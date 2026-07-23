@@ -62,6 +62,7 @@ Detailed build instructions are available in `docs/`:
 
 - [docs/build_ubuntu.md](docs/build_ubuntu.md) - building on Ubuntu / Linux
 - [docs/build_windows.md](docs/build_windows.md) - building on Windows via MSYS2
+- [docs/build_osx.md](docs/build_osx.md) - building on macOS
 
 Quick build (when dependencies are already installed):
 
