@@ -150,7 +150,7 @@ endif()
 add_library(mz_minizip INTERFACE)
 add_library(mz::minizip ALIAS mz_minizip)
 target_link_libraries(mz_minizip INTERFACE PkgConfig::MINIZIP)
-if(UNIX AND MINIZIP_STATIC_LIBRARIES)
+if(UNIX AND NOT APPLE AND MINIZIP_STATIC_LIBRARIES)
     target_link_libraries(mz_minizip INTERFACE ${MINIZIP_STATIC_LIBRARIES})
 endif()
 
