@@ -26,6 +26,10 @@ project(mz800new
     LANGUAGES C CXX
 )
 
+if(APPLE)
+    add_compile_definitions(_DARWIN_C_SOURCE)
+endif()
+
 # ----------------------------------------------------------------------------
 # Display jméno + verze projektu (= co se vytiskne v configure status reportu)
 #
