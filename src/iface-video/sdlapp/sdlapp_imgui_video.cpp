@@ -158,7 +158,10 @@ static Uint32 sdlapp_mygui_video_update_status_line(void *userdata, SDL_TimerID 
     (void)timerID;
     SDL_Window *window = (SDL_Window *)userdata;
     char *title_text = iface_video_create_window_title_text();
+#ifndef __APPLE__
+// Apple, not allowed to update GUI on background thread
     SDL_SetWindowTitle(window, title_text);
+#endif
     g_free(title_text);
     return interval;
 }
