@@ -41,7 +41,7 @@
 typedef struct SdlappMyImGuiVideo_t
 {
     SDL_Surface *surface;
-    SDL_TimerID update_title_timer;
+    guint update_title_timer; /**< sdlapp timer id periodické aktualizace titulku okna (0 = neběží, headless) */
     Uint64 lastPictureTime;
     int TARGET_FPS;
     int FRAME_TIME;
@@ -153,17 +153,40 @@ static void sdlapp_myimgui_video_set_colormap(uint32_t *colormap)
     video_sdl3_set_surface_colormap(colormap, g_sdlapp_myimgui_video->surface);
 }
 
-static Uint32 sdlapp_mygui_video_update_status_line(void *userdata, SDL_TimerID timerID, Uint32 interval)
+static SDL_Window *getSDL_Window_by_name(const char *name);
+
+/**
+ * @brief Timer callback (hlavní vlákno) - aktualizuje titulek hlavního okna.
+ *
+ * Registrován přes @ref sdlapp_add_timer, takže běží v hlavním vlákně -
+ * SDL timer vlákno jen pushne event do fronty hlavní smyčky.
+ * @c SDL_SetWindowTitle se smí volat pouze z hlavního vlákna; na macOS
+ * (Cocoa) volání z timer vlákna končí pádem na neošetřené
+ * NSInternalInconsistencyException (GitHub issue #2).
+ *
+ * Vedlejší efekt: @ref iface_video_create_window_title_text uvnitř
+ * aktualizuje měření GDG (@c emulator_measuring_gdg_event) - i tato
+ * mutace tedy probíhá v hlavním vlákně.
+ *
+ * @param timer_id Identifikátor sdlapp timeru (nepoužito).
+ * @param user_data Nepoužito - okno se resolvuje podle jména, aby callback
+ *                  nedržel potenciálně dangling ukazatel.
+ * @return TRUE - timer pokračuje.
+ */
+static gboolean sdlapp_mygui_video_update_status_line(guint timer_id, gpointer user_data)
 {
-    (void)timerID;
-    SDL_Window *window = (SDL_Window *)userdata;
+    (void)timer_id;
+    (void)user_data;
+    SDL_Window *window = getSDL_Window_by_name("main_window");
+    if (!window)
+        return TRUE;
     char *title_text = iface_video_create_window_title_text();
 #ifndef __APPLE__
 // Apple, not allowed to update GUI on background thread
     SDL_SetWindowTitle(window, title_text);
 #endif
     g_free(title_text);
-    return interval;
+    return TRUE;
 }
 
 static gboolean sdlapp_myimgui_video_init(void)
@@ -310,8 +333,9 @@ static gboolean sdlapp_myimgui_video_init(void)
     // (SDL_RaiseWindow volaný před startem hlavní smyčky na Windows nefunguje,
     // protože SetForegroundWindow selže když foreground drží konzole)
 
-    // Nastavení titulku okna
-    g_sdlapp_myimgui_video->update_title_timer = SDL_AddTimer(IFACE_VIDEO_UPDATE_WINDOW_TITLE_INTERVAL_MS, sdlapp_mygui_video_update_status_line, win->sdl_window);
+    /* Periodická aktualizace titulku okna. sdlapp timer doručí callback
+     * do hlavního vlákna (viz sdlapp_mygui_video_update_status_line). */
+    g_sdlapp_myimgui_video->update_title_timer = sdlapp_add_timer(g_sdlapp, IFACE_VIDEO_UPDATE_WINDOW_TITLE_INTERVAL_MS, sdlapp_mygui_video_update_status_line, NULL);
 
     sdlapp_myimgui_video_reset_fps_timer();
 
@@ -329,7 +353,7 @@ static void sdlapp_myimgui_video_exit(void)
     {
         if (g_sdlapp_myimgui_video->update_title_timer)
         {
-            SDL_RemoveTimer(g_sdlapp_myimgui_video->update_title_timer);
+            sdlapp_remove_timer(g_sdlapp, g_sdlapp_myimgui_video->update_title_timer);
         };
 
         if (g_sdlapp_myimgui_video->surface)

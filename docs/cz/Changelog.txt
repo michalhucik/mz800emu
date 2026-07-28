@@ -1,4 +1,6 @@
 
+	- BUGFIX: macOS - emulátor krátce po startu spadl při aktualizaci titulku hlavního okna. (GitHub issue #2)
+
 	- BUGFIX: Debugger - breakpoint MEM_W/MEM_R se chybně aktivoval už při vykonání instrukce na hlídané adrese. 
 
 	- BUGFIX: Debugger - breakpointy MEM_W/MEM_R a IORQ se aktivovaly jen tehdy, když bylo otevřené okno Disassembled. Nyní fungují i bez otevřeného okna Disassembled #1.

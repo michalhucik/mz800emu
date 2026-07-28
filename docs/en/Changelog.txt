@@ -1,4 +1,6 @@
 
+	- BUGFIX: macOS - the emulator crashed shortly after start while updating the main window title. (GitHub issue #2)
+
 	- BUGFIX: Debugger - a MEM_W/MEM_R breakpoint incorrectly triggered already when an instruction at the watched address was executed.
 
 	- BUGFIX: Debugger - MEM_W/MEM_R and IORQ breakpoints only worked while the Disassembled window was open. They now work without the Disassembled #1 window open too.
