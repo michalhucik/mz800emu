@@ -181,10 +181,7 @@ static gboolean sdlapp_mygui_video_update_status_line(guint timer_id, gpointer u
     if (!window)
         return TRUE;
     char *title_text = iface_video_create_window_title_text();
-#ifndef __APPLE__
-// Apple, not allowed to update GUI on background thread
     SDL_SetWindowTitle(window, title_text);
-#endif
     g_free(title_text);
     return TRUE;
 }
