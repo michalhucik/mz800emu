@@ -82,7 +82,7 @@ static inline void gdg_process_events(void)
 #endif
 
         /* V rezimu MZ-700 aktualizujeme screen framebuffer jakmile skonci HBLN. */
-        if ((GDG_MZ800_DMD_TEST_MZ700) && ((g_gdg.beam_row >= VIDEO_BEAM_CANVAS_FIRST_ROW) && (g_gdg.beam_row <= VIDEO_BEAM_CANVAS_LAST_ROW)))
+        if ((GDG_DMD_TEST_MODE700) && ((g_gdg.beam_row >= VIDEO_BEAM_CANVAS_FIRST_ROW) && (g_gdg.beam_row <= VIDEO_BEAM_CANVAS_LAST_ROW)))
         {
             if (framebuffer_get_screen_changes())
             {
@@ -178,7 +178,7 @@ static inline void gdg_process_events(void)
 
     case MZEVENT_GDG_AFTER_LAST_SCREEN_PIXEL:
         /* V rezimu MZ-800 aktualizujeme screen framebuffer az po dokoncenem radku. */
-        if (!GDG_MZ800_DMD_TEST_MZ700)
+        if (!GDG_DMD_TEST_MODE700)
         {
             if (framebuffer_get_screen_changes())
             {
@@ -329,9 +329,7 @@ static inline void gdg_process_events(void)
     case MZEVENT_BREAK_MZARCH_INTERRUPT:
     case MZEVENT_BREAK_EMULATION_PAUSED:
     case MZEVENT_PIOZ80:
-#ifdef MZ800EMU_CFG_CLK1M1_FAST
     case MZEVENT_CTC0:
-#endif
 
     case MZEVENT_CUSTOM_SPEED_SYNCHRONISATION:
         break;

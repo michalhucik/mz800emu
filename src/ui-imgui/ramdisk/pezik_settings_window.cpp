@@ -22,6 +22,7 @@
 
 // Lokalizace
 #include "i18n.h"
+#include "emulator/mzarch/mzhal.h"
 
 extern "C"
 {
@@ -219,9 +220,10 @@ extern "C" void imgui_pezik_settings_window(bool *p_open) {
 
     /* Při prvním otevření zkopírovat aktuální hodnoty z g_ramdisk */
     if (!s_initialized) {
-#if MZARCH != 1500
+/* Pezik E8 nelze na MZ-1500 (kolize portu 0xE8-0xEF) - runtime dle arch. */
+    if (g_mzhal.arch != 1500) {
         load_pezik_state(&s_state.e8, RAMDISK_PEZIK_E8);
-#endif
+    }
         load_pezik_state(&s_state.p68, RAMDISK_PEZIK_68);
         s_initialized = true;
     }
@@ -238,11 +240,12 @@ extern "C" void imgui_pezik_settings_window(bool *p_open) {
         static const char *ports_e8[] = { "E8", "E9", "EA", "EB", "EC", "ED", "EE", "EF" };
         static const char *ports_68[] = { "68", "69", "6A", "6B", "6C", "6D", "6E", "6F" };
 
-#if MZARCH != 1500
+/* Pezik E8 nelze na MZ-1500 (kolize portu 0xE8-0xEF) - runtime dle arch. */
+    if (g_mzhal.arch != 1500) {
         /* Standard PEZIK (E8) — skrytý na MZ-1500 */
         DrawPezikSection(_("Standard PEZIK:"), &s_state.e8, ports_e8, "e8",
                          &s_fch_open_e8, s_fch_id_e8);
-#endif
+    }
 
         /* Experimental PEZIK (68) */
         DrawPezikSection(_("Experimental PEZIK:"), &s_state.p68, ports_68, "68",
@@ -261,7 +264,8 @@ extern "C" void imgui_pezik_settings_window(bool *p_open) {
             ImGui::SetCursorPosX(ImGui::GetCursorPosX() + offset);
 
         if (ImGui::Button("OK", ImVec2(120, 0))) {
-#if MZARCH != 1500
+/* Pezik E8 nelze na MZ-1500 (kolize portu 0xE8-0xEF) - runtime dle arch. */
+    if (g_mzhal.arch != 1500) {
             /* Při zapínání E8 PEZIK — odpojit MR1R18 (sdílí porty 0xE8-0xEF) */
             if (s_state.e8.connected && RAMDISK_TEST_STD_CONNECTED) {
                 ramdisk_std_disconnect();
@@ -271,7 +275,7 @@ extern "C" void imgui_pezik_settings_window(bool *p_open) {
                                s_state.e8.portmask,
                                s_state.e8.backuped ? PEZIK_BACKUPED_YES : PEZIK_BACKUPED_NO,
                                s_state.e8.filepath);
-#endif
+    }
             ramdisk_pezik_init(RAMDISK_PEZIK_68,
                                s_state.p68.connected ? RAMDISK_CONNECTED : RAMDISK_DISCONNECTED,
                                s_state.p68.portmask,
@@ -297,7 +301,8 @@ extern "C" void imgui_pezik_settings_window(bool *p_open) {
     }
 
     /* File chooser dialogy */
-#if MZARCH != 1500
+/* Pezik E8 nelze na MZ-1500 (kolize portu 0xE8-0xEF) - runtime dle arch. */
+    if (g_mzhal.arch != 1500) {
     if (s_fch_open_e8) {
         ImGui::SetNextWindowSize(ImVec2(800, 500), ImGuiCond_FirstUseEver);
         if (ImGuiFileDialog::Instance()->Display(s_fch_id_e8)) {
@@ -309,7 +314,7 @@ extern "C" void imgui_pezik_settings_window(bool *p_open) {
             s_fch_open_e8 = false;
         }
     }
-#endif
+    }
 
     if (s_fch_open_68) {
         ImGui::SetNextWindowSize(ImVec2(800, 500), ImGuiCond_FirstUseEver);

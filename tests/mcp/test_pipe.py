@@ -249,6 +249,19 @@ def main():
         else:
             print(f"Test 9 UNKNOWN_CMD: FAIL ({resp})")
 
+        # 9b. Breakpoint cleanup - BP z testu 8 NESMÍ přežít shutdown.
+        # Emulátor při čistém exitu persistuje breakpointy do
+        # mz800-breakpoints.bpt v CWD; další start emu v témže adresáři
+        # (další test, typicky mcp_speed_smoke) by pak okamžitě narazil
+        # na PC_EXEC 0xE800 a startoval paused -> timeout celé suity.
+        total += 1
+        resp = send({"req_id": 11, "cmd": "bp_clear"})
+        if resp and resp.get("success"):
+            print("Test 9b BP_CLEAR: PASS")
+            passed += 1
+        else:
+            print(f"Test 9b BP_CLEAR: FAIL ({resp})")
+
         # 10. Shutdown
         total += 1
         resp = send({"req_id": 10, "cmd": "shutdown"})

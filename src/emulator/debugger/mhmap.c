@@ -370,14 +370,14 @@ en_MHMAP_RESOLVE_RESULT mhmap_resolve_mem ( uint16_t bus_addr, en_MHMAP_REGION *
                 /* V 800 native (DMD bit 3 = 0) + K3 je $E000-$E00F = 0xFF
                  * (= mapped ports area "off"). Cil neni ROM - skip resolveru.
                  * Empiricky overeno banking-e800 v0.5 T3. */
-                if ( ! GDG_MZ800_DMD_TEST_MZ700 && page == 0xE
+                if ( ! GDG_DMD_TEST_MODE700 && page == 0xE
                      && ( bus_addr & 0x0FFF ) <= 0x000F )
                 {
                     return MHMAP_RESOLVE_SKIP;
                 }
                 /* V 700 mode K3 je $E000-$E008 mapped ports (PIO/CTC/GDG),
                  * fyzicky cil neni ROM - skip resolveru. */
-                if ( GDG_MZ800_DMD_TEST_MZ700 && page == 0xE
+                if ( GDG_DMD_TEST_MODE700 && page == 0xE
                      && ( bus_addr & 0x0FFF ) <= 0x0008 )
                 {
                     return MHMAP_RESOLVE_SKIP;

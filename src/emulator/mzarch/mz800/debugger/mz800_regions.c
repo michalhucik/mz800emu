@@ -102,7 +102,7 @@ int mz800_regions_collect(st_REGION_DESC *out, int max_count)
      * V MZ-800 native modu jsou tyto regiony "skryté" za VRAM/banking;
      * v MZ-700 compat modu (DMD bit MZ700) jsou logicky přístupné.
      * Vždy enumerujeme - mapped_now reflektuje aktuální DMD. */
-    int is_700_mode = (GDG_MZ800_DMD_TEST_MZ700) ? 1 : 0;
+    int is_700_mode = (GDG_DMD_TEST_MODE700) ? 1 : 0;
 
     dbgapi_regions_add(out, &count, max_count,
         REGION_KIND_CGRAM_700, 0, "CG-RAM (MZ-700 mode, 4 KB)",

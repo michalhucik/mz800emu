@@ -283,10 +283,10 @@ extern "C" {
 
     #define pioz80_get_icena_event_pointer() ( &g_pioz80.icena_event )
 
-#include "gdg/video.h"
+#include "mzarch/mzhal.h"
 #define pioz80_on_screen_done_event() {\
     if ( (int)g_pioz80.icena_event.ticks != -1 ) {\
-        g_pioz80.icena_event.ticks -= VIDEO_SCREEN_TICKS;\
+        g_pioz80.icena_event.ticks -= g_mzhal.video_screen_ticks;\
     };\
 }
 

@@ -12,7 +12,7 @@
 
 #include "snapshot/snapshot_mgr.h"
 #include "audio.h"
-#include "hw-generic/gdg/gdg.h"
+#include "hw-generic/gdg/gdg_state.h"
 
 
 static en_SNAPSHOT_RESULT snap_audio_save(st_SNAPSHOT_CONTEXT *ctx)

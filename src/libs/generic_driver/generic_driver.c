@@ -38,7 +38,7 @@
 
 #ifdef WINDOWS
 #include <windows.h>
-#elif LINUX
+#elif defined(LINUX)
 /* při kompilaci přidat -D_XOPEN_SOURCE=500 */
 #include <unistd.h>
 #endif
@@ -742,7 +742,7 @@ int generic_driver_truncate_file_cb ( st_HANDLER *h, uint32_t size ) {
         d->err = GENERIC_DRIVER_ERROR_TRUNCATE;
         return EXIT_FAILURE;
     }
-#elif LINUX
+#elif defined(LINUX)
     if ( EXIT_SUCCESS != ftruncate ( fileno ( fh ), size ) ) {
         d->err = GENERIC_DRIVER_ERROR_TRUNCATE;
         return EXIT_FAILURE;

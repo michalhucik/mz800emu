@@ -7,6 +7,7 @@
  */
 
 #include "tlog_common.h"
+#include "mzarch/mzhal.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -127,38 +128,34 @@ uint32_t tlog_common_get_pxclk_in_screen ( void )
 uint64_t tlog_common_get_cpuclk_total ( void )
 {
     /* MZ-800/700/1500: pxCLK / 5 = CPU CLK (~3.546895 MHz). */
-    return gdg_get_total_ticks ( ) / GDGCLK2CPU_DIVIDER;
+    return gdg_get_total_ticks ( ) / g_mzhal.gdgclk2cpu_divider;
 }
 
 const char *tlog_common_get_platform_name ( void )
 {
-#if MZARCH == 800
-    return "MZ-800";
-#elif MZARCH == 700
-    return "MZ-700";
-#elif MZARCH == 1500
-    return "MZ-1500";
-#else
-    return "unknown";
-#endif
+    /* Runtime z g_mzhal (mzhal krok 7) - hodnoty identické s dřívějším
+     * #if MZARCH řetězem ("MZ-800"/"MZ-700"/"MZ-1500"); jde o čtvrtý
+     * jmenný styl (display name bez TV normy), persistovaný v trace
+     * manifestech = zmrazený kontrakt. */
+    return g_mzhal.arch_display_name;
 }
 
 uint32_t tlog_common_get_pxclk_freq ( void )
 {
-    /* Reálná frekvence krystalu (mz800_gdgclk.h: GDGCLK_REAL_BASE = 17734475).
-     * Emulátor interně počítá s mírně upravenou hodnotou (GDGCLK_BASE)
+    /* Reálná frekvence krystalu (mz800_gdgclk.h: g_mzhal.gdgclk_real_base = 17734475).
+     * Emulátor interně počítá s mírně upravenou hodnotou (g_mzhal.gdgclk_base)
      * pro celočíselný počet pxCLK / sec, ale do meta.json hlásíme reálnou. */
-    return GDGCLK_REAL_BASE;
+    return g_mzhal.gdgclk_real_base;
 }
 
 uint32_t tlog_common_get_cpu_divider ( void )
 {
-    return GDGCLK2CPU_DIVIDER;
+    return g_mzhal.gdgclk2cpu_divider;
 }
 
 uint32_t tlog_common_get_pxclk_per_screen ( void )
 {
-    return VIDEO_SCREEN_TICKS;
+    return g_mzhal.video_screen_ticks;
 }
 
 

@@ -1,3 +1,8 @@
+	- CHANGE (internal rework): All four emulator variants (MZ-800, MZ-700 PAL/NTSC, MZ-1500) now share a single common emulation core; per-machine differences are described at runtime by a platform HW table. A full build from sources in MSYS2 is roughly 2x faster. The mz800 performance loss is about 3-4 % in MAX SPEED.
+
+	- Snapshots now also store the TV system (PAL/NTSC). MZ-700 PAL and MZ-700 NTSC snapshots are mutually incompatible - loading the wrong variant is rejected with an error message (same as for a foreign architecture). Older snapshots without this field are judged by the historical default of their architecture (MZ-700 and MZ-800 = PAL, MZ-1500 = NTSC).
+
+	- Cleanup on emulator exit (saving configuration, CDL export, detaching media) now happens only after the emulation thread has stopped and MCP connections are shut down - prevents a rare crash when closing the emulator with an active MCP client.
 
 	- BUGFIX: Pressing RESET (F12 or menu) immediately after the window opened could crash the emulator if the emulation thread had not started yet.
 

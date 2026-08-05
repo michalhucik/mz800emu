@@ -4,9 +4,9 @@
 /*
  * Platform suffix pro per-arch oddelene default soubory a adresare
  * (ramdisk image, Unicard SD root). Compile-time string literal pro
- * concat se zbytkem nazvu (= "rd-" MZ_PLATFORM_SUFFIX ".dat" apod.).
+ * Od mzhal kroku 7 se skladaji RUNTIME z g_mzhal.arch_name;
+ * compile-time MZ_PLATFORM_SUFFIX zrusen.
  */
-#define MZ_PLATFORM_SUFFIX "mz1500"
 
 /*
  * Konfiguracni vypnuti periferii MZ-1500
@@ -20,7 +20,6 @@
 #define CFG_HWEXT_HAVE_RAMDISK 1
 #define CFG_HWEXT_HAVE_QDISK 1
 
-#define HAVE_JOY 1
 
 /* Z80 PIO: MZ-1500 ma Z80 PIO chip (joystick + keyboard interrupt) */
 #define HAVE_PIOZ80 1

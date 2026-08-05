@@ -1,3 +1,4 @@
+#include "hw-generic/memory/memory_arch.h" /* per-arch memory - dříve tranzitivně přes memory.h (mzhal 11c-2c) */
 #include "main.h"
 #include <stdio.h>
 #include <stdint.h>
@@ -24,9 +25,7 @@
 #include "audio.h"
 #include "cfgmain.h"
 
-#if HAVE_JOY
 #include "hw-generic/joy/joy.h"
-#endif /* HAVE_JOY */
 
 /*******************************************************************************
  *
@@ -204,9 +203,7 @@ void mzarch_platform_fn_init(void)
     qdisk_init();
 #endif
 
-#if HAVE_JOY
     joy_init();
-#endif
 
     unicard_init();
 

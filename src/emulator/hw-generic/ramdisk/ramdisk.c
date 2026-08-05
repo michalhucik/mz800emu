@@ -67,7 +67,8 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "mzarch/mzarch_config.h"
+#include "mzarch/mzcommon_config.h"
+#include "mzarch/mzhal.h"
 #include "emulator.h"
 #include "mzarch/mzarch.h"
 #include "ramdisk.h"
@@ -85,6 +86,26 @@
 #define DEF_BANK_SIZE  0x10000
 
 st_RAMDISK g_ramdisk;
+
+
+/**
+ * @brief Runtime default jméno záložního souboru MR-1R18 ("rd-<arch>.dat").
+ *
+ * Skládá se z g_mzhal.arch_name (mzhal krok 7) - hodnota identická
+ * s dřívějším compile-time "rd-" MZ_PLATFORM_SUFFIX ".dat". Vrací
+ * ukazatel na statický buffer naplněný při prvním volání (single-thread
+ * init cesta, g_mzhal je const od load-time).
+ *
+ * @return Jméno souboru relativní k cfg_dir; ukazatel je platný po
+ *         celou dobu běhu, volající ho NEuvolňuje.
+ */
+static const char *ramdisk_default_filename ( void ) {
+    static char fname[32];
+    if ( fname[0] == 0x00 ) {
+        snprintf ( fname, sizeof ( fname ), "rd-%s.dat", g_mzhal.arch_name );
+    };
+    return fname;
+}
 
 
 void ramdisk_load_backup_file ( uint8_t *memory, char *filepath, unsigned ramdisk_size ) {
@@ -198,9 +219,10 @@ void ramdisk_std_init ( int connect, en_RAMDISK_TYPE type, en_RAMDISK_BANKMASK s
                 g_ramdisk.std.filepath = (char*) baseui_tools_mem_realloc ( g_ramdisk.std.filepath, len );
                 strncpy ( g_ramdisk.std.filepath, filepath, len );
             } else {
-                int len = strlen ( RAMDISK_DEFAULT_FILENAME ) + 1;
+                const char *default_fname = ramdisk_default_filename ( );
+                int len = strlen ( default_fname ) + 1;
                 g_ramdisk.std.filepath = (char*) baseui_tools_mem_realloc ( g_ramdisk.std.filepath, len );
-                strncpy ( g_ramdisk.std.filepath, RAMDISK_DEFAULT_FILENAME, len );
+                strncpy ( g_ramdisk.std.filepath, default_fname, len );
             };
 
             unsigned ramdisk_size = ( g_ramdisk.std.size + 1 ) * DEF_BANK_SIZE;
@@ -361,7 +383,7 @@ void ramdisk_init ( void ) {
                                            -1 );
     cfgelement_set_handlers ( elm, NULL, (void*) &g_ramdisk.std.size );
 
-    elm = cfgmodule_register_new_element ( cmod, "mr1r18_filepath", CFGENTYPE_TEXT, RAMDISK_DEFAULT_FILENAME );
+    elm = cfgmodule_register_new_element ( cmod, "mr1r18_filepath", CFGENTYPE_TEXT, ramdisk_default_filename ( ) );
     cfgelement_set_pointers ( elm, NULL, (void*) &g_ramdisk.std.filepath );
 
     /* pezik e8 */

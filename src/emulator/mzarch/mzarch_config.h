@@ -46,169 +46,29 @@ extern "C"
 #endif
 
 /*
- * Konfiguracni vypnuti periferii
- * ==============================
+ * Capability makra (CFG_HWEXT_HAVE_*, HAVE_PIOZ80, HAVE_PSG)
+ * ====================================================================
  *
- * Nastavuje se 1, nebo 0
+ * Definuje VYHRADNE per-arch mz*_config.h (vzdy vsechna, hodnotou 0/1;
+ * HAVE_PSG = max pocet PSG instanci 0/2). Fallback #ifndef bloky byly
+ * odstraneny v mzhal kroku 8e - kazde TU vidi hodnoty pres dispatcher
+ * vyse a chybejici definice chyta -Werror=undef.
  *
+ * Sdileny (compile-once kandidatni) kod tato makra uz NEKONZUMUJE - cte
+ * runtime pole g_mzhal (psg_count, have_pioz80, have_fdc, ...). Zbyvajici
+ * compile-time konzumenti jsou per-EXE whitelist (mzarch.c, mz*_iorq.c,
+ * interrupt.c, bootstrap.c) a dokumentovane odklady (io_catalog.c,
+ * dbgapi media slot case bloky, iface_keyboard* FDC/JOY, joy subsystem)
+ * - viz mzhal/KROK8-PLAN.md.
  */
-#ifndef CFG_HWEXT_HAVE_FDC
-#define CFG_HWEXT_HAVE_FDC 0
-#endif
-#ifndef CFG_HWEXT_HAVE_IDE8
-#define CFG_HWEXT_HAVE_IDE8 0
-#endif
-#ifndef CFG_HWEXT_HAVE_RAMDISK
-#define CFG_HWEXT_HAVE_RAMDISK 0
-#endif
-#ifndef CFG_HWEXT_HAVE_QDISK
-#define CFG_HWEXT_HAVE_QDISK 0
-#endif
-#ifndef HAVE_JOY
-#define HAVE_JOY 0
-#endif
-
-    /*
-     * HAVE_PSG: max pocet PSG instanci (SN76489) na platforme - compile-time
-     * =====================================================================
-     *   0 = bez PSG, fyzicky nikdy (MZ-700)
-     *   1 = max 1 PSG (mono jen)
-     *   2 = max 2 PSG (mono nebo stereo - rozhoduje runtime g_psg_module.stereo)
-     *
-     * Pouziti:
-     *  - HAVE_PSG = 0  →  MZ-700: PSG cesta cele audio pipeline je
-     *                     compile-time eliminovana
-     *  - HAVE_PSG = 2  →  MZ-800: nativne mono, ale HW experiment
-     *                     allow_psg1 muze za behu zapnout stereo
-     *  - HAVE_PSG = 2  →  MZ-1500: nativne stereo
-     *
-     * Pocet kanalu audio logu = 1 + 4 * HAVE_PSG (CTC0 + 4 kanaly per PSG).
-     * Runtime stereo flag (g_psg_module.stereo) urci, zda PSG1 kanaly
-     * (5..8) budou skutecne zpracovany v audio_log_fill_psg.
-     */
-#ifndef HAVE_PSG
-#define HAVE_PSG 0
-#endif
 
 
     /*
-     * Konfiguracni vypnuti modulu MZ-800 debugger
-     * ===========================================
-     *
-     * Debugger lze vypnout dvema zpusoby:
-     *
-     *  1. Build-time prepinac z prikazove radky:
-     *     make NO_DEBUGGER=1   (Makefile to predava CMake jako
-     *                           -DMZ_NO_DEBUGGER=ON, ktery definuje
-     *                           MZ800EMU_NO_DEBUGGER pres globalni
-     *                           add_compile_definitions)
-     *
-     *  2. Lokalni edit tohoto souboru - zakomentovat radek `#define
-     *     MZ800EMU_CFG_DEBUGGER_ENABLED` nize.
-     *
-     * Bez debuggeru je binarka cca o 15 % mensi a emulace by mela
-     * byt rychlejsi (presne hodnoty neoverene).
+     * Platformně nezávislé toggly (DEBUGGER, MCP, CLK1M1, AUDIO,
+     * MEMORY_MAKE_STATISTICS) jsou vyčleněné do mzcommon_config.h
+     * (mzhal krok 5) - hlavičky citlivé na layout je includují přímo.
      */
-
-#ifndef MZ800EMU_NO_DEBUGGER
-#define MZ800EMU_CFG_DEBUGGER_ENABLED
-#endif
-
-    /*
-     * Konfigurační vypnutí MCP serveru
-     * ================================
-     *
-     * MCP (Model Context Protocol) server zpřístupňuje debugger emulátoru
-     * externím AI agentům (Claude Code, FastMCP klienti). Backend je
-     * rozdělen do dvou nezávislých togglů:
-     *
-     *  - MZ800EMU_CFG_MCP_SERVER_ENABLED řídí MCP backend jako celek
-     *    (pipe transport, JSONL parser, frontu příkazů). Sleduje
-     *    MZ800EMU_CFG_DEBUGGER_ENABLED - bez debuggeru nemá MCP smysl.
-     *
-     *  - MZ800EMU_CFG_MCP_TCP_ENABLED řídí volitelný TCP listener
-     *    (loopback 127.0.0.1). Vždy vyžaduje MCP_SERVER_ENABLED.
-     *    Lze ho vypnout zvlášť pro "pipe-only" build.
-     *
-     * Build-time přepínače z příkazové řádky:
-     *   make NO_MCP=1       -> vypne celý MCP (+ implicitně i TCP)
-     *   make NO_MCP_TCP=1   -> vypne jen TCP listener (pipe zůstane)
-     *
-     * Lokální edit této sekce: zakomentuj `#define` řádky níže.
-     *
-     * Pozn.: Pattern kopíruje MZ800EMU_NO_DEBUGGER (negativní toggle,
-     * pozitivní _ENABLED define bez hodnoty, `#ifdef` v hostujícím
-     * kódu). NIKDY nepoužívej `#if MZ800EMU_CFG_MCP_..._ENABLED` -
-     * bezhodnotový define se zde vyhodnotí jako 0.
-     */
-
-#ifndef MZ800EMU_NO_MCP
-#define MZ800EMU_CFG_MCP_SERVER_ENABLED
-#endif
-
-#ifndef MZ800EMU_NO_MCP_TCP
-#define MZ800EMU_CFG_MCP_TCP_ENABLED
-#endif
-
-    /*
-     * Validační guardy zachytí nesmyslné kombinace při compile-time.
-     * Bez DEBUGGER nemá MCP smysl; TCP listener vyžaduje funkční MCP
-     * backend (sdílí JSONL parser, frontu, transport vrstvu).
-     */
-#if defined(MZ800EMU_CFG_MCP_SERVER_ENABLED) && !defined(MZ800EMU_CFG_DEBUGGER_ENABLED)
-#error "MZ800EMU_CFG_MCP_SERVER_ENABLED requires MZ800EMU_CFG_DEBUGGER_ENABLED (use NO_MCP=1 when NO_DEBUGGER=1)"
-#endif
-
-#if defined(MZ800EMU_CFG_MCP_TCP_ENABLED) && !defined(MZ800EMU_CFG_MCP_SERVER_ENABLED)
-#error "MZ800EMU_CFG_MCP_TCP_ENABLED requires MZ800EMU_CFG_MCP_SERVER_ENABLED (use NO_MCP_TCP=1 when NO_MCP=1)"
-#endif
-
-    /*
-     * Konfigurace pro emulaci CLK 1.1 MHz (CTC8253-CTC0 a CMT )
-     * =========================================================
-     *
-     * !!! Pouzit jednu z voleb:
-     *
-     * MZ800EMU_CFG_CLK1M1_SLOW - presna varianta pri ktere se vola CTC0_step a CMT_step
-     * pri kazdem 16 pixelclk
-     *
-     * MZ800EMU_CFG_CLK1M1_FAST - prozatim nedokoncena varianta pri ktere se CLK 1M1
-     * step() zavola jen tehdy, pokud ma nastat konkretni event
-     *
-     */
-#if 1
-#define MZ800EMU_CFG_CLK1M1_FAST
-#else
-#define MZ800EMU_CFG_CLK1M1_SLOW
-#endif
-
-    /*
-     * Vypnuti audio modulu
-     * ====================
-     *
-     * Pokud neni definovano pouziti SDL nebo Gstreamer Audio, tak se vypne audio modul.
-     * Sznchronizace 20ms bude nahrazena synchronizaci podle get_ticks_ns().
-     *
-     */
-
-// #define MZ800EMU_CFG_AUDIO_DISABLED
-
-// Vypnuti audio modulu, pokud neni definovano pouziti SDL nebo Gstreamer Audio
-#ifndef MZ800EMU_CFG_AUDIO_DISABLED
-#if !defined(USE_SDL_AUDIO) && !defined(USE_SDL2_AUDIO) && !defined(USE_SDL3_AUDIO) && !defined(USE_GSTREAMER_AUDIO)
-#define MZ800EMU_CFG_AUDIO_DISABLED
-#endif /* !USE_SDL_AUDIO && !USE_GSTREAM_AUDIO */
-#endif /* !MZ800EMU_CFG_AUDIO_DISABLED */
-
-    /*
-     * Memory statistics
-     * =================
-     *
-     * Chci zkusit zjistit, jak nejlepe optimalizovat umisteni podminek pro cteni a zapis do pameti.
-     * Tato volba vytvori aditivni soubor se statistikou pro cteni a zapis pameti.
-     *
-     */
-    // #define MEMORY_MAKE_STATISTICS
+#include "mzcommon_config.h"
 
 #ifdef __cplusplus
 }

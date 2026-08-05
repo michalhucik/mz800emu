@@ -31,14 +31,10 @@ extern "C"
 {
 #endif
 
-#include "mzarch/mzarch_config.h"
+#include "mzarch/mzcommon_config.h"
 #include "audio.h"
-#include "gdg/video.h"
-#include "hw-generic/gdg/gdgclk.h"
 
 #include <stdio.h>
-
-#define PSG_DIVIDER (16 * GDGCLK2CPU_DIVIDER)
 
     // pokud je definovano, tak pri inicializaci emulujeme nahodnou desynchronizaci psg.process_clock
 #define PSG_USE_RANDOM_INIT 1

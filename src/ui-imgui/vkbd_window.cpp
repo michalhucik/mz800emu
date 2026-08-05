@@ -1,4 +1,6 @@
+#include "mzarch/mzarch_config.h" /* capability makra - dříve tranzitivně přes main.h (mzhal 11c-1) */
 #include "main.h"
+#include "emulator/mzarch/mzhal.h"
 #include "libs/sdlapp/sdlapp.h"
 #include "ui-imgui/bootstrap/myimgui.h"
 #include "ui-imgui/auto_layout.h"
@@ -220,13 +222,12 @@ void imgui_vkbd(bool *p_open)
     //ImGui::SetNextWindowSize(ImVec2(1200, 768), ImGuiCond_FirstUseEver);
     /* Auto-layout při fresh open - cache _L() do lokální proměnné.
      * Titulek je per MZARCH (klávesnice se liší mezi modely). */
-#if MZARCH == 700
-    const char *vkbd_title = _L("MZ-700 Virtual Keyboard");
-#elif MZARCH == 1500
-    const char *vkbd_title = _L("MZ-1500 Virtual Keyboard");
-#else
-    const char *vkbd_title = _L("MZ-800 Virtual Keyboard");
-#endif
+    /* Runtime dle g_mzhal.arch; vsechny _L literaly zustavaji kvuli
+     * gettext extrakci a stabilnim ImGui ID per arch. */
+    const char *vkbd_title =
+        (g_mzhal.arch == 700)  ? _L("MZ-700 Virtual Keyboard") :
+        (g_mzhal.arch == 1500) ? _L("MZ-1500 Virtual Keyboard") :
+                                 _L("MZ-800 Virtual Keyboard");
     auto_layout_first_use_portrait(vkbd_title, 700.0f, 300.0f);
     ImGui::Begin(vkbd_title, p_open, flags);
 

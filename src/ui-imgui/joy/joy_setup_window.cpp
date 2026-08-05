@@ -22,17 +22,14 @@
 // Lokalizace
 #include "i18n.h"
 
-#if HAVE_JOY
 #include "iface/iface_joy.h"
 #include "hw-generic/joy/joy.h"
-#endif
 
 extern "C"
 {
     void imgui_joy_setup_window(bool *p_open);
 }
 
-#if HAVE_JOY
 
 /* Nazvy gamepad tlacitek pro combo box */
 static const char *gamepad_button_names[] = {
@@ -577,12 +574,4 @@ void imgui_joy_setup_window(bool *p_open)
     ImGui::End();
 }
 
-#else /* !HAVE_JOY */
 
-void imgui_joy_setup_window(bool *p_open)
-{
-    (void)p_open;
-    /* Joystick neni podporovan na teto platforme */
-}
-
-#endif /* HAVE_JOY */

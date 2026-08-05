@@ -28,7 +28,8 @@
  * ---------------------------------------------------------------------------
  */
 
-#include "mzarch/mzarch_config.h"
+#include "mzarch/mzcommon_config.h"
+#include "mzarch/mzhal.h"
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
 
@@ -541,15 +542,14 @@ static char* bookmarks_resolve_path ( const char *path ) {
         if ( !g_sdlapp || !g_sdlapp->paths ) return g_strdup ( path );
         return sdlapp_paths_resolve_cfg ( g_sdlapp->paths, path );
     };
-    /* Default per-arch */
-    const char *fname;
-#if MZARCH == 800
-    fname = "mz800.bookmarks";
-#elif MZARCH == 1500
-    fname = "mz1500.bookmarks";
-#else
-    fname = "mz700.bookmarks";
-#endif
+    /* Default per-arch - runtime z g_mzhal (mzhal krok 7), jméno
+     * identické s dřívějším #if MZARCH řetězem ("mz800.bookmarks", ...).
+     * Statický buffer: plní se při prvním volání, g_mzhal je const. */
+    static char default_fname[32];
+    if ( default_fname[0] == 0x00 ) {
+        snprintf ( default_fname, sizeof ( default_fname ), "%s.bookmarks", g_mzhal.arch_name );
+    };
+    const char *fname = default_fname;
     /* Pokud cfg má override, použij ten */
     const char *use = ( s_bm_cfg.bookmarks_file && s_bm_cfg.bookmarks_file[0] )
                       ? s_bm_cfg.bookmarks_file : fname;
@@ -895,13 +895,10 @@ void bookmarks_cfg_init ( void ) {
     if ( s_cfg_registered ) return;
     s_cfg_registered = true;
 
-#if MZARCH == 800
-    #define DEFAULT_BOOKMARKS_FILE "mz800.bookmarks"
-#elif MZARCH == 1500
-    #define DEFAULT_BOOKMARKS_FILE "mz1500.bookmarks"
-#else
-    #define DEFAULT_BOOKMARKS_FILE "mz700.bookmarks"
-#endif
+    /* Default per-arch - runtime z g_mzhal (mzhal krok 7). */
+    static char default_bookmarks_file[32];
+    snprintf ( default_bookmarks_file, sizeof ( default_bookmarks_file ),
+               "%s.bookmarks", g_mzhal.arch_name );
 
     CFGMOD *cmod = cfgroot_register_new_module ( g_cfgmain, "BOOKMARKS" );
     if ( !cmod ) {
@@ -910,7 +907,7 @@ void bookmarks_cfg_init ( void ) {
     };
 
     CFGELM *elm;
-    elm = cfgmodule_register_new_element ( cmod, "bookmarks_file", CFGENTYPE_TEXT, DEFAULT_BOOKMARKS_FILE );
+    elm = cfgmodule_register_new_element ( cmod, "bookmarks_file", CFGENTYPE_TEXT, default_bookmarks_file );
     cfgelement_bind ( elm, (void*) &s_bm_cfg.bookmarks_file );
 
     elm = cfgmodule_register_new_element ( cmod, "bookmarks_auto_save", CFGENTYPE_BOOL, 1 );
@@ -922,7 +919,6 @@ void bookmarks_cfg_init ( void ) {
     cfgmodule_parse ( cmod );
     cfgmodule_propagate ( cmod );
 
-#undef DEFAULT_BOOKMARKS_FILE
 
     /* Auto-load po propagate (= cesta v s_bm_cfg.bookmarks_file je
      * platná). REPLACE mode = soubor je SSOT pro start. */

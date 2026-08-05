@@ -32,12 +32,14 @@ extern "C" {
 
 #include <stdint.h>
 
-#include "mzarch/mzarch_config.h"  /* MZ_PLATFORM_SUFFIX per-arch */
+#include "mzarch/mzcommon_config.h"
 
 /* Default jmeno ramdisk image obsahuje arch suffix - kazda platforma
  * pouziva vlastni soubor (drive sdileny "rd.dat" pro vsechny archy
  * davaly zmateny vysledek pri prepinani targetu). */
-#define RAMDISK_DEFAULT_FILENAME          "rd-" MZ_PLATFORM_SUFFIX ".dat"
+/* Default jméno záložního souboru ("rd-<arch>.dat") se od mzhal kroku 7
+ * skládá RUNTIME z g_mzhal.arch_name - viz ramdisk_default_filename()
+ * v ramdisk.c; compile-time makro z MZ_PLATFORM_SUFFIX zrušeno. */
 #define RAMDISK_PEZIK_E8_DEFAULT_FILENAME "pezik_e8.dat"
 #define RAMDISK_PEZIK_68_DEFAULT_FILENAME "pezik_68.dat"
 

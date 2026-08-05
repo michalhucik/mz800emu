@@ -71,12 +71,9 @@ static inline const char* _L(const char* text) {
 }
 #endif
 
-/* textová doména — odvozena z MZARCH_NAME ("mz800" → "mz800emu") */
-#ifdef MZARCH_NAME
-#define I18N_TEXTDOMAIN MZARCH_NAME "emu"
-#else
-#define I18N_TEXTDOMAIN "mz800emu"
-#endif
+/* Textová doména se odvozuje RUNTIME z g_mzhal.arch_name v i18n_init()
+ * ("mz800" -> "mz800emu"). Dřívější compile-time I18N_TEXTDOMAIN makro
+ * (s tichým fallbackem na "mz800emu") odstraněno - mzhal krok 7. */
 
 /* inicializace gettext — volat jednou v main() PO sdlapp_new (potřebuje paths).
  * Implementace v src/i18n.c (potřebuje glib + sdlapp_paths). */

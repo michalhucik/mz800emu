@@ -54,3 +54,21 @@ add_subdirectory(ui)
 # MCP backend (V0.A.2+) - standalone testy; tests/mcp/CMakeLists.txt
 # sám rozhoduje (MZ_NO_MCP guard) jestli se zaregistrují.
 add_subdirectory(mcp)
+
+# ---------------------------------------------------------------------------
+# CI gate: zamrazeny preprocessor stav mzhal konverze (krok 13)
+# ---------------------------------------------------------------------------
+find_package(Python3 COMPONENTS Interpreter)
+if(Python3_FOUND)
+    add_test(
+        NAME    preproc_state_gate
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/ci/check_preproc_state.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(preproc_state_gate PROPERTIES
+        LABELS  "ci;preproc"
+        TIMEOUT 60
+    )
+    message(STATUS "  tests: registered preproc_state_gate")
+endif()

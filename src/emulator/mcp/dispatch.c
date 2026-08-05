@@ -34,6 +34,15 @@
 #include "../mzarch/mzarch_config.h"
 #endif
 
+/* Hodnoty MZTVSYS_PAL/NTSC pro #if porovnání níže (platform/info).
+ * Standalone hlavička - bezpečná i v MZ800EMU_MCP_TEST_BUILD (ten musí
+ * definovat -DMZTVSYS, viz tests/mcp/CMakeLists.txt). */
+#include "../mzarch/mztvsys.h"
+
+/* HW layer platformy (capabilities, clocks, video geometrie) - mzhal
+ * krok 8. Standalone hlavička bez per-arch závislostí. */
+#include "../mzarch/mzhal.h"
+
 #ifdef MZ800EMU_CFG_MCP_SERVER_ENABLED
 
 #include "dispatch.h"
@@ -71,24 +80,17 @@
  * názvy typu/zóny BP, sdílená s .bpt persistencí). */
 #include "../debugger/breakpoints.h"
 
-/* GDG header pro platform detection (= regDMD bit pro mode discriminator). */
-#if MZARCH == 800
-#include "../mzarch/mz800/gdg/mz800_gdg.h"
-#elif MZARCH == 1500
-#include "../mzarch/mz1500/gdg/mz1500_gdg.h"
-#elif MZARCH == 700
-#include "../mzarch/mz700/gdg/mz700_gdg.h"
-#endif
+/* GDG superset stav pro platform detection (= regDMD pro mode
+ * discriminator; větvení dle g_mzhal.arch je runtime). */
+#include "../hw-generic/gdg/gdg_state.h"
 
 /* mzarch_platform exportuje globální fields pro plný platform string,
  * MZARCH_NAME (= "mz700" / "mz800" / "mz1500"; PAL/NTSC nerozlišuje -
  * oba MZ-700 targety mají "mz700") a pixel clock. */
 #include "../mzarch/mzarch_platform.h"
 
-/* psg.h definuje PSG_DIVIDER (= 16 * GDGCLK2CPU_DIVIDER) - používané
- * v platform/info clocks sub-objektu pro reportování PSG vstupní
- * frekvence. Makro je definované unconditionally i pro platformy bez
- * PSG (= MZ-700, HAVE_PSG=0), tam ale report skipujeme. */
+/* PSG mirror API; PSG vstupní frekvence pro platform/info clocks
+ * sub-objekt se čte runtime z g_mzhal.psg_divider. */
 #include "../hw-generic/psg/psg.h"
 
 /* PIO 8255 vkbd probe API (fix 0016 / cesta A) - skutečný readback
@@ -2337,7 +2339,17 @@ static en_MCP_DISPATCH_RESULT _handle_set_pioz80_interrupt_vector(
     const st_JSONL_MESSAGE *req, char **out_response) {
     int64_t req_id = jsonl_msg_get_req_id(req);
 
-#if HAVE_PIOZ80
+    /* Platformy bez PIO-Z80 (MZ-700): available=false misto regulerni
+     * chyby, aby klient mohl Tool volat platform-agnosticky (mzhal
+     * krok 8; drive compile-time #if HAVE_PIOZ80). */
+    if (!g_mzhal.have_pioz80) {
+        JsonObject *na = json_object_new();
+        json_object_set_boolean_member(na, "available", FALSE);
+        json_object_set_string_member(na, "reason",
+                                       "platform has no Z80 PIO");
+        return _ok_response(req_id, na, out_response);
+    }
+
     /* MZ-800 / MZ-1500 path - parse params + submit. */
     JsonNode *data_node = (JsonNode *)jsonl_msg_get_data_node(req);
     if (!data_node || json_node_get_node_type(data_node) != JSON_NODE_OBJECT) {
@@ -2368,17 +2380,6 @@ static en_MCP_DISPATCH_RESULT _handle_set_pioz80_interrupt_vector(
                                 (gint64)((uint8_t)(vector & 0xFE)));
     json_object_set_boolean_member(data, "applied",  TRUE);
     return _ok_response(req_id, data, out_response);
-#else
-    /* MZ-700 path - PIO-Z80 v této platformě neexistuje. Vrátíme
-     * available=false místo regulérní chyby, aby klient mohl Tool
-     * volat platform-agnosticky a sám se rozhodnout co dál. */
-    (void)req;
-    JsonObject *data = json_object_new();
-    json_object_set_boolean_member(data, "available", FALSE);
-    json_object_set_string_member(data, "reason",
-                                   "platform has no Z80 PIO");
-    return _ok_response(req_id, data, out_response);
-#endif
 }
 
 
@@ -11925,30 +11926,21 @@ static void _dispatch_detect_platform(const char **platform_out,
     *full_name_out = g_mzarch_full_name;
     *pxclk_hz_out  = g_mzarch_platform_pxclk;
 
-#if MZTVSYS == MZTVSYS_PAL
-    *tv_system_out    = "PAL";
-    *framerate_hz_out = 50;
-#elif MZTVSYS == MZTVSYS_NTSC
-    *tv_system_out    = "NTSC";
-    *framerate_hz_out = 60;
-#else
-    *tv_system_out    = "unknown";
-    *framerate_hz_out = 0;
-#endif
+    /* Runtime z g_mzhal (mzhal 11f). */
+    *tv_system_out    = g_mzhal.tvsys_name;
+    *framerate_hz_out = (int)g_mzhal.video_screens_per_sec;
 
-#if MZARCH == 700
-    *mode_out = "native";   /* MZ-700 = vždy sám sebou */
-#elif MZARCH == 800
-    /* DMD3 bit 3 = 1: native 800 mode, 0: 700 compat */
-    bool native_800 = (g_gdg.regDMD & 0x08) != 0;
-    *mode_out = native_800 ? "native" : "compat700";
-#elif MZARCH == 1500
-    /* MZ-1500 regDMD bit 0 = 1: 1500 native, 0: 700 sim (= reset default) */
-    bool native_1500 = (g_gdg.regDMD & 0x01) != 0;
-    *mode_out = native_1500 ? "native" : "compat700";
-#else
-    *mode_out = "unknown";
-#endif
+    if (g_mzhal.arch == 700) {
+        *mode_out = "native";   /* MZ-700 = vždy sám sebou */
+    } else if (g_mzhal.arch == 800) {
+        /* DMD bit 3 = 1: native 800 mode, 0: 700 compat */
+        *mode_out = ((g_gdg.regDMD & 0x08) != 0) ? "native" : "compat700";
+    } else if (g_mzhal.arch == 1500) {
+        /* MZ-1500 regDMD bit 0 = 1: 1500 native, 0: 700 sim (= reset default) */
+        *mode_out = ((g_gdg.regDMD & 0x01) != 0) ? "native" : "compat700";
+    } else {
+        *mode_out = "unknown";
+    }
 #endif /* MZ800EMU_MCP_TEST_BUILD */
 }
 
@@ -12263,31 +12255,26 @@ static en_MCP_DISPATCH_RESULT _handle_get_platform_info(
     /* Capabilities - compile-time HW podpora dané platformy. Co je
      * zakompilováno do binárky, ne co je runtime attached. */
     JsonObject *caps = json_object_new();
-#if HAVE_PIOZ80
-    json_object_set_boolean_member(caps, "has_pioz80", TRUE);
-#else
-    json_object_set_boolean_member(caps, "has_pioz80", FALSE);
-#endif
-#if HAVE_PSG
-    json_object_set_int_member(caps, "psg_count", HAVE_PSG);
-#else
-    json_object_set_int_member(caps, "psg_count", 0);
-#endif
+    /* Runtime z g_mzhal (mzhal krok 8) - hodnoty per platforma beze
+     * zmeny (hlidano golden fixtures platform_info). */
+    json_object_set_boolean_member(caps, "has_pioz80",
+                                   g_mzhal.have_pioz80 ? TRUE : FALSE);
+    json_object_set_int_member(caps, "psg_count", (gint64)g_mzhal.psg_count);
     json_object_set_boolean_member(caps, "hwext_fdc",
-                                   CFG_HWEXT_HAVE_FDC ? TRUE : FALSE);
+                                   g_mzhal.have_fdc ? TRUE : FALSE);
     json_object_set_boolean_member(caps, "hwext_ide8",
-                                   CFG_HWEXT_HAVE_IDE8 ? TRUE : FALSE);
+                                   g_mzhal.have_ide8 ? TRUE : FALSE);
     json_object_set_boolean_member(caps, "hwext_ramdisk",
-                                   CFG_HWEXT_HAVE_RAMDISK ? TRUE : FALSE);
+                                   g_mzhal.have_ramdisk ? TRUE : FALSE);
     json_object_set_boolean_member(caps, "hwext_qdisk",
-                                   CFG_HWEXT_HAVE_QDISK ? TRUE : FALSE);
+                                   g_mzhal.have_qdisk ? TRUE : FALSE);
     json_object_set_string_member(caps, "cpu_model", "Z80");
     json_object_set_object_member(data, "capabilities", caps);
 
     /* Clock domains - per Sharp HW jsou všechny derivované z GDG base
      * clocku (= GDGCLK_BASE) přes integer dividery. CPU clock je
      * GDGCLK / GDGCLK2CPU_DIVIDER, CTC0 input je GDGCLK / CTC0_DIVIDER,
-     * PSG input je CPU_CLOCK / 16 (= PSG_DIVIDER = 16 * CPU_DIVIDER).
+     * PSG input je CPU_CLOCK / 16 (= g_mzhal.psg_divider = 16 * CPU_DIVIDER).
      *
      * GDGCLK_BASE = simulovaná frekvence (= clean násobky pro
      * timing matematiku). GDGCLK_REAL_BASE = skutečná krystalová
@@ -12298,23 +12285,26 @@ static en_MCP_DISPATCH_RESULT _handle_get_platform_info(
      * v emulator://periph/i8253 Resource. */
     JsonObject *clocks = json_object_new();
     json_object_set_int_member(clocks, "gdg_base_hz",
-                               (gint64)GDGCLK_BASE);
+                               (gint64)g_mzhal.gdgclk_base);
     json_object_set_int_member(clocks, "gdg_real_base_hz",
-                               (gint64)GDGCLK_REAL_BASE);
+                               (gint64)g_mzhal.gdgclk_real_base);
     json_object_set_int_member(clocks, "cpu_hz",
-                               (gint64)(GDGCLK_BASE / GDGCLK2CPU_DIVIDER));
-    json_object_set_int_member(clocks, "cpu_divider", GDGCLK2CPU_DIVIDER);
+                               (gint64)g_mzhal.cpu_hz);
+    json_object_set_int_member(clocks, "cpu_divider",
+                               (gint64)g_mzhal.gdgclk2cpu_divider);
     json_object_set_int_member(clocks, "ctc0_input_hz",
-                               (gint64)(GDGCLK_BASE / GDGCLK_CTC0_DIVIDER));
-    json_object_set_int_member(clocks, "ctc0_divider", GDGCLK_CTC0_DIVIDER);
-#if HAVE_PSG
-    json_object_set_int_member(clocks, "psg_input_hz",
-                               (gint64)(GDGCLK_BASE / PSG_DIVIDER));
-    json_object_set_int_member(clocks, "psg_divider", PSG_DIVIDER);
-#else
-    json_object_set_null_member(clocks, "psg_input_hz");
-    json_object_set_null_member(clocks, "psg_divider");
-#endif
+                               (gint64)g_mzhal.ctc0_input_hz);
+    json_object_set_int_member(clocks, "ctc0_divider",
+                               (gint64)g_mzhal.gdgclk_ctc0_divider);
+    if (g_mzhal.psg_count > 0) {
+        json_object_set_int_member(clocks, "psg_input_hz",
+                                   (gint64)(g_mzhal.gdgclk_base / g_mzhal.psg_divider));
+        json_object_set_int_member(clocks, "psg_divider",
+                                   (gint64)g_mzhal.psg_divider);
+    } else {
+        json_object_set_null_member(clocks, "psg_input_hz");
+        json_object_set_null_member(clocks, "psg_divider");
+    }
     json_object_set_null_member(clocks, "ctc1_input_hz");
     json_object_set_null_member(clocks, "ctc2_input_hz");
     json_object_set_string_member(clocks, "ctc12_note",
@@ -12327,35 +12317,35 @@ static en_MCP_DISPATCH_RESULT _handle_get_platform_info(
      * i logical display area (= canvas s border). */
     JsonObject *scanline = json_object_new();
     json_object_set_int_member(scanline, "screen_total_width_ticks",
-                               (gint64)VIDEO_SCREEN_WIDTH);
+                               (gint64)g_mzhal.video_screen_width);
     json_object_set_int_member(scanline, "screen_total_height_lines",
-                               (gint64)VIDEO_SCREEN_HEIGHT);
+                               (gint64)g_mzhal.video_screen_height);
     json_object_set_int_member(scanline, "screen_total_ticks_per_frame",
-                               (gint64)VIDEO_SCREEN_TICKS);
+                               (gint64)g_mzhal.video_screen_ticks);
     json_object_set_int_member(scanline, "screens_per_sec",
-                               (gint64)VIDEO_SCREENS_PER_SEC);
+                               (gint64)g_mzhal.video_screens_per_sec);
     json_object_set_int_member(scanline, "display_width",
-                               (gint64)VIDEO_DISPLAY_WIDTH);
+                               (gint64)g_mzhal.video_display_width);
     json_object_set_int_member(scanline, "display_height",
-                               (gint64)VIDEO_DISPLAY_HEIGHT);
+                               (gint64)g_mzhal.video_display_height);
     json_object_set_int_member(scanline, "canvas_width",
-                               (gint64)VIDEO_CANVAS_WIDTH);
+                               (gint64)g_mzhal.video_canvas_width);
     json_object_set_int_member(scanline, "canvas_height",
-                               (gint64)VIDEO_CANVAS_HEIGHT);
+                               (gint64)g_mzhal.video_canvas_height);
     json_object_set_int_member(scanline, "border_left_width",
-                               (gint64)VIDEO_BORDER_LEFT_WIDTH);
+                               (gint64)g_mzhal.video_border_left_width);
     json_object_set_int_member(scanline, "border_right_width",
-                               (gint64)VIDEO_BORDER_RIGHT_WIDTH);
+                               (gint64)g_mzhal.video_border_right_width);
     json_object_set_int_member(scanline, "border_top_height",
-                               (gint64)VIDEO_BORDER_TOP_HEIGHT);
+                               (gint64)g_mzhal.video_border_top_height);
     json_object_set_int_member(scanline, "border_bottom_height",
-                               (gint64)VIDEO_BORDER_BOTOM_HEIGHT);
+                               (gint64)g_mzhal.video_border_bottom_height);
     json_object_set_int_member(scanline, "h_sync_ticks",
-                               (gint64)VIDEO_H_SYNC_TICKS);
+                               (gint64)g_mzhal.video_h_sync_ticks);
     json_object_set_int_member(scanline, "h_back_porch_ticks",
-                               (gint64)VIDEO_H_BACK_PORCH_TICKS);
+                               (gint64)g_mzhal.video_h_back_porch_ticks);
     json_object_set_int_member(scanline, "h_front_porch_ticks",
-                               (gint64)VIDEO_H_FRONT_PORCH_TICKS);
+                               (gint64)g_mzhal.video_h_front_porch_ticks);
     json_object_set_object_member(data, "scanline", scanline);
 
     return _ok_response(req_id, data, out_response);

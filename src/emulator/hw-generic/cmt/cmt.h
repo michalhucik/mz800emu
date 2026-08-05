@@ -30,8 +30,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "hw-generic/gdg/gdgclk.h"
-#include "hw-generic/gdg/gdg.h"
+#include "mzarch/mzhal.h"
+#include "hw-generic/gdg/gdg_state.h"
 
 #include "cmtext.h"
 
@@ -100,10 +100,10 @@
     static inline double cmt_get_playtime ( void ) {
         if ( !CMT_TEST_FILLED ) return 0;
         if ( CMT_TEST_STOP ) return 0;
-        if ( CMT_TEST_PAUSED ) return g_cmt.paused_time * ( 1 / (double) GDGCLK_BASE );
+        if ( CMT_TEST_PAUSED ) return g_cmt.paused_time * ( 1 / (double) g_mzhal.gdgclk_base );
         uint64_t now_ticks = gdg_get_total_ticks ( );
         uint64_t play_ticks = ( now_ticks - g_cmt.start_time );
-        double play_time = play_ticks * ( 1 / (double) GDGCLK_BASE );
+        double play_time = play_ticks * ( 1 / (double) g_mzhal.gdgclk_base );
         return play_time;
     }
 

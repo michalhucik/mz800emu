@@ -25,6 +25,7 @@
 #ifdef MZ800EMU_CFG_MCP_SERVER_ENABLED
 
 #include "hid_keymap.h"
+#include "../mzarch/mzhal.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -37,7 +38,9 @@
 #include "../hw-generic/pio8255/pio8255.h"
 #endif
 
-#if !defined(MZ800EMU_MCP_TEST_BUILD) && defined(HAVE_JOY)
+/* V testovacím MCP stub buildu (MZ800EMU_MCP_TEST_BUILD) se skutečná
+ * implementace nahrazuje stubem níže. */
+#ifndef MZ800EMU_MCP_TEST_BUILD
 #include "../hw-generic/joy/joy.h"
 #endif
 
@@ -78,9 +81,7 @@ static const st_HID_KEYNAME_ENTRY g_keyname_table[] = {
     { "GRAPH",       0, 6, false },
     { "LIBRA",       0, 5, true  }, /* SHIFT + col0/bit5 */
     { "ALPHA",       0, 4, false },
-#if MZARCH == 800
-    { "TAB",         0, 3, false }, /* MZ-700/MZ-1500 klávesu TAB nemají */
-#endif
+    { "TAB",         0, 3, false }, /* jen MZ-800 - runtime filtr keyname_entry_supported() */
     { "RETURN",      0, 0, false },
     { "ENTER",       0, 0, false },
     { "CR",          0, 0, false },
@@ -178,6 +179,24 @@ bool hid_keymap_resolve_ascii(char c, st_HID_KEYMAP_RESOLVED *out_res) {
 }
 
 
+/**
+ * @brief Test, zda je entry tabulky dostupná na aktuální platformě.
+ *
+ * Jediný platformní rozdíl: klávesa TAB (col 0, bit 3) existuje jen na
+ * MZ-800 (g_mzhal.has_key_tab); MZ-700/MZ-1500 ji v HW matici nemají
+ * (mzhal krok 8 - dříve compile-time #if MZARCH == 800 u entry).
+ *
+ * @param e  Entry tabulky g_keyname_table (nesmí být NULL).
+ * @return true = entry na platformě existuje, false = filtrovat.
+ */
+static bool keyname_entry_supported(const st_HID_KEYNAME_ENTRY *e) {
+    if (!g_mzhal.has_key_tab && e->col == 0 && e->bit == 3) {
+        return false;
+    }
+    return true;
+}
+
+
 const char *hid_keymap_reverse_lookup(int col, int bit) {
     if (col < 0 || col > 9 || bit < 0 || bit > 7) {
         return NULL;
@@ -185,6 +204,7 @@ const char *hid_keymap_reverse_lookup(int col, int bit) {
     /* Lineární scan - tabulka má cca 40 entries, hot-path to není
      * (= volá se jen při explicit `keyboard/state` Resource read). */
     for (int i = 0; g_keyname_table[i].name != NULL; i++) {
+        if (!keyname_entry_supported(&g_keyname_table[i])) continue;
         if (g_keyname_table[i].col == col
                 && g_keyname_table[i].bit == bit
                 && !g_keyname_table[i].needs_shift) {
@@ -193,6 +213,7 @@ const char *hid_keymap_reverse_lookup(int col, int bit) {
     }
     /* Druhé kolo - povolíme i needs_shift entries (pro LIBRA atd.) */
     for (int i = 0; g_keyname_table[i].name != NULL; i++) {
+        if (!keyname_entry_supported(&g_keyname_table[i])) continue;
         if (g_keyname_table[i].col == col
                 && g_keyname_table[i].bit == bit) {
             return g_keyname_table[i].name;
@@ -210,17 +231,19 @@ bool hid_keymap_get_entry(int index,
     if (index < 0) {
         return false;
     }
-    /* Spočítej platná entries (= ne sentinel). */
-    int i = 0;
-    while (g_keyname_table[i].name != NULL) {
-        if (i == index) {
+    /* Spočítej platná entries (= ne sentinel); nepodporované entries
+     * (TAB mimo MZ-800) se přeskakují, indexy zůstávají husté. */
+    int valid = 0;
+    for (int i = 0; g_keyname_table[i].name != NULL; i++) {
+        if (!keyname_entry_supported(&g_keyname_table[i])) continue;
+        if (valid == index) {
             if (out_name)        *out_name        = g_keyname_table[i].name;
             if (out_col)         *out_col         = g_keyname_table[i].col;
             if (out_bit)         *out_bit         = g_keyname_table[i].bit;
             if (out_needs_shift) *out_needs_shift = g_keyname_table[i].needs_shift;
             return true;
         }
-        i++;
+        valid++;
     }
     return false;
 }
@@ -260,6 +283,7 @@ bool hid_keymap_resolve(const char *name, st_HID_KEYMAP_RESOLVED *out_res) {
     upper[nlen] = '\0';
 
     for (int i = 0; g_keyname_table[i].name != NULL; i++) {
+        if (!keyname_entry_supported(&g_keyname_table[i])) continue;
         if (strcmp(upper, g_keyname_table[i].name) == 0) {
             out_res->col = g_keyname_table[i].col;
             out_res->bit = g_keyname_table[i].bit;
@@ -310,7 +334,6 @@ void hid_keymap_release_all(void) {
 
 
 bool hid_keymap_joystick_set(int port, uint8_t mcp_mask) {
-#ifdef HAVE_JOY
     if (port < 0 || port >= JOY_DEVID_COUNT) {
         return false;
     }
@@ -326,11 +349,6 @@ bool hid_keymap_joystick_set(int port, uint8_t mcp_mask) {
     if (mcp_mask & (1 << 5)) native &= ~(1 << JOY_STATEBIT_TRIG2);
     g_joy.dev[port].state = native;
     return true;
-#else
-    (void)port;
-    (void)mcp_mask;
-    return false;
-#endif
 }
 
 

@@ -11,6 +11,7 @@
  */
 
 #include "main.h"
+#include "emulator/mzarch/mzhal.h"
 #include "libs/sdlapp/sdlapp.h"
 #include "ui-imgui/bootstrap/myimgui.h"
 #include "libs/imgui/imgui.h"
@@ -18,18 +19,15 @@
 
 #include "i18n.h"
 
-#include "mzarch/mzarch_config.h"
+#include "mzarch/mzcommon_config.h"
 
-#if CFG_HWEXT_HAVE_QDISK
 #include "hw-generic/qdisk/qdisk.h"
-#endif
 
 extern "C"
 {
     void imgui_qdisk_state_window(bool *p_open);
 }
 
-#if CFG_HWEXT_HAVE_QDISK
 
 /**
  * @brief Vykresli jeden radek tabulky "Reg | Hex | Bin" pro 8-bit hodnotu.
@@ -137,11 +135,10 @@ static void render_sio_channel_regs(const char *table_id, const st_QDSIO_CHANNEL
     }
 }
 
-#endif /* CFG_HWEXT_HAVE_QDISK */
 
 void imgui_qdisk_state_window(bool *p_open)
 {
-#if CFG_HWEXT_HAVE_QDISK
+    if (g_mzhal.have_qdisk) { /* runtime capability, mzhal krok 8 */
     ImGui::SetNextWindowSize(ImVec2(420, 600), ImGuiCond_FirstUseEver);
 
     if (!ImGui::Begin(_L("QDisk State"), p_open, ImGuiWindowFlags_NoCollapse))
@@ -230,7 +227,7 @@ void imgui_qdisk_state_window(bool *p_open)
     }
 
     ImGui::End();
-#else
+    } else {
     (void)p_open;
-#endif
+    }
 }

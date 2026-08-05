@@ -160,6 +160,14 @@ ifneq ($(RAM_FASTPATH_VERIFY),)
     CMAKE_CONFIGURE_FLAGS += -DMZ_RAM_FASTPATH_VERIFY=$(RAM_FASTPATH_VERIFY)
 endif
 
+# REPRO propagace: `make REPRO=1` zapne deterministický build pro
+# repro-diff srovnávání binárek (experiment mzhal). Volající skript musí
+# navíc nastavit SOURCE_DATE_EPOCH v prostředí. Viz MZ_REPRO_BUILD
+# v CMakeLists.txt.
+ifneq ($(REPRO),)
+    CMAKE_CONFIGURE_FLAGS += -DMZ_REPRO_BUILD=$(REPRO)
+endif
+
 # NO_DEBUGGER propagace: `make NO_DEBUGGER=1` vypne debugger subsystém
 # (vypne MZ800EMU_CFG_DEBUGGER_ENABLED v mzarch_config.h přes globální
 # define MZ800EMU_NO_DEBUGGER). Bez debuggeru je binárka cca o 15 %

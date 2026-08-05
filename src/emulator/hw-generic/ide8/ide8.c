@@ -49,6 +49,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <glib.h>
+#include "mzarch/mzhal.h"
 
 #include "fs_layer.h"
 #include "cfgmain.h"
@@ -230,13 +231,20 @@ void ide8_init(void)
     CFGELM *elm_conn_hdd0 = cfgmodule_register_new_element(cmod, "hdd0_connected", CFGENTYPE_BOOL, IDE8_STATE_DISCONNECTED);
     cfgelement_set_handlers(elm_conn_hdd0, NULL, (void *)&g_ide8.drive[IDE8_DRIVE_MASTER].connected);
 
-    elm = cfgmodule_register_new_element(cmod, "hdd0_filepath", CFGENTYPE_TEXT, IDE8_DEFAULT_FILEPATH_DRIVE0);
+    /* Defaultní jména obrazů runtime z g_mzhal (mzhal krok 7) -
+     * identická s dřívějšími compile-time "hdd<N>-" MZARCH_NAME ".img". */
+    static char default_hdd0[32];
+    static char default_hdd1[32];
+    snprintf(default_hdd0, sizeof(default_hdd0), "hdd0-%s.img", g_mzhal.arch_name);
+    snprintf(default_hdd1, sizeof(default_hdd1), "hdd1-%s.img", g_mzhal.arch_name);
+
+    elm = cfgmodule_register_new_element(cmod, "hdd0_filepath", CFGENTYPE_TEXT, default_hdd0);
     cfgelement_set_pointers(elm, (void *)&g_ide8.drive[IDE8_DRIVE_MASTER].filepath, (void *)&g_ide8.drive[IDE8_DRIVE_MASTER].filepath);
 
     CFGELM *elm_conn_hdd1 = cfgmodule_register_new_element(cmod, "hdd1_connected", CFGENTYPE_BOOL, IDE8_STATE_DISCONNECTED);
     cfgelement_set_handlers(elm_conn_hdd1, NULL, (void *)&g_ide8.drive[IDE8_DRIVE_SLAVE].connected);
 
-    elm = cfgmodule_register_new_element(cmod, "hdd1_filepath", CFGENTYPE_TEXT, IDE8_DEFAULT_FILEPATH_DRIVE1);
+    elm = cfgmodule_register_new_element(cmod, "hdd1_filepath", CFGENTYPE_TEXT, default_hdd1);
     cfgelement_set_pointers(elm, (void *)&g_ide8.drive[IDE8_DRIVE_SLAVE].filepath, (void *)&g_ide8.drive[IDE8_DRIVE_SLAVE].filepath);
 
     cfgmodule_parse(cmod);

@@ -78,7 +78,7 @@ uint8_t *iface_audio_resampler_process_audio_log(const st_AUDIO_SOURCE_LOG *sour
  */
 static inline float iface_audio_lowpass_filter(int channel, float input)
 {
-    static float prev_output[AUDIO_SRC_CHANNELS_COUNT] = {0};
+    static float prev_output[AUDIO_SRC_CHANNELS_MAX] = {0};
     float alpha = 0.4f; // Řízení útlumu vyšších frekvencí (čím menší, tím silnější filtr a vice útlumu na vyšších frekvencích)
 
     prev_output[channel] = alpha * input + (1.0f - alpha) * prev_output[channel];
@@ -94,8 +94,8 @@ static inline float iface_audio_lowpass_filter(int channel, float input)
  */
 static inline float iface_audio_lowpass_filter_2nd_order(int channel, float input)
 {
-    static float prev_output_1[AUDIO_SRC_CHANNELS_COUNT] = {0}; // Minulý výstup
-    static float prev_output_2[AUDIO_SRC_CHANNELS_COUNT] = {0}; // Předminulý výstup
+    static float prev_output_1[AUDIO_SRC_CHANNELS_MAX] = {0}; // Minulý výstup
+    static float prev_output_2[AUDIO_SRC_CHANNELS_MAX] = {0}; // Předminulý výstup
 
     float alpha = 0.1f; // Určuje agresivitu filtru (nižší = silnější filtr)
     float beta = 0.9f;  // Určuje vliv starších vzorků (vyšší = silnější útlum vyšších frekvencí)
@@ -116,10 +116,10 @@ static inline float iface_audio_lowpass_filter_2nd_order(int channel, float inpu
  */
 static inline float iface_audio_lowpass_filter_butterworth(int channel, float input)
 {
-    static float x1[AUDIO_SRC_CHANNELS_COUNT] = {0}; // Minulé vstupy
-    static float x2[AUDIO_SRC_CHANNELS_COUNT] = {0}; // Minulé vstupy
-    static float y1[AUDIO_SRC_CHANNELS_COUNT] = {0}; // Minulé výstupy
-    static float y2[AUDIO_SRC_CHANNELS_COUNT] = {0}; // Minulé výstupy
+    static float x1[AUDIO_SRC_CHANNELS_MAX] = {0}; // Minulé vstupy
+    static float x2[AUDIO_SRC_CHANNELS_MAX] = {0}; // Minulé vstupy
+    static float y1[AUDIO_SRC_CHANNELS_MAX] = {0}; // Minulé výstupy
+    static float y2[AUDIO_SRC_CHANNELS_MAX] = {0}; // Minulé výstupy
 
     // Koeficienty pro 2. řád Butterworthova filtru, fc = 4kHz, fs = 44.1kHz
     // const float b0 = 0.206572083826147;
@@ -156,7 +156,7 @@ static inline float iface_audio_lowpass_filter_butterworth(int channel, float in
  */
 static inline float iface_audio_anti_glitch_filter(int channel, float input)
 {
-    static float prev_value[AUDIO_SRC_CHANNELS_COUNT] = {0};
+    static float prev_value[AUDIO_SRC_CHANNELS_MAX] = {0};
     float smooth_factor = 0.2f; // Čím menší, tím pomalejší změna (pohlcuje lupání)
 
     float output = prev_value[channel] + smooth_factor * (input - prev_value[channel]);
@@ -166,7 +166,7 @@ static inline float iface_audio_anti_glitch_filter(int channel, float input)
 
 static inline float iface_audio_anti_glitch_limiter(int channel, float input)
 {
-    static float prev_value[AUDIO_SRC_CHANNELS_COUNT] = {0};
+    static float prev_value[AUDIO_SRC_CHANNELS_MAX] = {0};
     float max_delta = 0.2f; // Maximální povolený skok mezi vzorky
 
     float delta = input - prev_value[channel];
@@ -318,7 +318,7 @@ float *iface_audio_resampler_process_psg_audio_log(int channel, const st_AUDIO_S
     size_t event_index = 0;
     uint64_t total_time = source->samples[event_index].count_ticks;
 
-    // static float last_filtered[AUDIO_SRC_CHANNELS_COUNT] = {0}; // Uchováváme poslední filtrovaný vzorek pro plynulost
+    // static float last_filtered[AUDIO_SRC_CHANNELS_MAX] = {0}; // Uchováváme poslední filtrovaný vzorek pro plynulost
 
     for (size_t i = 0; i < samples_count; i++, current_time += step)
     {
@@ -342,10 +342,10 @@ float *iface_audio_resampler_process_psg_audio_log(int channel, const st_AUDIO_S
 #if 1
         uint8_t end_value = current_value;
         // Pokud je hodnota zaparkovaná na konstantni hodnote, tak postupne snizujeme hodnotu k 0
-        static uint8_t parking_previous_resampled[AUDIO_SRC_CHANNELS_COUNT] = {0};
-        static size_t parking_counter[AUDIO_SRC_CHANNELS_COUNT] = {0};
-        static float parking_gain[AUDIO_SRC_CHANNELS_COUNT] = {0};
-        static int parking_gain_counter[AUDIO_SRC_CHANNELS_COUNT] = {0};
+        static uint8_t parking_previous_resampled[AUDIO_SRC_CHANNELS_MAX] = {0};
+        static size_t parking_counter[AUDIO_SRC_CHANNELS_MAX] = {0};
+        static float parking_gain[AUDIO_SRC_CHANNELS_MAX] = {0};
+        static int parking_gain_counter[AUDIO_SRC_CHANNELS_MAX] = {0};
 
         if ((end_value == 0) || (end_value != parking_previous_resampled[channel]))
         {
@@ -382,7 +382,7 @@ float *iface_audio_resampler_process_psg_audio_log(int channel, const st_AUDIO_S
 #endif
 
         float iir_x = 6.0f;
-        static float sample_value[AUDIO_SRC_CHANNELS_COUNT] = {0}; // posledni hodnota pro IIR filtr
+        static float sample_value[AUDIO_SRC_CHANNELS_MAX] = {0}; // posledni hodnota pro IIR filtr
         sample_value[channel] = sample_value[channel] + (resampled - sample_value[channel]) / iir_x;
         float filtered1 = sample_value[channel];
 
@@ -437,8 +437,8 @@ float *iface_audio_resampler_output_stream_psg(int channel, const uint8_t *input
     };
 
     double ratio = (double)input_samples_count / (double)output_samples_count;
-    static float last_filtered[AUDIO_SRC_CHANNELS_COUNT] = {0}; // Uchováváme poslední filtrovaný vzorek pro plynulost
-    // static float last_sampled_value[AUDIO_SRC_CHANNELS_COUNT] = {0};
+    static float last_filtered[AUDIO_SRC_CHANNELS_MAX] = {0}; // Uchováváme poslední filtrovaný vzorek pro plynulost
+    // static float last_sampled_value[AUDIO_SRC_CHANNELS_MAX] = {0};
 
     for (size_t i = 0; i < output_samples_count; i++)
     {
@@ -464,10 +464,10 @@ float *iface_audio_resampler_output_stream_psg(int channel, const uint8_t *input
 
 #if 1
         // Pokud je hodnota zaparkovaná na konstantni hodnote, tak postupne snizujeme hodnotu k 0
-        static uint8_t parking_previous_resampled[AUDIO_SRC_CHANNELS_COUNT] = {0};
-        static size_t parking_counter[AUDIO_SRC_CHANNELS_COUNT] = {0};
-        static float parking_gain[AUDIO_SRC_CHANNELS_COUNT] = {0};
-        static int parking_gain_counter[AUDIO_SRC_CHANNELS_COUNT] = {0};
+        static uint8_t parking_previous_resampled[AUDIO_SRC_CHANNELS_MAX] = {0};
+        static size_t parking_counter[AUDIO_SRC_CHANNELS_MAX] = {0};
+        static float parking_gain[AUDIO_SRC_CHANNELS_MAX] = {0};
+        static int parking_gain_counter[AUDIO_SRC_CHANNELS_MAX] = {0};
 
         if ((end_value == 0) || (end_value != parking_previous_resampled[channel]))
         {
@@ -504,7 +504,7 @@ float *iface_audio_resampler_output_stream_psg(int channel, const uint8_t *input
 #endif
 
         // float iir_x = 4.0f;
-        // static float sample_value[AUDIO_SRC_CHANNELS_COUNT] = {0}; // posledni hodnota pro IIR filtr
+        // static float sample_value[AUDIO_SRC_CHANNELS_MAX] = {0}; // posledni hodnota pro IIR filtr
         // sample_value[channel] = sample_value[channel] + (resampled - sample_value[channel]) / iir_x;
         // float filtered1 = sample_value[channel];
 

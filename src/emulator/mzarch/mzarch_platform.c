@@ -1,5 +1,7 @@
+#include "mzarch/mzarch_config.h" /* capability makra - dříve tranzitivně přes main.h (mzhal 11c-1) */
 #include "main.h"
 #include "mzarch_platform.h"
+#include "mztvsys.h"
 #include "hw-generic/gdg/gdgclk.h"
 #include <stdio.h>
 

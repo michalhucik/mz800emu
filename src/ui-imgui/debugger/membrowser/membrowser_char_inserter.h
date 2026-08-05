@@ -33,7 +33,7 @@
 #ifndef MEMBROWSER_CHAR_INSERTER_H
 #define MEMBROWSER_CHAR_INSERTER_H
 
-#include "mzarch/mzarch_config.h"
+#include "mzarch/mzcommon_config.h"
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
 

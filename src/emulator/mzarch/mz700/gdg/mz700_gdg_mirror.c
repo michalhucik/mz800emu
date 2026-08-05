@@ -27,10 +27,11 @@ void gdg_mirror_snapshot(st_GDG_MIRROR_MZ700 *out)
 
     memset(out, 0, sizeof(*out));
 
-    /* DMD registr + dekód bitů. */
-    out->regDMD        = (uint8_t)(g_gdg.regDMD & 0x03u);
-    out->dmd_mode700   = (g_gdg.regDMD & REGISTER_DMD_FLAG_MZ700_MODE) ? 1u : 0u;
-    out->dmd_pmode_bfp = (g_gdg.regDMD & REGISTER_DMD_FLAG_MZ700_PRIO) ? 1u : 0u;
+    /* Reálný MZ-700 DMD registr nemá (porty 0xF0/0xF1 nedekóduje) -
+     * regDMD je trvale 0, mirror ukazuje klidové hodnoty. */
+    out->regDMD        = 0u;
+    out->dmd_mode700   = 0u;
+    out->dmd_pmode_bfp = 0u;
 
     /* Border - MZ-700 nema border port, regBOR je vzdy 0, ale kopie pro
      * symetrii s MZ-800 mirror. */
@@ -38,7 +39,7 @@ void gdg_mirror_snapshot(st_GDG_MIRROR_MZ700 *out)
 
     /* Paleta MZ-700 - 8 indexu, port 0xF1. */
     for (unsigned i = 0; i < 8; ++i) {
-        out->mode700_color[i] = g_gdg.mode700_color[i];
+        out->mode700_color[i] = g_gdg.mode_color[i];
     }
 
     /* Raster pozice. */

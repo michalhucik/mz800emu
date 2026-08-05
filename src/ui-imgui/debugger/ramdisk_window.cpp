@@ -15,6 +15,7 @@
  */
 
 #include "main.h"
+#include "emulator/mzarch/mzhal.h"
 #include "libs/sdlapp/sdlapp.h"
 #include "ui-imgui/bootstrap/myimgui.h"
 #include "libs/imgui/imgui.h"
@@ -22,18 +23,13 @@
 
 #include "i18n.h"
 
-#include "mzarch/mzarch_config.h"
-
-#if CFG_HWEXT_HAVE_RAMDISK
 #include "hw-generic/ramdisk/ramdisk.h"
-#endif
 
 extern "C"
 {
     void imgui_ramdisk_state_window(bool *p_open);
 }
 
-#if CFG_HWEXT_HAVE_RAMDISK
 
 /**
  * @brief Vrati textovou reprezentaci en_RAMDISK_TYPE standardniho ramdisku.
@@ -126,14 +122,13 @@ static void render_pezik_section(int pezik_type)
     ImGui::Text("memory:    %s", p->memory ? "allocated" : "NULL");
 }
 
-#endif /* CFG_HWEXT_HAVE_RAMDISK */
 
 /**
  * @brief Render Memory Disk State debugger okno (viz ramdisk_window.h).
  */
 void imgui_ramdisk_state_window(bool *p_open)
 {
-#if CFG_HWEXT_HAVE_RAMDISK
+    if (g_mzhal.have_ramdisk) { /* runtime capability, mzhal krok 8 */
     ImGui::SetNextWindowSize(ImVec2(440, 420), ImGuiCond_FirstUseEver);
 
     if (!ImGui::Begin(_L("Memory Disk State"), p_open, ImGuiWindowFlags_NoCollapse))
@@ -149,12 +144,12 @@ void imgui_ramdisk_state_window(bool *p_open)
     }
 
     /* === Pezik 0xE8 - 0xEF === (jen MZ-700/MZ-800; MZ-1500 tento port nema) */
-#if MZARCH != 1500
-    if (ImGui::CollapsingHeader(_L("Pezik 0xE8 - 0xEF"), 0))
+/* Pezik E8 nelze na MZ-1500 (kolize portu 0xE8-0xEF) - runtime dle arch. */
+    if (g_mzhal.arch != 1500
+        && ImGui::CollapsingHeader(_L("Pezik 0xE8 - 0xEF"), 0))
     {
         render_pezik_section(RAMDISK_PEZIK_E8);
     }
-#endif
 
     /* === Pezik 0x68 - 0x6F === */
     if (ImGui::CollapsingHeader(_L("Pezik 0x68 - 0x6F"), 0))
@@ -163,7 +158,7 @@ void imgui_ramdisk_state_window(bool *p_open)
     }
 
     ImGui::End();
-#else
+    } else {
     (void)p_open;
-#endif
+    }
 }

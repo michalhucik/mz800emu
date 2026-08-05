@@ -29,10 +29,14 @@ mz_add_test(mcp_jsonl_parser
 
 # Override compile definitions na samotný test target - potřebuje:
 #   MZ800EMU_MCP_TEST_BUILD - vypne include mzarch_config.h v jsonl_io.c
-#   MZ800EMU_CFG_MCP_SERVER_ENABLED - aktivuje tělo jsonl_io.c
+#   MZ800EMU_CFG_MCP_SERVER_ENABLED= - aktivuje tělo jsonl_io.c; prázdná
+#                hodnota (=) drží definici identickou s mzcommon_config.h,
+#                která se do některých TU dostane include řetězem (jinak
+#                gcc hlásí "redefined")
 target_compile_definitions(test_mcp_jsonl_parser PRIVATE
     MZ800EMU_MCP_TEST_BUILD
-    MZ800EMU_CFG_MCP_SERVER_ENABLED
+    MZ800EMU_CFG_MCP_SERVER_ENABLED=
+    MZTVSYS=MZTVSYS_PAL
 )
 
 # Linkneme json-glib + glib (jsonl_io.c je na nich závislý).
@@ -64,7 +68,8 @@ mz_add_test(mcp_dispatch
 
 target_compile_definitions(test_mcp_dispatch PRIVATE
     MZ800EMU_MCP_TEST_BUILD
-    MZ800EMU_CFG_MCP_SERVER_ENABLED
+    MZ800EMU_CFG_MCP_SERVER_ENABLED=
+    MZTVSYS=MZTVSYS_PAL
 )
 
 target_link_libraries(test_mcp_dispatch PRIVATE
@@ -116,6 +121,45 @@ if(Python3_FOUND)
     # subprocess, takže by neměl běžet souběžně se sám sebou. Žádný
     # RESOURCE_LOCK protože různé MZARCH targets nesdílíme.
     message(STATUS "  tests/mcp: registered mcp_pipe_e2e "
+                   "(Python ${Python3_VERSION})")
+
+    # -----------------------------------------------------------
+    # Shutdown smoke: teardown kontrakt s aktivnim MCP (mzhal krok 12)
+    # -----------------------------------------------------------
+    # Spawne mz800emu --mcp-pipe a posle shutdown, zatimco background
+    # vlakno dal hazi get_registers requesty. Overi zavazne poradi
+    # g_thread_join -> MCP/dbgapi shutdown -> emulator_teardown()
+    # (UAF v teardownu = nenulovy exit / hang -> FAIL).
+    add_test(
+        NAME    mcp_shutdown_smoke
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_shutdown_smoke.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_shutdown_smoke PROPERTIES
+        LABELS  "e2e;mcp;pipe"
+        TIMEOUT 60
+    )
+    message(STATUS "  tests/mcp: registered mcp_shutdown_smoke "
+                   "(Python ${Python3_VERSION})")
+
+    # -----------------------------------------------------------
+    # Speed-layer smoke (mzhal, 2026-08-04)
+    # -----------------------------------------------------------
+    # Overi, ze emulator NEstartuje paused, set_speed max se ujme a
+    # run_until_tstate realne utraci cykly (delta_cycles > 0). Kryje
+    # diru v pokryti: "bench nuly / delta 0" = typicky paused emu.
+    add_test(
+        NAME    mcp_speed_smoke
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_speed_smoke.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_speed_smoke PROPERTIES
+        LABELS  "e2e;mcp;pipe;speed"
+        TIMEOUT 60
+    )
+    message(STATUS "  tests/mcp: registered mcp_speed_smoke "
                    "(Python ${Python3_VERSION})")
 
     # -----------------------------------------------------------

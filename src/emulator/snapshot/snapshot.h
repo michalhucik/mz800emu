@@ -44,6 +44,7 @@ typedef enum en_SNAPSHOT_RESULT {
     SNAPSHOT_ERR_ALLOC,           /* Chyba alokace paměti */
     SNAPSHOT_ERR_EXTERNAL_REF,    /* Chybí referenční externí soubor */
     SNAPSHOT_ERR_NOT_PAUSED,      /* Emulátor není v pauze */
+    SNAPSHOT_ERR_TVSYS,           /* Nekompatibilní TV systém (PAL vs NTSC) */
 } en_SNAPSHOT_RESULT;
 
 
@@ -81,6 +82,8 @@ typedef struct st_SNAPSHOT_METADATA {
     char emulator_version[64];    /* Verze emulátoru */
     char created[32];             /* Datum a čas vytvoření */
     int architecture;             /* MZARCH hodnota: 700, 800, 1500 */
+    int tvsys;                    /* MZTVSYS hodnota: 50 = PAL, 60 = NTSC;
+                                     0 = legacy snapshot bez pole <tvsys> */
     uint32_t format_version;      /* Verze formátu snapshotu */
     char checksum[65];            /* SHA-256 hash (64 hex znaků + null) */
 } st_SNAPSHOT_METADATA;

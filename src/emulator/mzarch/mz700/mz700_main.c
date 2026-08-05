@@ -21,9 +21,7 @@
 #include "hw-generic/psg/psg.h"
 #include "audio.h"
 
-#if HAVE_JOY
 #include "hw-generic/joy/joy.h"
-#endif /* HAVE_JOY */
 #include "hw-generic/joy/joymz-1x03.h"
 
 /*******************************************************************************
@@ -184,9 +182,7 @@ void mzarch_platform_fn_init(void)
     qdisk_init();
 #endif
 
-#if HAVE_JOY
     joy_init();
-#endif
 
     /* MZ-1X03 joystick (analogovy, MZ-700/MZ-1500 only). */
     joymz_init();

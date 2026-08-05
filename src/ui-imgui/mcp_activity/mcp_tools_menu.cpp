@@ -41,7 +41,7 @@
 #include "i18n.h"
 #include "mcp_tools_menu.h"
 
-#include "emulator/mzarch/mzarch_config.h"
+#include "emulator/mzarch/mzcommon_config.h"
 
 #ifdef MZ800EMU_CFG_MCP_TCP_ENABLED
 #include "emulator/mcp/tcp_server.h"

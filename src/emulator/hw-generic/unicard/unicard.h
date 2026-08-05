@@ -37,7 +37,7 @@ extern "C" {
 #include <stdint.h>
 #include <glib.h>
 
-#include "mzarch/mzarch_config.h"  /* MZ_PLATFORM_SUFFIX per-arch */
+#include "mzarch/mzcommon_config.h"
 
 #ifdef UNICARD_EMULATED
 #include "ff_result.h"
@@ -714,10 +714,11 @@ extern "C" {
 
 #define UNICARD_TEST_IS_CONNECTED ( g_unicard.connected == UNICARD_CONNECTION_CONNECTED )
 
-/* Default Unicard SD root obsahuje arch suffix - kazda platforma ma
- * vlastni adresar (drive sdilene "SD" davaly zmatecny obsah pri
- * prepinani targetu mezi MZ-700/800/1500). */
-#define UNICARD_DEFAULT_SD_ROOT     "SD-" MZ_PLATFORM_SUFFIX
+/* Default Unicard SD root obsahuje arch suffix ("SD-<arch>") - kazda
+ * platforma ma vlastni adresar (drive sdilene "SD" davaly zmatecny obsah
+ * pri prepinani targetu mezi MZ-700/800/1500). Od mzhal kroku 7 se
+ * sklada RUNTIME z g_mzhal.arch_name - viz unicard_default_sd_root()
+ * v unicard.c; compile-time makro z MZ_PLATFORM_SUFFIX zruseno. */
 #define UNICARD_DEFAULT_DIR_MODE     0775
 
 #define UNICARD_UNIMGR_DIR                  "unicard"

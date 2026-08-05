@@ -1,4 +1,5 @@
 #include "main.h"
+#include "emulator/mzarch/mzhal.h"
 #ifdef WINDOWS
 #include <windows.h>
 #endif
@@ -15,7 +16,7 @@
 #include "iface-video/sdl3/iface_sdl3_events.h"
 #include "ui-imgui/imgui_windows.h"
 #include "emulator/cfgmain.h"
-#include "mzarch/mzarch_config.h"
+#include "mzarch/mzcommon_config.h"
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
 #include "ui-imgui/debugger/eventview/event_viewer_window.h"
 #include "ui-imgui/debugger/profiler/profiler_window.h"
@@ -34,8 +35,8 @@
 //#define IFACE_WINDOW_SCALE DISPLAY_DEFAULT_SCALE
 #define IFACE_WINDOW_SCALE 1.0f
 
-#define IFACE_WINDOW_WIDTH VIDEO_DISPLAY_WIDTH
-#define IFACE_WINDOW_HEIGHT (VIDEO_DISPLAY_HEIGHT * 2)
+#define IFACE_WINDOW_WIDTH (g_mzhal.video_display_width)
+#define IFACE_WINDOW_HEIGHT (g_mzhal.video_display_height * 2)
 #define IFACE_SCREEN_ASPECT_RATIO ((float)IFACE_WINDOW_WIDTH / IFACE_WINDOW_HEIGHT)
 
 typedef struct SdlappMyImGuiVideo_t

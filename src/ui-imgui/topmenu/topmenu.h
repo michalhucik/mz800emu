@@ -57,9 +57,9 @@ extern "C"
 
 void imgui_menu_mz800_dip_switch(void);
 
-#if MZARCH == 800
-    void imgui_menu_mz800_hw_compat(void);
-#endif
+/* Implementace jen v mz800 per-arch stromu (ui-imgui/mz800/);
+ * volajici musi volani gatovat per-EXE nebo mit per-arch stub. */
+void imgui_menu_mz800_hw_compat(void);
 
     void imgui_customspeed_setup(void);
     void imgui_menu_snapshot(void);

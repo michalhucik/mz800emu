@@ -10,6 +10,8 @@
  */
 
 #include "main.h"
+#include "emulator/mzarch/mzhal.h"
+#include "mzarch/mzcommon_config.h"
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
 
@@ -323,7 +325,9 @@ static uint8_t eventlog_get_banking_summary ( void )
     en_MEMMAP_REGION_KIND p0  = memmap_query ( 0 );
     en_MEMMAP_REGION_KIND p14 = memmap_query ( 14 );
 
-#if MZARCH == 800
+    /* Runtime dle g_mzhal.arch (mzhal 11f) - klasifikace ambient
+     * banking je per arch, enum hodnoty jsou zmrazeny trace kontrakt. */
+    if (g_mzhal.arch == 800) {
     /* MZ-800 (native i MZ-700 compat mode). */
     en_MEMMAP_REGION_KIND p8  = memmap_query ( 8 );
     en_MEMMAP_REGION_KIND p10 = memmap_query ( 10 );
@@ -354,7 +358,8 @@ static uint8_t eventlog_get_banking_summary ( void )
     }
     return EVENTLOG_AMBIENT_BANKING_OTHER;
 
-#elif MZARCH == 700
+    }
+    if (g_mzhal.arch == 700) {
     /* MZ-700 - jednodušší banking: ROM low + ROM high + RAM + speciální
      * regiony 0xD000-0xE00F (VRAM_TEXT / CGRAM / MAPPED_PORTS). */
     bool low_rom  = ( p0  == MEMMAP_KIND_ROM_LOW );
@@ -374,7 +379,8 @@ static uint8_t eventlog_get_banking_summary ( void )
     }
     return EVENTLOG_AMBIENT_BANKING_OTHER;
 
-#elif MZARCH == 1500
+    }
+    if (g_mzhal.arch == 1500) {
     /* MZ-1500 - ROM_LOW / ROM_HIGH + SPEC banky (CGROM / PCG_1/2/3) v
      * 0xD000-0xEFFF. Klíčové = page 13 (0xD000). */
     en_MEMMAP_REGION_KIND p13 = memmap_query ( 13 );
@@ -398,10 +404,8 @@ static uint8_t eventlog_get_banking_summary ( void )
         return EVENTLOG_AMBIENT_BANKING_PCG_HIGH;
     }
     return EVENTLOG_AMBIENT_BANKING_OTHER;
-
-#else
-#  error "Unknown MZARCH value"
-#endif
+    }
+    return EVENTLOG_AMBIENT_BANKING_OTHER;
 }
 
 

@@ -40,23 +40,18 @@
 
 #include "i18n.h"
 
-#include "mzarch/mzarch_config.h"
-
 #include "ui-imgui/plotter/plotter_window.h"
 
-#if (MZARCH == 800) || (MZARCH == 1500)
 #include "emulator/hw-generic/mz1p16/mz1p16.h"
 #include "emulator/hw-generic/mz1p16/mz1p16_emu.h"
 #include "emulator/debugger/png_encode.h"
 #include "baseui/baseui_filechooser.h"
-#endif
+#include "emulator/mzarch/mzhal.h"
 
 extern "C"
 {
     void imgui_plotter_window(bool *p_open);
 }
-
-#if (MZARCH == 800) || (MZARCH == 1500)
 
 /* --- Stav okna (UI-only) --- */
 
@@ -363,11 +358,15 @@ static void plotter_save_dialog()
         fprintf(stderr, "%s(%d): filechooser error\n", __FILE__, __LINE__);
 }
 
-#endif /* (MZARCH == 800) || (MZARCH == 1500) */
 
 void imgui_plotter_window(bool *p_open)
 {
-#if (MZARCH == 800) || (MZARCH == 1500)
+    /* Plotter vyzaduje Z80 PIO - na MZ-700 je okno no-op (menu ho
+     * nenabizi, runtime gate dle g_mzhal). */
+    if (!g_mzhal.have_pioz80) {
+        (void)p_open;
+        return;
+    }
     /* Okno je JEDINÁ autorita nad aktivací plotteru: kdykoliv se viditelnost
      * okna a stav aktivace jádra rozejdou, sesynchronizuj je. Pokrývá to i
      * počáteční rozjezd (INI [MZ1P16] active / CLI --mz1p16 mohou nastavit
@@ -521,7 +520,4 @@ void imgui_plotter_window(bool *p_open)
     mz1p16_emu_unlock();
 
     ImGui::End();
-#else
-    (void)p_open;
-#endif
 }

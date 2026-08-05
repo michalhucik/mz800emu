@@ -104,19 +104,15 @@ typedef enum en_IDE8_BUSMODE
 #define IDE8_DEFAULT_NIPOS_GEO_S 64
 #define IDE8_MAX_IMG_BLOCKS (IDE8_DEFAULT_NIPOS_GEO_C * IDE8_DEFAULT_NIPOS_GEO_H * IDE8_DEFAULT_NIPOS_GEO_S)
 
-/* Default filenames pro IDE8 disky - per-arch (= aby MZ-800/MZ-700/MZ-1500
- * měl každý vlastní výchozí HDD obrazy a neházely se přes sebe v cfg_dir).
- *
- * MZARCH_NAME ("mz800" / "mz700" / "mz1500") je C string literál definovaný
- * přes target_compile_definitions v cmake/AddMzEmu.cmake; preprocessor
- * concatenuje sousední string literály do jednoho - výsledek je např.
- * "hdd0-mz800.img".
+/* Default filenames pro IDE8 disky jsou per-arch ("hdd0-mz800.img", ...)
+ * - aby MZ-800/MZ-700/MZ-1500 měl každý vlastní výchozí HDD obrazy a
+ * neházely se přes sebe v cfg_dir. Od mzhal kroku 7 se skládají RUNTIME
+ * z g_mzhal.arch_name v ide8_cfg registraci (ide8.c), compile-time
+ * makra zrušena.
  *
  * Když config vrátí relativní cestu, ide8_drive_open_image() ji resolvuje
  * proti cfg_dir. Absolutní cesty (uživatelem vybrané ve file dialogu) se
  * použijí přímo. */
-#define IDE8_DEFAULT_FILEPATH_DRIVE0 "hdd0-" MZARCH_NAME ".img"
-#define IDE8_DEFAULT_FILEPATH_DRIVE1 "hdd1-" MZARCH_NAME ".img"
 
 typedef struct st_IDE8_DRIVE
 {

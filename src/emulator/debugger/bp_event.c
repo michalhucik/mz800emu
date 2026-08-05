@@ -24,7 +24,8 @@
  * ---------------------------------------------------------------------------
  */
 
-#include "mzarch/mzarch_config.h"
+#include "mzarch/mzcommon_config.h"
+#include "mzarch/mzhal.h"
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
 
@@ -130,13 +131,12 @@ void bp_event_set_active ( en_BP_EVENT event, bool active ) {
 
 
 bool bp_event_is_supported_on_current_arch ( en_BP_EVENT event ) {
+    /* Runtime dle g_mzhal (mzhal krok 8) - drive compile-time #if. */
     switch ( event ) {
-#if !HAVE_PIOZ80
         case BP_EVENT_IRQ_PIOZ80_A:
         case BP_EVENT_IRQ_PIOZ80_B:
-            return false;
-#endif
-#if MZARCH != 800
+            return g_mzhal.have_pioz80 ? true : false;
+
         /* GDG change eventy - jen MZ-800 ma DMD/palette/palgrp/border ve
          * full forme. MZ-1500 a MZ-700 fire mode_change/palette_change s
          * jinou semantikou (jiny register layout) a nemaji palgrp/border
@@ -145,8 +145,8 @@ bool bp_event_is_supported_on_current_arch ( en_BP_EVENT event ) {
         case BP_EVENT_GDG_PALETTE_CHANGE:
         case BP_EVENT_GDG_PALGRP_CHANGE:
         case BP_EVENT_GDG_BORDER_CHANGE:
-            return false;
-#endif
+            return (g_mzhal.arch == 800) ? true : false;
+
         default:
             return true;
     }

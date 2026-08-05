@@ -26,9 +26,8 @@
 #include "emulator/debugger/trace/reclife.h"
 #include "emulator/debugger/trace/eventlog.h"
 #include "emulator/mzarch/mzarch.h"
-#if HAVE_PIOZ80
+#include "emulator/mzarch/mzhal.h"
 #include "hw-generic/pioz80/pioz80.h"
-#endif
 
 st_INTLOG_CONFIG g_intlog_config;
 int g_intlog_active = 0;
@@ -37,13 +36,11 @@ static st_TLOG_WRITER s_writer;
 static int s_writer_open = 0;
 
 static uint8_t s_prev_interrupt = 0;
-#if HAVE_PIOZ80
 /* Předchozí masked_input pro PA / PB - per-bit detekce hran. */
 static uint8_t s_prev_pioz80_pa_masked = 0;
 static uint8_t s_prev_pioz80_pb_masked = 0;
 /* Předchozí PIO_STATE bitmaska (READY+ARMED) pro detekci change. */
 static uint32_t s_prev_pio_state_bits = 0;
-#endif
 
 /**
  * @brief Mapování @ref en_INTLOG_EVENT_CLASS na @ref en_EVENTLOG_CATEGORY.
@@ -221,7 +218,7 @@ void intlog_poll_interrupt_state ( uint8_t current_interrupt )
     }
     s_prev_interrupt = current_interrupt;
 
-#if HAVE_PIOZ80
+    if (g_mzhal.have_pioz80) { /* runtime capability (mzhal krok 8) */
     /* Per-pin granularita PIOZ80@P[A,B][0..7]. masked_input je interní stav
      * po io_mask + invert (iclvl) + filter (icmask) - reflektuje ty piny,
      * které "by triggerovaly INT" v aktuální konfiguraci. Diff vs předchozí
@@ -249,7 +246,7 @@ void intlog_poll_interrupt_state ( uint8_t current_interrupt )
         intlog_record_pio_state ( state );
         s_prev_pio_state_bits = state;
     }
-#endif
+    }
 }
 
 
@@ -280,7 +277,7 @@ static char *build_subsys_header_json ( void )
     json_builder_set_member_name ( b, "initial_interrupt_bus" );
     json_builder_add_int_value ( b, s_prev_interrupt );
 
-#if HAVE_PIOZ80
+    if (g_mzhal.have_pioz80) { /* runtime capability (mzhal krok 8) */
     /* PIOZ80 baseline (snapshot interních registrů) - umožní externí
      * re-simulaci interrupt subsystému start od přesného stavu. */
     json_builder_set_member_name ( b, "initial_pioz80" );
@@ -302,7 +299,7 @@ static char *build_subsys_header_json ( void )
 
 #undef ADD_PIO_INT
     json_builder_end_object ( b );
-#endif
+    }
 
     json_builder_end_object ( b );
 
@@ -341,7 +338,7 @@ int intlog_start ( void )
     }
     s_writer_open = 1;
     s_prev_interrupt = 0;
-#if HAVE_PIOZ80
+    if (g_mzhal.have_pioz80) { /* runtime capability (mzhal krok 8) */
     /* Inicializace per-pin PIOZ80 baseline z aktuálního masked_input -
      * první poll po startu nevygeneruje "false edges" z dříve nastavených
      * stavů (= eventy logujeme jen pro skutečné změny po startu). */
@@ -354,7 +351,7 @@ int intlog_start ( void )
          || g_pioz80.port[ PIOZ80_PORT_B ].icena == PIOZ80_ICENA_ENABLED ) {
         s_prev_pio_state_bits |= INTLOG_STATE_BIT_PIO_ARMED;
     }
-#endif
+    }
     char *hdr = build_subsys_header_json ( );
     tlog_writer_update_meta ( &s_writer, hdr );
     g_free ( hdr );

@@ -15,7 +15,6 @@
 #include "iface_joy.h"
 #include "libs/sdlapp/sdl3_backend/sdl3_backend.h"
 
-#if HAVE_JOY
 
 st_IFACE_JOY g_iface_joy = {0};
 
@@ -328,4 +327,3 @@ void iface_joy_get_calibration(void)
     g_print("Joystick calibration: SDL3 gamepad API kalibruje automaticky\n");
 }
 
-#endif /* HAVE_JOY */

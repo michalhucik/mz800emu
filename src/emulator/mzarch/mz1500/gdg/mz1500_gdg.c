@@ -41,6 +41,7 @@
  */
 
 #include <stdio.h>
+#include <assert.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
@@ -63,7 +64,7 @@
 // #define framebuffer_border_changed()
 // #define framebuffer_MZ800_screen_changed()
 
-st_GDG g_gdg;
+st_GDG g_gdg __attribute__((aligned(64)));
 
 /* Eventy musi byt serazeny vzestupne podle event_column ! */
 const struct st_GDGEVENT g_gdgevent[] = {
@@ -106,6 +107,8 @@ const struct st_GDGEVENT g_gdgevent[] = {
 
 void gdg_init(void)
 {
+    /* Redzone poison superset st_GDG (mzhal 9c-3). */
+    gdg_redzone_fill(&g_gdg);
 
     g_gdg.total_elapsed.ticks = 0;
     g_gdg.total_elapsed.screens = 0;
@@ -135,9 +138,6 @@ void gdg_init(void)
 
     g_vramctrl.mz700_wr_latch_is_used = 0;
 
-#ifdef MZ800EMU_CFG_CLK1M1_SLOW
-    g_gdg.ctc0clk = 0;
-#endif
 }
 
 static inline void gdg_set_regDMD(uint8_t value, unsigned event_ticks)
@@ -154,11 +154,17 @@ static inline void gdg_set_regDMD(uint8_t value, unsigned event_ticks)
 
 void gdg_reset(void)
 {
+    /* Detekce korupce sousednich sekci supersetu (mzhal 9c-3);
+     * v debug buildu tvrdy assert, v release jen log. */
+    if (!gdg_redzone_check(&g_gdg)) {
+        fprintf(stderr, "GDG: redzone corrupted (detected at reset)\n");
+        assert(0 && "GDG redzone corrupted");
+    }
     g_gdg.regct53g7 = 0;
     gdg_set_regDMD(0, 0); /* MZ-1500: reset = MZ-700 rezim (bit 0 = 0) */
 
     /* MZ-1500 barevna paleta — vychozi hodnoty */
-    memset(g_gdg.mode1500_color, 0, sizeof(g_gdg.mode1500_color));
+    memset(g_gdg.mode_color, 0, sizeof(g_gdg.mode_color));
 
     g_gdg.regBOR = 0; /* MZ-1500 nema border port, vzdy cerny */
 
@@ -183,7 +189,7 @@ uint8_t gdg_read_dmd_status_memop(void)
     retval |= SIGNAL_GDG_TEMPO;
     /* MZ-1X03 joystick: pouze pokud je alespon jeden joy device aktivni v
      * iface_joy konfiguraci. Makro JOYMZ_TEST_ANY_ACTIVE compile-out na 0
-     * pri HAVE_JOY=0 (= cely if-branch zmizi). */
+     * kdyz zadny joystick neni nakonfigurovany. */
     if ( JOYMZ_TEST_ANY_ACTIVE ) {
         retval = (retval & ~0x1E)
                | (joymz_get_status_bits14( gdg_get_total_ticks() ) & 0x1E);
@@ -263,9 +269,9 @@ void gdg_write_byte(unsigned addr, uint8_t value)
         /* MZ-1500: barevna paleta — bity 4-6 = index (0-7), bity 0-2 = barva (0-7) */
         int i = (value >> 4) & 0x07;
         int color = value & 0x07;
-        if (g_gdg.mode1500_color[i] != color)
+        if (g_gdg.mode_color[i] != color)
         {
-            g_gdg.mode1500_color[i] = color;
+            g_gdg.mode_color[i] = color;
             g_framebuffer.screen_changes = SCRSTS_THIS_IS_CHANGED;
         };
         break;

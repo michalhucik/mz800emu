@@ -72,7 +72,7 @@ uint8_t port_read_cb(z80_t *cpu, uint16_t addr, void *user_data)
         };
         break;
 
-#ifdef CFG_HWEXT_HAVE_RAMDISK
+#if CFG_HWEXT_HAVE_RAMDISK
     case 0x68:
     case 0x69:
     case 0x6a:
@@ -94,7 +94,7 @@ uint8_t port_read_cb(z80_t *cpu, uint16_t addr, void *user_data)
         break;
 #endif
 
-#ifdef CFG_HWEXT_HAVE_IDE8
+#if CFG_HWEXT_HAVE_IDE8
     case 0x78:
     case 0x79:
     case 0x7a:
@@ -119,7 +119,7 @@ uint8_t port_read_cb(z80_t *cpu, uint16_t addr, void *user_data)
     /* MZ-700: porty 0xCE (DMD status), 0xD0-0xD3 (PIO8255), 0xD4-0xD6 (CTC8253)
      * jsou pristupne pouze pres MEMOP (0xE000-0xE008), ne pres IORQ */
 
-#ifdef CFG_HWEXT_HAVE_FDC
+#if CFG_HWEXT_HAVE_FDC
     case 0xd8:
     case 0xd9:
     case 0xda:
@@ -137,7 +137,7 @@ uint8_t port_read_cb(z80_t *cpu, uint16_t addr, void *user_data)
         break;
 #endif
 
-#ifdef CFG_HWEXT_HAVE_FDC
+#if CFG_HWEXT_HAVE_FDC
     /* FDC1 (sekundární) - chip data porty 0x58 - 0x5b. */
     case 0x58:
     case 0x59:
@@ -157,7 +157,7 @@ uint8_t port_read_cb(z80_t *cpu, uint16_t addr, void *user_data)
 
     /* MZ-700: porty 0xE0-0xE1 (memory mapper PREAD) neexistuji */
 
-#ifdef CFG_HWEXT_HAVE_RAMDISK
+#if CFG_HWEXT_HAVE_RAMDISK
     case 0xea:
         /* cteme std ramdisk: 0xea */
         if (g_ramdisk.std.connected)
@@ -171,8 +171,6 @@ uint8_t port_read_cb(z80_t *cpu, uint16_t addr, void *user_data)
         };
         break;
 #endif
-
-    /* MZ-700: porty 0xF0-0xF1 (joystick) nejsou na MZ-700 dostupne */
 
 #if CFG_HWEXT_HAVE_QDISK
     case 0xf4:
@@ -192,7 +190,7 @@ uint8_t port_read_cb(z80_t *cpu, uint16_t addr, void *user_data)
         break;
 #endif
 
-#ifdef CFG_HWEXT_HAVE_RAMDISK
+#if CFG_HWEXT_HAVE_RAMDISK
     case 0xf8:
     case 0xf9:
         /* cteme standardni ramdisk */
@@ -281,7 +279,7 @@ void port_write_cb(z80_t *cpu, uint16_t addr, uint8_t value, void *user_data)
         break;
 #endif
 
-#ifdef CFG_HWEXT_HAVE_IDE8
+#if CFG_HWEXT_HAVE_IDE8
     case 0x78:
     case 0x79:
     case 0x7a:
@@ -302,7 +300,7 @@ void port_write_cb(z80_t *cpu, uint16_t addr, uint8_t value, void *user_data)
     /* MZ-700: porty 0xCC-0xCF (VRAM radič, HW scroll, border) neexistuji */
     /* MZ-700: porty 0xD0-0xD3 (PIO8255), 0xD4-0xD7 (CTC8253) jsou pres MEMOP, ne IORQ */
 
-#ifdef CFG_HWEXT_HAVE_FDC
+#if CFG_HWEXT_HAVE_FDC
     case 0xd8:
     case 0xd9:
     case 0xda:
@@ -320,7 +318,7 @@ void port_write_cb(z80_t *cpu, uint16_t addr, uint8_t value, void *user_data)
         break;
 #endif
 
-#ifdef CFG_HWEXT_HAVE_FDC
+#if CFG_HWEXT_HAVE_FDC
     /* FDC1 (sekundární) - porty 0x58 - 0x5f. */
     case 0x58:
     case 0x59:
@@ -359,15 +357,6 @@ void port_write_cb(z80_t *cpu, uint16_t addr, uint8_t value, void *user_data)
         };
         break;
 
-    /* MZ-700: Pezik ramdisk (0xE8, 0xEC-0xEF) neni dostupny.
-     * MZ-700 nema PSG (HAVE_PSG=0), takze porty 0xE9, 0xF2, 0xF3 jsou volne. */
-
-    case 0xf0:
-    case 0xf1:
-        /* MZ-700: 0xF0 = DMD registr, 0xF1 = barevna paleta */
-        gdg_write_byte(addr, value);
-        TRACELOG_IORQ_MARK_HANDLED();
-        break;
 
 #if CFG_HWEXT_HAVE_QDISK
     case 0xf4:
@@ -383,7 +372,7 @@ void port_write_cb(z80_t *cpu, uint16_t addr, uint8_t value, void *user_data)
         break;
 #endif
 
-#ifdef CFG_HWEXT_HAVE_RAMDISK
+#if CFG_HWEXT_HAVE_RAMDISK
     case 0xfa:
         /* zapisujeme na std ramdisk: 0xfa */
         if (g_ramdisk.std.connected)
@@ -405,7 +394,7 @@ void port_write_cb(z80_t *cpu, uint16_t addr, uint8_t value, void *user_data)
         break;
 #endif
 
-#ifdef CFG_HWEXT_HAVE_RAMDISK
+#if CFG_HWEXT_HAVE_RAMDISK
     case 0xea:
     case 0xeb:
         /* zapisujeme na std ramdisk: 0xea - 0xeb */

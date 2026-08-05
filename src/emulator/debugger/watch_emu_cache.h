@@ -43,7 +43,7 @@
 #ifndef WATCH_EMU_CACHE_H
 #define WATCH_EMU_CACHE_H
 
-#include "mzarch/mzarch_config.h"
+#include "mzarch/mzcommon_config.h"
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
 

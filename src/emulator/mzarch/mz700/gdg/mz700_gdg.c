@@ -25,22 +25,17 @@
 
 /*
  *
- *	MZ-700 GDG registry:
- *
- *	DMD (port 0xF0):
- *		bit 0: MODE — 0 = MZ-700, 1 = MZ-700 (PCG)
- *		bit 1: PRIORITY — 0 = BPF, 1 = BFP
- *
- *	Barevna paleta (port 0xF1):
- *		bity 4-6: index barvy (0-7)
- *		bity 0-2: barva (0-7)
+ *	MZ-700 "GDG" (diskretni video logika):
  *
  *	CTC0 GATE (MEMOP 0xE008):
  *		bit 0: GATE signal pro CTC kanal 0
  *
+ *	Realny MZ-700 nema DMD registr ani paletu - porty 0xF0/0xF1
+ *	nedekoduje.
  */
 
 #include <stdio.h>
+#include <assert.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
@@ -63,7 +58,7 @@
 // #define framebuffer_border_changed()
 // #define framebuffer_MZ800_screen_changed()
 
-st_GDG g_gdg;
+st_GDG g_gdg __attribute__((aligned(64)));
 
 /* Eventy musi byt serazeny vzestupne podle event_column ! */
 const struct st_GDGEVENT g_gdgevent[] = {
@@ -106,6 +101,8 @@ const struct st_GDGEVENT g_gdgevent[] = {
 
 void gdg_init(void)
 {
+    /* Redzone poison superset st_GDG (mzhal 9c-3). */
+    gdg_redzone_fill(&g_gdg);
 
     g_gdg.total_elapsed.ticks = 0;
     g_gdg.total_elapsed.screens = 0;
@@ -135,30 +132,26 @@ void gdg_init(void)
 
     g_vramctrl.mz700_wr_latch_is_used = 0;
 
-#ifdef MZ800EMU_CFG_CLK1M1_SLOW
-    g_gdg.ctc0clk = 0;
-#endif
 }
 
-static inline void gdg_set_regDMD(uint8_t value, unsigned event_ticks)
-{
-    g_gdg.regDMD = value & 0x03;
-    /* MZ-700: mode700 = !(bit 0) */
-    int mode700 = !(value & REGISTER_DMD_FLAG_MZ700_MODE);
-    ctc82530_on_regDMD_changed(mode700, event_ticks);
-    if (!mode700)
-    {
-        g_vramctrl.mz700_wr_latch_is_used = 0;
-    };
-}
 
 void gdg_reset(void)
 {
+    /* Detekce korupce sousednich sekci supersetu (mzhal 9c-3);
+     * v debug buildu tvrdy assert, v release jen log. */
+    if (!gdg_redzone_check(&g_gdg)) {
+        fprintf(stderr, "GDG: redzone corrupted (detected at reset)\n");
+        assert(0 && "GDG redzone corrupted");
+    }
     g_gdg.regct53g7 = 0;
-    gdg_set_regDMD(0, 0); /* MZ-700: reset = MZ-700 rezim (bit 0 = 0) */
+    /* MZ-700: pipeline je trvale v rezimu MZ-700 (zadny DMD registr);
+     * CTC0 gate logice to oznamime jednou pri resetu. */
+    g_gdg.regDMD = 0;
+    ctc82530_on_regDMD_changed(1, 0);
+    g_vramctrl.mz700_wr_latch_is_used = 0;
 
     /* MZ-700 barevna paleta — vychozi hodnoty */
-    memset(g_gdg.mode700_color, 0, sizeof(g_gdg.mode700_color));
+    memset(g_gdg.mode_color, 0, sizeof(g_gdg.mode_color));
 
     g_gdg.regBOR = 0; /* MZ-700 nema border port, vzdy cerny */
 
@@ -183,7 +176,7 @@ uint8_t gdg_read_dmd_status_memop(void)
     retval |= SIGNAL_GDG_TEMPO;
     /* MZ-1X03 joystick: pouze pokud je alespon jeden joy device aktivni v
      * iface_joy konfiguraci. Makro JOYMZ_TEST_ANY_ACTIVE compile-out na 0
-     * pri HAVE_JOY=0 (= cely if-branch zmizi). */
+     * kdyz zadny joystick neni nakonfigurovany. */
     if ( JOYMZ_TEST_ANY_ACTIVE ) {
         retval = (retval & ~0x1E)
                | (joymz_get_status_bits14( gdg_get_total_ticks() ) & 0x1E);
@@ -194,11 +187,8 @@ uint8_t gdg_read_dmd_status_memop(void)
 void gdg_write_byte(unsigned addr, uint8_t value)
 {
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
-    /* trace-suite hwlog: zaznamenat write do MZ-700 GDG.
-     *
-     * MZ-700 GDG má jen 3 porty (0x08 CTC0 GATE, 0xF0 DMD, 0xF1 paleta).
-     * Klasifikace per port (per HW-log_format_CZ.md analogicky mz800).
-     */
+    /* trace-suite hwlog: MZ-700 ma jediny GDG port - 0x08 CTC0 GATE
+     * (MEMOP 0xE008). */
     if ( TEST_TRACE_HWLOG_DISPATCH ) {
         unsigned low = addr & 0xff;
         uint8_t payload[ 6 ] = {
@@ -206,30 +196,17 @@ void gdg_write_byte(unsigned addr, uint8_t value)
             (uint8_t)( ( addr >> 8 ) & 0xff ),
             value, 0, 0, 0
         };
-        if ( low == 0xf0 ) {
-            hwlog_record ( HWLOG_CHIP_GDG_MODE, 0, payload );
-        } else if ( low == 0xf1 ) {
-            /* MZ-700 paleta: bity 4-6 = index, bity 0-2 = barva. */
-            hwlog_record ( HWLOG_CHIP_GDG_COLORS, HWLOG_GDG_COLORS_PAL, payload );
-        } else if ( low == 0x08 ) {
-            /* CTC0 GATE register - logujeme jako GDG_MODE s odlišným
-             * addr_low (= 0x08) pro rozlišení od DMD (= 0xF0). */
+        if ( low == 0x08 ) {
             hwlog_record ( HWLOG_CHIP_GDG_MODE, 0, payload );
         }
     }
-    /* HWE - HW event BP hooks (mode + palette).
-     * MZ-700 nema separatni palgrp/border (= 8-color paleta jednoduse,
-     * border je pevne cerny). Nove BP_EVENT_GDG_PALGRP_CHANGE a
-     * BP_EVENT_GDG_BORDER_CHANGE proto v MZ-700 nikdy nefire. */
+    /* HWE - HW event BP hook: na MZ-700 jen CTC0 GATE (0x08);
+     * PALGRP/BORDER/PALETTE eventy na MZ-700 nikdy nefire. */
     {
         unsigned low = addr & 0xff;
-        if ( low == 0xf0 || low == 0x08 ) {
+        if ( low == 0x08 ) {
             if ( g_bp_event_active[ BP_EVENT_GDG_MODE_CHANGE ] ) {
                 bp_event_fire ( BP_EVENT_GDG_MODE_CHANGE, (int32_t) value );
-            }
-        } else if ( low == 0xf1 ) {
-            if ( g_bp_event_active[ BP_EVENT_GDG_PALETTE_CHANGE ] ) {
-                bp_event_fire ( BP_EVENT_GDG_PALETTE_CHANGE, (int32_t) value );
             }
         }
     }
@@ -247,29 +224,6 @@ void gdg_write_byte(unsigned addr, uint8_t value)
             ctc8253_gate(0, value, gdg_get_insigeop_ticks());
         };
         break;
-
-    case 0xf0:
-        /* MZ-700: Display Mode registr — bit 0 = MODE, bit 1 = PRIORITY */
-        value = value & 0x03;
-        if (g_gdg.regDMD != value)
-        {
-            g_framebuffer.screen_changes = SCRSTS_THIS_IS_CHANGED;
-            gdg_set_regDMD(value, gdg_get_insigeop_ticks());
-        };
-        break;
-
-    case 0xf1:
-    {
-        /* MZ-700: barevna paleta — bity 4-6 = index (0-7), bity 0-2 = barva (0-7) */
-        int i = (value >> 4) & 0x07;
-        int color = value & 0x07;
-        if (g_gdg.mode700_color[i] != color)
-        {
-            g_gdg.mode700_color[i] = color;
-            g_framebuffer.screen_changes = SCRSTS_THIS_IS_CHANGED;
-        };
-        break;
-    }
 
     default:
         break;

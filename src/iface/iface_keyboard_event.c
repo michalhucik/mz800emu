@@ -22,6 +22,7 @@
  *
  * ---------------------------------------------------------------------------
  */
+#include "emulator/mzarch/mzhal.h"
 
 #include <stdio.h>
 #ifdef WINDOWS
@@ -31,13 +32,9 @@
 #include "iface_keyboard.h"
 #include "iface_video.h"
 
-#if HAVE_JOY
 #include "iface/iface_joy.h"
-#endif
 
-#if CFG_HWEXT_HAVE_FDC
 #include "hw-generic/fdc/fdc.h"
-#endif /* CFG_HWEXT_HAVE_FDC */
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
 #include "debugger/debugger.h"
@@ -161,8 +158,7 @@ static inline void iface_keyboard_keydown_hotkeys(SDL_Keycode scancode)
             customspeed_step_down_request(100);
         }
 
-#if CFG_HWEXT_HAVE_FDC
-        else if (scancode == SDL_SCANCODE_1)
+        else if (g_mzhal.have_fdc && (scancode == SDL_SCANCODE_1))
         {
             /*
              * Mount/Umount FD0 DSK image: Alt + 1
@@ -179,7 +175,7 @@ static inline void iface_keyboard_keydown_hotkeys(SDL_Keycode scancode)
                 fdc_ui_mount(&g_fdc[FDC0], drive_id);
             };
         }
-        else if (scancode == SDL_SCANCODE_2)
+        else if (g_mzhal.have_fdc && (scancode == SDL_SCANCODE_2))
         {
             /*
              * Mount/Umount FD1 DSK image: Alt + 2
@@ -196,7 +192,7 @@ static inline void iface_keyboard_keydown_hotkeys(SDL_Keycode scancode)
                 fdc_ui_mount(&g_fdc[FDC0], drive_id);
             };
         }
-        else if (scancode == SDL_SCANCODE_3)
+        else if (g_mzhal.have_fdc && (scancode == SDL_SCANCODE_3))
         {
             /*
              * Mount/Umount FD2 DSK image: Alt + 3
@@ -213,7 +209,7 @@ static inline void iface_keyboard_keydown_hotkeys(SDL_Keycode scancode)
                 fdc_ui_mount(&g_fdc[FDC0], drive_id);
             };
         }
-        else if (scancode == SDL_SCANCODE_4)
+        else if (g_mzhal.have_fdc && (scancode == SDL_SCANCODE_4))
         {
             /*
              * Mount/Umount FD3 DSK image: Alt + 4
@@ -229,7 +225,6 @@ static inline void iface_keyboard_keydown_hotkeys(SDL_Keycode scancode)
                 printf("Select FDC0 FD%d DSK image for mount\n", drive_id);
                 fdc_ui_mount(&g_fdc[FDC0], drive_id);
             };
-#endif /* CFG_HWEXT_HAVE_FDC */
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
         }
         else if (scancode == SDL_SCANCODE_D)
@@ -259,14 +254,10 @@ void iface_keyboard_event_keydown(SDL_Keycode scancode)
         }
         else
         {
-#if HAVE_JOY
             iface_joy_get_calibration();
-#endif
         };
 #else
-#if HAVE_JOY
         iface_joy_get_calibration();
-#endif
 #endif
     }
     else if (scancode == SDL_SCANCODE_LALT)

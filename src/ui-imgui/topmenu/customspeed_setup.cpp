@@ -17,19 +17,13 @@
 #include "iface/iface_video.h"
 #include "topmenu.h"
 
-#if HAVE_JOY
 #include "iface/iface_joy.h"
-#endif
 
-#if CFG_HWEXT_HAVE_FDC
 #include "hw-generic/fdc/fdc.h"
-#endif /* CFG_HWEXT_HAVE_FDC */
 
 #include "hw-generic/pio8255/pio8255.h"
 
-#if HAVE_JOY
 #include "hw-generic/joy/joy.h"
-#endif
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
 #include "debugger/debugger.h"

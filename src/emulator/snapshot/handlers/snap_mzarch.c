@@ -7,6 +7,7 @@
 #include <glib.h>
 
 #include "snapshot/snapshot_mgr.h"
+#include "mzarch/mzhal.h"
 #include "snapshot/snapshot_xml.h"
 #include "mzarch/mzarch.h"
 
@@ -38,19 +39,20 @@ static en_SNAPSHOT_RESULT snap_mzarch_save(st_SNAPSHOT_CONTEXT *ctx)
     snapshot_xml_write_uint(w, "interrupt", g_mzarch_main.interrupt);
 
     /* HW kompatibilita - pouze MZ-800 ma konfigurovatelne HW experimenty */
-#if MZARCH == 800
+    /* Runtime dle g_mzhal (mzhal 11e), klice per arch zmrazene. */
+    if (g_mzhal.arch == 800) {
     snapshot_xml_open_element(w, "hw_compatibility");
     snapshot_xml_write_int(w, "mz800_hwcompat_allow_psg1",
                            (int)g_mzarch_main.mz800_hwcompat_allow_psg1);
     snapshot_xml_close_element(w); /* hw_compatibility */
-#endif /* MZARCH == 800 */
+    }
 
     /* MZ-700 kompatibilní přepínač - jen MZ-800/MZ-1500;
      * MZ-700 nativní field switch700 nemá. */
-#if MZARCH != 700
-    snapshot_xml_write_int(w, "switch700",
-                           (int)g_mzarch_main.switch700);
-#endif
+    if (g_mzhal.has_rear_dip_switch700) {
+        snapshot_xml_write_int(w, "switch700",
+                               (int)g_mzarch_main.switch700);
+    }
 
     snapshot_xml_close_element(w); /* mzarch_state */
 
@@ -121,23 +123,21 @@ static en_SNAPSHOT_RESULT snap_mzarch_load(st_SNAPSHOT_CONTEXT *ctx)
     /* HW kompatibilita - pouze MZ-800 ma konfigurovatelne HW experimenty.
      * Klice mz800_hwcompat_mz700_pal_timing a mz800_hwcompat_mz700_fixed_e008
      * jsou v starsich snapshotech ignorovany (read_int vraci false). */
-#if MZARCH == 800
-    if (snapshot_xml_enter_element(r, "hw_compatibility")) {
-        int val;
-        if (snapshot_xml_read_int(r, "mz800_hwcompat_allow_psg1", &val))
-            g_mzarch_main.mz800_hwcompat_allow_psg1 = (en_MZ800_HWCOMPAT_ALLOW_PSG1)val;
-        snapshot_xml_leave_element(r);
+    if (g_mzhal.arch == 800) {
+        if (snapshot_xml_enter_element(r, "hw_compatibility")) {
+            int val;
+            if (snapshot_xml_read_int(r, "mz800_hwcompat_allow_psg1", &val))
+                g_mzarch_main.mz800_hwcompat_allow_psg1 = (en_MZ800_HWCOMPAT_ALLOW_PSG1)val;
+            snapshot_xml_leave_element(r);
+        }
     }
-#endif /* MZARCH == 800 */
 
     /* MZ-700 kompatibilní přepínač - viz save block. */
-#if MZARCH != 700
-    {
+    if (g_mzhal.has_rear_dip_switch700) {
         int val;
         if (snapshot_xml_read_int(r, "switch700", &val))
             g_mzarch_main.switch700 = (en_SWITCH700)val;
     }
-#endif
 
     snapshot_xml_leave_element(r); /* mzarch_state */
     snapshot_xml_reader_free(r);

@@ -27,7 +27,7 @@
 #define COMPILE_FOR_EMULATOR
 #undef COMPILE_FOR_UNICARD
 #undef FS_LAYER_FATFS
-#elif LINUX
+#elif defined(LINUX)
 #define COMPILE_FOR_EMULATOR
 #undef COMPILE_FOR_UNICARD
 #undef FS_LAYER_FATFS
@@ -53,7 +53,7 @@
 #include "monitor.h"
 #include "mzint.h"
 #else
-#include "mzarch/mzarch_config.h"
+#include "mzarch/mzcommon_config.h"
 #include <stdint.h>
 #include <errno.h>
 #include <string.h>

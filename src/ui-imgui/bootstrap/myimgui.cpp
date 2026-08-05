@@ -7,6 +7,7 @@
 #include "imgui.h"
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_sdlrenderer3.h"
+#include "emulator/mzarch/mzhal.h"
 #include "imgui_impl_opengl3.h"
 #include <stdio.h>
 #include <SDL3/SDL.h>
@@ -25,7 +26,7 @@
 #include "main.h"  /* g_sdlapp */
 extern "C" void imgui_filechooser_settings_init(void);
 
-#include "mzarch/mzarch_config.h"
+#include "mzarch/mzcommon_config.h"
 #ifdef MZ800EMU_CFG_MCP_SERVER_ENABLED
 /* MCP Activity okno (V1.C.2 mutant mcp-server) - init/shutdown ring
  * bufferu pro real-time log MCP akcí. Bootstrap UI vrstva si vlastní
@@ -284,8 +285,13 @@ static gboolean myimgui_init_for_sdl3_opengl(SdlAppWindow *win, gpointer user_da
         if (opt_path) {
             s_imgui_ini_path = g_strdup(opt_path);
         } else {
+            /* Runtime z g_mzhal (mzhal krok 7) - jméno identické
+             * s dřívějším compile-time MZARCH_NAME "emu-imgui.ini". */
+            char ini_name[48];
+            snprintf(ini_name, sizeof(ini_name), "%semu-imgui.ini",
+                     g_mzhal.arch_name);
             s_imgui_ini_path = sdlapp_paths_resolve_cfg(
-                g_sdlapp->paths, MZARCH_NAME "emu-imgui.ini");
+                g_sdlapp->paths, ini_name);
         }
     }
     io.IniFilename = s_imgui_ini_path;

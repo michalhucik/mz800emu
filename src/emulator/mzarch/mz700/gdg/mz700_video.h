@@ -30,6 +30,10 @@
 extern "C" {
 #endif
 
+/* Hodnoty MZTVSYS_PAL/NTSC - nutné PŘED #if porovnáním níže (jinak past
+ * nedefinovaného makra, viz mztvsys.h). */
+#include "mzarch/mztvsys.h"
+
 #if MZTVSYS == MZTVSYS_NTSC
 #include "mz700_video_ntsc.h"
 #elif MZTVSYS == MZTVSYS_PAL

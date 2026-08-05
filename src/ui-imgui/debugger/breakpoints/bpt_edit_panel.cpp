@@ -23,6 +23,7 @@
  */
 
 #include "main.h"
+#include "emulator/mzarch/mzhal.h"
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
 
@@ -45,7 +46,6 @@ extern "C" {
 #include "emulator/debugger/bp_zone.h"
 #include "emulator/debugger/bp_expr.h"
 #include "emulator/debugger/bp_action.h"
-#include "emulator/hw-generic/gdg/video.h"  /* VIDEO_SCREEN_HEIGHT pro raster max */
 #include "ui-imgui/debugger/dbgapi_helpers.h"  /* V1.7+ BP CRUD via dbgapi */
 }
 
@@ -254,7 +254,7 @@ static const char *get_event_help(en_BP_EVENT e)
         if ( s_raster_event_help[0] == '\0' ) {
             snprintf ( s_raster_event_help, sizeof ( s_raster_event_help ),
                        _("GDG raster line - parametrized N (0..%u); trigger at start of given scanline."),
-                       (unsigned)( VIDEO_SCREEN_HEIGHT - 1 ) );
+                       (unsigned)( g_mzhal.video_screen_height - 1 ) );
         }
         return s_raster_event_help;
     default:
@@ -1417,9 +1417,8 @@ static void render_section_bp_options(BptEditPanelState *ep)
             {
                 /* PCG zóna existuje jen na MZ-1500 (= programmable
                  * character generator). MZ-700 a MZ-800 ji nemají. */
-#if MZARCH != 1500
-                if ((en_BP_ZONE)z == BP_ZONE_PCG) continue;
-#endif
+                /* PCG zona existuje jen na MZ-1500 (runtime, mzhal 11i). */
+                if (g_mzhal.arch != 1500 && (en_BP_ZONE)z == BP_ZONE_PCG) continue;
                 bool is_sel = (ep->wc_zone == (en_BP_ZONE)z);
                 const char *zn = bp_zone_to_string((en_BP_ZONE)z);
                 if (ImGui::Selectable(zn, is_sel))
@@ -1823,10 +1822,10 @@ static void render_section_bp_options(BptEditPanelState *ep)
                 ImGui::SameLine();
                 /* Range zalezi na platforme: PAL (MZ-800/MZ-700-PAL) = 0..311,
                  * NTSC (MZ-1500/MZ-700-NTSC) = 0..261. Pouzivame compile-time
-                 * VIDEO_SCREEN_HEIGHT - 1 jako horni mez. */
+                 * g_mzhal.video_screen_height - 1 jako horni mez. */
                 char hint[64];
                 snprintf(hint, sizeof(hint), _("(scanline 0..%u)"),
-                         (unsigned)(VIDEO_SCREEN_HEIGHT - 1));
+                         (unsigned)(g_mzhal.video_screen_height - 1));
                 ImGui::TextDisabled("%s", hint);
             }
         }

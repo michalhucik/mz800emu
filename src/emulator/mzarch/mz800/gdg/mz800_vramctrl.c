@@ -104,6 +104,7 @@
  *
  *
  */
+#include "hw-generic/memory/memory_arch.h" /* per-arch memory - dříve tranzitivně přes memory.h (mzhal 11c-2c) */
 
 #include <stdio.h>
 #include <stdint.h>

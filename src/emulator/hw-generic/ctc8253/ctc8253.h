@@ -31,12 +31,14 @@ extern "C"
 {
 #endif
 
-#include "mzarch/mzarch_config.h"
+#include "mzarch/mzcommon_config.h"
 #include <stdint.h>
 
-#ifdef MZ800EMU_CFG_CLK1M1_FAST
+/* st_EMUEVENT pro clk1m1_event pole - nepodmíněně (layout st_CTC8253
+ * nesmí záviset na CLK1M1 volbě, mzhal krok 5). */
+#include "mzarch/mzevent.h"
+
 #include "mzarch/mzarch.h"
-#endif
 
     typedef void (*ctc8253_out_cb_t)(unsigned value, unsigned event_screen_ticks);
 
@@ -116,10 +118,11 @@ extern "C"
         unsigned mode3_half_value;
         ctc8253_out_cb_t output_cb; /* tento callback je zavolan pri kazde zmene vystupniho stavu citace */
 
-#ifdef MZ800EMU_CFG_CLK1M1_FAST
+        /* Pole existují v OBOU CLK1M1 variantách (mzhal krok 5) - layout
+         * struktury nesmí záviset na build volbě. SLOW varianta je
+         * nepoužívá. */
         unsigned clk1m1_last_event_total_ticks;
         st_EMUEVENT clk1m1_event;
-#endif
     } st_CTC8253;
 
     extern struct st_CTC8253 g_ctc8253[3];
@@ -154,23 +157,19 @@ extern "C"
 
 
 
-#ifdef MZ800EMU_CFG_CLK1M1_FAST
     extern void ctc8253_ctc1m1_event(unsigned event_ticks);
     extern void ctc8253_sync_ctc0(void);
 #define ctc8253_get_ctc1m1_event_pointer() (&g_ctc8253[CTC_CS0].clk1m1_event)
-#endif
 
-#ifdef MZ800EMU_CFG_CLK1M1_FAST
-#include "gdg/video.h"
+#include "mzarch/mzhal.h"
 #define ctc8253_on_screen_done_event()                      \
     {                                                       \
         st_CTC8253 *ctc0 = &g_ctc8253[CTC_CS0];             \
         if ((int)ctc0->clk1m1_event.ticks != -1)            \
         {                                                   \
-            ctc0->clk1m1_event.ticks -= VIDEO_SCREEN_TICKS; \
+            ctc0->clk1m1_event.ticks -= g_mzhal.video_screen_ticks; \
         };                                                  \
     }
-#endif
 
 #ifdef __cplusplus
 }

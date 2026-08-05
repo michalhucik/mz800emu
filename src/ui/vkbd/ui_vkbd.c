@@ -1,3 +1,4 @@
+#include "mzarch/mzarch_config.h" /* capability makra - dříve tranzitivně přes main.h (mzhal 11c-1) */
 #include "main.h"
 #include <stdio.h>
 #include "libs/sdlapp/sdlapp.h"

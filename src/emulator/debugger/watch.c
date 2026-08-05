@@ -36,8 +36,8 @@
  *
  * ---------------------------------------------------------------------------
  */
-
-#include "mzarch/mzarch_config.h"
+#include "mzarch/mzhal.h"
+#include "mzarch/mzcommon_config.h"
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
 
@@ -1097,13 +1097,10 @@ static char *watch_resolve_path ( const char *path ) {
 
 
 char *watch_default_filepath ( void ) {
-#if MZARCH == 800
-    const char *fname = "mz800.watch";
-#elif MZARCH == 1500
-    const char *fname = "mz1500.watch";
-#else
-    const char *fname = "mz700.watch";
-#endif
+    /* Jmeno souboru per arch = zmrazeny on-disk kontrakt, runtime
+     * z g_mzhal (mzhal 11g). */
+    char fname[32];
+    g_snprintf ( fname, sizeof ( fname ), "%s.watch", g_mzhal.arch_name );
     const char *use = ( s_watch_cfg.watch_file && s_watch_cfg.watch_file[0] )
                       ? s_watch_cfg.watch_file : fname;
     if ( !g_sdlapp || !g_sdlapp->paths ) {
@@ -1438,13 +1435,10 @@ bool watch_load_from_filepath ( const char *path ) {
 
 
 void watch_cfg_init ( void ) {
-#if MZARCH == 800
-    #define DEFAULT_WATCH_FILE "mz800.watch"
-#elif MZARCH == 1500
-    #define DEFAULT_WATCH_FILE "mz1500.watch"
-#else
-    #define DEFAULT_WATCH_FILE "mz700.watch"
-#endif
+    static char default_watch_file[32];
+    g_snprintf ( default_watch_file, sizeof ( default_watch_file ),
+                 "%s.watch", g_mzhal.arch_name );
+#define DEFAULT_WATCH_FILE default_watch_file
 
     CFGMOD *cmod = cfgroot_register_new_module ( g_cfgmain, "WATCH_PANEL" );
     CFGELM *elm;

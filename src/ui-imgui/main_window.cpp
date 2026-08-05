@@ -1,4 +1,5 @@
 #include "main.h"
+#include "emulator/mzarch/mzhal.h"
 #include "libs/sdlapp/sdlapp.h"
 #include "ui-imgui/bootstrap/myimgui.h"
 #include "libs/imgui/imgui.h"
@@ -15,7 +16,6 @@
 #include "imgui_windows.h"
 #include "emulator/emulator.h"
 
-#include "mzarch/mzarch_config.h"
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
 #include "ui-imgui/debugger/sections/dbg_extra_disasm.h"
 #include "ui-imgui/debugger/sections/dbg_focus_to.h"
@@ -24,13 +24,9 @@
 /* Per-chip-panels F1 scaffold: per-chip detail okna pro CTC/PPI/PIO/PSG. */
 #include "ui-imgui/debugger/ctc_window.h"
 #include "ui-imgui/debugger/ppi_window.h"
-#if HAVE_PIOZ80
 #include "ui-imgui/debugger/pioz80_window.h"
-#endif
-#if HAVE_PSG >= 1
 #include "ui-imgui/debugger/psg_window.h"
 #include "ui-imgui/debugger/psg_audio_scope_window.h"
-#endif
 /* gdg-panel F1 scaffold: GDG state inspector (per-arch dispatch uvnitř). */
 #include "ui-imgui/debugger/gdg_window.h"
 /* Memory Browser V0 hex MVP - hex view paměti přes dbgapi_regions. */
@@ -41,7 +37,6 @@
 /* Disassembler V1 - samostatné range-based disasm okno (mutant). */
 #include "ui-imgui/debugger/dasm_window/dasm_window.h"
 #endif
-#include "mzarch/mzarch_config.h"
 #include "emulator/emulator_measuring.h"
 #include "version_check/version_check.h"
 #include "message/message_window.h"
@@ -266,7 +261,7 @@ void imgui_main_window(GLuint texture)
     if (g_gui->showCmtFixMzfsizeWindow)
         imgui_cmt_fix_mzfsize_popup(&g_gui->showCmtFixMzfsizeWindow);
 
-#if CFG_HWEXT_HAVE_FDC
+    if (g_mzhal.have_fdc) { /* runtime capability, mzhal krok 8 */
     if (g_gui->showFdcStorageSwitchWindow)
         imgui_fdc_storage_switch_popup(&g_gui->showFdcStorageSwitchWindow);
 
@@ -274,9 +269,9 @@ void imgui_main_window(GLuint texture)
     if (g_gui->showFdcStateWindow)
         imgui_fdc_state_window(&g_gui->showFdcStateWindow);
 #endif
-#endif
+    }
 
-#if CFG_HWEXT_HAVE_QDISK
+    if (g_mzhal.have_qdisk) { /* runtime capability, mzhal krok 8 */
     /* Faze 3 (qdisk-rewrite): switch storage mode popup pro DISCARD->jiny
      * mod s pending RAM changes. Aktivuje se z menu_qdisk.cpp. */
     if (g_gui->showQdiskStorageSwitchWindow)
@@ -288,34 +283,32 @@ void imgui_main_window(GLuint texture)
     if (g_gui->showQdiskStateWindow)
         imgui_qdisk_state_window(&g_gui->showQdiskStateWindow);
 #endif
-#endif
+    }
 
-#if (MZARCH == 800) || (MZARCH == 1500)
     /* mz1p16-plotter: GUI okno plotteru MZ-1P16 - živý náhled kresby +
      * ovládání. Plotter je aktivní jen když je okno otevřené; deaktivaci při
      * zavření [X] detekuje imgui_plotter_window podle hrany *p_open uvnitř,
      * proto ho voláme BEZPODMÍNEČNĚ (i při zavřeném okně - tam je render
      * no-op, ale zpracuje open->close hranu a deaktivuje plotter). */
     imgui_plotter_window(&g_gui->showPlotterWindow);
-#endif
 
-#if CFG_HWEXT_HAVE_RAMDISK
+    if (g_mzhal.have_ramdisk) { /* runtime capability, mzhal krok 8 */
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
     /* memory-disk-state: Memory Disk State debugger okno - stav vsech
      * ramdisku (MR-1R18 STD + Pezik E8/68). Side-effect free, per frame. */
     if (g_gui->showRamdiskStateWindow)
         imgui_ramdisk_state_window(&g_gui->showRamdiskStateWindow);
 #endif
-#endif
+    }
 
-#if CFG_HWEXT_HAVE_IDE8
+    if (g_mzhal.have_ide8) { /* runtime capability, mzhal krok 8 */
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
     /* memory-disk-state: IDE8 State debugger okno - stav IDE8 radice
      * (Master + Slave). Side-effect free, per frame. */
     if (g_gui->showIde8StateWindow)
         imgui_ide8_state_window(&g_gui->showIde8StateWindow);
 #endif
-#endif
+    }
 
     if (g_gui->showVirtualCmtTapeIndexWindow)
         imgui_cmt_tape_index_window(&g_gui->showVirtualCmtTapeIndexWindow);
@@ -506,11 +499,11 @@ void imgui_main_window(GLuint texture)
         imgui_ctc_state_window(&g_gui->showCtcStateWindow);
     if (g_gui->showPpiStateWindow)
         imgui_ppi_state_window(&g_gui->showPpiStateWindow);
-#if HAVE_PIOZ80
+    if (g_mzhal.have_pioz80) { /* runtime capability, mzhal krok 8 */
     if (g_gui->showPiozStateWindow)
         imgui_pioz80_state_window(&g_gui->showPiozStateWindow);
-#endif
-#if HAVE_PSG >= 1
+    }
+    if (g_mzhal.psg_count >= 1) { /* runtime capability, mzhal krok 8 */
     if (g_gui->showPsgStateWindow)
         imgui_psg_state_window(&g_gui->showPsgStateWindow);
     /* psg-audio-scope mutant F1: tick callback (= snapshot do ring bufferu)
@@ -520,7 +513,7 @@ void imgui_main_window(GLuint texture)
     psg_audio_scope_tick();
     if (g_gui->showPsgAudioScopeWindow)
         imgui_psg_audio_scope_window(&g_gui->showPsgAudioScopeWindow);
-#endif
+    }
 
     /* gdg-panel F1 scaffold: GDG state inspector (per-arch render shell).
      * GDG je ve všech 3 archech, žádný HAVE_* guard nepotřeba - per-arch
@@ -555,11 +548,11 @@ void imgui_main_window(GLuint texture)
     dbg_iasm_render();
     dbg_focus_to_render();
 
-#if (MZARCH == 800) || (MZARCH == 1500) || (MZARCH == 700)
+/* SENTINEL: Memory Heatmap platí pro všechny známé architektury
+ * (garantováno mzhal.c) - při přidání nové architektury PROVĚŘ. */
     /* Memory Heatmap (CDL) */
     if (g_gui->showMemoryHeatmapWindow)
         mhmap_window_render(&g_gui->showMemoryHeatmapWindow);
-#endif
 #endif
 
     imgui_file_chooser_window();

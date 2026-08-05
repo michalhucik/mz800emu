@@ -62,7 +62,7 @@ void gdg_mirror_snapshot(st_GDG_MIRROR_MZ1500 *out)
 
     /* Paleta MZ-1500 - 8 indexu, port 0xF1. */
     for (unsigned i = 0; i < 8; ++i) {
-        out->mode1500_color[i] = g_gdg.mode1500_color[i];
+        out->mode1500_color[i] = g_gdg.mode_color[i];
     }
 
     /* Raster pozice. */

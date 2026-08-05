@@ -33,7 +33,7 @@
 #ifndef MEMBROWSER_DIFF_WINDOW_H
 #define MEMBROWSER_DIFF_WINDOW_H
 
-#include "mzarch/mzarch_config.h"
+#include "mzarch/mzcommon_config.h"
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
 

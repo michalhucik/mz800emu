@@ -37,7 +37,7 @@
 #include "libs/sdlapp/sdlapp.h"
 #include "libs/sdlapp/sdlapp_options.h"
 #include "emulator/mzarch/mzarch_platform.h"
-#include "emulator/mzarch/mzarch_config.h"
+#include "emulator/mzarch/mzcommon_config.h"
 #include "snapshot/snapshot_config.h"
 #include "i18n_lang.h"
 #ifdef MZ800EMU_CFG_MCP_TCP_ENABLED

@@ -26,8 +26,7 @@
 #include "libs/imgui/imgui.h"
 
 #include "i18n.h"
-
-#include "mzarch/mzarch_config.h"
+#include "emulator/mzarch/mzhal.h"
 #include "hw-generic/pio8255/pio8255.h"
 
 #include "ui-imgui/debugger/chip_window_helpers.h"
@@ -270,21 +269,12 @@ void imgui_ppi_state_window(bool *p_open)
         ImGui::Text("D3-D0  %s: %u",
                     _("keyboard column (PA0-3)"),
                     g_pio8255.signal_PA_keybord_column);
-#if HAVE_JOY
         ImGui::Text("D4     %s: %u",
                     _("JOY1 enable (active LOW)"),
                     g_pio8255.signal_PA_joy1_enabled);
         ImGui::Text("D5     %s: %u",
                     _("JOY2 enable (active LOW)"),
                     g_pio8255.signal_PA_joy2_enabled);
-#else
-        ImGui::TextDisabled("D4     %s - %s",
-                            _("JOY1 enable"),
-                            _("not present on this arch"));
-        ImGui::TextDisabled("D5     %s - %s",
-                            _("JOY2 enable"),
-                            _("not present on this arch"));
-#endif
         ImGui::TextDisabled("D6-D7  %s", _("reserved"));
         ImGui::Unindent();
     }
@@ -353,13 +343,13 @@ void imgui_ppi_state_window(bool *p_open)
 
         ImGui::TextUnformatted(_("Bit decode:"));
         ImGui::Indent();
-#if MZARCH != 700
-        ImGui::Text("D0 OUT  pc00 = %u  (%s)", g_pio8255.signal_pc00,
-                    _("CTC0 audio mask (0 = mute, 1 = pass)"));
-#else
-        ImGui::TextDisabled("D0 OUT  pc00 - %s (MZ-700)",
-                            _("CTC0 audio mask not present"));
-#endif
+        if (g_mzhal.audio_ctc0_gate_pc00) {
+            ImGui::Text("D0 OUT  pc00 = %u  (%s)", g_pio8255.signal_pc00,
+                        _("CTC0 audio mask (0 = mute, 1 = pass)"));
+        } else {
+            ImGui::TextDisabled("D0 OUT  pc00 - %s (MZ-700)",
+                                _("CTC0 audio mask not present"));
+        }
         ImGui::Text("D1 OUT  pc01 = %u  (%s)", g_pio8255.signal_pc01,
                     _("CMT data out"));
         ImGui::Text("D2 OUT  pc02 = %u  (%s)", g_pio8255.signal_pc02,

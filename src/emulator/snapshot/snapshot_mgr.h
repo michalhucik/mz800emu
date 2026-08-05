@@ -11,7 +11,7 @@
 
 #include "snapshot.h"
 #include "snapshot_io.h"
-#include "mzarch/mzarch_config.h"
+#include "mzarch/mzcommon_config.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -102,28 +102,18 @@ extern void snap_pio8255_register(void);
 extern void snap_psg_register(void);
 extern void snap_audio_register(void);
 
-#if HAVE_PIOZ80
 extern void snap_pioz80_register(void);
-#endif
 
 /* Fáze 5: Handlery zařízení */
 extern void snap_cmt_register(void);
 
-#if CFG_HWEXT_HAVE_FDC
 extern void snap_fdc_register(void);
-#endif
 
-#if CFG_HWEXT_HAVE_QDISK
 extern void snap_qdisk_register(void);
-#endif
 
-#if CFG_HWEXT_HAVE_RAMDISK
 extern void snap_ramdisk_register(void);
-#endif
 
-#if CFG_HWEXT_HAVE_IDE8
 extern void snap_ide8_register(void);
-#endif
 
 #if 1 /* MEMEXT je vždy k dispozici */
 extern void snap_memext_register(void);

@@ -34,17 +34,15 @@ extern "C"
 #include <stdbool.h>
 #include "app/app_thread.h"
 
-#include "mzarch/mzarch_config.h"
-#include "hw-generic/gdg/video.h"
-#include "hw-generic/gdg/gdg.h"
+#include "mzarch/mzcommon_config.h" /* jen společné toggly; per-arch
+                                       nic (mzhal 11c-2) - includy
+                                       video.h/gdg.h byly vestigiální */
 #include "hw-generic/psg/psg.h"
 
-    /* Pocet zdrojovych audio kanalu, parametrizovany pres HAVE_PSG:
-     *   HAVE_PSG = 0  →  1 kanal (jen CTC0)         - MZ-700
-     *   HAVE_PSG = 1  →  5 kanalu (CTC0 + 4 PSG0)   - MZ-800
-     *   HAVE_PSG = 2  →  9 kanalu (CTC0 + 4 PSG0 + 4 PSG1) - MZ-1500
-     */
-#define AUDIO_SRC_CHANNELS_COUNT (1 + 4 * HAVE_PSG)
+    /* Superset dimenze polí (mzhal krok 8): pole se dimenzují na maximum
+     * napříč platformami (CTC0 + 2x4 PSG); skutečný počet kanálů za běhu
+     * čti z g_mzhal.audio_src_channels. */
+#define AUDIO_SRC_CHANNELS_MAX 9
 
     typedef int8_t AUDIO_BUF_t; // Musi to byt jednobajtovy typ !!!
 
@@ -53,8 +51,6 @@ extern "C"
     // extern AUDIO_BUF_t g_attenuator_volume_value [ PSG_OUT_OFF + 1 ];
     extern AUDIO_BUF_t g_attenuator_volume_value[4][16];
 
-#define AUDIO_SCAN_PERIOD PSG_DIVIDER
-    // #define AUDIO_SCAN_PERIOD   GDGCLK_CTC0_DIVIDER
 
 #define AUDIO_SOURCE_FLAG_PSG0 0x10
 #define AUDIO_SOURCE_MASK_PSG0 0x03
@@ -109,7 +105,7 @@ extern "C"
         uint64_t first_timestamp;
         uint64_t last_timestamp;
         uint64_t last_psg_timestamp;
-        st_AUDIO_SOURCE_LOG *src[AUDIO_SRC_CHANNELS_COUNT];
+        st_AUDIO_SOURCE_LOG *src[AUDIO_SRC_CHANNELS_MAX];
     } st_AUDIO_LOG;
 
     typedef struct st_AUDIO

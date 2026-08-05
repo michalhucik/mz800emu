@@ -13,9 +13,8 @@
 
 #include "emulator_measuring.h"
 #include "emulator.h"
-#include "hw-generic/gdg/gdgclk.h"
-#include "hw-generic/gdg/video.h"
-#include "hw-generic/gdg/gdg.h"
+#include "hw-generic/gdg/gdg_state.h"
+#include "mzarch/mzhal.h"
 
 st_EMULATOR_MEASURING g_emulator_measuring;
 
@@ -91,7 +90,7 @@ static void emulator_measuring_stats(double *samples, uint32_t head, uint32_t ta
     stats->median = median / 1000;
     stats->stddev = stddev / 1000;
     stats->samples_count = samples_count;
-    stats->total_width = (float)samples_count / VIDEO_SCREENS_PER_SEC;
+    stats->total_width = (float)samples_count / g_mzhal.video_screens_per_sec;
     stats->real_total_width = sum / 1e6;
 
     if (g_emulator_measuring.frame_timing.console_output_enabled)
@@ -195,13 +194,14 @@ void emulator_measuring_gdg_event(st_EMULATOR_MEASURING_GDG *msgdg)
     msgdg->elapsed_time = (float)g_timer_elapsed(msgdg->timer, NULL);
     g_timer_start(msgdg->timer);
 
-    uint64_t now_gdg_ticks = gdg_compute_total_ticks();
+    uint64_t now_gdg_ticks = gdg_compute_total_ticks(0);
     uint64_t elapsed_gdg_ticks = now_gdg_ticks - msgdg->last_gdg_ticks;
     msgdg->last_gdg_ticks = now_gdg_ticks;
 
     msgdg->current_gdg_frequency = elapsed_gdg_ticks / msgdg->elapsed_time;
-    msgdg->current_fps = (elapsed_gdg_ticks / VIDEO_SCREEN_TICKS) / msgdg->elapsed_time;
-    msgdg->current_gdg_frequency_percent = (msgdg->current_gdg_frequency / GDGCLK_REAL_BASE) * 100;
+    /* Runtime z g_mzhal (mzhal 10b, cold - measuring vlákno 1x za periodu). */
+    msgdg->current_fps = (elapsed_gdg_ticks / g_mzhal.video_screen_ticks) / msgdg->elapsed_time;
+    msgdg->current_gdg_frequency_percent = (msgdg->current_gdg_frequency / g_mzhal.gdgclk_real_base) * 100;
 
     if (msgdg->enabled)
     {
@@ -210,20 +210,20 @@ void emulator_measuring_gdg_event(st_EMULATOR_MEASURING_GDG *msgdg)
 
     if (msgdg->console_output_enabled)
     {
-        float native_fps = (float)GDGCLK_REAL_BASE / VIDEO_SCREEN_TICKS;
-        float simulated_fps = (float)GDGCLK_BASE / VIDEO_SCREEN_TICKS;
+        float native_fps = (float)g_mzhal.gdgclk_real_base / g_mzhal.video_screen_ticks;
+        float simulated_fps = (float)g_mzhal.gdgclk_base / g_mzhal.video_screen_ticks;
 
         char *formatted_num = NULL;
         printf("\n\nGDG meassuring:\n");
         printf(" - Measured time: %f s\n", msgdg->elapsed_time);
 
-        formatted_num = format_uint32_with_thousands(GDGCLK_REAL_BASE);
+        formatted_num = format_uint32_with_thousands(g_mzhal.gdgclk_real_base);
         printf(" - Native GDG freq.: %s Hz\n", formatted_num);
         g_free(formatted_num);
 
         printf(" - Native FPS: %.4f\n", native_fps);
 
-        formatted_num = format_uint32_with_thousands(GDGCLK_BASE);
+        formatted_num = format_uint32_with_thousands(g_mzhal.gdgclk_base);
         printf(" - Simulated GDG freq.: %s Hz\n", formatted_num);
         g_free(formatted_num);
 
@@ -417,7 +417,7 @@ static void maxspeed_current_totals_locked(st_EMULATOR_MEASURING_MAXSPEED *ms,
     uint64_t w = ms->acc_wall_us;
     if (ms->seg_active)
     {
-        t += gdg_compute_total_ticks() - ms->seg_start_ticks;
+        t += gdg_compute_total_ticks(0) - ms->seg_start_ticks;
         w += maxspeed_now_us() - ms->seg_start_wall_us;
     };
     *ticks = t;
@@ -538,14 +538,14 @@ void emulator_measuring_maxspeed_update_segment(void)
     if (want_active && (!ms->seg_active))
     {
         // Otevření nového segmentu
-        ms->seg_start_ticks = gdg_compute_total_ticks();
+        ms->seg_start_ticks = gdg_compute_total_ticks(0);
         ms->seg_start_wall_us = maxspeed_now_us();
         ms->seg_active = true;
     }
     else if ((!want_active) && ms->seg_active)
     {
         // Uzavření segmentu - přírůstek do akumulátorů
-        ms->acc_ticks += gdg_compute_total_ticks() - ms->seg_start_ticks;
+        ms->acc_ticks += gdg_compute_total_ticks(0) - ms->seg_start_ticks;
         ms->acc_wall_us += maxspeed_now_us() - ms->seg_start_wall_us;
         ms->seg_active = false;
     };
@@ -615,8 +615,8 @@ void emulator_measuring_maxspeed_report(st_MAXSPEED_BENCH_RESULT *out)
     if (out->valid)
     {
         out->pxclk_per_sec = (double)ticks / out->total_wall_sec;
-        out->efficiency_percent = out->pxclk_per_sec / (double)GDGCLK_REAL_BASE * 100.0;
-        out->fps = out->pxclk_per_sec / (double)VIDEO_SCREEN_TICKS;
+        out->efficiency_percent = out->pxclk_per_sec / (double)g_mzhal.gdgclk_real_base * 100.0;
+        out->fps = out->pxclk_per_sec / (double)g_mzhal.video_screen_ticks;
     }
     else
     {
@@ -693,7 +693,7 @@ static void emulator_measuring_maxspeed_take_sample(st_EMULATOR_MEASURING_MAXSPE
     // Vzorkuj jen pokud aktivní okno pokrylo aspoň půlku periody (omezení šumu)
     if (dwall >= (uint64_t)ms->sample_interval_us / 2)
     {
-        double eff = ((double)dticks / ((double)dwall / 1e6)) / (double)GDGCLK_REAL_BASE * 100.0;
+        double eff = ((double)dticks / ((double)dwall / 1e6)) / (double)g_mzhal.gdgclk_real_base * 100.0;
         ms->samples[ms->samples_head % MAX_MAXSPEED_BENCH_SAMPLES] = eff;
         ms->samples_head++;
         if ((ms->samples_head - ms->samples_tail) > MAX_MAXSPEED_BENCH_SAMPLES)

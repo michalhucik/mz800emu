@@ -29,9 +29,8 @@
 
 
 #include "baseui/baseui.h"
+#include "mzarch/mzhal.h"
 #include "fs_layer.h"
-
-#include "hw-generic/gdg/gdgclk.h"
 #include "cmt.h"
 #include "cmtext.h"
 #include "cmt_save.h"
@@ -102,7 +101,7 @@ static st_CMT_STREAM* cmtsave_stream_new ( int value ) {
         return NULL;
     };
 
-    //stream->str.vstream = cmt_vstream_new ( GDGCLK_BASE, CMT_VSTREAM_BYTELENGTH16, value, CMT_STREAM_POLARITY_NORMAL );
+    //stream->str.vstream = cmt_vstream_new ( g_mzhal.gdgclk_base, CMT_VSTREAM_BYTELENGTH16, value, CMT_STREAM_POLARITY_NORMAL );
     stream->str.vstream = cmt_vstream_new ( CMTSAVE_DEFAULT_SAMPLERATE, CMT_VSTREAM_BYTELENGTH8, value, CMT_STREAM_POLARITY_NORMAL );
     if ( !stream->str.vstream ) {
         cmt_stream_destroy ( stream );
@@ -180,11 +179,11 @@ static void cmtsave_write_data ( uint64_t play_ticks, int value ) {
         stream = cmtsave_stream_new ( ~value );
         if ( !stream ) return;
         block->stream = stream;
-        blspec->last_event = ( play_ticks > GDGCLK_BASE ) ? ( play_ticks - GDGCLK_BASE ) : 0;
+        blspec->last_event = ( play_ticks > g_mzhal.gdgclk_base ) ? ( play_ticks - g_mzhal.gdgclk_base ) : 0;
     };
 
     uint32_t count_ticks = play_ticks - blspec->last_event;
-    double ratecnv = (double) GDGCLK_BASE / cmt_stream_get_rate ( stream );
+    double ratecnv = (double) g_mzhal.gdgclk_base / cmt_stream_get_rate ( stream );
     uint32_t count_samples = round ( (double) count_ticks / ratecnv );
 
     //printf ( "SAVE: %d - %d - %d\n", value, count_ticks, count_samples );

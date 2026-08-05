@@ -6,7 +6,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "audio.h"
-#include "hw-generic/gdg/gdgclk.h"
 #include "hw-generic/psg/psg.h"
 
 
@@ -18,13 +17,13 @@
 
 // výhodný delič pro prevod na 44.1kHz => 2
 //#define IFACE_AUDIO_CTC5253_SAMPLE_RATE (GDGCLK_BASE / (GDGCLK_1M1_DIVIDER / 2)) // 2M2
-#define IFACE_AUDIO_CTC5253_SAMPLE_RATE (GDGCLK_BASE / (GDGCLK_CTC0_DIVIDER * 2)) // 276.9 kHz
+/* IFACE_AUDIO_CTC5253_SAMPLE_RATE (GDGCLK_BASE / (GDGCLK_CTC0_DIVIDER*2))
+ * zrušeno (mzhal 11c-2c): jediný konzument (iface_audio.c resampler)
+ * čte výraz runtime z g_mzhal od dávky 10b. */
 
 // frq na ktere je nativne generovan zvuk z PSG (je to nevyhodne pro prevod na 48kHz i na 44.1kHz)
-//#define IFACE_AUDIO_MZ_SAMPLE_RATE (GDGCLK_BASE / PSG_DIVIDER) // 17734475 / (16 *5) = 221520 Hz
 
 // výhodný delič pro prevod na 44.1kHz => 443.04/44.1 = 10.05
-#define IFACE_AUDIO_PSG_SAMPLE_RATE (GDGCLK_BASE / (PSG_DIVIDER / 2)) // 443040 Hz
 
 
 
@@ -74,10 +73,10 @@ typedef struct st_IFACE_AUDIO
     uint32_t played_frame;
 
     AUDIO_OUTPUT_t channel_scan_value;
-    AUDIO_OUTPUT_t SN76489_volume_value[AUDIO_SRC_CHANNELS_COUNT][PSG_COUNT_VOLUME_LEVELS];
+    AUDIO_OUTPUT_t SN76489_volume_value[AUDIO_SRC_CHANNELS_MAX][PSG_COUNT_VOLUME_LEVELS];
 
-    float gain[AUDIO_SRC_CHANNELS_COUNT]; // nastaveni hlasitosti pro jednotlive zdroje
-    float level[AUDIO_SRC_CHANNELS_COUNT]; // prumerna uroven zvuku na kanale pro indikaci
+    float gain[AUDIO_SRC_CHANNELS_MAX]; // nastaveni hlasitosti pro jednotlive zdroje
+    float level[AUDIO_SRC_CHANNELS_MAX]; // prumerna uroven zvuku na kanale pro indikaci (superset, mzhal 11c-2)
     float total_level;
     int output_channels;  /* aktuální počet output kanálů (1=mono, 2=stereo) */
 } st_IFACE_AUDIO;

@@ -13,6 +13,11 @@
 
 #include "emulator/snapshot/snapshot.h"
 #include "emulator/snapshot/snapshot_mgr.h"
+#include "emulator/mzarch/mztvsys.h"
+#include "emulator/mzarch/mzhal.h"
+#include "emulator/snapshot/snapshot_io.h"
+#include "emulator/snapshot/snapshot_xml.h"
+#include <stdio.h>
 #include "emulator/emulator.h"
 #include "hw-generic/memory/memory.h"
 
@@ -178,6 +183,7 @@ void test_mgr_read_metadata(void)
     /* ověřit metadata */
     TEST_ASSERT_EQUAL_STRING("metadata test popis", metadata.description);
     TEST_ASSERT_EQUAL_INT(MZARCH, metadata.architecture);
+    TEST_ASSERT_EQUAL_INT(MZTVSYS, metadata.tvsys);
     TEST_ASSERT_EQUAL_INT(1, metadata.format_version);
 
     /* checksum nesmí být prázdný */
@@ -224,6 +230,95 @@ void test_mgr_multiple_save_load(void)
     g_emulator.paused = false;
 }
 
+/* === Kompatibilita arch/tvsys (mzhal krok 14) ============================ */
+
+/**
+ * @brief Zapíše minimální .mzs obsahující jen manifest.xml.
+ *
+ * @param path  Cílový soubor.
+ * @param arch  Hodnota elementu <architecture>.
+ * @param tvsys Hodnota elementu <tvsys>; 0 = element vynechat (legacy
+ *              snapshot z doby před zavedením tvsys pole).
+ */
+static void write_minimal_manifest(const char *path, int arch, int tvsys)
+{
+    snapshot_io_t *io = snapshot_io_open_write(path, 1);
+    TEST_ASSERT_NOT_NULL(io);
+
+    snapshot_xml_writer_t *w = snapshot_xml_writer_new();
+    snapshot_xml_write_header(w);
+    char ver_str[16];
+    snprintf(ver_str, sizeof(ver_str), "%d", SNAPSHOT_FORMAT_VERSION);
+    snapshot_xml_open_element_attr(w, "mzs_snapshot", "version", ver_str);
+    snapshot_xml_write_int(w, "architecture", arch);
+    if (tvsys != 0) {
+        snapshot_xml_write_int(w, "tvsys", tvsys);
+    }
+    snapshot_xml_close_element(w);
+    char *xml = snapshot_xml_writer_finish(w);
+
+    TEST_ASSERT_EQUAL_INT(SNAPSHOT_OK,
+                          snapshot_io_write_xml(io, "manifest.xml", xml));
+    g_free(xml);
+    snapshot_io_close(io);
+}
+
+#define REJECT_FILE "tests/data/tmp/test_mgr_reject.mzs"
+
+/* snapshot cizí architektury -> SNAPSHOT_ERR_ARCHITECTURE */
+void test_mgr_load_reject_wrong_architecture(void)
+{
+    MZTEST_REQUIRE_LEVEL(MZTEST_LEVEL_UNIT);
+
+    const int foreign_arch = (g_mzhal.arch == 800) ? 1500 : 800;
+    write_minimal_manifest(REJECT_FILE, foreign_arch, (int)g_mzhal.tvsys);
+
+    g_emulator.paused = true;
+    TEST_ASSERT_EQUAL_INT(SNAPSHOT_ERR_ARCHITECTURE,
+                          snapshot_load(REJECT_FILE));
+    g_emulator.paused = false;
+}
+
+/* správná arch, cizí TV systém -> SNAPSHOT_ERR_TVSYS */
+void test_mgr_load_reject_wrong_tvsys(void)
+{
+    MZTEST_REQUIRE_LEVEL(MZTEST_LEVEL_UNIT);
+
+    const int foreign_tvsys =
+        ((int)g_mzhal.tvsys == MZTVSYS_PAL) ? MZTVSYS_NTSC : MZTVSYS_PAL;
+    write_minimal_manifest(REJECT_FILE, (int)g_mzhal.arch, foreign_tvsys);
+
+    g_emulator.paused = true;
+    TEST_ASSERT_EQUAL_INT(SNAPSHOT_ERR_TVSYS, snapshot_load(REJECT_FILE));
+    g_emulator.paused = false;
+}
+
+/* legacy snapshot bez <tvsys> - posuzuje se historickým defaultem
+ * architektury (700/800 = PAL, 1500 = NTSC; rozhodnutí 2026-07-30) */
+void test_mgr_load_legacy_tvsys_policy(void)
+{
+    MZTEST_REQUIRE_LEVEL(MZTEST_LEVEL_UNIT);
+
+    const int legacy_default =
+        (g_mzhal.arch == 1500) ? MZTVSYS_NTSC : MZTVSYS_PAL;
+    write_minimal_manifest(REJECT_FILE, (int)g_mzhal.arch, 0);
+
+    g_emulator.paused = true;
+    en_SNAPSHOT_RESULT res = snapshot_load(REJECT_FILE);
+    g_emulator.paused = false;
+
+    if (legacy_default == (int)g_mzhal.tvsys) {
+        /* Legacy default sedí (mz800, mz700-pal, mz1500): tvsys check
+         * musí projít; load pak selže až na chybějících komponentách,
+         * nikdy ne na tvsys/arch. */
+        TEST_ASSERT_NOT_EQUAL(SNAPSHOT_ERR_TVSYS, res);
+        TEST_ASSERT_NOT_EQUAL(SNAPSHOT_ERR_ARCHITECTURE, res);
+    } else {
+        /* mz700-ntsc: legacy default PAL != NTSC -> reject. */
+        TEST_ASSERT_EQUAL_INT(SNAPSHOT_ERR_TVSYS, res);
+    }
+}
+
 /* === MAIN === */
 
 int main(int argc, char *argv[])
@@ -246,6 +341,9 @@ int main(int argc, char *argv[])
     RUN_TEST(test_mgr_load_nonexistent);
     RUN_TEST(test_mgr_read_metadata);
     RUN_TEST(test_mgr_read_metadata_nonexistent);
+    RUN_TEST(test_mgr_load_reject_wrong_architecture);
+    RUN_TEST(test_mgr_load_reject_wrong_tvsys);
+    RUN_TEST(test_mgr_load_legacy_tvsys_policy);
 
     /* full */
     RUN_TEST(test_mgr_multiple_save_load);

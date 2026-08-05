@@ -38,7 +38,7 @@
  */
 
 #include "main.h"
-#include "mzarch/mzarch_config.h"
+#include "mzarch/mzcommon_config.h"
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
 
@@ -69,7 +69,7 @@ extern "C" {
 #include "libs/cfgfile/cfgmodule.h"
 #include "libs/cfgfile/cfgelement.h"
 }
-#include "gdg/video.h"   /* VIDEO_SCREEN_WIDTH per-arch pro raster decode. */
+#include "emulator/mzarch/mzhal.h"
 
 /* g_dbgapi_cmdrq_queue je definovany v emulator/debugger/dbgapi.c. */
 extern "C" st_DBGAPI_CMDRQ_QUEUE g_dbgapi_cmdrq_queue;
@@ -572,7 +572,7 @@ static void render_table ( void )
          * snímku, Sline = scanline 0..VIDEO_SCREEN_HEIGHT-1, Px = pixel
          * column 0..VIDEO_SCREEN_WIDTH-1, Pxclk = total pxclk counter
          * (= integer rostoucí přes všechny snímky). */
-        const uint32_t v_width = (uint32_t) VIDEO_SCREEN_WIDTH;
+        const uint32_t v_width = (uint32_t) g_mzhal.video_screen_width;
         const uint32_t sline   = e.pxclk_in_screen / v_width;
         const uint32_t px_col  = e.pxclk_in_screen % v_width;
 

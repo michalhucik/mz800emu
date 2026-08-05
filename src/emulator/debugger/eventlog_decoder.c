@@ -17,6 +17,8 @@
  */
 
 #include "main.h"
+#include "mzarch/mzhal.h"
+#include "mzarch/mzcommon_config.h"
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
 
@@ -1647,7 +1649,9 @@ static const char *ambient_reason_label ( uint8_t reason )
  */
 static const char *ambient_banking_label ( uint8_t banking )
 {
-#if MZARCH == 800
+    /* Runtime dle g_mzhal.arch (mzhal 11f) - labely per arch
+     * odpovídají per-arch klasifikaci v eventlog.c. */
+    if ( g_mzhal.arch == 800 ) {
     switch ( banking ) {
         case EVENTLOG_AMBIENT_BANKING_DEFAULT:      return "DEFAULT";
         case EVENTLOG_AMBIENT_BANKING_ALL_RAM:      return "ALL_RAM";
@@ -1658,7 +1662,8 @@ static const char *ambient_banking_label ( uint8_t banking )
         case EVENTLOG_AMBIENT_BANKING_OTHER:        return "OTHER";
         default:                                     return "?";
     }
-#elif MZARCH == 700
+    }
+    if ( g_mzhal.arch == 700 ) {
     switch ( banking ) {
         case EVENTLOG_AMBIENT_BANKING_DEFAULT:      return "DEFAULT";
         case EVENTLOG_AMBIENT_BANKING_ALL_RAM:      return "ALL_RAM";
@@ -1667,7 +1672,8 @@ static const char *ambient_banking_label ( uint8_t banking )
         case EVENTLOG_AMBIENT_BANKING_OTHER:        return "OTHER";
         default:                                     return "?";
     }
-#elif MZARCH == 1500
+    }
+    if ( g_mzhal.arch == 1500 ) {
     switch ( banking ) {
         case EVENTLOG_AMBIENT_BANKING_DEFAULT:      return "DEFAULT";
         case EVENTLOG_AMBIENT_BANKING_ALL_RAM:      return "ALL_RAM";
@@ -1677,9 +1683,8 @@ static const char *ambient_banking_label ( uint8_t banking )
         case EVENTLOG_AMBIENT_BANKING_OTHER:        return "OTHER";
         default:                                     return "?";
     }
-#else
-#  error "Unknown MZARCH value"
-#endif
+    }
+    return "?";
 }
 
 

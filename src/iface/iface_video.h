@@ -4,7 +4,7 @@
 #include "main.h"
 #include <glib.h>
 #include "app/app_thread.h"
-#include "hw-generic/gdg/framebuffer.h"
+#include "hw-generic/gdg/framebuffer_state.h"
 #include "emulator.h"
 #include "display.h"
 #include "emulator/emulator_measuring.h"

@@ -21,7 +21,10 @@
 #include "snapshot/snapshot_mgr.h"
 #include "snapshot/snapshot_xml.h"
 
-#if CFG_HWEXT_HAVE_QDISK
+#include "mzarch/mzhal.h"
+
+/* TU se kompiluje bezpodminecne na vsech platformach (mzhal krok 8);
+ * pritomnost sekce ve snapshotu ridi runtime guard v _register(). */
 
 #include <stdio.h>
 #include <string.h>
@@ -183,6 +186,12 @@ static en_SNAPSHOT_RESULT snap_qdisk_load(st_SNAPSHOT_CONTEXT *ctx)
 
 void snap_qdisk_register(void)
 {
+    /* Platformy bez HW registraci preskoci - snapshot pak sekci
+     * neobsahuje (zmrazeny on-disk kontrakt, shodne s drivejsim
+     * compile-time #if). */
+    if (!g_mzhal.have_qdisk)
+        return;
+
     snapshot_register_component("qdisk",
                                 SNAPSHOT_PRIORITY_DEVICE,
                                 snap_qdisk_save,
@@ -190,4 +199,4 @@ void snap_qdisk_register(void)
                                 true);
 }
 
-#endif /* CFG_HWEXT_HAVE_QDISK */
+

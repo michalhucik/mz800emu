@@ -16,6 +16,7 @@
  */
 
 #include "main.h"
+#include "emulator/mzarch/mzhal.h"
 #include "libs/sdlapp/sdlapp.h"
 #include "ui-imgui/bootstrap/myimgui.h"
 #include "libs/imgui/imgui.h"
@@ -23,18 +24,15 @@
 
 #include "i18n.h"
 
-#include "mzarch/mzarch_config.h"
+#include "mzarch/mzcommon_config.h"
 
-#if CFG_HWEXT_HAVE_IDE8
 #include "hw-generic/ide8/ide8.h"
-#endif
 
 extern "C"
 {
     void imgui_ide8_state_window(bool *p_open);
 }
 
-#if CFG_HWEXT_HAVE_IDE8
 
 /**
  * @brief Vrati textovou reprezentaci en_IDE8_CMD (posledni prikaz mechaniky).
@@ -110,14 +108,13 @@ static void render_drive_section(const st_IDE8_DRIVE *drive)
     render_decoded_status(drive->status);
 }
 
-#endif /* CFG_HWEXT_HAVE_IDE8 */
 
 /**
  * @brief Render IDE8 State debugger okno (viz ide8_window.h).
  */
 void imgui_ide8_state_window(bool *p_open)
 {
-#if CFG_HWEXT_HAVE_IDE8
+    if (g_mzhal.have_ide8) { /* runtime capability, mzhal krok 8 */
     ImGui::SetNextWindowSize(ImVec2(440, 560), ImGuiCond_FirstUseEver);
 
     if (!ImGui::Begin(_L("IDE8 State"), p_open, ImGuiWindowFlags_NoCollapse))
@@ -152,7 +149,7 @@ void imgui_ide8_state_window(bool *p_open)
     }
 
     ImGui::End();
-#else
+    } else {
     (void)p_open;
-#endif
+    }
 }

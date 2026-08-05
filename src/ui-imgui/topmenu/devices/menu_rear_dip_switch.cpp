@@ -1,3 +1,4 @@
+#include "mzarch/mzarch_config.h" /* capability makra - dříve tranzitivně přes main.h (mzhal 11c-1) */
 #include "main.h"
 #include <stdbool.h>
 #include <stdint.h>
@@ -11,10 +12,8 @@
 #include "ui-imgui/topmenu/topmenu.h"
 #include "emulator/mzarch/mzarch.h"
 #include "emulator/hw-generic/cmt/cmt.h"
-#if (MZARCH == 800) || (MZARCH == 1500)
 #include "emulator/hw-generic/pioz80/pioz80.h"
 #include "emulator/hw-generic/mz1p16/mz1p16_emu.h"
-#endif
 
 extern "C"
 {

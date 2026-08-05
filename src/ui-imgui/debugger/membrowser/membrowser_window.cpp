@@ -865,7 +865,7 @@ static bool render_banking_indicators_if_any ( void )
 #if MZARCH == 800
     /* MZ-800 PROHIBITED detection. */
     bool prh = MEMORY_MZ800_MAP_TEST_PROHIBITED ? true : false;
-    bool mz700_mode = GDG_MZ800_DMD_TEST_MZ700 ? true : false;
+    bool mz700_mode = GDG_DMD_TEST_MODE700 ? true : false;
     bool scrw640 = GDG_MZ800_DMD_TEST_SCRW640 ? true : false;
     bool hicolor = GDG_MZ800_DMD_TEST_HICOLOR ? true : false;
     bool vbank = GDG_MZ800_DMD_TEST_VBANK ? true : false;

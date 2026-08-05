@@ -8,9 +8,10 @@
  * 2 = Rotational — jako Incremental, ale po dosažení max_slots smaže nejstarší
  */
 
+#include "mzarch/mzhal.h" /* g_mzhal.arch pro jmena quicksave souboru (mzhal 11c-2c) */
 #include "snapshot_quicksave.h"
 #include "snapshot_xml.h"
-#include "mzarch/mzarch_config.h"
+#include "mzarch/mzcommon_config.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -27,7 +28,7 @@ static void quicksave_basic_path(char *out, size_t out_size,
     /* Precision specifier - shoda s formátem v Incremental/Rotational
      * větvi (~ř. 203), kde out je char[1024] a dir/basename mohou být
      * libovolně dlouhé. Brání format-truncation warningu (-O2). */
-    snprintf(out, out_size, "%.700s/%.200s_mz%d.mzs", dir, basename, MZARCH);
+    snprintf(out, out_size, "%.700s/%.200s_mz%d.mzs", dir, basename, g_mzhal.arch);
 }
 
 
@@ -37,7 +38,7 @@ int snapshot_quicksave_find_next_number(const char *dir, const char *basename)
 
     /* Sestavit vzor pro hledání: {basename}_mzXXX-*.mzs */
     char pattern[512];
-    snprintf(pattern, sizeof(pattern), "%s_mz%d-", basename, MZARCH);
+    snprintf(pattern, sizeof(pattern), "%s_mz%d-", basename, g_mzhal.arch);
     size_t prefix_len = strlen(pattern);
 
     GDir *gdir = g_dir_open(dir, 0, NULL);
@@ -76,7 +77,7 @@ bool snapshot_quicksave_find_latest(char *out_path, size_t out_size,
 
     /* Incremental/Rotational — najít soubor s nejvyšším číslem */
     char pattern[512];
-    snprintf(pattern, sizeof(pattern), "%s_mz%d-", basename, MZARCH);
+    snprintf(pattern, sizeof(pattern), "%s_mz%d-", basename, g_mzhal.arch);
     size_t prefix_len = strlen(pattern);
 
     int max_num = 0;
@@ -118,7 +119,7 @@ void snapshot_quicksave_cleanup_oldest(const char *dir, const char *basename,
         return;
 
     char pattern[512];
-    snprintf(pattern, sizeof(pattern), "%s_mz%d-", basename, MZARCH);
+    snprintf(pattern, sizeof(pattern), "%s_mz%d-", basename, g_mzhal.arch);
     size_t prefix_len = strlen(pattern);
 
     /* Sesbírat všechny soubory s čísly */
@@ -204,7 +205,7 @@ en_SNAPSHOT_RESULT snapshot_quicksave(void)
         {
             int next = snapshot_quicksave_find_next_number(dir, basename);
             snprintf(path, sizeof(path), "%.700s/%.200s_mz%d-%04d.mzs",
-                     dir, basename, MZARCH, next);
+                     dir, basename, g_mzhal.arch, next);
             result = snapshot_save(path, "Quick Save");
             break;
         }
@@ -213,7 +214,7 @@ en_SNAPSHOT_RESULT snapshot_quicksave(void)
         {
             int next = snapshot_quicksave_find_next_number(dir, basename);
             snprintf(path, sizeof(path), "%.700s/%.200s_mz%d-%04d.mzs",
-                     dir, basename, MZARCH, next);
+                     dir, basename, g_mzhal.arch, next);
             result = snapshot_save(path, "Quick Save");
             if (result == SNAPSHOT_OK) {
                 snapshot_quicksave_cleanup_oldest(dir, basename,

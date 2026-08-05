@@ -70,7 +70,7 @@
  * ---------------------------------------------------------------------------
  */
 
-#include "../mzarch/mzarch_config.h"
+#include "../mzarch/mzcommon_config.h"
 
 #ifdef MZ800EMU_CFG_MCP_SERVER_ENABLED
 
@@ -681,6 +681,11 @@ int mcp_pipe_main(int argc, char *argv[])
      * vlákno neběží, takže žádný emit z BP hooku nemůže nastat. */
     trap_manager_shutdown();
     event_bus_shutdown();
+
+    /* Threading kontrakt (mzhal krok 12): teardown subsystémů až po
+     * joinu emu vlákna a shutdownu MCP/dbgapi - viz emulator.h. */
+    if (emuretval == EXIT_SUCCESS)
+        emulator_teardown();
 
     iface_exit();
     sdlapp_destroy(g_sdlapp);

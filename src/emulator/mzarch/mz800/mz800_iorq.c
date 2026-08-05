@@ -16,9 +16,7 @@
 #include "hw-generic/pioz80/pioz80.h"
 #endif
 
-#if HAVE_JOY
 #include "hw-generic/joy/joy.h"
-#endif /* HAVE_JOY */
 
 #if CFG_HWEXT_HAVE_FDC
 #include "hw-generic/fdc/fdc.h"
@@ -82,7 +80,7 @@ uint8_t port_read_cb(z80_t *cpu, uint16_t addr, void *user_data)
         };
         break;
 
-#ifdef CFG_HWEXT_HAVE_RAMDISK
+#if CFG_HWEXT_HAVE_RAMDISK
     case 0x68:
     case 0x69:
     case 0x6a:
@@ -104,7 +102,7 @@ uint8_t port_read_cb(z80_t *cpu, uint16_t addr, void *user_data)
         break;
 #endif
 
-#ifdef CFG_HWEXT_HAVE_IDE8
+#if CFG_HWEXT_HAVE_IDE8
     case 0x78:
     case 0x79:
     case 0x7a:
@@ -138,7 +136,7 @@ uint8_t port_read_cb(z80_t *cpu, uint16_t addr, void *user_data)
     case 0xd2:
     case 0xd3:
         /* cteme z PIO8255: 0xd0 - 0xd3  */
-        if (!GDG_MZ800_DMD_TEST_MZ700)
+        if (!GDG_DMD_TEST_MODE700)
         {
             retval = pio8255_read(port_lsb & 0x03);
         }
@@ -153,7 +151,7 @@ uint8_t port_read_cb(z80_t *cpu, uint16_t addr, void *user_data)
     case 0xd5:
     case 0xd6:
         /* cteme z CTC8253: 0xd4 - 0xd6, 0xd7 cist nelze */
-        if (!GDG_MZ800_DMD_TEST_MZ700)
+        if (!GDG_DMD_TEST_MODE700)
         {
             retval = ctc8253_read_byte(port_lsb & 0x03);
         }
@@ -164,7 +162,7 @@ uint8_t port_read_cb(z80_t *cpu, uint16_t addr, void *user_data)
         };
         break;
 
-#ifdef CFG_HWEXT_HAVE_FDC
+#if CFG_HWEXT_HAVE_FDC
     case 0xd8:
     case 0xd9:
     case 0xda:
@@ -183,7 +181,7 @@ uint8_t port_read_cb(z80_t *cpu, uint16_t addr, void *user_data)
         break;
 #endif
 
-#ifdef CFG_HWEXT_HAVE_FDC
+#if CFG_HWEXT_HAVE_FDC
     /* FDC1 (sekundární) - chip data porty 0x58 - 0x5b. */
     case 0x58:
     case 0x59:
@@ -210,7 +208,7 @@ uint8_t port_read_cb(z80_t *cpu, uint16_t addr, void *user_data)
         TRACELOG_IORQ_MARK_UNCONNECTED();
         break;
 
-#ifdef CFG_HWEXT_HAVE_RAMDISK
+#if CFG_HWEXT_HAVE_RAMDISK
     case 0xe8:
     case 0xe9:
     case 0xeb:
@@ -248,7 +246,6 @@ uint8_t port_read_cb(z80_t *cpu, uint16_t addr, void *user_data)
         break;
 #endif
 
-#if HAVE_JOY
     case 0xf0:
         /* cteme JOY1 */
         if (g_pio8255.signal_PA_joy1_enabled)
@@ -272,13 +269,6 @@ uint8_t port_read_cb(z80_t *cpu, uint16_t addr, void *user_data)
             retval = 0xff;
         };
         break;
-#else
-    case 0xf0:
-    case 0xf1:
-        /* cteme JOY1, JOY2 */
-        retval = 0xff;
-        break;
-#endif
 
 #if CFG_HWEXT_HAVE_QDISK
     case 0xf4:
@@ -298,7 +288,7 @@ uint8_t port_read_cb(z80_t *cpu, uint16_t addr, void *user_data)
         break;
 #endif
 
-#ifdef CFG_HWEXT_HAVE_RAMDISK
+#if CFG_HWEXT_HAVE_RAMDISK
     case 0xf8:
     case 0xf9:
         /* cteme standardni ramdisk */
@@ -389,7 +379,7 @@ void port_write_cb(z80_t *cpu, uint16_t addr, uint8_t value, void *user_data)
         break;
 #endif
 
-#ifdef CFG_HWEXT_HAVE_IDE8
+#if CFG_HWEXT_HAVE_IDE8
     case 0x78:
     case 0x79:
     case 0x7a:
@@ -422,7 +412,7 @@ void port_write_cb(z80_t *cpu, uint16_t addr, uint8_t value, void *user_data)
     case 0xd2:
     case 0xd3:
         /* zapisujeme do PIO8255: 0xd0 - 0xd3 */
-        if (!GDG_MZ800_DMD_TEST_MZ700)
+        if (!GDG_DMD_TEST_MODE700)
         {
             pio8255_write(port_lsb & 0x03, value);
             TRACELOG_IORQ_MARK_HANDLED();
@@ -435,7 +425,7 @@ void port_write_cb(z80_t *cpu, uint16_t addr, uint8_t value, void *user_data)
     case 0xd6:
     case 0xd7:
         /* zapisujeme do CTC8253: 0xd4 - 0xd7 */
-        if (!GDG_MZ800_DMD_TEST_MZ700)
+        if (!GDG_DMD_TEST_MODE700)
         {
             ctc8253_write_byte(port_lsb & 0x03, value);
             TRACELOG_IORQ_MARK_HANDLED();
@@ -443,7 +433,7 @@ void port_write_cb(z80_t *cpu, uint16_t addr, uint8_t value, void *user_data)
         /* MZ-700 mode: CTC mapped jen na E004-E007, IORQ D4-D7 = ghost. */
         break;
 
-#ifdef CFG_HWEXT_HAVE_FDC
+#if CFG_HWEXT_HAVE_FDC
     case 0xd8:
     case 0xd9:
     case 0xda:
@@ -462,7 +452,7 @@ void port_write_cb(z80_t *cpu, uint16_t addr, uint8_t value, void *user_data)
         break;
 #endif
 
-#ifdef CFG_HWEXT_HAVE_FDC
+#if CFG_HWEXT_HAVE_FDC
     /* FDC1 (sekundární) - porty 0x58 - 0x5f. */
     case 0x58:
     case 0x59:
@@ -553,7 +543,7 @@ void port_write_cb(z80_t *cpu, uint16_t addr, uint8_t value, void *user_data)
         break;
 #endif
 
-#ifdef CFG_HWEXT_HAVE_RAMDISK
+#if CFG_HWEXT_HAVE_RAMDISK
     case 0xfa:
         /* zapisujeme na std ramdisk: 0xfa */
         if (g_ramdisk.std.connected)
@@ -575,7 +565,7 @@ void port_write_cb(z80_t *cpu, uint16_t addr, uint8_t value, void *user_data)
         break;
 #endif
 
-#ifdef CFG_HWEXT_HAVE_RAMDISK
+#if CFG_HWEXT_HAVE_RAMDISK
     case 0xe9:
     case 0xea:
     case 0xeb:

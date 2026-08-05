@@ -1,13 +1,11 @@
-
 #include "main.h"
 
 #include "interrupt.h"
 #include "hw-generic/pioz80/pioz80.h"
 #include "hw-generic/pio8255/pio8255.h"
 #include "hw-generic/ctc8253/ctc8253.h"
-#if CFG_HWEXT_HAVE_FDC
 #include "hw-generic/fdc/fdc.h"
-#endif
+#include "mzarch/mzhal.h"
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
 #include "debugger/trace/intlog.h"
@@ -67,7 +65,6 @@ static inline void mzarch_interrupt_check_pioz80(void)
 
 // #include "hw-generic/gdg/gdg.h"
 
-#if CFG_HWEXT_HAVE_FDC
 /**
  * Kontrola preruseni od FDC
  */
@@ -83,7 +80,6 @@ static inline void mzarch_interrupt_check_fdc(void)
         g_mzarch_main.interrupt &= ~MZARCH_INTERRUPT_FDC;
     };
 }
-#endif
 
 /**
  * Provede kontrolu vsech zarizeni, ktere jsou schopny vygenerovat interrupt.
@@ -92,13 +88,13 @@ static inline void mzarch_interrupt_check_fdc(void)
  */
 void mzarch_interrupt_manager(void)
 {
-#if CFG_HWEXT_HAVE_FDC
-    mzarch_interrupt_check_fdc();
-#endif
+    /* Runtime capability check - volano event-driven (CTC/FDC/PIO zmeny),
+     * ne per-instrukce. */
+    if (g_mzhal.have_fdc)
+        mzarch_interrupt_check_fdc();
     mzarch_interrupt_check_ctc2();
-#if HAVE_PIOZ80
-    mzarch_interrupt_check_pioz80();
-#endif
+    if (g_mzhal.have_pioz80)
+        mzarch_interrupt_check_pioz80();
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
     /* trace-suite intlog: emit pin_edge eventy pro každou změnu interrupt

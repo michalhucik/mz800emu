@@ -28,6 +28,10 @@
 
 #include "hw-generic/gdg/video.h"
 
+/* Hodnoty MZTVSYS_PAL/NTSC - nutné PŘED #if porovnáním níže (jinak past
+ * nedefinovaného makra, viz mztvsys.h). */
+#include "mzarch/mztvsys.h"
+
 #if MZTVSYS == MZTVSYS_NTSC
 
 #define GDGCLK_REAL_BASE 14318180

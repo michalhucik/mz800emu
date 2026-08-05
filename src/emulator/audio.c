@@ -29,6 +29,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
+#include "mzarch/mzhal.h"
 #include <glib.h>
 
 // Lokalizace
@@ -69,7 +70,7 @@ static inline st_AUDIO_LOG *audio_log_create(uint64_t first_timestamp, bool ster
     log->last_timestamp = first_timestamp;
     log->last_psg_timestamp = first_timestamp;
 
-    for (int src_id = 0; src_id < AUDIO_SRC_CHANNELS_COUNT; src_id++)
+    for (int src_id = 0; src_id < AUDIO_SRC_CHANNELS_MAX; src_id++)
     {
         st_AUDIO_SOURCE_LOG *src = (st_AUDIO_SOURCE_LOG *)malloc(sizeof(st_AUDIO_SOURCE_LOG));
         src->samples = NULL;
@@ -95,7 +96,7 @@ void audio_log_destroy(st_AUDIO_LOG *audio_log)
         return;
     };
 
-    for (int i = 0; i < AUDIO_SRC_CHANNELS_COUNT; i++)
+    for (int i = 0; i < AUDIO_SRC_CHANNELS_MAX; i++)
     {
         if (audio_log->src[i] != NULL)
         {
@@ -136,22 +137,20 @@ void audio_print_volume_info(void)
         g_string_append_c(str, ' ');
     };
     g_print("%sCTC0  : %7.2f %%\n", str->str, g_iface_audio.gain[AUDIO_SRC_CTC0] * 100.0f);
-#if HAVE_PSG >= 1
+    if (g_mzhal.audio_src_channels > 1) {
     g_print("%sPSG0_0: %7.2f %%\n", str->str, g_iface_audio.gain[AUDIO_SOURCE_ID_SHIFT_PSG0 + PSG_CHANNEL_0] * 100.0f);
     g_print("%sPSG0_1: %7.2f %%\n", str->str, g_iface_audio.gain[AUDIO_SOURCE_ID_SHIFT_PSG0 + PSG_CHANNEL_1] * 100.0f);
     g_print("%sPSG0_2: %7.2f %%\n", str->str, g_iface_audio.gain[AUDIO_SOURCE_ID_SHIFT_PSG0 + PSG_CHANNEL_2] * 100.0f);
     g_print("%sPSG0_3: %7.2f %%\n", str->str, g_iface_audio.gain[AUDIO_SOURCE_ID_SHIFT_PSG0 + PSG_CHANNEL_3] * 100.0f);
-#endif
-#if HAVE_PSG == 2
+    };
     /* PSG1: MZ-1500 vzdy stereo, MZ-800 jen kdyz allow_psg1=YES */
-    if (g_psg_module.stereo)
+    if (g_mzhal.psg_count == 2 && g_psg_module.stereo)
     {
         g_print("%sPSG1_0: %7.2f %%\n", str->str, g_iface_audio.gain[AUDIO_SOURCE_ID_SHIFT_PSG1 + PSG_CHANNEL_0] * 100.0f);
         g_print("%sPSG1_1: %7.2f %%\n", str->str, g_iface_audio.gain[AUDIO_SOURCE_ID_SHIFT_PSG1 + PSG_CHANNEL_1] * 100.0f);
         g_print("%sPSG1_2: %7.2f %%\n", str->str, g_iface_audio.gain[AUDIO_SOURCE_ID_SHIFT_PSG1 + PSG_CHANNEL_2] * 100.0f);
         g_print("%sPSG1_3: %7.2f %%\n", str->str, g_iface_audio.gain[AUDIO_SOURCE_ID_SHIFT_PSG1 + PSG_CHANNEL_3] * 100.0f);
     }
-#endif
     g_print("\n");
     g_string_free(str, TRUE);
 }
@@ -167,7 +166,7 @@ void audio_init(void)
     cfgelement_set_propagate_cb(elm, audio_propagatecfg_volume, &g_iface_audio.gain[AUDIO_SRC_CTC0]);
     cfgelement_set_save_cb(elm, audio_savecfg_volume, &g_iface_audio.gain[AUDIO_SRC_CTC0]);
 
-#if HAVE_PSG >= 1
+    if (g_mzhal.audio_src_channels > 1) {
     elm = cfgmodule_register_new_element(cmod, "volume_psg0", CFGENTYPE_UNSIGNED, DEFAULT_VOLUME, 0, MAX_UINT32);
     cfgelement_set_propagate_cb(elm, audio_propagatecfg_volume, &g_iface_audio.gain[AUDIO_SOURCE_ID_SHIFT_PSG0 + PSG_CHANNEL_0]);
     cfgelement_set_save_cb(elm, audio_savecfg_volume, &g_iface_audio.gain[AUDIO_SOURCE_ID_SHIFT_PSG0 + PSG_CHANNEL_0]);
@@ -183,9 +182,9 @@ void audio_init(void)
     elm = cfgmodule_register_new_element(cmod, "volume_psg3", CFGENTYPE_UNSIGNED, DEFAULT_VOLUME, 0, MAX_UINT32);
     cfgelement_set_propagate_cb(elm, audio_propagatecfg_volume, &g_iface_audio.gain[AUDIO_SOURCE_ID_SHIFT_PSG0 + PSG_CHANNEL_3]);
     cfgelement_set_save_cb(elm, audio_savecfg_volume, &g_iface_audio.gain[AUDIO_SOURCE_ID_SHIFT_PSG0 + PSG_CHANNEL_3]);
-#endif /* HAVE_PSG >= 1 */
+    };
 
-#if HAVE_PSG == 2
+    if (g_mzhal.psg_count == 2) {
     /* PSG1 volume konfigurace — jen pro stereo PSG (MZ-1500) */
     elm = cfgmodule_register_new_element(cmod, "volume_psg1_0", CFGENTYPE_UNSIGNED, DEFAULT_VOLUME, 0, MAX_UINT32);
     cfgelement_set_propagate_cb(elm, audio_propagatecfg_volume, &g_iface_audio.gain[AUDIO_SOURCE_ID_SHIFT_PSG1 + PSG_CHANNEL_0]);
@@ -202,13 +201,13 @@ void audio_init(void)
     elm = cfgmodule_register_new_element(cmod, "volume_psg1_3", CFGENTYPE_UNSIGNED, DEFAULT_VOLUME, 0, MAX_UINT32);
     cfgelement_set_propagate_cb(elm, audio_propagatecfg_volume, &g_iface_audio.gain[AUDIO_SOURCE_ID_SHIFT_PSG1 + PSG_CHANNEL_3]);
     cfgelement_set_save_cb(elm, audio_savecfg_volume, &g_iface_audio.gain[AUDIO_SOURCE_ID_SHIFT_PSG1 + PSG_CHANNEL_3]);
-#endif /* HAVE_PSG == 2 */
+    };
 
     cfgmodule_parse(cmod);
     cfgmodule_propagate(cmod);
 
     g_audio.log = audio_log_create(0, g_psg_module.stereo);
-    for (int src_id = 0; src_id < AUDIO_SRC_CHANNELS_COUNT; src_id++)
+    for (int src_id = 0; src_id < AUDIO_SRC_CHANNELS_MAX; src_id++)
     {
         audio_log_init_src(g_audio.log, src_id, 0);
     };
@@ -226,7 +225,7 @@ void audio_reset_log(uint64_t new_timestamp)
     /* Zničit starý log a vytvořit čistý s novým timestampem */
     audio_log_destroy(g_audio.log);
     g_audio.log = audio_log_create(new_timestamp, g_psg_module.stereo);
-    for (int src_id = 0; src_id < AUDIO_SRC_CHANNELS_COUNT; src_id++) {
+    for (int src_id = 0; src_id < AUDIO_SRC_CHANNELS_MAX; src_id++) {
         audio_log_init_src(g_audio.log, src_id, 0);
     }
 
@@ -309,15 +308,24 @@ void audio_ctc0_changed(bool ctc0_state, uint64_t total_event_ticks)
 
 void audio_log_fill_psg(uint64_t total_event_ticks)
 {
-#if HAVE_PSG == 0
-    /* MZ-700 nema PSG - pouze udrzime last_psg_timestamp v synchronizaci,
+    /* Platformy bez PSG: pouze udrzime last_psg_timestamp v synchronizaci,
      * abychom v audiolog_finish_20ms_frame mohli pouzit log->last_psg_timestamp
      * jako konzistentni casovou znacku zacatku noveho frame logu. */
-    g_audio.log->last_psg_timestamp = total_event_ticks;
-#else
+    if (g_mzhal.psg_count == 0)
+    {
+        g_audio.log->last_psg_timestamp = total_event_ticks;
+        return;
+    };
+
     st_AUDIO_LOG *log = g_audio.log;
 
-    while ((total_event_ticks - log->last_psg_timestamp) >= PSG_DIVIDER)
+    /* Loop-invariant hoist: cteni g_mzhal NEpatri dovnitr scan smycky.
+     * psg_divider runtime z g_mzhal (mzhal 10c; hodnota per EXE beze
+     * zmeny, ve smycce jen compare + add). */
+    const int psg1_present = (g_mzhal.psg_count == 2);
+    const uint64_t psg_divider = g_mzhal.psg_divider;
+
+    while ((total_event_ticks - log->last_psg_timestamp) >= psg_divider)
     {
         psg_step();   /* Steppuje PSG0 (a PSG1 pokud stereo) */
 
@@ -334,10 +342,9 @@ void audio_log_fill_psg(uint64_t total_event_ticks)
             };
             audio_changed(g_audio.log, (en_AUDIO_SOURCE)(AUDIO_SOURCE_FLAG_PSG0 | channel), scan_value, log->last_psg_timestamp);
 
-#if HAVE_PSG == 2
             /* PSG1 logování — stereo PSG (MZ-1500 nativne, MZ-800 pres allow_psg1).
              * Runtime check g_psg_module.stereo pro MZ-800 dynamic case. */
-            if (g_psg_module.stereo)
+            if (psg1_present && g_psg_module.stereo)
             {
                 AUDIO_BUF_t scan_value1 = 0;
                 if (g_psg_module.psg[1].channel[channel].attn != PSG_OUT_OFF)
@@ -349,12 +356,10 @@ void audio_log_fill_psg(uint64_t total_event_ticks)
                 };
                 audio_changed(g_audio.log, (en_AUDIO_SOURCE)(AUDIO_SOURCE_FLAG_PSG1 | channel), scan_value1, log->last_psg_timestamp);
             }
-#endif
         };
 
-        log->last_psg_timestamp += PSG_DIVIDER;
+        log->last_psg_timestamp += psg_divider;
     };
-#endif /* HAVE_PSG */
 }
 
 void audiolog_finish_20ms_frame(uint64_t total_event_ticks)
@@ -366,8 +371,8 @@ void audiolog_finish_20ms_frame(uint64_t total_event_ticks)
     st_AUDIO_LOG *log = g_audio.log;
     log->last_timestamp = total_event_ticks;
 
-    // uzavreme posledni eventy
-    for (int i = 0; i < AUDIO_SRC_CHANNELS_COUNT; i++)
+    // uzavreme posledni eventy (runtime pocet kanalu platformy)
+    for (int i = 0; i < (int)g_mzhal.audio_src_channels; i++)
     {
         st_AUDIO_SOURCE_LOG *src = log->src[i];
         if (src->samples_count > 0)
@@ -425,8 +430,8 @@ void audiolog_finish_20ms_frame(uint64_t total_event_ticks)
         };
     };
 
-    // Zkopirujeme posledni hodnoty PSG
-    for (int i = first_src_id; i < AUDIO_SRC_CHANNELS_COUNT; i++)
+    // Zkopirujeme posledni hodnoty PSG (runtime pocet kanalu platformy)
+    for (int i = first_src_id; i < (int)g_mzhal.audio_src_channels; i++)
     {
         st_AUDIO_SOURCE_LOG *src = log->src[i];
         audio_log_init_src(new_log, i, src->last_value);

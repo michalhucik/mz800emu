@@ -23,7 +23,7 @@
  * ---------------------------------------------------------------------------
  */
 
-#include "mzarch/mzarch_config.h"
+#include "mzarch/mzcommon_config.h"
 
 #include <stdio.h>
 #include <string.h>

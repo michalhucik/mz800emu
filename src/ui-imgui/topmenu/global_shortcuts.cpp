@@ -10,19 +10,15 @@
 #include "libs/imgui/imgui.h"
 
 #include "ui-imgui/bootstrap/myimgui.h"
+#include "emulator/mzarch/mzhal.h"
 #include "emulator.h"
 #include "emulator_measuring.h"
-#include "mzarch/mzarch_config.h"
 #include "mzarch/mzarch_platform_functions.h"
 #include "iface/iface_video.h"
 
-#if HAVE_JOY
 #include "iface/iface_joy.h"
-#endif
 
-#if CFG_HWEXT_HAVE_FDC
 #include "hw-generic/fdc/fdc.h"
-#endif /* CFG_HWEXT_HAVE_FDC */
 
 #include "debugger/debugger.h"
 #include "ui-imgui/debugger/debugger_state.h"
@@ -69,14 +65,10 @@ void imgui_global_shortcuts(void)
         }
         else
         {
-#if HAVE_JOY
             iface_joy_get_calibration();
-#endif
         };
 #else
-#if HAVE_JOY
         iface_joy_get_calibration();
-#endif
 #endif
     };
 
@@ -302,7 +294,7 @@ void imgui_global_shortcuts(void)
             customspeed_step_down_request(100);
         };
 
-#if CFG_HWEXT_HAVE_FDC
+        if (g_mzhal.have_fdc) { /* runtime capability, mzhal krok 8 */
         /*
          * Mount/Umount FD0 DSK image: Alt + 1
          */
@@ -374,7 +366,7 @@ void imgui_global_shortcuts(void)
                 fdc_ui_mount(&g_fdc[FDC0], drive_id);
             };
         };
-#endif /* CFG_HWEXT_HAVE_FDC */
+        }
 
         /*
          * Snapshot hotkeys:
@@ -552,7 +544,7 @@ void imgui_global_shortcuts(void)
          * patternu Alt+D / Alt+Shift+D (= hlavní debugger / Disassembler).
          */
 
-#if HAVE_PIOZ80
+        if (g_mzhal.have_pioz80) { /* runtime capability, mzhal krok 8 */
         /*
          * Per-chip-panels F1: Alt + Shift + Z = toggle Z80 PIO State okno.
          * Alt+Z bez Shift dnes není používán, ale gate na Shift zachováváme
@@ -563,9 +555,9 @@ void imgui_global_shortcuts(void)
         {
             g_gui->showPiozStateWindow = !g_gui->showPiozStateWindow;
         };
-#endif
+        }
 
-#if HAVE_PSG >= 1
+        if (g_mzhal.psg_count >= 1) { /* runtime capability, mzhal krok 8 */
         /*
          * Per-chip-panels F1: Alt + Shift + G = toggle PSG State okno
          * (G = Generator). Alt+G bez Shift dnes není používán.
@@ -585,7 +577,7 @@ void imgui_global_shortcuts(void)
         {
             g_gui->showPsgAudioScopeWindow = !g_gui->showPsgAudioScopeWindow;
         };
-#endif
+        }
         /*
          * gdg-panel F1: Alt + Shift + V = toggle GDG State okno - obslouženo
          * uvnitř `if (Alt+V)` handleru výše (analogie Alt+I / Alt+Shift+I).

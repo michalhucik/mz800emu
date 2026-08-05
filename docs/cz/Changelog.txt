@@ -1,3 +1,8 @@
+	- ZMĚNA (vnitřní přestavba): Všechny čtyři varianty emulátoru (MZ-800, MZ-700 PAL/NTSC, MZ-1500) nyní sdílejí jedno společné emulační jádro; rozdíly mezi počítači popisuje za běhu HW tabulka platformy. Plné sestavení ze zdrojáků v MSYS2 je zhruba 2x rychlejší. Ztráta výkonu mz800 je cca 3-4 % v MAX SPEED.
+
+	- Snapshot nově ukládá i TV systém (PAL/NTSC). Snapshoty z MZ-700 PAL a MZ-700 NTSC jsou vzájemně nekompatibilní - načtení nesprávné varianty se odmítne s chybovou hláškou (stejně jako u cizí architektury). Starší snapshoty bez tohoto údaje se posuzují podle historické výchozí normy dané architektury (MZ-700 a MZ-800 = PAL, MZ-1500 = NTSC).
+
+	- Úklid při ukončení emulátoru (zápis konfigurace, CDL export, odpojení médií) nyní proběhne až po ukončení emulačního vlákna a odpojení MCP spojení - prevence vzácného pádu při zavření emulátoru s aktivním MCP klientem.
 
 	- BUGFIX: Stisk RESET (F12 nebo menu) okamžitě po startu okna mohl shodit emulátor, pokud se ještě nestihlo spustit emulační vlákno.
 

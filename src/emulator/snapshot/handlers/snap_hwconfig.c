@@ -8,6 +8,7 @@
 #include <glib.h>
 
 #include "snapshot/snapshot_mgr.h"
+#include "mzarch/mzhal.h"
 #include "snapshot/snapshot_xml.h"
 #include "mzarch/mzarch.h"
 #include "hw-generic/psg/psg.h"
@@ -22,20 +23,20 @@ static en_SNAPSHOT_RESULT snap_hwconfig_save(st_SNAPSHOT_CONTEXT *ctx)
 
     /* Přepínač kompatibility MZ-700 (DIP switch) - jen MZ-800/MZ-1500;
      * MZ-700 nativní nemá DIP přepínač MZ-700-mode (je vždy v MZ-700 módu). */
-#if MZARCH != 700
-    snapshot_xml_write_int(w, "switch700", (int)g_mzarch_main.switch700);
-#endif
+    /* Runtime (mzhal 11e): DIP jen na 800/1500, klic per arch zmrazen. */
+    if (g_mzhal.has_rear_dip_switch700) {
+        snapshot_xml_write_int(w, "switch700", (int)g_mzarch_main.switch700);
+    }
 
     /* Audio režim (mono/stereo) - jen pro platformy s PSG */
-#if HAVE_PSG >= 1
-    snapshot_xml_write_bool(w, "psg_stereo", g_psg_module.stereo);
-#endif
+    if (g_mzhal.psg_count >= 1)
+        snapshot_xml_write_bool(w, "psg_stereo", g_psg_module.stereo);
 
     /* Nastavení HW kompatibility - pouze MZ-800 ma konfigurovatelne HW experimenty */
-#if MZARCH == 800
-    snapshot_xml_write_int(w, "hwcompat_allow_psg1",
-                           (int)g_mzarch_main.mz800_hwcompat_allow_psg1);
-#endif /* MZARCH == 800 */
+    if (g_mzhal.arch == 800) {
+        snapshot_xml_write_int(w, "hwcompat_allow_psg1",
+                               (int)g_mzarch_main.mz800_hwcompat_allow_psg1);
+    }
 
     snapshot_xml_close_element(w); /* hwconfig */
 
@@ -74,24 +75,24 @@ static en_SNAPSHOT_RESULT snap_hwconfig_load(st_SNAPSHOT_CONTEXT *ctx)
     bool bval;
 
     /* Přepínač kompatibility MZ-700 - viz save block. */
-#if MZARCH != 700
-    if (snapshot_xml_read_int(r, "switch700", &ival))
-        g_mzarch_main.switch700 = (en_SWITCH700)ival;
-#endif
+    if (g_mzhal.has_rear_dip_switch700) {
+        if (snapshot_xml_read_int(r, "switch700", &ival))
+            g_mzarch_main.switch700 = (en_SWITCH700)ival;
+    }
 
     /* Audio režim - jen pro platformy s PSG */
-#if HAVE_PSG >= 1
-    if (snapshot_xml_read_bool(r, "psg_stereo", &bval))
-        g_psg_module.stereo = bval;
-#endif
+    if (g_mzhal.psg_count >= 1) {
+        if (snapshot_xml_read_bool(r, "psg_stereo", &bval))
+            g_psg_module.stereo = bval;
+    }
 
     /* Nastavení HW kompatibility - pouze MZ-800 ma konfigurovatelne HW experimenty.
      * Klice hwcompat_mz700_pal_timing a hwcompat_mz700_fixed_e008 jsou v starsich
      * snapshotech pripadne ignorovany (snapshot_xml_read_int vraci false). */
-#if MZARCH == 800
-    if (snapshot_xml_read_int(r, "hwcompat_allow_psg1", &ival))
-        g_mzarch_main.mz800_hwcompat_allow_psg1 = (en_MZ800_HWCOMPAT_ALLOW_PSG1)ival;
-#endif /* MZARCH == 800 */
+    if (g_mzhal.arch == 800) {
+        if (snapshot_xml_read_int(r, "hwcompat_allow_psg1", &ival))
+            g_mzarch_main.mz800_hwcompat_allow_psg1 = (en_MZ800_HWCOMPAT_ALLOW_PSG1)ival;
+    }
 
     snapshot_xml_leave_element(r); /* hwconfig */
     snapshot_xml_reader_free(r);

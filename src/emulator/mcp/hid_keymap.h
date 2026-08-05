@@ -186,8 +186,8 @@ void hid_keymap_release_all(void);
  * @param[in] mcp_mask  8-bit aktivní-HIGH bitmaska (0 = nestisknuto)
  * @return true pokud port v rozsahu 0..1, false jinak
  *
- * @note Při sestavení s `NO_JOY=1` (= `HAVE_JOY` nedefinováno) funkce
- *       vrací false a nic nedělá - joystick subsystém není dostupný.
+ * @note V testovacím MCP stub buildu (MZ800EMU_MCP_TEST_BUILD) implementaci
+ *       dodává test stub (zachytává parametry do g_stub_state).
  */
 bool hid_keymap_joystick_set(int port, uint8_t mcp_mask);
 

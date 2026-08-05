@@ -707,8 +707,9 @@ void test_save_memory ( void ) {
     FILE *f = fopen ( save_path, "rb" );
     TEST_ASSERT_NOT_NULL ( f );
     uint8_t readback[8] = { 0 };
-    fread ( readback, 1, sizeof ( readback ), f );
+    size_t readback_bytes = fread ( readback, 1, sizeof ( readback ), f );
     fclose ( f );
+    TEST_ASSERT_EQUAL_size_t ( sizeof ( readback ), readback_bytes );
     TEST_ASSERT_EQUAL_UINT8_ARRAY ( data, readback, sizeof ( data ) );
 
     generic_driver_close ( &h );

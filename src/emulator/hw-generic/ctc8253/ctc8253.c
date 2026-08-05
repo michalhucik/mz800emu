@@ -23,11 +23,11 @@
  * ---------------------------------------------------------------------------
  */
 
-#include "mzarch/mzarch_config.h"
+#include "mzarch/mzcommon_config.h"
 
 #include "ctc8253.h"
-#include "hw-generic/gdg/gdgclk.h"
 #include "hw-generic/gdg/gdg.h"
+#include "mzarch/mzhal.h"
 
 #include "mzarch/mzarch.h"
 #include "mzarch/interrupt.h"
@@ -143,20 +143,20 @@ void ctc8253_init(void)
         g_ctc8253[cs].bcd = 0;
     };
 
-#ifdef MZ800EMU_CFG_CLK1M1_FAST
     g_ctc8253[CTC_CS0].clk1m1_event.ticks = -1;
     g_ctc8253[CTC_CS0].clk1m1_event.event_name = MZEVENT_CTC0;
-#endif
 }
 
-#ifdef MZ800EMU_CFG_CLK1M1_FAST
 
 static inline void ctc8253_update_ctc0_by_totalticks(unsigned event_total_ticks)
 {
+    /* Delička runtime z g_mzhal (mzhal 10e, warm cesta - per CTC sync);
+     * unsigned dělení, hodnota per EXE beze změny. */
+    const unsigned ctc0_divider = g_mzhal.gdgclk_ctc0_divider;
     unsigned elapsed_ticks = event_total_ticks - g_ctc8253[CTC_CS0].clk1m1_last_event_total_ticks;
-    unsigned decremented = elapsed_ticks / GDGCLK_CTC0_DIVIDER;
+    unsigned decremented = elapsed_ticks / ctc0_divider;
     g_ctc8253[CTC_CS0].value -= decremented;
-    g_ctc8253[CTC_CS0].clk1m1_last_event_total_ticks += decremented * GDGCLK_CTC0_DIVIDER;
+    g_ctc8253[CTC_CS0].clk1m1_last_event_total_ticks += decremented * ctc0_divider;
 }
 
 void ctc8253_sync_ctc0(void)
@@ -170,7 +170,6 @@ void ctc8253_sync_ctc0(void)
     };
 }
 
-#endif
 
 /**
  * @brief Precte bajt z citace 8253 (HW-verne cteni s posunem byte-pointeru).
@@ -206,7 +205,6 @@ uint8_t ctc8253_read_byte(unsigned cs)
 
     uint8_t retval = 0;
 
-#ifdef MZ800EMU_CFG_CLK1M1_FAST
     if (!(g_ctc8253[cs].latch_op == 1))
     {
         /*
@@ -219,7 +217,6 @@ uint8_t ctc8253_read_byte(unsigned cs)
             ctc8253_sync_ctc0();
         };
     };
-#endif
 
     unsigned value = (g_ctc8253[cs].latch_op == 1) ? g_ctc8253[cs].read_latch : g_ctc8253[cs].value;
 
@@ -274,9 +271,7 @@ void ctc8253_write_byte(unsigned addr, uint8_t value)
 
     en_CTC_CS cs;
 
-#ifdef MZ800EMU_CFG_CLK1M1_FAST
     en_CTC_STATE old_state;
-#endif
 
     addr = addr & 0x03;
 
@@ -326,14 +321,12 @@ void ctc8253_write_byte(unsigned addr, uint8_t value)
         if (cs == CTC_CS_ILLEGAL)
             return;
 
-#ifdef MZ800EMU_CFG_CLK1M1_FAST
         if ((cs == CTC_CS0) && (g_ctc8253[CTC_CS0].state >= CTC_STATE_COUNTDOWN) && ((int)g_ctc8253[CTC_CS0].clk1m1_event.ticks != -1))
         {
             ctc8253_update_ctc0_by_totalticks(gdg_compute_total_ticks(gdg_get_insigeop_ticks()));
         };
 
         old_state = g_ctc8253[cs].state;
-#endif
         unsigned rlf = (value >> 4) & 0x03;
 
         g_ctc8253[cs].rl_byte = 0;
@@ -382,14 +375,12 @@ void ctc8253_write_byte(unsigned addr, uint8_t value)
         /* Zapis do citace */
         cs = addr;
 
-#ifdef MZ800EMU_CFG_CLK1M1_FAST
         if ((cs == CTC_CS0) && (g_ctc8253[CTC_CS0].state >= CTC_STATE_COUNTDOWN) && ((int)g_ctc8253[CTC_CS0].clk1m1_event.ticks != -1))
         {
             ctc8253_update_ctc0_by_totalticks(gdg_compute_total_ticks(gdg_get_insigeop_ticks()));
         };
 
         old_state = g_ctc8253[cs].state;
-#endif
 
         g_ctc8253[cs].latch_op = 0;
 
@@ -467,7 +458,6 @@ void ctc8253_write_byte(unsigned addr, uint8_t value)
         };
     };
 
-#ifdef MZ800EMU_CFG_CLK1M1_FAST
     if (cs == CTC_CS0)
     {
         if (old_state != g_ctc8253[cs].state)
@@ -483,7 +473,6 @@ void ctc8253_write_byte(unsigned addr, uint8_t value)
             };
         };
     };
-#endif
 }
 
 void ctc8253_clkfall(unsigned cs, unsigned event_ticks)
@@ -708,9 +697,7 @@ void ctc8253_gate(unsigned cs, unsigned gate, unsigned event_ticks)
     if (g_ctc8253[cs].state == CTC_STATE_INIT)
         return;
 
-#ifdef MZ800EMU_CFG_CLK1M1_FAST
     en_CTC_STATE old_state = g_ctc8253[cs].state;
-#endif
 
     switch (g_ctc8253[cs].mode)
     {
@@ -776,7 +763,6 @@ void ctc8253_gate(unsigned cs, unsigned gate, unsigned event_ticks)
         break;
     };
 
-#ifdef MZ800EMU_CFG_CLK1M1_FAST
     if (cs == CTC_CS0)
     {
         if (old_state != g_ctc8253[cs].state)
@@ -797,10 +783,8 @@ void ctc8253_gate(unsigned cs, unsigned gate, unsigned event_ticks)
             };
         };
     };
-#endif
 }
 
-#ifdef MZ800EMU_CFG_CLK1M1_FAST
 
 void ctc8253_ctc1m1_event(unsigned event_ticks)
 {
@@ -840,8 +824,13 @@ void ctc8253_ctc1m1_event(unsigned event_ticks)
         int elapsed_ticks = event_total_ticks - ctc0->clk1m1_last_event_total_ticks;
         if (elapsed_ticks > 0)
         {
-            elapsed_ticks -= GDGCLK_CTC0_DIVIDER;
-            ctc0->value -= elapsed_ticks / GDGCLK_CTC0_DIVIDER;
+            /* POZOR: SIGNED aritmetika (mzhal 10e, ARITMETIKA-INVENTURA
+             * C1) - elapsed_ticks je int a po odečtu deličky může být
+             * <= 0; C dělení se zaokrouhluje k nule. Explicitní (int)
+             * cast drží signed sémantiku i s unsigned polem g_mzhal
+             * (bez castu by C promoce udělala unsigned dělení = bug). */
+            elapsed_ticks -= (int)g_mzhal.gdgclk_ctc0_divider;
+            ctc0->value -= elapsed_ticks / (int)g_mzhal.gdgclk_ctc0_divider;
         }
         else
         {
@@ -908,7 +897,7 @@ void ctc8253_ctc1m1_event(unsigned event_ticks)
 
         if ((int)destination_clk1m1_falls != -1)
         {
-            ctc0->clk1m1_event.ticks = event_ticks + (destination_clk1m1_falls * GDGCLK_CTC0_DIVIDER);
+            ctc0->clk1m1_event.ticks = event_ticks + (destination_clk1m1_falls * g_mzhal.gdgclk_ctc0_divider);
         }
         else
         {
@@ -918,7 +907,7 @@ void ctc8253_ctc1m1_event(unsigned event_ticks)
     else if ((old_state == CTC_STATE_COUNTDOWN) && (ctc0->state == CTC_STATE_PRESET))
     {
         /* M2 - skoncil COUNTDOWN */
-        ctc0->clk1m1_event.ticks = event_ticks + (1 * GDGCLK_CTC0_DIVIDER);
+        ctc0->clk1m1_event.ticks = event_ticks + (1 * g_mzhal.gdgclk_ctc0_divider);
     }
     else
     {
@@ -926,4 +915,3 @@ void ctc8253_ctc1m1_event(unsigned event_ticks)
     };
 }
 
-#endif

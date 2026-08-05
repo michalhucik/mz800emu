@@ -6,8 +6,11 @@
  *
  * @author Michal Hucik <hucik@ordoz.com>
  */
+#include "hw-generic/memory/memory.h"
+#include "mzarch/mzhal.h"
 
 #include "main.h"
+#include "mzarch/mzcommon_config.h"
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
 
@@ -27,18 +30,13 @@
 #include "libs/cfgfile/cfgmodule.h"
 #include "emulator/cfgmain.h"
 #include "emulator/mzarch/mzarch.h"
-#include "emulator/mzarch/mzarch_config.h"
 #include "emulator/debugger/debugger.h"
 #include "emulator/debugger/trace/tlog_common.h"
 #include "emulator/debugger/trace/reclife.h"
 #include "hw-generic/memory/memory.h"
 #include "hw-generic/memory/memext.h"
 
-#if MZARCH == 800
-#include "emulator/mzarch/mz800/gdg/mz800_gdg.h"
-#elif MZARCH == 1500
-#include "emulator/mzarch/mz1500/gdg/mz1500_gdg.h"
-#endif
+#include "emulator/hw-generic/gdg/gdg_state.h"
 
 /* Globální konfigurace + stav */
 st_CPUTRACK_CONFIG g_cputrack_config;
@@ -280,15 +278,18 @@ static int write_initial_memory_dumps ( const char *dir, const char *basename )
     int rc = 0;
     rc |= write_bin_file ( dir, basename, "initial_ram",
                            g_memory.RAM, MEMORY_SIZE_RAM );
+    /* Velikosti bloků = zmrazený trace on-disk kontrakt, runtime
+     * z g_mzhal (mzhal 11f; hodnoty per EXE beze změny). */
     rc |= write_bin_file ( dir, basename, "initial_vram",
-                           g_memory.VRAM, MEMORY_SIZE_VRAM );
-#if MZARCH == 800
-    rc |= write_bin_file ( dir, basename, "initial_exvram",
-                           g_memory.EXVRAM, MEMORY_SIZE_VRAM );
-#elif MZARCH == 1500
-    rc |= write_bin_file ( dir, basename, "initial_pcg",
-                           g_memory.PCG, MEMORY_SIZE_PCG );
-#endif
+                           g_memory.VRAM, g_mzhal.mem_vram_size );
+    if ( g_mzhal.mem_exvram_size > 0 ) {
+        rc |= write_bin_file ( dir, basename, "initial_exvram",
+                               g_memory.EXVRAM, g_mzhal.mem_exvram_size );
+    }
+    if ( g_mzhal.mem_pcg_size > 0 ) {
+        rc |= write_bin_file ( dir, basename, "initial_pcg",
+                               g_memory.PCG, g_mzhal.mem_pcg_size );
+    }
     if ( MEMEXT_TEST_CONNECTED ) {
         rc |= write_bin_file ( dir, basename, "initial_memext",
                                g_memext.RAM, MEMEXT_RAM_SIZE );
@@ -364,17 +365,18 @@ static char *build_subsys_header_json ( void )
     json_builder_set_member_name ( b, "initial_vram_file" );
     json_builder_add_string_value ( b, fname_buf );
 
-#if MZARCH == 800
-    g_snprintf ( fname_buf, sizeof ( fname_buf ),
-                 "%s_initial_exvram.bin", g_cputrack_config.name );
-    json_builder_set_member_name ( b, "initial_exvram_file" );
-    json_builder_add_string_value ( b, fname_buf );
-#elif MZARCH == 1500
-    g_snprintf ( fname_buf, sizeof ( fname_buf ),
-                 "%s_initial_pcg.bin", g_cputrack_config.name );
-    json_builder_set_member_name ( b, "initial_pcg_file" );
-    json_builder_add_string_value ( b, fname_buf );
-#endif
+    if ( g_mzhal.mem_exvram_size > 0 ) {
+        g_snprintf ( fname_buf, sizeof ( fname_buf ),
+                     "%s_initial_exvram.bin", g_cputrack_config.name );
+        json_builder_set_member_name ( b, "initial_exvram_file" );
+        json_builder_add_string_value ( b, fname_buf );
+    }
+    if ( g_mzhal.mem_pcg_size > 0 ) {
+        g_snprintf ( fname_buf, sizeof ( fname_buf ),
+                     "%s_initial_pcg.bin", g_cputrack_config.name );
+        json_builder_set_member_name ( b, "initial_pcg_file" );
+        json_builder_add_string_value ( b, fname_buf );
+    }
 
     json_builder_set_member_name ( b, "initial_memext_file" );
     if ( MEMEXT_TEST_CONNECTED ) {

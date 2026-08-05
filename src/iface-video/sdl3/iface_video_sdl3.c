@@ -3,6 +3,7 @@
 #include <glib.h>
 #include <stdint.h>
 #include "iface/iface_video.h"
+#include "mzarch/mzhal.h"
 #include "emulator/display.h"
 #include "libs/sdlapp/sdlapp.h"
 
@@ -10,7 +11,7 @@
 
 SDL_Surface *video_sdl3_create_surface(void)
 {
-    SDL_Surface *surface = SDL_CreateSurface(VIDEO_DISPLAY_WIDTH, VIDEO_DISPLAY_HEIGHT, SDL_PIXELFORMAT_INDEX8);
+    SDL_Surface *surface = SDL_CreateSurface(g_mzhal.video_display_width, g_mzhal.video_display_height, SDL_PIXELFORMAT_INDEX8);
 
     if (!surface)
     {
@@ -215,7 +216,7 @@ gboolean video_sdl3_update_surface_from_framebuffer(SDL_Surface *surface)
     {
         current_emulator_screen = g_iface_video->fbsnapshot_screen_id;
         SDL_LockSurface(surface);
-        memcpy(surface->pixels, g_iface_video->fbsnapshot_pixels, VIDEO_DISPLAY_WIDTH * VIDEO_DISPLAY_HEIGHT);
+        memcpy(surface->pixels, g_iface_video->fbsnapshot_pixels, g_mzhal.video_display_width * g_mzhal.video_display_height);
         SDL_UnlockSurface(surface);
         g_iface_video->fbsnapshot_pixels = NULL;
     };

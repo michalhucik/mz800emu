@@ -13,7 +13,7 @@
 #include "emulator.h"
 #include "version_check/version_check.h"
 
-#include "emulator/mzarch/mzarch_config.h"
+#include "emulator/mzarch/mzcommon_config.h"
 #ifdef MZ800EMU_CFG_MCP_TCP_ENABLED
 #include "ui-imgui/mcp_activity/mcp_tools_menu.h"
 #endif

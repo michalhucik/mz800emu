@@ -60,6 +60,70 @@ endfunction()
 #   mz_add_emulator(mz700emu-pal   700  PAL)
 #   mz_add_emulator(mz700emu-ntsc  700  NTSC)
 # ----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
+# mz_add_emucore_lib() - compile-once knihovna sdílených TU (mzhal krok 11)
+#
+# TU ze seznamu cmake/emucore_sources.txt se kompilují JEDNOU (bez
+# -DMZARCH/-DMZTVSYS/-D capability maker) do statické knihovny
+# mz_emucore, kterou linkují všechny 4 EXE. Bezpečnost: -Werror=undef
+# (chytá #if formy) + force-included cmake/emucore_poison.h
+# (#pragma GCC poison chytá i #ifdef a použití v kódu).
+#
+# Seznam zdrojů je explicitní (žádný glob) - do knihovny smí jen TU,
+# jehož celý include řetěz je bez per-arch podmínek (ověřeno přes
+# ninja deps, viz mzhal/HLAVICKY-INVENTURA.md). Rozšiřování seznamu =
+# další dávky kroku 11.
+# ----------------------------------------------------------------------------
+function(mz_add_emucore_lib)
+    # Změna seznamu musí vyvolat re-configure (file(STRINGS) sama o sobě
+    # závislost nezakládá - bez tohoto by build používal starý seznam).
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+        ${CMAKE_SOURCE_DIR}/cmake/emucore_sources.txt)
+    file(STRINGS ${CMAKE_SOURCE_DIR}/cmake/emucore_sources.txt _emucore_rel)
+    set(_emucore_abs "")
+    foreach(_src IN LISTS _emucore_rel)
+        list(APPEND _emucore_abs ${CMAKE_SOURCE_DIR}/${_src})
+    endforeach()
+    set_property(GLOBAL PROPERTY EMUCORE_SOURCES ${_emucore_abs})
+
+    add_library(mz_emucore STATIC ${_emucore_abs})
+
+    target_compile_options(mz_emucore PRIVATE
+        -Wundef -Werror=undef
+        -include ${CMAKE_SOURCE_DIR}/cmake/emucore_poison.h
+    )
+
+    target_include_directories(mz_emucore PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/src/emulator
+        ${CMAKE_SOURCE_DIR}/src/emulator/hw-generic
+    )
+    file(GLOB_RECURSE _header_dirs LIST_DIRECTORIES true
+        "${CMAKE_SOURCE_DIR}/src/*/headers"
+    )
+    list(FILTER _header_dirs INCLUDE REGEX "/headers$")
+    foreach(_hd IN LISTS _header_dirs)
+        if(IS_DIRECTORY ${_hd})
+            target_include_directories(mz_emucore PRIVATE ${_hd})
+        endif()
+    endforeach()
+
+    target_link_libraries(mz_emucore PRIVATE
+        mz::libs
+        mz::sdl3
+        mz::glib
+        mz::json_glib
+        mz::minizip
+        mz::libcurl
+        mz::opengl
+        mz::platform
+    )
+
+    list(LENGTH _emucore_rel _n)
+    message(STATUS "  mz_emucore: ${_n} compile-once TU")
+endfunction()
+
+
 function(mz_add_emulator target mzarch tvsys)
     set(arch_name "mz${mzarch}")
 
@@ -119,6 +183,13 @@ function(mz_add_emulator target mzarch tvsys)
         ${MZ_BUILD_REVISION_C}
     )
 
+    # Compile-once TU jdou z knihovny mz_emucore (mzhal krok 11) -
+    # z per-EXE seznamu je odebereme, jinak by symboly existovaly 2x.
+    if(TARGET mz_emucore)
+        get_property(_emucore_sources GLOBAL PROPERTY EMUCORE_SOURCES)
+        list(REMOVE_ITEM _all_sources ${_emucore_sources})
+    endif()
+
     # ---- Vytvoření executable ----------------------------------------------
 
     add_executable(${target} ${_all_sources})
@@ -135,14 +206,21 @@ function(mz_add_emulator target mzarch tvsys)
 
     # ---- Per-arch a per-tvsys defines --------------------------------------
 
+    # Hodnoty MZTVSYS_PAL/NTSC uz NEdefinuje build - jsou v hlavicce
+    # src/emulator/mzarch/mztvsys.h (jediny zdroj pravdy). Zde zustava jen
+    # vyber TV systemu targetu (MZTVSYS) + jmenne stringy.
     target_compile_definitions(${target} PRIVATE
         MZARCH=${mzarch}
         MZARCH_NAME="${arch_name}"
-        MZTVSYS_PAL=50
-        MZTVSYS_NTSC=60
         MZTVSYS=MZTVSYS_${tvsys}
         MZTVSYS_NAME="${tvsys}"
     )
+
+    # Preprocesorova bezpecnostni sit (mzhal krok 4): nedefinovane makro
+    # v #if se tise vyhodnoti jako 0 - pri migraci na compile-once kod je
+    # to killer trida chyb. -Werror=undef ji meni na compile error.
+    # Vendorovane knihovny (src/libs targety) flag nedostavaji.
+    target_compile_options(${target} PRIVATE -Wundef -Werror=undef)
 
     # ---- Include paths -----------------------------------------------------
 
@@ -171,6 +249,7 @@ function(mz_add_emulator target mzarch tvsys)
     # ---- Linkování ---------------------------------------------------------
 
     target_link_libraries(${target} PRIVATE
+        mz_emucore
         mz::libs
         mz::sdl3
         mz::glib
@@ -280,8 +359,6 @@ function(mz_add_pipe_emulator_disabled target mzarch tvsys)
     target_compile_definitions(${target} PRIVATE
         MZARCH=${mzarch}
         MZARCH_NAME="${arch_name}"
-        MZTVSYS_PAL=50
-        MZTVSYS_NTSC=60
         MZTVSYS=MZTVSYS_${tvsys}
         MZTVSYS_NAME="${tvsys}"
     )

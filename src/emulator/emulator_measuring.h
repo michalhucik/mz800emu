@@ -2,15 +2,17 @@
 #define EMULATOR_MEASURING_H
 
 #include "main.h"
-#include "hw-generic/gdg/video.h"
+#include "mzarch/mzhal.h"
 #include <glib.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <time.h>
 
-#define MAX_MEASURING_FRAME_TIMING_IN_SECS 60 
-#define MAX_MEASURING_FRAME_TIMING_SAMPLES (VIDEO_SCREENS_PER_SEC * MAX_MEASURING_FRAME_TIMING_IN_SECS)
-#define PREDEF_MEASURING_FRAME_TIMING (VIDEO_SCREENS_PER_SEC * 1)
+#define MAX_MEASURING_FRAME_TIMING_IN_SECS 60
+/** @brief Strop obrazovek za sekundu napříč TV systémy (PAL 50, NTSC 60) - dimenzování bufferů. */
+#define MEASURING_SCREENS_PER_SEC_MAX 60
+#define MAX_MEASURING_FRAME_TIMING_SAMPLES (MEASURING_SCREENS_PER_SEC_MAX * MAX_MEASURING_FRAME_TIMING_IN_SECS)
+#define PREDEF_MEASURING_FRAME_TIMING (g_mzhal.video_screens_per_sec * 1)
 
 #define MAX_MEASURING_GDG_IN_SECS 10
 #define EMULATOR_MEASURING_DEFAULT_GDG_UPDATE_SEC (1)
@@ -79,7 +81,7 @@ typedef struct st_MAXSPEED_BENCH_RESULT
     uint64_t total_ticks;       /**< Emulované pxCLK takty za měřené segmenty. */
     double total_wall_sec;      /**< Reálný (wall-clock) čas měřených segmentů [s]. */
     double pxclk_per_sec;       /**< Throughput = total_ticks / total_wall_sec [Hz]. */
-    double efficiency_percent;  /**< Efektivita = pxclk_per_sec / GDGCLK_REAL_BASE * 100. */
+    double efficiency_percent;  /**< Efektivita = pxclk_per_sec / g_mzhal.gdgclk_real_base * 100. */
     double fps;                 /**< Reálné video snímky za sekundu (FB-FPS). */
     bool valid;                 /**< true, pokud byl změřen nenulový čas (total_wall_sec > 0). */
     bool segment_active;        /**< true, pokud v okamžiku reportu právě běží měřený segment. */
@@ -165,11 +167,11 @@ extern st_EMULATOR_MEASURING g_emulator_measuring;
 #define EMULATOR_MEASURING_SET_FRAME_TIMING_ENABLED(x) (g_emulator_measuring.frame_timing.enabled = (x))
 #define EMULATOR_MEASURING_FRAME_TIMING_ENABLED_PTR (&g_emulator_measuring.frame_timing.enabled)
 
-#define EMULATOR_MEASURING_FRAME_TIMING_GET_PREDEF_TIME_IN_SEC() (g_emulator_measuring.frame_timing.stats_predef / VIDEO_SCREENS_PER_SEC)
-#define EMULATOR_MEASURING_FRAME_TIMING_SET_PREDEF_TIME_IN_SEC(x) (g_emulator_measuring.frame_timing.stats_predef = x * VIDEO_SCREENS_PER_SEC)
+#define EMULATOR_MEASURING_FRAME_TIMING_GET_PREDEF_TIME_IN_SEC() (g_emulator_measuring.frame_timing.stats_predef / g_mzhal.video_screens_per_sec)
+#define EMULATOR_MEASURING_FRAME_TIMING_SET_PREDEF_TIME_IN_SEC(x) (g_emulator_measuring.frame_timing.stats_predef = x * g_mzhal.video_screens_per_sec)
 
-#define EMULATOR_MEASURING_FRAME_TIMING_GET_MEASURING_WIDTH_IN_SEC() (g_emulator_measuring.frame_timing.measuring_width / VIDEO_SCREENS_PER_SEC)
-#define EMULATOR_MEASURING_FRAME_TIMING_SET_MEASURING_WIDTH_IN_SEC(x) (g_emulator_measuring.frame_timing.measuring_width = x * VIDEO_SCREENS_PER_SEC)
+#define EMULATOR_MEASURING_FRAME_TIMING_GET_MEASURING_WIDTH_IN_SEC() (g_emulator_measuring.frame_timing.measuring_width / g_mzhal.video_screens_per_sec)
+#define EMULATOR_MEASURING_FRAME_TIMING_SET_MEASURING_WIDTH_IN_SEC(x) (g_emulator_measuring.frame_timing.measuring_width = x * g_mzhal.video_screens_per_sec)
 
 #define EMULATOR_MEASURING_TEST_GDG_ENABLED (g_emulator_measuring.gdg.enabled)
 #define EMULATOR_MEASURING_GDG_ENABLED_PTR (&g_emulator_measuring.gdg.enabled)

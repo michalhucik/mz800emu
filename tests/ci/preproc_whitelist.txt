@@ -1,0 +1,41 @@
+# Zamrazeny stav per-arch/capability preprocessor tokenu mimo
+# per-arch stromy (mzhal krok 13). Format: cesta | tokeny.
+# Novy soubor s tokenem = bud konverze na g_mzhal runtime,
+# nebo vedoma editace tohoto whitelistu.
+src/emulator/debugger/bp_zone.c | MZARCH
+src/emulator/debugger/dbgapi_regions.c | MZARCH
+src/emulator/debugger/io_catalog.c | CFG_HWEXT_HAVE_FDC MZARCH
+src/emulator/debugger/mhmap.c | MZARCH
+src/emulator/debugger/mhmap.h | MZARCH
+src/emulator/debugger/trace/tlog_common.c | MZARCH
+src/emulator/hw-generic/gdg/framebuffer.h | MZARCH
+src/emulator/hw-generic/gdg/framebuffer_done.h | MZARCH
+src/emulator/hw-generic/gdg/gdg.h | MZARCH
+src/emulator/hw-generic/gdg/gdgclk.h | MZARCH
+src/emulator/hw-generic/gdg/video.h | MZARCH
+src/emulator/hw-generic/joy/joymz-1x03.c | MZARCH
+src/emulator/hw-generic/memory/memory_arch.h | MZARCH
+src/emulator/mcp/dispatch.c | MZARCH
+src/emulator/mzarch/mzarch.c | CFG_HWEXT_HAVE_FDC CFG_HWEXT_HAVE_IDE8 HAVE_PIOZ80 MZARCH
+src/emulator/mzarch/mzarch_config.h | MZARCH
+src/emulator/mzarch/mzarch_platform.c | MZARCH MZTVSYS
+src/emulator/mzarch/mzhal.c | CFG_HWEXT_HAVE_FDC CFG_HWEXT_HAVE_IDE8 CFG_HWEXT_HAVE_QDISK CFG_HWEXT_HAVE_RAMDISK HAVE_PIOZ80 HAVE_PSG MZARCH MZTVSYS
+src/emulator/mzarch/mztvsys.h | MZTVSYS
+src/emulator/snapshot/handlers/snap_vramctrl.c | MZARCH
+src/ui-imgui/debugger/gdg_window.cpp | MZARCH
+src/ui-imgui/debugger/gdg_window_mz1500.cpp | MZARCH
+src/ui-imgui/debugger/gdg_window_mz700.cpp | MZARCH
+src/ui-imgui/debugger/gdg_window_mz800.cpp | MZARCH
+src/ui-imgui/debugger/heatmap/mhmap_window.cpp | MZARCH
+src/ui-imgui/debugger/heatmap/mhmap_window.h | MZARCH
+src/ui-imgui/debugger/heatmap/mhmap_window_grid.cpp | MZARCH
+src/ui-imgui/debugger/heatmap/mhmap_window_grid.h | MZARCH
+src/ui-imgui/debugger/heatmap/mhmap_window_state.h | MZARCH
+src/ui-imgui/debugger/ioview/io_window.cpp | MZARCH
+src/ui-imgui/debugger/membrowser/membrowser_layers.cpp | MZARCH
+src/ui-imgui/debugger/membrowser/membrowser_window.cpp | MZARCH
+src/ui-imgui/debugger/memmap/memmap_window.cpp | MZARCH
+src/ui-imgui/topmenu/devices/menu_devices.cpp | MZARCH
+src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp | MZARCH
+src/ui/vkbd/ui_vkbd.c | MZARCH
+src/ui/vkbd/ui_vkbd.h | MZARCH

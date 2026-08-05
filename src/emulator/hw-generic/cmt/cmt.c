@@ -23,7 +23,7 @@
  * ---------------------------------------------------------------------------
  */
 
-#include "mzarch/mzarch_config.h"
+#include "mzarch/mzcommon_config.h"
 
 #include <stdio.h>
 #include <stdint.h>
@@ -41,9 +41,8 @@
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
 #include "debugger/bp_event.h"
 #endif
-
-#include "hw-generic/gdg/gdgclk.h"
-#include "hw-generic/gdg/gdg.h"
+#include "hw-generic/gdg/gdg_state.h"
+#include "mzarch/mzhal.h"
 
 #include "baseui/baseui.h"
 #include "baseui/baseui_filechooser.h"
@@ -804,7 +803,7 @@ void cmt_screen_done_period(void)
         }
         else
         {
-            if ((gdg_get_total_ticks() - g_cmt.recording_last_event) > (5 * GDGCLK_BASE))
+            if ((gdg_get_total_ticks() - g_cmt.recording_last_event) > (5 * g_mzhal.gdgclk_base))
             {
                 if ((g_cmt.cpu_boost == CMT_CPU_BOOST_ENABLED) && (EMULATOR_TEST_MAX_SPEED))
                 {

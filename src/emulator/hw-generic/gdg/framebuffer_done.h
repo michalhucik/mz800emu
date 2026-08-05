@@ -2,6 +2,7 @@
 #define FRAMEBUFFER_DONE_H
 
 #if MZARCH == 800
+#include "mzarch/mzarch_config.h" /* capability makra - dříve tranzitivně přes main.h (mzhal 11c-1) */
 #include "mzarch/mz800/gdg/mz800_framebuffer_done.h"
 #else
 #if MZARCH == 1500

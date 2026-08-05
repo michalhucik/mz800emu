@@ -26,6 +26,10 @@
 #ifndef MZ1500_MEMORY_H
 #define MZ1500_MEMORY_H
 
+/* Per-arch velikosti pameti (mzhal 11c-2c, presunuto z memory.h) */
+#define MEMORY_SIZE_VRAM 0x1000                          /* 4 KB - znakova + atributova VRAM */
+#define MEMORY_SIZE_PCG (MEMORY_SIZE_PCG_BANK * 3)       /* 24 KB - 3 PCG banky */
+
 #include <stdint.h>
 
 #ifdef __cplusplus

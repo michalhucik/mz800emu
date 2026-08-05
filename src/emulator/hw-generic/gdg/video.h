@@ -31,6 +31,7 @@ extern "C" {
 #endif
 
 #if MZARCH == 800
+#include "mzarch/mzarch_config.h" /* capability makra - dříve tranzitivně přes main.h (mzhal 11c-1) */
 #include "mzarch/mz800/gdg/mz800_video.h"
 #else
 #if MZARCH == 1500

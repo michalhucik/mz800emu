@@ -69,13 +69,7 @@ extern "C"
 #include "emulator/debugger/bookmarks/bookmarks.h"
 /* GDG include pro g_gdg (= total_elapsed.screens cur_frame v fix #10
  * last value cache age), per-arch dispatch jako v io_catalog.c. */
-#if MZARCH == 800
-#include "emulator/mzarch/mz800/gdg/mz800_gdg.h"
-#elif MZARCH == 1500
-#include "emulator/mzarch/mz1500/gdg/mz1500_gdg.h"
-#elif MZARCH == 700
-#include "emulator/mzarch/mz700/gdg/mz700_gdg.h"
-#endif
+#include "emulator/hw-generic/gdg/gdg_state.h"
 #include "libs/cfgfile/cfgmodule.h"
 #include "libs/cfgfile/cfgelement.h"
 }
@@ -319,19 +313,16 @@ static IoUiState g_io_ui;
 /* ========================================================================= */
 
 /**
- * @brief MZ_AVAIL_* mask pro aktualni MZARCH compile-time arch.
+ * @brief MZ_AVAIL_* mask pro aktuální architekturu (runtime z g_mzhal).
  */
 static unsigned io_window_current_arch_mask(void)
 {
-#if MZARCH == 800
-    return MZ_AVAIL_800;
-#elif MZARCH == 1500
-    return MZ_AVAIL_1500;
-#elif MZARCH == 700
-    return MZ_AVAIL_700;
-#else
-    return MZ_AVAIL_ALL;
-#endif
+    switch (g_mzhal.arch) {
+        case 800:  return MZ_AVAIL_800;
+        case 1500: return MZ_AVAIL_1500;
+        case 700:  return MZ_AVAIL_700;
+        default:   return MZ_AVAIL_ALL;
+    }
 }
 
 

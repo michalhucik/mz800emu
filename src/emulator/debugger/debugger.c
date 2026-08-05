@@ -74,13 +74,16 @@
 #include "bookmarks/bookmarks.h"
 #include "freeze/freeze.h"
 #include "dbgapi_ui.h"
+#include "mzarch/mzhal.h"
 #include "dbgapi_cmdrq.h"
 #include "stack_regions.h"
 #include "stack_history.h"
 #include "watch.h"
 #include "watch_cache.h"  /* Phase E: per-row cache + snapshot baseline */
 #include "watch_emu_cache.h"  /* V1.D.2.C: dispatch-side thread-safe mirror */
-#if ( MZARCH == 800 ) || ( MZARCH == 1500 ) || ( MZARCH == 700 )
+/* SENTINEL: debugger okna platí pro všechny známé architektury
+ * (700/800/1500, garantováno mzhal.c) - při přidání nové architektury
+ * tuto sadu PROVĚŘ. */
 #include "ui-imgui/debugger/heatmap/mhmap_window.h"
 #include "ui-imgui/debugger/ioview/io_window.h"
 #include "ui-imgui/debugger/memmap/memmap_window.h"
@@ -88,7 +91,6 @@
 /* membrowser mutant V0 - Memory Browser hex MVP. */
 #include "ui-imgui/debugger/membrowser/membrowser_window.h"
 #include "ui-imgui/debugger/eventview/event_viewer_window.h"
-#endif
 #include "libs/sdlapp/sdlapp_options.h"
 #include "main.h"   /* g_sdlapp pro sdlapp_paths_resolve_* */
 #include "libs/cfgfile/cfgtools.h"
@@ -442,14 +444,14 @@ void debugger_init ( void ) {
     elm = cfgmodule_register_new_element ( cmod, "wp_show_ppi", CFGENTYPE_BOOL, 0 );
     cfgelement_set_handlers ( elm, (void*) &g_debugger.wp_show_ppi, (void*) &g_debugger.wp_show_ppi );
 
-#if HAVE_PIOZ80
+    if (g_mzhal.have_pioz80) { /* INI klic jen na platformach s PIO-Z80 (mzhal krok 8) */
     /* Z80 PIO workplace slot - jen MZ-800 / MZ-1500. MZ-700 čip nemá,
      * INI klíč se neregistruje. */
     elm = cfgmodule_register_new_element ( cmod, "wp_show_pioz80", CFGENTYPE_BOOL, 0 );
     cfgelement_set_handlers ( elm, (void*) &g_debugger.wp_show_pioz80, (void*) &g_debugger.wp_show_pioz80 );
-#endif
+    }
 
-#if HAVE_PSG >= 1
+    if (g_mzhal.psg_count >= 1) { /* INI klice jen na platformach s PSG (mzhal krok 8) */
     /* PSG SN76489 workplace slot - jen MZ-800 / MZ-1500. MZ-700 čip nemá,
      * INI klíč se neregistruje. */
     elm = cfgmodule_register_new_element ( cmod, "wp_show_psg", CFGENTYPE_BOOL, 0 );
@@ -459,7 +461,7 @@ void debugger_init ( void ) {
      * (stejný arch gate HAVE_PSG >= 1, default 0). */
     elm = cfgmodule_register_new_element ( cmod, "wp_show_psg_audio_scope", CFGENTYPE_BOOL, 0 );
     cfgelement_set_handlers ( elm, (void*) &g_debugger.wp_show_psg_audio_scope, (void*) &g_debugger.wp_show_psg_audio_scope );
-#endif
+    }
 
     /* gdg-panel F1 scaffold: GDG state inspector workplace slot. GDG je
      * ve všech 3 archech (MZ-700 / MZ-800 / MZ-1500), žádný guard. */
@@ -538,11 +540,10 @@ void debugger_init ( void ) {
     cfgelement_set_handlers ( elm, (void*) &g_membrowser.memext_luftner_bank, (void*) &g_membrowser.memext_luftner_bank );
 #endif
 
-#if ( MZARCH == 800 ) || ( MZARCH == 1500 ) || ( MZARCH == 700 )
-    /* Memory Heatmap GUI okno persistence (color mode, threshold, zoom, atd.).
-     * Registrujeme do stejného DEBUGGER cfg modulu jako ostatní debug klíče. */
+    /* Memory Heatmap GUI okno persistence (color mode, threshold, zoom,
+     * atd.). Registrujeme do stejného DEBUGGER cfg modulu jako ostatní
+     * debug klíče. SENTINEL: platí pro všechny známé architektury. */
     mhmap_window_register_persistence ( cmod );
-#endif
 
     cfgmodule_parse ( cmod );
     cfgmodule_propagate ( cmod );

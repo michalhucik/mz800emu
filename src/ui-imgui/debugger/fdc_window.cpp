@@ -10,6 +10,7 @@
  */
 
 #include "main.h"
+#include "emulator/mzarch/mzhal.h"
 #include "libs/sdlapp/sdlapp.h"
 #include "ui-imgui/bootstrap/myimgui.h"
 #include "libs/imgui/imgui.h"
@@ -17,22 +18,19 @@
 
 #include "i18n.h"
 
-#include "mzarch/mzarch_config.h"
+#include "mzarch/mzcommon_config.h"
 
 #include "ui-imgui/debugger/chip_window_helpers.h"
 
-#if CFG_HWEXT_HAVE_FDC
 #include "hw-generic/fdc/fdc.h"
 
 #include "hw-generic/fdc/wd279x.h"
-#endif
 
 extern "C"
 {
     void imgui_fdc_state_window(bool *p_open);
 }
 
-#if CFG_HWEXT_HAVE_FDC
 
 /** Render chip state dané instance FDC. */
 static void render_new_chip_state(st_FDC *fdc)
@@ -177,11 +175,10 @@ static void render_new_chip_state(st_FDC *fdc)
     }
 }
 
-#endif /* CFG_HWEXT_HAVE_FDC */
 
 void imgui_fdc_state_window(bool *p_open)
 {
-#if CFG_HWEXT_HAVE_FDC
+    if (g_mzhal.have_fdc) { /* runtime capability, mzhal krok 8 */
     ImGui::SetNextWindowSize(ImVec2(420, 600), ImGuiCond_FirstUseEver);
 
     if (!ImGui::Begin(_L("FDC State"), p_open, ImGuiWindowFlags_NoCollapse))
@@ -210,7 +207,7 @@ void imgui_fdc_state_window(bool *p_open)
     }
 
     ImGui::End();
-#else
+    } else {
     (void)p_open;
-#endif
+    }
 }

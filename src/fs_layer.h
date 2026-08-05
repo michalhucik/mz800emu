@@ -97,7 +97,7 @@ extern "C" {
 
 #define FS_LAYER_FTRUNCATE(fh) fs_layer_win32_truncate ( &fh )
 
-#elif LINUX
+#elif defined(LINUX)
 
     /* pri kompilaci pridat -D_XOPEN_SOURCE=500 */
 #include <unistd.h>

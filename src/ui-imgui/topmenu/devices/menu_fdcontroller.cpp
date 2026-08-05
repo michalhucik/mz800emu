@@ -1,4 +1,5 @@
 #include "main.h"
+#include "emulator/mzarch/mzhal.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <glib.h>
@@ -12,9 +13,7 @@
 #include "ui-imgui/bootstrap/myimgui.h"
 #include "ui-imgui/mywidgets/mywidgets.h"
 
-#if CFG_HWEXT_HAVE_FDC
 #include "hw-generic/fdc/fdc.h"
-#endif
 
 extern "C"
 {
@@ -150,7 +149,7 @@ void imgui_fdc_storage_switch_popup(bool *p_open)
 
 void SubmenuFDDriveImage(st_FDC *fdc, int drive_id)
 {
-#if CFG_HWEXT_HAVE_FDC
+        if (g_mzhal.have_fdc) { /* runtime capability, mzhal krok 8 */
 
     GString *image_basename = g_string_new(NULL);
 
@@ -283,12 +282,12 @@ void SubmenuFDDriveImage(st_FDC *fdc, int drive_id)
     g_string_free(image_basename, TRUE);
     g_string_free(mount_accel, TRUE);
     g_string_free(umount_accel, TRUE);
-#endif
+        }
 }
 
 void SubmenuFDDrive(st_FDC *fdc, int drive_id)
 {
-#if CFG_HWEXT_HAVE_FDC
+        if (g_mzhal.have_fdc) { /* runtime capability, mzhal krok 8 */
     GString *drive_name = g_string_new(_("FDD "));
     g_string_append_printf(drive_name, "%d", drive_id);
 
@@ -306,10 +305,9 @@ void SubmenuFDDrive(st_FDC *fdc, int drive_id)
         ImGui::EndMenu();
     };
     g_string_free(drive_name, TRUE);
-#endif
+        }
 }
 
-#if CFG_HWEXT_HAVE_FDC
 /**
  * @brief Submenu pro HW volby FDC chipu.
  *
@@ -359,9 +357,7 @@ static void SubmenuFDCHardwareOptions(st_FDC *fdc)
         ImGui::EndTooltip();
     }
 }
-#endif
 
-#if CFG_HWEXT_HAVE_FDC
 /**
  * @brief Vykreslí konfiguraci jedné instance FDC.
  *
@@ -382,13 +378,12 @@ static void SubmenuFDCInstance(st_FDC *fdc)
     /* Sekce Hardware options - HD Patch + bus translation polarity. */
     SubmenuFDCHardwareOptions(fdc);
 }
-#endif
 
 void imgui_menu_fdcontroller(void)
 {
-    if (ImGui::BeginMenu(_L("FD Controller"), CFG_HWEXT_HAVE_FDC))
+    if (ImGui::BeginMenu(_L("FD Controller"), g_mzhal.have_fdc != 0))
     {
-#if CFG_HWEXT_HAVE_FDC
+        if (g_mzhal.have_fdc) { /* runtime capability, mzhal krok 8 */
         /* Připojení řadičů - nezávislé přepínače. Umožňují všechny
          * kombinace: nic / jen FDC0 / jen FDC1 / oba současně. */
         bool fdc0_connected = (g_fdc[FDC0].connected == FDC_CONNECTED);
@@ -444,7 +439,7 @@ void imgui_menu_fdcontroller(void)
             g_gui->showFdcStateWindow = !g_gui->showFdcStateWindow;
         };
 #endif
-#endif
+        }
         ImGui::EndMenu();
     };
 }

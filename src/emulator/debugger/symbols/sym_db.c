@@ -18,7 +18,8 @@
  * ---------------------------------------------------------------------------
  */
 
-#include "mzarch/mzarch_config.h"
+#include "mzarch/mzcommon_config.h"
+#include "mzarch/mzhal.h"
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
 
@@ -348,17 +349,21 @@ static struct {
 
 
 /**
- * @brief Per-arch default .lbl filename. Per-arch separace umožňuje
- *        přepínání mezi mz800emu/mz1500emu/mz700emu se samostatnou
- *        LBL sadou v jednom config dir.
+ * @brief Per-arch default .lbl filename ("mz800.lbl", ...). Per-arch
+ *        separace umožňuje přepínání mezi mz800emu/mz1500emu/mz700emu
+ *        se samostatnou LBL sadou v jednom config dir. Od mzhal kroku 7
+ *        runtime z g_mzhal.arch_name (hodnoty beze změny).
+ *
+ * @return Jméno souboru; statický buffer platný po celou dobu běhu,
+ *         volající ho NEuvolňuje.
  */
-#if MZARCH == 800
-    #define SYMDB_DEFAULT_LBL_FILE "mz800.lbl"
-#elif MZARCH == 1500
-    #define SYMDB_DEFAULT_LBL_FILE "mz1500.lbl"
-#else
-    #define SYMDB_DEFAULT_LBL_FILE "mz700.lbl"
-#endif
+static const char *sym_db_default_lbl_file ( void ) {
+    static char fname[32];
+    if ( fname[0] == 0x00 ) {
+        snprintf ( fname, sizeof ( fname ), "%s.lbl", g_mzhal.arch_name );
+    };
+    return fname;
+}
 
 
 void sym_db_cfg_init ( void ) {
@@ -369,7 +374,7 @@ void sym_db_cfg_init ( void ) {
     CFGELM *elm;
 
     elm = cfgmodule_register_new_element ( cmod, "lbl_file", CFGENTYPE_TEXT,
-                                            SYMDB_DEFAULT_LBL_FILE );
+                                            sym_db_default_lbl_file ( ) );
     cfgelement_bind ( elm, (void*) &s_sym_cfg.default_file );
 
     elm = cfgmodule_register_new_element ( cmod, "auto_load", CFGENTYPE_BOOL, 1 );

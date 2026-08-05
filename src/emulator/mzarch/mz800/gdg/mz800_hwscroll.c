@@ -145,7 +145,7 @@ static void hwscroll_regs_changed(void)
 #endif
     };
 
-    if ((!GDG_MZ800_DMD_TEST_MZ700) && (0 != (last_hwscroll_enabled | g_hwscroll.enabled)))
+    if ((!GDG_DMD_TEST_MODE700) && (0 != (last_hwscroll_enabled | g_hwscroll.enabled)))
     {
         framebuffer_MZ800_screen_changed();
     };

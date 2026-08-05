@@ -14,7 +14,6 @@
 #include "topmenu.h"
 #include "ui-imgui/debugger/dbgapi_helpers.h"
 
-// #if HAVE_JOY
 // #include "iface/iface_joy.h"
 // #endif
 

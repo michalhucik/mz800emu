@@ -14,7 +14,7 @@
  *
  * Strip tab (Vlna 2 Commit 10 + 11):
  *   - 2D canvas X = pixel column, Y = scanline (per-arch
- *     VIDEO_SCREEN_WIDTH x VIDEO_SCREEN_HEIGHT).
+ *     g_mzhal.video_screen_width x g_mzhal.video_screen_height).
  *   - Per-frame ring iteration (= jen eventy z aktuálního screens_total).
  *   - Bod per event, color = kategorie, size = subtype priority.
  *   - Toolbar: "Fit to window" / "1:1" mode combo, zoom slider
@@ -63,7 +63,7 @@
  * ---------------------------------------------------------------------------
  */
 
-#include "mzarch/mzarch_config.h"
+#include "mzarch/mzcommon_config.h"
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
 
@@ -82,7 +82,7 @@
 #include "debugger/eventlog_filter.h"
 #include "debugger/eventlog_decoder.h"  /* eventlog_decode_detail() - Vlna 3 Commit 21. */
 #include "debugger/debugger.h"
-#include "gdg/video.h"   /* VIDEO_SCREEN_WIDTH per-arch (= total pxclk/scanline). */
+#include "emulator/mzarch/mzhal.h"
 #include "emulator/emulator.h" /* EMULATOR_TEST_PAUSED makro - detekce pause stavu pro scanline cursor. */
 
 #include "libs/cfgfile/cfgmodule.h"
@@ -113,13 +113,13 @@
 /**
  * @brief Počet binů per-frame heatmapy v Log tabu (Vlna 4 Commit 28).
  *
- * Heatmapa rozděluje pxclk osu aktuálního snímku (0..@c VIDEO_SCREEN_WIDTH *
- * @c VIDEO_SCREEN_HEIGHT - 1) na @c EVW_HEATMAP_BIN_COUNT stejně širokých
+ * Heatmapa rozděluje pxclk osu aktuálního snímku (0..@c g_mzhal.video_screen_width *
+ * @c g_mzhal.video_screen_height - 1) na @c EVW_HEATMAP_BIN_COUNT stejně širokých
  * binů. 64 binů je kompromis mezi rozlišením (= dostatečně jemný histogram
  * aby šly odlišit early/mid/late frame fáze) a vizuální čitelností (= bary
  * mají rozumnou šířku i v úzkém okně).
  *
- * Pro MZ-800 PAL (= @c VIDEO_SCREEN_WIDTH=1136, @c VIDEO_SCREEN_HEIGHT=312)
+ * Pro MZ-800 PAL (= @c g_mzhal.video_screen_width=1136, @c g_mzhal.video_screen_height=312)
  * vychází jeden bin na ~5538 pxclk = ~5 scanline.
  */
 #define EVW_HEATMAP_BIN_COUNT 64
@@ -307,7 +307,7 @@ static bool s_prev_open = false;
  *
  * Filter parser používá @c eventlog_filter_set_screen_width() pro
  * dekódování @c sline / @c px z @c pxclk_in_screen. Width = celý
- * pxclk per scanline včetně blanking (@c VIDEO_SCREEN_WIDTH z
+ * pxclk per scanline včetně blanking (@c g_mzhal.video_screen_width z
  * @c mz{800,700,1500}_video.h, typicky 1136 pro MZ-800 PAL).
  * Per-arch hodnota je compile-time, takže stačí nastavit 1×.
  */
@@ -659,18 +659,18 @@ static const ImU32 s_default_category_colors[EVENTLOG_CAT_COUNT] = {
  * stejné dekódování - duplikujeme dělení tady, ne přes filter API
  * (filter API nemá public getter na width).
  *
- * Width = celý pxclk per scanline VČETNĚ blanking (@c VIDEO_SCREEN_WIDTH).
+ * Width = celý pxclk per scanline VČETNĚ blanking (@c g_mzhal.video_screen_width).
  * Pro MZ-800 PAL: 80 (Hsync) + 106 (back porch) + 928 (display) + 22
  * (front porch) = 1136 pxclk/scanline. Decoded sline 0..311.
  *
  * @param pxclk_in_screen  Vstupní pozice v aktuálním snímku.
- * @param[out] sline       Scanline 0..VIDEO_SCREEN_HEIGHT-1.
- * @param[out] px          Pixel column 0..VIDEO_SCREEN_WIDTH-1.
+ * @param[out] sline       Scanline 0..g_mzhal.video_screen_height-1.
+ * @param[out] px          Pixel column 0..g_mzhal.video_screen_width-1.
  */
 static void evw_decode_raster ( uint32_t pxclk_in_screen,
                                  uint32_t *sline, uint32_t *px )
 {
-    const uint32_t width = (uint32_t) VIDEO_SCREEN_WIDTH;
+    const uint32_t width = (uint32_t) g_mzhal.video_screen_width;
     *sline = pxclk_in_screen / width;
     *px    = pxclk_in_screen % width;
 }
@@ -3215,10 +3215,10 @@ static st_EVW_HEATMAP_BIN s_heatmap[EVW_HEATMAP_BIN_COUNT];
  */
 static void evw_render_log_heatmap ( void )
 {
-    /* Bin size v pxclk - celý frame (= VIDEO_SCREEN_WIDTH * HEIGHT)
+    /* Bin size v pxclk - celý frame (= g_mzhal.video_screen_width * HEIGHT)
      * rozdělený na EVW_HEATMAP_BIN_COUNT stejných binů. */
     const uint32_t bin_size_pxclk =
-        ( (uint32_t) VIDEO_SCREEN_WIDTH * (uint32_t) VIDEO_SCREEN_HEIGHT )
+        ( (uint32_t) g_mzhal.video_screen_width * (uint32_t) g_mzhal.video_screen_height )
         / EVW_HEATMAP_BIN_COUNT;
 
     /* Pass 1: reset bins. */
@@ -3325,8 +3325,8 @@ static void evw_render_log_heatmap ( void )
         if ( hover_bin >= 0 && hover_bin < EVW_HEATMAP_BIN_COUNT ) {
             uint64_t pxclk_lo = (uint64_t) hover_bin * (uint64_t) bin_size_pxclk;
             uint64_t pxclk_hi = pxclk_lo + (uint64_t) bin_size_pxclk - 1u;
-            uint32_t sline_lo = (uint32_t) ( pxclk_lo / (uint64_t) VIDEO_SCREEN_WIDTH );
-            uint32_t sline_hi = (uint32_t) ( pxclk_hi / (uint64_t) VIDEO_SCREEN_WIDTH );
+            uint32_t sline_lo = (uint32_t) ( pxclk_lo / (uint64_t) g_mzhal.video_screen_width );
+            uint32_t sline_hi = (uint32_t) ( pxclk_hi / (uint64_t) g_mzhal.video_screen_width );
 
             if ( s_heatmap[hover_bin].total > 0u ) {
                 ImGui::BeginTooltip ( );
@@ -3853,12 +3853,12 @@ static void evw_render_strip_popup ( const st_EVENTLOG_EVENT *e,
  * @brief Vykreslí overlay - bílý obrys viditelné display area + šedý obrys
  *        aktivní pixel oblasti (canvas) v logical Strip souřadnicích.
  *
- * Display area = (0, 0) - (VIDEO_BEAM_DISPLAY_LAST_COLUMN, VIDEO_BEAM_DISPLAY_LAST_ROW)
+ * Display area = (0, 0) - (mzhal_beam_display_last_column(), mzhal_beam_display_last_row())
  * = viditelná část obrazu včetně borderu. Pro MZ-800 (0, 0)-(927, 287).
  *
- * Canvas (active pixel area) = (VIDEO_BEAM_CANVAS_FIRST_COLUMN,
- * VIDEO_BEAM_CANVAS_FIRST_ROW) - (VIDEO_BEAM_CANVAS_LAST_COLUMN,
- * VIDEO_BEAM_CANVAS_LAST_ROW). Pro MZ-800 (154, 46)-(793, 245) = 640x200.
+ * Canvas (active pixel area) = (mzhal_beam_canvas_first_column(),
+ * mzhal_beam_canvas_first_row()) - (mzhal_beam_canvas_last_column(),
+ * mzhal_beam_canvas_last_row()). Pro MZ-800 (154, 46)-(793, 245) = 640x200.
  *
  * Rendering pořadí: pozadí canvasu (čisté logical screen) je už vykreslen
  * v evw_render_strip_tab. Overlay rect = tenké rámečky na top, takže
@@ -3881,8 +3881,8 @@ static void evw_render_strip_visible_canvas_overlay ( ImDrawList *dl,
     const ImVec2 disp_min ( canvas_origin.x,
                             canvas_origin.y );
     const ImVec2 disp_max (
-        canvas_origin.x + (float) ( VIDEO_BEAM_DISPLAY_LAST_COLUMN + 1 ) * scale_x,
-        canvas_origin.y + (float) ( VIDEO_BEAM_DISPLAY_LAST_ROW    + 1 ) * scale_y );
+        canvas_origin.x + (float) ( mzhal_beam_display_last_column() + 1 ) * scale_x,
+        canvas_origin.y + (float) ( mzhal_beam_display_last_row()    + 1 ) * scale_y );
     dl->AddRect ( disp_min, disp_max,
                    IM_COL32 ( 255, 255, 255, 128 ),
                    0.0f, 0, 1.0f );
@@ -3890,11 +3890,11 @@ static void evw_render_strip_visible_canvas_overlay ( ImDrawList *dl,
     /* Canvas (= active pixel area, bez borderu) - světle šedý
      * polotransparentní rámeček, menší a uvnitř display. */
     const ImVec2 cv_min (
-        canvas_origin.x + (float) VIDEO_BEAM_CANVAS_FIRST_COLUMN * scale_x,
-        canvas_origin.y + (float) VIDEO_BEAM_CANVAS_FIRST_ROW    * scale_y );
+        canvas_origin.x + (float) mzhal_beam_canvas_first_column() * scale_x,
+        canvas_origin.y + (float) mzhal_beam_canvas_first_row()    * scale_y );
     const ImVec2 cv_max (
-        canvas_origin.x + (float) ( VIDEO_BEAM_CANVAS_LAST_COLUMN + 1 ) * scale_x,
-        canvas_origin.y + (float) ( VIDEO_BEAM_CANVAS_LAST_ROW    + 1 ) * scale_y );
+        canvas_origin.x + (float) ( mzhal_beam_canvas_last_column() + 1 ) * scale_x,
+        canvas_origin.y + (float) ( mzhal_beam_canvas_last_row()    + 1 ) * scale_y );
     dl->AddRect ( cv_min, cv_max,
                    IM_COL32 ( 180, 180, 180, 96 ),
                    0.0f, 0, 1.0f );
@@ -3912,8 +3912,8 @@ static void evw_render_strip_visible_canvas_overlay ( ImDrawList *dl,
  * horizontální každých @c GRID_STEP_Y_PRI = 128 sline. Barva
  * @c IM_COL32(140,140,140,140) = sytější odstín pro hlavní orientaci.
  *
- * Linie se kreslí jen v rozsahu [0, VIDEO_SCREEN_WIDTH-1] x
- * [0, VIDEO_SCREEN_HEIGHT-1] - mimo screen je blanking, kde se eventy
+ * Linie se kreslí jen v rozsahu [0, g_mzhal.video_screen_width-1] x
+ * [0, g_mzhal.video_screen_height-1] - mimo screen je blanking, kde se eventy
  * nezobrazují.
  *
  * @param dl             ImDrawList canvas drawlistu.
@@ -3929,8 +3929,8 @@ static void evw_render_strip_grid ( ImDrawList *dl,
     if ( !dl ) return;
 
     /* Hranice gridu v logical souřadnicích (= 0..SCREEN_WIDTH/HEIGHT). */
-    const float full_w = (float) VIDEO_SCREEN_WIDTH  * scale_x;
-    const float full_h = (float) VIDEO_SCREEN_HEIGHT * scale_y;
+    const float full_w = (float) g_mzhal.video_screen_width  * scale_x;
+    const float full_h = (float) g_mzhal.video_screen_height * scale_y;
 
     const int GRID_STEP_X_SEC = 64;
     const int GRID_STEP_Y_SEC = 32;
@@ -3942,7 +3942,7 @@ static void evw_render_strip_grid ( ImDrawList *dl,
 
     /* Vertikální čáry (cols). Primární test bere přednost = jedna čára
      * jeden render (jinak by primary linka byla překreslena secondary). */
-    for ( int x = GRID_STEP_X_SEC; x < (int) VIDEO_SCREEN_WIDTH;
+    for ( int x = GRID_STEP_X_SEC; x < (int) g_mzhal.video_screen_width;
           x += GRID_STEP_X_SEC ) {
         const bool primary = ( ( x % GRID_STEP_X_PRI ) == 0 );
         const float sx = canvas_origin.x + (float) x * scale_x;
@@ -3952,7 +3952,7 @@ static void evw_render_strip_grid ( ImDrawList *dl,
     }
 
     /* Horizontální čáry (rows). */
-    for ( int y = GRID_STEP_Y_SEC; y < (int) VIDEO_SCREEN_HEIGHT;
+    for ( int y = GRID_STEP_Y_SEC; y < (int) g_mzhal.video_screen_height;
           y += GRID_STEP_Y_SEC ) {
         const bool primary = ( ( y % GRID_STEP_Y_PRI ) == 0 );
         const float sy = canvas_origin.y + (float) y * scale_y;
@@ -4013,11 +4013,11 @@ static void evw_render_strip_scanline_cursor ( ImDrawList *dl,
      * 0..VIDEO_SCREEN_TICKS-1 (= sline 0..SCREEN_HEIGHT-1), ale guard
      * proti corner case bezprostředně po reset / před prvním screen
      * done. */
-    if ( sline >= (uint32_t) VIDEO_SCREEN_HEIGHT ) sline = VIDEO_SCREEN_HEIGHT - 1;
-    if ( px    >= (uint32_t) VIDEO_SCREEN_WIDTH  ) px    = VIDEO_SCREEN_WIDTH  - 1;
+    if ( sline >= (uint32_t) g_mzhal.video_screen_height ) sline = g_mzhal.video_screen_height - 1;
+    if ( px    >= (uint32_t) g_mzhal.video_screen_width  ) px    = g_mzhal.video_screen_width  - 1;
 
-    const float sx_full = (float) VIDEO_SCREEN_WIDTH  * scale_x;
-    const float sy_full = (float) VIDEO_SCREEN_HEIGHT * scale_y;
+    const float sx_full = (float) g_mzhal.video_screen_width  * scale_x;
+    const float sy_full = (float) g_mzhal.video_screen_height * scale_y;
 
     const float cx = canvas_origin.x + (float) px    * scale_x;
     const float cy = canvas_origin.y + (float) sline * scale_y;
@@ -4146,7 +4146,7 @@ static void evw_render_strip_legend ( void )
  * Render pipeline:
  *   1. Lazy init Strip state (defaulty colors + mode).
  *   2. Zjisti aktuální frame number (@c g_gdg.total_elapsed.screens).
- *   3. Spočítej canvas dimenze (logické = VIDEO_SCREEN_WIDTH x HEIGHT,
+ *   3. Spočítej canvas dimenze (logické = g_mzhal.video_screen_width x HEIGHT,
  *      fyzické = logical * scale).
  *   4. Vykresli rámec canvasu (= tmavé pozadí pro kontrast bodů).
  *   5. Iteruj eventy v ringu; pro každý s @c screens_total ==
@@ -4174,10 +4174,10 @@ static void evw_render_strip_tab ( void )
 {
     evw_init_strip_state_once ( );
 
-    /* Logické dimenze canvasu - per-arch (VIDEO_SCREEN_WIDTH/HEIGHT
+    /* Logické dimenze canvasu - per-arch (g_mzhal.video_screen_width/HEIGHT
      * makra rezolvují podle compile-time MZARCH + PAL/NTSC variant). */
-    const float logical_w = (float) VIDEO_SCREEN_WIDTH;
-    const float logical_h = (float) VIDEO_SCREEN_HEIGHT;
+    const float logical_w = (float) g_mzhal.video_screen_width;
+    const float logical_h = (float) g_mzhal.video_screen_height;
 
     /* Toolbar. Drawn count je z PŘEDCHOZÍHO renderu (= cached v static)
      * aby uživatel nemusel čekat na další frame na update; pro hodnotu
@@ -4325,8 +4325,8 @@ static void evw_render_strip_tab ( void )
 
         /* Safety: pxclk_in_screen by neměl překročit screen dimenze,
          * ale defensive clip aby out-of-bounds bod neuteklo ven. */
-        if ( sline >= (uint32_t) VIDEO_SCREEN_HEIGHT ) continue;
-        if ( px    >= (uint32_t) VIDEO_SCREEN_WIDTH  ) continue;
+        if ( sline >= (uint32_t) g_mzhal.video_screen_height ) continue;
+        if ( px    >= (uint32_t) g_mzhal.video_screen_width  ) continue;
 
         ImVec2 pos = ImVec2 (
             canvas_origin.x + (float) px    * scale_x,
@@ -4579,9 +4579,9 @@ extern "C" void event_viewer_window_render ( bool *p_open )
     /* První render po open - sync filter handle z perzistovaného textu
      * + nastav screen width. */
     if ( !s_screen_width_initialized ) {
-        /* VIDEO_SCREEN_WIDTH = total pxclk/scanline včetně blanking
+        /* g_mzhal.video_screen_width = total pxclk/scanline včetně blanking
          * (= compile-time per-arch konstanta, MZ-800 PAL 1136). */
-        eventlog_filter_set_screen_width ( (uint32_t) VIDEO_SCREEN_WIDTH );
+        eventlog_filter_set_screen_width ( (uint32_t) g_mzhal.video_screen_width );
         s_screen_width_initialized = true;
         /* Pokud cfg propagate naplnil cfg_filter_text, zkopíruj do live
          * bufferu a parsuj (jednou). */

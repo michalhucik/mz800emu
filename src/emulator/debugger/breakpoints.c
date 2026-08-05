@@ -24,11 +24,10 @@
  * ---------------------------------------------------------------------------
  */
 
-#include "mzarch/mzarch_config.h"
-
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+#include "mzarch/mzcommon_config.h"
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
 
@@ -46,18 +45,13 @@
 /* V1.5.A8.5 - IRQ_SIG enforce potřebuje MZARCH_INTERRUPT_* a (volitelně)
  * g_pioz80 pro sub-detekci PIOZ80 portu A / B. */
 #include "mzarch/interrupt.h"
-#if HAVE_PIOZ80
+#include "mzarch/mzhal.h"
 #include "hw-generic/pioz80/pioz80.h"
-#endif
 
 /* V1.5 fáze 2.4 - Cycle/Frame/Scanline ctx zdroje z GDG.
  * Per-arch include (mz800_gdg.h a mz1500_gdg.h definují identický
  * pattern g_gdg + total_elapsed.screens / ticks + beam_row). */
-#if MZARCH == 800
-#include "mzarch/mz800/gdg/mz800_gdg.h"
-#elif MZARCH == 1500
-#include "mzarch/mz1500/gdg/mz1500_gdg.h"
-#endif
+#include "hw-generic/gdg/gdg_state.h"
 #include <glib.h>
 #include <glib/gstdio.h>
 #include <json-glib/json-glib.h>
@@ -291,13 +285,10 @@ void breakpoints_init ( void ) {
      * - pokud user má v cfgmain.ini starý "default_file=breakpoints.ini"
      * záznam, cfg lib ho ignoruje a použije nový default. Stará hodnota
      * zůstane v INI jako mrtvý klíč (= žádná migrace v V1). */
-#if MZARCH == 800
-    #define DEFAULT_BPT_FILE "mz800-breakpoints.bpt"
-#elif MZARCH == 1500
-    #define DEFAULT_BPT_FILE "mz1500-breakpoints.bpt"
-#else
-    #define DEFAULT_BPT_FILE "mz700-breakpoints.bpt"
-#endif
+    static char default_bpt_file[48];
+    g_snprintf ( default_bpt_file, sizeof ( default_bpt_file ),
+                 "%s-breakpoints.bpt", g_mzhal.arch_name );
+#define DEFAULT_BPT_FILE default_bpt_file
     elm = cfgmodule_register_new_element ( cmod, "bpt_file", CFGENTYPE_TEXT, DEFAULT_BPT_FILE );
     cfgelement_bind ( elm, (void*) &g_breakpoints.default_file );
 #undef DEFAULT_BPT_FILE
@@ -3262,11 +3253,13 @@ void breakpoints_fill_global_ctx ( bp_expr_ctx_t *ctx ) {
      *              resetu (16 pixel ticks per Z80 T-state na 3.5 MHz). NENI
      *              čistý Z80 T-state counter; pro per-frame timing relativní
      *              jednotky stačí. Plný T-state cycle counter = TODO V1.6+. */
-#if ( MZARCH == 800 ) || ( MZARCH == 1500 ) || ( MZARCH == 700 )
+    /* SENTINEL: g_gdg timing kontrakt plati pro vsechny zname
+     * architektury (700/800/1500, garantovano mzhal.c) - pri pridani
+     * nove architektury tuto cast PROVER. */
     ctx->Cycle    = (int64_t) gdg_get_total_ticks ( );
     ctx->Frame    = (int64_t) g_gdg.total_elapsed.screens;
     ctx->Scanline = (int32_t) g_gdg.beam_row;
-#else
+#if 0 /* sentinel fallback pro neznamou arch */
     ctx->Cycle    = 0;
     ctx->Frame    = 0;
     ctx->Scanline = 0;
@@ -3785,19 +3778,15 @@ void breakpoints_enforce_irq_sig ( uint8_t raised_now, uint8_t raised_prev ) {
      * port který drží INT pin v daisy chain). */
     uint8_t active_sources = 0;
     if ( newly_raised & MZARCH_INTERRUPT_PIOZ80 ) {
-#if HAVE_PIOZ80
-        if ( g_pioz80.interrupt_port_id == PIOZ80_PORT_A ) {
+        if ( g_mzhal.have_pioz80 && g_pioz80.interrupt_port_id == PIOZ80_PORT_A ) {
             active_sources |= BP_IRQ_SIG_PIOZ80_PORT_A;
-        } else if ( g_pioz80.interrupt_port_id == PIOZ80_PORT_B ) {
+        } else if ( g_mzhal.have_pioz80 && g_pioz80.interrupt_port_id == PIOZ80_PORT_B ) {
             active_sources |= BP_IRQ_SIG_PIOZ80_PORT_B;
         } else {
-            /* Race-safe fallback - když interrupt_port_id ještě nebyl
-             * nastaven (PIOZ80_PORT_NONE), evidujeme jako OTHER. */
+            /* Race-safe fallback (PIOZ80_PORT_NONE) nebo platforma bez
+             * PIO-Z80 - evidujeme jako OTHER (mzhal krok 8). */
             active_sources |= BP_IRQ_SIG_OTHER;
         };
-#else
-        active_sources |= BP_IRQ_SIG_OTHER;
-#endif
     };
     if ( newly_raised & MZARCH_INTERRUPT_CTC2 ) {
         active_sources |= BP_IRQ_SIG_CTC2;

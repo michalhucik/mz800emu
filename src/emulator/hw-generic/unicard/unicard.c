@@ -35,7 +35,8 @@
 // Lokalizace
 #include "i18n.h"
 
-#include "mzarch/mzarch_config.h"
+#include "mzarch/mzcommon_config.h"
+#include "mzarch/mzhal.h"
 #include "fs_layer.h"
 #include "cfgmain.h"
 #include "qdisk/qdisk.h"
@@ -722,10 +723,30 @@ char* unicard_get_mzfloader_image_filepath ( void ) {
 }
 
 
+/**
+ * @brief Runtime default Unicard SD root ("SD-<arch>").
+ *
+ * Skládá se z g_mzhal.arch_name (mzhal krok 7) - hodnota identická
+ * s dřívějším compile-time "SD-" MZ_PLATFORM_SUFFIX. Vrací ukazatel na
+ * statický buffer naplněný při prvním volání (single-thread init cesta,
+ * g_mzhal je const od load-time).
+ *
+ * @return Jméno adresáře relativní k cfg_dir; ukazatel je platný po
+ *         celou dobu běhu, volající ho NEuvolňuje.
+ */
+static const char *unicard_default_sd_root ( void ) {
+    static char dirname[32];
+    if ( dirname[0] == 0x00 ) {
+        snprintf ( dirname, sizeof ( dirname ), "SD-%s", g_mzhal.arch_name );
+    };
+    return dirname;
+}
+
+
 void unicard_set_connected ( en_UNICARD_CONNECTION conn ) {
 
     if ( strlen ( unicard_get_sd_root_dirpath ( ) ) == 0 ) {
-        char *sd_root = (char*) baseui_tools_mem_alloc0 ( strlen ( UNICARD_DEFAULT_SD_ROOT ) + 1 );
+        char *sd_root = (char*) baseui_tools_mem_alloc0 ( strlen ( unicard_default_sd_root ( ) ) + 1 );
         unicard_set_sd_root_dirpath ( sd_root );
         baseui_tools_mem_free ( sd_root );
     };
@@ -819,7 +840,7 @@ void unicard_init ( void ) {
     int default_conn = UNICARD_CONNECTION_CONNECTED;
     g_elm_connected = cfgmodule_register_new_element ( cmod, "connected", CFGENTYPE_BOOL, default_conn );
     cfgelement_set_handlers ( g_elm_connected, (void*) NULL, (void*) &g_unicard.connected );
-    g_elm_sd_root = cfgmodule_register_new_element ( cmod, "sd_root", CFGENTYPE_TEXT, UNICARD_DEFAULT_SD_ROOT );
+    g_elm_sd_root = cfgmodule_register_new_element ( cmod, "sd_root", CFGENTYPE_TEXT, unicard_default_sd_root ( ) );
 
     /* Default R/W (0) - existující uživatelé bez záznamu si nepoznají
      * žádnou změnu chování. Bind oba směry pro persistenci přes

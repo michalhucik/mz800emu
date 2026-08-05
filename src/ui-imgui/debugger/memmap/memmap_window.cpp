@@ -23,6 +23,7 @@
  *
  * ---------------------------------------------------------------------------
  */
+#include "hw-generic/memory/memory_arch.h" /* per-arch memory - dříve tranzitivně přes memory.h (mzhal 11c-2c) */
 
 #include "mzarch/mzarch_config.h"
 
@@ -362,7 +363,7 @@ static void memmap_banking_render_popup_content ( void );
 static bool memmap_banking_is_clickable ( int row )
 {
 #if MZARCH == 800
-    bool mz700_mode = GDG_MZ800_DMD_TEST_MZ700 ? true : false;
+    bool mz700_mode = GDG_DMD_TEST_MODE700 ? true : false;
     bool scrw640    = GDG_MZ800_DMD_TEST_SCRW640 ? true : false;
 
     if ( mz700_mode ) {
@@ -455,7 +456,7 @@ static void memmap_banking_left_click ( int row )
              * naráz, jinak by se emul. dostal do stavu nedostupného HW.
              * Výjimka: v 700 modu pro $D000 platí ROM_E000 flag
              * (= VRAM D000 + ROM E000 jeden bit). */
-            if ( row == 0x0d && GDG_MZ800_DMD_TEST_MZ700 ) {
+            if ( row == 0x0d && GDG_DMD_TEST_MODE700 ) {
                 g_memory.map ^= MEMORY_MZ800_MAP_FLAG_ROM_E000;
             } else {
                 g_memory.map ^= ( MEMORY_MZ800_MAP_FLAG_ROM_1000

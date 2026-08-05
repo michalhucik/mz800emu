@@ -1,7 +1,7 @@
 #include "main.h"
 #include <glib.h>
-#include "hw-generic/gdg/video.h"
 #include "mzarch/mzarch.h"
+#include "mzarch/mzhal.h"
 #include "customspeed.h"
 #include "emulator.h"
 
@@ -18,7 +18,8 @@ st_CUSTOMSPEED g_customspeed;
 
 void customspeed_print(void)
 {
-    float frame_time = ((float)VIDEO_SCREEN_TICKS / g_customspeed.speed_frame_width_requested) * (1000.0f / VIDEO_SCREENS_PER_SEC);
+    /* Runtime z g_mzhal (mzhal 10b, cold cesta - UI/konzole). */
+    float frame_time = ((float)g_mzhal.video_screen_ticks / g_customspeed.speed_frame_width_requested) * (1000.0f / g_mzhal.video_screens_per_sec);
     float fps = (1 / frame_time) * 1000;
     g_print("%s speed: %d %% => frame time: %0.2f ms, FPS: %0.2f\n", (EMULATOR_TEST_CUSTOM_SPEED) ? "Custom" : "Normal", g_customspeed.speed_in_percentage_requested, frame_time, fps);
 }
@@ -30,7 +31,7 @@ void customspeed_set_request(int speed_in_percentage)
     if (speed_in_percentage < 1)
         speed_in_percentage = 1;
     g_customspeed.speed_in_percentage_requested = speed_in_percentage;
-    g_customspeed.speed_frame_width_requested = VIDEO_SCREEN_TICKS * g_customspeed.speed_in_percentage_requested / 100;
+    g_customspeed.speed_frame_width_requested = g_mzhal.video_screen_ticks * g_customspeed.speed_in_percentage_requested / 100;
     customspeed_print();
 }
 

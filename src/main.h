@@ -2,7 +2,7 @@
 #define MAIN_H
 
 #include <stdbool.h>
-#include "mzarch/mzarch_config.h"
+#include "mzarch/mzcommon_config.h"
 #include "app/app.h"
 #include "libs/sdlapp/sdlapp.h"
 

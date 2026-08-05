@@ -39,16 +39,13 @@
 #include "mzarch/mzarch_config.h"
 #include "joymz-1x03.h"
 
-#if HAVE_JOY
 #include "joy.h"
-#endif
 #include "hw-generic/gdg/gdgclk.h"
 
 st_JOYMZ g_joymz;
 
-#if HAVE_JOY && ((MZARCH == 700) || (MZARCH == 1500))
-
-#include "hw-generic/gdg/gdg.h"
+#if (MZARCH == 700) || (MZARCH == 1500)
+#include "hw-generic/gdg/gdg_state.h"
 #include "hw-generic/gdg/video.h"
 
 /* Pomocne offsety pro bit mapping na 0xE008. Bity 1-4 (mask 0x1E):
@@ -226,13 +223,11 @@ void joymz_set_connected(int stick_idx, bool connected)
     g_joymz.stick[stick_idx].connected = connected;
 }
 
-#else  /* HAVE_JOY=0 OR (MZARCH != 700 && MZARCH != 1500) */
+#else  /* MZARCH == 800 */
 
-/* Stub implementace - dva pripady:
- *  1) HAVE_JOY=0: uzivatel zakazal joystick subsystem v config (compile-time)
- *  2) MZ-800: MZ-1X03 nepatri k MZ-800 (= MZ-800 ma vlastni digital JOY na
- *     0xF0/0xF1 IORQ, ne na 0xE008)
- * V obou pripadech 0xE008 status read vraci 0x1E (= bity 1-4 vsechny HIGH). */
+/* Stub implementace: MZ-1X03 nepatri k MZ-800 (= MZ-800 ma vlastni
+ * digital JOY na 0xF0/0xF1 IORQ, ne na 0xE008). 0xE008 status read
+ * vraci 0x1E (= bity 1-4 vsechny HIGH). */
 
 void joymz_init(void)
 {
@@ -266,4 +261,4 @@ void joymz_set_connected(int stick_idx, bool connected)
     (void) stick_idx; (void) connected;
 }
 
-#endif /* HAVE_JOY && (MZARCH == 700 || MZARCH == 1500) */
+#endif /* MZARCH == 700 || MZARCH == 1500 */

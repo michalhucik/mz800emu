@@ -186,7 +186,15 @@ static void Snapshot_InfoPane(const char *vFilter, IGFD::UserDatas vUserDatas, b
             case 1500: arch_name = "MZ-1500"; break;
         }
 
-        ImGui::Text("%s: %s", _("Architecture"), arch_name);
+        /* TV systém: legacy snapshot pole <tvsys> nemá (0), pak se
+         * nezobrazuje nic */
+        const char *tvsys_name = "";
+        switch (s_cached_metadata.tvsys) {
+            case 50: tvsys_name = " PAL"; break;
+            case 60: tvsys_name = " NTSC"; break;
+        }
+
+        ImGui::Text("%s: %s%s", _("Architecture"), arch_name, tvsys_name);
         ImGui::Text("%s: %s", _("Created"), s_cached_metadata.created);
         ImGui::Text("%s: %s", _("Emulator"), s_cached_metadata.emulator_version);
 

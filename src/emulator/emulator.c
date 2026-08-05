@@ -39,25 +39,31 @@ st_EMULATOR g_emulator;
 jmp_buf jumpBuffer;
 int g_emulator_exit_value = 0;
 
+void emulator_teardown(void)
+{
+    /* cfgmain musi byt prvni exit funkce !!! */
+    version_check_exit();
+    snapshot_exit();
+    cfgmain_exit();
+
+    emulator_measuring_exit();
+    mzarch_platform_fn_exit();
+}
+
 void emulator_quit(int exit_value)
 {
     g_emulator_exit_value = exit_value;
     if (exit_value == 0)
     {
-        /* cfgmain musi byt prvni exit funkce !!! */
+        /* Subsystemy zde NEuklizime - emulator_teardown() vola main
+         * vlakno az po g_thread_join + MCP/dbgapi shutdownu (viz
+         * kontrakt v emulator.h; jinak UAF z MCP dispatch vlakna). */
         fprintf(stderr, "Application is normaly exiting...\n");
-
-        version_check_exit();
-        snapshot_exit();
-        cfgmain_exit();
-
-        emulator_measuring_exit();
-        mzarch_platform_fn_exit();
     }
     else
     {
         fprintf(stderr, "Oops ... Apppication is abnormaly exiting...\n");
-#if WINDOWS
+#ifdef WINDOWS
         // Pokud doslo k chybe, tak nechame chvili otevrene okno, aby uzivatel mohl videt, co se stalo
         fprintf(stderr, "Waiting 5 seconds before exit...\n");
         g_usleep(5 * 1000 * 1000);

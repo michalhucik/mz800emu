@@ -6,9 +6,7 @@
 #include "ui-imgui/bootstrap/myimgui.h"
 #include "iface-video/sdlapp/sdlapp_imgui_video.h"
 
-#if HAVE_JOY
 #include "iface/iface_joy.h"
-#endif
 
 void iface_sdl3_events_cb(SdlAppWindow *win, SDL_Event *event, gpointer user_data)
 {
@@ -29,7 +27,6 @@ void iface_sdl3_events_cb(SdlAppWindow *win, SDL_Event *event, gpointer user_dat
         iface_sdl3_video_window_resize_event_handler(win, event);
         break;
 
-#if HAVE_JOY
     case SDL_EVENT_JOYSTICK_ADDED:
     case SDL_EVENT_JOYSTICK_REMOVED:
     case SDL_EVENT_GAMEPAD_ADDED:
@@ -40,7 +37,6 @@ void iface_sdl3_events_cb(SdlAppWindow *win, SDL_Event *event, gpointer user_dat
             iface_joy_rescan_devices();
         }
         break;
-#endif
 
     default:
         break;

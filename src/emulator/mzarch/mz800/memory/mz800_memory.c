@@ -131,7 +131,7 @@ static inline void memory_mmap_rom_upper_on ( void ) {
  */
 static inline void memory_mmap_all_on ( void ) {
     g_memory.map |= ( MEMORY_MZ800_MAP_FLAG_ROM_0000 | MEMORY_MZ800_MAP_FLAG_ROM_1000 | MEMORY_MZ800_MAP_FLAG_CGRAM_VRAM | MEMORY_MZ800_MAP_FLAG_ROM_E000 );
-    if ( GDG_MZ800_DMD_TEST_MZ700 ) {
+    if ( GDG_DMD_TEST_MODE700 ) {
         g_memory.map &= ~( MEMORY_MZ800_MAP_FLAG_ROM_1000 | MEMORY_MZ800_MAP_FLAG_CGRAM_VRAM );
     };
 }
@@ -519,7 +519,7 @@ static inline uint8_t memory_internal_read_rom_e000_efff_sync ( uint16_t addr ) 
      *                     bajty (FF/00/...) ale HW vraci konstantni 0x1A
      *                     bez ohledu na PIO state - takze tady vracime natvrdo
      *                     0x1A pro shodu s HW). */
-    if ( ! GDG_MZ800_DMD_TEST_MZ700 ) return 0xFF;
+    if ( ! GDG_DMD_TEST_MODE700 ) return 0xFF;
 
     /* 700 mode: $E009-$E00F shadow byte. */
     if ( addr_low > 0x08 ) return 0x1A;
@@ -579,7 +579,7 @@ static inline uint8_t memory_internal_read_rom_e000_efff ( uint16_t addr ) {
     /* $E000-$E00F (NE Prohibited - tu uz vyresilo nadrazene makro).
      * 800 native: cela oblast "off" (0xFF). 700 mode: $E000-$E008 mapped ports,
      * $E009-$E00F = 0x1A shadow byte. Detail v sync verzi. */
-    if ( ! GDG_MZ800_DMD_TEST_MZ700 ) return 0xFF;
+    if ( ! GDG_DMD_TEST_MODE700 ) return 0xFF;
 
     /* 700 mode: $E009-$E00F shadow byte. */
     if ( addr_low > 0x08 ) return 0x1A;
@@ -1212,7 +1212,7 @@ en_MEMMAP_REGION_KIND memmap_query ( uint8_t addr_point )
 {
     if ( addr_point > 0x0f ) return MEMMAP_KIND_RAM;
 
-    int mz700_mode = GDG_MZ800_DMD_TEST_MZ700 ? 1 : 0;
+    int mz700_mode = GDG_DMD_TEST_MODE700 ? 1 : 0;
     int prohibited = MEMORY_MZ800_MAP_TEST_PROHIBITED ? 1 : 0;
 
     switch ( addr_point ) {

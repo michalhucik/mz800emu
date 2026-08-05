@@ -336,7 +336,7 @@ typedef enum en_DBGAPI_CMD
      *
      * Read-only snapshoty GDG (= per-platforma struct: MZ-800 má 16-color
      * palette přes regPALGRP/regPAL0..3; MZ-700 a MZ-1500 mají 8-entry
-     * palette přes mode700_color/mode1500_color), WD279x FDC (status,
+     * palette přes mode_color[8]), WD279x FDC (status,
      * regs, 4 drives s mount metadaty), CMT (motor/play state, image
      * filename, polarita) a Quick Disk (motor, virt status, header/body
      * sizes).
@@ -2514,8 +2514,8 @@ typedef struct st_DBGAPI_HID_KEY_PARAM
  * 3 = RIGHT, 4 = FIRE1, 5 = FIRE2). Pro CMD_INPUT_JOY_CLEAR se
  * `mcp_mask` ignoruje (= ekvivalent SET s mask=0).
  *
- * Pokud emulátor sestaven s NO_JOY=1 (= HAVE_JOY nedefinováno),
- * handler vrátí success=false.
+ * V testovacím MCP stub buildu (MZ800EMU_MCP_TEST_BUILD) obsluhu
+ * dodává test stub (zachytává parametry do g_stub_state).
  */
 typedef struct st_DBGAPI_HID_JOY_PARAM
 {
@@ -3079,18 +3079,18 @@ typedef struct st_DBGAPI_PERIPH_BEEPER_PARAM
  *   - MZ-800: 16-color palette, ovládaná přes `regPALGRP` + 4 byte
  *     `regPAL0..3` (= 16 logických -> fyzických hodnot). Plus `regBOR`
  *     (border color), `vram800_hot_phase_*` pro WAIT model. Nemá
- *     `mode700_color[]` ani `mode1500_color[]`.
- *   - MZ-700: 8-entry palette (`mode700_color[8]`), žádný `regBOR`
+ *     `mode_color[]`.
+ *   - MZ-700: 8-entry palette (`mode_color[8]`), žádný `regBOR`
  *     (hardware border port chybí, vždy 0), žádné `regPAL*` ani
  *     `regPALGRP`.
- *   - MZ-1500: 8-entry palette (`mode1500_color[8]`), žádný `regBOR`,
+ *   - MZ-1500: 8-entry palette (`mode_color[8]`), žádný `regBOR`,
  *     žádné `regPAL*` ani `regPALGRP`.
  *
  * Handler vyplní pole `platform` ASCII identifikátorem ("mz800",
  * "mz700", "mz1500"), `palette_count` = 16 (MZ-800) nebo 8 (MZ-700,
  * MZ-1500). `palette[]` obsahuje per-entry GDG hodnotu - pro MZ-800
  * jsou platné entries 0..15 (= regPAL0..3 expandované do 16 položek),
- * pro MZ-700/MZ-1500 entries 0..7 (= mode700_color / mode1500_color
+ * pro MZ-700/MZ-1500 entries 0..7 (= mode_color
  * přetypované do uint8_t).
  *
  * Reference: mz800-knowledge/reference/agent/hw/09-video-mz800-modes.md

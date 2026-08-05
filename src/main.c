@@ -11,6 +11,7 @@
 
 #include "libs/sdlapp/sdlapp.h"
 #include "libs/sdlapp/sdlapp_options.h"
+#include "emulator/mzarch/mzhal.h"
 #include "ui-imgui/bootstrap/myimgui.h"
 #include "ui-imgui/debugger/dbgapi_dispatcher.h"
 #include "ui-imgui/spdfd/spdfd_main.h"
@@ -269,6 +270,11 @@ static const st_SDLAPP_OPTION_DEF g_known_options[] = {
 
 int main(int argc, char *argv[])
 {
+    /* Konzistenční kontrola HW layer specifikace (g_mzhal) - první věc
+     * v main(), fail-fast při rozjetí s mzarch_platform (pokrývá i
+     * --mcp-pipe větev, mcp_pipe_main se volá odsud). */
+    mzhal_validate();
+
     /* Inicializace options moduly před čímkoliv jiným, aby si moduly mohly
      * své options vytáhnout v dalších fázích startu. */
     sdlapp_options_init(argc, argv);
@@ -488,6 +494,11 @@ int main(int argc, char *argv[])
      * (= žádný producer ani konzument už nebude přistupovat). */
     dbgapi_destroy(&g_dbgapi_cmdrq_queue);
 #endif
+
+    /* Threading kontrakt (mzhal krok 12): teardown subsystémů až po
+     * joinu emu vlákna a shutdownu MCP/dbgapi - viz emulator.h. */
+    if (emuretval == EXIT_SUCCESS)
+        emulator_teardown();
 
     iface_exit();
     sdlapp_destroy(g_sdlapp);

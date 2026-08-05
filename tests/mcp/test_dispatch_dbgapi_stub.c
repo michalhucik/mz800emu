@@ -2219,3 +2219,66 @@ bool bp_event_trigger_from_string ( const char *s, en_BP_EVENT_TRIGGER *out )
     if ( strcmp ( s, "high" ) == 0 )    { *out = BP_EVT_TRIG_HIGH;    return true; }
     return false;
 }
+
+
+/* ===========================================================================
+ * g_mzhal stub (mzhal krok 8)
+ * ===========================================================================
+ *
+ * dispatch.c cte capability/clock/geometry pole z g_mzhal (produkcne je
+ * definuje per-EXE mzhal.c, ktery ve standalone testu neni - potrebuje
+ * per-arch hlavicky). Stub poskytuje deterministicke placeholder hodnoty
+ * odpovidajici MZ-800/PAL (stejna filozofie jako "test" placeholdery
+ * v _dispatch_detect_platform). Vsechny delitele jsou nenulove, aby
+ * pripadne cesty s delenim nespadly na SIGFPE.
+ */
+#include "../../src/emulator/mzarch/mzhal.h"
+
+const st_MZHAL g_mzhal = {
+    .arch = 800,
+    .tvsys = 50,
+    .arch_name = "mz800",
+    .tvsys_name = "PAL",
+    .full_name = "MZ-800",
+    .arch_display_name = "MZ-800",
+    .gdgclk_base = 17721600,
+    .gdgclk_real_base = 17734475,
+    .gdgclk2cpu_divider = 5,
+    .gdgclk_ctc0_divider = 16,
+    .cpu_hz = 17721600 / 5,
+    .ctc0_input_hz = 17721600 / 16,
+    .video_border_left_width = 154,
+    .video_border_right_width = 134,
+    .video_border_top_height = 46,
+    .video_border_bottom_height = 42,
+    .video_canvas_width = 640,
+    .video_canvas_height = 200,
+    .video_display_width = 928,
+    .video_display_height = 288,
+    .video_screen_width = 1136,
+    .video_screen_height = 312,
+    .video_screen_ticks = 354432,
+    .video_screens_per_sec = 50,
+    .video_h_sync_ticks = 80,
+    .video_h_back_porch_ticks = 106,
+    .video_h_front_porch_ticks = 22,
+    .psg_divider = 80,
+    .psg_count = 2,
+    .have_pioz80 = 1,
+    .have_fdc = 1,
+    .have_ide8 = 1,
+    .have_ramdisk = 1,
+    .have_qdisk = 1,
+    .audio_src_channels = 9,
+    .audio_ctc0_gate_pc00 = 1,
+    .has_key_tab = 1,
+    .has_rear_dip_switch700 = 1,
+    .mem_vram_size = 0x4000,
+    .mem_exvram_size = 0x4000,
+    .mem_pcg_size = 0,
+    .iorq_rd_ticks = 12,
+    .iorq_wr_ticks = 9,
+    .mreq_rd_m1_ticks = 7,
+    .mreq_rd_ticks = 9,
+    .mreq_wr_ticks = 9,
+};

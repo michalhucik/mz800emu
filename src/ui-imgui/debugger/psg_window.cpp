@@ -9,8 +9,8 @@
  *  - NOISE kanál (CH3 v noise módu): noise divider type, white/periodic feedback.
  *
  * MZ-800 má mono PSG (1 chip), MZ-1500 má stereo (2 chipy = L/R). MZ-700
- * žádný PSG nemá - celé tělo souboru je vyřazené compile-time, funkce
- * `imgui_psg_state_window()` se v MZ-700 buildu vůbec nedefinuje.
+ * žádný PSG nemá - TU je sdílené (mz_emucore), volající gatují okno
+ * runtime přes `g_mzhal.psg_count >= 1` (menu i render loop).
  * Stereo flag se čte z `g_psg_module.stereo`.
  *
  * Data source: výhradně přes mirror API z `hw-generic/psg/psg.h` (side-effect
@@ -40,17 +40,16 @@
 
 #include "i18n.h"
 
-#include "mzarch/mzarch_config.h"
+#include "mzarch/mzcommon_config.h"
 
 #include "ui-imgui/debugger/chip_window_helpers.h"
 #include "ui-imgui/debugger/psg_window.h"
 
-#if HAVE_PSG >= 1
 
 extern "C"
 {
 #include "hw-generic/psg/psg.h"
-#include "hw-generic/gdg/gdgclk.h"
+#include "emulator/mzarch/mzhal.h"
 
     void imgui_psg_state_window(bool *p_open);
 }
@@ -139,7 +138,8 @@ static double psg_tone_frequency_hz(unsigned divider)
 {
     if (divider < 2u)
         return 0.0;
-    return (double)GDGCLK_BASE / (32.0 * (double)divider * (double)GDGCLK2CPU_DIVIDER);
+    /* Runtime z g_mzhal (mzhal 10b, cold - UI render). */
+    return (double)g_mzhal.gdgclk_base / (32.0 * (double)divider * (double)g_mzhal.gdgclk2cpu_divider);
 }
 
 /**
@@ -650,4 +650,3 @@ void imgui_psg_state_window(bool *p_open)
     ImGui::End();
 }
 
-#endif /* HAVE_PSG >= 1 */

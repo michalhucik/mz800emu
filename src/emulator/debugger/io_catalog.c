@@ -72,9 +72,7 @@
 #include "hw-generic/cmt/cmt.h"
 #include "hw-generic/memory/memory.h"
 #include "hw-generic/memory/memext.h"
-#if HAVE_JOY
 #include "hw-generic/joy/joy.h"
-#endif
 #include "mzarch/mzarch.h"
 
 /* Per-arch memory.h - flagy pro g_memory.map bit dekódy v Memory bank
@@ -200,7 +198,6 @@ static uint8_t read_gdg_rf(void) { return 0; }
 
 #endif /* MZARCH == 800 */
 
-#if HAVE_JOY
 
 /**
  * Read joystick 0 input (IORQ 0F0h, MZ-800 only).
@@ -250,7 +247,6 @@ static const st_IO_BIT_DESC bits_joy[] = {
     { 5, 1, "TRIG2", "Trigger 2 (pressed when 0)" }
 };
 
-#endif /* HAVE_JOY */
 
 /**
  * Read GDG palette/border value (mirror).
@@ -1543,25 +1539,15 @@ const st_IO_PORT_DESC g_io_ports[] = {
          * v port_read_no_se_cb / mz800_iorq.c). Bity active LOW. */
         0x00F0, "JOY0 (R)", "Joystick 0 input (read; mirror via joy_read_byte)",
         IO_PORT_DIR_R,
-#if HAVE_JOY
         bits_joy, sizeof(bits_joy) / sizeof(bits_joy[0]),
         read_joy0, NULL,
-#else
-        NULL, 0,
-        NULL, NULL,
-#endif
         MZ_AVAIL_800
     },
     {
         0x00F1, "JOY1 (R)", "Joystick 1 input (read; mirror via joy_read_byte)",
         IO_PORT_DIR_R,
-#if HAVE_JOY
         bits_joy, sizeof(bits_joy) / sizeof(bits_joy[0]),
         read_joy1, NULL,
-#else
-        NULL, 0,
-        NULL, NULL,
-#endif
         MZ_AVAIL_800
     },
 

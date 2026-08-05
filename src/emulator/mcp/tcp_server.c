@@ -58,7 +58,7 @@
  * ---------------------------------------------------------------------------
  */
 
-#include "../mzarch/mzarch_config.h"
+#include "../mzarch/mzcommon_config.h"
 
 #ifdef MZ800EMU_CFG_MCP_TCP_ENABLED
 

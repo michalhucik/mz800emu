@@ -14,51 +14,43 @@
 #include "i18n.h"
 
 #include "iface/iface_audio.h"
+#include "emulator/mzarch/mzhal.h"
 
 extern "C"
 {
     void imgui_audio(bool *p_open);
 };
 
-#if HAVE_PSG == 0
 /* MZ-700: pouze CTC0, zadny PSG */
 static const char *channel_names_ctc_only[] = {
     N_("CTC0")
 };
-#endif
-#if HAVE_PSG >= 1
 /* Mono PSG (MZ-800 nativne, MZ-1500 nikdy) */
 static const char *channel_names_mono[] = {
     N_("CTC0"), N_("PSG tone1"), N_("PSG tone2"), N_("PSG tone3"), N_("PSG noise")
 };
-#endif
-#if HAVE_PSG == 2
 /* Stereo (MZ-1500 nativne, MZ-800 pres allow_psg1) */
 static const char *channel_names_stereo[] = {
     N_("CTC0"),
     N_("PSG0 tone1"), N_("PSG0 tone2"), N_("PSG0 tone3"), N_("PSG0 noise"),
     N_("PSG1 tone1"), N_("PSG1 tone2"), N_("PSG1 tone3"), N_("PSG1 noise")
 };
-#endif
 
 static inline const char **get_channel_names(void) {
-#if HAVE_PSG == 0
-    return channel_names_ctc_only;
-#elif HAVE_PSG == 2
-    /* Runtime rozhodnuti: MZ-1500 vzdy stereo, MZ-800 dle allow_psg1 */
-    return g_psg_module.stereo ? channel_names_stereo : channel_names_mono;
-#else
+    /* Runtime dle g_mzhal (mzhal krok 8); u psg_count == 2 rozhoduje
+     * stereo flag (MZ-1500 vzdy, MZ-800 dle allow_psg1). */
+    if (g_mzhal.psg_count == 0)
+        return channel_names_ctc_only;
+    if (g_mzhal.psg_count == 2)
+        return g_psg_module.stereo ? channel_names_stereo : channel_names_mono;
     return channel_names_mono;
-#endif
 }
 
 static inline int get_num_channels(void) {
-#if HAVE_PSG == 2
-    /* Runtime: 5 kanalu (CTC0 + PSG0) nebo 9 kanalu (+ PSG1) */
-    return g_psg_module.stereo ? 9 : 5;
-#else
-    return AUDIO_SRC_CHANNELS_COUNT;
-#endif
+    /* Runtime: u psg_count == 2 je 5 kanalu (CTC0 + PSG0) nebo 9 (+ PSG1). */
+    if (g_mzhal.psg_count == 2)
+        return g_psg_module.stereo ? 9 : 5;
+    return (int)g_mzhal.audio_src_channels;
 }
 
 const int NUM_LEDS = 16; // Počet LED indikátorů

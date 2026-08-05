@@ -45,7 +45,7 @@
 #define MZ800EMU_SRC_EMULATOR_MCP_COOPERATION_H
 
 #ifndef MZ800EMU_MCP_TEST_BUILD
-#include "../mzarch/mzarch_config.h"
+#include "../mzarch/mzcommon_config.h"
 #endif
 
 #ifdef MZ800EMU_CFG_MCP_SERVER_ENABLED

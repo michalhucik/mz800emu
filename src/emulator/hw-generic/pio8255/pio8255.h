@@ -32,13 +32,12 @@ extern "C" {
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "hw-generic/gdg/gdgclk.h"
+#include "mzarch/mzhal.h"
 
-#if MZARCH != 700
-#define CTC_AUDIO_MASK  ( g_pio8255.signal_pc00 )
-#else
-#define CTC_AUDIO_MASK  1
-#endif
+/* Beeper gate (mzhal krok 8): MZ-800/MZ-1500 hradluji CTC0 audio
+ * signalem PC00 z 8255, MZ-700 ne. Event-driven cesta (zmeny CTC0
+ * OUT / PC00), runtime cteni g_mzhal je zdarma. */
+#define CTC_AUDIO_MASK  ( g_mzhal.audio_ctc0_gate_pc00 ? g_pio8255.signal_pc00 : 1 )
 
 
     /** @brief Stav "probe" pro ověření dosednutí virtuální klávesy.

@@ -12,9 +12,12 @@
 #include "snapshot/snapshot_mgr.h"
 #include "snapshot/snapshot_xml.h"
 #include "hw-generic/psg/psg.h"
-#include "mzarch/mzarch_config.h"
+#include "mzarch/mzcommon_config.h"
 
-#if HAVE_PSG >= 1
+#include "mzarch/mzhal.h"
+
+/* TU se kompiluje bezpodminecne na vsech platformach (mzhal krok 8);
+ * pritomnost sekce ve snapshotu ridi runtime guard v _register(). */
 
 /* Názvy elementů pro PSG instance a kanály */
 static const char *psg_names[PSG_MAX_COUNT] = { "psg_0", "psg_1" };
@@ -172,6 +175,12 @@ static en_SNAPSHOT_RESULT snap_psg_load(st_SNAPSHOT_CONTEXT *ctx)
 
 void snap_psg_register(void)
 {
+    /* Platformy bez PSG (MZ-700) registraci preskoci - snapshot pak
+     * neobsahuje hw/psg.xml (zmrazeny on-disk kontrakt, shodne
+     * s drivejsim compile-time #if). */
+    if (g_mzhal.psg_count == 0)
+        return;
+
     snapshot_register_component("psg",
                                 SNAPSHOT_PRIORITY_HW_IO,
                                 snap_psg_save,
@@ -179,11 +188,4 @@ void snap_psg_register(void)
                                 false);
 }
 
-#else /* HAVE_PSG == 0 */
 
-/* MZ-700 nema PSG - registrace handleru je no-op, snapshot neobsahuje hw/psg.xml */
-void snap_psg_register(void)
-{
-}
-
-#endif /* HAVE_PSG */

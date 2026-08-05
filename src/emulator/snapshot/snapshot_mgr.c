@@ -11,13 +11,11 @@
 #include "emulator.h"
 #include "cfgmain.h"
 #include "mzarch/mzarch.h"
-#include "mzarch/mzarch_config.h"
+#include "mzarch/mzcommon_config.h"
 
-/* RAM fast-path rebuild po dokončení loadu (jen MZ-800, viz závěr
- * snapshot_load_through_io). */
-#if MZARCH == 800
-#include "mzarch/mz800/memory/mz800_memory.h"
-#endif
+#include "mzarch/mzhal.h"
+#include "mzarch/mztvsys_values.h"
+
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
 #include "debugger/trace/eventlog.h"
 #endif
@@ -129,15 +127,25 @@ static en_SNAPSHOT_RESULT snapshot_save_manifest(st_SNAPSHOT_CONTEXT *ctx,
     snprintf(ver_str, sizeof(ver_str), "%d", SNAPSHOT_FORMAT_VERSION);
     snapshot_xml_open_element_attr(w, "mzs_snapshot", "version", ver_str);
 
-    /* Identifikace emulátoru */
+    /* Identifikace emulátoru - runtime z g_mzhal (mzhal krok 7); hodnoty
+     * jsou zmrazený on-disk kontrakt, runtime podoba je s dřívějším
+     * compile-time MZARCH_NAME "emu" / MZARCH identická. */
+    char emu_name[32];
+    snprintf(emu_name, sizeof(emu_name), "%semu", g_mzhal.arch_name);
     snapshot_xml_open_element(w, "emulator");
-    snapshot_xml_write_string(w, "name", MZARCH_NAME "emu");
+    snapshot_xml_write_string(w, "name", emu_name);
     snapshot_xml_write_string(w, "version", CFGMAIN_EMULATOR_VERSION);
     snapshot_xml_write_string(w, "build_date", cfgmain_get_build_date());
     snapshot_xml_close_element(w); /* /emulator */
 
-    /* Architektura */
-    snapshot_xml_write_int(w, "architecture", MZARCH);
+    /* Architektura (osa arch 700/800/1500, sdílená oběma mz700 targety) */
+    snapshot_xml_write_int(w, "architecture", g_mzhal.arch);
+
+    /* TV systém (osa tvsys 50=PAL/60=NTSC; mzhal krok 9, rozhodnutí
+     * 2026-07-30: snapshoty mz700-pal a mz700-ntsc jsou nekompatibilní).
+     * Starší emulátory element neznají a ignorují ho, verze formátu se
+     * proto nemění. */
+    snapshot_xml_write_int(w, "tvsys", g_mzhal.tvsys);
 
     /* Metadata */
     /* cfgmain_create_timestamp() vrací statický buffer — nepoužívat g_free! */
@@ -166,6 +174,31 @@ static en_SNAPSHOT_RESULT snapshot_save_manifest(st_SNAPSHOT_CONTEXT *ctx,
     en_SNAPSHOT_RESULT res = snapshot_io_write_xml(ctx->io, "manifest.xml", xml);
     g_free(xml);
     return res;
+}
+
+
+/**
+ * @brief Historický default TV systému pro legacy snapshoty bez pole <tvsys>.
+ *
+ * Policy (rozhodnutí 2026-07-30): snapshot bez pole <tvsys> se posuzuje
+ * jako by vznikl na defaultní variantě své architektury - mz800 a mz1500
+ * mají jedinou tvsys variantu (PAL, resp. NTSC), u mz700 je default PAL
+ * (evropská varianta). Legacy mz700 snapshot z NTSC buildu se tedy na
+ * mz700emu-ntsc odmítne - vzácný případ, cenou za něj je jistota, že se
+ * PAL stav nikdy tiše nenačte do NTSC časování.
+ *
+ * @param architecture MZARCH hodnota ze snapshot metadat (700/800/1500)
+ * @return MZTVSYS_PAL/MZTVSYS_NTSC; 0 pro neznámou architekturu (vede
+ *         na reject v tvsys checku, arch check ale selže dřív)
+ */
+static int snapshot_legacy_default_tvsys(int architecture)
+{
+    switch (architecture) {
+        case 700:  return MZTVSYS_PAL;
+        case 800:  return MZTVSYS_PAL;
+        case 1500: return MZTVSYS_NTSC;
+        default:   return 0;
+    }
 }
 
 
@@ -213,6 +246,11 @@ static en_SNAPSHOT_RESULT snapshot_load_manifest_from_io(snapshot_io_t *io,
 
     /* Architektura */
     snapshot_xml_read_int(r, "architecture", &metadata->architecture);
+
+    /* TV systém - legacy snapshoty element nemají, pak zůstává 0
+     * (= unknown, vyhodnotí se přes historický default architektury) */
+    metadata->tvsys = 0;
+    snapshot_xml_read_int(r, "tvsys", &metadata->tvsys);
 
     /* Časové razítko */
     char *created = NULL;
@@ -266,6 +304,7 @@ const char *snapshot_result_to_string(en_SNAPSHOT_RESULT result)
         case SNAPSHOT_ERR_ALLOC:        return "Memory allocation error";
         case SNAPSHOT_ERR_EXTERNAL_REF: return "Missing external reference";
         case SNAPSHOT_ERR_NOT_PAUSED:   return "Emulator is not paused";
+        case SNAPSHOT_ERR_TVSYS:        return "Incompatible TV system (PAL vs NTSC)";
         default:                        return "Unknown error";
     }
 }
@@ -291,29 +330,19 @@ void snapshot_init(void)
     snap_pio8255_register();
     snap_psg_register();
 
-#if HAVE_PIOZ80
     snap_pioz80_register();
-#endif
 
     snap_audio_register();
 
     snap_cmt_register();
 
-#if CFG_HWEXT_HAVE_FDC
     snap_fdc_register();
-#endif
 
-#if CFG_HWEXT_HAVE_QDISK
     snap_qdisk_register();
-#endif
 
-#if CFG_HWEXT_HAVE_RAMDISK
     snap_ramdisk_register();
-#endif
 
-#if CFG_HWEXT_HAVE_IDE8
     snap_ide8_register();
-#endif
 
 #if 1 /* MEMEXT */
     snap_memext_register();
@@ -357,7 +386,7 @@ static en_SNAPSHOT_RESULT snapshot_save_through_io(snapshot_io_t *io,
     st_SNAPSHOT_CONTEXT ctx = {
         .io = io,
         .format_version = SNAPSHOT_FORMAT_VERSION,
-        .architecture = MZARCH,
+        .architecture = g_mzhal.arch,
         .saving = true
     };
 
@@ -494,10 +523,25 @@ static en_SNAPSHOT_RESULT snapshot_load_through_io(snapshot_io_t *io)
     if (result != SNAPSHOT_OK) return result;
 
     /* 2. Ověřit kompatibilitu architektury */
-    if (metadata.architecture != MZARCH) {
+    if (metadata.architecture != g_mzhal.arch) {
         SNAP_ERR("load", "incompatible architecture: snapshot=%d, emulator=%d",
-                 metadata.architecture, MZARCH);
+                 metadata.architecture, g_mzhal.arch);
         return SNAPSHOT_ERR_ARCHITECTURE;
+    }
+
+    /* 2b. Ověřit kompatibilitu TV systému (rozhodnutí 2026-07-30:
+     * snapshoty mz700-pal a mz700-ntsc jsou nekompatibilní). Legacy
+     * snapshot bez pole <tvsys> (tvsys == 0) se posuzuje podle
+     * historického defaultu své architektury. */
+    {
+        const int snap_tvsys = (metadata.tvsys != 0)
+                ? metadata.tvsys
+                : snapshot_legacy_default_tvsys(metadata.architecture);
+        if (snap_tvsys != g_mzhal.tvsys) {
+            SNAP_ERR("load", "incompatible TV system: snapshot=%d, emulator=%d (%s)",
+                     metadata.tvsys, g_mzhal.tvsys, g_mzhal.tvsys_name);
+            return SNAPSHOT_ERR_TVSYS;
+        }
     }
 
     /* 3. Ověřit SHA-256 checksum */
@@ -543,11 +587,9 @@ static en_SNAPSHOT_RESULT snapshot_load_through_io(snapshot_io_t *io)
      * (další reconnect) běžet nemusí. Bez tohoto by jádro až do nejbližšího
      * banking/DMD switche používalo tabulku z doby před loadem = tichý
      * přístup mimo obnovené mapování. */
-#if MZARCH == 800
-#ifdef MZ800EMU_CFG_RAM_FASTPATH
-    mz800_ram_fastpath_rebuild();
-#endif
-#endif
+    /* Per-arch post-load hook (mzhal 11e): MZ-800 rebuiduje RAM
+     * fast-path, ostatní no-op - viz mzarch.h. */
+    mzarch_snapshot_post_load();
 
     /* Po obnově celého stavu vynutit kompletní překreslení obrazovky z nově
      * načteného VRAM/GDG stavu. Snapshot se typicky načítá do pauzy, kdy se

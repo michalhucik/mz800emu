@@ -31,7 +31,7 @@
 
 #include "i18n.h"
 
-#include "mzarch/mzarch_config.h"
+#include "mzarch/mzcommon_config.h"
 
 #include "hw-generic/ctc8253/ctc8253.h"
 
@@ -314,7 +314,6 @@ static void render_channel(unsigned cs, const char *header_name)
                                "50% duty square wave)"));
         }
 
-#ifdef MZ800EMU_CFG_CLK1M1_FAST
         /* CLK1M1_FAST optimalizace - CTC0 si pamatuje "last event ticks"
          * a má scheduled event. Ostatní kanály nemají vlastní event, ale
          * fieldy ve struct existují vždy (jen jsou unused pro CTC1/CTC2). */
@@ -338,7 +337,6 @@ static void render_channel(unsigned cs, const char *header_name)
             ImGui::Text("%u", c->clk1m1_event.ticks);
         ImGui::TableSetColumnIndex(2);
         ImGui::TextDisabled("-");
-#endif /* MZ800EMU_CFG_CLK1M1_FAST */
 
         /* Output callback presence (ne null = někdo poslouchá změny OUT). */
         ImGui::TableNextRow();

@@ -383,7 +383,7 @@ void framebuffer_flush_full_screen(void)
             {
                 if ((g_gdg.beam_row >= VIDEO_BEAM_CANVAS_FIRST_ROW) && (g_gdg.beam_row <= VIDEO_BEAM_CANVAS_LAST_ROW))
                 {
-                    if (!GDG_MZ800_DMD_TEST_MZ700)
+                    if (!GDG_DMD_TEST_MODE700)
                     {
                         framebuffer_MZ700_screen_row_fill(g_gdg.beam_row);
                     }

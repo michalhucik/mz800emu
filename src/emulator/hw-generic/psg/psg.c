@@ -25,11 +25,11 @@
 
 /* Emulace PSG - SN76489AN */
 
-#include "mzarch/mzarch_config.h"
+#include "mzarch/mzcommon_config.h"
 
 #include "psg.h"
-#include "hw-generic/gdg/gdg.h"
-#include "hw-generic/gdg/gdgclk.h"
+#include "hw-generic/gdg/gdg_state.h"
+#include "mzarch/mzhal.h"
 #include "audio.h"
 #include "mzarch/mzarch.h"
 
@@ -111,9 +111,9 @@ static inline void psg_write_log_ensure_mutex_init(void)
  */
 static inline uint32_t psg_write_log_pxclk_hz(void)
 {
-    /* GDGCLK_BASE = nominální pxCLK kompilovaný per architektura
+    /* g_mzhal.gdgclk_base = nominální pxCLK kompilovaný per architektura
      * (MZ-800: ~17.73 MHz, MZ-1500/MZ-700-NTSC: ~14.32 MHz). */
-    return (uint32_t)GDGCLK_BASE;
+    return (uint32_t)g_mzhal.gdgclk_base;
 }
 
 bool psg_write_log_enable(const char *path)

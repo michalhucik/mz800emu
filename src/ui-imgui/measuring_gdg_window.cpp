@@ -2,6 +2,7 @@
 #include "libs/sdlapp/sdlapp.h"
 #include "ui-imgui/bootstrap/myimgui.h"
 #include "ui-imgui/auto_layout.h"
+#include "emulator/mzarch/mzhal.h"
 #include "libs/imgui/imgui.h"
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_opengl.h>
@@ -50,8 +51,9 @@ static GString *format_uint32_with_thousands(uint32_t number)
     return formatted;
 }
 
-#define NATIVE_FPS (float)((float)GDGCLK_REAL_BASE / VIDEO_SCREEN_TICKS)
-#define SIMULATED_FPS (float)((float)GDGCLK_BASE / VIDEO_SCREEN_TICKS)
+/* Runtime z g_mzhal (mzhal 10b, cold - UI render). */
+#define NATIVE_FPS (float)((float)g_mzhal.gdgclk_real_base / g_mzhal.video_screen_ticks)
+#define SIMULATED_FPS (float)((float)g_mzhal.gdgclk_base / g_mzhal.video_screen_ticks)
 
 void imgui_measuring_gdg(bool *p_open)
 {
@@ -99,12 +101,12 @@ void imgui_measuring_gdg(bool *p_open)
             ImGui::TableNextColumn();
             ImGui::Separator();
 
-            str = format_uint32_with_thousands(GDGCLK_REAL_BASE);
+            str = format_uint32_with_thousands(g_mzhal.gdgclk_real_base);
             g_string_append_printf(str, " Hz");
             printRow(_("Native GDG freq.:"), str->str);
             g_string_free(str, TRUE);
 
-            str = format_uint32_with_thousands(GDGCLK_REAL_BASE / GDGCLK2CPU_DIVIDER);
+            str = format_uint32_with_thousands(g_mzhal.gdgclk_real_base / g_mzhal.gdgclk2cpu_divider);
             g_string_append_printf(str, " Hz");
             printRow(_("Native CPU freq.:"), str->str);
             g_string_free(str, TRUE);
@@ -120,12 +122,12 @@ void imgui_measuring_gdg(bool *p_open)
             ImGui::TableNextColumn();
             ImGui::Separator();
 
-            str = format_uint32_with_thousands(GDGCLK_BASE);
+            str = format_uint32_with_thousands(g_mzhal.gdgclk_base);
             g_string_append_printf(str, " Hz");
             printRow(_("Simulated GDG freq.:"), str->str);
             g_string_free(str, TRUE);
 
-            str = format_uint32_with_thousands(GDGCLK_BASE / GDGCLK2CPU_DIVIDER);
+            str = format_uint32_with_thousands(g_mzhal.gdgclk_base / g_mzhal.gdgclk2cpu_divider);
             g_string_append_printf(str, " Hz");
             printRow(_("Simulated CPU freq.:"), str->str);
             g_string_free(str, TRUE);
@@ -146,7 +148,7 @@ void imgui_measuring_gdg(bool *p_open)
             printRow(_("Current GDG freq.:"), str->str);
             g_string_free(str, TRUE);
 
-            str = format_uint32_with_thousands(msgdg->current_gdg_frequency / GDGCLK2CPU_DIVIDER);
+            str = format_uint32_with_thousands(msgdg->current_gdg_frequency / g_mzhal.gdgclk2cpu_divider);
             g_string_append_printf(str, " Hz");
             printRow(_("Current CPU freq.:"), str->str);
             g_string_free(str, TRUE);

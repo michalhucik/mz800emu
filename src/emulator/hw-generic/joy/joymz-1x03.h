@@ -62,11 +62,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "mzarch/mzarch_config.h"   /* HAVE_JOY */
-
-#if HAVE_JOY
 #include "joy.h"                    /* g_joy, JOY_TYPE_NONE, en_JOY_DEVID */
-#endif
 
 #ifdef __cplusplus
 extern "C"
@@ -94,17 +90,10 @@ extern "C"
  *              | (joymz_get_status_bits14(gdg_get_total_ticks()) & 0x1E);
  *   }
  *
- * Compile-time degradace:
- *   - HAVE_JOY=0  -> JOYMZ_TEST_ANY_ACTIVE = 0 (compile-time false)
- *     -> if-branch dead code, kompilátor ho úplně odstraní.
  */
-#if HAVE_JOY
 #define JOYMZ_TEST_ANY_ACTIVE \
     ((g_joy.dev[ JOY_DEVID_0 ].type != JOY_TYPE_NONE) \
      || (g_joy.dev[ JOY_DEVID_1 ].type != JOY_TYPE_NONE))
-#else
-#define JOYMZ_TEST_ANY_ACTIVE   0
-#endif
 
 /**
  * Stav jednoho sticku MZ-1X03.
@@ -189,10 +178,8 @@ extern void joymz_reset(void);
  *              | (joymz_get_status_bits14(gdg_get_total_ticks()) & 0x1E);
  *   }
  *
- * Pro buildy bez HAVE_JOY nebo mimo MZ-700/MZ-1500 (= MZ-800) tato funkce
- * vraci 0x1E (= zadny joystick pripojen, vsechny bity HIGH) bez side
- * effectu - ovsem JOYMZ_TEST_ANY_ACTIVE makro v techto pripadech compile-time
- * vyhodnoti na 0 a call site if-branch zmizi uplne.
+ * Mimo MZ-700/MZ-1500 (= MZ-800, stub implementace) tato funkce vraci
+ * 0x1E (= zadny joystick pripojen, vsechny bity HIGH) bez side effectu.
  *
  * @param total_ticks  Aktualni cumulative GDG total ticks (ponechano kvuli
  *                     ABI kompatibilite / volajicim - lazy implementace

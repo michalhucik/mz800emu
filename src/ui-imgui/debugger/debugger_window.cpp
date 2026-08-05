@@ -87,7 +87,7 @@
  */
 
 #include "main.h"
-#include "mzarch/mzarch_config.h"
+#include "emulator/mzarch/mzhal.h"
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
 
@@ -144,13 +144,13 @@ static void dbg_workplace_apply(bool open)
      * všech archech, Z80 PIO + PSG jen MZ-800 / MZ-1500. */
     if (g_debugger.wp_show_ctc)        g_gui->showCtcStateWindow    = open;
     if (g_debugger.wp_show_ppi)        g_gui->showPpiStateWindow    = open;
-#if HAVE_PIOZ80
+    if (g_mzhal.have_pioz80) { /* runtime capability, mzhal krok 8 */
     if (g_debugger.wp_show_pioz80)     g_gui->showPiozStateWindow   = open;
-#endif
-#if HAVE_PSG >= 1
+    }
+    if (g_mzhal.psg_count >= 1) { /* runtime capability, mzhal krok 8 */
     if (g_debugger.wp_show_psg)            g_gui->showPsgStateWindow         = open;
     if (g_debugger.wp_show_psg_audio_scope) g_gui->showPsgAudioScopeWindow   = open;
-#endif
+    }
     /* gdg-panel F1 scaffold: GDG je ve všech 3 archech, žádný guard. */
     if (g_debugger.wp_show_gdg)        g_gui->showGdgStateWindow    = open;
     for (int i = 0; i < 4; i++)
@@ -251,7 +251,7 @@ static void render_pause_info_modal(void)
 
 
 /*
- * Titul okna debuggeru — dynamický podle architektury (MZARCH makro).
+ * Titul okna debuggeru — dynamický podle architektury (g_mzhal.arch_display_name).
  * Suffix " - Disassembly #1" odkazuje na hlavní disasm instanci v okně
  * (= je to "Disassembly #1", sekundární jsou #2..#5 v samostatných oknech).
  *
@@ -261,15 +261,13 @@ static void render_pause_info_modal(void)
  */
 static const char *get_window_title(void)
 {
-#if MZARCH == 800
-    return "MZ-800 Debugger - Disassembly #1";
-#elif MZARCH == 1500
-    return "MZ-1500 Debugger - Disassembly #1";
-#elif MZARCH == 700
-    return "MZ-700 Debugger - Disassembly #1";
-#else
-    return "MZ Debugger - Disassembly #1";
-#endif
+    /* Runtime z g_mzhal (mzhal 11i); statický buffer = stabilní ImGui ID. */
+    static char title[64];
+    if (title[0] == '\0') {
+        g_snprintf(title, sizeof(title), "%s Debugger - Disassembly #1",
+                   g_mzhal.arch_display_name);
+    }
+    return title;
 }
 
 

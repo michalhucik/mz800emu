@@ -23,6 +23,7 @@
  *
  * ---------------------------------------------------------------------------
  */
+#include "mzarch/mzarch_config.h" /* capability makra - dříve tranzitivně přes main.h (mzhal 11c-1) */
 #include "main.h"
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
@@ -68,31 +69,18 @@
 #include "libs/dasm-z80/z80_dasm.h"
 #include "gdg/video.h"
 #include "memory/memory.h"
-#if MZARCH == 800
-#include "mzarch/mz800/gdg/mz800_gdg.h"
-#elif MZARCH == 1500
-#include "mzarch/mz1500/gdg/mz1500_gdg.h"
-#elif MZARCH == 700
-#include "mzarch/mz700/gdg/mz700_gdg.h"
-#endif
-#if HAVE_PIOZ80
+#include "hw-generic/gdg/gdg_state.h"
+#include "hw-generic/gdg/gdg.h" /* per-arch gettery (gdg_get_regct53g7) */
 #include "hw-generic/pioz80/pioz80.h"
-#endif
 #include "hw-generic/pio8255/pio8255.h"
+#include "mzarch/mzhal.h"
 #include "hw-generic/ctc8253/ctc8253.h"
-#if HAVE_PSG >= 1
 #include "hw-generic/psg/psg.h"
-#endif
-#if MZARCH == 800
-#include "mzarch/mz800/mz800_main.h"
-#include "mzarch/mz800/mz800_iorq.h"
-#elif MZARCH == 1500
-#include "mzarch/mz1500/mz1500_main.h"
-#include "mzarch/mz1500/mz1500_iorq.h"
-#elif MZARCH == 700
-#include "mzarch/mz700/mz700_main.h"
-#include "mzarch/mz700/mz700_iorq.h"
-#endif
+/* Kontrakt: IORQ callbacky implementuje kazda architektura ve svem
+ * mz*_iorq.c se shodnymi prototypy (viz mz*_iorq.h). */
+extern uint8_t port_read_cb(z80_t *cpu, uint16_t addr, void *user_data);
+extern void port_write_cb(z80_t *cpu, uint16_t addr, uint8_t value, void *user_data);
+extern void mzarch_run_to_temporary_breakpoint(void);
 #include "libs/cpu-z80/z80.h"
 
 /* V1.B.1 - Media Tools (mcp-server mutant). Handler v switchi pro
@@ -105,15 +93,9 @@
  * header strukturu. */
 #include "mzarch/bootstrap.h"
 #include "libs/mzf/mzf.h"
-#if CFG_HWEXT_HAVE_FDC
 #include "hw-generic/fdc/fdc.h"
-#endif
-#if CFG_HWEXT_HAVE_QDISK
 #include "hw-generic/qdisk/qdisk.h"
-#endif
-#if CFG_HWEXT_HAVE_IDE8
 #include "hw-generic/ide8/ide8.h"
-#endif
 
 #ifdef MZ800EMU_CFG_MCP_SERVER_ENABLED
 #include <json-glib/json-glib.h>
@@ -123,9 +105,7 @@
 /* V1.D.1 - Core + CPU extras Resources: čte memext + memory + z80 state. */
 #include "hw-generic/memory/memext.h"
 /* V1.D.4 - Input + Frame Resources: joystick, framebuffer, VRAM read. */
-#if HAVE_JOY
 #include "hw-generic/joy/joy.h"
-#endif
 #include "iface/iface_video.h"
 #include "hw-generic/gdg/framebuffer.h"
 #endif
@@ -138,7 +118,6 @@
 #include "libs/cfgfile/cfgcommon.h"
 
 
-#if CFG_HWEXT_HAVE_FDC
 /**
  * @brief Mapuje FDC media slot na instanci řadiče a mechaniku.
  *
@@ -166,7 +145,6 @@ static int dbgapi_media_slot_to_fdc ( en_DBGAPI_MEDIA_SLOT slot,
         default: return 0;
     }
 }
-#endif
 
 
 /* ============================================================================
@@ -1940,7 +1918,7 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                 st_DBGAPI_IM2_VECTOR *out =
                     (st_DBGAPI_IM2_VECTOR *)rq->result_ptr;
                 memset(out, 0, sizeof(*out));
-#if HAVE_PIOZ80
+                if (g_mzhal.have_pioz80) { /* runtime capability, mzhal krok 8 */
                 z80_t *cpu = g_mzarch_main.cpu;
                 out->available  = 1;
                 out->im         = cpu->im;
@@ -1977,11 +1955,11 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                 uint8_t lo = debugger_memory_read_byte(out->isr_table_addr);
                 uint8_t hi = debugger_memory_read_byte((uint16_t)(out->isr_table_addr + 1));
                 out->isr_target_addr = (uint16_t)(lo | (hi << 8));
-#else
+                } else {
                 /* MZ-700: PIO-Z80 nedostupné, IM 2 vector by se musel řešit
                  * jiným zdrojem dat (RST 38h v IM 1 / nepoužívá se). */
                 out->available = 0;
-#endif
+                }
                 rq->success = true;
             }
             else
@@ -2146,7 +2124,7 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                  * sekce VECA/ISRA + VECB/ISRB dostala data v každém ticku.
                  * Pro MZ-700 (HAVE_PIOZ80 == 0) má_pioz80 = 0; UI sekce
                  * se na MZ-700 nezobrazuje. */
-#if HAVE_PIOZ80
+                if (g_mzhal.have_pioz80) { /* runtime capability, mzhal krok 8 */
                 {
                     out->has_pioz80    = 1;
                     uint8_t va = g_pioz80.port[PIOZ80_PORT_A].interrupt_vector;
@@ -2168,15 +2146,15 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                         out->isrb = (uint16_t)(lo_b | (hi_b << 8));
                     };
                 };
-#else
+                } else {
                 out->has_pioz80 = 0;
-#endif
+                }
 
                 /* === IM2 ISR vector (volitelne) === */
                 if (which & DBGAPI_CPU_PANEL_WANT_IM2)
                 {
                     st_DBGAPI_IM2_VECTOR *im2 = &out->im2;
-#if HAVE_PIOZ80
+                if (g_mzhal.have_pioz80) { /* runtime capability, mzhal krok 8 */
                     im2->available  = 1;
                     im2->im         = cpu->im;
                     im2->i_register = cpu->i;
@@ -2205,9 +2183,9 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                         uint8_t hi = debugger_memory_read_byte((uint16_t)(im2->isr_table_addr + 1));
                         im2->isr_target_addr = (uint16_t)(lo | (hi << 8));
                     };
-#else
+                } else {
                     im2->available = 0;
-#endif
+                }
                     out->im2_valid = 1;
                 };
 
@@ -2278,7 +2256,7 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
              * instrukcemi, atomicita zápisu uint8_t je triviální. UI
              * řídí pause přes dbg_autopause_silent před submitem (= edit
              * není v running, ale pro jistotu žádný extra lock potřeba). */
-#if HAVE_PIOZ80
+                if (g_mzhal.have_pioz80) { /* runtime capability, mzhal krok 8 */
             if (rq->data_ptr)
             {
                 st_DBGAPI_PIOZ80_VEC_PARAM *p =
@@ -2299,9 +2277,9 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
             {
                 rq->success = false;
             };
-#else
+                } else {
             rq->success = false;
-#endif
+                }
             break;
 
         case DBGAPI_CMD_MEM_WRITE_CHECKED:
@@ -3981,7 +3959,6 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                      * závisí na implementaci). */
                     break;
                 };
-#if CFG_HWEXT_HAVE_FDC
                 case DBGAPI_MEDIA_SLOT_FDC0_FD0:
                 case DBGAPI_MEDIA_SLOT_FDC0_FD1:
                 case DBGAPI_MEDIA_SLOT_FDC0_FD2:
@@ -3991,6 +3968,9 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                 case DBGAPI_MEDIA_SLOT_FDC1_FD2:
                 case DBGAPI_MEDIA_SLOT_FDC1_FD3:
                 {
+                    /* Runtime capability (mzhal 11h): bez FDC vraci -10
+                     * (= driv #else vetev). */
+                    if ( !g_mzhal.have_fdc ) { rc = -10; break; }
                     st_FDC *fdc = NULL;
                     unsigned drive = 0;
                     dbgapi_media_slot_to_fdc ( p->slot, &fdc, &drive );
@@ -3998,21 +3978,9 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                     rc = FDC_TEST_DRIVE_ID_MOUNTED ( fdc, drive ) ? 0 : -3;
                     break;
                 };
-#else
-                case DBGAPI_MEDIA_SLOT_FDC0_FD0:
-                case DBGAPI_MEDIA_SLOT_FDC0_FD1:
-                case DBGAPI_MEDIA_SLOT_FDC0_FD2:
-                case DBGAPI_MEDIA_SLOT_FDC0_FD3:
-                case DBGAPI_MEDIA_SLOT_FDC1_FD0:
-                case DBGAPI_MEDIA_SLOT_FDC1_FD1:
-                case DBGAPI_MEDIA_SLOT_FDC1_FD2:
-                case DBGAPI_MEDIA_SLOT_FDC1_FD3:
-                    rc = -10; /* FDC není v této arch sestavě */
-                    break;
-#endif
-#if CFG_HWEXT_HAVE_QDISK
                 case DBGAPI_MEDIA_SLOT_QD:
                 {
+                    if ( !g_mzhal.have_qdisk ) { rc = -10; break; }
                     /* qdisk_open čte cestu z CFGELM (g_elm_qd_path) -
                      * V1.B.1 podporujeme jen runtime ekvivalent insert
                      * skrz cfgelement API. Pro V1.B.1 vrátíme -11
@@ -4022,24 +3990,14 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                     rc = -11;
                     break;
                 };
-#else
-                case DBGAPI_MEDIA_SLOT_QD:
-                    rc = -10;
-                    break;
-#endif
-#if CFG_HWEXT_HAVE_IDE8
                 case DBGAPI_MEDIA_SLOT_IDE8:
                 {
+                    if ( !g_mzhal.have_ide8 ) { rc = -10; break; }
                     rc = ide8_drive_open_image ( &g_ide8.drive[ 0 ],
                                                   (char *) p->filepath );
                     /* ide8 vrací 0 = OK. */
                     break;
                 };
-#else
-                case DBGAPI_MEDIA_SLOT_IDE8:
-                    rc = -10;
-                    break;
-#endif
                 default:
                     rc = -1;
                     break;
@@ -4065,7 +4023,6 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                     cmt_eject ( );
                     rc = 0;
                     break;
-#if CFG_HWEXT_HAVE_FDC
                 case DBGAPI_MEDIA_SLOT_FDC0_FD0:
                 case DBGAPI_MEDIA_SLOT_FDC0_FD1:
                 case DBGAPI_MEDIA_SLOT_FDC0_FD2:
@@ -4075,6 +4032,7 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                 case DBGAPI_MEDIA_SLOT_FDC1_FD2:
                 case DBGAPI_MEDIA_SLOT_FDC1_FD3:
                 {
+                    if ( !g_mzhal.have_fdc ) { rc = -10; break; }
                     st_FDC *fdc = NULL;
                     unsigned drive = 0;
                     dbgapi_media_slot_to_fdc ( p->slot, &fdc, &drive );
@@ -4082,38 +4040,16 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                     rc = 0;
                     break;
                 };
-#else
-                case DBGAPI_MEDIA_SLOT_FDC0_FD0:
-                case DBGAPI_MEDIA_SLOT_FDC0_FD1:
-                case DBGAPI_MEDIA_SLOT_FDC0_FD2:
-                case DBGAPI_MEDIA_SLOT_FDC0_FD3:
-                case DBGAPI_MEDIA_SLOT_FDC1_FD0:
-                case DBGAPI_MEDIA_SLOT_FDC1_FD1:
-                case DBGAPI_MEDIA_SLOT_FDC1_FD2:
-                case DBGAPI_MEDIA_SLOT_FDC1_FD3:
-                    rc = -10;
-                    break;
-#endif
-#if CFG_HWEXT_HAVE_QDISK
                 case DBGAPI_MEDIA_SLOT_QD:
+                    if ( !g_mzhal.have_qdisk ) { rc = -10; break; }
                     qdisk_umount ( );
                     rc = 0;
                     break;
-#else
-                case DBGAPI_MEDIA_SLOT_QD:
-                    rc = -10;
-                    break;
-#endif
-#if CFG_HWEXT_HAVE_IDE8
                 case DBGAPI_MEDIA_SLOT_IDE8:
+                    if ( !g_mzhal.have_ide8 ) { rc = -10; break; }
                     ide8_drive_close_image ( &g_ide8.drive[ 0 ] );
                     rc = 0;
                     break;
-#else
-                case DBGAPI_MEDIA_SLOT_IDE8:
-                    rc = -10;
-                    break;
-#endif
                 default:
                     rc = -1;
                     break;
@@ -4165,7 +4101,7 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                     for ( unsigned d = 0; d < 4; d++ )
                     {
                         p->slots[ idx ].slot = fdc_slot_ids[ c ][ d ];
-#if CFG_HWEXT_HAVE_FDC
+                if (g_mzhal.have_fdc) { /* runtime capability, mzhal krok 8 */
                         st_FDC *fdc = &g_fdc[ c ];
                         int mounted = fdc_test_drive_id_mounted ( fdc, d );
                         p->slots[ idx ].inserted = mounted ? 1 : 0;
@@ -4176,13 +4112,13 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                                       fdc->drive[ d ].filename,
                                       sizeof ( p->slots[ idx ].filepath ) - 1 );
                         };
-#endif
+                }
                         idx++;
                     };
                 };
             };
 
-#if CFG_HWEXT_HAVE_QDISK
+                if (g_mzhal.have_qdisk) { /* runtime capability, mzhal krok 8 */
             p->slots[ idx ].slot = DBGAPI_MEDIA_SLOT_QD;
             p->slots[ idx ].inserted = ( g_qdisk.filename[ 0 ] != '\0' ) ? 1 : 0;
             p->slots[ idx ].read_only = qdisc_get_write_protected ( ) ? 1 : 0;
@@ -4192,12 +4128,12 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                           sizeof ( p->slots[ idx ].filepath ) - 1 );
             };
             idx++;
-#else
+                } else {
             p->slots[ idx ].slot = DBGAPI_MEDIA_SLOT_QD;
             idx++;
-#endif
+                }
 
-#if CFG_HWEXT_HAVE_IDE8
+                if (g_mzhal.have_ide8) { /* runtime capability, mzhal krok 8 */
             p->slots[ idx ].slot = DBGAPI_MEDIA_SLOT_IDE8;
             p->slots[ idx ].inserted =
                 IDE8_TEST_MASTER_CONNECTED ? 1 : 0;
@@ -4211,10 +4147,10 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                 };
             };
             idx++;
-#else
+                } else {
             p->slots[ idx ].slot = DBGAPI_MEDIA_SLOT_IDE8;
             idx++;
-#endif
+                }
 
             p->count = idx;
             rq->success = true;
@@ -5154,7 +5090,7 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                 break;
             };
             memset ( p, 0, sizeof ( *p ) );
-#if HAVE_PIOZ80
+                if (g_mzhal.have_pioz80) { /* runtime capability, mzhal krok 8 */
             p->available         = 1;
             p->interrupt         = (uint8_t)( g_pioz80.interrupt & 0xFF );
             if ( g_pioz80.interrupt_port_id == PIOZ80_PORT_A
@@ -5186,10 +5122,10 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                     ? g_pioz80_port_a_last_ctrl_byte
                     : g_pioz80_port_b_last_ctrl_byte;
             };
-#else
+                } else {
             p->available         = 0;
             p->interrupt_port_id = 0xFF;
-#endif
+                }
             rq->success = true;
             break;
         }
@@ -5216,7 +5152,7 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                 break;
             };
             memset ( p, 0, sizeof ( *p ) );
-#if HAVE_PSG >= 1
+                if (g_mzhal.psg_count >= 1) { /* runtime capability, mzhal krok 8 */
             p->available = 1;
             p->stereo    = (uint8_t)( g_psg_module.stereo ? 1 : 0 );
             p->psg_count = (uint8_t)( g_psg_module.stereo ? 2 : 1 );
@@ -5251,11 +5187,11 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                     out->noise_type     = (uint8_t)( psg_mirror_channel_noise_type ( psg1, ch ) );
                 };
             };
-#else
+                } else {
             /* HAVE_PSG == 0 (= MZ-700): chip není přítomen. */
             p->available = 0;
             p->psg_count = 0;
-#endif
+                }
             rq->success = true;
             break;
         }
@@ -5361,7 +5297,10 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
             p->tempo         = (uint32_t)g_gdg.tempo;
             p->tempo_divider = (uint32_t)g_gdg.tempo_divider;
 
-#if MZARCH == 800
+            /* Runtime dle g_mzhal.arch (mzhal 11g). */
+            g_strlcpy ( (char *) p->platform, g_mzhal.arch_name,
+                        sizeof ( p->platform ) );
+            if ( g_mzhal.arch == 800 ) {
             /* MZ-800: 16-color palette přes regPALGRP + regPAL0..3,
              * border port + cksw + vram hot phase. */
             p->palette_count = 16;
@@ -5385,9 +5324,9 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
             p->palette[ 3 ] = (uint8_t)( g_gdg.regPAL3 & 0xFFu );
             /* entries 4..15 zůstávají 0 (placeholder; klient si dopočítá
              * podle regPAL0..3 + regPALGRP - viz hw/09-video-mz800-modes.md). */
-            memcpy ( p->platform, "mz800", 6 );
-#elif MZARCH == 1500
-            /* MZ-1500: 8-entry palette `mode1500_color[8]`, žádný regBOR
+            } else if ( g_mzhal.arch == 1500 ) {
+
+            /* MZ-1500: 8-entry palette `mode_color[8]`, žádný regBOR
              * ani regPALGRP, žádný cksw. */
             p->palette_count  = 8;
             p->has_border_reg = 0;
@@ -5395,11 +5334,11 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
             p->has_cksw       = 0;
             for ( unsigned i = 0; i < 8; i++ )
             {
-                p->palette[ i ] = (uint8_t)( g_gdg.mode1500_color[ i ] & 0xFFu );
+                p->palette[ i ] = (uint8_t)( g_gdg.mode_color[ i ] & 0xFFu );
             };
-            memcpy ( p->platform, "mz1500", 7 );
-#elif MZARCH == 700
-            /* MZ-700: 8-entry palette `mode700_color[8]`, žádný regBOR
+            } else {
+
+            /* MZ-700: 8-entry palette `mode_color[8]`, žádný regBOR
              * ani regPALGRP, žádný cksw. */
             p->palette_count  = 8;
             p->has_border_reg = 0;
@@ -5407,12 +5346,9 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
             p->has_cksw       = 0;
             for ( unsigned i = 0; i < 8; i++ )
             {
-                p->palette[ i ] = (uint8_t)( g_gdg.mode700_color[ i ] & 0xFFu );
+                p->palette[ i ] = (uint8_t)( g_gdg.mode_color[ i ] & 0xFFu );
             };
-            memcpy ( p->platform, "mz700", 6 );
-#else
-#error "Unknown MZARCH for GDG handler"
-#endif
+            }
             rq->success = true;
             break;
         }
@@ -5437,7 +5373,7 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                 break;
             };
             memset ( p, 0, sizeof ( *p ) );
-#if CFG_HWEXT_HAVE_FDC
+                if (g_mzhal.have_fdc) { /* runtime capability, mzhal krok 8 */
             if ( g_fdc[FDC0].connected != FDC_CONNECTED )
             {
                 p->available = 0;
@@ -5495,9 +5431,9 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                 memcpy ( out->image_basename, base, blen );
                 out->image_basename[ blen ] = '\0';
             };
-#else
+                } else {
             p->available = 0;
-#endif
+                }
             rq->success = true;
             break;
         }
@@ -5576,7 +5512,7 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                 break;
             };
             memset ( p, 0, sizeof ( *p ) );
-#if CFG_HWEXT_HAVE_QDISK
+                if (g_mzhal.have_qdisk) { /* runtime capability, mzhal krok 8 */
             if ( g_qdisk.connected != QDISK_CONNECTED )
             {
                 p->available = 0;
@@ -5612,9 +5548,9 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                 memcpy ( p->image_basename, base, blen );
                 p->image_basename[ blen ] = '\0';
             };
-#else
+                } else {
             p->available = 0;
-#endif
+                }
             rq->success = true;
             break;
         }
@@ -5694,13 +5630,8 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                 break;
             };
             memset ( p, 0, sizeof ( *p ) );
-#if MZARCH == 800
-            memcpy ( p->platform, "mz800", 6 );
-#elif MZARCH == 1500
-            memcpy ( p->platform, "mz1500", 7 );
-#elif MZARCH == 700
-            memcpy ( p->platform, "mz700", 6 );
-#endif
+            g_strlcpy ( (char *) p->platform, g_mzhal.arch_name,
+                        sizeof ( p->platform ) );
             const uint32_t cap = (uint32_t)( sizeof ( p->keys ) / sizeof ( p->keys[ 0 ] ) );
             int idx = 0;
             const char *nm = NULL;
@@ -5735,9 +5666,8 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
              * MCP wire data jsou active-HIGH (= klient logičtější).
              * Decode podle JOY_STATEBIT_* enum.
              *
-             * MZ-700 build: HAVE_JOY je obvykle 0 (= joystick HW není
-             * standardní); handler vrátí oba porty connected=0. MZ-800
-             * a MZ-1500: HAVE_JOY=1, runtime config rozhodne type.
+             * Joystick subsystem je součástí všech tří platforem,
+             * runtime config rozhodne type.
              */
             st_DBGAPI_INPUT_JOY_STATE_PARAM *p =
                 (st_DBGAPI_INPUT_JOY_STATE_PARAM *) rq->data_ptr;
@@ -5747,7 +5677,6 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                 break;
             };
             memset ( p, 0, sizeof ( *p ) );
-#if HAVE_JOY
             for ( unsigned i = 0; i < 2; i++ )
             {
                 st_DBGAPI_INPUT_JOY_PORT *port = &p->port[ i ];
@@ -5779,15 +5708,6 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                         memcpy ( port->device_name, "unknown", 8 );
                 };
             };
-#else
-            /* HAVE_JOY=0: oba porty connected=0, idle native_state=0xFF. */
-            for ( unsigned i = 0; i < 2; i++ )
-            {
-                p->port[ i ].connected    = 0;
-                p->port[ i ].native_state = 0xFF;
-                memcpy ( p->port[ i ].device_name, "none", 5 );
-            };
-#endif
             rq->success = true;
             break;
         }
@@ -6138,20 +6058,17 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                 break;
             };
             memset ( p, 0, sizeof ( *p ) );
-#if MZARCH == 800
-            memcpy ( p->platform, "mz800", 6 );
-            if ( !GDG_MZ800_DMD_TEST_MZ700 )
+            g_strlcpy ( (char *) p->platform, g_mzhal.arch_name,
+                        sizeof ( p->platform ) );
+            /* MZ-800: DMD bit 3 = 0 znamena native 800 graficky rezim -
+             * textovy reader neni k dispozici. */
+            if ( ( g_mzhal.arch == 800 ) && ( ( g_gdg.regDMD & 0x08 ) == 0 ) )
             {
                 p->available = 0;
                 strcpy ( p->reason, "MZ-800 in 800 graphics mode (not text)" );
                 rq->success = true;
                 break;
             };
-#elif MZARCH == 1500
-            memcpy ( p->platform, "mz1500", 7 );
-#elif MZARCH == 700
-            memcpy ( p->platform, "mz700", 6 );
-#endif
             p->cols = 40;
             p->rows = 25;
             p->cell_count = p->cols * p->rows;

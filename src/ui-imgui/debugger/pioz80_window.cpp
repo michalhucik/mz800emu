@@ -35,12 +35,11 @@
 
 #include "i18n.h"
 
-#include "mzarch/mzarch_config.h"
+#include "mzarch/mzcommon_config.h"
 
 #include "ui-imgui/debugger/chip_window_helpers.h"
 #include "ui-imgui/debugger/pioz80_window.h"
 
-#if HAVE_PIOZ80
 
 #include "hw-generic/pioz80/pioz80.h"
 
@@ -500,4 +499,3 @@ void imgui_pioz80_state_window(bool *p_open)
     ImGui::End();
 }
 
-#endif /* HAVE_PIOZ80 */

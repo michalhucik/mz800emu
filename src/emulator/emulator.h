@@ -94,6 +94,27 @@ extern "C"
 {
 #endif
     void emulator_quit(int exit_value);
+
+    /**
+     * @brief Deinicializace emulátorových subsystémů (flush + destroy).
+     *
+     * Volá version_check/snapshot/cfgmain/measuring/platform_fn exit
+     * sekvenci (zapisuje INI, CDL export, media writeback a uvolňuje
+     * stav emulace).
+     *
+     * Závazné pořadí při shutdownu (threading kontrakt, mzhal krok 12):
+     * g_thread_join(emu_thread) -> shutdown MCP transportů ->
+     * dbgapi_dispatcher_shutdown + dbgapi_destroy -> emulator_teardown()
+     * -> iface_exit(). Funkce běží na main vlákně v single-threaded
+     * kontextu - nesmí běžet souběžně s emu vláknem ani s MCP dispatch
+     * vlákny (uvolňuje stav, na který dispatch sahá).
+     *
+     * Preconditions: emu vlákno joinnuté, MCP/dbgapi transporty
+     * shutdownuté. Postconditions: stav emulace uvolněn; volat max 1x.
+     * Při abnormálním exitu (emulator_quit s nenulovou hodnotou) se
+     * nevolá.
+     */
+    void emulator_teardown(void);
     gpointer emulator_thread(gpointer ptr);
 
     void emulator_max_speed(bool value);

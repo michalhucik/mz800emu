@@ -50,6 +50,7 @@
  */
 
 #include <stdio.h>
+#include <assert.h>
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -76,7 +77,7 @@
 // #define framebuffer_border_changed()
 // #define framebuffer_MZ800_screen_changed()
 
-st_GDG g_gdg;
+st_GDG g_gdg __attribute__((aligned(64)));
 
 /* Eventy musi byt serazeny vzestupne podle event_column ! */
 const struct st_GDGEVENT g_gdgevent[] = {
@@ -119,6 +120,8 @@ const struct st_GDGEVENT g_gdgevent[] = {
 
 void gdg_init(void)
 {
+    /* Redzone poison superset st_GDG (mzhal 9c-3). */
+    gdg_redzone_fill(&g_gdg);
 
     g_gdg.total_elapsed.ticks = 0;
     g_gdg.total_elapsed.screens = 0;
@@ -154,9 +157,6 @@ void gdg_init(void)
     g_gdg.vram800_hot_phase_end_total_ticks = 0;
     g_gdg.vram800_hot_phase_clk0_phase = 0;
 
-#ifdef MZ800EMU_CFG_CLK1M1_SLOW
-    g_gdg.ctc0clk = 0;
-#endif
 }
 
 static inline void gdg_set_regDMD(uint8_t value, unsigned event_ticks)
@@ -177,6 +177,12 @@ static inline void gdg_set_regDMD(uint8_t value, unsigned event_ticks)
 
 void gdg_reset(void)
 {
+    /* Detekce korupce sousednich sekci supersetu (mzhal 9c-3);
+     * v debug buildu tvrdy assert, v release jen log. */
+    if (!gdg_redzone_check(&g_gdg)) {
+        fprintf(stderr, "GDG: redzone corrupted (detected at reset)\n");
+        assert(0 && "GDG redzone corrupted");
+    }
     g_gdg.regct53g7 = 0; // musi byt pri resetu nastaveno drive, nez regDMD!
     gdg_set_regDMD(REGISTER_DMD_FLAG_MZ700, 0); // TODO: proc tam posilam 0 a ne g_gdg.total_elapsed.ticks ?
 
@@ -324,7 +330,7 @@ void gdg_write_byte(unsigned addr, uint8_t value)
         if (g_gdg.regDMD != value)
         {
 
-            if (!GDG_MZ800_DMD_TEST_MZ700)
+            if (!GDG_DMD_TEST_MODE700)
             {
                 /*
                  * TODO: pri zmenach rezimu 700 / 800 a naopak je potreba osetrit framebuffer.
@@ -389,7 +395,7 @@ void gdg_write_byte(unsigned addr, uint8_t value)
 
             if (g_gdg.regPALGRP != (value & 0x03))
             {
-                if (!GDG_MZ800_DMD_TEST_MZ700)
+                if (!GDG_DMD_TEST_MODE700)
                 {
                     framebuffer_MZ800_screen_changed();
                 };
@@ -414,7 +420,7 @@ void gdg_write_byte(unsigned addr, uint8_t value)
                     /* undoc mode! */
                     if (g_gdg.regPAL1 != pal_value)
                     {
-                        if (!GDG_MZ800_DMD_TEST_MZ700)
+                        if (!GDG_DMD_TEST_MODE700)
                         {
                             framebuffer_MZ800_screen_changed();
                         };
@@ -426,7 +432,7 @@ void gdg_write_byte(unsigned addr, uint8_t value)
                 {
                     if (framebuffer_updated == 0)
                     {
-                        if (!GDG_MZ800_DMD_TEST_MZ700)
+                        if (!GDG_DMD_TEST_MODE700)
                         {
                             framebuffer_MZ800_screen_changed();
                         };
@@ -438,7 +444,7 @@ void gdg_write_byte(unsigned addr, uint8_t value)
             case 1:
                 if (g_gdg.regPAL1 != pal_value)
                 {
-                    if (!GDG_MZ800_DMD_TEST_MZ700)
+                    if (!GDG_DMD_TEST_MODE700)
                     {
                         framebuffer_MZ800_screen_changed();
                     };
@@ -449,7 +455,7 @@ void gdg_write_byte(unsigned addr, uint8_t value)
             case 2:
                 if (g_gdg.regPAL2 != pal_value)
                 {
-                    if (!GDG_MZ800_DMD_TEST_MZ700)
+                    if (!GDG_DMD_TEST_MODE700)
                     {
                         framebuffer_MZ800_screen_changed();
                     };
@@ -462,7 +468,7 @@ void gdg_write_byte(unsigned addr, uint8_t value)
                 {
                     if (g_gdg.regPAL2 != pal_value)
                     {
-                        if (!GDG_MZ800_DMD_TEST_MZ700)
+                        if (!GDG_DMD_TEST_MODE700)
                         {
                             framebuffer_MZ800_screen_changed();
                         };
@@ -474,7 +480,7 @@ void gdg_write_byte(unsigned addr, uint8_t value)
                 {
                     if (framebuffer_updated == 0)
                     {
-                        if (!GDG_MZ800_DMD_TEST_MZ700)
+                        if (!GDG_DMD_TEST_MODE700)
                         {
                             framebuffer_MZ800_screen_changed();
                         };

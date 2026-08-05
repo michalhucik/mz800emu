@@ -33,7 +33,7 @@
 // Lokalizace
 #include "i18n.h"
 
-#include "mzarch/mzarch_config.h"
+#include "mzarch/mzcommon_config.h"
 #include "cmthack.h"
 #include "cmtext.h"
 

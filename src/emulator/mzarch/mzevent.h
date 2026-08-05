@@ -1,6 +1,10 @@
 #ifndef MZEVENT_H
 #define MZEVENT_H
 
+/* Společné toggly přímo (ne přes mzarch_config.h) - číslování enumu
+ * nesmí záviset na tom, jestli si TU vzpomněl na správný include. */
+#include "mzcommon_config.h"
+
 typedef enum en_MZEVENT
 {
     //        MZEVENT_GDG_STS_HSYNC_END,
@@ -19,9 +23,10 @@ typedef enum en_MZEVENT
 
     MZEVENT_PIOZ80,
 
-#ifdef MZ800EMU_CFG_CLK1M1_FAST
+    /* Event existuje v OBOU CLK1M1 variantách (mzhal krok 5) - číslování
+     * enumu (persistované mj. ve snapshot event_name) nesmí záviset na
+     * build volbě. V SLOW variantě se jen nikdy nenaplánuje. */
     MZEVENT_CTC0,
-#endif
 
     MZEVENT_CUSTOM_SPEED_SYNCHRONISATION,
     MZEVENT_BREAK, /* pouze hranicni hodnota - neni skutecny event */

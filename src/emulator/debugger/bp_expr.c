@@ -32,8 +32,7 @@
  *
  * ---------------------------------------------------------------------------
  */
-
-#include "mzarch/mzarch_config.h"
+#include "mzarch/mzcommon_config.h"
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
 
@@ -63,13 +62,10 @@
  * uzivatel typicky chce probe bez mutating chipu. Pro `port[N]!` (=
  * explicit side-effect) je read fyzicky proveden = stejne jako
  * Z80 IN inst.  */
-#if MZARCH == 800
-#  include "mzarch/mz800/mz800_iorq.h"
-#elif MZARCH == 1500
-#  include "mzarch/mz1500/mz1500_iorq.h"
-#elif MZARCH == 700
-#  include "mzarch/mz700/mz700_iorq.h"
-#endif
+/* Kontrakt: kazda architektura implementuje ve svem mz*_iorq.c
+ * IORQ callbacky se shodnymi prototypy (viz mz*_iorq.h). */
+extern uint8_t port_read_no_se_cb(uint16_t addr);
+extern uint8_t port_read_cb(z80_t *cpu, uint16_t addr, void *user_data);
 
 
 /* ========================================================================= */

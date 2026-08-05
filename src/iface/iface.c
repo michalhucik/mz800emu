@@ -1,3 +1,4 @@
+#include "mzarch/mzarch_config.h" /* capability makra - dříve tranzitivně přes main.h (mzhal 11c-1) */
 #include "main.h"
 #include <stdbool.h>
 #include <stdint.h>
@@ -18,12 +19,10 @@ bool iface_init(void)
         return false;
     };
 
-#if HAVE_JOY
     if(!iface_joy_init())
     {
         return false;
     };
-#endif
 
     if(!iface_audio_init())
     {
@@ -38,8 +37,6 @@ void iface_exit(void)
     g_print("Quitting interface...\n");
 
     iface_audio_exit();
-#if HAVE_JOY
     iface_joy_exit();
-#endif
     iface_video_exit();
 }

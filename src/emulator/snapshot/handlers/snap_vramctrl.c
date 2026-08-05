@@ -2,6 +2,7 @@
  * @file snap_vramctrl.c
  * @brief Snapshot handler: VRAM Control — platformově specifický řadič VRAM
  */
+#include "mzarch/mzarch_config.h" /* capability makra - dříve tranzitivně přes main.h (mzhal 11c-1) */
 
 #include <stdio.h>
 #include <glib.h>

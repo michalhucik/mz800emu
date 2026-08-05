@@ -9,7 +9,10 @@
 #include "snapshot/snapshot_mgr.h"
 #include "snapshot/snapshot_xml.h"
 
-#if HAVE_PIOZ80
+#include "mzarch/mzhal.h"
+
+/* TU se kompiluje bezpodminecne na vsech platformach (mzhal krok 8);
+ * pritomnost sekce ve snapshotu ridi runtime guard v _register(). */
 
 #include "hw-generic/pioz80/pioz80.h"
 
@@ -168,6 +171,12 @@ static en_SNAPSHOT_RESULT snap_pioz80_load(st_SNAPSHOT_CONTEXT *ctx)
 
 void snap_pioz80_register(void)
 {
+    /* Platformy bez PIO-Z80 (MZ-700) registraci preskoci - snapshot
+     * pak sekci neobsahuje (zmrazeny on-disk kontrakt, shodne
+     * s drivejsim compile-time #if). */
+    if (!g_mzhal.have_pioz80)
+        return;
+
     snapshot_register_component("pioz80",
                                 SNAPSHOT_PRIORITY_HW_IO,
                                 snap_pioz80_save,
@@ -175,4 +184,4 @@ void snap_pioz80_register(void)
                                 true);
 }
 
-#endif /* HAVE_PIOZ80 */
+

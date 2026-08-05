@@ -1,3 +1,5 @@
+#include "hw-generic/memory/memory_arch.h" /* per-arch memory - dříve tranzitivně přes memory.h (mzhal 11c-2c) */
+#include "mzarch/mzarch_config.h" /* capability makra - dříve tranzitivně přes main.h (mzhal 11c-1) */
 #include "main.h"
 #include <stdio.h>
 #include <stdint.h>
@@ -137,9 +139,7 @@ static inline void mzarch_main_event_callback_20ms(unsigned event_ticks)
  */
 static inline void mz800_main_event_callback_screen_done(void)
 {
-#ifdef MZ800EMU_CFG_CLK1M1_FAST
     ctc8253_on_screen_done_event();
-#endif
 #if HAVE_PIOZ80
     pioz80_on_screen_done_event();
     /* Per-frame krokování 8050 plotteru MZ-1P16. Když plotter neaktivní,
@@ -218,7 +218,6 @@ static inline void mzarch_main_queue_next_event(void)
     st_EMUEVENT *ev_gdg = gdg_get_event_pointer();
     st_EMUEVENT *ev_pioz80 = pioz80_get_icena_event_pointer();
 
-#ifdef MZ800EMU_CFG_CLK1M1_FAST
 
     st_EMUEVENT *ev_ctc = ctc8253_get_ctc1m1_event_pointer();
 
@@ -236,17 +235,6 @@ static inline void mzarch_main_queue_next_event(void)
         proximate = ev_gdg;
     };
 
-#else  // MZ800EMU_CFG_CLK1M1_FAST
-
-    if (ev_gdg->ticks <= ev_pioz80->ticks)
-    {
-        proximate = ev_gdg;
-    }
-    else
-    {
-        proximate = ev_pioz80;
-    };
-#endif // MZ800EMU_CFG_CLK1M1_FAST
 
     st_EMUEVENT *ev_cspd = customspeed_get_event_pointer();
     if (ev_cspd->ticks <= proximate->ticks)
@@ -285,14 +273,12 @@ static inline void mzarch_main_process_events(void)
         // Nejprve odbavime eventy, ktere nepochazeji z GDG
         while (g_mzarch_main.event.event_name >= MZEVENT_NO_GDG)
         {
-#ifdef MZ800EMU_CFG_CLK1M1_FAST
             st_EMUEVENT *ev_ctc = ctc8253_get_ctc1m1_event_pointer();
 
             if (ev_ctc->ticks <= g_mzarch_main.event.ticks)
             {
                 ctc8253_ctc1m1_event(g_mzarch_main.event.ticks);
             };
-#endif
             st_EMUEVENT *ev_pioz80 = pioz80_get_icena_event_pointer();
             if (ev_pioz80->ticks <= g_mzarch_main.event.ticks)
             {
@@ -316,36 +302,6 @@ static inline void mzarch_main_process_events(void)
     };
 }
 
-#ifdef MZ800EMU_CFG_CLK1M1_SLOW
-
-static inline void mzarch_sync_ctc0_and_cmt(unsigned instruction_ticks)
-{
-
-    g_gdg.total_elapsed.ticks -= g_gdg.ctc0clk;
-    instruction_ticks += g_gdg.ctc0clk;
-
-    while (instruction_ticks > GDGCLK_CTC0_DIVIDER - 1)
-    {
-
-        g_gdg.total_elapsed.ticks += GDGCLK_CTC0_DIVIDER;
-        instruction_ticks -= GDGCLK_CTC0_DIVIDER;
-
-        ctc8253_clkfall(CTC_CS0, g_gdg.total_elapsed.ticks);
-
-        // uz neexistuje
-#if 0
-        /* TODO: prozatim si sem povesime i pomaly cmt_step() */
-        if ( TEST_CMT_PLAYING ) {
-            cmt_step ( );
-        };
-#endif
-    };
-
-    g_gdg.ctc0clk = instruction_ticks;
-    g_gdg.total_elapsed.ticks += instruction_ticks;
-}
-
-#endif
 
 /*******************************************************************************
  *
@@ -544,11 +500,7 @@ static inline void mzarch_main_insideop(const en_INSIDEOP insideop)
         break;
     };
 
-#ifdef MZ800EMU_CFG_CLK1M1_SLOW
-    mzarch_sync_ctc0_and_cmt(ticks_to_sync);
-#else
     g_gdg.total_elapsed.ticks += ticks_to_sync;
-#endif
 
     g_mzarch_main.instruction_insideop_sync_ticks = instruction_ticks;
 
@@ -762,11 +714,7 @@ static inline void mzarch_main_process_interrupt(void)
 
             unsigned interrupt_ticks = interrupt_tstates * GDGCLK2CPU_DIVIDER;
 
-#ifdef MZ800EMU_CFG_CLK1M1_SLOW
-            mzarch_sync_ctc0_and_cmt(interrupt_ticks);
-#else
             g_gdg.total_elapsed.ticks += interrupt_ticks;
-#endif
 
             if (g_gdg.total_elapsed.ticks >= g_mzarch_main.event.ticks)
             {
@@ -815,7 +763,7 @@ static inline void mzzarch_main_do_emulator_paused(void)
     debugger_step_call(0);
 
     framebuffer_border_changed();
-    if (!GDG_MZ800_DMD_TEST_MZ700)
+    if (!GDG_DMD_TEST_MODE700)
     {
         framebuffer_MZ800_screen_changed();
     };
@@ -924,7 +872,7 @@ void mzarch_forced_full_screen_refresh(void)
 {
     iface_video_create_redraw_full_screen_request();
 
-    if (GDG_MZ800_DMD_TEST_MZ700)
+    if (GDG_DMD_TEST_MODE700)
     {
         framebuffer_update_MZ700_all_rows();
     }
@@ -1215,11 +1163,7 @@ void mzarch_main(void)
         }
 #endif
 
-#ifdef MZ800EMU_CFG_CLK1M1_SLOW
-        mzarch_sync_ctc0_and_cmt(((g_mz800_main.instruction_tstates * GDGCLK2CPU_DIVIDER) - g_mz800_main.instruction_insideop_sync_ticks));
-#else
         g_gdg.total_elapsed.ticks += ((g_mzarch_main.instruction_tstates * GDGCLK2CPU_DIVIDER) - g_mzarch_main.instruction_insideop_sync_ticks);
-#endif
 
         g_mzarch_main.instruction_tstates = 0;
         g_mzarch_main.instruction_insideop_sync_ticks = 0;
@@ -1310,3 +1254,13 @@ void mzarch_run_to_temporary_breakpoint(void)
 }
 
 #endif
+
+/* Per-arch hook po snapshot loadu - kontrakt viz mzarch.h (mzhal 11e). */
+void mzarch_snapshot_post_load(void)
+{
+#if MZARCH == 800
+#ifdef MZ800EMU_CFG_RAM_FASTPATH
+    mz800_ram_fastpath_rebuild();
+#endif
+#endif
+}

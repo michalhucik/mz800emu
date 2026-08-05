@@ -2,13 +2,19 @@
  * @file snap_memory.c
  * @brief Snapshot handler: RAM, VRAM, EXVRAM (MZ-800) / PCG (MZ-1500)
  */
-
 #include <stdio.h>
 #include <glib.h>
 
 #include "snapshot/snapshot_mgr.h"
 #include "snapshot/snapshot_xml.h"
 #include "memory/memory.h"
+#include "mzarch/mzhal.h"
+
+/* Zmrazená on-disk hodnota bitu 2 v <map> elementu MZ-700 snapshotu
+ * (mzhal 11e): odpovídá MEMORY_MZ700_MAP_FLAG_PROHIBITED (1 << 2)
+ * z mz700_memory.h - per-arch hlavičku sem nesmíme (compile-once TU),
+ * hodnota je součást snapshot formátu a NESMÍ se měnit. */
+#define SNAP_MZ700_MAP_FLAG_PROHIBITED (1 << 2)
 
 static en_SNAPSHOT_RESULT snap_memory_save(st_SNAPSHOT_CONTEXT *ctx)
 {
@@ -22,48 +28,51 @@ static en_SNAPSHOT_RESULT snap_memory_save(st_SNAPSHOT_CONTEXT *ctx)
         return res;
     }
 
-    /* Uložení VRAM */
+    /* Uložení VRAM - velikost bloku je zmrazený on-disk kontrakt,
+     * runtime z g_mzhal (mzhal 9d; hodnoty per EXE beze změny). */
     res = snapshot_io_write_bin(ctx->io, "memory/vram.bin",
-                                g_memory.VRAM, MEMORY_SIZE_VRAM);
+                                g_memory.VRAM, g_mzhal.mem_vram_size);
     if (res != SNAPSHOT_OK) {
         SNAP_ERR("memory", "Cannot write memory/vram.bin");
         return res;
     }
 
-#if MZARCH == 800
-    /* MZ-800: rozšířená VRAM (banky III, IV) */
-    res = snapshot_io_write_bin(ctx->io, "memory/exvram.bin",
-                                g_memory.EXVRAM, MEMORY_SIZE_VRAM);
-    if (res != SNAPSHOT_OK) {
-        SNAP_ERR("memory", "Cannot write memory/exvram.bin");
-        return res;
+    /* MZ-800: rozšířená VRAM (banky III, IV); mem_exvram_size == 0 na
+     * platformách bez EXVRAM = entry se nezapisuje (množina entries
+     * per arch beze změny). */
+    if (g_mzhal.mem_exvram_size > 0) {
+        res = snapshot_io_write_bin(ctx->io, "memory/exvram.bin",
+                                    g_memory.EXVRAM, g_mzhal.mem_exvram_size);
+        if (res != SNAPSHOT_OK) {
+            SNAP_ERR("memory", "Cannot write memory/exvram.bin");
+            return res;
+        }
     }
-#endif
 
-#if MZARCH == 1500
-    /* MZ-1500: PCG banky */
-    res = snapshot_io_write_bin(ctx->io, "memory/pcg.bin",
-                                g_memory.PCG, MEMORY_SIZE_PCG);
-    if (res != SNAPSHOT_OK) {
-        SNAP_ERR("memory", "Cannot write memory/pcg.bin");
-        return res;
+    /* MZ-1500: PCG banky (analogicky mem_pcg_size). */
+    if (g_mzhal.mem_pcg_size > 0) {
+        res = snapshot_io_write_bin(ctx->io, "memory/pcg.bin",
+                                    g_memory.PCG, g_mzhal.mem_pcg_size);
+        if (res != SNAPSHOT_OK) {
+            SNAP_ERR("memory", "Cannot write memory/pcg.bin");
+            return res;
+        }
     }
-#endif
 
     /* Uložení stavu paměťové mapy */
     snapshot_xml_writer_t *w = snapshot_xml_writer_new();
     snapshot_xml_write_header(w);
 
     snapshot_xml_open_element(w, "memory_state");
-#if MZARCH == 700
-    /* Snapshot kompatibilita: bit 2 byl puvodne ROM_E800_mapped (1=mapped),
-     * po prejmenovani na PROHIBITED ma invertovany vyznam (1=Prohibited
-     * active). Snapshot format zachovan v puvodni semantice ROM_E800 -
-     * pri save invertujeme bit 2. */
-    snapshot_xml_write_hex8(w, "map", g_memory.map ^ MEMORY_MZ700_MAP_FLAG_PROHIBITED);
-#else
-    snapshot_xml_write_hex8(w, "map", g_memory.map);
-#endif
+    /* MZ-700 snapshot kompatibilita (runtime, mzhal 11e): bit 2 byl
+     * puvodne ROM_E800_mapped (1=mapped), po prejmenovani na PROHIBITED
+     * ma invertovany vyznam (1=Prohibited active). Snapshot format
+     * zachovan v puvodni semantice ROM_E800 - pri save invertujeme. */
+    if (g_mzhal.arch == 700) {
+        snapshot_xml_write_hex8(w, "map", g_memory.map ^ SNAP_MZ700_MAP_FLAG_PROHIBITED);
+    } else {
+        snapshot_xml_write_hex8(w, "map", g_memory.map);
+    }
     snapshot_xml_close_element(w);
 
     char *xml = snapshot_xml_writer_finish(w);
@@ -85,33 +94,34 @@ static en_SNAPSHOT_RESULT snap_memory_load(st_SNAPSHOT_CONTEXT *ctx)
         return res;
     }
 
-    /* Načtení VRAM */
+    /* Načtení VRAM - očekávaná velikost bloku runtime z g_mzhal
+     * (zmrazený on-disk kontrakt, hodnoty per EXE beze změny). */
     res = snapshot_io_read_bin_into(ctx->io, "memory/vram.bin",
-                                    g_memory.VRAM, MEMORY_SIZE_VRAM);
+                                    g_memory.VRAM, g_mzhal.mem_vram_size);
     if (res != SNAPSHOT_OK) {
         SNAP_ERR("memory", "Cannot load memory/vram.bin");
         return res;
     }
 
-#if MZARCH == 800
-    /* MZ-800: rozšířená VRAM */
-    res = snapshot_io_read_bin_into(ctx->io, "memory/exvram.bin",
-                                    g_memory.EXVRAM, MEMORY_SIZE_VRAM);
-    if (res != SNAPSHOT_OK) {
-        SNAP_ERR("memory", "Cannot load memory/exvram.bin");
-        return res;
+    /* MZ-800: rozšířená VRAM (jen platformy s mem_exvram_size > 0). */
+    if (g_mzhal.mem_exvram_size > 0) {
+        res = snapshot_io_read_bin_into(ctx->io, "memory/exvram.bin",
+                                        g_memory.EXVRAM, g_mzhal.mem_exvram_size);
+        if (res != SNAPSHOT_OK) {
+            SNAP_ERR("memory", "Cannot load memory/exvram.bin");
+            return res;
+        }
     }
-#endif
 
-#if MZARCH == 1500
-    /* MZ-1500: PCG banky */
-    res = snapshot_io_read_bin_into(ctx->io, "memory/pcg.bin",
-                                    g_memory.PCG, MEMORY_SIZE_PCG);
-    if (res != SNAPSHOT_OK) {
-        SNAP_ERR("memory", "Cannot load memory/pcg.bin");
-        return res;
+    /* MZ-1500: PCG banky (jen platformy s mem_pcg_size > 0). */
+    if (g_mzhal.mem_pcg_size > 0) {
+        res = snapshot_io_read_bin_into(ctx->io, "memory/pcg.bin",
+                                        g_memory.PCG, g_mzhal.mem_pcg_size);
+        if (res != SNAPSHOT_OK) {
+            SNAP_ERR("memory", "Cannot load memory/pcg.bin");
+            return res;
+        }
     }
-#endif
 
     /* Načtení stavu paměťové mapy */
     char *xml = NULL;
@@ -132,11 +142,11 @@ static en_SNAPSHOT_RESULT snap_memory_load(st_SNAPSHOT_CONTEXT *ctx)
     if (snapshot_xml_enter_element(r, "memory_state")) {
         uint8_t map_val;
         if (snapshot_xml_read_hex8(r, "map", &map_val)) {
-#if MZARCH == 700
             /* Snapshot kompatibilita - viz save: invertujeme bit 2 zpet
              * z puvodni semantiky ROM_E800_mapped na novou PROHIBITED. */
-            map_val ^= MEMORY_MZ700_MAP_FLAG_PROHIBITED;
-#endif
+            if (g_mzhal.arch == 700) {
+                map_val ^= SNAP_MZ700_MAP_FLAG_PROHIBITED;
+            }
             g_memory.map = map_val;
         }
         snapshot_xml_leave_element(r);

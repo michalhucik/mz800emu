@@ -30,12 +30,7 @@
 #include "joy.h"
 #include "cfgmain.h"
 
-#if HAVE_JOY
 #include "iface/iface_joy.h"
-#else
-#define iface_joy_open_configured_joyid(x) (EXIT_FAILURE)
-#define iface_joy_scan(x) (0xff)
-#endif
 
 
 st_JOY g_joy;

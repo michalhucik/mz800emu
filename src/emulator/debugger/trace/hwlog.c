@@ -9,6 +9,7 @@
  */
 
 #include "main.h"
+#include "mzarch/mzcommon_config.h"
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
 
@@ -29,14 +30,12 @@
 #include "emulator/debugger/trace/eventlog.h"
 #include "emulator/mzarch/mzarch.h"
 #include "emulator/hw-generic/psg/psg.h"
-#include "emulator/hw-generic/gdg/gdgclk.h"
 #include "emulator/hw-generic/pio8255/pio8255.h"
 #include "emulator/hw-generic/ctc8253/ctc8253.h"
 #include "emulator/hw-generic/memory/memext.h"
-#include "emulator/hw-generic/gdg/gdg.h"
-#if HAVE_PIOZ80
+#include "hw-generic/gdg/gdg_state.h"
+#include "emulator/mzarch/mzhal.h"
 #include "emulator/hw-generic/pioz80/pioz80.h"
-#endif
 #include <glib/gstdio.h>
 #include <json-glib/json-glib.h>
 
@@ -429,7 +428,6 @@ static void hwlog_serialize_initial_ctc8253 ( st_HWLOG_BUF *b )
 }
 
 
-#if HAVE_PSG >= 1
 /**
  * Serializace PSG modulu (= 1× nebo 2× SN76489).
  *  - stereo (u8)
@@ -470,7 +468,6 @@ static void hwlog_serialize_initial_psg ( st_HWLOG_BUF *b )
         }
     }
 }
-#endif /* HAVE_PSG >= 1 */
 
 
 /**
@@ -499,7 +496,6 @@ static void hwlog_serialize_initial_memext ( st_HWLOG_BUF *b )
  *   - st_EMUEVENT event (= dynamický scheduling)
  *   - screen_need_update_from / last_updated_border_pixel (= rendering hint)
  *   - tempo_divider (= konstanta architektury)
- *   - ctc0clk (= podmínečné na CFG_CLK1M1_SLOW)
  *
  * Společná pole (oba MZ-800 i MZ-1500):
  *  - total_elapsed.screens (u32), total_elapsed.ticks (u32)
@@ -514,7 +510,7 @@ static void hwlog_serialize_initial_memext ( st_HWLOG_BUF *b )
  *  - regPALGRP (u8), regPAL0..3 (4× u8)
  *
  * MZ-1500 specifická pole (po společných, jen pokud arch_marker = 0x15):
- *  - mode1500_color[8] (8× i32 = 32 B; LE encoding přes u32)
+ *  - mode_color[8] (8× i32 = 32 B; LE encoding přes u32)
  */
 static void hwlog_serialize_initial_gdg ( st_HWLOG_BUF *b )
 {
@@ -529,29 +525,28 @@ static void hwlog_serialize_initial_gdg ( st_HWLOG_BUF *b )
     hwbuf_put_u8 ( b, (uint8_t) g_gdg.regBOR );
     hwbuf_put_u8 ( b, (uint8_t) g_gdg.regct53g7 );
     hwbuf_put_u32 ( b, (uint32_t) g_gdg.tempo );
-#if MZARCH == 800
-    hwbuf_put_u8 ( b, 0x80 );
-    hwbuf_put_u8 ( b, (uint8_t) g_gdg.regPALGRP );
-    hwbuf_put_u8 ( b, (uint8_t) g_gdg.regPAL0 );
-    hwbuf_put_u8 ( b, (uint8_t) g_gdg.regPAL1 );
-    hwbuf_put_u8 ( b, (uint8_t) g_gdg.regPAL2 );
-    hwbuf_put_u8 ( b, (uint8_t) g_gdg.regPAL3 );
-#elif MZARCH == 1500
-    hwbuf_put_u8 ( b, 0x15 );
-    for ( int i = 0; i < 8; i++ ) {
-        hwbuf_put_u32 ( b, (uint32_t) g_gdg.mode1500_color[ i ] );
+    /* Runtime dle g_mzhal.arch (mzhal 11f) - markery a TLV obsah per
+     * arch jsou zmrazeny trace on-disk kontrakt. */
+    if ( g_mzhal.arch == 800 ) {
+        hwbuf_put_u8 ( b, 0x80 );
+        hwbuf_put_u8 ( b, (uint8_t) g_gdg.regPALGRP );
+        hwbuf_put_u8 ( b, (uint8_t) g_gdg.regPAL0 );
+        hwbuf_put_u8 ( b, (uint8_t) g_gdg.regPAL1 );
+        hwbuf_put_u8 ( b, (uint8_t) g_gdg.regPAL2 );
+        hwbuf_put_u8 ( b, (uint8_t) g_gdg.regPAL3 );
+    } else if ( g_mzhal.arch == 1500 ) {
+        hwbuf_put_u8 ( b, 0x15 );
+        for ( int i = 0; i < 8; i++ ) {
+            hwbuf_put_u32 ( b, (uint32_t) g_gdg.mode_color[ i ] );
+        }
+    } else {
+        /* MZ-700: TODO mzarch - tracelog GDG state dump zatím není
+         * podporován. Marker 0x07, žádné state body. */
+        hwbuf_put_u8 ( b, 0x07 );
     }
-#elif MZARCH == 700
-    /* TODO MZ-700 mzarch: dočasný bypass - tracelog GDG state dump zatím
-     * není podporován pro MZ-700. Marker 0x07, žádné state body. */
-    hwbuf_put_u8 ( b, 0x07 );
-#else
-#error hwlog: GDG serializer needs MZARCH 800, 1500 nebo 700
-#endif
 }
 
 
-#if HAVE_PIOZ80
 /**
  * Serializace Z80 PIO. Per port (A, B):
  *  - mode (u8), io_mask (u8)
@@ -611,7 +606,6 @@ static void hwlog_serialize_initial_pioz80 ( st_HWLOG_BUF *b )
     hwbuf_put_u8 ( b, (uint8_t) g_pioz80.interrupt );
     hwbuf_put_u8 ( b, (uint8_t) g_pioz80.interrupt_port_id );
 }
-#endif /* HAVE_PIOZ80 */
 
 
 static int dump_initial_state ( const char *resolved_dir, const char *name )
@@ -638,12 +632,12 @@ static int dump_initial_state ( const char *resolved_dir, const char *name )
     write_chip_tlv_buf ( fp, HWLOG_CHIP_CTC8253, &buf );
     hwbuf_free ( &buf );
 
-#if HAVE_PSG >= 1
+    if (g_mzhal.psg_count >= 1) { /* TLV blok jen na platformach s PSG (mzhal krok 8) */
     hwbuf_init ( &buf );
     hwlog_serialize_initial_psg ( &buf );
     write_chip_tlv_buf ( fp, HWLOG_CHIP_PSG, &buf );
     hwbuf_free ( &buf );
-#endif
+    }
 
     if ( MEMEXT_TEST_CONNECTED ) {
         hwbuf_init ( &buf );
@@ -657,12 +651,12 @@ static int dump_initial_state ( const char *resolved_dir, const char *name )
     write_chip_tlv_buf ( fp, HWLOG_CHIP_GDG_MODE, &buf );
     hwbuf_free ( &buf );
 
-#if HAVE_PIOZ80
+    if (g_mzhal.have_pioz80) { /* TLV blok jen na platformach s PIO-Z80 (mzhal krok 8) */
     hwbuf_init ( &buf );
     hwlog_serialize_initial_pioz80 ( &buf );
     write_chip_tlv_buf ( fp, HWLOG_CHIP_PIOZ80, &buf );
     hwbuf_free ( &buf );
-#endif
+    }
 
     /* EOF marker. */
     write_chip_tlv_empty ( fp, 0xFF );
@@ -727,13 +721,14 @@ static char *build_subsys_header_json ( void )
     json_builder_set_member_name ( b, "chip_dividers" );
     json_builder_begin_object ( b );
     json_builder_set_member_name ( b, "psgclk_divider_cpuclk" );
-    json_builder_add_int_value ( b, (gint64) ( PSG_DIVIDER / GDGCLK2CPU_DIVIDER ) );
+    /* Runtime z g_mzhal (mzhal 10b, cold - manifest 1x per trace session). */
+    json_builder_add_int_value ( b, (gint64) ( g_mzhal.psg_divider / g_mzhal.gdgclk2cpu_divider ) );
     json_builder_set_member_name ( b, "tempo_divider_screen_rows" );
     json_builder_add_int_value ( b, 229 );
     json_builder_set_member_name ( b, "cpu_divider_pxclk" );
-    json_builder_add_int_value ( b, (gint64) GDGCLK2CPU_DIVIDER );
+    json_builder_add_int_value ( b, (gint64) g_mzhal.gdgclk2cpu_divider );
     json_builder_set_member_name ( b, "ctc0_clk1m1_divider_pxclk" );
-    json_builder_add_int_value ( b, (gint64) GDGCLK_CTC0_DIVIDER );
+    json_builder_add_int_value ( b, (gint64) g_mzhal.gdgclk_ctc0_divider );
     json_builder_set_member_name ( b, "pio8255_cursor_divider_screens" );
     json_builder_add_int_value ( b, 25 );
     json_builder_end_object ( b );

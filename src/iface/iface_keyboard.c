@@ -22,6 +22,7 @@
  *
  * ---------------------------------------------------------------------------
  */
+#include "emulator/mzarch/mzhal.h"
 
 #include <stdio.h>
 #include <stdint.h>
@@ -31,9 +32,7 @@
 #include "iface_keyboard.h"
 #include "hw-generic/pio8255/pio8255.h"
 
-#if HAVE_JOY
 #include "hw-generic/joy/joy.h"
-#endif
 
 static inline void iface_keyboard_scan_col0(const bool *state)
 {
@@ -51,7 +50,6 @@ static inline void iface_keyboard_scan_col0(const bool *state)
     {
         PIO8255_MZKEYBIT_RESET(0, 5); /* LIBRA */
     };
-#if MZARCH == 800
     /* ALPHA: obě hostitelské klávesy generující "\" - BACKSLASH (ImGui 604)
      * i NONUSBACKSLASH (ImGui Oem102 631, ISO klávesa, na ANSI klávesnicích
      * obvykle u levého Shiftu / dolního Enteru). Obě plní funkci ALPHA. */
@@ -59,19 +57,19 @@ static inline void iface_keyboard_scan_col0(const bool *state)
     {
         PIO8255_MZKEYBIT_RESET(0, 4); /* ALPHA */
     };
+    /* Hostitelská TAB: na HW s klávesou TAB (MZ-800) bit (0, 3), jinak
+     * (MZ-700/MZ-1500 TAB nemají) se aplikuje jako ALPHA (0, 4). */
     if (state[SDL_SCANCODE_TAB])
     {
-        PIO8255_MZKEYBIT_RESET(0, 3); /* TAB */
+        if (g_mzhal.has_key_tab)
+        {
+            PIO8255_MZKEYBIT_RESET(0, 3); /* TAB */
+        }
+        else
+        {
+            PIO8255_MZKEYBIT_RESET(0, 4); /* ALPHA */
+        };
     };
-#else
-    /* MZ-700/MZ-1500: HW nemá klávesu TAB. Hostitelská TAB i obě "\" klávesy
-     * (BACKSLASH + NONUSBACKSLASH/Oem102) se aplikují jako ALPHA (0, 4);
-     * bit (0, 3) se nikdy nevystaví. */
-    if ((state[SDL_SCANCODE_BACKSLASH]) || (state[SDL_SCANCODE_NONUSBACKSLASH]) || (state[SDL_SCANCODE_TAB]))
-    {
-        PIO8255_MZKEYBIT_RESET(0, 4); /* ALPHA */
-    };
-#endif
     if ((state[SDL_SCANCODE_SEMICOLON]) || (state[SDL_SCANCODE_KP_PLUS]))
     {
         PIO8255_MZKEYBIT_RESET(0, 2); /* ; */
@@ -407,7 +405,6 @@ static inline void iface_keyboard_scan_col9(const bool *state)
     };
 }
 
-#if HAVE_JOY
 static inline void iface_keyboard_joy_num_keypad_scan(const bool *state, uint8_t *joystate)
 {
     if (state[SDL_SCANCODE_KP_8])
@@ -455,7 +452,6 @@ static inline void iface_keyboard_joy_num_keypad_scan(const bool *state, uint8_t
         JOY_STATEBIT_RESET(*joystate, JOY_STATEBIT_TRIG2);
     };
 }
-#endif
 
 void iface_keyboard_full_scan(const bool *state, SDL_Keymod kmod, int numkeys)
 {
@@ -478,7 +474,6 @@ void iface_keyboard_full_scan(const bool *state, SDL_Keymod kmod, int numkeys)
     iface_keyboard_scan_col8(state);
     iface_keyboard_scan_col9(state);
 
-#if HAVE_JOY
     int device;
     for (device = 0; device < JOY_DEVID_COUNT; device++)
     {
@@ -489,5 +484,4 @@ void iface_keyboard_full_scan(const bool *state, SDL_Keymod kmod, int numkeys)
             break;
         };
     };
-#endif
 }

@@ -26,6 +26,9 @@
 #ifndef MZ700_MEMORY_H
 #define MZ700_MEMORY_H
 
+/* Per-arch velikost VRAM (mzhal 11c-2c, presunuto z memory.h) */
+#define MEMORY_SIZE_VRAM 0x1000                          /* 4 KB - znakova + atributova VRAM */
+
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -48,6 +51,16 @@ extern "C"
                                                    * memory_reset. Polarita sjednocena s
                                                    * MZ-800 (= flag set = Prohibited active).
                                                    */
+/* Hodnota bitu je soucast snapshot on-disk kontraktu - snap_memory.c
+ * ma zmrazenou kopii SNAP_MZ700_MAP_FLAG_PROHIBITED (mzhal 11e).
+ * Pri zmene bitu je nutne v snap_memory.c resit konverzi formatu! */
+#ifdef __cplusplus
+static_assert(MEMORY_MZ700_MAP_FLAG_PROHIBITED == (1 << 2),
+              "snapshot kontrakt: PROHIBITED bit se nesmi menit");
+#else
+_Static_assert(MEMORY_MZ700_MAP_FLAG_PROHIBITED == (1 << 2),
+               "snapshot kontrakt: PROHIBITED bit se nesmi menit");
+#endif
 
     /* Memory map porty pro IORQ - PWRITE */
     typedef enum en_MMAP_MZ700_PWRITE

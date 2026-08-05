@@ -29,7 +29,7 @@
 #include <assert.h>
 
 #include "libs/cmt_stream/cmt_stream.h"
-#include "hw-generic/gdg/gdgclk.h"
+#include "mzarch/mzhal.h"
 
 #include "baseui/baseui.h"
 
@@ -105,22 +105,22 @@ en_CMTEXT_BLOCK_PLAYSTS cmtext_block_get_output ( st_CMTEXT_BLOCK *block, uint64
 
     if ( CMT_STREAM_TYPE_VSTREAM == block->stream->stream_type ) {
         st_CMT_VSTREAM *vstream = block->stream->str.vstream;
-        /* konverze GDG ticků na vzorky: play_gdgticks * rate / GDGCLK_BASE */
-        uint64_t play_scans_count = round ( (double) play_gdgticks * vstream->rate / GDGCLK_BASE );
+        /* konverze GDG ticků na vzorky: play_gdgticks * rate / g_mzhal.gdgclk_base */
+        uint64_t play_scans_count = round ( (double) play_gdgticks * vstream->rate / g_mzhal.gdgclk_base );
         if ( EXIT_SUCCESS == cmt_vstream_get_value ( vstream, play_scans_count, output ) ) return CMTEXT_BLOCK_PLAYSTS_BODY;
         // Prekrocili jsme delku streamu
         uint64_t pause_scans_count = block->pause_after * vstream->msticks;
         uint64_t total_scans_count = vstream->scans + pause_scans_count;
         if ( play_scans_count < total_scans_count ) return CMTEXT_BLOCK_PLAYSTS_PAUSE; // prehravame pauzu
         // pauza uz skoncila
-        /* konverze zpět ze vzorků na GDG ticky: count * GDGCLK_BASE / rate */
-        *transferred_gdgticks = (uint64_t) round ( (double) ( play_scans_count - total_scans_count ) * GDGCLK_BASE / vstream->rate );
+        /* konverze zpět ze vzorků na GDG ticky: count * g_mzhal.gdgclk_base / rate */
+        *transferred_gdgticks = (uint64_t) round ( (double) ( play_scans_count - total_scans_count ) * g_mzhal.gdgclk_base / vstream->rate );
         return CMTEXT_BLOCK_PLAYSTS_STOP;
 
     } else if ( CMT_STREAM_TYPE_BITSTREAM == block->stream->stream_type ) {
 
         st_CMT_BITSTREAM *bitstream = block->stream->str.bitstream;
-        double play_time = play_gdgticks * ( 1 / (double) GDGCLK_BASE );
+        double play_time = play_gdgticks * ( 1 / (double) g_mzhal.gdgclk_base );
 
         if ( play_time < bitstream->stream_length ) {
             uint32_t sample_position = cmt_bitstream_get_position_by_time ( bitstream, play_time );
@@ -131,7 +131,7 @@ en_CMTEXT_BLOCK_PLAYSTS cmtext_block_get_output ( st_CMTEXT_BLOCK *block, uint64
         double total_length = ( block->pause_after * 0.001 ) + bitstream->stream_length;
         if ( play_time < total_length ) return CMTEXT_BLOCK_PLAYSTS_PAUSE; // prehravame pauzu
         // pauza uz skoncila
-        *transferred_gdgticks = ( play_time - total_length ) * (double) GDGCLK_BASE;
+        *transferred_gdgticks = ( play_time - total_length ) * (double) g_mzhal.gdgclk_base;
         return CMTEXT_BLOCK_PLAYSTS_STOP;
     };
     fprintf ( stderr, "%s():%d - Unknown stream type '%d'\n", __func__, __LINE__, block->stream->stream_type );

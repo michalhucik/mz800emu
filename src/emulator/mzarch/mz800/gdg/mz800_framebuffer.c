@@ -22,6 +22,7 @@
  * 
  * ---------------------------------------------------------------------------
  */
+#include "hw-generic/memory/memory_arch.h" /* per-arch memory - dříve tranzitivně přes memory.h (mzhal 11c-2c) */
 
 
 #include <stdint.h>
@@ -670,7 +671,7 @@ void framebuffer_flush_full_screen(void)
             {
                 if ((g_gdg.beam_row >= VIDEO_BEAM_CANVAS_FIRST_ROW) && (g_gdg.beam_row <= VIDEO_BEAM_CANVAS_LAST_ROW))
                 {
-                    if (!GDG_MZ800_DMD_TEST_MZ700)
+                    if (!GDG_DMD_TEST_MODE700)
                     {
                         framebuffer_MZ800_current_screen_row_fill(VIDEO_CANVAS_WIDTH);
                     }

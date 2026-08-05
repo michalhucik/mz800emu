@@ -114,6 +114,25 @@ if(MZ_RAM_FASTPATH_VERIFY)
 endif()
 
 # ----------------------------------------------------------------------------
+# Reprodukovatelný build (repro-diff harness)
+#
+# MZ_REPRO_BUILD - deterministické binárky pro bajtové srovnávání dvou
+# buildů (brána "refaktor nemění generovaný kód"). Na Windows přidá
+# linkeru --no-insert-timestamp (PE TimeDateStamp = 0). Druhý zdroj
+# nedeterminismu (__DATE__/__TIME__ v cfgmain.c) řeší proměnná prostředí
+# SOURCE_DATE_EPOCH, kterou nastavuje volající skript (GCC ji při expanzi
+# __DATE__/__TIME__ honoruje). build_revision.c je v experimentálním
+# klonu deterministický sám od sebe (bez upstream remote je revize -1).
+# NENÍ určeno pro distribuční buildy.
+option(MZ_REPRO_BUILD "Deterministic binaries for repro-diff comparison" OFF)
+if(MZ_REPRO_BUILD)
+    if(WIN32)
+        add_link_options(LINKER:--no-insert-timestamp)
+    endif()
+    message(STATUS "  MZ_REPRO_BUILD: ON (PE timestamp zeroed; set SOURCE_DATE_EPOCH in env)")
+endif()
+
+# ----------------------------------------------------------------------------
 # Debugger subsystem opt-out (volitelne)
 #
 # MZ_NO_DEBUGGER - vypne MZ800EMU_CFG_DEBUGGER_ENABLED direktivu pres
@@ -226,6 +245,11 @@ include(cmake/AddMzEmu.cmake)
 # Sdílené knihovny
 # ----------------------------------------------------------------------------
 add_subdirectory(src/libs)
+
+# ----------------------------------------------------------------------------
+# Compile-once knihovna sdílených TU (mzhal krok 11) - před executables
+# ----------------------------------------------------------------------------
+mz_add_emucore_lib()
 
 # ----------------------------------------------------------------------------
 # Per-arch executable

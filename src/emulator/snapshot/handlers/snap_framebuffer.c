@@ -4,20 +4,43 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 #include <glib.h>
 
 #include "snapshot/snapshot_mgr.h"
 #include "snapshot/snapshot_xml.h"
-#include "hw-generic/gdg/framebuffer.h"
+#include "hw-generic/gdg/framebuffer_state.h"
+#include "mzarch/mzhal.h"
+
+/**
+ * @brief Velikost jednoho pixel bufferu v hw/framebuffer.bin.
+ *
+ * Zmrazený on-disk kontrakt: blok obsahuje GDG_FRAMEBUFFER_PIXBUF_COUNT
+ * bufferů o skutečné display ploše architektury (mz800 267264 B,
+ * mz700/mz1500 163328 B) za sebou - NE superset rozměr pixbuff pole
+ * (GDG_FRAMEBUFFER_PIXBUF_SIZE_MAX). V paměti buffery leží se superset
+ * stridem, proto se při save/load přeskládávají přes dočasný buffer.
+ */
+static uint32_t snap_framebuffer_pixbuf_size(void)
+{
+    return (uint32_t)(g_mzhal.video_display_width * g_mzhal.video_display_height);
+}
 
 static en_SNAPSHOT_RESULT snap_framebuffer_save(st_SNAPSHOT_CONTEXT *ctx)
 {
     en_SNAPSHOT_RESULT res;
 
-    /* Uložení pixel bufferů jako binární data */
+    /* Uložení pixel bufferů jako binární data (skutečná velikost, viz
+     * snap_framebuffer_pixbuf_size) */
+    const uint32_t fb_size = snap_framebuffer_pixbuf_size();
+    uint8_t *packed = g_malloc((gsize)fb_size * GDG_FRAMEBUFFER_PIXBUF_COUNT);
+    for (int i = 0; i < GDG_FRAMEBUFFER_PIXBUF_COUNT; i++) {
+        memcpy(packed + (gsize)i * fb_size, g_framebuffer.pixbuff[i], fb_size);
+    }
     res = snapshot_io_write_bin(ctx->io, "hw/framebuffer.bin",
-                                (const uint8_t *)g_framebuffer.pixbuff,
-                                sizeof(g_framebuffer.pixbuff));
+                                packed,
+                                (gsize)fb_size * GDG_FRAMEBUFFER_PIXBUF_COUNT);
+    g_free(packed);
     if (res != SNAPSHOT_OK) {
         SNAP_ERR("framebuffer", "Cannot write hw/framebuffer.bin");
         return res;
@@ -42,14 +65,21 @@ static en_SNAPSHOT_RESULT snap_framebuffer_load(st_SNAPSHOT_CONTEXT *ctx)
 {
     en_SNAPSHOT_RESULT res;
 
-    /* Načtení pixel bufferů */
+    /* Načtení pixel bufferů (formát viz snap_framebuffer_pixbuf_size) */
+    const uint32_t fb_size = snap_framebuffer_pixbuf_size();
+    uint8_t *packed = g_malloc((gsize)fb_size * GDG_FRAMEBUFFER_PIXBUF_COUNT);
     res = snapshot_io_read_bin_into(ctx->io, "hw/framebuffer.bin",
-                                    (uint8_t *)g_framebuffer.pixbuff,
-                                    sizeof(g_framebuffer.pixbuff));
+                                    packed,
+                                    (gsize)fb_size * GDG_FRAMEBUFFER_PIXBUF_COUNT);
     if (res != SNAPSHOT_OK) {
+        g_free(packed);
         SNAP_ERR("framebuffer", "Cannot load hw/framebuffer.bin");
         return res;
     }
+    for (int i = 0; i < GDG_FRAMEBUFFER_PIXBUF_COUNT; i++) {
+        memcpy(g_framebuffer.pixbuff[i], packed + (gsize)i * fb_size, fb_size);
+    }
+    g_free(packed);
 
     /* Načtení stavu */
     char *xml = NULL;

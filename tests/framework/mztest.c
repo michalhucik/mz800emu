@@ -10,6 +10,7 @@
 #include "mztest.h"
 
 #include "main.h"
+#include "mzarch/mzhal.h"
 #include <glib.h>
 #include <stdlib.h>
 #include <string.h>
@@ -73,6 +74,10 @@ void mztest_init(void)
         MZTEST_LOG("mztest_init(): už inicializováno, přeskakuji");
         return;
     }
+
+    /* Konzistenční kontrola HW layer specifikace (g_mzhal) - fail-fast
+     * dřív, než se cokoliv inicializuje (stejně jako v main()). */
+    mzhal_validate();
 
     MZTEST_LOG("mztest_init(): začátek inicializace");
 

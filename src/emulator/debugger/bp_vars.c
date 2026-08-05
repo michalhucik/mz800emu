@@ -29,8 +29,8 @@
  *
  * ---------------------------------------------------------------------------
  */
-
-#include "mzarch/mzarch_config.h"
+#include "mzarch/mzhal.h"
+#include "mzarch/mzcommon_config.h"
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
 
@@ -368,13 +368,9 @@ static void bp_vars_set_err ( char *errbuf, size_t errbuf_size, const char *fmt,
 
 
 char* bp_vars_default_filepath ( void ) {
-#if MZARCH == 800
-    const char *fname = "mz800.vars";
-#elif MZARCH == 1500
-    const char *fname = "mz1500.vars";
-#else
-    const char *fname = "mz700.vars";
-#endif
+    /* Jmeno souboru per arch = zmrazeny on-disk kontrakt (mzhal 11g). */
+    char fname[32];
+    g_snprintf ( fname, sizeof ( fname ), "%s.vars", g_mzhal.arch_name );
     /* Pokud je v cfg `vars_file` explicit nastavený, použij ho. */
     const char *use = ( s_vars_cfg.vars_file && s_vars_cfg.vars_file[0] )
                       ? s_vars_cfg.vars_file : fname;
@@ -584,13 +580,10 @@ bool bp_vars_load_from_filepath ( const char *path,
 
 
 void bp_vars_cfg_init ( void ) {
-#if MZARCH == 800
-    #define DEFAULT_VARS_FILE "mz800.vars"
-#elif MZARCH == 1500
-    #define DEFAULT_VARS_FILE "mz1500.vars"
-#else
-    #define DEFAULT_VARS_FILE "mz700.vars"
-#endif
+    static char default_vars_file[32];
+    g_snprintf ( default_vars_file, sizeof ( default_vars_file ),
+                 "%s.vars", g_mzhal.arch_name );
+#define DEFAULT_VARS_FILE default_vars_file
 
     CFGMOD *cmod = cfgroot_register_new_module ( g_cfgmain, "BP_VARS" );
     CFGELM *elm;

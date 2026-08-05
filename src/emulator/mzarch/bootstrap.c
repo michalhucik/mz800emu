@@ -1,9 +1,9 @@
 #include "main.h"
 
-#include "mzarch/mzarch_config.h"
+#include "mzarch/mzhal.h"
 #include "mzarch/bootstrap.h"
 #include "libs/mzf/mzf_tools.h"
-#include "hw-generic/gdg/gdg.h"
+#include "hw-generic/gdg/gdg_state.h"
 #include "hw-generic/ctc8253/ctc8253.h"
 #include "hw-generic/pio8255/pio8255.h"
 #include "hw-generic/pioz80/pioz80.h"
@@ -36,17 +36,18 @@ static void mzarch_bootstrap_init(void)
     ctc8253_write_byte(1, 0xfb);
     ctc8253_write_byte(1, 0x3c);
 
-#if HAVE_PIOZ80
-    // PIO init
-    pioz80_write_byte(0, 0x00);
-    pioz80_write_byte(0, 0xcf);
-    pioz80_write_byte(0, 0x3f);
-    pioz80_write_byte(0, 0x07);
-    pioz80_write_byte(1, 0x00);
-    pioz80_write_byte(1, 0xcf);
-    pioz80_write_byte(1, 0x00);
-    pioz80_write_byte(1, 0x07);
-#endif
+    // PIO init (jen platformy s PIO-Z80)
+    if (g_mzhal.have_pioz80)
+    {
+        pioz80_write_byte(0, 0x00);
+        pioz80_write_byte(0, 0xcf);
+        pioz80_write_byte(0, 0x3f);
+        pioz80_write_byte(0, 0x07);
+        pioz80_write_byte(1, 0x00);
+        pioz80_write_byte(1, 0xcf);
+        pioz80_write_byte(1, 0x00);
+        pioz80_write_byte(1, 0x07);
+    }
 
     // Zavolame platform-specific bootstrap init, ktery muze nastavit mapovani pameti a podobne
     mzarch_platform_bootstrap_init();

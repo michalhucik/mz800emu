@@ -41,7 +41,7 @@
 #include "i18n.h"
 #include "mcp_settings_dialog.h"
 
-#include "emulator/mzarch/mzarch_config.h"
+#include "emulator/mzarch/mzcommon_config.h"
 
 #ifdef MZ800EMU_CFG_MCP_TCP_ENABLED
 extern "C" {

@@ -1,4 +1,5 @@
 #include "main.h"
+#include "emulator/mzarch/mzhal.h"
 #include <stdio.h>
 
 #include <stdbool.h>
@@ -20,7 +21,7 @@
 #include "emulator.h"
 #include "time_profiler.h"
 
-#if (LINUX && defined(USE_SDL2) && defined(USE_SDL_AUDIO)) || defined(MZ800EMU_CFG_AUDIO_DISABLED)
+#if (defined(LINUX) && defined(USE_SDL2) && defined(USE_SDL_AUDIO)) || defined(MZ800EMU_CFG_AUDIO_DISABLED)
 #define AUDIO_SYNC_BY_NSTIMER
 #endif // LINUX
 
@@ -58,8 +59,12 @@ void print_audiolog(const st_AUDIO_SOURCE_LOG *source, uint64_t start_time, uint
 static inline void iface_audio_mix_channels_with_gain(float **channels, float *output, size_t output_size)
 {
     float *gain = g_iface_audio.gain;
-    float level[AUDIO_SRC_CHANNELS_COUNT] = {0};
+    float level[AUDIO_SRC_CHANNELS_MAX] = {0};
     float total_level = 0.0f;
+
+    /* Loop-invariant hoist: pocet kanalu platformy se uvnitr sample
+     * smycky NEcte z g_mzhal (mzhal krok 8). */
+    const size_t nch = g_mzhal.audio_src_channels;
 
     for (size_t i = 0; i < output_size; i++)
     {
@@ -68,7 +73,7 @@ static inline void iface_audio_mix_channels_with_gain(float **channels, float *o
 
         float sample_psg0 = 0.0f;
 
-#if HAVE_PSG >= 1
+        if (nch > 1) {
         for (size_t ch = 1; ch < (1 + PSG_CHANNELS_COUNT); ch++)
         {
             float sample = channels[ch][i] * gain[ch];
@@ -76,7 +81,7 @@ static inline void iface_audio_mix_channels_with_gain(float **channels, float *o
             sample_psg0 += sample;
         };
         sample_psg0 /= (float)PSG_CHANNELS_COUNT;
-#endif /* HAVE_PSG >= 1 */
+        };
 
         float sample_max = sample_ctc0 + sample_psg0;
 
@@ -84,7 +89,7 @@ static inline void iface_audio_mix_channels_with_gain(float **channels, float *o
         total_level += fabs(output[i]);
     }
 
-    for (size_t ch = 0; ch < AUDIO_SRC_CHANNELS_COUNT; ch++)
+    for (size_t ch = 0; ch < nch; ch++)
     {
         g_iface_audio.level[ch] = level[ch] / output_size;
     };
@@ -101,8 +106,12 @@ static inline void iface_audio_mix_channels_with_gain(float **channels, float *o
 static inline void iface_audio_mix_channels_stereo(float **channels, float *output, size_t output_size)
 {
     float *gain = g_iface_audio.gain;
-    float level[AUDIO_SRC_CHANNELS_COUNT] = {0};
+    float level[AUDIO_SRC_CHANNELS_MAX] = {0};
     float total_level = 0.0f;
+
+    /* Loop-invariant hoist (mzhal krok 8); stereo mixer bezi jen pri
+     * psg_count == 2, nch je tedy 9. */
+    const size_t nch = g_mzhal.audio_src_channels;
 
     for (size_t i = 0; i < output_size; i++)
     {
@@ -121,7 +130,7 @@ static inline void iface_audio_mix_channels_stereo(float **channels, float *outp
 
         /* PSG1 → pravý kanál */
         float sample_psg1 = 0.0f;
-        for (size_t ch = (1 + PSG_CHANNELS_COUNT); ch < AUDIO_SRC_CHANNELS_COUNT; ch++)
+        for (size_t ch = (1 + PSG_CHANNELS_COUNT); ch < nch; ch++)
         {
             float sample = channels[ch][i] * gain[ch];
             level[ch] += fabs(sample);
@@ -138,7 +147,7 @@ static inline void iface_audio_mix_channels_stereo(float **channels, float *outp
         total_level += (fabs(output[i * 2]) + fabs(output[i * 2 + 1])) * 0.5f;
     }
 
-    for (size_t ch = 0; ch < AUDIO_SRC_CHANNELS_COUNT; ch++)
+    for (size_t ch = 0; ch < nch; ch++)
     {
         g_iface_audio.level[ch] = level[ch] / output_size;
     };
@@ -208,8 +217,9 @@ float *iface_audio_wait_for_data(size_t *output_samples_size)
     // };
     // time_profiler_start(profiler);
 
-    float *all_samples[AUDIO_SRC_CHANNELS_COUNT];
-    size_t output_samples_count = IFACE_AUDIO_SAMPLE_RATE / VIDEO_SCREENS_PER_SEC;
+    float *all_samples[AUDIO_SRC_CHANNELS_MAX];
+    const int nch = (int)g_mzhal.audio_src_channels;
+    size_t output_samples_count = IFACE_AUDIO_SAMPLE_RATE / g_mzhal.video_screens_per_sec;
     bool stereo = audiolog->stereo;
     *output_samples_size = output_samples_count * 2 * sizeof(float); /* vždy stereo output pro SDL */
     // 45 ms => pocet vzorku po kterych povazujeme nemenici se hodnotu za zaparkovanou
@@ -219,22 +229,23 @@ float *iface_audio_wait_for_data(size_t *output_samples_size)
 
     // CTC0 resamplujeme samostatne
     uint64_t log_count_samples = (audiolog->last_timestamp - audiolog->first_timestamp);
-    size_t ctc0_samples_uint8_count = IFACE_AUDIO_CTC5253_SAMPLE_RATE / VIDEO_SCREENS_PER_SEC;
+    /* Runtime z g_mzhal (mzhal 10b, cold - resampler 1x per 20ms frame);
+     * výraz identický s makrem IFACE_AUDIO_CTC5253_SAMPLE_RATE. */
+    size_t ctc0_samples_uint8_count = (g_mzhal.gdgclk_base / (g_mzhal.gdgclk_ctc0_divider * 2))
+                                    / g_mzhal.video_screens_per_sec;
     uint8_t *ctc0_samples_uint8 = iface_audio_resampler_process_audio_log(audiolog->src[0], log_count_samples, ctc0_samples_uint8_count);
 
     all_samples[0] = iface_audio_resampler_output_stream_ctc0(ctc0_samples_uint8, ctc0_samples_uint8_count, output_samples_count, parked_samples, parked_samples_fade);
     free(ctc0_samples_uint8);
 
-#if HAVE_PSG >= 1
     // resamplujeme zvukove kanaly PSG (MZ-800 / MZ-1500); MZ-700 nema PSG
-    for (int i = 1; i < AUDIO_SRC_CHANNELS_COUNT; i++)
+    for (int i = 1; i < nch; i++)
     {
         //uint8_t *psg_samples_uint8 = iface_audio_resampler_process_audio_log(audiolog->src[i], log_count_samples, IFACE_AUDIO_PSG_SAMPLE_RATE, 20, NULL);
 
         all_samples[i] = iface_audio_resampler_process_psg_audio_log(i, audiolog->src[i], log_count_samples, g_iface_audio.SN76489_volume_value[i], output_samples_count, parked_samples, parked_samples_fade);
         // all_samples[i] = iface_audio_resampler_output_stream_psg(i, psg_samples_uint8, psg_samples_uint8_count, output_samples_count, g_iface_audio.SN76489_volume_value[i], parked_samples, parked_samples_fade);
     };
-#endif /* HAVE_PSG >= 1 */
 
     audio_log_destroy(audiolog);
 
@@ -257,7 +268,7 @@ float *iface_audio_wait_for_data(size_t *output_samples_size)
         g_free(mono_buf);
     }
 
-    for (int i = 0; i < AUDIO_SRC_CHANNELS_COUNT; i++)
+    for (int i = 0; i < nch; i++)
     {
         g_free(all_samples[i]);
     };
@@ -313,7 +324,7 @@ void iface_audio_buffer_init(void)
     g_iface_audio.state = IFACE_AUDIO_BUFFER_STATE_NORMAL;
     g_iface_audio.state_beffore_pause = IFACE_AUDIO_BUFFER_STATE_NORMAL;
     g_iface_audio.channel_scan_value = 0;
-    for (int i = 0; i < AUDIO_SRC_CHANNELS_COUNT; i++)
+    for (int i = 0; i < AUDIO_SRC_CHANNELS_MAX; i++)
     {
         iface_audio_set_src_volume(i, 100);
     };
@@ -325,7 +336,7 @@ bool iface_audio_init(void)
 #ifndef MZ800EMU_CFG_AUDIO_DISABLED
     iface_audio_buffer_init();
 
-    for (int i = 0; i < AUDIO_SRC_CHANNELS_COUNT; i++)
+    for (int i = 0; i < AUDIO_SRC_CHANNELS_MAX; i++)
     {
         g_iface_audio.gain[i] = 1.0f;
     };
@@ -388,7 +399,7 @@ void iface_audio_20ms_sync(void)
         APP_MUTEX_LOCK(g_iface_audio.mutex);
         while ((g_iface_audio.prepared_frame != g_iface_audio.played_frame) && (g_iface_audio.state == IFACE_AUDIO_BUFFER_STATE_NORMAL))
         {
-            APP_COND_WAIT_TIMEOUT_MS(g_iface_audio.play_cond, g_iface_audio.mutex, (1000 / VIDEO_SCREENS_PER_SEC));
+            APP_COND_WAIT_TIMEOUT_MS(g_iface_audio.play_cond, g_iface_audio.mutex, (1000 / g_mzhal.video_screens_per_sec));
 
             if (!sdlapp_is_running(g_sdlapp))
             {
@@ -396,7 +407,7 @@ void iface_audio_20ms_sync(void)
                 emulator_quit(EXIT_SUCCESS);
             };
 
-            if (timeouts++ >= VIDEO_SCREENS_PER_SEC) // Pokud zde cekame dele, tak neco neni v poradku
+            if (timeouts++ >= g_mzhal.video_screens_per_sec) // Pokud zde cekame dele, tak neco neni v poradku
             {
                 g_print("%s():%d - timeout! Is Audio module running?\n", __func__, __LINE__);
                 break;

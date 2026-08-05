@@ -25,9 +25,9 @@
 
 #ifndef MEMORY_H
 #define MEMORY_H
+#include "mzarch/mzcommon_config.h" /* capability makra - dříve tranzitivně přes main.h (mzhal 11c-1) */
 
 #include "libs/cpu-z80/z80.h"
-#include "hw-generic/gdg/gdg.h"
 #include "memory/rom.h"
 
 #ifdef __cplusplus
@@ -54,16 +54,21 @@ extern "C"
      */
 #define MEMORY_SIZE_RAM 0x10000
 
-#if MZARCH == 800
+/*
+ * Superset dimenze polí st_MEMORY (mzhal 9d): pole mají MAX velikost
+ * přes všechny architektury, takže st_MEMORY má jediný layout pro
+ * všechna 4 EXE. Skutečnou velikost paměti dané platformy nese
+ * g_mzhal (mem_vram_size, mem_exvram_size, mem_pcg_size; 0 = paměť
+ * na platformě neexistuje). Per-arch makra MEMORY_SIZE_VRAM /
+ * MEMORY_SIZE_PCG zůstávají pro per-EXE kód a plnění g_mzhal.
+ */
 #define MEMORY_SIZE_VRAM_BANK 0x2000
-#define MEMORY_SIZE_VRAM (MEMORY_SIZE_VRAM_BANK * 2)    /* 16 KB — 4 roviny po 8 KB (2 banky) */
-#elif MZARCH == 1500
-#define MEMORY_SIZE_VRAM 0x1000                          /* 4 KB — znakova + atributova VRAM */
+#define MEMORY_SIZE_VRAM_MAX (MEMORY_SIZE_VRAM_BANK * 2) /* 16 KB (MZ-800) */
 #define MEMORY_SIZE_PCG_BANK 0x2000
-#define MEMORY_SIZE_PCG (MEMORY_SIZE_PCG_BANK * 3)       /* 24 KB — 3 PCG banky */
-#elif MZARCH == 700
-#define MEMORY_SIZE_VRAM 0x1000                          /* 4 KB — znakova + atributova VRAM */
-#endif
+#define MEMORY_SIZE_PCG_MAX (MEMORY_SIZE_PCG_BANK * 3)   /* 24 KB (MZ-1500) */
+
+/* Per-arch MEMORY_SIZE_VRAM / MEMORY_SIZE_PCG jsou v mz*_memory.h
+ * (mzhal 11c-2c) - sdílený kód čte g_mzhal.mem_*_size. */
 
 #define MEMORY_MEMRAM_POINTS 0x10
 
@@ -79,31 +84,19 @@ extern "C"
         uint8_t *memram_write[MEMORY_MEMRAM_POINTS];
         uint8_t ROM[ROM_SIZE_TOTAL];
         uint8_t RAM[MEMORY_SIZE_RAM];
-        uint8_t VRAM[MEMORY_SIZE_VRAM];
-#if MZARCH == 800
-        uint8_t EXVRAM[MEMORY_SIZE_VRAM];             /* MZ-800: rozsirena VRAM (banky III, IV) */
-#elif MZARCH == 1500
-        uint8_t PCG[MEMORY_SIZE_PCG];                 /* MZ-1500: 3 PCG banky x 8 KB */
-#elif MZARCH == 700
-// MZ-700 nema zadnou rozsirenu VRAM ani PCG, takze tady nic nedefinujeme
-#endif
+        /* Superset (mzhal 9d): pole MAX velikosti existují na všech
+         * platformách; skutečné využití viz g_mzhal.mem_*_size, mimo
+         * vlastní platformu zůstávají nulová (BSS) a nikdo je nesmí
+         * plnit ani číst. */
+        uint8_t VRAM[MEMORY_SIZE_VRAM_MAX];
+        uint8_t EXVRAM[MEMORY_SIZE_VRAM_MAX];         /* MZ-800: rozsirena VRAM (banky III, IV) */
+        uint8_t PCG[MEMORY_SIZE_PCG_MAX];             /* MZ-1500: 3 PCG banky x 8 KB */
     } st_MEMORY;
 
     extern st_MEMORY g_memory;
 
-#if MZARCH == 800
-#include "mzarch/mz800/memory/mz800_memory.h"
-#else
-#if MZARCH == 1500
-#include "mzarch/mz1500/memory/mz1500_memory.h"
-#else
-#if MZARCH == 700
-#include "mzarch/mz700/memory/mz700_memory.h"
-#else
-#error "Unknown MZARCH value"
-#endif
-#endif
-#endif
+/* Per-arch dispatch (mz*_memory.h) je vyčleněn do memory_arch.h
+ * (mzhal 11c-2c) - includují ho jen per-EXE / dirty TU. */
 
     /*
      *

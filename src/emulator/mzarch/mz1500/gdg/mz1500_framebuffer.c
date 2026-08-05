@@ -43,6 +43,7 @@
  *   BFP: pozadi → popredi → PCG (PCG prepise foreground)
  *
  */
+#include "hw-generic/memory/memory_arch.h" /* per-arch memory - dříve tranzitivně přes memory.h (mzhal 11c-2c) */
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -186,11 +187,11 @@ static inline void framebuffer_MZ1500_screen_row_fill(unsigned beam_row)
     uint8_t *PCG1 = g_memoryPCG2;
     uint8_t *PCG2 = g_memoryPCG3;
 
-    /* PCG barevna paleta: mode1500_color[i] → IGRB hodnota */
+    /* PCG barevna paleta: mode_color[i] → IGRB hodnota */
     uint8_t pcg_colormap[8];
     for (int i = 0; i < 8; i++)
     {
-        pcg_colormap[i] = c_MZ700_COLORMAP[g_gdg.mode1500_color[i]];
+        pcg_colormap[i] = c_MZ700_COLORMAP[g_gdg.mode_color[i]];
     }
 
     uint8_t *p = g_framebuffer.pixels + (beam_row * VIDEO_DISPLAY_WIDTH + VIDEO_BORDER_LEFT_WIDTH);
@@ -464,7 +465,7 @@ void framebuffer_flush_full_screen(void)
             {
                 if ((g_gdg.beam_row >= VIDEO_BEAM_CANVAS_FIRST_ROW) && (g_gdg.beam_row <= VIDEO_BEAM_CANVAS_LAST_ROW))
                 {
-                    if (!GDG_MZ800_DMD_TEST_MZ700)
+                    if (!GDG_DMD_TEST_MODE700)
                     {
                         framebuffer_MZ1500_screen_row_fill(g_gdg.beam_row);
                     }

@@ -7,9 +7,11 @@
 #include <stdbool.h>
 #include "app/app_thread.h"
 
-#include "mzarch_config.h"
+#include "mzcommon_config.h" /* mzhal 11c-2b: mzarch.h sám žádné per-arch makro nepoužívá */
 #include "libs/cpu-z80/z80.h"
-#include "hw-generic/gdg/gdg.h"
+#include "hw-generic/gdg/gdg_state.h" /* jen g_gdg + superset (mzhal 11c-2b);
+                                         per-arch gdg makra sem nepatří */
+#include "mzarch/mzhal.h"
 #include "mzarch/mzevent.h"
 
 typedef enum en_SWITCH700
@@ -50,34 +52,42 @@ typedef struct st_mzarch_main
 
     unsigned interrupt;
 
-#if MZARCH == 800 /* HW experimenty pro MY-800 */
-    en_MZ800_HWCOMPAT_ALLOW_PSG1 mz800_hwcompat_allow_psg1;
-#endif /* MZARCH == 800 */
-
-#if MZARCH != 700
-    en_SWITCH700 switch700;
-#endif /* MZARCH != 700 */
+    /* Nepodmíněně (mzhal 9e): layout st_mzarch_main je superset společný
+     * všem architekturám. Pole plní/čte jen kód příslušné platformy,
+     * jinde zůstávají v nule. */
+    en_MZ800_HWCOMPAT_ALLOW_PSG1 mz800_hwcompat_allow_psg1; /* jen MZ-800 (HW experiment) */
+    en_SWITCH700 switch700; /* zadní DIP MZ-700 mode; MZ-700 nativní ho nemá */
 
     app_mutex_t *reset_request_mutex;
     bool reset_request;
     unsigned reset_count;       /**< Inkrementuje se při každém dokončeném resetu. UI vlákno detekuje reset přes porovnání s předchozí hodnotou - umožňuje sync focus_addr na nové PC i při resetu z paused stavu (= bez normálního pause→run→pause přechodu). */
 
-#ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
     /* D.4 - SP threshold BP polling. Drží předchozí hodnotu SP pro edge
      * detekci crossing přes threshold. Inicializuje se při resetu na
      * aktuální cpu->sp (= žádný falešný edge po resetu). Aktualizuje se
-     * v hot loop pouze pokud per_type_active[BPTMAP_IDX_SP_THRESHOLD]. */
+     * v hot loop pouze pokud per_type_active[BPTMAP_IDX_SP_THRESHOLD].
+     * Nepodmíněně (mzhal 9c): layout st_mzarch_main nesmí záviset na
+     * build volbě NO_DEBUGGER (pravidlo z kroku 5); pole používá jen
+     * debugger kód. */
     uint16_t bp_sp_prev;
-#endif
 } st_mzarch_main;
 
 extern struct st_mzarch_main g_mzarch_main;
 
-#if MZARCH != 700
-#define MZARCH_TEST_REAR_DIP_SWITCH700 (g_mzarch_main.switch700 == 1)
-#else
-#define MZARCH_TEST_REAR_DIP_SWITCH700 (0) /* MZ-700 nativní: žádný DIP přepínač MZ-700-mode */
-#endif
+/**
+ * @brief Per-arch hook po dokončení snapshot loadu (mzhal 11e).
+ *
+ * Volá snapshot_mgr po obnově kompletního stavu. Implementace je
+ * v per-EXE mzarch.c: MZ-800 zde rebuiduje RAM fast-path page-table
+ * (snap_gdg obnovuje regDMD mimo banking-switch cestu), ostatní
+ * architektury no-op. Compile-once snapshot_mgr tak nepotřebuje
+ * per-arch symboly.
+ */
+extern void mzarch_snapshot_post_load(void);
+
+/* Runtime z g_mzhal (mzhal 11c-2b): jediný konzument je cold UI menu
+ * menu_rear_dip_switch.cpp; na MZ-700 nativním je predikát vždy 0. */
+#define MZARCH_TEST_REAR_DIP_SWITCH700 (g_mzhal.has_rear_dip_switch700 && (g_mzarch_main.switch700 == 1))
 
 typedef enum en_INSIDEOP
 {

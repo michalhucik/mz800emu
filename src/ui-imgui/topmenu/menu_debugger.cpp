@@ -37,15 +37,14 @@
  */
 
 #include "main.h"
+#include "emulator/mzarch/mzhal.h"
 #include "libs/imgui/imgui.h"
 #include "i18n.h"
 #include "mzarch/mzarch_config.h"
 #include "ui-imgui/bootstrap/myimgui.h"
 #include "ui-imgui/topmenu/topmenu.h"
 #include "debugger/debugger.h"
-#if (MZARCH == 800) || (MZARCH == 1500) || (MZARCH == 700)
 #include "ui-imgui/debugger/heatmap/mhmap_window.h"
-#endif
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
 
@@ -208,7 +207,7 @@ void imgui_menu_debugger(en_DBG_MENU_CALLER caller)
             {
                 g_debugger.wp_show_ppi = wp_ppi ? 0 : 1;
             };
-#if HAVE_PIOZ80
+        if (g_mzhal.have_pioz80) { /* runtime capability, mzhal krok 8 */
             /* Z80 PIO je jen na MZ-800 / MZ-1500. MZ-700 (HAVE_PIOZ80=0)
              * čip nemá → workplace slot vypnut. */
             bool wp_pioz = (g_debugger.wp_show_pioz80 != 0);
@@ -216,8 +215,8 @@ void imgui_menu_debugger(en_DBG_MENU_CALLER caller)
             {
                 g_debugger.wp_show_pioz80 = wp_pioz ? 0 : 1;
             };
-#endif
-#if HAVE_PSG >= 1
+        }
+        if (g_mzhal.psg_count >= 1) { /* runtime capability, mzhal krok 8 */
             /* PSG SN76489 je jen na MZ-800 (mono) / MZ-1500 (stereo).
              * MZ-700 (HAVE_PSG=0) čip nemá → workplace slot vypnut. */
             bool wp_psg = (g_debugger.wp_show_psg != 0);
@@ -232,7 +231,7 @@ void imgui_menu_debugger(en_DBG_MENU_CALLER caller)
             {
                 g_debugger.wp_show_psg_audio_scope = wp_psg_audio_scope ? 0 : 1;
             };
-#endif
+        }
             /* gdg-panel F1 scaffold: GDG je ve všech 3 archech, žádný guard. */
             bool wp_gdg = (g_debugger.wp_show_gdg != 0);
             if (ImGui::MenuItem(_L("GDG State"), NULL, wp_gdg))
@@ -407,7 +406,8 @@ void imgui_menu_debugger(en_DBG_MENU_CALLER caller)
         {
             g_gui->showMemoryDiffWindow = !g_gui->showMemoryDiffWindow;
         };
-#if (MZARCH == 800) || (MZARCH == 1500) || (MZARCH == 700)
+/* SENTINEL: Memory Heatmap platí pro všechny známé architektury
+ * (garantováno mzhal.c) - při přidání nové architektury PROVĚŘ. */
         /*
          * Memory Heatmap (CDL) - samostatné okno pro vizualizaci access counterů.
          * Toggle přes g_gui->showMemoryHeatmapWindow.
@@ -416,7 +416,7 @@ void imgui_menu_debugger(en_DBG_MENU_CALLER caller)
         {
             mhmap_window_show_hide();
         };
-#endif
+
         /*
          * V1.5+ ASCII edit follow-up: Char Inserter - paleta znaků pro
          * vkládání speciálních chars (SharpMZ EU/JP, KOI8-CS) do Memory
@@ -544,13 +544,13 @@ void imgui_menu_debugger(en_DBG_MENU_CALLER caller)
             {
                 g_gui->showPpiStateWindow = !g_gui->showPpiStateWindow;
             };
-#if HAVE_PIOZ80
+        if (g_mzhal.have_pioz80) { /* runtime capability, mzhal krok 8 */
             if (ImGui::MenuItem(_L("Z80 PIO State"), "Alt+Shift+Z", g_gui->showPiozStateWindow))
             {
                 g_gui->showPiozStateWindow = !g_gui->showPiozStateWindow;
             };
-#endif
-#if HAVE_PSG >= 1
+        }
+        if (g_mzhal.psg_count >= 1) { /* runtime capability, mzhal krok 8 */
             if (ImGui::MenuItem(_L("PSG State"), "Alt+Shift+G", g_gui->showPsgStateWindow))
             {
                 g_gui->showPsgStateWindow = !g_gui->showPsgStateWindow;
@@ -562,7 +562,7 @@ void imgui_menu_debugger(en_DBG_MENU_CALLER caller)
             {
                 g_gui->showPsgAudioScopeWindow = !g_gui->showPsgAudioScopeWindow;
             };
-#endif
+        }
             /* gdg-panel F1 scaffold: GDG inspector toggle. V = Video / GDG.
              * GDG je ve všech 3 archech (MZ-700/MZ-800/MZ-1500), žádný guard. */
             if (ImGui::MenuItem(_L("GDG State"), "Alt+Shift+V", g_gui->showGdgStateWindow))
@@ -584,30 +584,30 @@ void imgui_menu_debugger(en_DBG_MENU_CALLER caller)
          */
         if (ImGui::BeginMenu(_L("Storage")))
         {
-#if CFG_HWEXT_HAVE_FDC
+        if (g_mzhal.have_fdc) { /* runtime capability, mzhal krok 8 */
             if (ImGui::MenuItem(_L("FDC State"), NULL, g_gui->showFdcStateWindow))
             {
                 g_gui->showFdcStateWindow = !g_gui->showFdcStateWindow;
             };
-#endif
-#if CFG_HWEXT_HAVE_QDISK
+        }
+        if (g_mzhal.have_qdisk) { /* runtime capability, mzhal krok 8 */
             if (ImGui::MenuItem(_L("QDisk State"), NULL, g_gui->showQdiskStateWindow))
             {
                 g_gui->showQdiskStateWindow = !g_gui->showQdiskStateWindow;
             };
-#endif
-#if CFG_HWEXT_HAVE_RAMDISK
+        }
+        if (g_mzhal.have_ramdisk) { /* runtime capability, mzhal krok 8 */
             if (ImGui::MenuItem(_L("Memory Disk State"), NULL, g_gui->showRamdiskStateWindow))
             {
                 g_gui->showRamdiskStateWindow = !g_gui->showRamdiskStateWindow;
             };
-#endif
-#if CFG_HWEXT_HAVE_IDE8
+        }
+        if (g_mzhal.have_ide8) { /* runtime capability, mzhal krok 8 */
             if (ImGui::MenuItem(_L("IDE8 State"), NULL, g_gui->showIde8StateWindow))
             {
                 g_gui->showIde8StateWindow = !g_gui->showIde8StateWindow;
             };
-#endif
+        }
 
             ImGui::EndMenu();
         };

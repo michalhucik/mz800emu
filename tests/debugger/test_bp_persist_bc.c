@@ -81,9 +81,15 @@ static char* copy_fixture_to_cfgdir ( const char *fixture_subpath,
 
     char *buf = (char *) malloc ( (size_t) sz + 1 );
     if ( !buf ) { fclose ( fsrc ); g_free ( dst_resolved ); return NULL; };
-    fread ( buf, 1, (size_t) sz, fsrc );
-    buf[ sz ] = '\0';
+    size_t read_bytes = fread ( buf, 1, (size_t) sz, fsrc );
     fclose ( fsrc );
+    if ( read_bytes != (size_t) sz ) {
+        fprintf ( stderr, "FIXTURE short read: %s\n", src_path );
+        free ( buf );
+        g_free ( dst_resolved );
+        return NULL;
+    };
+    buf[ sz ] = '\0';
 
     /* Zapsat do cfg-dir cílové cesty. */
     FILE *fdst = fopen ( dst_resolved, "wb" );

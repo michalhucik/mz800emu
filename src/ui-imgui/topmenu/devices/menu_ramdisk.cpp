@@ -7,6 +7,7 @@
 
 // Lokalizace
 #include "i18n.h"
+#include "emulator/mzarch/mzhal.h"
 
 #include "ui-imgui/topmenu/topmenu.h"
 #include "ui-imgui/bootstrap/myimgui.h"
@@ -92,13 +93,13 @@ void imgui_menu_ramdisk(void)
             ImGui::BeginDisabled();
         };
 
-#if MZARCH != 1500
-        if (MenuRadioItem(_("Pezik 0xE8 - 0xEF"), RAMDISK_TEST_PEZIK_E8_CONNECTED))
+/* Pezik E8 nelze na MZ-1500 (kolize portu 0xE8-0xEF) - runtime dle arch. */
+        if (g_mzhal.arch != 1500
+            && MenuRadioItem(_("Pezik 0xE8 - 0xEF"), RAMDISK_TEST_PEZIK_E8_CONNECTED))
         {
             RAMDISK_DISCONNECT_ALL();
             ramdisk_pezik_connect(RAMDISK_PEZIK_E8);
         };
-#endif
 
         if (pezik_is_dissabled)
         {

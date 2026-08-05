@@ -15,7 +15,6 @@
 
 #include "emulator.h"
 #include "emulator_measuring.h"
-#include "hw-generic/gdg/video.h"
 
 extern "C"
 {
@@ -65,7 +64,7 @@ void imgui_measuring_frame_timing(bool *p_open)
 
                 st_EMULATOR_MEASURING_FRAME_TIMING_STATS *stats = &g_emulator_measuring.frame_timing.stats;
 
-                float ref_frame_time = 1000.0f / VIDEO_SCREENS_PER_SEC;
+                float ref_frame_time = 1000.0f / g_mzhal.video_screens_per_sec;
                 printRow(_("Reference frame time:"), ref_frame_time);
                 printRow(_("Average time:"), stats->mean);
                 printRow(_("Max time:"), stats->max);

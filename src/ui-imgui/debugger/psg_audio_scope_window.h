@@ -41,8 +41,8 @@
  *
  * Visibilitu drží `g_gui->showPsgAudioScopeWindow`.
  *
- * Arch guard: celé tělo se kompiluje jen pro `HAVE_PSG >= 1` (MZ-700 PSG
- * nemá).
+ * MZ-700 PSG nemá - volající gatují okno i tick runtime přes
+ * `g_mzhal.psg_count >= 1`.
  *
  * License: GPLv3.
  */
@@ -154,8 +154,8 @@ unsigned psg_audio_scope_total_notes(void);
  * timeline (attn historie přes ring buffer), info hlavičku a piano roll
  * sekci (timeline pruhů per kanál); export se přidá v F5.
  *
- * Pokud build je MZ-700 (HAVE_PSG == 0), funkce se vůbec nedefinuje a
- * volání odjinud musí být guardované shodným `#if HAVE_PSG >= 1`.
+ * Na platformě bez PSG (MZ-700) funkci nevolat - volající gatuje
+ * runtime přes `g_mzhal.psg_count >= 1`.
  *
  * @param p_open  Pointer na visibility flag (typicky
  *                `&g_gui->showPsgAudioScopeWindow`). Nesmí být NULL.
@@ -179,7 +179,8 @@ void imgui_psg_audio_scope_window(bool *p_open);
  * Okno samotné jen renderuje aktuální stav ringu. Overhead 4-8 vzorků
  * per frame je zanedbatelný.
  *
- * V MZ-700 buildu se funkce nedefinuje (HAVE_PSG == 0).
+ * Na platformě bez PSG (MZ-700) funkci nevolat - volající gatuje
+ * runtime přes `g_mzhal.psg_count >= 1`.
  */
 void psg_audio_scope_tick(void);
 
