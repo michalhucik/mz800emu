@@ -43,7 +43,7 @@ jobs:
       # a cachujeme podle tagu verzi.
       - name: Cache SDL3 + SDL3_image + minizip-ng
         id: deps-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ env.DEPS_PREFIX }}
           key: linux-deps-${{ env.SDL_TAG }}-${{ env.SDL_IMAGE_TAG }}-${{ env.MINIZIP_TAG }}
@@ -94,6 +94,9 @@ jobs:
 
       - name: Install Homebrew packages
         run: |
+          # Runner image obsahuje neduvěryhodný tap aws/tap - brew kvůli
+          # němu tiskne tap-trust varování; nepoužíváme ho, pryč s ním.
+          brew untap aws/tap || true
           brew install cmake ninja pkg-config glib json-glib curl zlib sdl3 sdl3_image minizip-ng
 
       - name: Build
