@@ -21,7 +21,7 @@ jobs:
       SDL_IMAGE_TAG: release-3.4.2
       MINIZIP_TAG: 4.1.2
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # Projektove zavislosti + oficialni SDL3 build-deps seznam pro
       # Ubuntu (https://wiki.libsdl.org/SDL3/README-linux#build-dependencies)
@@ -90,7 +90,7 @@ jobs:
     name: macOS
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install Homebrew packages
         run: |
@@ -106,7 +106,7 @@ jobs:
       run:
         shell: msys2 {0}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Setup MSYS2 UCRT64
         uses: msys2/setup-msys2@v2
