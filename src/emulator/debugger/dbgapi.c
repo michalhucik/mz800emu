@@ -6439,7 +6439,7 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
 
         case DBGAPI_CMD_CMT_RECORD:
         {
-            /* CMT-A: zahájení WAV nahrávání do souboru bez file dialogu.
+            /* CMT-A: zahájení WAV/LEP/L16 nahrávání bez file dialogu.
              * cmt_record_to_file vrátí EXIT_SUCCESS/EXIT_FAILURE; chyba
              * (nezapisovatelná cesta, špatný stav) -> success = false. */
             st_DBGAPI_CMT_RECORD_PARAM *p =

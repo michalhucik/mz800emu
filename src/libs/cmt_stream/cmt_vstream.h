@@ -65,6 +65,7 @@ extern "C" {
         double stream_length;                   /**< celková doba streamu (s) */
         en_CMT_VSTREAM_BYTELENGTH min_byte_length; /**< nejmenší velikost jednoho eventu (1|2|4 B) */
         uint32_t size;                          /**< počet bajtů datové oblasti */
+        uint32_t capacity;                      /**< alokovaná kapacita datové oblasti */
         uint64_t scans;                         /**< celkový počet vzorků */
         int start_value;                        /**< počáteční hodnota signálu (0|1) */
         int last_set_value;                     /**< poslední zapsaná hodnota (0|1) */

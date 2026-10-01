@@ -1793,20 +1793,20 @@ async def emu_cmt_eject() -> str:
 
 @mcp.tool()
 async def emu_cmt_record(path: str) -> str:
-    """Start recording the REAL cassette tape output to a WAV file.
+    """Start recording the REAL cassette tape output to a WAV, LEP, or L16 file.
 
-    Opens ``path`` as a WAV file and arms the tape for recording (the
+    The filename extension selects WAV, LEP (50 us units), or L16
+    (16 us units); a path without an extension defaults to WAV. The
     captured signal is whatever the program writes to the cassette
-    output). Recording starts paused; call
-    ``emu_cmt_pause(paused=False)`` to begin capturing. Only WAV output
-    is supported. The tape must be in the STOP state and the path must be
-    writable, otherwise this fails.
+    output. Recording starts paused; call
+    ``emu_cmt_pause(paused=False)`` to begin capturing. The tape must be
+    in the STOP state and the path must be writable, otherwise this fails.
 
     This records the real tape signal; it is unrelated to the cmthack
     instant load. Sensitive: changes emulator state (MCP action).
 
     Args:
-        path: target WAV file path (must be writable).
+        path: target .wav, .lep, or .l16 path (must be writable).
 
     Returns:
         JSON ``{"ok": true, "path": str}`` on success or

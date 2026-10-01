@@ -100,7 +100,7 @@ transport call).
 | `emulator://docs/eventlog_mask` | EventLog 64-bit category mask - bit assignments + recipes |
 | `emulator://docs/sharp_display_code` | Sharp MZ ASCII vs display code vs std ASCII (decoding `video/text_dump` + `mzascii` watch) |
 | `emulator://docs/mz800_keyboard` | MZ-800 keyboard - layout, matrix, modifiers, character layers, key names for `emu_input_send_keys`, special-character recipes (MZ-700/1500 as a diff) |
-| `emulator://docs/cmt_workflow` | CMT workflow - real tape vs cmthack, transport, WAV recording, speed ratios, SIMPLE_TAPE multi-block seek + per-block speed |
+| `emulator://docs/cmt_workflow` | CMT workflow - real tape vs cmthack, transport, WAV/LEP/L16 recording, speed ratios, SIMPLE_TAPE multi-block seek + per-block speed |
 
 AI clients should read `emulator://docs/index` first - it shows what
 is documented and when to consult each topic.

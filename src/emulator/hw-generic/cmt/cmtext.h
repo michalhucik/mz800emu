@@ -77,6 +77,7 @@ extern "C" {
 
     extern st_CMTEXT* cmtext_get_extension ( const char *filename );
     extern st_CMTEXT* cmtext_get_recording_extension ( void );
+    extern st_CMTEXT* cmtext_get_recording_extension_for_filename ( const char *filename );
     extern const char* cmtext_get_description ( st_CMTEXT *ext );
     extern const char* cmtext_get_name ( st_CMTEXT *ext );
     extern st_CMTEXT_BLOCK* cmtext_get_block ( st_CMTEXT *ext );
@@ -96,4 +97,3 @@ extern "C" {
 #endif
 
 #endif /* CMTEXT_H */
-

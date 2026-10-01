@@ -28,7 +28,7 @@ https://sourceforge.net/projects/mz800emu/
 - Wide range of supported peripherals:
   - Cassette (CMT): MZF, MZT, TAP, WAV
   - Floppy disk controller (FDC WD279x)
-  - Quick Disk
+  - Quick Disk (`.mzq` read/write; legacy, HxC and FlashFloppy `.qd` read/write)
   - RAM disk, memory extensions
   - Unicard
   - IDE8 hard disk interface

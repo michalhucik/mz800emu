@@ -441,7 +441,7 @@ typedef enum en_DBGAPI_CMD
 
     /* === mutant mcp-server CMT-A: CMT transport + recording + hack ====
      *
-     * Ovládání reálné páskové emulace (transport, WAV recording) a
+     * Ovládání reálné páskové emulace (transport, WAV/LEP/L16 recording) a
      * okrajového cmthack ROM-patch instant-load toggle. Všechny tři
      * cmd modifikují stav -> MCP_ACTION broadcast pro origin == MCP
      * (Activity log). Funkce cmt_ a cmthack_ běží na emu vlákně, proto
@@ -452,7 +452,7 @@ typedef enum en_DBGAPI_CMD
      * protože nesou odlišný payload (path / enabled).
      */
     DBGAPI_CMD_CMT_TRANSPORT,                  /* Transport pásky - data_ptr: st_DBGAPI_CMT_TRANSPORT_PARAM* */
-    DBGAPI_CMD_CMT_RECORD,                     /* Zahájit WAV nahrávání - data_ptr: st_DBGAPI_CMT_RECORD_PARAM* */
+    DBGAPI_CMD_CMT_RECORD,                     /* Zahájit CMT nahrávání - data_ptr: st_DBGAPI_CMT_RECORD_PARAM* */
     DBGAPI_CMD_CMT_HACK_SET,                   /* Zapnout/vypnout cmthack ROM patch - data_ptr: st_DBGAPI_CMT_HACK_SET_PARAM* */
 
     /* === mutant mcp-server CMT-B: vlastnosti CMT + práce s páskou =====
@@ -3765,14 +3765,15 @@ typedef struct st_DBGAPI_CMT_TRANSPORT_PARAM
 /**
  * @brief Parametr pro DBGAPI_CMD_CMT_RECORD.
  *
- * Zahájí WAV nahrávání do souboru `filepath` přes cmt_record_to_file.
+ * Zahájí WAV/LEP/L16 nahrávání do `filepath` přes cmt_record_to_file.
+ * Formát určuje přípona; cesta bez přípony používá WAV.
  * Nahrávání startuje v pauze (= cmt_record nastaví paused). Pokud cestu
  * nelze otevřít pro zápis nebo CMT není ve STOP, out_result != 0 a
  * success=false.
  */
 typedef struct st_DBGAPI_CMT_RECORD_PARAM
 {
-    const char *filepath;   /**< IN: cesta k cílovému WAV souboru. */
+    const char *filepath;   /**< IN: cesta k cílovému WAV/LEP/L16 souboru. */
     int         out_result; /**< OUT: 0 = OK, -1 = neplatný param, -2 = cmt_record_to_file selhal. */
 } st_DBGAPI_CMT_RECORD_PARAM;
 

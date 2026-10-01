@@ -118,11 +118,13 @@ void imgui_qdisk_storage_switch_popup(bool *p_open)
              * pres force_save (bypass storage_mode gate - jeste jsme v
              * DISCARD), pak provedeme switch. Faze 4: konsoliduje primy
              * generic_driver_save_memory na verejne API. */
-            (void)qdisk_drive_force_save_to_file();
-            qdisk_apply_storage_mode_switch(target);
-            g_qdisk_storage_switch_pending.target_mode[0] = 0;
-            *p_open = false;
-            ImGui::CloseCurrentPopup();
+            if (qdisk_drive_force_save_to_file())
+            {
+                qdisk_apply_storage_mode_switch(target);
+                g_qdisk_storage_switch_pending.target_mode[0] = 0;
+                *p_open = false;
+                ImGui::CloseCurrentPopup();
+            };
         };
 
         ImGui::SameLine();
@@ -158,7 +160,22 @@ void qdisk_create_image_cb(baseui_fchooser_t *fch)
 
     if (filename)
     {
-        qdisk_create_image((char *)filename);
+        const char *filter = fch->selected_filter;
+        /* The selected New Image filter is authoritative.  Do not infer a
+         * .qd subtype from its shared extension and do not silently fall
+         * back to another representation if the chooser returns an
+        * unexpected filter name. */
+        if (filter != NULL && strcmp(filter, _("MZQ image")) == 0)
+            qdisk_create_mzq_image((char *)filename);
+        else if (filter != NULL && strcmp(filter, _("FlashFloppy physical QD image")) == 0)
+            qdisk_create_qd_image((char *)filename, QDISK_CREATE_QD_FLASHFLOPPY);
+        else if (filter != NULL && strcmp(filter, _("Sharp legacy QD image")) == 0)
+            qdisk_create_qd_image((char *)filename, QDISK_CREATE_QD_SHARP_LEGACY);
+        else if (filter != NULL && strcmp(filter, _("HxC physical QD image")) == 0)
+            qdisk_create_qd_image((char *)filename, QDISK_CREATE_QD_HXC);
+        else
+            fprintf(stderr, "%s(%d): can't create QD image '%s': unknown image format selected\n",
+                    __FILE__, __LINE__, filename);
     };
 
     baseui_filechooser_destroy(fch);
@@ -167,8 +184,20 @@ void qdisk_create_image_cb(baseui_fchooser_t *fch)
 void imgui_qdisk_create_image(void)
 {
     baseui_fchooser_t *fch = NULL;
+    GString *filters = g_string_new(NULL);
+    /* ImGuiFileDialog preserves whitespace after a comma in the collection
+     * title returned by GetCurrentFilter().  Keep separators whitespace-free
+     * so selected_filter exactly matches the labels used by the callback. */
+    g_string_append_printf(filters, "%s{.mzq},%s{.qd},%s{.qd},%s{.qd}",
+                           _("MZQ image"),
+                           _("FlashFloppy physical QD image"),
+                           _("Sharp legacy QD image"),
+                           _("HxC physical QD image"));
 
-    fch = baseui_filechooser_save_file(_("Create new QD image"), ".mzq", NULL, _("qdimage.mzq"), NULL, qdisk_create_image_cb, NULL);
+    /* Bez pevné přípony: ImGuiFileDialog doplní .mzq nebo .qd podle právě
+     * zvoleného konkrétního formátu. */
+    fch = baseui_filechooser_save_file(_("Create new QD image"), filters->str, NULL, _("qdimage"), NULL, qdisk_create_image_cb, NULL);
+    g_string_free(filters, TRUE);
 
     if (!fch)
     {
@@ -277,14 +306,15 @@ void imgui_menu_qdisk(void)
 
             ImGui::Separator();
 
-            const char *mount_label = (QDISK_TEST_TYPE_IMAGE) ? _("Mount Image...") : _("Mount Directory...");
+            const bool is_mounted = (drive_option != drive_empty);
+            const char *mount_label = is_mounted ? _("Re-Mount...") : _("Mount...");
 
-            if (ImGui::MenuItem(mount_label, NULL, false, (drive_option == drive_empty)))
+            if (ImGui::MenuItem(mount_label, NULL, false, true))
             {
                 qdisk_ui_mount();
             };
 
-            if (ImGui::MenuItem(_L("Unmount"), NULL, false, (drive_option != drive_empty)))
+            if (ImGui::MenuItem(_L("Unmount"), NULL, false, is_mounted))
             {
                 qdisk_umount();
             };
@@ -294,12 +324,14 @@ void imgui_menu_qdisk(void)
 
         g_string_free(str, TRUE);
 
-        /* Faze 5 (qdisk-rewrite): UNICARD má vynucené R/O (force_user_readonly=1
-         * v qdisk_open_image_internal). MenuItem zobrazujeme zaškrtnutý a
-         * disabled (gray) - user vidí, že R/O platí, ale nedá se přepnout. */
+        /* UNICARD má vynucené R/O (force_user_readonly=1). Externí .qd
+         * kontejner je zapisovatelný přes cached převod při synchronizaci. */
         bool is_unicard = (QDISK_TEST_CONNECTED && QDISK_TEST_TYPE_UNICARD);
-        bool wrprot_enabled = (QDISK_TEST_CONNECTED && !QDISK_TEST_TYPE_UNICARD);
-        bool wrprot_shown = is_unicard ? true : (qdisc_get_write_protected() != 0);
+        bool is_qd_image = (QDISK_TEST_CONNECTED && QDISK_TEST_TYPE_IMAGE
+                            && g_qdisk.external_qd);
+        bool wrprot_enabled = (QDISK_TEST_CONNECTED && !is_unicard);
+        bool wrprot_shown = is_unicard
+                          ? true : (qdisc_get_write_protected() != 0);
 
         if (ImGui::MenuItem(_L("Write Protected"), NULL, wrprot_shown, wrprot_enabled))
         {
@@ -309,7 +341,6 @@ void imgui_menu_qdisk(void)
         {
             ImGui::SetTooltip(_("Forced R/O by UNICARD - cannot be changed."));
         };
-
         /* Faze 2: vizualni indikator fs_readonly. Pokud je soubor na disku
          * sam o sobe write-protected (chmod a-w nebo Windows R/O attribute),
          * je effective R/O vynucene bez ohledu na user volbu - ukazujeme
@@ -377,10 +408,16 @@ void imgui_menu_qdisk(void)
                 if (!mode_cached) try_switch("cached");
             };
 
+            if (is_qd_image) ImGui::BeginDisabled();
             if (MenuRadioItem(_("Direct (write-through to file)"), mode_direct))
             {
                 if (!mode_direct) try_switch("direct");
             };
+            if (is_qd_image && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+            {
+                ImGui::SetTooltip(_("Direct mode is unavailable for .qd images because they must be converted back to their container format when saved."));
+            };
+            if (is_qd_image) ImGui::EndDisabled();
 
             if (MenuRadioItem(_("Discard changes (in-RAM, no sync)"), mode_discard))
             {
@@ -393,7 +430,6 @@ void imgui_menu_qdisk(void)
         {
             ImGui::SetTooltip(_("UNICARD mode is locked to Cached storage."));
         };
-
         ImGui::Separator();
 
         if (ImGui::MenuItem(_L("Create New Image..."), NULL))

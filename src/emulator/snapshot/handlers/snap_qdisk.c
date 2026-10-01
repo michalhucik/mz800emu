@@ -9,9 +9,10 @@
  * stav na mountnutý handler.
  *
  * Snapshot NEUKLÁDÁ user-pref pole `storage_mode`, `user_readonly` - ta jsou
- * v INI a obnovují se při init. `fs_readonly` se taky neukládá (runtime detect
- * při mount). Memory buffer image obsahu se neukládá (dirty RAM změny se
- * snapshot save+load ztrácí, stejné chování jako FDC).
+ * v INI a obnovují se při init. `fs_readonly` ani `external_qd` se také
+ * neukládají (runtime detekce při mountu). Memory buffer image obsahu se
+ * neukládá (dirty RAM změny se snapshot save+load ztrácí, stejné chování jako
+ * FDC).
  *
  * Backward compat: pole `readonly` a `filename` jsou nová (Fáze 4). Starý
  * snapshot bez těchto klíčů projde loadem - `snapshot_xml_read_*` vrátí
@@ -131,7 +132,15 @@ static en_SNAPSHOT_RESULT snap_qdisk_load(st_SNAPSHOT_CONTEXT *ctx)
      * neukládají (jsou v INI / runtime detect). */
     int rdo;
     if (snapshot_xml_read_int(r, "readonly", &rdo)) {
-        g_qdisk.readonly = rdo;
+        /* Runtime filesystem and user protection reconstructed by mount must
+         * remain authoritative even when an older snapshot says writable. */
+        g_qdisk.readonly = (rdo || g_qdisk.user_readonly || g_qdisk.fs_readonly) ? 1 : 0;
+        if (g_qdisk.readonly) g_qdisk.status |= QDSTS_IMG_READONLY;
+        else g_qdisk.status &= ~QDSTS_IMG_READONLY;
+        if (g_qdisk.handler_valid) {
+            generic_driver_set_handler_readonly_status(&g_qdisk.handler,
+                                                       g_qdisk.readonly);
+        }
     }
     char *fname = NULL;
     if (snapshot_xml_read_string(r, "filename", &fname)) {

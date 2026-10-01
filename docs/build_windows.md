@@ -89,6 +89,18 @@ Compile the program:
 make
 ```
 
+From a regular Windows PowerShell (including the integrated terminal used by
+Codex or VS Code), use the checked-in wrapper instead. It supplies the native
+Windows `PATH` required by GCC child processes and uses the UCRT64 toolchain:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\windows-dev.ps1 -Action Build
+powershell -ExecutionPolicy Bypass -File .\tools\windows-dev.ps1 -Action Run
+```
+
+Use `-BuildType Release`, `-Target mz1500emu` (or another emulator target),
+and `-Action Test` as needed. The default is a Debug build of `mz800emu`.
+
 The build system automatically uses all available CPU cores for parallel compilation.
 
 By default, `make` builds all supported targets (`mz800emu` and `mz1500emu`). You can also build a specific target:

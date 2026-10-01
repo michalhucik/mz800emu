@@ -1,5 +1,6 @@
 *~
 /.vscode
+/cdl-export
 
 # Binaries
 mz800emu.exe
@@ -58,3 +59,4 @@ mz700emu-ntsc.exe
 # *.tap
 # *.wav
 # *.mzs
+tools/windows-dev.ps1

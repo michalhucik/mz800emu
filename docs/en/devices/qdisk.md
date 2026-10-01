@@ -5,7 +5,7 @@ ports 0xF4-0xF7. The mz800new emulator supports three modes:
 
 | Mode     | Description                                                                   |
 |----------|-------------------------------------------------------------------------------|
-| IMAGE    | classic .MZQ image of a QD disk (typically 64 kB usable, max ~92 kB)          |
+| IMAGE    | logical `.MZQ` or physical `.qd` QuickDisk image                              |
 | VIRTUAL  | a directory with .MZF files, dynamically presented as QD content              |
 | UNICARD  | image managed by UNICARD FW (read-only from the emulator's perspective)       |
 
@@ -13,13 +13,22 @@ IMAGE and UNICARD run through the abstraction over the memory driver
 and file driver - the same mechanism as FDC. VIRTUAL mode has a
 separate I/O path.
 
+IMAGE automatically detects legacy Sharp logical `.qd`, HxC `HXCQDDRV`,
+and FlashFloppy physical `.qd` images. A physical image is decoded into an
+internal logical working buffer when mounted. Saving rebuilds the original
+container type; FlashFloppy output uses the canonical QDF/qdf2qd MFM layout
+starting at offset `0x3A90`, so it remains usable on a real MZ-800. The
+**Create New Image** dialog can create `.mzq` and all three `.qd` variants.
+A new `.qd` entered as a previously non-existent file in the mount dialog is
+FlashFloppy physical by default; legacy and HxC require an explicit format choice.
+
 ## Storage mode (IMAGE / UNICARD)
 
 The choice is persisted in the INI key `mz1f11_storage_mode`.
 
 | Mode    | What happens                                                              |
 |---------|---------------------------------------------------------------------------|
-| CACHED  | The entire .MZQ image is loaded into RAM (memory driver). Changes are    |
+| CACHED  | The entire image is loaded into RAM (memory driver). Changes are         |
 |         | kept in the RAM buffer; they are written to the file only on motor-off, |
 |         | umount, emu exit or manual "Save now". Default. Low I/O overhead, risk  |
 |         | of loss on crash.                                                         |
@@ -29,6 +38,12 @@ The choice is persisted in the INI key `mz1f11_storage_mode`.
 |         | in the RAM buffer. On motor-off / close / exit NOTHING is written back. |
 |         | For test runs without modifying the source file. The "Save now" button  |
 |         | can do a one-off force-save even in this mode.                            |
+
+Physical `.qd` images always use an internal RAM buffer because individual
+logical SIO bytes cannot be written directly into an MFM container. DIRECT
+mode is therefore disabled in the UI for a mounted `.qd`; CACHED rewrites a
+complete validated container at synchronization points, while DISCARD leaves
+the source file unchanged.
 
 ### Switching storage mode at runtime
 
@@ -98,7 +113,7 @@ The QD subsystem snapshot saves:
 - informational info: `filename`, effective `readonly`
 
 **What is NOT saved:**
-- Memory buffer content of the .MZQ image (= analogous to FDC: dirty
+- Memory buffer content of the `.MZQ`/`.qd` image (= analogous to FDC: dirty
   RAM changes are **lost** on snapshot save+load; we recommend a manual
   "Save now" before snapshot save if you have CACHED + dirty)
 - User INI settings (`storage_mode`, `user_readonly`) - INI is the
@@ -116,7 +131,7 @@ state to the mounted handler.
 - **No per-drive structure** - QD is physically a single drive; a
   second disk cannot be mounted (unlike FDC, which has two drive slots
   A/B).
-- **Memory buffer of .MZQ is not persisted in the snapshot** - see
+- **Memory buffer of `.MZQ`/`.qd` is not persisted in the snapshot** - see
   above.
 
 ## INI keys reference
@@ -125,7 +140,7 @@ state to the mounted handler.
 |-------------------------------|---------|----------|-------------------------------------|
 | `mz1f11_connected`            | BOOL    | 0        | QD subsystem enabled                |
 | `mz1f11_type`                 | INT     | 0        | 0=IMAGE, 1=VIRTUAL, 2=UNICARD       |
-| `mz1f11_std_filepath`         | TEXT    | ""       | Path to the .MZQ image              |
+| `mz1f11_std_filepath`         | TEXT    | ""       | Path to an `.MZQ` or `.qd` image    |
 | `mz1f11_virt_dirpath`         | TEXT    | ""       | Path to the directory with .MZF files |
 | `mz1f11_write_protected`      | BOOL    | 0        | user_readonly                       |
 | `mz1f11_storage_mode`         | TEXT    | "cached" | "cached" / "direct" / "discard"     |

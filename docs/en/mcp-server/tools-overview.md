@@ -1808,13 +1808,14 @@ Returns: `{"ok": true, "action": "eject"}`.
 
 ### `emu_cmt_record` (sensitive)
 
-Start recording the real cassette output to a WAV file. Recording
+Start recording the real cassette output to WAV, LEP, or L16. Recording
 starts paused; call `emu_cmt_pause(paused=False)` to begin capturing.
-Only WAV output is supported. Requires the tape to be in the STOP
-state and the path to be writable.
+The filename extension selects the format (`.lep` uses 50 us units,
+`.l16` uses 16 us units); no extension defaults to WAV. Requires the
+tape to be in the STOP state and the path to be writable.
 
 Args:
-- `path` (required): target WAV file path (must be writable).
+- `path` (required): target `.wav`, `.lep`, or `.l16` path (must be writable).
 
 Returns: `{"ok": true, "path": "<path>"}`. Fails (`error`) on bad state
 or a path that is not writable.
@@ -1837,7 +1838,7 @@ emu_media_insert(slot="cmt", path="game.mzf")  # source tape
 emu_cmt_record(path="out.wav")     # arm recording (starts paused)
 emu_cmt_pause(paused=False)        # begin capturing
 # ... run the program ...
-emu_cmt_stop()                     # finish, flush WAV
+emu_cmt_stop()                     # finish and flush the selected format
 ```
 
 ### `emu_cmt_set_speed` (sensitive)

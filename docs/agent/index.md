@@ -16,7 +16,7 @@ Read individual topics on demand via `resources/read`.
 | `emulator://docs/eventlog_mask` | EventLog 64-bit category mask: bit assignments per `en_EVENTLOG_CATEGORY`, common mask recipes ("memory writes only", "IRQ only"), how to pass via `emu_eventlog_set_mask`. |
 | `emulator://docs/sharp_display_code` | Sharp MZ ASCII vs display code vs standard ASCII. Mapping tables, inverse video, decoding `emulator://video/text_dump`. |
 | `emulator://docs/mz800_keyboard` | Sharp MZ-800 keyboard: physical layout, per-key matrix position + emitted characters, modifiers (SHIFT / CTRL / GRAPH / ALPHA), the four character layers, canonical key names for the `emu_input_send_keys` injection tool, recipes for typing graphics / semigraphics. MZ-700 / MZ-1500 as a diff (no TAB, longer ALPHA). |
-| `emulator://docs/cmt_workflow` | CMT cassette workflow: real tape (`emu_cmt_*`) vs cmthack instant load, transport flow, WAV recording, speed ratios / polarity / cpu boost / mzfsize check, SIMPLE_TAPE multi-block seek + per-block speed. Cross-refs `emulator://periph/cmt` and `emulator://periph/cmt/tape`. |
+| `emulator://docs/cmt_workflow` | CMT cassette workflow: real tape (`emu_cmt_*`) vs cmthack instant load, transport flow, WAV/LEP/L16 recording, speed ratios / polarity / cpu boost / mzfsize check, SIMPLE_TAPE multi-block seek + per-block speed. Cross-refs `emulator://periph/cmt` and `emulator://periph/cmt/tape`. |
 
 ## When to read what
 

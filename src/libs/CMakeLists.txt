@@ -52,6 +52,7 @@ mz_add_lib(mzlib_mz_vcode         SOURCES mz_vcode/mz_vcode.c)
 mz_add_lib(mzlib_mzglyphs         SOURCES mzglyphs/mzglyphs.c)
 mz_add_lib(mzlib_wav              SOURCES wav/wav.c
                                   DEPS    mz::glib)
+mz_add_lib(mzlib_qd_image         SOURCES qd_image/qd_image.c)
 
 mz_add_lib(mzlib_cfgfile          SOURCES cfgfile/cfgelement.c
                                           cfgfile/cfgmodule.c
@@ -194,6 +195,7 @@ target_link_libraries(mz_libs INTERFACE
     mzlib_mz_vcode
     mzlib_mzglyphs
     mzlib_wav
+    mzlib_qd_image
     mzlib_cfgfile
     mzlib_cmt_stream
     mzlib_cmtspeed
