@@ -36,6 +36,7 @@ typedef struct baseui_fchooser_t
     char *filePathName; // cesta a nazev souboru
     char *selected_filePathName;
     char *selected_path;
+    char *selected_filter; // zobrazovaný název zvoleného filtru
     BaseuiFchooserCb cb;
     gpointer user_data;
     GMutex mutex;

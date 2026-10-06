@@ -192,6 +192,51 @@ void imgui_cmt_stream_info(st_CMTEXT_BLOCK *block, char **value_stream, char **v
     };
 }
 
+/*
+ * LEP/L16 jsou edge/timebase formáty. Interně zůstávají reprezentované jako
+ * VSTREAM s rate 20 kHz (LEP) / 62.5 kHz (L16), protože to přesně odpovídá
+ * jednotce 50 us / 16 us. V UI ale tento údaj není "sample rate" jako u WAV.
+ *
+ * Vrací "LEP" nebo "L16" a příslušný timebase v mikrosekundách.
+ * Pro ostatní formáty vrací NULL.
+ */
+static const char *imgui_cmt_edge_format(unsigned *timebase_us)
+{
+    if (timebase_us)
+        *timebase_us = 0;
+
+    if (!g_cmt.ext)
+        return NULL;
+
+    st_CMTEXT_CONTAINER *container = cmtext_get_container(g_cmt.ext);
+    if (!container)
+        return NULL;
+
+    const char *filepath = cmtext_container_get_filepath(container);
+    if (!filepath)
+        return NULL;
+
+    const char *ext = cmtext_get_filename_extension(filepath);
+    if (!ext)
+        return NULL;
+
+    if (g_ascii_strcasecmp(ext, "lep") == 0)
+    {
+        if (timebase_us)
+            *timebase_us = 50;
+        return "LEP";
+    }
+
+    if (g_ascii_strcasecmp(ext, "l16") == 0)
+    {
+        if (timebase_us)
+            *timebase_us = 16;
+        return "L16";
+    }
+
+    return NULL;
+}
+
 void imgui_tape_info_table(void)
 {
     if (ImGui::BeginTable("TapeInfoTable", 7, ImGuiTableFlags_NoBordersInBody | ImGuiTableFlags_SizingStretchProp))
@@ -233,6 +278,9 @@ void imgui_tape_info_table(void)
             // total blocks
             values[0][1] = g_strdup_printf("%02d", total_blocks);
 
+            unsigned edge_timebase_us = 0;
+            const char *edge_format = imgui_cmt_edge_format(&edge_timebase_us);
+
             if ((EXIT_SUCCESS == cmtext_is_playable(g_cmt.ext)) && (g_cmt.playsts != CMTEXT_BLOCK_PLAYSTS_PAUSE))
             {
                 char buff[100];
@@ -267,8 +315,9 @@ void imgui_tape_info_table(void)
                     break;
 
                 case CMTEXT_BLOCK_TYPE_WAV:
-                    // filetype
-                    values[1][0] = g_strdup_printf("WAV");
+                    // LEP/L16 používají pro playback stejný generic stream block
+                    // jako WAV, ale v UI zobrazíme skutečný formát.
+                    values[1][0] = g_strdup_printf("%s", edge_format ? edge_format : "WAV");
                     break;
 
                 case CMTEXT_BLOCK_TYPE_TAPHEADER:
@@ -303,12 +352,34 @@ void imgui_tape_info_table(void)
                 };
 
                 imgui_cmt_stream_info(g_cmt.ext->block, &values[4][0], &values[5][0], &values[5][1]);
+
+                if (edge_format)
+                {
+                    labels[5][0] = _("Timebase");
+
+                    if ((values[5][0] != NULL) && (values[5][0] != default_value))
+                    {
+                        g_free(values[5][0]);
+                    }
+                    values[5][0] = g_strdup_printf("%u \xC2\xB5s", edge_timebase_us);
+                }
             }
             else if (EXIT_SUCCESS == cmtext_is_recordable(g_cmt.ext))
             {
-                // filetype
-                values[1][0] = g_strdup_printf("SAVE");
+                // U LEP/L16 zobrazit konkrétní formát místo obecného SAVE.
+                values[1][0] = g_strdup_printf("%s", edge_format ? edge_format : "SAVE");
                 imgui_cmt_stream_info(g_cmt.ext->block, &values[4][0], &values[5][0], &values[5][1]);
+
+                if (edge_format)
+                {
+                    labels[5][0] = _("Timebase");
+
+                    if ((values[5][0] != NULL) && (values[5][0] != default_value))
+                    {
+                        g_free(values[5][0]);
+                    }
+                    values[5][0] = g_strdup_printf("%u \xC2\xB5s", edge_timebase_us);
+                }
             };
         };
 
@@ -398,7 +469,7 @@ void imgui_cmt_row2_tape_info(void)
         if (ImGui::Button(ICON_IGFD_FILE_LIST_THUMBNAILS))
         {
             g_gui->showVirtualCmtTapeIndexWindow = !g_gui->showVirtualCmtTapeIndexWindow;
-        }
+        };
         ImGui::EndDisabled();
 
         ImGui::EndTable();
@@ -568,7 +639,7 @@ void imgui_cmt_main_controls(CmtGlyphRenderer renderer)
         if (ImGui::Button("##cmt_btn_previous", CMT_BUTTON_SIZE))
         {
             imgui_cmt_button_previous_action();
-        }
+        };
         renderer.drawPrevious();
         ImGui::EndDisabled();
 
@@ -578,7 +649,7 @@ void imgui_cmt_main_controls(CmtGlyphRenderer renderer)
         if (ImGui::Button("##cmt_btn_backward", CMT_BUTTON_SIZE))
         {
             g_print("Button backward clicked\n");
-        }
+        };
         renderer.drawBackward();
         ImGui::EndDisabled();
 
@@ -588,7 +659,7 @@ void imgui_cmt_main_controls(CmtGlyphRenderer renderer)
         if (ImGui::Button("##cmt_btn_forward", CMT_BUTTON_SIZE))
         {
             g_print("Button forward clicked\n");
-        }
+        };
         renderer.drawForward();
         ImGui::EndDisabled();
 
@@ -598,7 +669,7 @@ void imgui_cmt_main_controls(CmtGlyphRenderer renderer)
         if (ImGui::Button("##cmt_btn_next", CMT_BUTTON_SIZE))
         {
             imgui_cmt_button_next_action();
-        }
+        };
         renderer.drawNext();
         ImGui::EndDisabled();
 
@@ -672,7 +743,7 @@ void imgui_cmt_main_controls(CmtGlyphRenderer renderer)
         ImGui::EndDisabled();
 
         ImGui::EndTable();
-    }
+    };
 }
 
 // Druhá tabulka s 2 řadami a 1 tlačítkem (zarovnaná vpravo)
@@ -710,7 +781,7 @@ void imgui_cmt_side_controls(CmtGlyphRenderer renderer)
         ImGui::EndDisabled();
 
         ImGui::EndTable();
-    }
+    };
 }
 
 void draw_vertical_separator()
@@ -749,7 +820,7 @@ void imgui_cmt_row5_buttons_layout()
         imgui_cmt_side_controls(renderer);
 
         ImGui::EndTable();
-    }
+    };
 }
 
 void imgui_cmt(bool *p_open)

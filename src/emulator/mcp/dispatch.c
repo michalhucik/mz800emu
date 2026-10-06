@@ -9997,10 +9997,10 @@ static en_MCP_DISPATCH_RESULT _handle_cmt_transport(
 }
 
 /**
- * @brief `cmt_record` handler - zahájení WAV nahrávání do souboru.
+ * @brief `cmt_record` handler - zahájení WAV/LEP/L16 nahrávání.
  *
  * Forwarduje na DBGAPI_CMD_CMT_RECORD. Vyžaduje string `path` (cílový
- * WAV soubor). Nahrávání startuje v pauze (= klient musí následně
+ * soubor; formát určuje přípona). Nahrávání startuje v pauze (= klient musí následně
  * cmt_transport pause=false pro reálný zápis). Nezapisovatelná cesta
  * nebo špatný stav CMT (= není STOP) -> success=false.
  *

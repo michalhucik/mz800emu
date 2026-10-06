@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <limits.h>
 
 
 #include "baseui/baseui.h"
@@ -38,6 +39,7 @@
 
 
 char *g_cmt_save_fileext[] = {
+                              "wav",
                               NULL
 };
 
@@ -116,6 +118,25 @@ static st_CMT_STREAM* cmtsave_stream_new ( int value ) {
 }
 
 
+static uint64_t cmtsave_ticks_to_samples ( uint64_t ticks, uint32_t rate, int *ok ) {
+    const uint64_t base = (uint64_t) GDGCLK_BASE;
+    if ( ok ) *ok = 0;
+    if ( rate == 0 || base == 0 ) return 0;
+
+    uint64_t quotient = ticks / base;
+    uint64_t remainder = ticks % base;
+    if ( quotient > UINT64_MAX / rate ) return 0;
+
+    uint64_t samples = quotient * rate;
+    uint64_t fraction = remainder * (uint64_t) rate;
+    uint64_t rounded = ( fraction + base / 2u ) / base;
+    if ( samples > UINT64_MAX - rounded ) return 0;
+
+    if ( ok ) *ok = 1;
+    return samples + rounded;
+}
+
+
 static st_CMTEXT_BLOCK* cmtsave_block_open ( char *filename ) {
 
     printf ( "%s\nOpen: %s\n", cmtext_get_description ( g_cmt_save ), filename );
@@ -181,23 +202,48 @@ static void cmtsave_write_data ( uint64_t play_ticks, int value ) {
         if ( !stream ) return;
         block->stream = stream;
         blspec->last_event = ( play_ticks > GDGCLK_BASE ) ? ( play_ticks - GDGCLK_BASE ) : 0;
+        blspec->quantization_start = blspec->last_event;
     };
 
-    uint32_t count_ticks = play_ticks - blspec->last_event;
-    double ratecnv = (double) GDGCLK_BASE / cmt_stream_get_rate ( stream );
-    uint32_t count_samples = round ( (double) count_ticks / ratecnv );
+    if ( play_ticks <= blspec->last_event ) return;
 
-    //printf ( "SAVE: %d - %d - %d\n", value, count_ticks, count_samples );
+    /*
+     * WAV uses a continuous sample clock.  Quantize the absolute elapsed
+     * emulator time to a target sample position and emit only the difference
+     * from samples already written.  Per-edge rounding error is therefore
+     * carried into following intervals instead of accumulating as drift.
+     */
+    int ok = 0;
+    uint64_t elapsed_ticks = play_ticks - blspec->quantization_start;
+    uint64_t target_samples = cmtsave_ticks_to_samples (
+        elapsed_ticks, cmt_stream_get_rate ( stream ), &ok );
+    if ( !ok ) return;
+
+    uint64_t count_samples;
+    uint64_t next_emitted_samples;
+    if ( target_samples > blspec->emitted_samples ) {
+        count_samples = target_samples - blspec->emitted_samples;
+        next_emitted_samples = target_samples;
+    } else {
+        if ( blspec->emitted_samples == UINT64_MAX ) return;
+        count_samples = 1;
+        next_emitted_samples = blspec->emitted_samples + 1u;
+    };
+    if ( count_samples > UINT32_MAX ) return;
+
+    //printf ( "SAVE: %d - %llu\n", value, (unsigned long long) count_samples );
 
     if ( stream->stream_type == CMT_STREAM_TYPE_VSTREAM ) {
         st_CMT_VSTREAM *vstream = stream->str.vstream;
-        cmt_vstream_add_value ( vstream, value, count_samples );
+        if ( EXIT_SUCCESS != cmt_vstream_add_value (
+                vstream, value, (uint32_t) count_samples ) ) return;
     } else if ( stream->stream_type == CMT_STREAM_TYPE_BITSTREAM ) {
         printf ( "%s(): %d - Bitstream is not implemented\n", __func__, __LINE__ );
     } else {
         printf ( "%s(): %d - Unsupported stream type %d\n", __func__, __LINE__, stream->stream_type );
     };
 
+    blspec->emitted_samples = next_emitted_samples;
     blspec->last_event = play_ticks;
 }
 

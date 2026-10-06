@@ -40,6 +40,8 @@ extern "C" {
     typedef struct st_CMTSAVE_BLOCKSPEC {
         char *filepath;
         uint64_t last_event;
+        uint64_t quantization_start;
+        uint64_t emitted_samples;
     } st_CMTSAVE_BLOCKSPEC;
 
 
@@ -53,4 +55,3 @@ extern "C" {
 #endif
 
 #endif /* CMT_SAVE_H */
-

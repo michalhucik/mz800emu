@@ -1913,13 +1913,14 @@ Returns: `{"ok": true, "action": "eject"}`.
 
 ### `emu_cmt_record` (sensitive)
 
-Spustí nahrávání výstupu reálné kazety do WAV souboru. Nahrávání
+Spustí nahrávání výstupu reálné kazety do WAV, LEP nebo L16. Nahrávání
 startuje v pauze; pro zahájení záznamu volej
-`emu_cmt_pause(paused=False)`. Podporován je jen WAV výstup. Vyžaduje
-stav pásky STOP a zapisovatelnou cestu.
+`emu_cmt_pause(paused=False)`. Formát určuje přípona (`.lep` používá
+jednotky 50 us, `.l16` jednotky 16 us); bez přípony se použije WAV.
+Vyžaduje stav pásky STOP a zapisovatelnou cestu.
 
 Args:
-- `path` (required): cílová cesta WAV souboru (musí být zapisovatelná).
+- `path` (required): cílová cesta `.wav`, `.lep` nebo `.l16` (musí být zapisovatelná).
 
 Returns: `{"ok": true, "path": "<path>"}`. Selže (`error`) při špatném
 stavu nebo nezapisovatelné cestě.
@@ -1942,7 +1943,7 @@ emu_media_insert(slot="cmt", path="game.mzf")  # zdrojová páska
 emu_cmt_record(path="out.wav")     # arm nahrávání (startuje v pauze)
 emu_cmt_pause(paused=False)        # zahaj záznam
 # ... spusť program ...
-emu_cmt_stop()                     # ukonči, flush WAV
+emu_cmt_stop()                     # ukonči a zapiš zvolený formát
 ```
 
 ### `emu_cmt_set_speed` (sensitive)

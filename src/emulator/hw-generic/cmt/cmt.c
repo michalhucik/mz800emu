@@ -29,7 +29,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
-#include <strings.h>
 #include <glib.h>
 #include <assert.h>
 
@@ -507,12 +506,7 @@ static void cmt_ui_record_cb(baseui_fchooser_t *fch)
     fch->selected_filePathName = NULL;
     baseui_filechooser_destroy(fch);
 
-    const char *fileext = baseui_filechooser_get_extension_ptr(filepath);
-    if (fileext != NULL)
-    {
-        if (0 != strcasecmp(fileext, ".wav"))
-            fileext = NULL;
-    };
+    const char *fileext = cmtext_get_filename_extension(filepath);
 
     if (fileext == NULL)
     {
@@ -551,7 +545,14 @@ static void cmt_ui_record_cb(baseui_fchooser_t *fch)
         };
     };
 
-    st_CMTEXT *ext = cmtext_get_recording_extension();
+    st_CMTEXT *ext = cmtext_get_recording_extension_for_filename(filepath);
+    if (!ext)
+    {
+        baseui_error("Unknown CMT recording file extension '%s'\n", filepath);
+        baseui_tools_mem_free(filepath);
+        ui_cmt_window_update();
+        return;
+    };
 
     if (EXIT_SUCCESS != ext->cb_open(filepath))
     {
@@ -579,7 +580,7 @@ void cmt_ui_record(void)
     if (!CMT_TEST_FILLED)
     {
 
-        baseui_fchooser_t *fch = baseui_filechooser_save_file(_("Create a new WAV file"), ".wav", NULL, NULL, _("newfile.wav"), cmt_ui_record_cb, NULL);
+        baseui_fchooser_t *fch = baseui_filechooser_save_file(_("Create a new CMT recording"), ".wav,.lep,.l16", NULL, NULL, _("newfile.wav"), cmt_ui_record_cb, NULL);
         if (!fch)
         {
             fprintf(stderr, "%s(%d): filechooser error\n", __FILE__, __LINE__);
@@ -592,12 +593,12 @@ void cmt_ui_record(void)
 }
 
 /**
- * @brief Non-UI vstupní bod pro zahájení nahrávání do WAV souboru.
+ * @brief Non-UI vstupní bod pro zahájení nahrávání do CMT souboru.
  *
  * Spustí RECORD bez file dialogu (= ekvivalent cmt_ui_record minus
  * baseui_filechooser). Určeno pro programové ovládání (MCP server,
- * testy). Output formát je WAV (= recording extension vrácená
- * cmtext_get_recording_extension).
+ * testy). Formát určuje přípona .wav, .lep nebo .l16; bez přípony se
+ * zachovává výchozí WAV.
  *
  * Sekvence zrcadlí cmt_ui_record + cmt_ui_record_cb:
  *   1. Pokud CMT není ve STOP, nahrávání nelze zahájit (= EXIT_FAILURE).
@@ -611,7 +612,7 @@ void cmt_ui_record(void)
  * shodně s UI variantou. Pro reálný zápis dat musí klient následně
  * zrušit pauzu (cmt_pause(0)).
  *
- * @param path Cesta k cílovému WAV souboru. Nesmí být NULL/prázdná.
+ * @param path Cesta k cílovému souboru. Nesmí být NULL/prázdná.
  *             Funkce parametr nemodifikuje (cast na char* kvůli legacy
  *             signatuře cb_open).
  * @return EXIT_SUCCESS při úspěšném zahájení nahrávání, jinak
@@ -631,8 +632,18 @@ int cmt_record_to_file(const char *path)
     if (!CMT_TEST_STOP)
         return EXIT_FAILURE;
 
-    /* Pokud je nahrán obraz, do kterého nelze nahrávat, vysunout ho. */
-    if ((CMT_TEST_FILLED) && (EXIT_SUCCESS != cmtext_is_recordable(g_cmt.ext)))
+    st_CMTEXT *ext = cmtext_get_recording_extension_for_filename(path);
+    if (!ext)
+    {
+        baseui_error("Unknown CMT recording file extension '%s'\n", path);
+        return EXIT_FAILURE;
+    };
+
+    /* Jiný recorder nebo jiná cílová cesta musí být znovu otevřeny. */
+    if (CMT_TEST_FILLED &&
+        (EXIT_SUCCESS != cmtext_is_recordable(g_cmt.ext) ||
+         g_cmt.ext != ext ||
+         strcmp(cmtext_container_get_filepath(g_cmt.ext->container), path) != 0))
     {
         cmt_eject();
     };
@@ -661,9 +672,6 @@ int cmt_record_to_file(const char *path)
         return EXIT_FAILURE;
     };
     baseui_tools_file_close(wtst);
-
-    /* Otevřít recording extension nad cílovou cestou. */
-    st_CMTEXT *ext = cmtext_get_recording_extension();
 
     if (EXIT_SUCCESS != ext->cb_open((char *) path))
     {
@@ -803,9 +811,9 @@ void cmt_init(void)
     cmtext_init();
 
     GString *gs = g_string_new(0);
-    g_string_append_printf(gs, "%s{.mzf,.m12,.mzt,.tap,.wav,.wave}", _("All Supported CMT Files"));
+    g_string_append_printf(gs, "%s{.mzf,.m12,.mzt,.tap,.wav,.wave,.lep,.l16}", _("All Supported CMT Files"));
     g_string_append_printf(gs, ", %s{.mzt,.tap}", _("Tape Files"));
-    g_string_append_printf(gs, ", .mzf, .m12, .mzt, .tap, .wav, .wave, .*");
+    g_string_append_printf(gs, ", .mzf, .m12, .mzt, .tap, .wav, .wave, .lep{.lep}, .l16{.l16}, .*");
     g_ui_cmt_filters = g_string_free(gs, FALSE);
 
     ui_cmt_window_update();

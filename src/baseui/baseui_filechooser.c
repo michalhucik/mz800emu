@@ -34,6 +34,11 @@ void baseui_filechooser_destroy(baseui_fchooser_t *fch)
         free(fch->selected_path);
         fch->selected_path = NULL;
     };
+    if (fch->selected_filter != NULL)
+    {
+        free(fch->selected_filter);
+        fch->selected_filter = NULL;
+    };
     if (fch->title != NULL)
     {
         g_free(fch->title);
@@ -109,6 +114,7 @@ static baseui_fchooser_t *baseui_filechooser_create_new(const char *title, const
 
     fch->selected_filePathName = NULL;
     fch->selected_path = NULL;
+    fch->selected_filter = NULL;
     fch->cb = cb;
     fch->user_data = user_data;
     fch->type = type;

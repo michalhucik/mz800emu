@@ -98,7 +98,7 @@ file-based, žádný transport call).
 | `emulator://docs/eventlog_mask` | EventLog 64-bit category mask - bit assignments + recipes |
 | `emulator://docs/sharp_display_code` | Sharp MZ ASCII vs display code vs std ASCII (decode `video/text_dump` + `mzascii` watch) |
 | `emulator://docs/mz800_keyboard` | Klávesnice MZ-800 - layout, matice, modifikátory, znakové vrstvy, jména kláves pro `emu_input_send_keys`, recepty na speciální znaky (MZ-700/1500 jako diff) |
-| `emulator://docs/cmt_workflow` | CMT workflow - reálná páska vs cmthack, transport, WAV recording, rychlostní poměry, SIMPLE_TAPE multi-blok seek + per-blok speed |
+| `emulator://docs/cmt_workflow` | CMT workflow - reálná páska vs cmthack, transport, WAV/LEP/L16 recording, rychlostní poměry, SIMPLE_TAPE multi-blok seek + per-blok speed |
 
 AI klient by měl číst `emulator://docs/index` jako první - poskytne
 přehled co se kde nachází a kdy to číst.

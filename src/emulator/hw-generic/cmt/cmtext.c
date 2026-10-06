@@ -38,13 +38,16 @@
 #include "cmt_mzftape.h"
 #include "cmt_tap.h"
 #include "cmt_save.h"
+#include "cmt_edge.h"
 
 st_CMTEXT *g_cmtext[] = {
                          &g_cmt_wav_extension,
+                         &g_cmt_edge_extension,
                          &g_cmt_mzf_extension,
                          &g_cmt_mzftape_extension,
                          &g_cmt_tap_extension,
                          &g_cmt_save_extension,
+                         &g_cmt_edge_save_extension,
                          NULL
 };
 
@@ -72,6 +75,7 @@ void cmtext_exit ( void ) {
 
 
 const char* cmtext_get_filename_extension ( const char *filename ) {
+    if ( !filename || !filename[0] ) return NULL;
     int end_pos = strlen ( filename ) - 1;
     int pos = end_pos;
     while ( pos ) {
@@ -112,6 +116,25 @@ st_CMTEXT* cmtext_get_recording_extension ( void ) {
     for ( i = 0; i < g_count_extensions; i++ ) {
         if ( ( g_cmtext[i]->info == NULL ) || ( !( g_cmtext[i]->info->type & CMTEXT_TYPE_RECORDABLE ) ) ) continue;
         return g_cmtext[i];
+    };
+    return NULL;
+}
+
+
+st_CMTEXT* cmtext_get_recording_extension_for_filename ( const char *filename ) {
+    const char *file_ext = cmtext_get_filename_extension ( filename );
+    if ( !file_ext ) return cmtext_get_recording_extension ( );
+
+    int i;
+    for ( i = 0; i < g_count_extensions; i++ ) {
+        if ( ( g_cmtext[i]->info == NULL ) ||
+             ( !( g_cmtext[i]->info->type & CMTEXT_TYPE_RECORDABLE ) ) ||
+             ( g_cmtext[i]->info->fileext == NULL ) ) continue;
+        char **valid_fileexts = g_cmtext[i]->info->fileext;
+        int j = 0;
+        while ( valid_fileexts[j] != NULL ) {
+            if ( 0 == strcasecmp ( file_ext, valid_fileexts[j++] ) ) return g_cmtext[i];
+        };
     };
     return NULL;
 }

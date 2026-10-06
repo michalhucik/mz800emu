@@ -313,9 +313,11 @@ void imgui_file_chooser_window(void)
         {
             std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
             std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+            std::string currentFilter = ImGuiFileDialog::Instance()->GetCurrentFilter();
             // action
             fch->selected_filePathName = g_strdup(filePathName.c_str());
             fch->selected_path = g_strdup(filePath.c_str());
+            fch->selected_filter = g_strdup(currentFilter.c_str());
             fch->state = BASEUI_FCHOOSER_STATE_CLOSED_OK;
         }
         else
@@ -351,6 +353,7 @@ void imgui_filechooser_new(baseui_fchooser_t *fch)
 
     fch->selected_filePathName = NULL;
     fch->selected_path = NULL;
+    fch->selected_filter = NULL;
 
     // Pokud jiz exisuje bezici dialog, tak vratime error
     if (ImGuiFileDialog::Instance()->IsOpened("ChooseFileDlgKey"))

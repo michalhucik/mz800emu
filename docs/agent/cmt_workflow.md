@@ -34,11 +34,8 @@ To load from the virtual tape there, turn the patch off first
 
 1. Load an image:
    - `emu_cmt_open(path, play_immediately=false)` - CMT-specific open by
-     file extension (.mzf / .mzt / .wav / ...). With
-     `play_immediately=true` it starts playback in one step. The result
-     reports the actual transport state after the call (`playing`,
-     `state`, `paused`), not the request; if playback was requested but
-     did not start, it also carries `warning`.
+     file extension (.mzf / .mzt / .wav / .lep / .l16 / ...). With
+     `play_immediately=true` it starts playback in one step.
    - or the generic `emu_media_insert(slot="cmt", path=...)`.
 2. Start the tape: `emu_cmt_play` (or `emu_cmt_play_paused` to arm it
    suspended).
@@ -51,11 +48,12 @@ Transport state is in `emulator://periph/cmt`: `state`
 `output` (current bit on the PIO line). `state` and `paused` are
 orthogonal: PLAY + paused=true means playback is suspended.
 
-## Recording (WAV only)
+## Recording (WAV / LEP / L16)
 
-1. `emu_cmt_record(path)` - opens `path` as a WAV file and arms
-   recording. The tape must be in STOP and the path must be writable.
-   Recording is WAV output only; no other format is supported.
+1. `emu_cmt_record(path)` - opens `path` and arms recording. The filename
+   extension selects WAV, LEP (50 us units), or L16 (16 us units); a path
+   without an extension defaults to WAV. An unknown extension is rejected.
+   The tape must be in STOP and the path must be writable.
 2. Recording starts paused. Call `emu_cmt_pause(paused=false)` to begin
    capturing the signal the program writes to the cassette output.
 3. `emu_cmt_stop` to finish.

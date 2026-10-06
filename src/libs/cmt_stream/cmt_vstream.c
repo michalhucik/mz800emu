@@ -86,9 +86,10 @@ st_CMT_VSTREAM* cmt_vstream_new ( uint32_t rate, en_CMT_VSTREAM_BYTELENGTH min_b
     stream->start_value = value & 1;
     stream->polarity = polarity;
 
-    stream->data = baseui_tools_mem_alloc0 ( min_byte_length );
+    stream->capacity = 64;
+    stream->data = baseui_tools_mem_alloc0 ( stream->capacity );
     if ( !stream->data ) {
-        fprintf ( stderr, "%s():%d: Error: can't allocate memory (%u B).\n", __func__, __LINE__, (unsigned) min_byte_length );
+        fprintf ( stderr, "%s():%d: Error: can't allocate memory (%u B).\n", __func__, __LINE__, stream->capacity );
         cmt_vstream_destroy ( stream );
         return NULL;
     }
@@ -120,6 +121,31 @@ static inline uint32_t cmt_vstream_get_last_event ( st_CMT_VSTREAM *cmt_vstream 
 }
 
 
+/* Geometrický růst zabraňuje realokaci a kopírování celé datové oblasti
+ * při každé hraně. Logická velikost streamu zůstává v poli size. */
+static int cmt_vstream_ensure_capacity ( st_CMT_VSTREAM *stream, uint32_t needed ) {
+    if ( needed <= stream->capacity ) return EXIT_SUCCESS;
+
+    uint32_t capacity = stream->capacity ? stream->capacity : 64;
+    while ( capacity < needed ) {
+        if ( capacity > UINT32_MAX / 2 ) {
+            capacity = needed;
+            break;
+        }
+        capacity *= 2;
+    }
+
+    uint8_t *data = baseui_tools_mem_realloc ( stream->data, capacity );
+    if ( !data ) {
+        fprintf ( stderr, "%s():%d: Error: can't allocate memory (%u B).\n", __func__, __LINE__, capacity );
+        return EXIT_FAILURE;
+    }
+    stream->data = data;
+    stream->capacity = capacity;
+    return EXIT_SUCCESS;
+}
+
+
 /*
  * Zapíše délku posledního eventu (od konce datové oblasti).
  * Pokud hodnota přesáhne kapacitu aktuální šířky, automaticky
@@ -135,9 +161,7 @@ static inline int cmt_vstream_set_last_event ( st_CMT_VSTREAM *cmt_vstream, uint
             return EXIT_SUCCESS;
         } else {
             cmt_vstream->data[pos] = 0xff;
-            cmt_vstream->data = baseui_tools_mem_realloc ( cmt_vstream->data, cmt_vstream->size + sizeof ( uint16_t ) );
-            if ( !cmt_vstream->data ) {
-                fprintf ( stderr, "%s():%d: Error: can't allocate memory (%u B).\n", __func__, __LINE__, cmt_vstream->size + (uint32_t) sizeof ( uint16_t ) );
+            if ( EXIT_SUCCESS != cmt_vstream_ensure_capacity ( cmt_vstream, cmt_vstream->size + sizeof ( uint16_t ) ) ) {
                 return EXIT_FAILURE;
             }
             cmt_vstream->last_event_byte_length = sizeof ( uint16_t );
@@ -153,9 +177,7 @@ static inline int cmt_vstream_set_last_event ( st_CMT_VSTREAM *cmt_vstream, uint
             return EXIT_SUCCESS;
         } else {
             cmt_vstream_write_u16 ( cmt_vstream->data, pos, (uint16_t) 0xffff );
-            cmt_vstream->data = baseui_tools_mem_realloc ( cmt_vstream->data, cmt_vstream->size + sizeof ( uint32_t ) );
-            if ( !cmt_vstream->data ) {
-                fprintf ( stderr, "%s():%d: Error: can't allocate memory (%u B).\n", __func__, __LINE__, cmt_vstream->size + (uint32_t) sizeof ( uint32_t ) );
+            if ( EXIT_SUCCESS != cmt_vstream_ensure_capacity ( cmt_vstream, cmt_vstream->size + sizeof ( uint32_t ) ) ) {
                 return EXIT_FAILURE;
             }
             cmt_vstream->last_event_byte_length = sizeof ( uint32_t );
@@ -199,9 +221,7 @@ int cmt_vstream_add_value ( st_CMT_VSTREAM *cmt_vstream, int value, uint32_t cou
     }
 
     /* jiná hodnota — nový event */
-    cmt_vstream->data = baseui_tools_mem_realloc ( cmt_vstream->data, cmt_vstream->size + cmt_vstream->min_byte_length );
-    if ( !cmt_vstream->data ) {
-        fprintf ( stderr, "%s():%d: Error: can't allocate memory (%u B).\n", __func__, __LINE__, cmt_vstream->size + (uint32_t) cmt_vstream->min_byte_length );
+    if ( EXIT_SUCCESS != cmt_vstream_ensure_capacity ( cmt_vstream, cmt_vstream->size + cmt_vstream->min_byte_length ) ) {
         return EXIT_FAILURE;
     }
 
