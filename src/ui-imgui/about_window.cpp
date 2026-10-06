@@ -424,6 +424,25 @@ void imgui_ShowAboutWindow(bool *p_open)
     CenteredText(version->str);
     g_string_free(version, TRUE);
 
+    /* Build ze zdrojů repozitáře NAS1 (vývojové buildy): doplnit větev
+     * a commit, aby šlo build jednoznačně dohledat. Oficiální (GitHub)
+     * a ostatní buildy řádek nemají. Příznak neuložených změn se
+     * připojí ke zkrácenému hashi jako "-dirty" (konvence git describe). */
+    if (build_revision_get_repo_origin() == BUILD_REVISION_ORIGIN_NAS1)
+    {
+        const char *branch = build_revision_is_detached() ? _("detached") : build_revision_get_branch();
+        GString *commit = g_string_new(build_revision_get_commit_short());
+        if (build_revision_is_dirty() == 1)
+        {
+            g_string_append(commit, "-dirty");
+        };
+        GString *source = g_string_new(NULL);
+        g_string_printf(source, _("Source: NAS1 repository, branch %s, commit %s"), branch, commit->str);
+        CenteredText(source->str);
+        g_string_free(source, TRUE);
+        g_string_free(commit, TRUE);
+    };
+
     ImGui::SetWindowFontScale(1.0f);
 
     ImGui::Text("\n");

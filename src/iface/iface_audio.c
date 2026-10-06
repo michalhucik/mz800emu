@@ -19,6 +19,13 @@
 #include "audio.h"
 #include "emulator.h"
 #include "time_profiler.h"
+#include "videorec/videorec.h"
+
+/* Režim podle reality převzorkovává výstup této cesty - musí znát jeho frekvenci a blok
+ * (blok = IFACE_AUDIO_SAMPLE_RATE / VIDEO_SCREENS_PER_SEC: 882 při 50, 735 při 60 snímcích/s;
+ * musí vyjít celý, jinak by se zvuk proti obrazu posouval). */
+G_STATIC_ASSERT(IFACE_AUDIO_SAMPLE_RATE == VIDEOREC_RT_SDL_RATE);
+G_STATIC_ASSERT(IFACE_AUDIO_SAMPLE_RATE % VIDEO_SCREENS_PER_SEC == 0);
 
 #if (LINUX && defined(USE_SDL2) && defined(USE_SDL_AUDIO)) || defined(MZ800EMU_CFG_AUDIO_DISABLED)
 #define AUDIO_SYNC_BY_NSTIMER
@@ -265,6 +272,9 @@ float *iface_audio_wait_for_data(size_t *output_samples_size)
     // time_profiler_stop(profiler);
 
     // iface_audio_debug_save_raw_audio_file("audio.raw", output_samples, *output_samples_size);
+
+    /* Video záznam podle reality: kopie bloku, který jde do reproduktoru (mimo realtime 1 čtení příznaku). */
+    videorec_rt_audio_output(output_samples, output_samples_count);
     return output_samples;
 }
 
@@ -294,6 +304,26 @@ void iface_audio_set_src_volume(int id, int volume)
 #endif /* MZ800EMU_CFG_AUDIO_DISABLED */
 }
 
+void iface_audio_build_videorec_levels(float level[][VIDEOREC_AUDIO_LEVELS], unsigned channels)
+{
+    /* Střední zesílení převzorkování CTC0 v SDL cestě (podíl nenulových / (délka bloku + 1)),
+     * stejné rozměry bloků jako iface_audio_wait_for_data(). */
+    float ctc0_gain = videorec_audio_sdl_ctc0_gain(IFACE_AUDIO_CTC5253_SAMPLE_RATE / VIDEO_SCREENS_PER_SEC,
+                                                   IFACE_AUDIO_SAMPLE_RATE / VIDEO_SCREENS_PER_SEC);
+    for (unsigned ch = 0; ch < channels && ch < AUDIO_SRC_CHANNELS_COUNT; ch++)
+    {
+        for (unsigned v = 0; v < VIDEOREC_AUDIO_LEVELS; v++)
+        {
+            if (ch == 0)
+                /* CTC0: SDL cesta počítá podíl nenulových vzorků => 0 / zesílení bloku */
+                level[ch][v] = (v ? ctc0_gain : 0.0f) * g_iface_audio.gain[0];
+            else
+                /* PSG: hlasitostní tabulka + gain, průměr přes 4 kanály jako iface_audio_mix_channels_with_gain() */
+                level[ch][v] = (float)g_iface_audio.SN76489_volume_value[ch][v] * g_iface_audio.gain[ch] / (float)PSG_CHANNELS_COUNT;
+        }
+    }
+}
+
 void iface_audio_set_master_volume(int volume)
 {
     (void)volume;
@@ -312,6 +342,10 @@ void iface_audio_buffer_init(void)
     APP_COND_CREATE(g_iface_audio.play_cond);
     g_iface_audio.state = IFACE_AUDIO_BUFFER_STATE_NORMAL;
     g_iface_audio.state_beffore_pause = IFACE_AUDIO_BUFFER_STATE_NORMAL;
+    g_iface_audio.sync_by_timer = false;
+    g_iface_audio.device_open_failed = false;
+    g_iface_audio.timer_base_us = 0;
+    g_iface_audio.timer_events = 0;
     g_iface_audio.channel_scan_value = 0;
     for (int i = 0; i < AUDIO_SRC_CHANNELS_COUNT; i++)
     {
@@ -366,11 +400,58 @@ void iface_audio_exit(void)
 #endif /* !MZ800EMU_CFG_AUDIO_DISABLED */
 }
 
+#if !defined(MZ800EMU_CFG_AUDIO_DISABLED)
 /**
- * Synchronizace emulatoru s audio bufferem.
+ * @brief Počet period, o které smí časová synchronizace zaostat a ještě je dohnat.
  *
- * Oznamime audio callbacku, ze mame pripraveny dalsi audio frame.
- * Pokud emulator nebezi v max speed, tak pockame, az si callback vezme dalsi frame, nebo se alespon pokusime pockat 20ms.
+ * Větší zpoždění (návrat z pauzy, přepnutí z MAX SPEED, dlouhé zaseknutí
+ * hostitele) se nedohání zrychleným během, řada termínů se založí znovu.
+ */
+#define IFACE_AUDIO_TIMER_MAX_LAG_EVENTS 5
+
+/**
+ * @brief Časová synchronizace jedné 20ms události bez audio zařízení.
+ *
+ * Termín k-té události je `timer_base_us + k * 1000000 / VIDEO_SCREENS_PER_SEC`
+ * (absolutní, takže hrubá granularita uspání ve Windows nezpůsobí drift -
+ * přesah jedné události zkrátí čekání té následující). Pokud je aktuální čas
+ * za termínem o víc než IFACE_AUDIO_TIMER_MAX_LAG_EVENTS period, nebo jde
+ * o první událost, řada se založí znovu od aktuálního času a nečeká se.
+ *
+ * @pre Volá jen emulační vlákno (timer_base_us a timer_events bez zámku).
+ * @post Návrat nejdříve v termínu aktuální události (pokud se řada nezakládala).
+ */
+static void iface_audio_timer_sync(void)
+{
+    const int64_t period_us = 1000000 / VIDEO_SCREENS_PER_SEC;
+    int64_t now = g_get_monotonic_time();
+
+    g_iface_audio.timer_events++;
+    int64_t deadline = g_iface_audio.timer_base_us + (int64_t)((g_iface_audio.timer_events * 1000000) / VIDEO_SCREENS_PER_SEC);
+
+    if ((g_iface_audio.timer_base_us == 0) || ((now - deadline) > (IFACE_AUDIO_TIMER_MAX_LAG_EVENTS * period_us)))
+    {
+        /* první událost nebo velké zpoždění: nová řada, tato událost proběhne hned */
+        g_iface_audio.timer_base_us = now;
+        g_iface_audio.timer_events = 0;
+        return;
+    };
+
+    while (now < deadline)
+    {
+        g_usleep((gulong)(deadline - now));
+        now = g_get_monotonic_time();
+    };
+}
+#endif /* !MZ800EMU_CFG_AUDIO_DISABLED */
+
+/**
+ * @brief Synchronizace emulátoru s audio bufferem (kontrakt viz iface_audio.h).
+ *
+ * Oznámíme audio callbacku, že máme připravený další audio snímek.
+ * Pokud emulátor neběží v MAX SPEED, počkáme, až si callback snímek vezme
+ * (s audio zařízením), nebo do dalšího časového termínu (bez audio zařízení -
+ * headless nebo náhradní režim po selhání otevření zařízení).
  */
 void iface_audio_20ms_sync(void)
 {
@@ -381,7 +462,27 @@ void iface_audio_20ms_sync(void)
     APP_COND_SIGNAL(g_iface_audio.frame_cond);
     APP_MUTEX_UNLOCK(g_iface_audio.mutex);
 
-    if (g_iface_audio.state == IFACE_AUDIO_BUFFER_STATE_NORMAL)
+    if (g_iface_audio.sync_by_timer && videorec_rt_audio_wants_output())
+    {
+        /* Bez audio zařízení (headless, GUI po selhání zařízení): video záznam
+         * podle reality chce zvuk "jak by zněl".
+         * Vyrobit blok stejnou SDL cestou jen pro nahrávku (nic se nepřehrává); jen když
+         * ho jitter buffer potřebuje - jako zařízení, které si data žádá (při MAX SPEED
+         * se tak nevyrábí blok za každou 20ms událost). */
+        size_t samples_size = 0;
+        float *samples = iface_audio_wait_for_data(&samples_size);
+        g_free(samples);
+    };
+
+    if ((g_iface_audio.state == IFACE_AUDIO_BUFFER_STATE_NORMAL) && g_iface_audio.sync_by_timer)
+    {
+        /* Bez audio zařízení (headless, nebo GUI po selhání otevření zařízení)
+         * není callback, který by snímky odebíral -
+         * čekání na play_cond by vždy vypršelo (cca 1 s na událost). Tempo
+         * udávají monotónní hodiny. */
+        iface_audio_timer_sync();
+    }
+    else if (g_iface_audio.state == IFACE_AUDIO_BUFFER_STATE_NORMAL)
     {
         // Pockame, az bude posledni audio frame prehran, cimz se synchronizujeme se zvukem
         int timeouts = 0;

@@ -132,6 +132,15 @@ extern "C" {
         void *save_value_handler;       /**< Vazba na promennou: zdroj pro save (KEYWORD, BOOL, UNSIGNED, FLOAT — memcpy) */
         void *save_value_pointer;       /**< Vazba na textovy ukazatel: zdroj pro save (TEXT — cteni z ukazatele) */
 
+        /*
+         * Připnutá INI hodnota (viz cfgelement_pin_save_value()).
+         * Invariant: save_pin_active != 0 jen u KEYWORD, BOOL a UNSIGNED
+         * s nastaveným save_value_handler; pak save_pin_runtime != save_pin_ini.
+         */
+        int save_pin_active;            /**< 1 = save zapíše save_pin_ini, dokud proměnná drží save_pin_runtime */
+        unsigned save_pin_ini;          /**< Hodnota, která má zůstat v INI (stav před přepsáním proměnné) */
+        unsigned save_pin_runtime;      /**< Hodnota proměnné jen pro běh (např. ze snapshotu) */
+
     } st_CFGELEMENT;
 
     /** @brief Zkraceny typovy alias pro st_CFGELEMENT */
@@ -189,6 +198,35 @@ extern "C" {
      * @param variable Ukazatel na aplikacni promennou
      */
     extern void cfgelement_bind ( st_CFGELEMENT *e, void *variable );
+
+    /**
+     * @brief Připne INI hodnotu elementu, jehož proměnná byla přepsána jen pro běh
+     *
+     * Řeší situaci, kdy aplikace přepíše proměnnou svázanou se save
+     * handlerem hodnotou, která se nemá dostat do INI (typicky načtení
+     * snapshotu). Bez připnutí by ji další cfgelement_save() zapsal.
+     *
+     * Po připnutí cfgelement_save() zapisuje @p ini_value, dokud proměnná
+     * drží hodnotu, kterou měla v okamžiku volání. Jakmile ji aplikace
+     * změní (např. uživatel v menu), připnutí se při nejbližším save zruší
+     * a zapíše se aktuální hodnota proměnné.
+     *
+     * Opakované volání (další snapshot) zachová původní INI hodnotu, pokud
+     * proměnná mezitím držela hodnotu z předchozího připnutí.
+     *
+     * @param e Ukazatel na element (KEYWORD, BOOL nebo UNSIGNED)
+     * @param ini_value Hodnota proměnné PŘED přepsáním (= co má zůstat v INI)
+     *
+     * @pre Element má nastavený save_value_handler (cfgelement_set_handlers
+     *      nebo cfgelement_bind) a proměnná už obsahuje novou hodnotu.
+     * @post Je-li nová hodnota proměnné rovna INI hodnotě, připnutí se
+     *       zruší (není co chránit).
+     * @note Rozlišuje se jen hodnotou: když uživatel proměnnou změní a před
+     *       uložením vrátí zpět na hodnotu jen pro běh, zůstane INI hodnota.
+     * @note Pro TEXT a FLOAT, nebo bez save handleru, se nic nestane (assert
+     *       v debug buildu).
+     */
+    extern void cfgelement_pin_save_value ( st_CFGELEMENT *e, unsigned ini_value );
 
     /**
      * @brief Vazba s oddelenymi promennymi pro propagate a save

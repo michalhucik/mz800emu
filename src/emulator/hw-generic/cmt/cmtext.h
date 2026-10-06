@@ -88,7 +88,28 @@ extern "C" {
 
     extern const char* cmtext_get_filename_extension ( const char *filename );
 
+    /**
+     * @brief Zjistí, zda lze pásku daného rozšíření přehrávat.
+     *
+     * Pozor na konvenci návratové hodnoty: nejde o bool, ale o EXIT_* kód.
+     * Volající musí porovnávat s EXIT_SUCCESS
+     * (`EXIT_SUCCESS == cmtext_is_playable ( ext )`), ne testovat pravdivost.
+     *
+     * @param ext Rozšíření (může být NULL).
+     * @return EXIT_SUCCESS (0), pokud rozšíření má CMTEXT_TYPE_PLAYABLE;
+     *         EXIT_FAILURE pro NULL, chybějící info nebo nepřehratelný typ.
+     */
     extern int cmtext_is_playable ( st_CMTEXT *ext );
+
+    /**
+     * @brief Zjistí, zda lze do pásky daného rozšíření nahrávat.
+     *
+     * Stejná konvence jako cmtext_is_playable(): EXIT_SUCCESS = ano.
+     *
+     * @param ext Rozšíření (může být NULL).
+     * @return EXIT_SUCCESS (0), pokud rozšíření má CMTEXT_TYPE_RECORDABLE;
+     *         EXIT_FAILURE pro NULL, chybějící info nebo typ bez nahrávání.
+     */
     extern int cmtext_is_recordable ( st_CMTEXT *ext );
 
 

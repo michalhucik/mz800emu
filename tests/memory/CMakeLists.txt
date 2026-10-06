@@ -15,3 +15,11 @@ mz_add_test(regions
     SOURCES  test_regions.c
     LABELS   "emu;memory;debugger"
 )
+
+# Okno MemExt Map Settings: přemapování (memext_map_pwrite + memory_reconnect_ram)
+# provádí emu vlákno přes memext_map_request / _poll, ne přímo UI vlákno.
+mz_add_test(memext_map_request
+    TYPE     EMU
+    SOURCES  test_memext_map_request.c
+    LABELS   "emu;memory"
+)

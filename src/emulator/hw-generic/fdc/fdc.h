@@ -337,6 +337,16 @@ extern "C"
     extern const char *fdc_dskpath_keyname(st_FDC *fdc, unsigned drive_id);
 
     /**
+     * @brief Vrátí název cfgfile sekce pro danou instanci FDC.
+     *
+     * FDC0 používá historickou sekci "FDC", FDC1 sekci "FDC1".
+     *
+     * @param fdc instance FDC řadiče (NULL = vrátí "FDC")
+     * @return statický C-string s názvem sekce, nikdy NULL.
+     */
+    extern const char *fdc_cfg_section_name(const st_FDC *fdc);
+
+    /**
      * @brief Aktualizuje cfgfile element DSK cesty pro danou mechaniku.
      *
      * Volá se po mount/umount, aby cesta perzistovala do INI při exitu.

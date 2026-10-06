@@ -35,10 +35,14 @@ event).
 | Framebuffer (in memory, BGRA 928×288) | rendered |
 | Snapshot save/load | works |
 | CMT hack (`--run-mzf`) | works |
+| CMT hack load started by the ROM (boot menu C, `LOAD`) | **no** file dialog: the load is cancelled at once (the ROM reports Break) and a warning goes to stderr. Load the program with `media_load_mzf` or `--run-mzf`, or switch the CMT hack off (`cmt_hack_set`) and use the virtual tape |
 | Console stdout/stderr | only in `FORCE_CONSOLE=1` builds (see below) |
 | GUI window | **no** (skipped) |
 | Audio output | **no** (no-op SDL audio device) |
+| Emulation pace | system clock: 100 % = real time (MZ-800: 50 frames/s), custom speed and MAX SPEED as in windowed mode |
 | ImGui debugger | **no** (context not created) |
+
+Headless emulation therefore runs in real time. To run faster (tests, batches), set the speed at start with `--speed` (`--speed max` = MAX SPEED, `--speed 400` = four times real time; valid range 1-4000 %), or change it at runtime with the MCP `set_speed` tool. The `--speed` option applies to `mz800emu --headless`; with `--mcp-pipe` it is rejected (`Unknown option: --speed`, startup fails); in pipe mode set the speed with `set_speed`.
 
 ## Console-enabled build (Windows)
 
@@ -59,15 +63,10 @@ Explorer icon experience).
 
 ## Known limitations
 
-- **Audio sync warning** - when running with `--run-mzf`, the log
-  repeatedly shows `iface_audio_20ms_sync(): timeout!` - this is a
-  **benign** warning (the audio module waits for a callback that won't
-  arrive in no-op mode). The emulator continues running.
 - **Window error log at startup** - 2-3 lines of `getSDL_Window_by_name():
   Failed to get window: main_window` - **benign**, callers have a
-  `NULL` window guard and continue without error.
-
-Both log messages can be safely ignored.
+  `NULL` window guard and continue without error. The message can be
+  safely ignored.
 
 ## Screenshot in headless mode
 

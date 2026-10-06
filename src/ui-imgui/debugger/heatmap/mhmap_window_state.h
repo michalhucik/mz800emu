@@ -94,8 +94,8 @@ extern "C"
         bool side_panel_visible;             /**< viditelnost pravého panelu s detailem */
         en_MHMAP_WINDOW_DATA_SOURCE data_source;/**< Live vs. Imported */
         bool have_import;                    /**< @c true = @c import_data je validní */
-        /* import_data je velký buffer (~2 MB pro MZ-800), alokuje se dynamicky
-         * při Import. Phase F doplní concrete typedef st_MHMAP a related. */
+        /* import_data je velký buffer (sizeof(st_MHMAP), pro MZ-800 13 508 608 B,
+         * viz mhmap.h), alokuje se dynamicky při Import. */
         void *import_data;                   /**< malloc'd kopie st_MHMAP po importu */
         /**
          * @brief Bitmaska viditelnosti regionů pro tab bar.

@@ -83,6 +83,9 @@ extern "C" {
  * a MEMEXT_TEST_CONNECTED test. */
 #include "emulator/hw-generic/memory/memext.h"
 }
+/* ui-thread-writes T6a: přidání / odebrání freeze záznamu vykoná emu vlákno
+ * (dbg_ui_freeze_add / dbg_ui_freeze_remove). */
+#include "ui-imgui/debugger/dbgapi_helpers.h"
 
 
 /**
@@ -1579,7 +1582,13 @@ extern "C" void membrowser_hexview_render_ex ( st_MEMBROWSER_STATE *st,
             }
             ImGui::Separator ( );
         }
-        /* Freeze sekce - dostupné pro libovolný writable region. */
+        /* Freeze sekce - dostupné pro libovolný writable region.
+         *
+         * Tabulku zafrozených bajtů čte emu vlákno ve freeze_apply_all()
+         * (jednou za snímek). Přidání / odebrání proto jde přes frontu
+         * dbgapi (dbg_ui_freeze_*), mění ji jen emu vlákno. Přímé čtení
+         * freeze_is_frozen() z UI níže je jen pro text menu - souběh
+         * s add/remove na emu vlákně ovlivní nejvýš jeden snímek zobrazení. */
         uint8_t cur_val = 0;
         bool have_val = false;
         if ( be && be->read_bytes ) {
@@ -1590,7 +1599,8 @@ extern "C" void membrowser_hexview_render_ex ( st_MEMBROWSER_STATE *st,
                                           target, NULL );
         if ( is_frz ) {
             if ( ImGui::MenuItem ( _( "Unfreeze byte at cursor" ) ) ) {
-                freeze_remove ( extras->region_kind, extras->sub_id, target );
+                (void) dbg_ui_freeze_remove ( extras->region_kind,
+                                             extras->sub_id, target );
             }
         } else {
             char fz_label[64];
@@ -1600,8 +1610,8 @@ extern "C" void membrowser_hexview_render_ex ( st_MEMBROWSER_STATE *st,
             bool fz_dis = !have_val;
             if ( fz_dis ) ImGui::BeginDisabled ( );
             if ( ImGui::MenuItem ( fz_label ) ) {
-                freeze_add ( extras->region_kind, extras->sub_id,
-                             target, cur_val );
+                (void) dbg_ui_freeze_add ( extras->region_kind, extras->sub_id,
+                                           target, cur_val );
             }
             if ( fz_dis ) ImGui::EndDisabled ( );
         }
@@ -1626,7 +1636,7 @@ extern "C" void membrowser_hexview_render_ex ( st_MEMBROWSER_STATE *st,
             if ( ImGui::MenuItem ( _( "Open in PCG editor..." ) ) ) {
                 int char_idx = ( int ) ( target / 8 );
                 if ( char_idx < 0 ) char_idx = 0;
-                if ( char_idx > 255 ) char_idx = 255;
+                if ( char_idx > MEMBROWSER_PCG_CHAR_COUNT - 1 ) char_idx = MEMBROWSER_PCG_CHAR_COUNT - 1;
                 membrowser_pcg_window_focus_at ( extras->sub_id, char_idx );
                 if ( g_gui ) g_gui->showMembrowserPcgEditor = true;
             }

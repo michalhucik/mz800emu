@@ -28,6 +28,7 @@
 #include "ui-imgui/debugger/debugger_state.h"
 #include "ui-imgui/debugger/breakpoints/bpt_state.h"
 #include "ui-imgui/debugger/dbgapi_helpers.h"
+#include "ui-imgui/videorec/videorec_menu.h"
 
 extern "C"
 {
@@ -402,6 +403,23 @@ void imgui_global_shortcuts(void)
         {
             snapshot_ui_request_quickload();
         };
+
+        /*
+         * Video záznam (platí i bez debuggeru):
+         * Alt + O: Start / Stop nahrávání
+         * Alt + Shift + O: Pozastavit / pokračovat v nahrávání (emulace běží dál)
+         * Alt + L: Marker ("Marker N")
+         * Alt + Shift + L: Okno dálkového ovládání nahrávání
+         * Alt + U: Přepnout časovou základnu (emulační čas / podle reality),
+         *          platí hned i během nahrávání; Alt + Shift + U nic nedělá
+         *
+         * Klávesy a popisky jsou v jedné tabulce (videorec_menu.cpp, s_shortcuts),
+         * ze které čte i menu a okno - obsluha je proto tam. O, L a U nejsou v jiných
+         * Alt zkratkách použité (globální ani debuggerové; psaní do disassembleru
+         * Alt ignoruje). Alt+R záměrně ne - koliduje s NVIDIA overlay. Na
+         * nepodporované platformě start jen ohlásí chybu.
+         */
+        imgui_videorec_shortcuts();
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
         /*

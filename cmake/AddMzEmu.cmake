@@ -47,6 +47,26 @@ function(mz_glob_flat out_var)
 endfunction()
 
 # ----------------------------------------------------------------------------
+# mz_arch_compile_definitions(<target> <mzarch> <tvsys>)
+#
+# Jediné místo, kde vznikají per-arch a per-tvsys defines (MZARCH, MZARCH_NAME,
+# MZTVSYS_PAL/NTSC = nominální snímková frekvence 50/60, MZTVSYS, MZTVSYS_NAME).
+# Používá ho mz_add_emulator() i testy, které překládají kód pro jinou
+# platformu než test framework (sonda tests/videorec/videorec_platform_probe.c),
+# aby se hodnoty nemohly rozejít. Defines jsou PRIVATE.
+# ----------------------------------------------------------------------------
+function(mz_arch_compile_definitions target mzarch tvsys)
+    target_compile_definitions(${target} PRIVATE
+        MZARCH=${mzarch}
+        MZARCH_NAME="mz${mzarch}"
+        MZTVSYS_PAL=50
+        MZTVSYS_NTSC=60
+        MZTVSYS=MZTVSYS_${tvsys}
+        MZTVSYS_NAME="${tvsys}"
+    )
+endfunction()
+
+# ----------------------------------------------------------------------------
 # mz_add_emulator(<target> <mzarch> <tvsys>)
 #
 # Vytvoří executable s per-arch sources, definemi a linknutými knihovnami.
@@ -94,6 +114,7 @@ function(mz_add_emulator target mzarch tvsys)
         src/emulator/hw-generic
         src/emulator/debugger
         src/emulator/snapshot
+        src/emulator/videorec
         src/emulator/mcp
     )
 
@@ -135,14 +156,7 @@ function(mz_add_emulator target mzarch tvsys)
 
     # ---- Per-arch a per-tvsys defines --------------------------------------
 
-    target_compile_definitions(${target} PRIVATE
-        MZARCH=${mzarch}
-        MZARCH_NAME="${arch_name}"
-        MZTVSYS_PAL=50
-        MZTVSYS_NTSC=60
-        MZTVSYS=MZTVSYS_${tvsys}
-        MZTVSYS_NAME="${tvsys}"
-    )
+    mz_arch_compile_definitions(${target} ${mzarch} ${tvsys})
 
     # ---- Include paths -----------------------------------------------------
 
@@ -241,6 +255,7 @@ function(mz_add_pipe_emulator_disabled target mzarch tvsys)
         src/emulator/hw-generic
         src/emulator/debugger
         src/emulator/snapshot
+        src/emulator/videorec
         src/emulator/mcp
     )
     # Pro pipe target VŠECHNY src/emulator/mcp/ soubory zůstávají (vč.
@@ -277,14 +292,7 @@ function(mz_add_pipe_emulator_disabled target mzarch tvsys)
         mz_add_windows_rc(${target} ${CMAKE_SOURCE_DIR}/src/windows_rc/${arch_name}emu.rc)
     endif()
 
-    target_compile_definitions(${target} PRIVATE
-        MZARCH=${mzarch}
-        MZARCH_NAME="${arch_name}"
-        MZTVSYS_PAL=50
-        MZTVSYS_NTSC=60
-        MZTVSYS=MZTVSYS_${tvsys}
-        MZTVSYS_NAME="${tvsys}"
-    )
+    mz_arch_compile_definitions(${target} ${mzarch} ${tvsys})
 
     target_include_directories(${target} PRIVATE
         ${CMAKE_SOURCE_DIR}/src

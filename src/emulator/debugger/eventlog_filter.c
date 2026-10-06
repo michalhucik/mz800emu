@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdarg.h>
+#include <glib.h>
 
 #include "symbols/sym_db.h"
 
@@ -2471,6 +2472,21 @@ static void dump_node ( const st_EVFILT_NODE *n, st_EVFILT_STR *s )
 /* ========================================================================= */
 
 
+/**
+ * @brief Počet živých filtrů (parse bez odpovídajícího free).
+ *
+ * Diagnostika pro testy vlastnictví (@ref eventlog_filter_live_count).
+ * Mění se atomicky, parse / free smí běžet na různých vláknech.
+ */
+static gint s_live_count = 0;
+
+
+int eventlog_filter_live_count ( void )
+{
+    return (int) g_atomic_int_get ( &s_live_count );
+}
+
+
 st_EVENTLOG_FILTER *eventlog_filter_parse ( const char *expr )
 {
     /* Délka overflow check. */
@@ -2495,6 +2511,7 @@ st_EVENTLOG_FILTER *eventlog_filter_parse ( const char *expr )
     f->arena.used = 0;
     f->arena.cap = EVFILT_ARENA_CAP;
     f->arena.node_count = 0;
+    g_atomic_int_inc ( &s_live_count );
 
     if ( !expr || !expr[ 0 ] ) return f;  /* match all */
 
@@ -2542,6 +2559,7 @@ void eventlog_filter_free ( st_EVENTLOG_FILTER *f )
     free ( f->sym_leaves );
     free ( f->arena.buf );
     free ( f );
+    g_atomic_int_add ( &s_live_count, -1 );
 }
 
 

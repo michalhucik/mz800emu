@@ -241,27 +241,32 @@ static void render_toolbar ( void )
 {
     /* Active checkbox - hot toggle subsystému.
      *
-     * Volá callstack_set_active(enable) z UI vlákna, který:
+     * callstack_set_active(enable) vykoná emu vlákno přes frontu dbgapi
+     * (dbg_ui_callstack_set_active, ui-thread-writes T6c):
      *   - při ON: zaregistruje Z80 CALL/RET callback sloty (z80_set_call/ret)
      *     a vyresetuje shadow + stats (= čistý start),
      *   - při OFF: deregistruje sloty (NULL) a ponechá shadow pro
      *     poslední zobrazení.
      *
-     * Pointer assignment do z80_t.call_cb/ret_cb je 8-byte aligned write
-     * (= atomic na x86_64); race s emu vláknem maximálně missne 1 frame
-     * pri přechodu, ne crash. Plný safe-point CMDRQ pattern je V1.5+
-     * pokud bude reálná synchronizační potřeba. */
+     * Dřív se volalo přímo z UI vlákna: reset shadow stacku (g_depth = 0)
+     * souběžně s push/pop v CALL/RET hoocích mohl g_depth snížit pod nulu
+     * (další push pak píše mimo pole). UI cache g_cs.active se přepíše jen
+     * při úspěchu, jinak ji srovná příští refresh (GET_CALLSTACK). */
     bool active = g_cs.active;
     if ( ImGui::Checkbox ( _L ( "Active###cs_active" ), &active ) ) {
-        callstack_set_active ( active );
-        g_cs.active = active;
+        bool active_after = g_cs.active;
+        if ( dbg_ui_callstack_set_active ( active, &active_after ) ) {
+            g_cs.active = active_after;
+        };
     };
 
     ImGui::SameLine ( );
-    if ( ImGui::Button ( _L ( "Reset###cs_reset" ) ) ) {
+    if ( ImGui::Button ( _L ( "Reset###cs_reset" ) )
+         && dbg_ui_callstack_reset ( ) ) {
         /* Full reset: shadow stack + stats (= jako po emu reset).
-         * UI cache (g_cs.entries) se vyčistí na dalším refresh ticku. */
-        callstack_reset ( );
+         * callstack_reset() vykoná emu vlákno přes frontu dbgapi (shadow
+         * stack mění CALL/RET hooky na emu vlákně). UI cache se vyčistí
+         * hned jen při úspěchu, jinak zůstane do dalšího refresh ticku. */
         g_cs.entries.clear ( );
         g_cs.current_depth     = 0;
         g_cs.max_depth_reached = 0;

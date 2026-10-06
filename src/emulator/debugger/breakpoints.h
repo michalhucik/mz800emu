@@ -494,10 +494,37 @@ struct st_BP_ACTION;
     /* === Persistence === */
 
     extern void breakpoints_save_to_file ( void );
+
+    /**
+     * @brief Nahradí BP, skupiny a $vars obsahem výchozího souboru.
+     *
+     * Cestu vyhodnotí z g_breakpoints.default_file proti konfiguračnímu
+     * adresáři a zavolá breakpoints_load_from_filepath().
+     *
+     * @pre Volat jen z emu vlákna (z UI přes DBGAPI_CMD_BP_LOAD_FILE,
+     *      helper dbg_ui_bp_load_from_file) nebo při init, kdy emu vlákno
+     *      BP nevyhodnocuje. Přestavuje data, která emu vlákno čte.
+     */
     extern void breakpoints_load_from_file ( void );
 
     /* Varianty se specifikovanou cestou (pro Load From... / Save As...) */
     extern void breakpoints_save_to_filepath ( const char *filepath );
+
+    /**
+     * @brief Nahradí BP, skupiny a $vars obsahem souboru @p filepath.
+     *
+     * Nejdřív vždy zavolá breakpoints_clear_all(); neexistující nebo
+     * nečitelný soubor tiše zanechá prázdný stav. Po načtení validuje
+     * rodiče a adresy, přestaví bptmap a zvýší g_breakpoints.version.
+     *
+     * @param filepath Cesta k souboru; NULL nebo "" = no-op (data se nemažou).
+     *
+     * @pre Volat jen z emu vlákna (z UI přes DBGAPI_CMD_BP_LOAD_FILE) nebo
+     *      v jednovláknovém kontextu (init, testy). Uvolňuje stringy a AST
+     *      BP a zkracuje pole, která emu vlákno čte při vyhodnocení BP.
+     * @note Gating logging callbacků nepřepočítává; dělá to handler
+     *       DBGAPI_CMD_BP_LOAD_FILE.
+     */
     extern void breakpoints_load_from_filepath ( const char *filepath );
 
 
@@ -577,13 +604,37 @@ struct st_BP_ACTION;
     /* Nastaví novou adresu pro event. Provede resync bptmap. */
     extern bool breakpoints_set_addr ( int bpt_id, uint16_t new_addr );
     extern void breakpoints_increment_hits ( int bpt_id );
+
+    /**
+     * @brief Vynuluje počítadlo zásahů BP (bpt->hits) a zvýší g_breakpoints.version.
+     *
+     * Neexistující ID = no-op.
+     *
+     * @param bpt_id ID breakpointu.
+     *
+     * @pre Volat z EMU vlákna (nebo z jednovláknového kontextu). hits++
+     *      a test hit_count dělá emu vlákno při vyhodnocení BP; UI posílá
+     *      reset přes DBGAPI_CMD_BP_RESET_HITS (helper dbg_ui_bp_reset_hits).
+     */
     extern void breakpoints_reset_hits ( int bpt_id );
     extern unsigned breakpoints_count ( void );
 
 
     /* === Hromadné operace === */
 
-    /* Smaže všechny breakpointy a skupiny, vyčistí bptmap. */
+    /**
+     * @brief Smaže všechny breakpointy, skupiny a $vars a vyčistí bptmap.
+     *
+     * Vyčistí i aktivní bitmapu HW eventů a dočasný BP (Run To / Step
+     * Over) v bptmap; zvýší g_breakpoints.version.
+     *
+     * @pre Volat jen z emu vlákna (z UI přes DBGAPI_CMD_BP_CLEAR_ALL,
+     *      helper dbg_ui_bp_clear_all) nebo v jednovláknovém kontextu
+     *      (init, testy). Uvolňuje stringy a AST BP, které emu vlákno
+     *      čte při vyhodnocení BP.
+     * @note Gating logging callbacků nepřepočítává; dělá to handler
+     *       DBGAPI_CMD_BP_CLEAR_ALL.
+     */
     extern void breakpoints_clear_all ( void );
 
     /* Zkontroluje, zda je BPT efektivně povolený — tj. enabled on + všechny rodičovské skupiny enabled. */

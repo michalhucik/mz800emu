@@ -189,7 +189,6 @@ struct IoUiState {
     char filter[128] = "";
     int  tracking_enable = 1;        /* user toggle - default ON pri panel open
                                        * (int kvuli cfgmodule BOOL handler). */
-    int  history_capacity = (int) IO_HISTORY_DEFAULT_CAPACITY;
     int  auto_follow = 1;            /* int pro cfgmodule BOOL handler. */
     /* Tracking opt-in z cfg (= user persist preferenci). */
     int  cfg_tracking_active = 1;    /* default ON - tracking se vykonává jen
@@ -669,11 +668,14 @@ static void io_window_render_port_row ( size_t idx, const st_IO_PORT_DESC *port 
         ImGui::Separator ( );
         if ( ImGui::MenuItem ( _L ( "Reset activity counter##ioctx" ) ) ) {
             /* V1.5 fix #1: per 16-bit slot reset. 8-bit porty agreguj
-             * přes 256 high-byte slotů. */
+             * přes 256 high-byte slotů. Reset vykoná emu vlákno
+             * (DBGAPI_CMD_IO_ACTIVITY_RESET_PORT) - tabulku g_io_activity
+             * souběžně plní io_activity_record_hit(). */
             if ( port->addr <= 0xFF ) {
-                io_activity_reset_port_8bit ( (uint8_t) port->addr );
+                (void) dbg_ui_io_activity_reset_port ( port->addr, true );
             } else {
-                io_activity_reset_port ( io_catalog_to_bus_addr ( port->addr ) );
+                (void) dbg_ui_io_activity_reset_port (
+                    io_catalog_to_bus_addr ( port->addr ), false );
             }
         }
         if ( ImGui::MenuItem ( _L ( "Show in History tab##ioctx" ) ) ) {
@@ -934,6 +936,27 @@ static bool io_port_in_section ( const st_IO_PORT_DESC *port,
 
 
 /**
+ * @brief Požádá emu vlákno o změnu kapacity ringu historie I/O.
+ *
+ * Realokaci ringu (free + calloc) vykoná emu vlákno přes
+ * DBGAPI_CMD_IO_HISTORY_SET_CAPACITY (dbg_ui_io_history_set_capacity);
+ * přímé volání io_history_set_capacity() z UI vlákna by souběžně
+ * s io_history_record() mohlo zapisovat do uvolněné paměti.
+ *
+ * @param requested Požadovaná kapacita z comboboxu.
+ *
+ * @post Při úspěchu emu vlákno nastavilo g_io_history_cfg_capacity na
+ *       skutečnou kapacitu (po clampu) - combobox ji zobrazí a cfg save
+ *       ji zapíše do INI. Při neúspěchu (timeout = příkaz neproveden)
+ *       zůstává původní hodnota, ring se nezměnil.
+ */
+static void io_window_request_history_capacity ( int requested )
+{
+    (void) dbg_ui_io_history_set_capacity ( (uint32_t) requested, NULL );
+}
+
+
+/**
  * @brief Render Overview tab - section grouping + tabulka.
  */
 static void io_window_render_overview_tab ( void )
@@ -976,7 +999,9 @@ static void io_window_render_overview_tab ( void )
 
     /* === Sticky header (radek 2: tracking + capacity + auto-follow) === */
     if ( ImGui::Button ( _L ( "Reset Activity##io_reset_act" ) ) ) {
-        io_activity_reset_all ( );
+        /* Vynulování tabulky, kterou emu vlákno inkrementuje, vykoná
+         * emu vlákno (DBGAPI_CMD_IO_ACTIVITY_RESET). */
+        (void) dbg_ui_io_activity_reset_all ( );
     }
     if ( ImGui::IsItemHovered ( ) ) {
         ImGui::SetTooltip ( "%s",
@@ -1000,7 +1025,7 @@ static void io_window_render_overview_tab ( void )
     /* Najdi current option (= nejbližší match, fallback default 10000). */
     int sel_idx = 2;  /* default 10000 */
     for ( int i = 0; i < s_capacity_count; i++ ) {
-        if ( g_io_ui.history_capacity == s_capacity_options[ i ] ) {
+        if ( (int) g_io_history_cfg_capacity == s_capacity_options[ i ] ) {
             sel_idx = i;
             break;
         }
@@ -1010,8 +1035,9 @@ static void io_window_render_overview_tab ( void )
         for ( int i = 0; i < s_capacity_count; i++ ) {
             bool is_sel = ( i == sel_idx );
             if ( ImGui::Selectable ( s_capacity_labels[ i ], is_sel ) ) {
-                g_io_ui.history_capacity = s_capacity_options[ i ];
-                io_history_set_capacity ( (size_t) g_io_ui.history_capacity );
+                /* Kapacitu zobrazenou v comboboxu bere UI z výsledku
+                 * příkazu (emu vlákno ring realokuje a clampuje). */
+                io_window_request_history_capacity ( s_capacity_options[ i ] );
             }
             if ( is_sel ) ImGui::SetItemDefaultFocus ( );
         }
@@ -1954,9 +1980,13 @@ static void io_window_render_history_tab ( void )
     ImGui::TextDisabled ( "|" );
     ImGui::SameLine ( );
     if ( ImGui::Button ( _L ( "Clear history##io_hist_purge" ) ) ) {
-        io_history_clear ( );
-        g_io_ui.history_selected_visible = -1;
-        g_io_ui.history_selected_logical = -1;
+        /* Vyprázdnění ringu vykoná emu vlákno (DBGAPI_CMD_IO_HISTORY_CLEAR),
+         * souběžně s ním head/count inkrementuje. Výběr se ruší jen když
+         * se ring opravdu vyprázdnil. */
+        if ( dbg_ui_io_history_clear ( ) ) {
+            g_io_ui.history_selected_visible = -1;
+            g_io_ui.history_selected_logical = -1;
+        }
     }
     if ( ImGui::IsItemHovered ( ) ) {
         ImGui::SetTooltip ( "%s",
@@ -1966,7 +1996,7 @@ static void io_window_render_history_tab ( void )
     /* === V1.5 fix #3: druhý řádek - Capacity + Track ===
      *
      * Stejny widget jako v Overview sticky header, sdileny stav
-     * g_io_ui.history_capacity / g_io_ui.tracking_enable. Logicky
+     * g_io_history_cfg_capacity (jádro) / g_io_ui.tracking_enable. Logicky
      * zde patri (= Capacity je primarne pro History, Track ovlivnuje
      * History capture). */
     ImGui::TextUnformatted ( _( "Capacity:" ) );
@@ -1980,7 +2010,7 @@ static void io_window_render_history_tab ( void )
                                     / sizeof ( s_hcap_options[ 0 ] ) );
     int hsel_idx = 2;
     for ( int i = 0; i < s_hcap_count; i++ ) {
-        if ( g_io_ui.history_capacity == s_hcap_options[ i ] ) {
+        if ( (int) g_io_history_cfg_capacity == s_hcap_options[ i ] ) {
             hsel_idx = i;
             break;
         }
@@ -1990,8 +2020,8 @@ static void io_window_render_history_tab ( void )
         for ( int i = 0; i < s_hcap_count; i++ ) {
             bool is_sel = ( i == hsel_idx );
             if ( ImGui::Selectable ( s_hcap_labels[ i ], is_sel ) ) {
-                g_io_ui.history_capacity = s_hcap_options[ i ];
-                io_history_set_capacity ( (size_t) g_io_ui.history_capacity );
+                /* Viz Overview: realokaci ringu vykoná emu vlákno. */
+                io_window_request_history_capacity ( s_hcap_options[ i ] );
             }
             if ( is_sel ) ImGui::SetItemDefaultFocus ( );
         }
@@ -2831,85 +2861,6 @@ static const char* io_window_cfg_collapse_key ( size_t section_idx,
 }
 
 
-/* ========================================================================= */
-/*  Record mask cfg callbacks (V1.7+ 2.6)                                    */
-/* ========================================================================= */
-
-/**
- * @brief Hex znak (0-9 / A-F / a-f) na 4-bit nibble. -1 pri chybe.
- */
-static int io_window_hex_nibble ( char c )
-{
-    if ( c >= '0' && c <= '9' ) return c - '0';
-    if ( c >= 'A' && c <= 'F' ) return 10 + ( c - 'A' );
-    if ( c >= 'a' && c <= 'f' ) return 10 + ( c - 'a' );
-    return -1;
-}
-
-
-/**
- * @brief Propagate cb pro `record_mask` - parse 64-hex string -> 256 bool flagy.
- *
- * Format: 64 hex znaku, kazdy nibble = 4 porty. Bit 0 nejnizsiho nibblu =
- * port 0x00, bit 3 nejvyssiho nibblu = port 0xFF. (= little-endian bit
- * order, prirozene pro hex string ctený zleva doprava jako sekvence bajtu
- * 0x00..0xFF.)
- *
- * Pri parse chybe (kratky string, neplatne znaky) padne na default = vse 1.
- */
-static void io_window_cfg_propagate_record_mask ( void *e, void *data )
-{
-    (void) data;
-    st_CFGELEMENT *elm = (st_CFGELEMENT *) e;
-    const char *txt = cfgelement_get_text_value ( elm );
-    if ( !txt || strlen ( txt ) != 64 ) {
-        /* Empty / kratky / dlouhy = default vse aktivni (safe fallback). */
-        io_history_record_enable_all ( );
-        return;
-    }
-    for ( size_t byte = 0; byte < 32; byte++ ) {
-        int hi = io_window_hex_nibble ( txt[ byte * 2 ] );
-        int lo = io_window_hex_nibble ( txt[ byte * 2 + 1 ] );
-        if ( hi < 0 || lo < 0 ) {
-            io_history_record_enable_all ( );
-            return;
-        }
-        uint8_t b = (uint8_t) ( ( hi << 4 ) | lo );
-        for ( int bit = 0; bit < 8; bit++ ) {
-            size_t port_idx = byte * 8 + bit;
-            g_io_history_record_enabled[ port_idx ] =
-                ( b >> bit ) & 1u;
-        }
-    }
-}
-
-
-/**
- * @brief Save cb pro `record_mask` - 256 flagu -> 64-hex string.
- *
- * Inverze parseru. Bit i v bajtu i/8 = port i record_enabled.
- */
-static void io_window_cfg_save_record_mask ( void *e, void *data )
-{
-    (void) data;
-    st_CFGELEMENT *elm = (st_CFGELEMENT *) e;
-    char buf[ 65 ];
-    static const char hex[] = "0123456789ABCDEF";
-    for ( size_t byte = 0; byte < 32; byte++ ) {
-        uint8_t b = 0;
-        for ( int bit = 0; bit < 8; bit++ ) {
-            if ( g_io_history_record_enabled[ byte * 8 + bit ] ) {
-                b |= (uint8_t) ( 1u << bit );
-            }
-        }
-        buf[ byte * 2 ]     = hex[ ( b >> 4 ) & 0x0Fu ];
-        buf[ byte * 2 + 1 ] = hex[ b & 0x0Fu ];
-    }
-    buf[ 64 ] = '\0';
-    cfgelement_set_text_value ( elm, buf );
-}
-
-
 extern "C" void io_window_register_persistence ( void *cmod_void )
 {
     if ( !cmod_void ) return;
@@ -2930,14 +2881,9 @@ extern "C" void io_window_register_persistence ( void *cmod_void )
             (void *) &g_io_ui.section_collapsed[ s ] );
     }
 
-    /* History buffer capacity (UNSIGNED 1000..50000, default 10000). */
-    elm = cfgmodule_register_new_element ( cmod,
-        (char *) "history_capacity",
-        CFGENTYPE_UNSIGNED, (int) IO_HISTORY_DEFAULT_CAPACITY,
-        (int) IO_HISTORY_MIN_CAPACITY, (int) IO_HISTORY_MAX_CAPACITY );
-    cfgelement_set_handlers ( elm,
-        (void *) &g_io_ui.history_capacity,
-        (void *) &g_io_ui.history_capacity );
+    /* History buffer capacity: klíč history_capacity registruje jádro
+     * (io_history_register_persistence, g_io_history_cfg_capacity) -
+     * debugger_init z něj alokuje ring, UI proměnnou číst nesmí. */
 
     /* Auto-follow History tab (BOOL, default 1). */
     elm = cfgmodule_register_new_element ( cmod,
@@ -2981,23 +2927,9 @@ extern "C" void io_window_register_persistence ( void *cmod_void )
         (void *) &g_io_ui.heat_bg_hot_threshold,
         (void *) &g_io_ui.heat_bg_hot_threshold );
 
-    /* V1.7+ 2.6: Selective per-port history record mask.
-     *
-     * Format = 64 hex znaku (TEXT), bit i v bajtu i/8 = port i (8-bit
-     * IORQ space, low byte adresy). Default vsech 'F' = vse zaznamenavano
-     * (= back-compat povodni chovani). Pri propagate parser nastavi
-     * g_io_history_record_enabled[256]; save callback inverze.
-     *
-     * Pro 256 portu by jednotlive klice byly nečitelne v INI - bitmap
-     * je kompaktni 64-byte string a slo by ho i ručne editovat.
-     */
-    elm = cfgmodule_register_new_element ( cmod,
-        (char *) "record_mask", CFGENTYPE_TEXT,
-        (char *) "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF" );
-    cfgelement_set_propagate_cb ( elm,
-        io_window_cfg_propagate_record_mask, NULL );
-    cfgelement_set_save_cb ( elm,
-        io_window_cfg_save_record_mask, NULL );
+    /* V1.7+ 2.6: maska zaznamenávaných portů (klíč record_mask) patří
+     * jádru - registruje ji io_history_register_persistence(), viz
+     * debugger_init(). */
 }
 
 

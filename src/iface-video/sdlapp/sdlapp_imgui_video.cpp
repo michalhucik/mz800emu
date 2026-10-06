@@ -16,6 +16,7 @@
 #include "ui-imgui/imgui_windows.h"
 #include "emulator/cfgmain.h"
 #include "mzarch/mzarch_config.h"
+#include "ui-imgui/videorec/videorec_menu.h"
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
 #include "ui-imgui/debugger/eventview/event_viewer_window.h"
 #include "ui-imgui/debugger/profiler/profiler_window.h"
@@ -188,6 +189,11 @@ static gboolean sdlapp_mygui_video_update_status_line(guint timer_id, gpointer u
 
 static gboolean sdlapp_myimgui_video_init(void)
 {
+    /* Persistence viditelnosti okna dálkového ovládání nahrávání - registrace
+     * i v headless režimu, aby uložení INI sekci [VIDEOREC_UI] nepřepsalo
+     * (cfgmain už proběhl; do g_gui se hodnota aplikuje až níže v GUI větvi). */
+    imgui_videorec_remote_cfg_init();
+
     /* Headless režim: žádné SDL okno se nevytváří, žádný ImGui kontext.
      * Alokujeme:
      *  - SdlappMyImGuiVideo_t + SDL surface (= cíl @c set_colors callbacku
@@ -292,6 +298,8 @@ static gboolean sdlapp_myimgui_video_init(void)
      * g_gui->showMemoryBrowserWindow (po vytvoření g_gui). */
     membrowser_window_apply_persisted();
 #endif
+    /* Viditelnost okna dálkového ovládání nahrávání ([VIDEOREC_UI]). */
+    imgui_videorec_remote_apply_persisted();
 
     // Pri prvnim spusteni zobrazime okno s informacemi o programu.
     // CLI flag --no-first-run-windows toto chování potlačí (= headless

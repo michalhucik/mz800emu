@@ -54,6 +54,16 @@ extern "C"
     baseui_fchooser_t *baseui_filechooser_save_file(const char *title, const char *filter, const char *path, const char *fileName, const char *filePathName, BaseuiFchooserCb cb, gpointer user_data);
     void baseui_filechooser_destroy(baseui_fchooser_t *fch);
 
+    /**
+     * @brief Zjistí, zda může blokující dialog (*_wait) někdo zavřít.
+     *
+     * @return true s interaktivním GUI; false v --headless (i --mcp-pipe),
+     *         kde blokující varianty dialog neotevřou a hned vrátí NULL.
+     *
+     * @note Hledá v argv (O(n)), volat jen mimo hot path. Bez vedlejších efektů.
+     */
+    bool baseui_filechooser_can_wait(void);
+
     char *baseui_filechooser_open_file_wait(const char *title, const char *filter, const char *path, const char *fileName, const char *filePathName, char **selected_path);
     char *baseui_filechooser_open_dir_wait(const char *title, const char *path, const char *fileName, const char *filePathName);
     char *baseui_filechooser_open_rw_file_wait(const char *title, const char *filter, const char *path, const char *fileName, const char *filePathName, char **selected_path);

@@ -1,6 +1,12 @@
 /**
  * @file snap_hwconfig.c
  * @brief Snapshot handler: HW konfigurace — uložení a načtení HW nastavení relevantních pro emulaci
+ *
+ * Volba HWCOMPAT allow_psg1 (druhý PSG) je stav stroje: snapshot ji obnoví
+ * pro běh, INI ([HWCOMPAT] allow_psg1) si drží volbu uživatele
+ * (snapshot_config_pin_ini_value). Druhý PSG se zakládá jen při startu
+ * emulátoru (mz800_main.c), obnovená volba ho tedy nezaloží [neověřeno,
+ * zda to vadí].
  */
 
 #include <stdio.h>
@@ -9,6 +15,7 @@
 
 #include "snapshot/snapshot_mgr.h"
 #include "snapshot/snapshot_xml.h"
+#include "snapshot/snapshot_config.h"
 #include "mzarch/mzarch.h"
 #include "hw-generic/psg/psg.h"
 
@@ -20,10 +27,11 @@ static en_SNAPSHOT_RESULT snap_hwconfig_save(st_SNAPSHOT_CONTEXT *ctx)
 
     snapshot_xml_open_element(w, "hwconfig");
 
-    /* Přepínač kompatibility MZ-700 (DIP switch) - jen MZ-800/MZ-1500;
-     * MZ-700 nativní nemá DIP přepínač MZ-700-mode (je vždy v MZ-700 módu). */
+    /* Zadní přepínač SW1 (MZ-700 / MZ-800 mód, en_MZ800_MODE_SW) - jen
+     * MZ-800/MZ-1500; MZ-700 nativní ho nemá (je vždy v MZ-700 módu).
+     * Název elementu switch700 zůstává kvůli kompatibilitě snapshotů. */
 #if MZARCH != 700
-    snapshot_xml_write_int(w, "switch700", (int)g_mzarch_main.switch700);
+    snapshot_xml_write_int(w, "switch700", (int)g_mzarch_main.mode_sw);
 #endif
 
     /* Audio režim (mono/stereo) - jen pro platformy s PSG */
@@ -75,8 +83,18 @@ static en_SNAPSHOT_RESULT snap_hwconfig_load(st_SNAPSHOT_CONTEXT *ctx)
 
     /* Přepínač kompatibility MZ-700 - viz save block. */
 #if MZARCH != 700
-    if (snapshot_xml_read_int(r, "switch700", &ival))
-        g_mzarch_main.switch700 = (en_SWITCH700)ival;
+    {
+        /* Element switch700 nese en_MZ800_MODE_SW (0 = MZ-700, 1 = MZ-800).
+         * Poloha přepínače jen pro běh - INI hodnota se připne (MZ-800). */
+        unsigned ini_mode_sw = (unsigned)g_mzarch_main.mode_sw;
+        if (snapshot_xml_read_int(r, "switch700", &ival))
+            g_mzarch_main.mode_sw = (ival == MZ800_MODE_SW_MZ800) ? MZ800_MODE_SW_MZ800 : MZ800_MODE_SW_MZ700;
+#if MZARCH == 800
+        snapshot_config_pin_ini_value("MZ800", "mode_switch", ini_mode_sw);
+#else
+        (void)ini_mode_sw;
+#endif
+    }
 #endif
 
     /* Audio režim - jen pro platformy s PSG */
@@ -89,8 +107,13 @@ static en_SNAPSHOT_RESULT snap_hwconfig_load(st_SNAPSHOT_CONTEXT *ctx)
      * Klice hwcompat_mz700_pal_timing a hwcompat_mz700_fixed_e008 jsou v starsich
      * snapshotech pripadne ignorovany (snapshot_xml_read_int vraci false). */
 #if MZARCH == 800
-    if (snapshot_xml_read_int(r, "hwcompat_allow_psg1", &ival))
-        g_mzarch_main.mz800_hwcompat_allow_psg1 = (en_MZ800_HWCOMPAT_ALLOW_PSG1)ival;
+    {
+        /* allow_psg1 jen pro běh - INI hodnota se připne. */
+        unsigned ini_allow_psg1 = (unsigned)g_mzarch_main.mz800_hwcompat_allow_psg1;
+        if (snapshot_xml_read_int(r, "hwcompat_allow_psg1", &ival))
+            g_mzarch_main.mz800_hwcompat_allow_psg1 = (en_MZ800_HWCOMPAT_ALLOW_PSG1)ival;
+        snapshot_config_pin_ini_value("HWCOMPAT", "allow_psg1", ini_allow_psg1);
+    }
 #endif /* MZARCH == 800 */
 
     snapshot_xml_leave_element(r); /* hwconfig */

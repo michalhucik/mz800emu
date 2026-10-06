@@ -203,6 +203,76 @@ void memext_map_pwrite ( int addr_point, uint8_t value ) {
 }
 
 
+void memext_map_get_out_values ( uint8_t *values ) {
+    if ( !values ) return;
+    int i;
+    for ( i = 0; i < MEMEXT_RAW_MAP_SIZE; i++ ) {
+        if ( MEMEXT_TEST_TYPE_PEHU ) {
+            /* map[] drží 4 KB raw banky páru (2n, 2n+1); OUT E7h bere n. */
+            values[i] = (uint8_t) ( ( g_memext.map[( i & 0xfe )] >> 1 ) & MEMEXT_PEHU_MASK );
+        } else {
+            values[i] = (uint8_t) ( g_memext.map[i] & 0xff );
+        };
+    };
+}
+
+
+/* ===========================================================================
+ *  Požadavek na přemapování z UI vlákna (okno MemExt Map Settings)
+ * =========================================================================== */
+
+gint g_memext_map_request_pending = 0;
+
+/**
+ * @brief Zámek kopie hodnot požadavku (s_map_request_values).
+ *
+ * Statický GMutex s nulovou inicializací nepotřebuje g_mutex_init.
+ * Drží se jen po dobu kopírování 16 bajtů, nikdy během
+ * memext_map_pwrite().
+ */
+static GMutex s_map_request_mutex;
+
+/**
+ * @brief Hodnoty čekajícího požadavku pro address pointy 0..15.
+ *
+ * Platné, jen když je g_memext_map_request_pending != 0. Chráněno
+ * s_map_request_mutex.
+ */
+static uint8_t s_map_request_values[MEMEXT_RAW_MAP_SIZE];
+
+
+void memext_map_request ( const uint8_t *values ) {
+    if ( !values ) return;
+    g_mutex_lock ( &s_map_request_mutex );
+    memcpy ( s_map_request_values, values, sizeof ( s_map_request_values ) );
+    g_atomic_int_set ( &g_memext_map_request_pending, 1 );
+    g_mutex_unlock ( &s_map_request_mutex );
+}
+
+
+bool memext_map_request_process ( void ) {
+    uint8_t values[MEMEXT_RAW_MAP_SIZE];
+
+    g_mutex_lock ( &s_map_request_mutex );
+    if ( !g_atomic_int_get ( &g_memext_map_request_pending ) ) {
+        g_mutex_unlock ( &s_map_request_mutex );
+        return false;
+    };
+    memcpy ( values, s_map_request_values, sizeof ( values ) );
+    g_atomic_int_set ( &g_memext_map_request_pending, 0 );
+    g_mutex_unlock ( &s_map_request_mutex );
+
+    /* PEHU: jeden zápis na 8 KB pár (sudý point). Zápis lichého pointu
+     * by HW zarovnal na sudý a přepsal celý pár hodnotou lichého řádku. */
+    int step = MEMEXT_TEST_TYPE_PEHU ? 2 : 1;
+    int i;
+    for ( i = 0; i < MEMEXT_RAW_MAP_SIZE; i += step ) {
+        memext_map_pwrite ( i, values[i] );
+    };
+    return true;
+}
+
+
 uint8_t* memext_get_ram_read_pointer_by_rawbank ( int rawbank ) {
     if ( rawbank & 0x80 ) {
         return &g_memext.FLASH[( ( rawbank & 0x7f ) * MEMEXT_RAW_BANK_SIZE )];

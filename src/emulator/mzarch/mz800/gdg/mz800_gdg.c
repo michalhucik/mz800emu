@@ -175,6 +175,55 @@ static inline void gdg_set_regDMD(uint8_t value, unsigned event_ticks)
 #endif
 }
 
+/**
+ * @brief Zápis DMD s vedlejšími efekty GDG (společné jádro OUT CEh
+ *        a gdg_debug_set_regDMD()).
+ *
+ * Maskuje na bity 0-3; beze změny hodnoty nic nedělá. Jinak podle
+ * PŮVODNÍHO režimu aktualizuje framebuffer (z 800 módu dokreslí řádek
+ * do aktuální pozice paprsku, ze 700 módu jen označí změnu obrazu)
+ * a zavolá gdg_set_regDMD() s časem gdg_get_insigeop_ticks().
+ *
+ * Bez záznamu hwlog a bez HW event breakpointu - ty řeší volající
+ * gdg_write_byte().
+ *
+ * @param value Zapisovaná hodnota (bity 4-7 se ignorují).
+ *
+ * @pre Emu vlákno (nebo neběžící emu vlákno).
+ */
+static void gdg_write_regDMD(uint8_t value)
+{
+    value = value & 0x0f;
+
+    if (g_gdg.regDMD == value)
+        return;
+
+    if (!GDG_MZ800_DMD_TEST_MZ700)
+    {
+        /*
+         * TODO: pri zmenach rezimu 700 / 800 a naopak je potreba osetrit framebuffer.
+         * MZ700 -> MZ800 - do mista zmeny ponechat MZ700 obsah, zbytek updatovat standardne v MZ800
+         * MZ800 -> MZ700 - udelat update jen do zmeny rezimu, zbytek vygenerovat v 700
+         *
+         */
+        framebuffer_MZ800_screen_changed();
+    }
+    else
+    {
+        g_framebuffer.screen_changes = SCRSTS_THIS_IS_CHANGED;
+    };
+    gdg_set_regDMD(value, gdg_get_insigeop_ticks());
+
+    /*
+                DEBUGGER_MMAP_FULL_UPDATE ( );
+     */
+}
+
+void gdg_debug_set_regDMD(uint8_t value)
+{
+    gdg_write_regDMD(value);
+}
+
 void gdg_reset(void)
 {
     g_gdg.regct53g7 = 0; // musi byt pri resetu nastaveno drive, nez regDMD!
@@ -214,7 +263,8 @@ uint8_t gdg_read_dmd_status_ioop(void)
     retval |= SIGNAL_GDG_STS_HS ? 1 << 5 : 0x00;
     retval |= SIGNAL_GDG_STS_VS ? 1 << 4 : 0x00;
     retval |= g_gdg.cksw ? 1 << 2 : 0x00;
-    retval |= (g_mzarch_main.switch700) ? 1 << 1 : 0x00;
+    /* Bit 1 = poloha SW1: 0 = MZ-700 mód, 1 = MZ-800 mód (viz en_MZ800_MODE_SW). */
+    retval |= (g_mzarch_main.mode_sw == MZ800_MODE_SW_MZ800) ? 1 << 1 : 0x00;
     retval |= SIGNAL_GDG_TEMPO;
     //    printf ( "read DMD sts = 0x%02x - HB: %d, VB: %d, HS: %d, VS: %d, row: %d, col: %d, PC: 0x%04x\n", retval, SIGNAL_GDG_HBLNK, SIGNAL_GDG_VBLNK, SIGNAL_GDG_STS_HS, SIGNAL_GDG_STS_VS, BEAM_ROW ( g_gdg.screen_ticks_elapsed ), BEAM_COL ( g_gdg.screen_ticks_elapsed ), z80ex_get_reg ( g_mz800_main.cpu, regPC )  );
     return retval;
@@ -318,32 +368,7 @@ void gdg_write_byte(unsigned addr, uint8_t value)
 
         /* regDMD */
     case 0xce:
-
-        value = value & 0x0f;
-
-        if (g_gdg.regDMD != value)
-        {
-
-            if (!GDG_MZ800_DMD_TEST_MZ700)
-            {
-                /*
-                 * TODO: pri zmenach rezimu 700 / 800 a naopak je potreba osetrit framebuffer.
-                 * MZ700 -> MZ800 - do mista zmeny ponechat MZ700 obsah, zbytek updatovat standardne v MZ800
-                 * MZ800 -> MZ700 - udelat update jen do zmeny rezimu, zbytek vygenerovat v 700
-                 *
-                 */
-                framebuffer_MZ800_screen_changed();
-            }
-            else
-            {
-                g_framebuffer.screen_changes = SCRSTS_THIS_IS_CHANGED;
-            };
-            gdg_set_regDMD(value, gdg_get_insigeop_ticks());
-
-            /*
-                        DEBUGGER_MMAP_FULL_UPDATE ( );
-             */
-        };
+        gdg_write_regDMD(value);
         break;
 
     case 0xcf:

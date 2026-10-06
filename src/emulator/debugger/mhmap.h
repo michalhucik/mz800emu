@@ -45,19 +45,25 @@
  * (per-arch sada regionů). Klasický CDL bitmap (FCEUX-style) je z counterů
  * derivovatelný: flag = (count > 0).
  *
- * Aktivace: má vlastní toggle @c g_debugger.mhmap_active (nezávislý na otevření
- * debug okna). Hot path emulátoru bez aktivního debuggeru i bez aktivní MH
+ * Aktivace: režim @c g_debugger.mhmap_mode (@ref en_DEBUGGER_MHMAP_MODE: OFF /
+ * WITH_WINDOW = jen při otevřeném okně debuggeru / ALWAYS = i bez něj),
+ * vyhodnocený makrem @c TEST_DEBUGGER_MHMAP_ACTIVE. Hot path emulátoru bez aktivního debuggeru i bez aktivní MH
  * zůstává nedotčen, žádné větvení v běžné instrukční smyčce. Pomalou cestu
  * přes @c memory_*_with_logging_cb použije emulátor, pokud je aktivní debugger
  * NEBO MH (callback swap pokrývá obojí).
  *
- * Statická alokace v BSS, celková velikost @c g_mhmap ~2 MB (per arch). Žádný
- * malloc.
+ * Statická alokace v BSS, žádný malloc. Velikost @c g_mhmap (16 B na buňku,
+ * dominuje region Memext 512 K buněk = 8 MiB):
+ *  - MZ-800: 13 508 608 B (~12.9 MiB, 844 288 buněk) - změřeno
+ *    sizeof(st_MHMAP) v testovacím buildu MZ-800 (2026-10-04),
+ *  - MZ-1500: 11 276 288 B (~10.8 MiB), MZ-700: 10 883 072 B (~10.4 MiB) -
+ *    jen výpočtem z MHMAP_SIZE_* níže [neměřeno].
  *
  * Modul je arch-specific - region enum a state struct se liší podle MZARCH:
  *  - MZ-800: 4 VRAM plane, banking ROM_LOWER/CG/UPPER, GDG 16-bit IORQ
+ *    (MZ-700 mód MZ-800 používá regiony VRAM700_CG / VRAM700)
  *  - MZ-1500: 1 VRAM, 3 PCG banky, CGROM, banking ROM/ROM_UPPER, žádné GDG
- *  - MZ-700 = MZ-800 v MZ-700 modu (žádná separátní arch v emulátoru)
+ *  - MZ-700 (samostatná arch): jako MZ-1500 bez PCG bank
  */
 
 #ifndef MHMAP_H
@@ -419,6 +425,10 @@ extern "C"
     /**
      * @brief Reset všech counterů na nulu.
      *
+     * @pre Volat jen z emu vlákna (drain fronty dbgapi, akce BP) nebo
+     *      v jednovláknovém kontextu (init, testy). Emu vlákno do
+     *      @ref g_mhmap souběžně inkrementuje countery; UI vlákno reset
+     *      posílá jako DBGAPI_CMD_CDL_RESET (dbg_ui_mhmap_reset).
      * @post Všechny mapy v @ref g_mhmap jsou vynulovány.
      */
     extern void mhmap_reset ( void );
@@ -432,14 +442,78 @@ extern "C"
      * vyžaduje přechod mezi rychlou a pomalou cestou.
      *
      * @param mode @ref en_DEBUGGER_MHMAP_MODE - OFF / WITH_WINDOW / ALWAYS
+     *
+     * @pre Volat jen z emu vlákna (dbgapi CDL_START / CDL_STOP, akce BP)
+     *      nebo v jednovláknovém kontextu. Swap callbacků z UI vlákna by
+     *      běžel souběžně s CPU smyčkou; UI vlákno proto zapíše jen
+     *      @c g_debugger.mhmap_mode a přepočet deleguje přes
+     *      DBGAPI_CMD_DEBUGGER_STATE_RECOMPUTE (dbg_ui_mhmap_set_mode).
      */
     extern void mhmap_set_mode ( en_DEBUGGER_MHMAP_MODE mode );
 
 
     /**
+     * @brief Vynulovat countery jednoho regionu z tabulky exportních regionů.
+     *
+     * Region se vybírá indexem do pole z @ref mhmap_get_export_regions
+     * (stejné pořadí jako taby okna Memory Heatmap). Ostatní regiony
+     * zůstávají beze změny.
+     *
+     * @param region_index Index regionu (0 .. out_count - 1).
+     * @return true při úspěchu, false pokud je index mimo rozsah (nic se
+     *         nemění).
+     *
+     * @pre Volat jen z emu vlákna nebo v jednovláknovém kontextu (viz
+     *      @ref mhmap_reset). UI vlákno posílá DBGAPI_CMD_MHMAP_RESET_REGION
+     *      (dbg_ui_mhmap_reset_region).
+     * @post Při true jsou všechny čtyři countery (R/W/X/S) každé buňky
+     *       vybraného regionu nulové; ostatní regiony beze změny. Při false
+     *       se @ref g_mhmap nemění.
+     */
+    extern bool mhmap_reset_region ( size_t region_index );
+
+
+    /**
+     * @brief Operace pro @ref mhmap_merge.
+     *
+     * Hodnoty se přenášejí číselně v st_DBGAPI_MHMAP_MERGE_PARAM.op,
+     * proto se nesmí přečíslovat.
+     */
+    typedef enum en_MHMAP_MERGE_OP
+    {
+        MHMAP_MERGE_ADD = 0,    /**< live += src, saturace na UINT32_MAX */
+        MHMAP_MERGE_SUB = 1,    /**< live -= src, při podtečení 0 */
+    } en_MHMAP_MERGE_OP;
+
+
+    /**
+     * @brief Po buňkách přičíst / odečíst jinou mapu k živým counterům.
+     *
+     * Pracuje nad celým @ref g_mhmap jako nad polem @c uint32_t (všechny
+     * čtyři countery R/W/X/S každé buňky všech regionů). Používá okno
+     * Memory Heatmap pro Add / Sub importovaných dat.
+     *
+     * @param src Zdrojová mapa stejného layoutu (typicky importovaná data).
+     *            Jen se čte; vlastní ji volající, musí žít do návratu.
+     * @param op  @ref en_MHMAP_MERGE_OP.
+     * @return true při úspěchu, false pro @p src == NULL nebo neznámé
+     *         @p op (nic se nemění).
+     *
+     * @pre Volat jen z emu vlákna nebo v jednovláknovém kontextu (viz
+     *      @ref mhmap_reset). UI vlákno posílá DBGAPI_CMD_MHMAP_MERGE
+     *      (dbg_ui_mhmap_merge).
+     * @post Při true platí pro každý counter k: ADD -> live[k] =
+     *       min(live[k] + src[k], UINT32_MAX), SUB -> live[k] =
+     *       max(live[k] - src[k], 0). Při false se @ref g_mhmap nemění.
+     */
+    extern bool mhmap_merge ( const st_MHMAP *src, en_MHMAP_MERGE_OP op );
+
+
+    /**
      * @brief Zaznamenat jeden přístup do dané cely.
      *
-     * Volá se z debug callbacků pouze pokud je aktivní MH (@c g_debugger.mhmap_active).
+     * Volá se z debug callbacků pouze pokud je aktivní MH
+     * (@c TEST_DEBUGGER_MHMAP_ACTIVE podle @c g_debugger.mhmap_mode).
      *
      * @param region Identifikátor regionu (@ref en_MHMAP_REGION).
      * @param offset Offset v rámci regionu (0 .. velikost - 1).
@@ -568,7 +642,8 @@ extern "C"
      * non-static datech). Volání tedy není thread-safe pro paralelní
      * přístup z více vláken.
      *
-     * @param[out] out_count Počet platných položek (MZ-800 = 22, MZ-1500 = 9).
+     * @param[out] out_count Počet platných položek (MZ-800 = 23, MZ-1500 = 10,
+     *                       MZ-700 = 7; vždy včetně regionu memext).
      * @return Pointer na pole popisů regionů.
      */
     extern const st_MHMAP_EXPORT_REGION *mhmap_get_export_regions ( size_t *out_count );
@@ -629,6 +704,6 @@ extern "C"
 }
 #endif
 
-#endif /* MZ800EMU_CFG_DEBUGGER_ENABLED && (MZARCH == 800 || MZARCH == 1500) */
+#endif /* MZ800EMU_CFG_DEBUGGER_ENABLED && (MZARCH == 800 || MZARCH == 1500 || MZARCH == 700) */
 
 #endif /* MHMAP_H */

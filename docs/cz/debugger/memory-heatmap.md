@@ -243,7 +243,8 @@ Načítání:
    vynulované) a zobrazí se warning v Import status řádku
 4. Po úspěchu se Show toggle automaticky přepne na **Imported**
 
-Import alokuje paralelní buffer (~2 MB pro MZ-800, ~700 KB pro MZ-1500).
+Import alokuje paralelní buffer (~13,5 MB pro MZ-800, ~11 MB pro MZ-1500
+a MZ-700).
 Buffer žije, dokud se okno nezavře nebo emulátor neukončí.
 
 Důležité: Import je **read-only vizualizace**. Live recording běží dál,

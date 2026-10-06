@@ -27,7 +27,7 @@ void imgui_menu_mz800_dip_switch(void)
     {
 #if MZARCH != 700
         GString *str0 = g_string_new(_("Mode 700 Compat.: "));
-        if (MZARCH_TEST_REAR_DIP_SWITCH700)
+        if (MZARCH_TEST_MODE_SW_MZ800)
         {
             g_string_append(str0, _("OFF"));
         }
@@ -36,9 +36,9 @@ void imgui_menu_mz800_dip_switch(void)
             g_string_append(str0, _("ON (default)"));
         };
 
-        if (ImGui::MenuItem(str0->str, NULL, !MZARCH_TEST_REAR_DIP_SWITCH700))
+        if (ImGui::MenuItem(str0->str, NULL, !MZARCH_TEST_MODE_SW_MZ800))
         {
-            mzarch_rear_dip_switch_mz700_compat(!MZARCH_TEST_REAR_DIP_SWITCH700);
+            mzarch_mode_sw_set(MZARCH_TEST_MODE_SW_MZ800 ? MZ800_MODE_SW_MZ700 : MZ800_MODE_SW_MZ800);
         };
         g_string_free(str0, TRUE);
 #endif /* MZARCH != 700 */

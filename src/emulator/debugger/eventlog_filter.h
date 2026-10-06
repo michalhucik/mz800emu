@@ -108,10 +108,13 @@
  *
  * @section thread_safety Thread safety
  *
- * Filter struktura je vlastněna UI vláknem (Events okno). Není
- * thread-safe pro paralelní mutaci. Volání @ref eventlog_filter_match()
- * je read-only a může běžet z UI nebo emu vlákna (matcher nemění
- * AST).
+ * Filter struktura patří tomu, kdo ji naparsoval, dokud ji nepředá:
+ * filtr Log tabu okna Events drží UI vlákno, filtry triggerů Pause /
+ * Auto-mark on match převezme a uvolňuje modul @c eventlog_trigger.c
+ * (emu vlákno, viz @c eventlog_trigger.h). Není thread-safe pro
+ * paralelní mutaci ani pro uvolnění souběžné s vyhodnocením. Volání
+ * @ref eventlog_filter_match() je read-only a může běžet z UI nebo emu
+ * vlákna (matcher nemění AST).
  *
  * Licence: GPLv3
  */
@@ -173,6 +176,20 @@ st_EVENTLOG_FILTER *eventlog_filter_parse ( const char *expr );
  * @param f  Filter z @ref eventlog_filter_parse() (může být @c NULL).
  */
 void eventlog_filter_free ( st_EVENTLOG_FILTER *f );
+
+
+/**
+ * @brief Počet živých filtrů v procesu (úspěšné parse minus free).
+ *
+ * Diagnostika pro testy vlastnictví filtrů předávaných mezi vlákny
+ * (triggery okna Events): po dokončené operaci musí počet odpovídat
+ * filtrům, které někdo legitimně drží. Čítač se mění atomicky.
+ *
+ * @return Aktuální počet živých filtrů (>= 0 při korektním použití).
+ *
+ * Smí volat libovolné vlákno.
+ */
+int eventlog_filter_live_count ( void );
 
 
 /**

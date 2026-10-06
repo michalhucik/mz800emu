@@ -23,6 +23,7 @@
 #include "hw-generic/psg/psg.h"
 #include "audio.h"
 #include "cfgmain.h"
+#include "libs/sdlapp/sdlapp_options.h"
 
 #if HAVE_JOY
 #include "hw-generic/joy/joy.h"
@@ -184,6 +185,29 @@ void mzarch_platform_fn_init(void)
         cfgmodule_propagate(cmod);
     }
 
+    /* [MZ800] mode_switch - poloha zadního přepínače SW1 (MZ-700 / MZ-800
+     * mód, = bit 1 Status registru GDG). Volba --mode-switch=700|800 ji
+     * přepíše nad hodnotou z INI a jako ostatní CLI override se při
+     * ukončení uloží do INI (s --no-save-ini platí jen pro běh). Hodnotu
+     * ověřil už main() - neplatná = konec před startem emulátoru. */
+    {
+        CFGMOD *cmod = cfgroot_register_new_module(g_cfgmain, "MZ800");
+        CFGELM *elm = cfgmodule_register_new_element(cmod, "mode_switch", CFGENTYPE_KEYWORD, MZ800_MODE_SW_MZ700,
+                                                     MZ800_MODE_SW_MZ700, "MZ700",
+                                                     MZ800_MODE_SW_MZ800, "MZ800",
+                                                     -1);
+        cfgelement_set_handlers(elm, (void *)&g_mzarch_main.mode_sw, (void *)&g_mzarch_main.mode_sw);
+        cfgmodule_parse(cmod);
+        cfgmodule_propagate(cmod);
+
+        en_MZ800_MODE_SW cli_mode;
+        if (sdlapp_option_present("--mode-switch")
+            && mzarch_mode_sw_parse_cli(sdlapp_option_value("--mode-switch"), &cli_mode))
+        {
+            mzarch_mode_sw_set(cli_mode);
+        }
+    }
+
     /* Pokud je v INI povolený druhý PSG, aktivujeme ho */
     if (g_mzarch_main.mz800_hwcompat_allow_psg1 == MZ800_HWCOMPAT_ALLOW_PSG1_YES)
     {
@@ -222,7 +246,7 @@ void mzarch_platform_fn_init(void)
 
     printf("\nRear dip switch - ");
 #if MZARCH != 700
-    printf("Mode: %s, ", (!g_mzarch_main.switch700) ? "MZ-700" : "MZ-800");
+    printf("Mode: %s, ", (g_mzarch_main.mode_sw == MZ800_MODE_SW_MZ700) ? "MZ-700" : "MZ-800");
 #endif /* MZARCH != 700 */
     printf("CMT polarity: %s\n", (!g_cmt.polarity) ? "Normal" : "Inverted");
 

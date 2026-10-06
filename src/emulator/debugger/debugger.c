@@ -66,6 +66,7 @@
 #include "trace/hwlog.h"
 #include "trace/marklog.h"
 #include "trace/eventlog.h"
+#include "trace/eventlog_trigger.h"
 #include "io_activity.h"
 #include "io_history.h"
 #include "callstack.h"
@@ -217,6 +218,10 @@ void debugger_exit ( void ) {
     iorqlog_finalize ( );
     intlog_finalize ( );
     hwlog_finalize ( );
+    /* Triggery okna Events (Pause / Auto-mark on match) - vypnout a uvolnit
+     * jejich filtry dřív, než zanikne ring. Běží na emu vlákně (emulator_quit),
+     * callback triggeru proto souběžně neběží. */
+    eventlog_trigger_shutdown ( );
     /* Event Viewer - destroy ringu před marklog_finalize (sjednocení s
      * pořadím init: marklog před eventlog -> destroy v opačném pořadí). */
     eventlog_destroy ( );
@@ -547,24 +552,30 @@ void debugger_init ( void ) {
     cfgmodule_parse ( cmod );
     cfgmodule_propagate ( cmod );
 
-    /* UI persistence registrace volající funkce z ui-imgui/ - skip jen v
-     * headless test buildu, kde ui-imgui/ není linkován (jinak undefined
-     * reference). Historický #ifndef NOT_HAVE_DEBUGGER_UI guard sem
-     * nesedí (je vždy defined, vynechal by i production ImGui build). */
-#ifndef MZTEST_HEADLESS
     /* I/O Ports panel persistence - samostatná sekce [IO_PORTS_PANEL]
-     * (per UX spec a Michalovo rozhodnutí). Klíče: collapse_<chip>,
-     * history_capacity, history_auto_follow, tracking_active. */
+     * (per UX spec a Michalovo rozhodnutí). Klíč history_capacity patří
+     * jádru (g_io_history_cfg_capacity, io_history_init_from_cfg() níže
+     * z něj alokuje ring); ostatní klíče (collapse_<chip>,
+     * history_auto_follow, tracking_active, ...) registruje okno, jen
+     * mimo headless test build (viz guard níže). */
     {
         CFGMOD *iomod = cfgroot_register_new_module ( g_cfgmain,
                                                        "IO_PORTS_PANEL" );
         if ( iomod ) {
+            io_history_register_persistence ( iomod );
+#ifndef MZTEST_HEADLESS
             io_window_register_persistence ( iomod );
+#endif
             cfgmodule_parse ( iomod );
             cfgmodule_propagate ( iomod );
         }
     }
 
+    /* UI persistence registrace volající funkce z ui-imgui/ - skip jen v
+     * headless test buildu, kde ui-imgui/ není linkován (jinak undefined
+     * reference). Historický #ifndef NOT_HAVE_DEBUGGER_UI guard sem
+     * nesedí (je vždy defined, vynechal by i production ImGui build). */
+#ifndef MZTEST_HEADLESS
     /* Memory Map okno persistence - samostatná sekce [MEMMAP_WINDOW].
      * Klíče: compact_mode (kompaktní vs normální zobrazení banking sloupce). */
     {
@@ -781,8 +792,10 @@ void debugger_init ( void ) {
     /* I/O Ports panel activity tracker (V1.5 faze 3.3 / 1.5). */
     io_activity_init ( );
 
-    /* I/O Ports panel history ring (V1.5 faze 3.3 / 1.6). */
-    io_history_init ( IO_HISTORY_DEFAULT_CAPACITY );
+    /* I/O Ports panel history ring (V1.5 faze 3.3 / 1.6). Kapacita
+     * z [IO_PORTS_PANEL] history_capacity (propagate výše, emu vlákno
+     * ještě neběží). */
+    io_history_init_from_cfg ( );
 
     /* Shorthand --all-traces-mode / --all-traces-dir aplikujeme PO
      * per-subsystém options. Per-subsystém option má precedenci - shorthand
@@ -979,16 +992,6 @@ void debugger_screen_refresh_if_enabled ( void ) {
 }
 
 
-void debugger_mmap_mount ( unsigned value ) {
-    g_memory.map |= value;
-}
-
-
-void debugger_mmap_umount ( unsigned value ) {
-    g_memory.map &= ( ~value ) & 0x0f;
-}
-
-
 void debugger_change_z80_flagbit ( unsigned flagbit, unsigned value ) {
 
     if ( !EMULATOR_TEST_PAUSED ) {
@@ -1020,17 +1023,6 @@ void debugger_change_z80_register ( z80_reg_t reg, uint16_t value ) {
     } else {
         z80_set_reg ( g_mzarch_main.cpu, reg, value );
     };
-}
-
-
-void debugger_change_dmd ( uint8_t value ) {
-
-    if ( !EMULATOR_TEST_PAUSED ) {
-        /* Hodnotu comboboxu neni potreba nastavovat zpet, protoze po pauze dojde k update */
-        return;
-    };
-
-    gdg_write_byte ( 0xce, value );
 }
 
 

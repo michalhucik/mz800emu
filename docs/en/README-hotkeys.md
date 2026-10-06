@@ -59,6 +59,18 @@ Global keyboard shortcuts available across the entire emulator window.
 | `Alt + F8`                 | Quick Save                                                                  |
 | `Alt + F9`                 | Quick Load                                                                  |
 
+## Video recording
+
+All platforms. For details see [`video-recording.md`](video-recording.md).
+
+| Key                        | Action                                                                      |
+|----------------------------|-----------------------------------------------------------------------------|
+| `Alt + O`                  | Start / stop video recording                                                |
+| `Alt + Shift + O`          | Pause / resume recording (emulation keeps running)                          |
+| `Alt + L`                  | Add a marker to the recording                                               |
+| `Alt + Shift + L`          | Show / hide the recording remote control window                             |
+| `Alt + U`                  | Switch the recording time base: emulated time / real time (also while recording) |
+
 ## Debugger
 
 Available only in builds with `MZ800EMU_CFG_DEBUGGER_ENABLED`.

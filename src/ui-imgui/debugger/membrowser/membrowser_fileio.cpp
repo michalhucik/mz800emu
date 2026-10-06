@@ -45,6 +45,7 @@
 #include <cstring>
 #include <cstdint>
 #include <string>
+#include <vector>
 #include <sys/stat.h>
 
 extern "C" {
@@ -302,6 +303,10 @@ static bool do_save_bytes ( const std::string &path, uint64_t from, uint64_t siz
 }
 
 
+/** @brief Velikost bloku při nahrávání souboru do regionu (bajty). */
+#define MEMBROWSER_LOAD_CHUNK ( 1024u * 1024u )
+
+
 /**
  * @brief Vlastní I/O nahrání bajtů ze souboru do regionu.
  *
@@ -364,13 +369,18 @@ static bool do_load_bytes ( const std::string &path, uint64_t to,
 #endif
     }
 
-    uint8_t buf[65536];
+    /* Zápis jde přes CMDRQ frontu (emu_backend_write) a za běhu emulace
+     * čeká každý blok na konec snímku (~20 ms). Velký blok (1 MiB) drží
+     * počet submitů nízký: 16 MB ramdisk = 16 zápisů místo 256. */
+    std::vector<uint8_t> chunk ( MEMBROWSER_LOAD_CHUNK );
+    uint8_t *buf = chunk.data ( );
+    const uint64_t buf_size = chunk.size ( );
     uint64_t off = to;
     uint64_t end = to + size;
     bool ok = true;
     while ( off < end ) {
         uint32_t want = ( uint32_t )
-            ( ( end - off > sizeof ( buf ) ) ? sizeof ( buf ) : end - off );
+            ( ( end - off > buf_size ) ? buf_size : end - off );
         size_t r = std::fread ( buf, 1, want, fp );
         if ( r == 0 ) {
             std::snprintf ( s_load_error, sizeof ( s_load_error ),

@@ -1,11 +1,75 @@
 
-	- BUGFIX: Pressing RESET (F12 or menu) immediately after the window opened could crash the emulator if the emulation thread had not started yet.
+	- New option --mode-switch <700|800> (MZ-800): rear mode switch position. The switch position is now saved in the configuration.
 
-	- BUGFIX: Opening/closing the debugger window (Alt+D, menu) while emulation was running, and live memory reads in the Memory Browser, could rarely race with the emulation thread. Both operations are now performed safely.
+	- BUGFIX: Loading a snapshot overwrote the configuration. Cassette settings (polarity, speed, MZF size check), memory extension fill and the Pezik ramdisk backup are no longer restored from a snapshot; device connections and types, the Unicard firmware version and the second PSG are restored only until the emulator exits.
 
-	- BUGFIX: The accelerated RAM access path is now always recomputed after loading a snapshot. Previously the emulator could keep using the memory mapping from before the snapshot was loaded, until the next banking change.
+	- DOCS FIX: Debugger - the PCG editor and Memory Diff window descriptions match the actual controls (the PCG editor writes every change immediately and has no Save; Memory Diff has its own region and mode for each source).
 
-	- DOCS FIX: MCP - the platform field of platform/info is mz700 / mz800 / mz1500; PAL and NTSC are distinguished by the tv_system field. The documentation previously claimed mz700-pal / mz700-ntsc.
+	- BUGFIX: I/O Ports - the saved selection of recorded ports (Rec column) was discarded at start and after every history capacity change (all ports were recorded).
+
+	- BUGFIX: MCP - emu_debugger_activate did not start CPU history or heatmap recording tied to the debug window and emu_debugger_deactivate did not switch the emulation back to the fast path without debug hooks.
+
+	- BUGFIX: Debugger windows changed the emulator state concurrently with the running emulation (risk of a crash or corrupted data); the emulation thread now performs the changes. Affected: Memory Browser (write, Freeze Bytes), Event Viewer (capacity, Clear, mode, categories, import, Pause/Auto-mark on match), I/O Ports (history, Reset Activity), Breakpoints (Delete All, load from file, reset hit counter), Memory Heatmap (mode, Reset, Add/Sub), Memory Map (banking, DMD), MemExt Map, Callstack (Active, Reset), Ctrl+R and hiding the debugger.
+
+	- BUGFIX: MemExt Map Settings (PEHU) - the window showed twice the 8 kB bank number and Apply without edits changed the map.
+
+	- BUGFIX: I/O Ports - the saved history capacity was not applied at start (the history always held 10000 events while the option showed the saved value).
+
+	- BUGFIX: --run-mzf in MZ-800 mode and the DMD option in the Memory Map window switched the GDG mode without the side effects of OUT (CEh); after --run-mzf the CTC0 timer thus stayed blocked (GATE0 = 0), unlike a ROM load.
+
+	- New option --version: prints the version, revision, source origin and build details.
+
+	- New option --speed <percent|max>: emulation speed at start (mainly for --headless).
+
+	- BUGFIX: --run-mzf starts a program in the same state as after a ROM tape load (MZ-1500: missing palette and PCG graphics; MZ-800 and MZ-1500: muted timer sound; screen not cleared). CHANGE: on MZ-700 the real-time clock is no longer started (the ROM does not start it either).
+
+	- BUGFIX: MCP - stopped answering entirely when the emulation thread got stuck; now returns "Emulator busy: command still running" (after about 20 s, 10 min for file operations).
+
+	- Debugger and MCP - commands execute immediately while the emulation is paused (previously with up to 20 ms delay).
+
+	- BUGFIX: Crash after loading a snapshot saved during tape playback when no tape was inserted.
+
+	- BUGFIX: After loading such a snapshot a newly inserted tape did not play from the start and the program waited forever for the tape signal.
+
+	- BUGFIX: MCP - the tape listing reported playable/recordable inverted; cmt_transport stop without a tape did not stop the recorder.
+
+	- BUGFIX: MCP Python wrapper - an emulator exit surfaced only as a 30 s timeout and the next call silently started a new emulator; now an immediate error, the reason in emu_status (last_exit) and restarted: true on the call that restarts the emulator.
+
+	- DOCS FIX: MCP - emu_cmt_tape_seek does not support single-file tapes (.mzf, .wav).
+
+	- BUGFIX: Cassette CPU Boost - after loading a snapshot the speed did not match the recorder state; tape stop and pause also turned off MAX SPEED chosen by the user; loading a snapshot overwrote the CPU Boost option (and it was saved to the configuration).
+
+	- BUGFIX: MCP - cmt_open reported playing from the request, not the real state (now also state, paused and warning).
+
+	- MCP - bp_list shows the address and bank range (addr_end, addr_match_mode, ...); bp_create_with_init warns about addr_end without RANGE.
+
+	- BUGFIX: PCG editor (MZ-1500) - only characters 0-255 of the 1024 in a bank could be edited.
+
+	- BUGFIX: MCP - io_write and io_read while the emulation was running (also emu_media_run_mzf) stopped the CPU for several minutes and blocked MCP.
+
+	- BUGFIX: CMT hack without GUI (--headless, MCP pipe) blocked the emulation forever (nobody can close the file dialog); now returns Break with a warning.
+
+	- MCP Python wrapper - the MZ800EMU_WORK_DIR environment variable sets the working directory of the started emulator (--work-dir).
+
+	- New feature: video recording (Tools -> Video Recording) on all platforms. Lossless AVI (picture and sound) in emulation time or real time, start/stop Alt+O, pause Alt+Shift+O, markers Alt+L, remote control window Alt+Shift+L, retake via snapshot with no visible seam, presets, export script to MP4 for YouTube. See video-recording.md.
+
+	- MCP - key names from the documentation (CURSOR_*, INST, UP_ARROW, DOWN_ARROW) also work in press_key and release_key; the "Unknown key" error suggests the closest names. CHANGE: send_keys with an unknown key name fails entirely (previously the key was silently skipped).
+
+	- BUGFIX: Without a working audio device the windowed emulation did not start; it now runs without sound in real time and shows a notice.
+
+	- BUGFIX: Headless (--headless, MCP pipe) - the emulation ran at about 1 frame/s, at other times unthrottled; it now runs in real time and the speed can be changed as in the window.
+
+	- BUGFIX: MCP - commands occasionally failed (e.g. "bp_remove failed (unknown id?)") when the emulation thread picked them up late; now waits up to 10 s and a command not executed reports "Emulator busy: ...".
+
+	- BUGFIX: RESET right after the window opened could crash the emulator.
+
+	- BUGFIX: Opening and closing the debugger while running and live memory reads in the Memory Browser could rarely collide with the emulation thread.
+
+	- BUGFIX: After loading a snapshot the emulator could use the RAM mapping from before the load until the next memory mapping change.
+
+	- BUGFIX: Snapshot Setup settings were not loaded after an emulator restart.
+
+	- DOCS FIX: MCP - platform/info returns platform mz700 / mz800 / mz1500; PAL and NTSC are distinguished by tv_system.
 
 2026-07-28 - Released version 2.0.5 - preview
 

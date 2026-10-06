@@ -202,6 +202,7 @@ Wrapper čte transport z env proměnných:
 |---------|---------|------------------|
 | `MZ800EMU_TRANSPORT` | `pipe` | `pipe`, `tcp` |
 | `MZ800EMU_EXE` | `../mz800emu.exe` | cesta k binárce (pouze pipe) |
+| `MZ800EMU_WORK_DIR` | (prázdné) | pracovní adresář spawnutého emulátoru, předá se jako `--work-dir` (pouze pipe); tam jdou relativní výstupy, např. CDL export při ukončení |
 | `MZ800EMU_TCP_HOST` | `127.0.0.1` | hostname (pouze tcp) |
 | `MZ800EMU_TCP_PORT` | `23800` | port number (pouze tcp) |
 
@@ -234,6 +235,31 @@ instantní. To znamená:
   (= pipe spawn nebo TCP connect).
 - Pokud transport selže, chybu uvidíte až u prvního tool callu, ne
   při discovery.
+
+## Konec emulátoru a automatický restart
+
+Pokud proces emulátoru skončí ve chvíli, kdy tool call čeká na
+odpověď (pád nebo jiné ukončení procesu), volání **hned** selže
+chybou typu `emulator process exited (exit code 3221225477 =
+0xC0000005) while waiting for the response (cmd=run); ...` - nečeká
+se do 30s timeoutu požadavku. V pipe módu se stav emulátoru ztratil.
+V TCP módu je text `emulator connection closed (...)`; ztratilo se
+jen spojení - GUI emulátor může dál běžet se svým stavem.
+
+Po takovém nečekaném konci:
+
+- `emu_status` vrací `{"running": false, "connected": false,
+  "last_exit": "<důvod>"}`.
+- Další tool call, který emulátor potřebuje, spustí nový proces
+  emulátoru (pipe; RAM, registry, breakpointy a vložená média jsou
+  ve výchozím stavu) nebo se znovu připojí (TCP). Restart ohlásí právě
+  ten tool call, který ho vyvolal: jeho výsledek nese
+  `"restarted": true` a `"restart_reason"`; pokud toto volání selže,
+  text chyby končí `[restarted: true; <důvod>]`. Ohlásí ho jen toto
+  jedno volání, i když jich běží víc současně. Pokud restart vyvolalo
+  čtení resource, pole nese výsledek nejbližšího toolu.
+- `emu_stop` s následným voláním ani explicitní `emu_start` se jako
+  restart nehlásí.
 
 ## Logging
 

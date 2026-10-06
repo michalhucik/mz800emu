@@ -5,6 +5,9 @@
 
 #include "snapshot.h"
 #include "snapshot_config.h"
+#include "snapshot_xml.h"
+
+#include <stdio.h>
 #include "cfgmain.h"
 #include "libs/cfgfile/cfgroot.h"
 #include "libs/cfgfile/cfgmodule.h"
@@ -205,16 +208,41 @@ void snapshot_config_init(void)
     elm = cfgmodule_register_new_element(cmod, "quickload_resume_mode", CFGENTYPE_UNSIGNED, SNAPSHOT_RESUME_ALWAYS_PAUSE, 0, 2);
     cfgelement_set_propagate_cb(elm, propagatecfg_quickload_resume_mode, NULL);
     cfgelement_set_save_cb(elm, savecfg_quickload_resume_mode, NULL);
+
+    /* Načíst sekci z INI a propagovat (vzor mcp_config_init, audio.c):
+     * globální cfgroot_propagate se v emulátoru nevolá, takže bez tohoto by
+     * se uložené hodnoty nikdy nenačetly a po každém startu platily výchozí.
+     * Chybí-li sekce, propagují se výchozí hodnoty elementů. */
+    cfgmodule_parse(cmod);
+    cfgmodule_propagate(cmod);
 }
 
 
 void snapshot_config_load(void)
 {
-    /* Konfigurace se načítá automaticky přes cfgroot_propagate */
+    /* Konfigurace se načítá v snapshot_config_init() (cfgmodule_parse +
+     * cfgmodule_propagate); zde není co dělat. */
 }
 
 
 void snapshot_config_save(void)
 {
-    /* Konfigurace se ukládá automaticky přes cfgroot_save */
+    /* Konfigurace se ukládá přes cfgroot_save (save callbacky elementů). */
+}
+
+
+void snapshot_config_pin_ini_value(const char *module_name, const char *element_name, unsigned ini_value)
+{
+    /* Bez konfigurace (unit testy snapshotu bez cfgmain) není co chránit. */
+    if (!g_cfgmain) {
+        return;
+    }
+    CFGMOD *cmod = cfgroot_get_module_by_name(g_cfgmain, (char *)module_name);
+    CFGELM *elm = cmod ? cfgmodule_get_element_by_name(cmod, (char *)element_name) : NULL;
+    if (!elm) {
+        SNAP_WARN("config", "INI key [%s] %s not found, value from snapshot may be saved to INI",
+                  module_name, element_name);
+        return;
+    }
+    cfgelement_pin_save_value(elm, ini_value);
 }

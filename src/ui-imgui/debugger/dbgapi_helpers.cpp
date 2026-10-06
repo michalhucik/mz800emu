@@ -30,6 +30,11 @@
 
 #include "debugger/dbgapi_ui.h"
 #include "debugger/dbgapi_cmdrq.h"
+#include "debugger/debugger.h"
+#include "debugger/mhmap.h"
+#include "debugger/eventlog_filter.h"
+
+#include <string.h>
 #include "dbgapi_helpers.h"
 
 
@@ -267,6 +272,328 @@ bool dbg_ui_bpgrp_update(const st_DBGAPI_BPGRP_UPDATE_PARAM *p)
                                      DBGAPI_CMD_BPGRP_UPDATE,
                                      (void *)p, NULL,
                                      DBG_UI_DEFAULT_TIMEOUT_MS);
+}
+
+bool dbg_ui_io_history_set_capacity(uint32_t capacity, uint32_t *out_capacity_after)
+{
+    /* Realokace ringu (free + calloc) musí běžet na emu vlákně: to do ringu
+     * zapisuje v io_history_record(). Param žije na zásobníku, synchronní
+     * submit ho po dokončení příkazu už nepoužívá. */
+    st_DBGAPI_IO_HISTORY_CAPACITY_PARAM p;
+    p.capacity = capacity;
+    p.capacity_after = 0;
+    bool ok = dbgapi_ui_submit_cmd_sync(&g_dbgapi_cmdrq_queue,
+                                        DBGAPI_CMD_IO_HISTORY_SET_CAPACITY,
+                                        &p, NULL,
+                                        DBG_UI_IO_CMD_TIMEOUT_MS);
+    if (ok && out_capacity_after)
+        *out_capacity_after = p.capacity_after;
+    return ok;
+}
+
+
+bool dbg_ui_io_history_clear(void)
+{
+    return dbgapi_ui_submit_cmd_sync(&g_dbgapi_cmdrq_queue,
+                                     DBGAPI_CMD_IO_HISTORY_CLEAR,
+                                     NULL, NULL,
+                                     DBG_UI_IO_CMD_TIMEOUT_MS);
+}
+
+
+bool dbg_ui_io_activity_reset_all(void)
+{
+    return dbgapi_ui_submit_cmd_sync(&g_dbgapi_cmdrq_queue,
+                                     DBGAPI_CMD_IO_ACTIVITY_RESET,
+                                     NULL, NULL,
+                                     DBG_UI_IO_CMD_TIMEOUT_MS);
+}
+
+
+bool dbg_ui_io_activity_reset_port(uint16_t port, bool is_8bit)
+{
+    /* memset slotů g_io_activity musí běžet na emu vlákně (souběh
+     * s io_activity_record_hit / io_activity_advance_frame). Param žije
+     * na zásobníku, synchronní submit ho po dokončení už nepoužívá. */
+    st_DBGAPI_IO_ACTIVITY_RESET_PORT_PARAM p;
+    p.port = port;
+    p.is_8bit = is_8bit ? 1u : 0u;
+    return dbgapi_ui_submit_cmd_sync(&g_dbgapi_cmdrq_queue,
+                                     DBGAPI_CMD_IO_ACTIVITY_RESET_PORT,
+                                     &p, NULL,
+                                     DBG_UI_IO_CMD_TIMEOUT_MS);
+}
+
+
+bool dbg_ui_bp_clear_all(void)
+{
+    /* Uvolnění stringů/AST BP a vyčištění bptmap musí běžet na emu
+     * vlákně: to obojí čte při vyhodnocení BP v CPU smyčce. */
+    return dbgapi_ui_submit_cmd_sync(&g_dbgapi_cmdrq_queue,
+                                     DBGAPI_CMD_BP_CLEAR_ALL,
+                                     NULL, NULL,
+                                     DBG_UI_BP_BULK_CMD_TIMEOUT_MS);
+}
+
+
+bool dbg_ui_bp_load_from_file(const char *filepath)
+{
+    /* Param i řetězec cesty žijí u volajícího; synchronní submit je po
+     * dokončení příkazu už nepoužívá. */
+    st_DBGAPI_BP_LOAD_FILE_PARAM p;
+    p.filepath = filepath;
+    return dbgapi_ui_submit_cmd_sync(&g_dbgapi_cmdrq_queue,
+                                     DBGAPI_CMD_BP_LOAD_FILE,
+                                     &p, NULL,
+                                     DBG_UI_BP_BULK_CMD_TIMEOUT_MS);
+}
+
+
+bool dbg_ui_bp_reset_hits(int id)
+{
+    /* ID žije na zásobníku; synchronní submit ho po dokončení nepoužívá. */
+    return dbgapi_ui_submit_cmd_sync(&g_dbgapi_cmdrq_queue,
+                                     DBGAPI_CMD_BP_RESET_HITS,
+                                     &id, NULL,
+                                     DBG_UI_BP_BULK_CMD_TIMEOUT_MS);
+}
+
+
+bool dbg_ui_mhmap_set_mode(int mode)
+{
+    /* Vzor CPU Instruction History: flag zapíše UI (int zápis), swap
+     * callbacků (mzarch_platform_fn_debugger_state_changed) běží na emu
+     * vlákně. mhmap_set_mode se z UI nevolá - swapoval by souběžně s CPU. */
+    g_debugger.mhmap_mode = (en_DEBUGGER_MHMAP_MODE)mode;
+    return dbg_ui_debugger_state_recompute();
+}
+
+
+bool dbg_ui_mhmap_reset(void)
+{
+    /* Existující příkaz MCP cdl_reset = přesně mhmap_reset() na emu vlákně. */
+    return dbgapi_ui_submit_cmd_sync(&g_dbgapi_cmdrq_queue,
+                                     DBGAPI_CMD_CDL_RESET,
+                                     NULL, NULL,
+                                     DBG_UI_MHMAP_CMD_TIMEOUT_MS);
+}
+
+
+bool dbg_ui_mhmap_reset_region(uint32_t region_index)
+{
+    st_DBGAPI_MHMAP_RESET_REGION_PARAM p;
+    p.region_index = region_index;
+    return dbgapi_ui_submit_cmd_sync(&g_dbgapi_cmdrq_queue,
+                                     DBGAPI_CMD_MHMAP_RESET_REGION,
+                                     &p, NULL,
+                                     DBG_UI_MHMAP_CMD_TIMEOUT_MS);
+}
+
+
+bool dbg_ui_mhmap_merge(const struct st_MHMAP *src, unsigned op)
+{
+    if (!src) return false;
+    /* Zdrojová mapa zůstává u volajícího; emu vlákno ji čte jen do
+     * dokončení synchronního příkazu. */
+    st_DBGAPI_MHMAP_MERGE_PARAM p;
+    p.src = src;
+    p.src_size = sizeof(st_MHMAP);
+    p.op = op;
+    return dbgapi_ui_submit_cmd_sync(&g_dbgapi_cmdrq_queue,
+                                     DBGAPI_CMD_MHMAP_MERGE,
+                                     &p, NULL,
+                                     DBG_UI_MHMAP_CMD_TIMEOUT_MS);
+}
+
+
+bool dbg_ui_memmap_change_map(uint8_t clear_mask, uint8_t set_mask,
+                              uint8_t *map_after)
+{
+    st_DBGAPI_MEMMAP_SET_PARAM p;
+    memset(&p, 0, sizeof(p));
+    p.map_clear_mask = clear_mask;
+    p.map_set_mask = set_mask;
+    p.dmd_write = false;
+    bool ok = dbgapi_ui_submit_cmd_sync(&g_dbgapi_cmdrq_queue,
+                                        DBGAPI_CMD_MEMMAP_SET,
+                                        &p, NULL,
+                                        DBG_UI_MEMMAP_CMD_TIMEOUT_MS);
+    if (ok && map_after) *map_after = p.map_after;
+    return ok;
+}
+
+
+bool dbg_ui_memmap_set_dmd(uint8_t dmd)
+{
+    /* Masky 0 = banking bity beze změny; handler na ne-MZ-800 odmítne. */
+    st_DBGAPI_MEMMAP_SET_PARAM p;
+    memset(&p, 0, sizeof(p));
+    p.dmd_write = true;
+    p.dmd_value = dmd;
+    return dbgapi_ui_submit_cmd_sync(&g_dbgapi_cmdrq_queue,
+                                     DBGAPI_CMD_MEMMAP_SET,
+                                     &p, NULL,
+                                     DBG_UI_MEMMAP_CMD_TIMEOUT_MS);
+}
+
+
+bool dbg_ui_eventlog_set_mode(uint32_t mode, bool *out_active)
+{
+    /* Režim + eventlog_recompute_active() na emu vlákně (gate záznamu čte
+     * eventlog_record). Neplatný režim odmítne handler. */
+    st_DBGAPI_EVENTLOG_MODE_PARAM p;
+    p.mode = mode;
+    p.active_after = 0;
+    bool ok = dbgapi_ui_submit_cmd_sync(&g_dbgapi_cmdrq_queue,
+                                        DBGAPI_CMD_EVENTLOG_SET_MODE,
+                                        &p, NULL,
+                                        DBG_UI_EVENTLOG_CMD_TIMEOUT_MS);
+    if (ok && out_active) *out_active = (p.active_after != 0);
+    return ok;
+}
+
+
+bool dbg_ui_eventlog_set_mask(uint64_t mask)
+{
+    st_DBGAPI_EVENTLOG_MASK_PARAM p;
+    p.mask = mask;
+    return dbgapi_ui_submit_cmd_sync(&g_dbgapi_cmdrq_queue,
+                                     DBGAPI_CMD_EVENTLOG_SET_MASK,
+                                     &p, NULL,
+                                     DBG_UI_EVENTLOG_CMD_TIMEOUT_MS);
+}
+
+
+bool dbg_ui_eventlog_import_file(const char *path, int *out_rc,
+                                 uint32_t *out_count_after)
+{
+    if (!path || !path[0]) return false;
+    /* Sentinel rc: handler ho přepíše, jen když import opravdu proběhl.
+     * Tím se odliší chyba importu (rc = -1) od neprovedeného příkazu
+     * (timeout, plná fronta, ukončování). */
+    st_DBGAPI_EVENTLOG_IMPORT_PARAM p;
+    p.path = path;
+    p.rc = INT32_MIN;
+    p.count_after = 0;
+    p.capacity_after = 0;
+    bool ok = dbgapi_ui_submit_cmd_sync(&g_dbgapi_cmdrq_queue,
+                                        DBGAPI_CMD_EVENTLOG_IMPORT_FILE,
+                                        &p, NULL,
+                                        DBG_UI_EVENTLOG_CMD_TIMEOUT_MS);
+    if (p.rc != INT32_MIN)
+    {
+        if (out_rc) *out_rc = (int)p.rc;
+        if (out_count_after) *out_count_after = p.count_after;
+    };
+    return ok;
+}
+
+
+bool dbg_ui_eventlog_trigger_set(uint32_t kind,
+                                 struct st_EVENTLOG_FILTER *filter,
+                                 const char *name)
+{
+    st_DBGAPI_EVENTLOG_TRIGGER_PARAM p;
+    p.kind = kind;
+    p.filter = filter;
+    p.name = name;
+    p.old_filter = NULL;
+    bool ok = dbgapi_ui_submit_cmd_sync(&g_dbgapi_cmdrq_queue,
+                                        DBGAPI_CMD_EVENTLOG_TRIGGER_SET,
+                                        &p, NULL,
+                                        DBG_UI_EVENTLOG_CMD_TIMEOUT_MS);
+    if (ok)
+    {
+        /* Emu vlákno nový filtr převzalo a starý už nepoužívá. */
+        eventlog_filter_free((st_EVENTLOG_FILTER *)p.old_filter);
+    }
+    else
+    {
+        /* Neprovedeno nebo odmítnuto: filtr zůstal nám, stav beze změny. */
+        eventlog_filter_free(filter);
+    };
+    return ok;
+}
+
+
+bool dbg_ui_eventlog_trigger_clear_matches(uint32_t kind)
+{
+    uint32_t k = kind;
+    return dbgapi_ui_submit_cmd_sync(&g_dbgapi_cmdrq_queue,
+                                     DBGAPI_CMD_EVENTLOG_TRIGGER_CLEAR_MATCHES,
+                                     &k, NULL,
+                                     DBG_UI_EVENTLOG_CMD_TIMEOUT_MS);
+}
+
+
+/**
+ * @brief Společné jádro dbg_ui_freeze_add / dbg_ui_freeze_remove.
+ *
+ * @param cmd         DBGAPI_CMD_FREEZE_ADD nebo DBGAPI_CMD_FREEZE_REMOVE.
+ * @param region_kind en_REGION_KIND regionu.
+ * @param sub_id      Disambiguator banku / plane.
+ * @param offset      Offset v rámci regionu.
+ * @param value       Hodnota (jen ADD).
+ * @return true pokud emu vlákno příkaz provedlo a operace uspěla.
+ */
+static bool dbg_ui_freeze_submit(en_DBGAPI_CMD cmd, int region_kind,
+                                 int sub_id, uint32_t offset, uint8_t value)
+{
+    st_DBGAPI_FREEZE_PARAM p;
+    memset(&p, 0, sizeof(p));
+    p.region_kind = (int32_t)region_kind;
+    p.sub_id = (int32_t)sub_id;
+    p.offset = offset;
+    p.value = value;
+    return dbgapi_ui_submit_cmd_sync(&g_dbgapi_cmdrq_queue, cmd, &p, NULL,
+                                     DBG_UI_FREEZE_CMD_TIMEOUT_MS);
+}
+
+
+bool dbg_ui_freeze_add(int region_kind, int sub_id, uint32_t offset,
+                       uint8_t value)
+{
+    return dbg_ui_freeze_submit(DBGAPI_CMD_FREEZE_ADD, region_kind, sub_id,
+                                offset, value);
+}
+
+
+bool dbg_ui_freeze_remove(int region_kind, int sub_id, uint32_t offset)
+{
+    return dbg_ui_freeze_submit(DBGAPI_CMD_FREEZE_REMOVE, region_kind, sub_id,
+                                offset, 0);
+}
+
+
+bool dbg_ui_callstack_set_active(bool active, bool *out_active)
+{
+    st_DBGAPI_CALLSTACK_SET_ACTIVE_PARAM p;
+    p.active = active ? 1u : 0u;
+    p.active_after = 0;
+    bool ok = dbgapi_ui_submit_cmd_sync(&g_dbgapi_cmdrq_queue,
+                                        DBGAPI_CMD_CALLSTACK_SET_ACTIVE,
+                                        &p, NULL,
+                                        DBG_UI_CALLSTACK_CMD_TIMEOUT_MS);
+    if (ok && out_active) *out_active = (p.active_after != 0);
+    return ok;
+}
+
+
+bool dbg_ui_callstack_reset(void)
+{
+    return dbgapi_ui_submit_cmd_sync(&g_dbgapi_cmdrq_queue,
+                                     DBGAPI_CMD_CALLSTACK_RESET,
+                                     NULL, NULL,
+                                     DBG_UI_CALLSTACK_CMD_TIMEOUT_MS);
+}
+
+
+bool dbg_ui_screen_refresh(void)
+{
+    return dbgapi_ui_submit_cmd_sync(&g_dbgapi_cmdrq_queue,
+                                     DBGAPI_CMD_SCREEN_REFRESH,
+                                     NULL, NULL,
+                                     DBG_UI_SCREEN_REFRESH_TIMEOUT_MS);
 }
 
 #else /* !MZ800EMU_CFG_DEBUGGER_ENABLED */

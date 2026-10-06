@@ -37,7 +37,8 @@ Notes:
 - The build system uses CMake (3.20+) with Ninja as the preferred generator.
 - `json-glib` is required since the `D.0.5.B.1` release (build/cmake commit `48ed161`).
 - `zlib` is required because `find_package(ZLIB)` in CMake links it explicitly
-  as a transitive dependency of `minizip-ng`.
+  as a transitive dependency of `minizip-ng`. zlib is also used directly by
+  video recording (ZMBV codec).
 
 ## 2b) Install SDL3 and SDL3-image
 

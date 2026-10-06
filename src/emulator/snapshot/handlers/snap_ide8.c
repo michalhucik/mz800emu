@@ -1,10 +1,15 @@
 /**
  * @file snap_ide8.c
  * @brief Snapshot handler: IDE8 HDD — uložení a načtení stavu IDE řadiče
+ *
+ * Připojení disků (connected) je stav stroje: snapshot ho obnoví pro běh,
+ * INI ([IDE8] hdd0_connected, hdd1_connected) si drží volbu uživatele
+ * (snapshot_config_pin_ini_value).
  */
 
 #include "snapshot/snapshot_mgr.h"
 #include "snapshot/snapshot_xml.h"
+#include "snapshot/snapshot_config.h"
 
 #if CFG_HWEXT_HAVE_IDE8
 
@@ -126,7 +131,11 @@ static en_SNAPSHOT_RESULT snap_ide8_load(st_SNAPSHOT_CONTEXT *ctx)
         if (snapshot_xml_enter_element(r, elem_name)) {
             st_IDE8_DRIVE *drv = &g_ide8.drive[i];
 
+            /* connected jen pro běh - INI hodnota se připne. */
+            unsigned ini_connected = (unsigned)drv->connected;
             if (snapshot_xml_read_int(r, "connected", &ival)) drv->connected = (en_IDE8_STATE)ival;
+            snapshot_config_pin_ini_value("IDE8", (i == IDE8_DRIVE_MASTER) ? "hdd0_connected" : "hdd1_connected",
+                                          ini_connected);
             snapshot_xml_read_int(r, "geo_c", &drv->geo_c);
             snapshot_xml_read_int(r, "geo_h", &drv->geo_h);
             snapshot_xml_read_int(r, "geo_s", &drv->geo_s);

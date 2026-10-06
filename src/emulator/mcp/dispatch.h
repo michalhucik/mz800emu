@@ -245,6 +245,82 @@ extern "C" {
     void mcp_dispatch_set_shutdown_callback(mcp_dispatch_shutdown_cb_fn cb);
 
 
+    /**
+     * @brief Hlídání zaseknutého příkazu pro vlákno, které dispatchuje.
+     *
+     * Registruje ho běhový obal (`dispatch_runner.c`) pro vlákno, na
+     * kterém běží `mcp_dispatch_request()`. Každý submit do dbgapi z
+     * tohoto vlákna pak:
+     *  - nejdřív zjistí `is_abandoned` - pokud je požadavek už opuštěný
+     *    (klient dostal odpověď "busy"), další krok se neodešle a vrátí
+     *    se jako neprovedený (žádné opožděné vedlejší efekty),
+     *  - jinak volá `dbgapi_ui_submit_cmd_sync_watched()` a při zaseknutí
+     *    rozpracovaného příkazu (viz mcp_dispatch_stall_limit_ms() v
+     *    dispatch.c) zavolá `on_stall`.
+     *
+     * Členy:
+     *  - on_stall:     hlášení zaseknutí; volá se z dispatchujícího
+     *                  vlákna bez zámků dbgapi, nesmí blokovat,
+     *  - is_abandoned: true = klientovi už bylo odpovězeno, výsledek
+     *                  se zahodí,
+     *  - user_data:    kontext obou callbacků (vlastní registrující).
+     *
+     * Invariant: struktura i user_data musí žít, dokud je registrace
+     * aktivní (do `mcp_dispatch_set_thread_stall_watch(NULL)`).
+     */
+    typedef struct st_MCP_DISPATCH_STALL_WATCH {
+        void (*on_stall)(void *user_data);
+        bool (*is_abandoned)(void *user_data);
+        void *user_data;
+    } st_MCP_DISPATCH_STALL_WATCH;
+
+
+    /**
+     * @brief Zaregistruje (nebo s NULL zruší) hlídání zaseknutí pro
+     *        aktuální vlákno.
+     *
+     * Registrace je thread-local, jiná vlákna (např. přímé volání
+     * `mcp_dispatch_request()` v unit testech) zůstávají beze změny:
+     * bez registrace se submit chová jako dřív (rozpracovaný příkaz
+     * se čeká bez limitu).
+     *
+     * @param[in] watch  hlídání nebo NULL; ukazatel se jen uloží
+     */
+    void mcp_dispatch_set_thread_stall_watch(const st_MCP_DISPATCH_STALL_WATCH *watch);
+
+
+    /**
+     * @brief Dodatečný limit pro dokončení převzatého příkazu (tabulka).
+     *
+     * Vrací, jak dlouho po vypršení limitu fronty (10 s) se ještě čeká na
+     * dokončení příkazu, který emu vlákno převzalo, než klient dostane
+     * "Emulator busy: command still running". Běžné příkazy 10 s,
+     * příkazy se souborovým I/O nebo velkými daty (trace_save, snapshot
+     * save/load, profiler/CDL export, videorec, media load/insert/eject,
+     * CMT open/record, PNG screenshot) 600 s. Limit fronty se nemění.
+     *
+     * @param[in] cmd  en_DBGAPI_CMD (případný BLOCKING flag se ignoruje)
+     * @return limit v ms (> 0)
+     */
+    int mcp_dispatch_stall_limit_ms(int cmd);
+
+
+    /**
+     * @brief Sestaví chybovou odpověď "příkaz se v emu vlákně zasekl".
+     *
+     * Text začíná stabilním prefixem `Emulator busy:` (kontrakt pro
+     * klienty, docs/agent/error_handling.md) a říká, že výsledek není
+     * znám (příkaz může doběhnout později), takže opakování NENÍ bez
+     * kontroly stavu bezpečné.
+     *
+     * @param[in]  req_id        ID požadavku
+     * @param[out] out_response  JSONL řádek (caller `free()`), při chybě NULL
+     * @return `MCP_DISPATCH_EMU_ERROR` nebo `MCP_DISPATCH_ALLOC_ERROR`
+     */
+    en_MCP_DISPATCH_RESULT mcp_dispatch_build_stalled_response(int64_t req_id,
+                                                               char **out_response);
+
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

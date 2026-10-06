@@ -78,7 +78,8 @@
 
 #include "debugger/trace/eventlog.h"
 #include "debugger/trace/tlog_common.h"  /* tlog_common_get_screens_total() = thread-safe accessor pro g_gdg. */
-#include "debugger/trace/marklog.h"  /* marklog_register / marklog_record - Commit 20 auto-mark. */
+#include "debugger/trace/marklog.h"  /* MARKLOG_INVALID_ID - zobrazení ID markeru auto-mark triggeru. */
+#include "debugger/trace/eventlog_trigger.h"  /* Stav triggerů Pause / Auto-mark on match (emu vlákno). */
 #include "debugger/eventlog_filter.h"
 #include "debugger/eventlog_decoder.h"  /* eventlog_decode_detail() - Vlna 3 Commit 21. */
 #include "debugger/debugger.h"
@@ -90,6 +91,15 @@
 #include "emulator/cfgmain.h"
 
 #include "event_viewer_window.h"
+#include "emulator/debugger/dbgapi_ui.h"
+
+/**
+ * @brief Limit (ms) čekání příkazů Event Vieweru na vyzvednutí emu vláknem.
+ *
+ * Resize a vyprázdnění ringu jdou přes CMDRQ frontu; v pauze se vykonají
+ * hned, za běhu na konci snímku. Při překročení se příkaz neprovede.
+ */
+#define EVW_CMD_TIMEOUT_MS 1000
 
 #include <cstdio>
 #include <cstring>
@@ -759,165 +769,139 @@ static void evw_reparse_filter ( void )
 }
 
 /* ===========================================================================
- *  Pause-on-match trigger (Commit 19)
+ *  Triggery Pause on match (Commit 19) a Auto-mark on match (Commit 20)
+ *
+ *  Stav, který čtou callbacky v eventlog_record() na emu vlákně (filtr,
+ *  jméno markeru, ID markeru, gate, počítadla shod), vlastní
+ *  eventlog_trigger.c a mění ho jen emu vlákno. Okno si drží jen editační
+ *  buffery a chybovou zprávu parse pro zobrazení; každou změnu naparsuje
+ *  do NOVÉHO filtru a předá ho příkazem fronty dbgapi
+ *  (dbg_ui_eventlog_trigger_set), který starý filtr uvolní až po jeho
+ *  vrácení emu vláknem. Počítadla shod zobrazuje z
+ *  eventlog_trigger_get_status() a maže příkazem.
  * =========================================================================== */
 
 /**
- * @brief State pause-on-match triggeru.
+ * @brief Délka bufferu pro kopii chybové zprávy parse filtru triggeru
+ *        (včetně NUL); delší zpráva se zkrátí.
+ */
+#define EVW_TRIGGER_ERR_LEN 256
+
+/**
+ * @brief Naparsuje výraz triggeru a výsledek předá emu vláknu.
  *
- * Driven UI checkboxem "Pause on match" + textboxem s filter expression
- * v Events toolbaru. Když je @c enabled a @c parsed valid, eventlog
- * hot-path při každém zapsaném eventu volá @c evw_pause_callback() (přes
- * @ref g_eventlog_pause_callback). Callback eval filter na nově zapsaný
- * event a při match volá @c emulator_pause(true) (= halt) + zaznamená
- * frame/pxclk pro "Last match" indikátor.
+ * Výraz se parsuje vždy (kvůli zobrazení chyby syntaxe i u vypnutého
+ * triggeru). Trigger se zapne jen při (@p enabled && neprázdný výraz &&
+ * neprázdné jméno u AUTOMARK && eventlog_trigger_filter_is_armable()) -
+ * prázdný výraz by byl "match all" (pauza / marker na každou událost),
+ * temporální filtr callback vyhodnotit neumí. Jinak se filtr uvolní a
+ * trigger se vypne, pokud je zapnutý; vypnutý trigger se příkazem
+ * neobtěžuje (psaní do textboxu vypnutého triggeru tak frontu nezatěžuje).
  *
- * Cross-thread safety:
- *   - UI vlákno mutuje @c expr / @c parsed (= edit textboxu, toggle gate)
- *   - EMU vlákno čte @c parsed v @c evw_pause_callback
- *   - Race race je acceptable V1: max 1-2 missed / extra eventy než UI
- *     re-parse dokončí. Důvod: lock by zavedl per-event overhead i v
- *     OFF stavu (gate test by musel být uvnitř locku).
- *   - @c last_match_* polí jsou aktualizována jen z EMU vlákna při
- *     match; UI čte v render loopu (= úmyslně relaxed - mírný tearing
- *     na 32-bit hodnotách je vizuálně nezachytitelný).
+ * @param kind     Druh triggeru.
+ * @param enabled  Stav checkboxu.
+ * @param expr     Text výrazu (UI buffer).
+ * @param name     AUTOMARK: text jména (UI buffer); PAUSE: @c NULL.
+ * @param[out] err_out Kopie chybové zprávy parse, "" = bez chyby.
+ * @param err_len  Velikost @p err_out (> 0).
  *
- * @field enabled        UI checkbox stav. Když @c false, @c
- *                       g_eventlog_pause_trigger_active musí být @c 0.
- * @field expr           ImGui InputText buffer pro pause filter
- *                       expression. NULL-terminated, max
- *                       @c EVW_FILTER_BUF_LEN.
- * @field parsed         Parsovaný filter z @c expr (alokovaný
- *                       @c eventlog_filter_parse). NULL pokud parse
- *                       OOM nebo prázdný expr; non-NULL i pro syntax
- *                       error (= @c eventlog_filter_get_error vrátí msg).
- * @field dirty          One-shot flag pro reparse v render loopu (=
- *                       user změnil text v textboxu).
- * @field has_match      @c true pokud trigger fíroval alespoň jednou
- *                       v této session. Resetováno @c Clear matches
- *                       tlačítkem.
- * @field last_match_frame   @c screens_total posledního matche.
- * @field last_match_pxclk   @c pxclk_in_screen posledního matche.
- * @field last_match_event_idx  Logický index v ringu pro scroll na
- *                       event v Log tabu. @c -1 = no valid idx (= overflow
- *                       může index zneplatnit, ale UI to bere jen jako
- *                       informativní; click řeší @c want_scroll_to_idx).
+ * Vedlejší efekty: synchronní příkaz fronty dbgapi (blokuje UI vlákno
+ * do vyzvednutí, nejvýš DBG_UI_EVENTLOG_CMD_TIMEOUT_MS). Při neprovedení
+ * příkazu zůstane stav triggeru beze změny (zobrazení to ukáže přes
+ * eventlog_trigger_get_status()) a nový filtr helper uvolní.
+ *
+ * @pre Volat z UI vlákna.
+ */
+static void evw_trigger_apply ( en_EVENTLOG_TRIGGER_KIND kind, bool enabled,
+                                const char *expr, const char *name,
+                                char *err_out, size_t err_len )
+{
+    err_out[0] = '\0';
+
+    st_EVENTLOG_FILTER *f = NULL;
+    if ( expr[0] != '\0' ) {
+        f = eventlog_filter_parse ( expr );
+        const char *err = eventlog_filter_get_error ( f );
+        if ( err ) snprintf ( err_out, err_len, "%s", err );
+    }
+
+    bool want = enabled
+                && f != NULL
+                && expr[0] != '\0'
+                && ( name == NULL || name[0] != '\0' )
+                && eventlog_trigger_filter_is_armable ( f );
+    if ( want ) {
+        /* Helper vlastnictví f převezme v každém případě. */
+        (void) dbg_ui_eventlog_trigger_set ( (uint32_t) kind, f, name );
+        return;
+    }
+
+    eventlog_filter_free ( f );
+    st_EVENTLOG_TRIGGER_STATUS st;
+    eventlog_trigger_get_status ( kind, &st );
+    if ( st.armed ) {
+        (void) dbg_ui_eventlog_trigger_set ( (uint32_t) kind, NULL, NULL );
+    }
+}
+
+/**
+ * @brief Vykreslí stavový odznak triggeru.
+ *
+ * Pořadí: "(empty)" pro prázdný výraz (u AUTOMARK i prázdné jméno),
+ * "[Syntax error]" s tooltipem chyby, "[Armed]" když je trigger podle
+ * eventlog vrstvy skutečně zapnutý, jinak "[OK]" (výraz platný, trigger
+ * vypnutý - checkbox, temporální filtr nebo neprovedený příkaz).
+ *
+ * @param empty  Výraz (nebo jméno) je prázdný.
+ * @param err    Kopie chybové zprávy parse ("" = bez chyby).
+ * @param armed  Trigger zapnutý (eventlog_trigger_get_status).
+ */
+static void evw_trigger_render_badge ( bool empty, const char *err, bool armed )
+{
+    if ( empty ) {
+        ImGui::PushStyleColor ( ImGuiCol_Text, IM_COL32 ( 140, 140, 140, 255 ) );
+        ImGui::TextUnformatted ( _("(empty)") );
+        ImGui::PopStyleColor ( );
+    } else if ( err[0] != '\0' ) {
+        ImGui::PushStyleColor ( ImGuiCol_Text, IM_COL32 ( 220, 80, 80, 255 ) );
+        ImGui::TextUnformatted ( _("[Syntax error]") );
+        ImGui::PopStyleColor ( );
+        if ( ImGui::IsItemHovered ( ) ) {
+            ImGui::SetTooltip ( "%s", err );
+        }
+    } else if ( armed ) {
+        ImGui::PushStyleColor ( ImGuiCol_Text, IM_COL32 ( 90, 200, 90, 255 ) );
+        ImGui::TextUnformatted ( _("[Armed]") );
+        ImGui::PopStyleColor ( );
+    } else {
+        ImGui::PushStyleColor ( ImGuiCol_Text, IM_COL32 ( 180, 180, 180, 255 ) );
+        ImGui::TextUnformatted ( _("[OK]") );
+        ImGui::PopStyleColor ( );
+    }
+}
+
+
+/**
+ * @brief Editační stav pause-on-match triggeru v okně Events.
+ *
+ * Patří jen UI vláknu. Filtr, gate a údaje o poslední shodě vlastní
+ * eventlog_trigger.c (viz začátek sekce).
+ *
+ * @field enabled  Stav checkboxu "Pause on match".
+ * @field expr     ImGui buffer výrazu filtru, NUL-terminated, max
+ *                 @c EVW_FILTER_BUF_LEN.
+ * @field dirty    Uživatel změnil checkbox nebo text - v tomto snímku
+ *                 proběhne @ref evw_trigger_apply().
+ * @field error    Kopie chybové zprávy posledního parse ("" = bez chyby).
  */
 typedef struct st_EVW_PAUSE_TRIGGER {
-    bool                enabled;
-    char                expr[EVW_FILTER_BUF_LEN];
-    st_EVENTLOG_FILTER *parsed;
-    bool                dirty;
-    bool                has_match;
-    uint32_t            last_match_frame;
-    uint32_t            last_match_pxclk;
-    int64_t             last_match_event_idx;
+    bool enabled;
+    char expr[EVW_FILTER_BUF_LEN];
+    bool dirty;
+    char error[EVW_TRIGGER_ERR_LEN];
 } st_EVW_PAUSE_TRIGGER;
 
 static st_EVW_PAUSE_TRIGGER s_pause_trigger = {};
-
-/**
- * @brief One-shot flag - eventlog callback je registrovaný.
- *
- * Registrace probíhá lazy při prvním renderu toolbaru, aby se neopírala
- * o pořadí cfg propagate / window init. Idempotentní (= druhé volání
- * nepřepíše pointer).
- */
-static bool s_pause_callback_registered = false;
-
-/**
- * @brief Pause-on-match callback volaný z EMU vlákna (eventlog hot path).
- *
- * Eval @c s_pause_trigger.parsed na nově zapsaný event. Match ->
- * zaznamenat metadata + volat @c emulator_pause(true) (= async halt
- * skrze MZ800_MAIN_SET_EVENT pattern, breakpoints používají stejnou
- * cestu).
- *
- * Defenzivní guard: pokud user vypnul gate mezi hot-path testem a
- * tímto callbackem, gracefully no-op. @c parsed může být NULL při OOM
- * - taky no-op.
- *
- * @param e  Pointer na právě zapsaný event v ringu (read-only).
- */
-static void evw_pause_callback ( const st_EVENTLOG_EVENT *e )
-{
-    if ( !e ) return;
-    if ( !s_pause_trigger.enabled ) return;
-    if ( !s_pause_trigger.parsed ) return;
-    if ( !eventlog_filter_match ( s_pause_trigger.parsed, e ) ) return;
-
-    /* Match - zaznamenat + požádat o pause.
-     *
-     * Index v ringu = (head - 1) modulo capacity, protože eventlog_record
-     * už head inkrementoval. Při wrap-around odpovídá fyzický index
-     * logickému idx = count-1 (= aktuálně nejnovější event). */
-    s_pause_trigger.has_match = true;
-    s_pause_trigger.last_match_frame = e->screens_total;
-    s_pause_trigger.last_match_pxclk = e->pxclk_in_screen;
-    if ( g_eventlog.count > 0 ) {
-        s_pause_trigger.last_match_event_idx = (int64_t) ( g_eventlog.count - 1 );
-    } else {
-        s_pause_trigger.last_match_event_idx = -1;
-    }
-
-    /* emulator_pause(true) z EMU vlákna je safe - viz breakpoints.c
-     * pattern (= breakpoints_enforce volá emulator_pause(true) z hot
-     * path. Funkce nastaví g_emulator.paused = true a MZEVENT_BREAK
-     * event, který mzarch loop vyhodnotí v dalším checkpointu. */
-    emulator_pause ( true );
-}
-
-/**
- * @brief Idempotentní registrace pause callbacku v eventlog hot-path.
- *
- * Volat při prvním renderu Events okna. Druhé volání no-op.
- */
-static void evw_pause_register_callback_once ( void )
-{
-    if ( s_pause_callback_registered ) return;
-    g_eventlog_pause_callback = evw_pause_callback;
-    s_pause_callback_registered = true;
-}
-
-/**
- * @brief Re-parse pause filteru @c s_pause_trigger.expr -> @c parsed.
- *
- * Atomicky vůči hot-path: před re-parse vypneme gate (=
- * @c g_eventlog_pause_trigger_active = 0), pak free + new parse, pak
- * gate znovu nahodíme pokud user enabled a filter je validní.
- *
- * Důvod: kdyby gate zůstal zapnutý při free parsed, hot-path callback
- * by mohl číst right-after-free pointer. Vypnutí gate na pár cyklů je
- * acceptable (= max 1-2 missed eventy během re-parse).
- */
-static void evw_pause_reparse ( void )
-{
-    int saved_gate = g_eventlog_pause_trigger_active;
-    g_eventlog_pause_trigger_active = 0;
-
-    if ( s_pause_trigger.parsed ) {
-        eventlog_filter_free ( s_pause_trigger.parsed );
-        s_pause_trigger.parsed = NULL;
-    }
-    s_pause_trigger.parsed = eventlog_filter_parse ( s_pause_trigger.expr );
-    s_pause_trigger.dirty = false;
-
-    /* Obnovit gate jen pokud user enabled a parse je platný (= bez
-     * syntax error). Prázdný filter = match all = NEpovolujeme jako
-     * trigger (= způsobilo by halt na první event), takže taky OFF.
-     * Filter s temporal node-em (Vlna 4 Commit 26) taky NEpovolujeme -
-     * callback běží z emu vlákna a temporal eval vyžaduje ring kontext
-     * + ctx scope; toto je analytická vrstva pro UI, ne hot-path. */
-    bool can_fire = false;
-    if ( saved_gate && s_pause_trigger.enabled && s_pause_trigger.parsed ) {
-        const char *err = eventlog_filter_get_error ( s_pause_trigger.parsed );
-        if ( !err && s_pause_trigger.expr[0] != '\0'
-             && !eventlog_filter_has_temporal ( s_pause_trigger.parsed ) ) {
-            can_fire = true;
-        }
-    }
-    g_eventlog_pause_trigger_active = can_fire ? 1 : 0;
-}
 
 /**
  * @brief Vykreslí Pause-on-match toolbar řádek (Commit 19).
@@ -925,28 +909,25 @@ static void evw_pause_reparse ( void )
  * Layout:
  *   [ ] Pause on match: [filter expr textbox]  [status badge]  [Last: frame=N pxclk=M] [Clear]
  *
+ * Při shodě callback v eventlog_trigger.c (emu vlákno) zaznamená pozici
+ * a zavolá emulator_pause(true).
+ *
  * Side effects:
- *   - Toggle checkboxu nebo edit textboxu reparseuje filter +
- *     aktualizuje @c g_eventlog_pause_trigger_active (= hot-path gate).
+ *   - Toggle checkboxu nebo edit textboxu naparsuje nový filtr a pošle ho
+ *     emu vláknu (@ref evw_trigger_apply).
  *   - Click na "Last match" indikátor scrollne Log tab na ten event
  *     (viz @c s_state.want_scroll_to_idx + want_switch_tab).
- *   - Click "Clear" vyresetuje @c has_match (= indikátor zmizí).
+ *   - Click "Clear" smaže indikátor příkazem
+ *     DBGAPI_CMD_EVENTLOG_TRIGGER_CLEAR_MATCHES.
  */
 static void evw_render_pause_trigger_row ( void )
 {
-    /* Lazy register callback v hot-path. */
-    evw_pause_register_callback_once ( );
-
-    /* Checkbox "Pause on match" - aktualizuje enabled + gate. */
     bool en = s_pause_trigger.enabled;
     if ( ImGui::Checkbox ( _L("Pause on match##evw_pause_match_en"), &en ) ) {
         s_pause_trigger.enabled = en;
-        /* Promítnutí do gate: aktivace vyžaduje i platný parse + non-empty
-         * expr. evw_pause_reparse() to vyhodnotí. */
         s_pause_trigger.dirty = true;
     }
 
-    /* Textbox s filter expression. */
     ImGui::SameLine ( );
     ImGui::SetNextItemWidth ( 260.0f );
     if ( ImGui::InputTextWithHint ( _L("##evw_pause_match_expr"),
@@ -956,52 +937,31 @@ static void evw_render_pause_trigger_row ( void )
         s_pause_trigger.dirty = true;
     }
 
-    /* Re-parse pokud user změnil text NEBO toggle enabled. */
     if ( s_pause_trigger.dirty ) {
-        /* Pro re-parse potřebujeme stav gate před hovorem - když user
-         * toggluje enabled, evw_pause_reparse() přečte enabled a podle
-         * něj rozhodne. Trik s "saved_gate" v reparse zajistí, že
-         * obnovení gate respektuje aktuální enabled. */
-        g_eventlog_pause_trigger_active = s_pause_trigger.enabled ? 1 : 0;
-        evw_pause_reparse ( );
+        s_pause_trigger.dirty = false;
+        evw_trigger_apply ( EVENTLOG_TRIGGER_PAUSE, s_pause_trigger.enabled,
+                            s_pause_trigger.expr, NULL,
+                            s_pause_trigger.error, sizeof ( s_pause_trigger.error ) );
     }
 
-    /* Status badge - zelená "OK", červená "Syntax error", šedá "(off)". */
+    st_EVENTLOG_TRIGGER_STATUS st;
+    eventlog_trigger_get_status ( EVENTLOG_TRIGGER_PAUSE, &st );
+
     ImGui::SameLine ( );
-    const char *err = eventlog_filter_get_error ( s_pause_trigger.parsed );
-    if ( s_pause_trigger.expr[0] == '\0' ) {
-        ImGui::PushStyleColor ( ImGuiCol_Text, IM_COL32 ( 140, 140, 140, 255 ) );
-        ImGui::TextUnformatted ( _("(empty)") );
-        ImGui::PopStyleColor ( );
-    } else if ( err ) {
-        ImGui::PushStyleColor ( ImGuiCol_Text, IM_COL32 ( 220, 80, 80, 255 ) );
-        ImGui::TextUnformatted ( _("[Syntax error]") );
-        ImGui::PopStyleColor ( );
-        if ( ImGui::IsItemHovered ( ) ) {
-            ImGui::SetTooltip ( "%s", err );
-        }
-    } else if ( s_pause_trigger.enabled ) {
-        ImGui::PushStyleColor ( ImGuiCol_Text, IM_COL32 ( 90, 200, 90, 255 ) );
-        ImGui::TextUnformatted ( _("[Armed]") );
-        ImGui::PopStyleColor ( );
-    } else {
-        ImGui::PushStyleColor ( ImGuiCol_Text, IM_COL32 ( 180, 180, 180, 255 ) );
-        ImGui::TextUnformatted ( _("[OK]") );
-        ImGui::PopStyleColor ( );
-    }
+    evw_trigger_render_badge ( s_pause_trigger.expr[0] == '\0',
+                               s_pause_trigger.error, st.armed );
 
     /* Last match indikátor + click. */
-    if ( s_pause_trigger.has_match ) {
+    if ( st.has_match ) {
         ImGui::SameLine ( );
         char lbl[96];
         snprintf ( lbl, sizeof ( lbl ),
                    "Last: frame=%u pxclk=%u##evw_pause_lastmatch",
-                   s_pause_trigger.last_match_frame,
-                   s_pause_trigger.last_match_pxclk );
+                   st.last_match_frame, st.last_match_pxclk );
         if ( ImGui::SmallButton ( lbl ) ) {
-            if ( s_pause_trigger.last_match_event_idx >= 0 ) {
-                s_state.selected_idx       = s_pause_trigger.last_match_event_idx;
-                s_state.want_scroll_to_idx = s_pause_trigger.last_match_event_idx;
+            if ( st.last_match_event_idx >= 0 ) {
+                s_state.selected_idx       = st.last_match_event_idx;
+                s_state.want_scroll_to_idx = st.last_match_event_idx;
                 s_state.want_switch_tab    = 0; /* Log tab */
                 s_state.follow_tail        = false;
                 s_state.cfg_follow_tail    = 0u;
@@ -1014,41 +974,29 @@ static void evw_render_pause_trigger_row ( void )
 
         ImGui::SameLine ( );
         if ( ImGui::SmallButton ( _L("Clear##evw_pause_clear") ) ) {
-            s_pause_trigger.has_match = false;
-            s_pause_trigger.last_match_event_idx = -1;
+            (void) dbg_ui_eventlog_trigger_clear_matches ( (uint32_t) EVENTLOG_TRIGGER_PAUSE );
         }
     }
 }
 
 
-/* ===========================================================================
- *  Auto-mark on match trigger (Commit 20)
- * =========================================================================== */
-
 /**
- * @brief Maximální délka user marker name (=  @c MARKLOG_NAME_MAX 64,
- *        včetně NUL terminatoru).
+ * @brief Velikost UI bufferu jména markeru auto-mark triggeru (včetně NUL).
  *
- * Marklog při registraci truncuje delší jména s warningem, UI buffer
- * zde drží stejný limit aby uživatel viděl výsledek 1:1.
+ * Stejná jako EVENTLOG_TRIGGER_NAME_MAX (= MARKLOG_NAME_MAX), aby uživatel
+ * viděl jméno 1:1 tak, jak ho marklog zaregistruje.
  */
-#define EVW_AUTOMARK_NAME_BUF_LEN 64
+#define EVW_AUTOMARK_NAME_BUF_LEN EVENTLOG_TRIGGER_NAME_MAX
 
 /**
- * @brief State auto-mark on match triggeru.
+ * @brief Editační stav auto-mark on match triggeru v okně Events.
  *
- * Driven UI checkboxem "Auto-mark on match" + textboxem s user
- * marker name + textboxem s filter expression v Events toolbaru.
- * Když je @c enabled, @c parsed valid a @c name non-empty, eventlog
- * hot-path při každém zapsaném eventu volá @c evw_automark_callback()
- * (přes @ref g_eventlog_automark_callback). Callback eval filter a
- * při match volá @c marklog_record() (= synthetic @c USER_MARK event
- * v ringu + zápis do tlog markeru, pokud běží recording).
+ * Patří jen UI vláknu. Filtr, kopii jména, ID markeru, gate a počítadla
+ * vlastní eventlog_trigger.c (viz začátek sekce). Callback při shodě
+ * zapíše marker (marklog_record -> synthetic USER_MARK v ringu + zápis
+ * do markerlog, pokud běží recording).
  *
- * Cross-thread safety: identicky s @ref st_EVW_PAUSE_TRIGGER (= UI
- * mutuje pod gate vypnutým, EMU čte při gate zapnutém).
- *
- * Use cases (= dokumentační, viz @ref evw_render_automark_trigger_row):
+ * Use cases:
  *  - name "psg_writes" + expr "cat:psg" - každý PSG write je marker
  *    (= Strip canvas ukáže pozice PSG writes v rámci snímku).
  *  - name "bord_change" + expr "cat:gdg_colors sub:bord" - tracking
@@ -1056,163 +1004,24 @@ static void evw_render_pause_trigger_row ( void )
  *  - name "isr_call" + expr "cat:cpu_int sym:isr_main" - specific
  *    ISR dispatch.
  *
- * @field enabled            UI checkbox stav.
- * @field name               User-supplied marker name, max
- *                           @c EVW_AUTOMARK_NAME_BUF_LEN. Prázdný =
- *                           gate OFF (= jména s 0 bytes marklog odmítá).
- * @field expr               Filter expression buffer, max
- *                           @c EVW_FILTER_BUF_LEN.
- * @field parsed             Parsovaný filter (= @c eventlog_filter_parse).
- * @field dirty              One-shot flag pro reparse + re-register.
- * @field cached_marker_id   Marker id po prvním fire (=
- *                           @c marklog_register). @c MARKLOG_INVALID_ID
- *                           = ještě nebylo registrováno.
- * @field cached_for_name    Jméno, pro které je @c cached_marker_id
- *                           platný. Invalidate při změně @c name.
- * @field has_match          @c true při alespoň jednom fire.
- * @field total_marks        Counter fire počtů (= "N fires" v UI).
+ * @field enabled  Stav checkboxu "Auto-mark on match".
+ * @field name     ImGui buffer jména markeru, max
+ *                 @c EVW_AUTOMARK_NAME_BUF_LEN. Prázdné = trigger se
+ *                 nezapne. Emu vlákno pracuje s vlastní kopií.
+ * @field expr     ImGui buffer výrazu filtru, max @c EVW_FILTER_BUF_LEN.
+ * @field dirty    Změna checkboxu, jména nebo výrazu - v tomto snímku
+ *                 proběhne @ref evw_trigger_apply().
+ * @field error    Kopie chybové zprávy posledního parse ("" = bez chyby).
  */
 typedef struct st_EVW_AUTOMARK_TRIGGER {
-    bool                enabled;
-    char                name[EVW_AUTOMARK_NAME_BUF_LEN];
-    char                expr[EVW_FILTER_BUF_LEN];
-    st_EVENTLOG_FILTER *parsed;
-    bool                dirty;
-    uint16_t            cached_marker_id;
-    char                cached_for_name[EVW_AUTOMARK_NAME_BUF_LEN];
-    bool                has_match;
-    uint64_t            total_marks;
+    bool enabled;
+    char name[EVW_AUTOMARK_NAME_BUF_LEN];
+    char expr[EVW_FILTER_BUF_LEN];
+    bool dirty;
+    char error[EVW_TRIGGER_ERR_LEN];
 } st_EVW_AUTOMARK_TRIGGER;
 
-static st_EVW_AUTOMARK_TRIGGER s_automark_trigger = {
-    .cached_marker_id = MARKLOG_INVALID_ID,
-};
-
-/**
- * @brief One-shot flag - eventlog automark callback je registrovaný.
- *
- * Lazy registrace při prvním renderu, identicky s pause callbackem.
- */
-static bool s_automark_callback_registered = false;
-
-/**
- * @brief Auto-mark callback volaný z EMU vlákna (eventlog hot path).
- *
- * Eval @c s_automark_trigger.parsed na nově zapsaný event. Match ->
- * @c marklog_register (lazy, jen poprvé per name) + @c marklog_record
- * (= 24B zápis do markerlog tlog + paralelní fan-out do eventlog ringu
- * jako @c EVENTLOG_CAT_USER_MARK event).
- *
- * Re-entry guard: @c marklog_record() vyvolá @c eventlog_record() s
- * kategorií @c USER_MARK -> callback by se volal znovu. Skip pomocí
- * @c if (e->category == USER_MARK) return; (= USER_MARK se nikdy
- * neaut-markuje znovu, infinite loop prevented).
- *
- * @param e  Pointer na právě zapsaný event (read-only).
- */
-static void evw_automark_callback ( const st_EVENTLOG_EVENT *e )
-{
-    if ( !e ) return;
-    if ( !s_automark_trigger.enabled ) return;
-    if ( !s_automark_trigger.parsed ) return;
-    if ( s_automark_trigger.name[0] == '\0' ) return;
-
-    /* Re-entry guard: USER_MARK event byl vygenerován naším vlastním
-     * marklog_record() voláním. Skip - jinak infinite re-entry, dokud
-     * stack neselže. */
-    if ( e->category == EVENTLOG_CAT_USER_MARK ) return;
-
-    if ( !eventlog_filter_match ( s_automark_trigger.parsed, e ) ) return;
-
-    /* MATCH! Lazy register marker_id - jen pokud ještě nebyl nebo se
-     * změnilo jméno mezi předchozím fire a tímto. Re-register při
-     * změně name je iniciovaný UI (= clear cached_marker_id při dirty
-     * + name change), tady jen lazy fallback. */
-    if ( s_automark_trigger.cached_marker_id == MARKLOG_INVALID_ID
-         || strcmp ( s_automark_trigger.cached_for_name,
-                     s_automark_trigger.name ) != 0 ) {
-        s_automark_trigger.cached_marker_id =
-            marklog_register ( s_automark_trigger.name );
-        /* Uložit jméno pro budoucí porovnání. Pokud register selhal
-         * (= MARKLOG_INVALID_ID), uložíme stejně - aby se nezkoušelo
-         * register znovu při každém match (= stderr warning by spamoval). */
-        snprintf ( s_automark_trigger.cached_for_name,
-                   sizeof ( s_automark_trigger.cached_for_name ),
-                   "%s", s_automark_trigger.name );
-    }
-
-    if ( s_automark_trigger.cached_marker_id == MARKLOG_INVALID_ID ) {
-        /* Register selhal (= overflow registru, alloc fail nebo prázdné
-         * jméno). UI to zobrazí jako "(registration failed)" - hot path
-         * sám nic víc neudělá. */
-        return;
-    }
-
-    /* marklog_record: synchronní write do markerlog binárního souboru
-     * (pokud writer běží) + paralelní fan-out do eventlog ringu jako
-     * USER_MARK event. Druhá cesta re-entry callbacku, ale skipnutá
-     * guardem výše. */
-    marklog_record ( s_automark_trigger.cached_marker_id );
-    s_automark_trigger.has_match = true;
-    s_automark_trigger.total_marks++;
-}
-
-/**
- * @brief Idempotentní registrace automark callbacku v eventlog hot-path.
- */
-static void evw_automark_register_callback_once ( void )
-{
-    if ( s_automark_callback_registered ) return;
-    g_eventlog_automark_callback = evw_automark_callback;
-    s_automark_callback_registered = true;
-}
-
-/**
- * @brief Re-parse automark filteru + invalidate cached marker_id při
- *        změně jména.
- *
- * Atomicky vůči hot-path: gate OFF, free + new parse, gate ON pokud
- * (enabled && parsed valid && non-empty name && non-empty expr).
- *
- * Cached marker_id se invaliduje pokud user změnil jméno - další fire
- * zaregistruje pod novým jménem (= dostane nový id).
- */
-static void evw_automark_reparse ( void )
-{
-    int saved_gate = g_eventlog_automark_trigger_active;
-    g_eventlog_automark_trigger_active = 0;
-
-    if ( s_automark_trigger.parsed ) {
-        eventlog_filter_free ( s_automark_trigger.parsed );
-        s_automark_trigger.parsed = NULL;
-    }
-    s_automark_trigger.parsed = eventlog_filter_parse ( s_automark_trigger.expr );
-    s_automark_trigger.dirty = false;
-
-    /* Pokud user změnil name, zrušit cache (= re-register při dalším
-     * fire). Counter total_marks zachovat (= UI vidí kumulativní fire
-     * count, reset jen explicit Clear button). */
-    if ( strcmp ( s_automark_trigger.cached_for_name,
-                  s_automark_trigger.name ) != 0 ) {
-        s_automark_trigger.cached_marker_id = MARKLOG_INVALID_ID;
-    }
-
-    /* Gate ON jen pokud user enabled a všechny vstupy validní. Temporal
-     * filtry jsou vyřazené (Vlna 4 Commit 26) - viz pause_reparse. */
-    bool can_fire = false;
-    if ( saved_gate
-         && s_automark_trigger.enabled
-         && s_automark_trigger.parsed
-         && s_automark_trigger.name[0] != '\0'
-         && s_automark_trigger.expr[0] != '\0'
-         && !eventlog_filter_has_temporal ( s_automark_trigger.parsed ) ) {
-        const char *err = eventlog_filter_get_error ( s_automark_trigger.parsed );
-        if ( !err ) {
-            can_fire = true;
-        }
-    }
-    g_eventlog_automark_trigger_active = can_fire ? 1 : 0;
-}
+static st_EVW_AUTOMARK_TRIGGER s_automark_trigger = {};
 
 /**
  * @brief Vykreslí Auto-mark on match toolbar řádek (Commit 20).
@@ -1222,23 +1031,14 @@ static void evw_automark_reparse ( void )
  *     [status badge]  [Marker ID: N  (M fires)]  [Clear]
  *
  * Side effects:
- *   - Toggle / edit reparseuje filter + aktualizuje gate.
- *   - Click "Clear" vyresetuje has_match + total_marks + invaliduje
- *     cached_marker_id (= další fire registruje znovu).
- *
- * Re-entry guard pro infinite loop je v @c evw_automark_callback
- * (skip @c USER_MARK kategorie).
- *
- * Use case examples (= komentáře pro budoucí čtenáře dokumentace):
- *   - "psg_write" + "cat:psg" -> každý PSG write je marker
- *   - "bord_change" + "cat:gdg_colors sub:bord" -> BORDER write tracking
- *   - "isr_call" + "cat:cpu_int sym:isr_main" -> specific ISR dispatch
+ *   - Toggle / edit naparsuje nový filtr a pošle ho spolu se jménem emu
+ *     vláknu (@ref evw_trigger_apply). Změna jména zneplatní ID markeru,
+ *     další shoda ho zaregistruje pod novým jménem.
+ *   - Click "Clear" vynuluje počítadla příkazem
+ *     DBGAPI_CMD_EVENTLOG_TRIGGER_CLEAR_MATCHES (ID markeru zůstává).
  */
 static void evw_render_automark_trigger_row ( void )
 {
-    evw_automark_register_callback_once ( );
-
-    /* Checkbox. */
     bool en = s_automark_trigger.enabled;
     if ( ImGui::Checkbox ( _L("Auto-mark on match##evw_automark_en"), &en ) ) {
         s_automark_trigger.enabled = en;
@@ -1269,44 +1069,29 @@ static void evw_render_automark_trigger_row ( void )
         s_automark_trigger.dirty = true;
     }
 
-    /* Reparse + gate update. */
     if ( s_automark_trigger.dirty ) {
-        g_eventlog_automark_trigger_active = s_automark_trigger.enabled ? 1 : 0;
-        evw_automark_reparse ( );
+        s_automark_trigger.dirty = false;
+        evw_trigger_apply ( EVENTLOG_TRIGGER_AUTOMARK, s_automark_trigger.enabled,
+                            s_automark_trigger.expr, s_automark_trigger.name,
+                            s_automark_trigger.error,
+                            sizeof ( s_automark_trigger.error ) );
     }
 
-    /* Status badge. */
+    st_EVENTLOG_TRIGGER_STATUS st;
+    eventlog_trigger_get_status ( EVENTLOG_TRIGGER_AUTOMARK, &st );
+
     ImGui::SameLine ( );
-    const char *err = eventlog_filter_get_error ( s_automark_trigger.parsed );
-    if ( s_automark_trigger.expr[0] == '\0'
-         || s_automark_trigger.name[0] == '\0' ) {
-        ImGui::PushStyleColor ( ImGuiCol_Text, IM_COL32 ( 140, 140, 140, 255 ) );
-        ImGui::TextUnformatted ( _("(empty)") );
-        ImGui::PopStyleColor ( );
-    } else if ( err ) {
-        ImGui::PushStyleColor ( ImGuiCol_Text, IM_COL32 ( 220, 80, 80, 255 ) );
-        ImGui::TextUnformatted ( _("[Syntax error]") );
-        ImGui::PopStyleColor ( );
-        if ( ImGui::IsItemHovered ( ) ) {
-            ImGui::SetTooltip ( "%s", err );
-        }
-    } else if ( s_automark_trigger.enabled ) {
-        ImGui::PushStyleColor ( ImGuiCol_Text, IM_COL32 ( 90, 200, 90, 255 ) );
-        ImGui::TextUnformatted ( _("[Armed]") );
-        ImGui::PopStyleColor ( );
-    } else {
-        ImGui::PushStyleColor ( ImGuiCol_Text, IM_COL32 ( 180, 180, 180, 255 ) );
-        ImGui::TextUnformatted ( _("[OK]") );
-        ImGui::PopStyleColor ( );
-    }
+    evw_trigger_render_badge ( s_automark_trigger.expr[0] == '\0'
+                               || s_automark_trigger.name[0] == '\0',
+                               s_automark_trigger.error, st.armed );
 
     /* Marker ID indikátor + fire counter. */
-    if ( s_automark_trigger.cached_marker_id != MARKLOG_INVALID_ID ) {
+    if ( st.marker_id != MARKLOG_INVALID_ID ) {
         ImGui::SameLine ( );
         ImGui::TextDisabled ( "%s %u  (%llu fires)",
                               _("Marker ID:"),
-                              (unsigned) s_automark_trigger.cached_marker_id,
-                              (unsigned long long) s_automark_trigger.total_marks );
+                              (unsigned) st.marker_id,
+                              (unsigned long long) st.total_marks );
     } else if ( s_automark_trigger.enabled
                 && s_automark_trigger.name[0] != '\0'
                 && s_automark_trigger.expr[0] != '\0' ) {
@@ -1315,15 +1100,10 @@ static void evw_render_automark_trigger_row ( void )
     }
 
     /* Clear button (= zobrazit jen pokud byly nějaké fires). */
-    if ( s_automark_trigger.has_match ) {
+    if ( st.has_match ) {
         ImGui::SameLine ( );
         if ( ImGui::SmallButton ( _L("Clear##evw_automark_clear") ) ) {
-            s_automark_trigger.has_match = false;
-            s_automark_trigger.total_marks = 0;
-            /* Cache marker_id nezruším - další fire by jen znovu
-             * registrovalo pod stejným jménem (= dostane stejné id z
-             * idempotentního marklog_register). Counter restartuje od
-             * nuly = informativně přehlednější. */
+            (void) dbg_ui_eventlog_trigger_clear_matches ( (uint32_t) EVENTLOG_TRIGGER_AUTOMARK );
         }
     }
 }
@@ -1388,8 +1168,11 @@ static void evw_apply_quick_preset ( const char *expr )
 /**
  * @brief Vykreslí Mode combo (OFF / WHEN_WINDOW_OPEN / ALWAYS).
  *
- * Při změně volá @c eventlog_recompute_active() aby se nová politika
- * okamžitě promítla do @c g_eventlog_active.
+ * Změnu režimu vykoná emu vlákno přes @c dbg_ui_eventlog_set_mode()
+ * (@c DBGAPI_CMD_EVENTLOG_SET_MODE): zápis @c g_eventlog_config.mode
+ * a @c eventlog_recompute_active(), aby se nová politika okamžitě
+ * promítla do @c g_eventlog_active. Při timeoutu zůstane režim beze
+ * změny (combo dál ukazuje původní hodnotu).
  */
 static void evw_render_mode_combo ( void )
 {
@@ -1402,8 +1185,7 @@ static void evw_render_mode_combo ( void )
         for ( int i = 0; i < 3; i++ ) {
             bool sel = ( i == current );
             if ( ImGui::Selectable ( items[i], sel ) ) {
-                g_eventlog_config.mode = (en_EVENTLOG_MODE) i;
-                eventlog_recompute_active ( 0 );
+                (void) dbg_ui_eventlog_set_mode ( (uint32_t) i, NULL );
             }
             if ( sel ) ImGui::SetItemDefaultFocus ( );
         }
@@ -1439,14 +1221,27 @@ static void evw_render_capacity_controls ( void )
     ImGui::SameLine ( );
     if ( ImGui::Button ( _L("Apply##evw_cap_apply") ) ) {
         if ( (unsigned) s_pending_cap != g_eventlog_config.capacity ) {
-            eventlog_set_capacity ( (size_t) s_pending_cap );
-            g_eventlog_config.capacity = (unsigned) s_pending_cap;
+            /* Resize ringu (free + calloc) přes CMDRQ frontu: emu vlákno do
+             * ringu zapisuje, přímé volání z UI vlákna by mohlo zapisovat
+             * do uvolněné paměti. Viz DBGAPI_CMD_EVENTLOG_SET_CAPACITY. */
+            st_DBGAPI_EVENTLOG_CAPACITY_PARAM cp;
+            cp.capacity = (uint32_t) s_pending_cap;
+            cp.capacity_after = 0;
+            if ( dbgapi_ui_submit_cmd_sync ( &g_dbgapi_cmdrq_queue,
+                                             DBGAPI_CMD_EVENTLOG_SET_CAPACITY,
+                                             &cp, NULL, EVW_CMD_TIMEOUT_MS ) ) {
+                g_eventlog_config.capacity = cp.capacity_after;
+                s_pending_cap = (int) cp.capacity_after;
+            }
         }
     }
 
     ImGui::SameLine ( );
     if ( ImGui::Button ( _L("Clear##evw_clear") ) ) {
-        eventlog_clear ( );
+        /* Vyprázdnění ringu vykoná emu vlákno (souběh s jeho zápisy). */
+        (void) dbgapi_ui_submit_cmd_sync ( &g_dbgapi_cmdrq_queue,
+                                           DBGAPI_CMD_EVENTLOG_CLEAR,
+                                           NULL, NULL, EVW_CMD_TIMEOUT_MS );
     }
 }
 
@@ -1510,7 +1305,7 @@ static void evw_set_io_toast ( const char *text )
  *
  * Otevře soubor, načte 32 B hlavičku, vrátí @c record_count nebo @c 0
  * při jakékoliv chybě. Plné importu provede až vlastní
- * @c eventlog_import_from_file po confirm.
+ * @c dbg_ui_eventlog_import_file (emu vlákno) po confirm.
  */
 static size_t evw_peek_import_record_count ( const char *path )
 {
@@ -1541,7 +1336,8 @@ static size_t evw_peek_import_record_count ( const char *path )
  *
  * Import popup: file path InputText + Load / Cancel. Po Load proběhne
  * 2-stage confirm: peek hlavičky -> "Replace ring (N) with file (M)?"
- * -> Replace / Cancel. Replace volá @c eventlog_import_from_file(path).
+ * -> Replace / Cancel. Replace volá @c dbg_ui_eventlog_import_file(path)
+ * (import vykoná emu vlákno přes @c DBGAPI_CMD_EVENTLOG_IMPORT_FILE).
  *
  * Pro V1 prostý ImGui popup - file picker (ImGuiFileDialog) je follow-up.
  */
@@ -1612,7 +1408,7 @@ static void evw_render_export_import_controls ( void )
             if ( s_pending_import_record_count == 0 ) {
                 /* Hlavička invalid - rovnou error toast, popup necháme otevřený
                  * aby user mohl upravit cestu. */
-                evw_set_io_toast ( "Import FAILED: invalid file or header" );
+                evw_set_io_toast ( _("Import FAILED: invalid file or header") );
             } else {
                 ImGui::CloseCurrentPopup ( );
                 ImGui::OpenPopup ( "Confirm import##evw_import_confirm" );
@@ -1635,14 +1431,18 @@ static void evw_render_export_import_controls ( void )
         ImGui::Spacing ( );
 
         if ( ImGui::Button ( _L("Replace##evw_import_replace"), ImVec2 ( 120, 0 ) ) ) {
-            int rc = eventlog_import_from_file ( s_import_path );
-            /* 600 = "Exported %zu events to " (~25) + s_export_path max 511 + rezerva. */
+            /* Import (případná realokace ringu + fread do něj) běží na emu
+             * vlákně přes DBGAPI_CMD_EVENTLOG_IMPORT_FILE - emu vlákno do
+             * ringu souběžně zapisuje v eventlog_record(). */
+            uint32_t count_after = 0;
+            bool ok = dbg_ui_eventlog_import_file ( s_import_path, NULL, &count_after );
+            /* 600 = přeložený text (~40) + s_import_path max 511 + rezerva. */
             char msg[ 600 ];
-            if ( rc == 0 ) {
-                snprintf ( msg, sizeof ( msg ), "Imported %zu events from %s",
-                           eventlog_get_count ( ), s_import_path );
+            if ( ok ) {
+                snprintf ( msg, sizeof ( msg ), _("Imported %u events from %s"),
+                           (unsigned) count_after, s_import_path );
             } else {
-                snprintf ( msg, sizeof ( msg ), "Import FAILED: %s", s_import_path );
+                snprintf ( msg, sizeof ( msg ), _("Import FAILED: %s"), s_import_path );
             }
             evw_set_io_toast ( msg );
             ImGui::CloseCurrentPopup ( );
@@ -1662,6 +1462,14 @@ static void evw_render_export_import_controls ( void )
  * Bity v @c g_eventlog_active_mask odpovídají hodnotě
  * @ref en_EVENTLOG_CATEGORY. Změna bitu se okamžitě promítne do
  * hot-path gate (= další eventy té kategorie nepojdou do ringu).
+ * Novou masku zapíše emu vlákno přes @c dbg_ui_eventlog_set_mask()
+ * (existující @c DBGAPI_CMD_EVENTLOG_SET_MASK, nastaví i
+ * @c g_eventlog_config.categories_mask). UI do masky přímo nezapisuje,
+ * novou hodnotu ale počítá z masky přečtené v tomto snímku a posílá ji
+ * celou: změnu masky přes MCP mezi čtením a provedením příkazu proto
+ * přepíše (zbytkový read-modify-write, okno nejvýš jeden snímek; odstranit
+ * by ho šlo jen set/clear bity v handleru, což mění kontrakt MCP
+ * @c eventlog_set_mask). Při timeoutu zůstane maska beze změny.
  *
  * Layout: 4 sloupce x 6 řádků, label = lowercase jméno z
  * @c eventlog_filter_cat_to_name().
@@ -1684,12 +1492,13 @@ static void evw_render_categories_section ( void )
         char id[64];
         snprintf ( id, sizeof ( id ), "%s##evw_cat_%d", name, i );
         if ( ImGui::Checkbox ( id, &on ) ) {
+            uint64_t mask = g_eventlog_active_mask;
             if ( on ) {
-                g_eventlog_active_mask |= ( UINT64_C(1) << i );
+                mask |= ( UINT64_C(1) << i );
             } else {
-                g_eventlog_active_mask &= ~( UINT64_C(1) << i );
+                mask &= ~( UINT64_C(1) << i );
             }
-            g_eventlog_config.categories_mask = g_eventlog_active_mask;
+            (void) dbg_ui_eventlog_set_mask ( mask );
         }
         ImGui::NextColumn ( );
     }

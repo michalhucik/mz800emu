@@ -96,7 +96,9 @@ Mapování DMD -> položka při čtení:
 - bit 3 = 1 -> "MZ-700" (bity 0-2 ignorovány)
 - bit 3 = 0 -> položka podle bitů 2-0
 
-Klik na položku = přímý zápis do DMD registru. "MZ-700" zapisuje 0x08
+Klik na položku = zápis do DMD registru se stejným účinkem jako OUT (CEh)
+programu (včetně vazby časovače CTC0 na režim 700/800), jen se nezapíše do
+trace logu a nespustí breakpoint na změnu módu. "MZ-700" zapisuje 0x08
 (bity 0-2 nezachovává).
 
 ## Per-platform region mapy

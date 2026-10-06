@@ -207,7 +207,7 @@ void mzarch_platform_fn_init(void)
 
     printf("\nRear dip switch - ");
 #if MZARCH != 700
-    printf("Mode: %s, ", (!g_mzarch_main.switch700) ? "MZ-700" : "MZ-800");
+    printf("Mode: %s, ", (g_mzarch_main.mode_sw == MZ800_MODE_SW_MZ700) ? "MZ-700" : "MZ-800");
 #endif /* MZARCH != 700 */
     printf("CMT polarity: %s\n", (!g_cmt.polarity) ? "Normal" : "Inverted");
 

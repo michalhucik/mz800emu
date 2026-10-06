@@ -98,8 +98,11 @@ DMD -> item mapping on read:
 - bit 3 = 1 -> "MZ-700" (bits 0-2 are ignored)
 - bit 3 = 0 -> item based on bits 2-0
 
-Clicking an item = direct write to the DMD register. "MZ-700" writes
-0x08 (bits 0-2 are not preserved).
+Clicking an item = write to the DMD register with the same effect as an
+OUT (CEh) by the program (including the CTC0 timer coupling to the 700/800
+mode), except that it is not written to the trace log and does not trigger
+a mode change breakpoint. "MZ-700" writes 0x08 (bits 0-2 are not
+preserved).
 
 ## Per-platform region maps
 

@@ -125,6 +125,21 @@ static const st_HID_KEYNAME_ENTRY g_keyname_table[] = {
     { "F8",          7, 1, false }, /* ? */
     { "F9",          0, 5, false }, /* LIBRA bez SHIFT */
 
+    /* Aliasy podle primárních názvů z docs/agent/mz800_keyboard.md
+     * (= sada jmen, kterou používá i dokumentace pro send_keys).
+     * Jsou ZÁMĚRNĚ až na konci tabulky, aby hid_keymap_reverse_lookup()
+     * dál vracel původní jména (první nalezený). CURSOR_* = kurzorové
+     * šipky (stejná poloha jako ARROW_*), UP_ARROW / DOWN_ARROW jsou
+     * naopak ZNAKOVÉ klávesy (glyfy šipek, ne pohyb kurzoru) - proto
+     * neplatí UP_ARROW == ARROW_UP. */
+    { "INST",         7, 7, false }, /* = INSERT */
+    { "CURSOR_UP",    7, 5, false },
+    { "CURSOR_DOWN",  7, 4, false },
+    { "CURSOR_RIGHT", 7, 3, false },
+    { "CURSOR_LEFT",  7, 2, false },
+    { "UP_ARROW",     6, 6, false }, /* znaková klávesa (glyf šipky nahoru) */
+    { "DOWN_ARROW",   0, 5, false }, /* znaková klávesa, stejná poloha jako F9 */
+
     { NULL,          0, 0, false }
 };
 
@@ -268,6 +283,106 @@ bool hid_keymap_resolve(const char *name, st_HID_KEYMAP_RESOLVED *out_res) {
         }
     }
     return false;
+}
+
+
+/**
+ * @brief Pomocná: editační (Levenshteinova) vzdálenost dvou UPPERCASE řetězců.
+ *
+ * Řetězce jsou krátké (max HID_KEYMAP_MAX_KEYNAME), proto stačí dvě řádky
+ * matice na zásobníku.
+ *
+ * @param a  první řetězec
+ * @param b  druhý řetězec
+ * @return počet vložení/smazání/záměn potřebných na převod a na b
+ */
+static int _edit_distance(const char *a, const char *b) {
+    int la = (int)strlen(a);
+    int lb = (int)strlen(b);
+    int prev[HID_KEYMAP_MAX_KEYNAME + 1];
+    int cur[HID_KEYMAP_MAX_KEYNAME + 1];
+    if (lb > HID_KEYMAP_MAX_KEYNAME) {
+        lb = HID_KEYMAP_MAX_KEYNAME;
+    }
+    for (int j = 0; j <= lb; j++) {
+        prev[j] = j;
+    }
+    for (int i = 1; i <= la; i++) {
+        cur[0] = i;
+        for (int j = 1; j <= lb; j++) {
+            int cost = (a[i - 1] == b[j - 1]) ? 0 : 1;
+            int v = prev[j - 1] + cost;
+            if (prev[j] + 1 < v) v = prev[j] + 1;
+            if (cur[j - 1] + 1 < v) v = cur[j - 1] + 1;
+            cur[j] = v;
+        }
+        memcpy(prev, cur, sizeof(int) * (size_t)(lb + 1));
+    }
+    return prev[lb];
+}
+
+
+void hid_keymap_suggest(const char *name, char *out, size_t out_size) {
+    if (!out || out_size == 0) {
+        return;
+    }
+    out[0] = '\0';
+    if (!name || name[0] == '\0') {
+        return;
+    }
+    char upper[HID_KEYMAP_MAX_KEYNAME + 1];
+    size_t nlen = strlen(name);
+    if (nlen > HID_KEYMAP_MAX_KEYNAME) {
+        nlen = HID_KEYMAP_MAX_KEYNAME;
+    }
+    for (size_t i = 0; i < nlen; i++) {
+        upper[i] = _to_upper(name[i]);
+    }
+    upper[nlen] = '\0';
+
+    /* Skóre: prefixová/podřetězcová shoda má přednost (skóre = rozdíl
+     * délek), jinak editační vzdálenost + 100. Vybereme 3 nejlepší. */
+    enum { MAX_SUGG = 3 };
+    const char *best[MAX_SUGG] = { NULL, NULL, NULL };
+    int best_score[MAX_SUGG] = { 0, 0, 0 };
+    int limit = (int)(nlen / 2) + 2; /* max. přijatelná vzdálenost */
+    for (int i = 0; g_keyname_table[i].name != NULL; i++) {
+        const char *cand = g_keyname_table[i].name;
+        int score;
+        if (strstr(cand, upper) != NULL || strstr(upper, cand) != NULL) {
+            int d = (int)strlen(cand) - (int)nlen;
+            score = d < 0 ? -d : d;
+        } else {
+            int d = _edit_distance(upper, cand);
+            if (d > limit) {
+                continue;
+            }
+            score = 100 + d;
+        }
+        /* vložení do seřazeného pole (stabilně - dřívější v tabulce
+         * vyhrává při shodě skóre) */
+        for (int k = 0; k < MAX_SUGG; k++) {
+            if (best[k] == NULL || score < best_score[k]) {
+                for (int m = MAX_SUGG - 1; m > k; m--) {
+                    best[m] = best[m - 1];
+                    best_score[m] = best_score[m - 1];
+                }
+                best[k] = cand;
+                best_score[k] = score;
+                break;
+            }
+        }
+    }
+    size_t used = 0;
+    for (int k = 0; k < MAX_SUGG && best[k] != NULL; k++) {
+        int n = snprintf(out + used, out_size - used, "%s%s",
+                         k ? ", " : "", best[k]);
+        if (n < 0 || (size_t)n >= out_size - used) {
+            out[used] = '\0'; /* nevešlo se - zahodit částečný název */
+            break;
+        }
+        used += (size_t)n;
+    }
 }
 
 

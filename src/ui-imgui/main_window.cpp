@@ -45,6 +45,8 @@
 #include "emulator/emulator_measuring.h"
 #include "version_check/version_check.h"
 #include "message/message_window.h"
+#include "ui-imgui/videorec/videorec_menu.h"
+#include "iface/iface_audio.h"
 
 #ifdef MZ800EMU_CFG_MCP_SERVER_ENABLED
 /* MCP Activity okno (V1.C.2) - render funkce volaná za běhu pokud
@@ -63,6 +65,8 @@ extern "C"
     void imgui_snapshot_load_dialog(void);
     void imgui_snapshot_setup_dialog(void);
     void imgui_snapshot_notification(void);
+    void snapshot_notification_show(const char *message, bool is_error);
+    bool snapshot_notification_error_active(void);
     void imgui_snapshot_quicksave_handler(void);
 
     /* Jazyk */
@@ -71,6 +75,32 @@ extern "C"
     /* MCP server settings (V0.B.4). Pri NO_MCP_TCP=1 je no-op. */
     void imgui_mcp_settings_dialog(void);
 };
+
+/**
+ * @brief Jednorázové upozornění, že emulátor běží bez audio zařízení.
+ *
+ * Pokud iface_audio_lowlevel_init() nedokázala inicializovat SDL audio nebo
+ * otevřít výstupní zařízení (g_iface_audio.device_open_failed), emulace běží
+ * bez zvuku s tempem podle systémových hodin. Při prvním volání s nastaveným
+ * příznakem zobrazí toast přes snapshot_notification_show(); další volání
+ * nedělají nic (je-li právě otevřené chybové okno, upozornění zůstane čekající
+ * a zobrazí se v pozdějším snímku; za běhu se příznak nemění, upozornění se tak ukáže jen jednou
+ * za běh aplikace).
+ *
+ * @par Vlákna Jen UI vlákno (příznak se zapisuje před startem emu vlákna).
+ * @post Upozornění bylo zobrazeno nejvýše jednou.
+ */
+static void imgui_audio_device_notice(void)
+{
+    static bool s_shown = false;
+    if (s_shown || !g_iface_audio.device_open_failed)
+        return;
+    /* Aktivní chybové okno nepřepisovat; upozornění zůstává čekající a ukáže se v pozdějším snímku. */
+    if (snapshot_notification_error_active())
+        return;
+    s_shown = true;
+    snapshot_notification_show(_("No audio device - running without sound"), false);
+}
 
 static void ShowOverlayWindow(void)
 {
@@ -197,6 +227,8 @@ static void ShowFullScreenImageEmulatorWindow(GLuint texture)
     };
 
     ImGui::Image(texture, ImVec2(viewport->Size.x, viewport->Size.y));
+    /* REC indikátor v pravém horním rohu obrazu (jen UI, do nahrávky se nedostane) */
+    imgui_videorec_overlay();
     ImGui::PopStyleVar(2);
 
     // bool isPopupOpen = ImGui::IsPopupOpen("ContextMenu", ImGuiPopupFlags_AnyPopup);
@@ -357,6 +389,15 @@ void imgui_main_window(GLuint texture)
     imgui_snapshot_load_dialog();
     imgui_snapshot_setup_dialog();
     imgui_snapshot_quicksave_handler();
+
+    /* Video záznam: dialog nastavení, okno dálkového ovládání + notifikace událostí (před vykreslením notifikace) */
+    imgui_videorec_setup_dialog();
+    imgui_videorec_remote_window();
+    imgui_videorec_poll_events();
+
+    /* Upozornění na běh bez audio zařízení (jednou, před vykreslením notifikace) */
+    imgui_audio_device_notice();
+
     imgui_snapshot_notification();
 
     /* Jazyk */

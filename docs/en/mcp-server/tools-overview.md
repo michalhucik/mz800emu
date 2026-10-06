@@ -22,7 +22,7 @@ documented separately in [Resources overview](resources-overview.md).
 | `emu_mem_read` | no | Reads bytes from Z80 memory (base64) |
 | `emu_mem_write` | **YES** | Writes bytes into RAM - region checked, **destructive** |
 | `emu_bp_add` | no | Adds a breakpoint (exec, or typed memw/memr/ior/iow + condition) |
-| `emu_bp_list` | no | Lists breakpoints (id/addr/enabled + type/zone/bank_id/hits/condition) |
+| `emu_bp_list` | no | Lists breakpoints (id/addr/addr_end/addr_match_mode/addr_mask/enabled + type/zone/bank_id/bank_id_end/bank_match_mode/bank_id_mask/hits/condition) |
 | `emu_bp_remove` | no | Removes a specific BP by ID |
 | `emu_bp_clear` | no | Removes all breakpoints at once |
 | `emu_bp_enable` | no | Toggles BP enabled flag (no removal) |
@@ -67,6 +67,12 @@ documented separately in [Resources overview](resources-overview.md).
 | `emu_trace_stop` | no | Stop trace recording of a channel (segment closed) |
 | `emu_trace_reset` | no | Clear the current trace channel segment |
 | `emu_trace_save` | no | Save/redirect a trace channel segment (optional path) |
+| `emu_videorec_start` | yes (creates / overwrites a file) | Start lossless video recording (optional path, auto-stop after N frames) |
+| `emu_videorec_stop` | no | Stop video recording, by default wait until the files are saved |
+| `emu_videorec_pause` | no | Recording pause (emulation keeps running): pause / resume / toggle |
+| `emu_videorec_marker` | no | Marker (chapter) at the current recording position |
+| `emu_videorec_status` | no | Video recording status (state, frames, segment, size, path, last event) |
+| `emu_videorec_timebase` | no | Recording timebase: emulated time or real time |
 | `emu_profiler_start` | no | Start CPU profiler (hot-path overhead) |
 | `emu_profiler_stop` | no | Stop profiler (data preserved) |
 | `emu_profiler_reset` | no | Clear profiler aggregator |
@@ -172,13 +178,44 @@ can reliably test for the presence of `error` in the response. On
 success the response carries the tool-specific data fields (see the
 descriptions below); a successful response has no `error` field.
 
+The `error` text also tells whether the emulator executed the command:
+
+- `Emulator busy: command not executed ...` / `Emulator busy: command
+  queue full ...` - the command was **not** executed (the emulator
+  thread did not pick it up within 10 s, or the queue was full); the
+  emulator state is unchanged and the call is safe to retry.
+- `Emulator busy: command only partially executed ...` - a multi-step
+  tool stopped after an earlier step ran; check the state before
+  retrying.
+- `Emulator busy: command still running ...` - the emulator thread
+  picked the command up but did not finish it within about 20 s (10 min
+  for file I/O tools such as trace_save or snapshot_save); the
+  result is unknown (it may still complete later). Check the state
+  before retrying.
+- `Emulator is shutting down ...` - not executed, stop sending requests.
+- any other text (e.g. `bp_remove failed (unknown id?)`) - the command
+  was executed and failed (or the parameters were rejected); retrying
+  unchanged does not help.
+
+The `Emulator busy: ...` / `Emulator is shutting down ...` texts end
+with the tool's original message in square brackets (kept for
+compatibility), e.g. `... safe to retry [bp_remove failed (unknown id?)]`;
+match on the prefix. Once the emulator thread picks a command up, the
+call waits for it to finish and returns its real result (at most about
+20 s, or 10 min for file I/O tools, then `command still running`). Details for AI
+clients: `emulator://docs/error_handling`.
+
 ## Per-tool description
 
 ### `emu_status`
 
 Returns emulator state: whether it is running or paused, how many
 frames have elapsed, whether the transport is connected.
-Non-destructive, suitable as the first call after connecting.
+Non-destructive, suitable as the first call after connecting. When
+the emulator ended unexpectedly, the result is
+`{"running": false, "connected": false, "last_exit": "..."}` (see
+[Python wrapper](python-wrapper.md), section *Emulator exit and
+automatic restart*).
 
 ### `emu_ping`
 
@@ -304,11 +341,21 @@ Returns the list of current breakpoints. Return:
 
 - `id` (int) - breakpoint handle
 - `addr` (int) - address
+- `addr_end` (int) - upper bound of the address range (inclusive);
+  used only when `addr_match_mode` is `RANGE`
+- `addr_match_mode` (string) - `SINGLE` (only `addr`), `RANGE`
+  (`addr`..`addr_end`) or `MASK` (`(x & addr_mask) == (addr & addr_mask)`);
+  applies to `PC_EXEC` / `MEM_R` / `MEM_W`
+- `addr_mask` (int) - AND mask; used only when `addr_match_mode` is `MASK`
 - `enabled` (bool)
 - `type` (string) - canonical UPPER_SNAKE type (`PC_EXEC` / `MEM_R` /
   `MEM_W` / `IORQ_R` / `IORQ_W` / ...)
 - `zone` (string) - memory zone (`CPU_VIEW` / `RAM` / ...)
 - `bank_id` (int) - bank index (for the `MMEXT_BANK` zone)
+- `bank_id_end` (int) - upper bound of the bank range (inclusive); used
+  only when `bank_match_mode` is `RANGE`
+- `bank_match_mode` (string) - `SINGLE` / `RANGE` / `MASK` for `bank_id`
+- `bank_id_mask` (int) - AND mask for `bank_id`; used only in `MASK` mode
 - `hits` (int) - BP trigger counter
 - `condition` (string or null if unconditional)
 
@@ -838,6 +885,100 @@ Saves / redirects the channel segment. Argument:
 
 Returns `{"saved": true, "path": <str|null>}`.
 
+## Video recording tools
+
+Lossless recording of the picture and sound of the emulated computer (see
+[Video recording](../video-recording.md)), controlled by an AI client:
+start, play the game, markers, retake via snapshot, stop. The complete
+workflow including the export to MP4 is in the MCP document
+`emulator://docs/videorec_workflow`.
+
+By default the recording uses emulation time (one emulated frame = one
+video frame, 50 frames/s, 60 on MZ-700 NTSC and MZ-1500), so pauses between tool calls and MAX SPEED do
+not show in the video. The real-time mode (`emu_videorec_timebase`)
+records what was seen and heard in real time instead. Requests (start, pause, marker, stop) take effect at the end of
+the next emulated frame; a stop while emulation is paused is executed
+immediately. Available in every build (MZ-800, MZ-700 PAL/NTSC,
+MZ-1500).
+
+Every successful reply contains the recording status:
+
+| Field | Meaning |
+|-------|---------|
+| `supported` | Recording is available (always `true`). |
+| `state` | `idle`, `recording` or `paused` (recording pause). |
+| `start_pending` | Start accepted, recording begins at the end of the next frame. |
+| `frames`, `fps`, `duration_s` | Number of recorded frames, frame rate, length in seconds. |
+| `segment`, `segment_open` | Current segment number (from 1) and whether it is open. |
+| `bytes`, `parts` | Size and number of AVI files of the running or last recording. |
+| `retake_mode` | `discard`, `seam` or `off` - what loading a snapshot does. |
+| `path`, `sidecar` | First AVI file and the `.cuts.json` file. |
+| `last_error` | Last error or `null`. |
+| `last_event` | `null` or `{seq, kind, frame, path, text}`; `kind` = `started`, `saved`, `failed`, `retake`, `seam`. |
+| `timebase`, `timebase_effective` | Requested and actual timebase (`emulated` / `realtime`); the actual one is `emulated` even with `realtime` requested when `realtime_speed = emulated_when_fast` and the speed is not 100 %. |
+| `rt_activity` | Real-time mode: `off` (emulated time), `live` (live picture), `frozen` (emulation paused, frozen picture), `skipping` (nothing written). |
+
+### `emu_videorec_start` (sensitive - creates / overwrites a file)
+
+Arguments:
+
+- `path` (string, optional) - target `.avi`; an existing file is
+  overwritten. Without it the name `mz800_YYYYMMDD_HHMMSS.avi` is
+  generated in the recordings output folder.
+- `frames` (int, optional, default 0) - stop automatically after this
+  many recorded frames (the emulator keeps running); 0 = no limit.
+
+The file is created immediately, so an error (e.g. `Cannot create video
+file: <path>`) is returned at once. The frame on which the start is
+processed is not recorded. Returns the status plus `start_requested` and
+`stop_after_frames`. Error `Video recording is already running` if a
+recording is in progress.
+
+### `emu_videorec_stop`
+
+Arguments: `wait` (bool, default `true`), `timeout_s` (default 30). With
+`wait` the tool waits until the recording files are complete and returns
+`saved` (bool) and `recorded_frames`. Stopping a start that has not been
+processed yet cancels it and deletes the file (`start_cancelled: true`).
+Without a recording: `Video recording is not running`.
+
+### `emu_videorec_pause`
+
+Argument `paused` (bool, optional): `true` = pause recording, `false` =
+resume, omitted = toggle. Emulation keeps running; resuming starts a new
+segment (a cut with a transition in the export). Returns the status plus
+`pause_requested` and `paused_target`.
+
+### `emu_videorec_marker`
+
+Argument `label` (string, optional; default `Marker at frame N`). The
+marker gets the index of the next recorded frame and becomes a chapter on
+export. Markers at or after the point of a snapshot used for a retake are
+discarded together with the discarded part of the recording.
+
+### `emu_videorec_status`
+
+No arguments. Returns the status described above.
+
+### `emu_videorec_timebase`
+
+Argument `timebase` (string, required): `emulated` or `realtime`. Applies
+to the running recording and to the next start (INI `[VIDEOREC]
+timebase`). It therefore changes the persistent user setting - the same
+as switching in the GUI (`Alt + U`, the recording control window, the
+settings dialog): it is saved to the INI on exit (unless running with
+`--no-save-ini`) and applies to the GUI user after a restart as well. An
+agent that switched to `realtime` on a shared instance should switch
+back to `emulated` when done. The recording switches to real time within one frame period (20 ms, 16.7 ms at 60 frames/s) and back to
+emulated time at the end of the next emulated frame; every switch starts
+a new segment. In real time, 50 times (60 times on MZ-700 NTSC and MZ-1500) per second of wall-clock time the
+picture that was on the screen is written together with the sound that
+went to the speaker (turbo plays fast, pauses follow `realtime_pause`).
+Without an audio device (`--headless`, `--mcp-pipe`, or when the windowed
+emulator cannot open an audio device) the sound is rendered by the same
+path without being played. Returns the status plus
+`timebase_requested`; an invalid value is a parameter error.
+
 ## Profiler tools
 
 The CPU profiler aggregates per-function statistics (calls, exclusive
@@ -1261,8 +1402,29 @@ parallel to the physical scan matrix. The Z80 emulation ANDs the two
 matrices when reading PORT B, so a virtual press appears to the Z80
 as a real key held by the user.
 
-Key name vocabulary: RETURN, BREAK, SHIFT, CONTROL, GRAPH, ALPHA,
-ARROW_*, F1..F9, plus ASCII fallback (`"A"`, `"ASCII:A"`, ...).
+Key name vocabulary (ONE table shared by `emu_input_send_key`,
+`emu_input_send_keys` with `encoding=key_names`, `emu_input_press_key`,
+`emu_input_release_key` and `emu_input_send_keys_with_delays`; case-insensitive):
+
+| Name(s) | Key |
+|---------|-----|
+| `RETURN`, `ENTER`, `CR` | CR (Enter) |
+| `SPACE`, `TAB` (MZ-800 only), `BLANK`, `GRAPH`, `ALPHA` | the key of that name |
+| `LIBRA` | `£` (= SHIFT + DOWN_ARROW position), `F9` = same position without SHIFT |
+| `INSERT`, `INS`, `INST` | INST |
+| `DELETE`, `DEL`, `BACKSPACE` | DEL |
+| `ARROW_UP`, `UP`, `CURSOR_UP` (likewise `DOWN`, `LEFT`, `RIGHT`) | cursor movement keys |
+| `UP_ARROW`, `DOWN_ARROW` | arrow-glyph character keys (NOT cursor movement) |
+| `ESC`, `ESCAPE`, `BREAK`, `END` | ESC / BREAK |
+| `CTRL`, `CONTROL`, `SHIFT` | modifiers |
+| `F1`..`F9` | function keys (`F6`-`F8` map to `@`, `\`, `?`; `F9` = LIBRA position without SHIFT, i.e. DOWN_ARROW) |
+
+Plus ASCII fallback (`"A"`, `"ASCII:A"`, ...). The names printed in
+`emulator://docs/mz800_keyboard` (`CURSOR_*`, `INST`, ...) are accepted as
+aliases, and the older names keep working. An unknown name is rejected with
+`Unknown key '<name>'. Closest valid names: ...` (for `send_keys` with
+`key_names` and `send_keys_with_delays` the whole call fails before any key
+is sent).
 
 The joystick state byte uses the Sharp MZ standard:
 
@@ -1431,7 +1593,11 @@ Args:
   `event_name`) accept `None` to clear.
 
 Returns: JSON `{"id": int, "created": bool}`. `id` is `-1` on
-failure.
+failure. If `addr_end` is set to a value different from `addr` but
+`addr_match_mode` is not set to `RANGE` (a new breakpoint starts in
+`SINGLE`), the breakpoint is still created, matches only `addr`, and the
+result also carries `warning`. To watch a range, pass both
+`"addr_end"` and `"addr_match_mode"` (value `"RANGE"`) in `fields`.
 
 The `fwd_min_interval_ms` and `fwd_max_fires` fields are a per-BP
 override of the forward-action (snapshot / trace_save) rate limit -
@@ -1765,6 +1931,7 @@ Returns: `{"ok": true, "action": "play_paused"}`.
 ### `emu_cmt_stop` (sensitive)
 
 Stop the transport (PLAY or RECORD -> STOP). No-op if already stopped.
+Without a loaded tape it still puts the transport into STOP.
 
 Returns: `{"ok": true, "action": "stop"}`.
 
@@ -1846,6 +2013,8 @@ Args:
 
 Enables/disables CPU boost during tape transport (run at max speed for
 fast long loads). Reflected as `cpu_boost`.
+User preference: snapshot load does not restore it (snapshots still
+store it for older emulator versions).
 
 Args:
 - `enabled` (required): true = boost, false = real time.
@@ -1869,14 +2038,20 @@ Args:
 - `path` (required): tape file path (extension selects the backend).
 - `play_immediately` (default false): start playback after opening.
 
-Returns: `{"ok": true, "path": <str>, "playing": <bool>}`.
+Returns: `{"ok": true, "path": <str>, "playing": <bool>, "state": <str>,
+"paused": <bool>}`. `playing`, `state` (`"stop"` / `"play"` / `"record"`)
+and `paused` report the actual transport state after the operation (same
+meaning as in `emulator://periph/cmt`); `playing` is true only for PLAY
+without pause. If `play_immediately` was requested but the tape is not
+playing afterwards, the result also contains `warning`.
 
 ### `emu_cmt_tape_seek` (sensitive)
 
-Seeks to a tape block (SIMPLE_TAPE multi-block containers). A
-single-block container (e.g. a plain .mzf) has only block 0 and may not
-support seeking. Requires a loaded tape. Block listing is in
-`emulator://periph/cmt/tape`.
+Seeks to a tape block (SIMPLE_TAPE multi-block containers: .mzt,
+.tap). A single-file container (SINGLE: a plain .mzf or .wav) does not
+support seeking - the call fails even for block 0; to start it from
+the beginning again, use `emu_cmt_stop` + `emu_cmt_play`. Requires a
+loaded tape. Block listing is in `emulator://periph/cmt/tape`.
 
 Args:
 - `block_id` (required): 0-based block index.

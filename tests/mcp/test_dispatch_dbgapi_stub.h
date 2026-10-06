@@ -36,6 +36,13 @@ bool dbgapi_ui_submit_cmd_sync(st_DBGAPI_CMDRQ_QUEUE *queue,
                                 void *result_ptr,
                                 int timeout_ms);
 
+en_DBGAPI_SUBMIT_STATUS dbgapi_ui_submit_cmd_sync_ex(st_DBGAPI_CMDRQ_QUEUE *queue,
+                                                     en_DBGAPI_CMD cmd,
+                                                     en_DBGAPI_CMD_ORIGIN origin,
+                                                     void *data_ptr,
+                                                     void *result_ptr,
+                                                     int timeout_ms);
+
 extern st_DBGAPI_CMDRQ_QUEUE g_dbgapi_cmdrq_queue;
 
 
@@ -53,6 +60,16 @@ typedef struct st_DISPATCH_STUB_STATE {
     void                *last_result;  /**< result_ptr poslední call. */
     int                  call_count;   /**< Počet volání mocku. */
     bool                 fail_next;    /**< Pokud true, příští call vrátí false. */
+    /** Stav, který při neúspěchu vrátí `dbgapi_ui_submit_cmd_sync_ex`.
+     *  0 (= DBGAPI_SUBMIT_OK po resetu) znamená výchozí DBGAPI_SUBMIT_FAILED
+     *  (= handler neuspěl). TIMEOUT / QUEUE_FULL / ENDING simulují příkaz,
+     *  který emu neprovedlo. Platí pro každý neúspěšný call, dokud ho test
+     *  nezmění. */
+    en_DBGAPI_SUBMIT_STATUS fail_status;
+    /** Pokud > 0, call s pořadovým číslem `fail_on_call` (1 = první call
+     *  po resetu) vrátí false - pro scénáře, kde handler selže až na
+     *  pozdějším submitu. */
+    int                  fail_on_call;
     bool                 is_running;   /**< Pro IS_RUNNING - jaké running vrátit. */
     bool                 fill_regs;    /**< Pro GET_ALL_REGS - naplnit deterministický pattern. */
     int                  fill_bp_id;   /**< Pro BP_ADD - jaké id přidělit. */
@@ -84,6 +101,15 @@ typedef struct st_DISPATCH_STUB_STATE {
     uint8_t              bp_list_fake_bank_id;
     uint64_t             bp_list_fake_hits;
     const char          *bp_list_fake_condition;
+    /* bp_list: addr_end / addr_match_mode (en_BP_MATCH_MODE) / addr_mask
+     * do bp[0] (default 0 = SINGLE). */
+    uint16_t             bp_list_fake_addr_end;
+    uint8_t              bp_list_fake_addr_match_mode;
+    uint16_t             bp_list_fake_addr_mask;
+    /* bp_list: bank_id_end / bank_match_mode / bank_id_mask do bp[0]. */
+    uint8_t              bp_list_fake_bank_id_end;
+    uint8_t              bp_list_fake_bank_match_mode;
+    uint8_t              bp_list_fake_bank_id_mask;
     int                  bp_create_calls;
     uint8_t              bp_create_last_type;
     uint16_t             bp_create_last_addr;
@@ -742,6 +768,28 @@ typedef struct st_DISPATCH_STUB_STATE {
     int64_t              watch_snapshot_fake_min_int;
     int64_t              watch_snapshot_fake_max_int;
     uint64_t             watch_snapshot_fake_change_count;
+
+    /* video-capture Task 15: DBGAPI_CMD_VIDEOREC (videorec_* MCP příkazy).
+     *
+     *   videorec_calls       - kolikrát stub viděl DBGAPI_CMD_VIDEOREC.
+     *   videorec_last_op     - en_DBGAPI_VIDEOREC_OP posledního volání.
+     *   videorec_last_path   - heap g_strdup vstupní cesty (NULL = nezadaná);
+     *                          uvolňuje dispatch_stub_reset.
+     *   videorec_last_frames - vstupní frames (START).
+     *   videorec_last_paused - vstupní paused (-1/0/1, PAUSE).
+     *   videorec_last_label  - heap g_strdup vstupního popisku (NULL = nezadaný).
+     *   videorec_last_timebase - vstupní timebase (0/1, TIMEBASE; Task 18).
+     *   videorec_fake        - výstupní pole (out_*) zkopírovaná do parametru;
+     *                          out_result != 0 => submit vrátí false (chyba).
+     */
+    int                      videorec_calls;
+    int                      videorec_last_op;
+    char                    *videorec_last_path;
+    uint64_t                 videorec_last_frames;
+    int                      videorec_last_paused;
+    char                    *videorec_last_label;
+    int                      videorec_last_timebase;
+    st_DBGAPI_VIDEOREC_PARAM videorec_fake;
 } st_DISPATCH_STUB_STATE;
 
 

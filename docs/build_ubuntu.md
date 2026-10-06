@@ -25,7 +25,8 @@ Notes:
 - `libjson-glib-dev` is required since the `D.0.5.B.1` release (build/cmake commit `48ed161`).
 - `zlib1g-dev` is required because `minizip-ng` is typically available only as a static `.a`
   archive on Linux and `find_package(ZLIB)` in CMake links it explicitly to resolve
-  `inflateEnd`/`deflateEnd` symbols.
+  `inflateEnd`/`deflateEnd` symbols. zlib is also used directly by video recording
+  (ZMBV codec).
 
 ## 2b) Install SDL3 and SDL3-image
 

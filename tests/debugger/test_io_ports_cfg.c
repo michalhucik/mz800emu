@@ -1,9 +1,11 @@
 /*
  * test_io_ports_cfg.c - Cfg roundtrip test pro IO_PORTS_PANEL sekci.
  *
- * Sprint 2 Fáze 4.4. Verifikuje cfgmodule pattern používaný funkcí
- * io_window_register_persistence (= klíče collapse_<chip>,
- * history_capacity, history_auto_follow, tracking_active).
+ * Sprint 2 Fáze 4.4. Verifikuje cfgmodule pattern modulu IO_PORTS_PANEL
+ * (= klíče collapse_<chip>, history_capacity, history_auto_follow,
+ * tracking_active). history_capacity dnes registruje jádro
+ * (io_history_register_persistence, vazbu na ring ověřuje
+ * test_io_history_cfg.c), ostatní io_window_register_persistence.
  *
  * Test strategie:
  *  - Vytvoří cfgroot s docasnym INI souborem

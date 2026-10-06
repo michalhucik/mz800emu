@@ -1,6 +1,12 @@
 # docs/tools/
 
-Example offline tools that accompany the PSG Audio Scope debugger window.
+Offline helper tools shipped with the emulator (also copied into the
+distribution under `docs/tools/`).
+
+- `example_psg_write_log_to_midi.py` - example converter for the PSG Audio
+  Scope debugger window (see below).
+- `videorec_export.py` - exports a video recording (AVI parts +
+  `*.cuts.json` sidecar) to a YouTube-ready MP4 (see below).
 
 ## example_psg_write_log_to_midi.py
 
@@ -102,3 +108,43 @@ Tone frequency: `clock_hz / (32 * tone_divider * GDGCLK2CPU_DIVIDER)`.
   not pitch bend.
 - The script is an example. If you need production grade output, fork
   it.
+
+## videorec_export.py
+
+Turns a recording made by Tools -> Video Recording (lossless AVI parts and
+the `<name>.cuts.json` sidecar with segments and markers) into an MP4
+(H.264 High, yuv420p, AAC 320k 48 kHz) plus a YouTube chapters file
+`<output without extension>.chapters.txt`. Crop, integer upscaling, aspect
+ratio and transitions (cut, fade, crossfade, title card) are selectable;
+`--state-overlay icons` burns emulator state indicators (pause, speed,
+real time) from the sidecar events into the picture.
+Code comments in this script are in English (an explicit exception from
+the project rule of Czech comments).
+
+### Requirements
+
+- Python 3 (standard library only)
+- [ffmpeg](https://ffmpeg.org/) in `PATH`, or passed via `--ffmpeg PATH` or
+  the `VIDEOREC_FFMPEG` environment variable (the `card` transition with
+  text and the text indicators of `--state-overlay icons` also need the
+  `drawtext` filter and a font passed by `--font`)
+
+ffmpeg can be downloaded from <https://ffmpeg.org/download.html> (on
+Windows e.g. a static build, or `pacman -S mingw-w64-ucrt-x86_64-ffmpeg` in
+MSYS2). It must be on `PATH` or passed via `--ffmpeg` (or `VIDEOREC_FFMPEG`).
+
+### Usage
+
+Run from the distribution root (the folder that contains `docs/`):
+
+```bash
+python3 docs/tools/videorec_export.py recording.cuts.json -o video.mp4 --target 1080p
+```
+
+On Windows without a `python3` command use `python` or the launcher
+`py -3` instead, e.g. `py -3 docs\tools\videorec_export.py ...`.
+
+Run `python3 docs/tools/videorec_export.py --help` for all options
+(`--target`, `--crop`, `--aspect`, `--transition`, `--transition-ms`,
+`--card-text`, `--font`, `--crf`, `--state-overlay`, `--dry-run`). Full description:
+`docs/en/video-recording.md`.

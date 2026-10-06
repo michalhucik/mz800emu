@@ -10,6 +10,7 @@
 #include "baseui_filechooser.h"
 #include "ui-imgui/filechooser/imgui_filechooser.h"
 #include "libs/sdlapp/sdlapp.h"
+#include "libs/sdlapp/sdlapp_options.h"
 
 /**
  * @brief Destrukce struktury filechooseru. Vse co není NULL je uvolněno.
@@ -210,6 +211,24 @@ baseui_fchooser_t *baseui_filechooser_save_file(const char *title, const char *f
 }
 
 /**
+ * @brief Zjistí, zda může blokující dialog vůbec někdo zavřít.
+ *
+ * V režimu --headless (včetně --mcp-pipe, které --headless vkládá do argv)
+ * neběží okno ani uživatel, který by dialog potvrdil nebo zrušil. Blokující
+ * varianta (*_wait) by pak čekala, dokud běží sdlapp, tedy navždy. Když ji
+ * volá EMU vlákno (CMT hack z instrukce OUT), zastaví se emulace i vyřizování
+ * příkazů dbgapi a MCP odpovídá jen "Emulator busy".
+ *
+ * @return true, pokud je k dispozici interaktivní GUI; false v --headless.
+ *
+ * @note Hledá v argv (O(n)), volat jen mimo hot path.
+ */
+bool baseui_filechooser_can_wait(void)
+{
+    return !sdlapp_option_present("--headless");
+}
+
+/**
  * @brief Čeká na dokončení dialogu a vrátí vybraný soubor, nebo adresář.
  * @param fch Ukazatel na strukturu filechooseru
  * @param selected_path Ukazatel na proměnnou, kam se uloží vybraný adresář (pouze pokud neni NULL)
@@ -276,10 +295,23 @@ static char *baseui_filechooser_wait(baseui_fchooser_t *fch, char **selected_pat
  * @param fileName Výchozí název souboru
  * @param filePathName Plná cesta a název souboru k otevření
  * @param selected_path Ukazatel na proměnnou, kam se uloží vybraný adresář (pouze pokud neni NULL)
- * @return Vybraný soubor, nebo NULL
+ * @return Vybraný soubor (vlastní ho volající, uvolnit g_free()), nebo NULL
+ *         při zrušení dialogu, ukončení aplikace nebo bez GUI.
+ *
+ * @note Bez interaktivního GUI (--headless, --mcp-pipe) dialog vůbec
+ *       neotevře a hned vrátí NULL (viz baseui_filechooser_can_wait()),
+ *       jinak by volající vlákno čekalo navždy.
+ * @pre Nevolat z UI vlákna (blokuje do zavření dialogu).
  */
 char *baseui_filechooser_open_file_wait(const char *title, const char *filter, const char *path, const char *fileName, const char *filePathName, char **selected_path)
 {
+    /* Bez GUI by dialog nikdo nezavřel - vrátit "zrušeno" hned. */
+    if (!baseui_filechooser_can_wait())
+    {
+        if (selected_path != NULL)
+            *selected_path = NULL;
+        return NULL;
+    };
     baseui_fchooser_t *fch = baseui_filechooser_open_file(title, filter, path, fileName, filePathName, NULL, NULL);
     if (fch == NULL)
     {
@@ -296,10 +328,21 @@ char *baseui_filechooser_open_file_wait(const char *title, const char *filter, c
  * @param path Výchozí cesta
  * @param fileName Výchozí název souboru
  * @param filePathName Plná cesta a název souboru k otevření
- * @return Vybraný adresář, nebo NULL
+ * @return Vybraný adresář (vlastní ho volající, uvolnit g_free()), nebo NULL
+ *         při zrušení dialogu, ukončení aplikace nebo bez GUI.
+ *
+ * @note Bez interaktivního GUI (--headless, --mcp-pipe) dialog vůbec
+ *       neotevře a hned vrátí NULL (viz baseui_filechooser_can_wait()),
+ *       jinak by volající vlákno čekalo navždy.
+ * @pre Nevolat z UI vlákna (blokuje do zavření dialogu).
  */
 char *baseui_filechooser_open_dir_wait(const char *title, const char *path, const char *fileName, const char *filePathName)
 {
+    /* Bez GUI by dialog nikdo nezavřel - vrátit "zrušeno" hned. */
+    if (!baseui_filechooser_can_wait())
+    {
+        return NULL;
+    };
     baseui_fchooser_t *fch = baseui_filechooser_open_dir(title, path, fileName, filePathName, NULL, NULL);
     if (fch == NULL)
     {
@@ -316,10 +359,23 @@ char *baseui_filechooser_open_dir_wait(const char *title, const char *path, cons
  * @param fileName Výchozí název souboru
  * @param filePathName Plná cesta a název souboru k otevření
  * @param selected_path Ukazatel na proměnnou, kam se uloží vybraný adresář (pouze pokud neni NULL)
- * @return Vybraný soubor, nebo NULL
+ * @return Vybraný soubor (vlastní ho volající, uvolnit g_free()), nebo NULL
+ *         při zrušení dialogu, ukončení aplikace nebo bez GUI.
+ *
+ * @note Bez interaktivního GUI (--headless, --mcp-pipe) dialog vůbec
+ *       neotevře a hned vrátí NULL (viz baseui_filechooser_can_wait()),
+ *       jinak by volající vlákno čekalo navždy.
+ * @pre Nevolat z UI vlákna (blokuje do zavření dialogu).
  */
 char *baseui_filechooser_open_rw_file_wait(const char *title, const char *filter, const char *path, const char *fileName, const char *filePathName, char **selected_path)
 {
+    /* Bez GUI by dialog nikdo nezavřel - vrátit "zrušeno" hned. */
+    if (!baseui_filechooser_can_wait())
+    {
+        if (selected_path != NULL)
+            *selected_path = NULL;
+        return NULL;
+    };
     baseui_fchooser_t *fch = baseui_filechooser_open_rw_file(title, filter, path, fileName, filePathName, NULL, NULL);
     if (fch == NULL)
     {
@@ -338,10 +394,23 @@ char *baseui_filechooser_open_rw_file_wait(const char *title, const char *filter
  * @param fileName Výchozí název souboru
  * @param filePathName Plná cesta a název souboru k otevření
  * @param selected_path Ukazatel na proměnnou, kam se uloží vybraný adresář (pouze pokud neni NULL)
- * @return Vybraný soubor, nebo NULL
+ * @return Vybraný soubor (vlastní ho volající, uvolnit g_free()), nebo NULL
+ *         při zrušení dialogu, ukončení aplikace nebo bez GUI.
+ *
+ * @note Bez interaktivního GUI (--headless, --mcp-pipe) dialog vůbec
+ *       neotevře a hned vrátí NULL (viz baseui_filechooser_can_wait()),
+ *       jinak by volající vlákno čekalo navždy.
+ * @pre Nevolat z UI vlákna (blokuje do zavření dialogu).
  */
 char *baseui_filechooser_save_file_wait(const char *title, const char *filter, const char *path, const char *fileName, const char *filePathName, char **selected_path)
 {
+    /* Bez GUI by dialog nikdo nezavřel - vrátit "zrušeno" hned. */
+    if (!baseui_filechooser_can_wait())
+    {
+        if (selected_path != NULL)
+            *selected_path = NULL;
+        return NULL;
+    };
     baseui_fchooser_t *fch = baseui_filechooser_save_file(title, filter, path, fileName, filePathName, NULL, NULL);
     if (fch == NULL)
     {

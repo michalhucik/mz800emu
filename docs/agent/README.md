@@ -20,6 +20,7 @@ paragraph is the description.
 | URI | File |
 |-----|------|
 | `emulator://docs/index` | `index.md` |
+| `emulator://docs/error_handling` | `error_handling.md` |
 | `emulator://docs/memory_layout` | `memory_layout.md` |
 | `emulator://docs/bp_dsl` | `bp_dsl.md` |
 | `emulator://docs/smart_vars` | `smart_vars.md` |
@@ -29,6 +30,7 @@ paragraph is the description.
 | `emulator://docs/sharp_display_code` | `sharp_display_code.md` |
 | `emulator://docs/mz800_keyboard` | `mz800_keyboard.md` |
 | `emulator://docs/cmt_workflow` | `cmt_workflow.md` |
+| `emulator://docs/videorec_workflow` | `videorec_workflow.md` |
 
 This table is informative only - the actual resource list is built by
 scanning this directory, so it always matches the files present.

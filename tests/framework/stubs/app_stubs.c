@@ -133,6 +133,15 @@ void *baseui_filechooser_open_file(const char *title, const char *filter)
     return NULL;
 }
 
+/**
+ * @brief Stub: v testu není interaktivní GUI, blokující dialog by nikdo nezavřel.
+ * @return false (stejně jako produkční kód v --headless).
+ */
+bool baseui_filechooser_can_wait(void)
+{
+    return false;
+}
+
 void *baseui_filechooser_open_file_wait(const char *title, const char *filter)
 {
     (void)title;

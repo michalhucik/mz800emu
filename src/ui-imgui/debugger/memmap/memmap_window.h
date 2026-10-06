@@ -21,7 +21,8 @@
  *   - barevné kódování Banking sloupce
  *   - 3 stavy MExt sloupce (žádný / Luftner 4K / PEHU 8K) - tlačítka
  *     "$xx" bez akce, plánovaná funkčnost edit přijde V1+
- *   - DMD roletka (jen MZ-800), direct write do g_gdg.regDMD
+ *   - DMD roletka (jen MZ-800), přímý zápis do g_gdg.regDMD (bez IORQ)
+ *     provedený emu vláknem přes DBGAPI_CMD_MEMMAP_SET
  *   - okno se v prvním framu auto-sizuje na obsah (SetNextWindowSize +
  *     ImGuiCond_Once), pak je user-resizable (= AlwaysAutoResize byl
  *     odstraněn kvůli hover race v prvním framu po Appearing)
@@ -174,9 +175,12 @@ extern void memmap_window_request_focus_at ( unsigned addr );
  * &g_gui->showMemoryMapWindow).
  *
  * Side effects:
- *   - (Jen MZ-800) Klik na položku DMD roletky provede direct write
- *     do g_gdg.regDMD + memory_reconnect_ram() pro aktualizaci dispatch
- *     tabulek (= bez IORQ funkce).
+ *   - Klik na položku DMD roletky (jen MZ-800) a banking akce (levý klik
+ *     na buňku Banking, popup Mount/Umount/...) se odešlou emu vláknu přes
+ *     DBGAPI_CMD_MEMMAP_SET a okno čeká na jejich provedení (max.
+ *     DBG_UI_MEMMAP_CMD_TIMEOUT_MS). Emu vlákno zapíše g_gdg.regDMD /
+ *     g_memory.map (bez IORQ funkce), zavolá memory_reconnect_ram()
+ *     a případně refresh obrazu. Při timeoutu se nic nezmění.
  *
  * Thread safety: pouze UI vlákno.
  *

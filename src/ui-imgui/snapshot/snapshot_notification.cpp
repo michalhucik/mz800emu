@@ -19,6 +19,8 @@
 static bool s_notification_active = false;
 static bool s_notification_is_error = false;
 static char s_notification_message[512] = "";
+/* Titulek chybového okna (už přeložený); prázdný = "Snapshot Error" */
+static char s_notification_error_title[128] = "";
 static Uint64 s_notification_start_time = 0;
 
 /* Doba zobrazení notifikace v ms */
@@ -26,12 +28,47 @@ static Uint64 s_notification_start_time = 0;
 #define NOTIFICATION_FADE_MS 500
 
 
-extern "C" void snapshot_notification_show(const char *message, bool is_error)
+/**
+ * @brief Zobrazí notifikaci s volitelným titulkem chybového okna.
+ *
+ * Úspěch = toast dole uprostřed (3 s s dozníváním), chyba = modální okno
+ * s tlačítkem OK. Nová notifikace nahradí předchozí.
+ *
+ * @param message     Text (už přeložený; zkopíruje se, zkrátí na 511 znaků).
+ * @param is_error    true = modální chybové okno.
+ * @param error_title Titulek chybového okna (už přeložený; zkopíruje se),
+ *                    NULL = "Snapshot Error". Pro toast se ignoruje.
+ * @par Vlákna Jen UI vlákno.
+ */
+extern "C" void snapshot_notification_show_ex(const char *message, bool is_error, const char *error_title)
 {
     snprintf(s_notification_message, sizeof(s_notification_message), "%s", message);
+    snprintf(s_notification_error_title, sizeof(s_notification_error_title), "%s", error_title ? error_title : "");
     s_notification_is_error = is_error;
     s_notification_active = true;
     s_notification_start_time = SDL_GetTicks();
+}
+
+
+/**
+ * @brief Zda je právě otevřené chybové (modální) okno notifikace.
+ *
+ * Volající, který nechce běžnou notifikací (toast) přepsat dosud nepotvrzenou
+ * chybu, se podle toho rozhodne (snapshot_notification_show_ex() sama
+ * předchozí notifikaci vždy nahradí).
+ *
+ * @return true dokud uživatel chybové okno nezavřel tlačítkem OK.
+ * @par Vlákna Jen UI vlákno.
+ */
+extern "C" bool snapshot_notification_error_active(void)
+{
+    return s_notification_active && s_notification_is_error;
+}
+
+
+extern "C" void snapshot_notification_show(const char *message, bool is_error)
+{
+    snapshot_notification_show_ex(message, is_error, NULL);
 }
 
 
@@ -44,14 +81,18 @@ extern "C" void imgui_snapshot_notification(void)
 
     /* Chybové hlášení — modální dialog (bez fadeout) */
     if (s_notification_is_error) {
-        ImGui::OpenPopup(_L("Snapshot Error"));
+        /* Stabilní ID ###NotificationError: titulek se mění (snapshot / video záznam). */
+        char popup_title[192];
+        snprintf(popup_title, sizeof(popup_title), "%s###NotificationError",
+                 s_notification_error_title[0] ? s_notification_error_title : _("Snapshot Error"));
+        ImGui::OpenPopup(popup_title);
 
-        if (ImGui::BeginPopupModal(_L("Snapshot Error"), NULL,
+        if (ImGui::BeginPopupModal(popup_title, NULL,
                                     ImGuiWindowFlags_AlwaysAutoResize)) {
             ImGui::TextWrapped("%s", s_notification_message);
             ImGui::Spacing();
 
-            if (ImGui::Button("OK", ImVec2(120, 0))) {
+            if (ImGui::Button(_L("OK"), ImVec2(120, 0))) {
                 s_notification_active = false;
                 ImGui::CloseCurrentPopup();
             }

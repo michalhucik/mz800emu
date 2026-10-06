@@ -57,6 +57,30 @@
     } en_CMT_MZFSIZE_CHECK;
 
 
+    /**
+     * @brief Stav virtuálního kazetového magnetofonu (globální instance g_cmt).
+     *
+     * Drží vloženou pásku (ext), stav transportu (state, paused), stav
+     * přehrávání aktuálního bloku (playsts), výstupní signál z pásky (output)
+     * a časovou základnu přehrávání v GDG ticích (start_time, paused_time).
+     *
+     * Invarianty:
+     * - Bez vložené pásky (ext == NULL) je transport vždy ve stavu
+     *   CMT_STATE_STOP s paused == 0 a playsts == CMTEXT_BLOCK_PLAYSTS_STOP.
+     *   Funkce, které ve stavu PLAY/RECORD čtou ext (cmt_update_output,
+     *   cmt_write_data), na tento invariant spoléhají a navíc ho samy
+     *   defenzivně testují. Za běhu ho udržují cmt_stop() a cmt_eject()
+     *   (i bez vložené pásky přepnou do STOP), po načtení snapshotu ho
+     *   obnoví cmt_sanitize_state().
+     * - Ve stavu CMT_STATE_STOP je paused == 0.
+     *
+     * Ownership: ext ukazuje na statickou instanci cmtext rozšíření (nikdy
+     * se neuvolňuje přes g_cmt), last_filename a ui_base_filename vlastní
+     * g_cmt (uvolňují se přes baseui_tools_mem_free).
+     *
+     * Synchronizace: přístup jen z emulátorového vlákna (nebo s pozastavenou
+     * emulací, např. při načítání snapshotu).
+     */
     typedef struct st_CMT {
         st_CMTEXT *ext;
         char *last_filename;
@@ -70,6 +94,9 @@
         uint64_t start_time;
         uint64_t paused_time;
         int ui_player_update;
+        /** Uživatelská preference "MAX SPEED během přehrávání" (cfg CMT/cpu_boost,
+         *  cfg element ukazuje přímo sem). Snapshot ji zapisuje, ale při
+         *  načtení neobnovuje (viz snap_cmt_load). */
         en_CMT_CPU_BOOST cpu_boost;
         en_CMT_MZFSIZE_CHECK mzfsize_check;
         int recording_to_stream; // pri RECORD identifikuje, zda uz mame zalozen stream
@@ -126,6 +153,7 @@ extern "C" {
     void cmt_pause ( int value );
     void cmt_stop ( void );
     void cmt_eject ( void );
+    bool cmt_sanitize_state ( void );
     int cmt_change_speed ( en_CMTSPEED cmtspeed );
 
     void cmt_screen_done_period ( void );
@@ -134,6 +162,34 @@ extern "C" {
     void cmt_write_data ( int value );
 
     void cmt_cpu_boost_set ( en_CMT_CPU_BOOST cpu_boost );
+
+    /**
+     * @brief Srovná MAX SPEED se stavem transportu podle volby cpu_boost.
+     *
+     * Sémantika cpu_boost: automatická MAX SPEED po dobu, kdy páska běží.
+     * - cpu_boost zapnutý, páska vložená, PLAY nebo RECORD bez pauzy
+     *   -> emulator_max_speed_boost(true) (zapne MAX SPEED, pokud neběží),
+     * - jinak -> emulator_max_speed_boost(false): vypne MAX SPEED jen tehdy,
+     *   když ji zapnul cpu_boost; MAX SPEED zvolenou uživatelem nechá.
+     *
+     * Volá se při každé změně transportu (play, pauza, stop), při změně
+     * volby a po načtení snapshotu (snap_cmt_load) - snapshot obnoví stav
+     * transportu, ale dříve rychlost emulace nesrovnal. Samotnou volbu
+     * cpu_boost snapshot neobnovuje (uživatelská preference, do snapshotu
+     * se zapisuje jen kvůli kompatibilitě); platí aktuální volba uživatele.
+     * Při RECORD pak MAX SPEED dál řídí cmt_screen_done_period() podle
+     * aktivity zápisu: po 5 s bez zápisu na pásku MAX SPEED od boostu
+     * vypne, při další aktivitě (kontrola jednou za 50 snímků) ji zapne.
+     * Vypne-li uživatel MAX SPEED během boostu, automatika ji znovu zapne
+     * při nejbližší pauze/obnovení transportu nebo změně volby cpu_boost
+     * (při RECORD i při další aktivitě zápisu).
+     *
+     * @pre Voláno z emulátorového vlákna nebo při pozastavené emulaci;
+     *      platí invarianty st_CMT.
+     * @post Bez aktivního transportu (nebo s vypnutým cpu_boost) neběží
+     *       MAX SPEED zapnutá automatikou (g_emulator.max_speed_boost == false).
+     */
+    void cmt_cpu_boost_apply ( void );
     void cmt_mzfsize_check_set ( en_CMT_MZFSIZE_CHECK mzfsize_check );
 
 #ifdef __cplusplus

@@ -146,13 +146,39 @@ void cmthack_result(en_LOADRET result)
     z80_set_reg(g_mzarch_main.cpu, Z80_REG_AF, reg_af);
 }
 
-/*
+/**
+ * @brief Obslouží požadavek ROM na načtení hlavičky z kazety (port 01h).
  *
- * Pozadavek na precteni headeru z CMT
+ * Volá se z port_write_cb() uvnitř instrukce OUT (EMU vlákno), kterou do ROM
+ * vložil CMT hack patch. S GUI otevře blokující dialog pro výběr MZF a čeká,
+ * dokud ho uživatel nezavře; emulace po tu dobu stojí. Výsledek předá ROM
+ * přes registry (cmthack_result()): zrušení = Break.
  *
+ * Bez interaktivního GUI (--headless, --mcp-pipe) dialog nikdo nezavře.
+ * Dřív EMU vlákno čekalo navždy: emulace stála, fronta dbgapi se už
+ * nevybrala a každý příkaz MCP vracel "Emulator busy". Nyní se požadavek
+ * okamžitě vyřídí jako zrušený (ROM dostane Break), na stderr se vypíše
+ * varování a emulace běží dál. Načíst pásku v takovém režimu lze reálnou
+ * páskou (CMT hack vypnout, [CMTHACK] enable = 0 nebo MCP cmt_hack_set).
+ *
+ * @pre EMU vlákno, uvnitř instrukce OUT (01h) se zapnutým CMT hack patchem.
+ * @post Hlavička je v RAM na adrese z HL a ROM dostala výsledek OK, nebo ROM
+ *       dostala Break či chybu. Zvuk a měření MAX SPEED jsou obnovené.
+ * @par Side effects Pozastaví zvuk a měření po dobu dialogu, zapisuje do RAM
+ *      a registrů CPU, při headless výpis na stderr.
  */
 void cmthack_load_file(void)
 {
+    if (!baseui_filechooser_can_wait())
+    {
+        /* Headless: dialog by nikdo nezavřel a EMU vlákno by stálo navždy. */
+        fprintf(stderr, "WARNING: CMT hack needs the GUI file dialog to load a tape file; "
+                        "no GUI in headless mode, load cancelled (Break). "
+                        "Disable the CMT hack to load from the virtual tape.\n");
+        cmthack_result(LOADRET_BREAK);
+        return;
+    };
+
     iface_audio_pause_emulation(1);
     /* CMT-hack stall: file chooser dialog + IO stojí emulaci - vyloučit z benchmarku */
     emulator_measuring_maxspeed_stall_begin();

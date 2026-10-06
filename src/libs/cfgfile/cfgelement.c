@@ -838,6 +838,35 @@ void cfgelement_bind_separate ( st_CFGELEMENT *e, void *propagate_var, void *sav
 
 
 /**
+ * @brief Připne INI hodnotu elementu (viz deklarace v cfgelement.h)
+ * @param e Ukazatel na element (KEYWORD, BOOL nebo UNSIGNED)
+ * @param ini_value Hodnota proměnné před přepsáním
+ */
+void cfgelement_pin_save_value ( st_CFGELEMENT *e, unsigned ini_value ) {
+    assert ( e != NULL );
+    assert ( ( e->type == CFGENTYPE_KEYWORD ) || ( e->type == CFGENTYPE_BOOL ) || ( e->type == CFGENTYPE_UNSIGNED ) );
+    assert ( e->save_value_handler != NULL );
+    if ( ( e->save_value_handler == NULL ) || ( e->type == CFGENTYPE_TEXT ) || ( e->type == CFGENTYPE_FLOAT ) ) {
+        return;
+    };
+
+    /* KEYWORD a BOOL čte cfgelement_save() jako int, UNSIGNED jako unsigned -
+     * obojí má stejnou šířku, porovnává se bitová hodnota. */
+    unsigned runtime_value = *(unsigned *) e->save_value_handler;
+
+    /* Proměnná dosud držela hodnotu z předchozího připnutí (uživatel ji
+     * nezměnil) -> v INI má zůstat původní hodnota, ne ta z minulého běhu. */
+    if ( e->save_pin_active && ( ini_value == e->save_pin_runtime ) ) {
+        ini_value = e->save_pin_ini;
+    };
+
+    e->save_pin_ini = ini_value;
+    e->save_pin_runtime = runtime_value;
+    e->save_pin_active = ( runtime_value != ini_value ) ? 1 : 0;
+}
+
+
+/**
  * @brief Prenese hodnotu elementu do aplikace (pres handler/pointer/callback)
  * @param e Ukazatel na element
  */
@@ -884,6 +913,11 @@ void cfgelement_propagate ( st_CFGELEMENT *e ) {
 
 /**
  * @brief Nacte hodnotu z aplikace a zapise element do INI souboru
+ *
+ * Je-li element připnutý (cfgelement_pin_save_value()) a proměnná stále
+ * drží hodnotu jen pro běh, zapíše se připnutá INI hodnota. Změnila-li
+ * se proměnná mezitím, připnutí se zruší a zapíše se její hodnota.
+ *
  * @param e Ukazatel na element
  */
 void cfgelement_save ( st_CFGELEMENT *e ) {
@@ -899,14 +933,25 @@ void cfgelement_save ( st_CFGELEMENT *e ) {
     if ( NULL != e->save_value_handler ) {
         void **value_pointer = cfgelement_get_variable_pointer ( e, CFGELVAR_VALUE );
 
+        /* Připnutá INI hodnota platí, dokud proměnná drží hodnotu jen pro
+         * běh; jakmile ji aplikace změnila, připnutí se ruší. */
+        int use_pin = 0;
+        if ( e->save_pin_active ) {
+            if ( *(unsigned *) e->save_value_handler == e->save_pin_runtime ) {
+                use_pin = 1;
+            } else {
+                e->save_pin_active = 0;
+            };
+        };
+
         if ( ( e->type == CFGENTYPE_KEYWORD ) || ( e->type == CFGENTYPE_BOOL ) ) {
             int *dst = *value_pointer;
-            int src = *(int *) e->save_value_handler;
+            int src = use_pin ? (int) e->save_pin_ini : *(int *) e->save_value_handler;
             *dst = src;
 
         } else if ( e->type == CFGENTYPE_UNSIGNED ) {
             unsigned *dst = *value_pointer;
-            unsigned src = *(unsigned *) e->save_value_handler;
+            unsigned src = use_pin ? e->save_pin_ini : *(unsigned *) e->save_value_handler;
             *dst = src;
 
         } else if ( e->type == CFGENTYPE_FLOAT ) {

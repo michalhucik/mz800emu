@@ -32,10 +32,14 @@ mz800emu.exe` na Windows, nebo SDL quit event).
 | Framebuffer (v paměti, BGRA 928×288) | renderuje se |
 | Snapshot save/load | funguje |
 | CMT hack (`--run-mzf`) | funguje |
+| Načítání přes CMT hack spuštěné z ROM (boot menu C, `LOAD`) | **bez** dialogu pro výběr souboru: načtení se hned zruší (ROM ohlásí Break) a na stderr se vypíše varování. Program načtěte přes `media_load_mzf` nebo `--run-mzf`, nebo CMT hack vypněte (`cmt_hack_set`) a použijte virtuální pásku |
 | Konzole stdout/stderr | jen v `FORCE_CONSOLE=1` buildu (viz níže) |
 | GUI okno | **ne** (přeskočeno) |
 | Audio výstup | **ne** (no-op SDL audio device) |
+| Tempo emulace | podle systémových hodin: 100 % = reálný čas (MZ-800: 50 snímků/s), vlastní rychlost i MAX SPEED jako v okně |
 | ImGui debugger | **ne** (kontext se nevytvoří) |
+
+Bezhlavá emulace tedy běží v reálném čase. Pro rychlejší běh (testy, dávky) zvolte rychlost při startu volbou `--speed` (`--speed max` = MAX SPEED, `--speed 400` = čtyřnásobek reálné rychlosti; platné jsou 1-4000 %), nebo ji změňte za běhu MCP nástrojem `set_speed`. Volba `--speed` platí pro `mz800emu --headless`; s `--mcp-pipe` se `--speed` odmítne (`Unknown option: --speed`, start skončí chybou); v pipe režimu rychlost nastavte nástrojem `set_speed`.
 
 ## Build s konzolovým výstupem (Windows)
 
@@ -56,15 +60,9 @@ průzkumníku Windows).
 
 ## Známá omezení
 
-- **Audio sync warning** - při běhu s `--run-mzf` se v logu opakovaně
-  objeví `iface_audio_20ms_sync(): timeout!` - jde o **benigní**
-  upozornění (audio modul čeká na callback, který v no-op módu nepřijde).
-  Emu pokračuje běžet.
 - **Window error log při startu** - 2-3 řádky `getSDL_Window_by_name():
   Failed to get window: main_window` - **benigní**, volající mají guard
-  na `NULL` window a pokračují bez chyby.
-
-Obě hlášení lze v logu ignorovat.
+  na `NULL` window a pokračují bez chyby. Hlášení lze v logu ignorovat.
 
 ## Screenshot v headless mode
 

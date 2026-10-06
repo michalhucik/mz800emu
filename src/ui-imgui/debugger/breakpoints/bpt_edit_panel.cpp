@@ -2598,8 +2598,9 @@ static void render_event_panel(void)
             float reset_w = ImGui::CalcTextSize(reset_label, NULL, true).x
                               + ImGui::GetStyle().FramePadding.x * 2.0f;
             ImGui::SetCursorPosX(right_x - reset_w - right_safety);
+            /* Reset vykoná emu vlákno (hits++ a test hit_count běží tam). */
             if (ImGui::Button(reset_label))
-                breakpoints_reset_hits(ep->edit_id);
+                (void)dbg_ui_bp_reset_hits(ep->edit_id);
         }
     }
 

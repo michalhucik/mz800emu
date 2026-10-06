@@ -163,6 +163,14 @@ Reason == nmi_ack                        ; only NMI ack in IFF1_CHANGE
   semantics either mask (`a & 0xFFFF`) or use `s8` / `s16`.
 - `$name` is read-only in conditions. Write via Action DSL.
 - `Cycle` is GDG pixel ticks, not a pure Z80 T-state counter.
+- Address ranges are not part of the condition: a range breakpoint
+  (`PC_EXEC` / `MEM_R` / `MEM_W`) needs both `addr_end` and
+  `addr_match_mode: "RANGE"` in `fields` of `emu_bp_create_with_init` /
+  `emu_bp_update`. With `addr_end` alone the mode stays `SINGLE` and the
+  breakpoint matches only `addr`; create returns a `warning` in that case.
+  `emu_bp_list` shows `addr_end`, `addr_match_mode` and `addr_mask`
+  (and, for the `MMEXT_BANK` zone, `bank_id_end`, `bank_match_mode`,
+  `bank_id_mask` - the bank range works the same way).
 
 ## Related
 

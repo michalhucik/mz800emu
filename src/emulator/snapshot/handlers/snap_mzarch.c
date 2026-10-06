@@ -1,6 +1,12 @@
 /**
  * @file snap_mzarch.c
  * @brief Snapshot handler: hlavní stav mzarch_main (řídicí struktura emulátoru)
+ *
+ * Volba HWCOMPAT allow_psg1 (druhý PSG) je stav stroje: snapshot ji obnoví
+ * pro běh, INI ([HWCOMPAT] allow_psg1) si drží volbu uživatele
+ * (snapshot_config_pin_ini_value). Druhý PSG se zakládá jen při startu
+ * emulátoru (mz800_main.c), obnovená volba ho tedy nezaloží [neověřeno,
+ * zda to vadí].
  */
 
 #include <stdio.h>
@@ -8,6 +14,7 @@
 
 #include "snapshot/snapshot_mgr.h"
 #include "snapshot/snapshot_xml.h"
+#include "snapshot/snapshot_config.h"
 #include "mzarch/mzarch.h"
 
 static en_SNAPSHOT_RESULT snap_mzarch_save(st_SNAPSHOT_CONTEXT *ctx)
@@ -46,10 +53,11 @@ static en_SNAPSHOT_RESULT snap_mzarch_save(st_SNAPSHOT_CONTEXT *ctx)
 #endif /* MZARCH == 800 */
 
     /* MZ-700 kompatibilní přepínač - jen MZ-800/MZ-1500;
-     * MZ-700 nativní field switch700 nemá. */
+     * MZ-700 nativní field mode_sw nemá. Název elementu switch700 zůstává
+     * kvůli kompatibilitě snapshotů. */
 #if MZARCH != 700
     snapshot_xml_write_int(w, "switch700",
-                           (int)g_mzarch_main.switch700);
+                           (int)g_mzarch_main.mode_sw);
 #endif
 
     snapshot_xml_close_element(w); /* mzarch_state */
@@ -124,8 +132,11 @@ static en_SNAPSHOT_RESULT snap_mzarch_load(st_SNAPSHOT_CONTEXT *ctx)
 #if MZARCH == 800
     if (snapshot_xml_enter_element(r, "hw_compatibility")) {
         int val;
+        /* allow_psg1 jen pro běh - INI hodnota se připne. */
+        unsigned ini_allow_psg1 = (unsigned)g_mzarch_main.mz800_hwcompat_allow_psg1;
         if (snapshot_xml_read_int(r, "mz800_hwcompat_allow_psg1", &val))
             g_mzarch_main.mz800_hwcompat_allow_psg1 = (en_MZ800_HWCOMPAT_ALLOW_PSG1)val;
+        snapshot_config_pin_ini_value("HWCOMPAT", "allow_psg1", ini_allow_psg1);
         snapshot_xml_leave_element(r);
     }
 #endif /* MZARCH == 800 */
@@ -134,8 +145,15 @@ static en_SNAPSHOT_RESULT snap_mzarch_load(st_SNAPSHOT_CONTEXT *ctx)
 #if MZARCH != 700
     {
         int val;
+        /* Poloha přepínače jen pro běh - INI hodnota se připne (MZ-800). */
+        unsigned ini_mode_sw = (unsigned)g_mzarch_main.mode_sw;
         if (snapshot_xml_read_int(r, "switch700", &val))
-            g_mzarch_main.switch700 = (en_SWITCH700)val;
+            g_mzarch_main.mode_sw = (val == MZ800_MODE_SW_MZ800) ? MZ800_MODE_SW_MZ800 : MZ800_MODE_SW_MZ700;
+#if MZARCH == 800
+        snapshot_config_pin_ini_value("MZ800", "mode_switch", ini_mode_sw);
+#else
+        (void)ini_mode_sw;
+#endif
     }
 #endif
 

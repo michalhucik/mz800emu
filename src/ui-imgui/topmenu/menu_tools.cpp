@@ -12,6 +12,7 @@
 
 #include "emulator.h"
 #include "version_check/version_check.h"
+#include "ui-imgui/videorec/videorec_menu.h"
 
 #include "emulator/mzarch/mzarch_config.h"
 #ifdef MZ800EMU_CFG_MCP_TCP_ENABLED
@@ -47,6 +48,9 @@ void imgui_menu_tools(void)
 
             ImGui::EndMenu();
         };
+
+        // Video záznam (start/stop, pauza, marker, nastavení)
+        imgui_videorec_menu();
 
 #ifdef MZ800EMU_CFG_MCP_TCP_ENABLED
         // V0.A.5: MCP TCP Server start/stop + status

@@ -30,7 +30,9 @@
  * Threading: hot-path běží v emulačním vláknu, UI render z UI vlákna.
  * Ring je single-writer / single-reader, bez locků - krátký data race
  * při čtení (nesourodý sliding window value) je akceptovatelný (= UI
- * jen zobrazí číslo).
+ * jen zobrazí číslo). Zapisuje do tabulky jen emu vlákno, včetně resetů
+ * (io_activity_reset_*): UI je posílá přes frontu dbgapi
+ * (DBGAPI_CMD_IO_ACTIVITY_RESET, DBGAPI_CMD_IO_ACTIVITY_RESET_PORT).
  *
  * Licence: GPLv3
  */
@@ -157,16 +159,28 @@ void io_activity_init ( void );
 /**
  * @brief Reset activity counters pro všechny porty.
  *
- * Vynuluje hits_per_frame_in/out[], current_bucket=0, total_hits_in/out=0
- * pro všech 256 portů. UI tlačítko "Reset Activity" tuto funkci volá.
+ * Vynuluje celou tabulku g_io_activity (všech IO_ACTIVITY_TABLE_SIZE slotů:
+ * hits_per_frame_in/out[], current_bucket, total_hits_in/out, last value).
+ *
+ * @pre Volat jen z emu vlákna (nebo když emu vlákno neběží), jinak souběh
+ *      s io_activity_record_hit / io_activity_advance_frame. UI tlačítko
+ *      "Reset Activity" posílá DBGAPI_CMD_IO_ACTIVITY_RESET.
  */
 void io_activity_reset_all ( void );
 
 
 /**
- * @brief Reset activity counter pro jeden port.
+ * @brief Reset activity counter pro jeden slot tabulky.
  *
- * @param port  Plná 16-bit IORQ adresa (0x0000..0xFFFF).
+ * Vynuluje celý slot g_io_activity[port] (čítače, ring, last value).
+ *
+ * @param port  Klíčová 16-bit adresa slotu (bus adresa IORQ 0x0000..0xFFFF,
+ *              resp. MMIO adresa 0E000h..0E008h u MZ-700 MMIO).
+ *
+ * @pre Volat jen z emu vlákna (nebo když emu vlákno neběží), jinak souběh
+ *      s io_activity_record_hit / io_activity_advance_frame. Kontextové
+ *      menu okna I/O Ports ("Reset activity counter") posílá
+ *      DBGAPI_CMD_IO_ACTIVITY_RESET_PORT s is_8bit = 0.
  */
 void io_activity_reset_port ( uint16_t port );
 
@@ -273,9 +287,14 @@ bool io_activity_get_last_value_8bit ( uint8_t low_byte, bool is_in,
 /**
  * @brief Reset activity counters pro 8-bit port přes všech 256 high-byte slotů.
  *
- * UI "Reset activity counter" v context menu pro 8-bit porty.
+ * Vynuluje sloty g_io_activity[(hb << 8) | low_byte] pro hb = 0..255.
  *
  * @param low_byte  Low byte port adresy.
+ *
+ * @pre Volat jen z emu vlákna (nebo když emu vlákno neběží), jinak souběh
+ *      s io_activity_record_hit / io_activity_advance_frame. Kontextové
+ *      menu okna I/O Ports ("Reset activity counter" u 8-bit portu) posílá
+ *      DBGAPI_CMD_IO_ACTIVITY_RESET_PORT s is_8bit = 1.
  */
 void io_activity_reset_port_8bit ( uint8_t low_byte );
 

@@ -1,5 +1,8 @@
 #include "main.h"
 #include <glib.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdbool.h>
 #include "hw-generic/gdg/video.h"
 #include "mzarch/mzarch.h"
 #include "customspeed.h"
@@ -70,4 +73,56 @@ void customspeed_restore_speed(void)
     {
         customspeed_set_request(g_customspeed.previous_speed_in_percentage);
     };
+}
+
+/**
+ * @brief Zpracuje hodnotu CLI volby `--speed`.
+ *
+ * Přijímá buď řetězec `max` (MAX SPEED, malá/velká písmena se rozlišují),
+ * nebo celé číslo v rozsahu 1..CUSTOMSPEED_MAX_VALUE (rychlost v procentech,
+ * 100 = normální rychlost). Na rozdíl od customspeed_set_request() hodnoty
+ * mimo rozsah NEořezává, ale odmítne je.
+ *
+ * Při neplatné hodnotě vypíše anglickou chybu na stderr a výstupní parametry
+ * nemění.
+ *
+ * @param text        Hodnota volby (NULL nebo prázdná = neplatná).
+ * @param[out] out_max     true pro `max`, jinak false.
+ * @param[out] out_percent Procenta (1..CUSTOMSPEED_MAX_VALUE); pro `max` se
+ *                         nenastavuje.
+ * @return true při platné hodnotě, jinak false.
+ *
+ * @pre out_max a out_percent jsou platné ukazatele.
+ * @note Funkce nemá vedlejší efekt na stav emulace (jen čte text).
+ */
+bool customspeed_parse_cli_value(const char *text, bool *out_max, int *out_percent)
+{
+    if (text && strcmp(text, "max") == 0)
+    {
+        *out_max = true;
+        return true;
+    }
+
+    gchar *endptr = NULL;
+    gint64 value = 0;
+    bool digits_only = (text && *text);
+    for (const char *p = text; digits_only && *p; p++)
+    {
+        if (*p < '0' || *p > '9') digits_only = false;
+    }
+    if (digits_only)
+    {
+        value = g_ascii_strtoll(text, &endptr, 10);
+        if (value >= 1 && value <= CUSTOMSPEED_MAX_VALUE && endptr && *endptr == '\0')
+        {
+            *out_max = false;
+            *out_percent = (int)value;
+            return true;
+        }
+    }
+
+    fprintf(stderr,
+            "Invalid value for --speed: '%s' (expected 'max' or an integer percentage in 1..%d, 100 = normal speed)\n",
+            text ? text : "", CUSTOMSPEED_MAX_VALUE);
+    return false;
 }

@@ -15,6 +15,11 @@ Pokud chcete na platformě Windows mít vždy zobrazenou konzoli, máte tři mo�
 - Vytvořit zástupce pro `mz800emu.exe` a přidat parametr `--console`
 - Zkompilovat program s parametrem `FORCE_CONSOLE=1`
 
+Volby `--help` a `--version` vypíšou text i do konzole, ze které byl program
+spuštěn (cmd.exe, PowerShell) - bez `--console`. cmd.exe na program s oknem
+nečeká, takže výpis se může objevit až za promptem; čistší je přesměrování do
+souboru, např. `mz800emu --version > version.txt`.
+
 
 ## Mapování klávesnice
 
@@ -62,6 +67,7 @@ jsou odmítnuty s chybou - pro vygenerovaný výpis použijte `--help`.
 | Volba | Argument | Popis |
 |-------|----------|-------|
 | `--help` | - | Vypsat seznam options a skončit. |
+| `--version` | - | Vypsat verzi, revizi, datum buildu, původ zdrojů (větev, commit, neuložené změny, pokud jsou k dispozici), překladač, zakompilované části, verze SDL a GLib a hostitelský OS, pak skončit. Funguje ve všech binárkách (`mz800emu`, `mz700emu-pal`, `mz700emu-ntsc`, `mz1500emu`) i s `--mcp-pipe`; emulátor ani okno se nespouští. |
 | `--console` | - | Pouze Windows: alokovat okno konzole pro stdout/stderr. |
 | `--run-mzf` | `<filepath>` | Po startu emulátoru automaticky načíst a spustit zadaný MZF soubor. |
 | `--cdl-mode` | `<off\|window\|always>` | Nastavit režim CDL (Memory Heatmap) recordingu. |
@@ -99,6 +105,10 @@ jsou odmítnuty s chybou - pro vygenerovaný výpis použijte `--help`.
 | `--no-first-run-windows` | - | Potlačit automatické otevření oken About + Version Check Setup při prvním spuštění (kdy neexistuje `.ini` soubor). Užitečné pro headless / scriptované spouštění. |
 | `--headless` | - | Spustit emulátor bez GUI okna a bez audio výstupu. SDL3 video a audio subsystémy běží v no-op módu (žádné SDL okno, žádný audio device se neotevírá). Framebuffer se stále renderuje do paměti (= připraveno pro pozdější MCP frame Resources). Určeno pro CI / batch / subprocess scénáře bez displeje nebo audio zařízení. Proces běží do SIGINT (Ctrl+C) nebo SDL quit eventu. Doporučeno kombinovat s `--no-first-run-windows`. |
 | `--maxspeed-bench` | - | Spustit rovnou v MAX SPEED a periodicky (každých 5 s) vypisovat report MAX SPEED benchmarku na konzoli (efektivita %, throughput, FB-FPS, distribuce). Určeno pro headless měření efektivity emulace. Kombinujte s `--headless` a `--run-mzf`. Viz [`maxspeed-benchmark.md`](maxspeed-benchmark.md). |
+| `--speed` | `<procenta\|max>` | Nastavit rychlost emulace při startu: `max` = MAX SPEED (bez synchronizace na reálný čas), celé číslo 1-4000 = vlastní rychlost v procentech (100 = normální). Funguje v okně i v `--headless` (kde jinak emulace běží v reálném čase). Neplatná hodnota = chyba a konec. Při souběhu s `--maxspeed-bench` vyhrává MAX SPEED. |
+| `--mode-switch` | `<700\|800>` | Jen MZ-800: poloha zadního přepínače režimu (SW1) - `700` = MZ-700 mód, `800` = MZ-800 mód. Přepínač čte ROM při spouštění programu. Přepíše hodnotu `[MZ800] mode_switch` z `.ini` (stejně jako menu Rear DIP Switch). Neplatná hodnota = chyba a konec. |
+| `--record` | `<soubor.avi>` | Zahájit nahrávání videa hned po startu. Viz [`video-recording.md`](video-recording.md). |
+| `--record-frames` | `<počet>` | Ukončit nahrávání videa po zadaném počtu snímků; v režimu `--headless` pak emulátor skončí. |
 
 ### Layout CDL exportu
 

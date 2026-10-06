@@ -12,9 +12,15 @@
 # distribuované číslo revize se nikdy znovu nepoužije.
 # Pokud ne (fork, lokální klon, mirror), revize = -1.
 #
-# Soubor se regeneruje při každém volání cmake --build (custom_command s
-# nezávislým add_custom_target), takže zachycuje aktuální datum a revizi
-# v okamžiku buildu.
+# Dále zapisuje původ zdrojů (GitHub upstream / repozitář NAS1 / neznámý;
+# NAS1 se pozná i přes řetěz lokálních klonů), větev, hash commitu, příznak
+# neuložených změn a MSYSTEM buildu - viz src/build_revision/build_revision.h.
+# Chybějící git informace build nikdy nezastaví: skript zapíše hodnoty
+# "unknown" a skončí s kódem 0. Soubor přepíše jen při změně obsahu.
+#
+# Skript se spouští při každém volání cmake --build (custom_command s
+# nezávislým add_custom_target), takže zachycuje stav repozitáře
+# (revize, commit, dirty) v okamžiku buildu.
 #
 # Po include() je dostupný:
 #   - target mz_build_revision (custom target)

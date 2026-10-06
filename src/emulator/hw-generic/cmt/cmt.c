@@ -121,10 +121,94 @@ static void cmt_bp_event_state_change_fire ( void ) {
 #endif
 
 
+/* Doxygen viz cmt.h. */
+void cmt_cpu_boost_apply(void)
+{
+    if ((g_cmt.cpu_boost != CMT_CPU_BOOST_ENABLED) || (!CMT_TEST_FILLED)
+        || (CMT_TEST_STOP) || (CMT_TEST_PAUSED))
+    {
+        emulator_max_speed_boost(false);
+        return;
+    };
+
+    /* PLAY i RECORD bez pauzy. Při RECORD ji pak cmt_screen_done_period()
+     * dál vypíná/zapíná podle toho, zda program na pásku zapisuje. */
+    emulator_max_speed_boost(true);
+}
+
+/**
+ * @brief Společné vedlejší efekty přechodu transportu do STOP.
+ *
+ * Vypne MAX SPEED, pokud ji zapnul cpu_boost (uživatelem zvolenou MAX SPEED
+ * nechá - viz cmt_cpu_boost_apply), odpálí BP eventy změny stavu
+ * (CMT_MSTATE, CMT_STATE_CHANGE) a aktualizuje UI. Volá se po nastavení
+ * g_cmt.state = STOP z cmt_stop() a cmt_reset_transport_without_tape().
+ *
+ * @pre Voláno z emulátorového vlákna; transport už je ve STOP.
+ */
+static void cmt_transport_stopped_notify(void)
+{
+    cmt_cpu_boost_apply();
+
+    cmt_bp_event_mstate_fire ( );
+    cmt_bp_event_state_change_fire ( );
+
+    ui_cmt_window_update();
+}
+
+/**
+ * @brief Převede transport bez vložené pásky do klidového stavu STOP.
+ *
+ * Obnovuje invariant st_CMT (bez pásky STOP) za běhu: state = STOP,
+ * paused = 0, playsts = STOP, output = 0, start_time = paused_time = 0.
+ * Pokud byl transport aktivní (PLAY/RECORD nebo pauza), provede stejné
+ * vedlejší efekty jako cmt_stop (cmt_transport_stopped_notify: MAX SPEED
+ * při cpu_boost, BP eventy, UI). Nulování časové základny zaručí, že následné
+ * cmt_open + cmt_play začne přehrávat novou pásku od začátku (dříve se
+ * použila pozice ze stavu obnoveného snapshotem).
+ *
+ * @pre Voláno z emulátorového vlákna; g_cmt.ext == NULL.
+ * @post CMT_TEST_STOP a !CMT_TEST_PAUSED.
+ */
+static void cmt_reset_transport_without_tape(void)
+{
+    bool was_active = (!CMT_TEST_STOP) || (g_cmt.paused != 0);
+
+    g_cmt.state = CMT_STATE_STOP;
+    g_cmt.paused = 0;
+    g_cmt.playsts = CMTEXT_BLOCK_PLAYSTS_STOP;
+    g_cmt.output = 0;
+    g_cmt.start_time = 0;
+    g_cmt.paused_time = 0;
+    g_cmt.recording_to_stream = 0;
+
+    if (!was_active)
+        return;
+
+    printf("Virtual CMT is stopped (no tape inserted).\n");
+
+    cmt_transport_stopped_notify();
+}
+
+/**
+ * @brief Zastaví přehrávání nebo nahrávání (tlačítko STOP).
+ *
+ * S vloženou páskou zavolá cb_stop rozšíření, přejde do STOP a vypne MAX
+ * SPEED zapnutý přes cpu_boost. Bez vložené pásky transport také uvede do
+ * STOP (cmt_reset_transport_without_tape) - dříve to byl no-op, takže
+ * stav PLAY obnovený snapshotem nešlo zastavit, přestože MCP hlásilo
+ * úspěch.
+ *
+ * @pre Voláno z emulátorového vlákna.
+ * @post CMT_TEST_STOP, paused == 0, playsts == STOP, output == 0.
+ */
 void cmt_stop(void)
 {
     if (!CMT_TEST_FILLED)
+    {
+        cmt_reset_transport_without_tape();
         return;
+    };
     if (CMT_TEST_STOP)
         return;
 
@@ -138,15 +222,7 @@ void cmt_stop(void)
     g_cmt.playsts = CMTEXT_BLOCK_PLAYSTS_STOP;
     g_cmt.output = 0;
 
-    if (g_cmt.cpu_boost == CMT_CPU_BOOST_ENABLED)
-    {
-        emulator_max_speed(false);
-    };
-
-    cmt_bp_event_mstate_fire ( );
-    cmt_bp_event_state_change_fire ( );
-
-    ui_cmt_window_update();
+    cmt_transport_stopped_notify();
 }
 
 void cmt_pause(int value)
@@ -176,14 +252,10 @@ void cmt_pause(int value)
         g_cmt.paused = 0;
     };
 
-    if ((g_cmt.cpu_boost == CMT_CPU_BOOST_ENABLED) && (!CMT_TEST_PAUSED) && (!CMT_TEST_STOP))
-    {
-        emulator_max_speed(true);
-    }
-    else
-    {
-        emulator_max_speed(false);
-    };
+    /* Dříve se při vypnutém cpu_boost (nebo pauze) volalo
+     * emulator_max_speed(false) bezpodmínečně, takže pauza pásky
+     * vypnula i MAX SPEED zvolenou uživatelem. */
+    cmt_cpu_boost_apply();
 
     if (CMT_TEST_PAUSED)
     {
@@ -208,10 +280,28 @@ void cmt_pause(int value)
     ui_cmt_window_update();
 }
 
+/**
+ * @brief Vysune pásku (zastaví transport, zavolá cb_eject, ext = NULL).
+ *
+ * Bez vložené pásky jen uvede transport do STOP s vynulovanou časovou
+ * základnou (cmt_reset_transport_without_tape). cmt_open_file_by_extension
+ * volá eject před otevřením nové pásky, takže tím nová páska vždy startuje
+ * z čistého STOP: následný cmt_play nastaví start_time a zavolá cb_play
+ * bloku, přehrávání začne od začátku pásky. Dříve eject bez pásky nechal
+ * stav PLAY/paused ze snapshotu, cmt_play byl pak no-op a cmt_pause(0)
+ * dopočítal pozici pásky ze staré paused_time (za koncem nové pásky) -
+ * program čekal na hranu signálu, která nikdy nepřišla.
+ *
+ * @pre Voláno z emulátorového vlákna.
+ * @post !CMT_TEST_FILLED, CMT_TEST_STOP, ui_base_filename == NULL.
+ */
 void cmt_eject(void)
 {
     if (!CMT_TEST_FILLED)
+    {
+        cmt_reset_transport_without_tape();
         return;
+    };
     if (!CMT_TEST_STOP)
         cmt_stop();
     if (g_cmt.ext->cb_eject)
@@ -237,6 +327,67 @@ void cmt_eject(void)
     ui_cmt_window_update();
 }
 
+/**
+ * @brief Uvede stav transportu do souladu s vloženou páskou (bez vedlejších efektů).
+ *
+ * Určeno pro snapshot loader: snapshot obnoví stav transportu (state,
+ * paused, časy, playsts), ale obraz pásky neukládá ani neotevírá. Pokud
+ * obnovený stav neodpovídá aktuálně vložené pásce, transport se přepne do
+ * klidového stavu STOP:
+ * - bez vložené pásky (ext == NULL) při libovolném stavu,
+ * - PLAY nad páskou, kterou nelze přehrát (cmtext_is_playable selže),
+ * - RECORD nad páskou, do které nelze nahrávat (cmtext_is_recordable selže).
+ *
+ * Klidový stav: state = STOP, paused = 0, playsts = STOP, output = 0,
+ * start_time = paused_time = 0, recording_to_stream = 0. Ve stavu STOP
+ * (i bez přepnutí) se navíc srovná paused = 0 a playsts = STOP.
+ *
+ * Funkce záměrně nevolá cb_stop rozšíření, nemění rychlost emulace (to po
+ * načtení snapshotu dělá cmt_cpu_boost_apply()), nevolá BP eventy
+ * ani aktualizaci UI - jen opravuje hodnoty právě načtené ze snapshotu.
+ *
+ * @return true, pokud byl transport z PLAY/RECORD přepnut do STOP; jinak false.
+ *
+ * @pre Emulace je pozastavená nebo voláno z emulátorového vlákna.
+ * @post Platí invarianty st_CMT (bez pásky STOP, ve STOP paused == 0).
+ */
+bool cmt_sanitize_state(void)
+{
+    bool reset = false;
+
+    if (!CMT_TEST_FILLED)
+    {
+        reset = true;
+    }
+    else if (CMT_TEST_PLAY && (EXIT_SUCCESS != cmtext_is_playable(g_cmt.ext)))
+    {
+        reset = true;
+    }
+    else if (CMT_TEST_RECORD && (EXIT_SUCCESS != cmtext_is_recordable(g_cmt.ext)))
+    {
+        reset = true;
+    };
+
+    bool was_active = !CMT_TEST_STOP;
+
+    if (reset)
+    {
+        g_cmt.state = CMT_STATE_STOP;
+        g_cmt.output = 0;
+        g_cmt.start_time = 0;
+        g_cmt.paused_time = 0;
+        g_cmt.recording_to_stream = 0;
+    };
+
+    if (CMT_TEST_STOP)
+    {
+        g_cmt.paused = 0;
+        g_cmt.playsts = CMTEXT_BLOCK_PLAYSTS_STOP;
+    };
+
+    return (reset && was_active);
+}
+
 void cmt_play(void)
 {
     if (!CMT_TEST_FILLED)
@@ -251,10 +402,7 @@ void cmt_play(void)
     // printf ( "CMT start: %ul\n", gdg_get_total_ticks ( ) );
     g_cmt.ui_player_update = 0;
     ui_cmt_window_update();
-    if ((g_cmt.cpu_boost == CMT_CPU_BOOST_ENABLED) && (!CMT_TEST_PAUSED))
-    {
-        emulator_max_speed(true);
-    };
+    cmt_cpu_boost_apply();
     if (!CMT_TEST_PAUSED)
     {
         printf("Virtual CMT is playing.\n");
@@ -275,10 +423,38 @@ void cmt_play(void)
     cmt_bp_event_state_change_fire ( );
 }
 
+/**
+ * @brief Spustí přehrávání v pauze (PLAY + paused, páska stojí).
+ *
+ * Nastaví paused = 1 a zavolá cmt_play(). Pokud cmt_play() přehrávání
+ * nespustí, příznak pauzy se vrátí:
+ * - transport zůstal ve STOP (bez pásky, nepřehratelná páska) -> paused = 0;
+ *   jinak by vznikl stav STOP + paused, který porušuje invariant st_CMT
+ *   a následný stop/eject by ho považoval za aktivní transport,
+ * - transport už předtím nebyl ve STOP (PLAY/RECORD, cmt_play je no-op)
+ *   -> původní hodnota paused (bez přepočtu paused_time by vynucená pauza
+ *   rozbila pozici pásky).
+ *
+ * @pre Voláno z emulátorového vlákna.
+ * @post Buď start z STOP do PLAY s paused == 1, nebo stav transportu beze
+ *       změny; ve STOP je vždy paused == 0.
+ */
 void cmt_play_paused(void)
 {
+    bool was_stop = CMT_TEST_STOP;
+    int prev_paused = g_cmt.paused;
+
     g_cmt.paused = 1;
     cmt_play();
+
+    if (CMT_TEST_STOP)
+    {
+        g_cmt.paused = 0;
+    }
+    else if (!was_stop)
+    {
+        g_cmt.paused = prev_paused;
+    };
 }
 
 static void cmt_record(void)
@@ -720,10 +896,29 @@ void cmt_ui_open(bool play_immediately)
     };
 }
 
+/**
+ * @brief Přepočítá výstupní signál z pásky (g_cmt.output) k aktuálnímu GDG času.
+ *
+ * Z rozdílu gdg_get_total_ticks() - g_cmt.start_time zjistí od cmtext bloku
+ * aktuální úroveň signálu a stav přehrávání bloku. Na konci bloku přejde na
+ * další blok kontejneru, na konci pásky zavolá cmt_stop(). Volá se z čtení
+ * PC5 8255 (cmt_read_data), z cmt_screen_done_period() a z mzarch při
+ * opuštění pauzy emulace.
+ *
+ * Bez vložené pásky (ext == NULL) se nic nepočítá a output se nemění.
+ * Tento test je defenzivní: platný stav bez pásky je vždy STOP (viz
+ * invariant st_CMT), ale funkce se volá bezpodmínečně (mzarch.c při
+ * opuštění pauzy), takže nesmí dereferencovat NULL ani při porušeném
+ * invariantu (dříve pád po načtení snapshotu pořízeného během přehrávání).
+ *
+ * @pre Voláno z emulátorového vlákna.
+ * @post Při PLAY bez pauzy s vloženou páskou odpovídá g_cmt.output poloze
+ *       pásky; může dojít k přechodu na další blok nebo do STOP.
+ */
 void cmt_update_output(void)
 {
 
-    if ((!CMT_TEST_PLAY) || (CMT_TEST_PAUSED))
+    if ((!CMT_TEST_FILLED) || (!CMT_TEST_PLAY) || (CMT_TEST_PAUSED))
         return;
 
     uint64_t play_ticks = gdg_get_total_ticks() - g_cmt.start_time;
@@ -806,25 +1001,21 @@ void cmt_screen_done_period(void)
                 g_cmt.recording_to_stream = 1;
                 if (g_cmt.cpu_boost == CMT_CPU_BOOST_ENABLED)
                 {
-                    emulator_max_speed(true);
+                    emulator_max_speed_boost(true);
                 };
             };
         }
-        else
+        else if (g_cmt.cpu_boost == CMT_CPU_BOOST_ENABLED)
         {
+            /* Program 5 s nezapisuje -> MAX SPEED od boostu dočasně pryč,
+             * při další aktivitě zpět. Uživatelskou MAX SPEED nemění. */
             if ((gdg_get_total_ticks() - g_cmt.recording_last_event) > (5 * GDGCLK_BASE))
             {
-                if ((g_cmt.cpu_boost == CMT_CPU_BOOST_ENABLED) && (EMULATOR_TEST_MAX_SPEED))
-                {
-                    emulator_max_speed(false);
-                };
+                emulator_max_speed_boost(false);
             }
             else
             {
-                if ((g_cmt.cpu_boost == CMT_CPU_BOOST_ENABLED) && (!EMULATOR_TEST_MAX_SPEED))
-                {
-                    emulator_max_speed(true);
-                };
+                emulator_max_speed_boost(true);
             };
         };
     };
@@ -836,9 +1027,20 @@ int cmt_read_data(void)
     return g_cmt.output;
 }
 
+/**
+ * @brief Předá zápis signálu na pásku (PC1 8255) nahrávacímu rozšíření.
+ *
+ * Mimo nahrávání, v pauze nebo bez vložené pásky (defenzivní test, viz
+ * invariant st_CMT) nedělá nic.
+ *
+ * @param value Úroveň výstupu na pásku (bit 0); do cb_write jde invertovaná.
+ *
+ * @pre Voláno z emulátorového vlákna.
+ * @post Při RECORD bez pauzy je zaznamenán čas události (recording_last_event).
+ */
 void cmt_write_data(int value)
 {
-    if ((!CMT_TEST_RECORD) || (CMT_TEST_PAUSED))
+    if ((!CMT_TEST_FILLED) || (!CMT_TEST_RECORD) || (CMT_TEST_PAUSED))
         return;
     g_cmt.recording_last_event = gdg_get_total_ticks();
     uint64_t play_ticks = g_cmt.recording_last_event - g_cmt.start_time;
@@ -846,22 +1048,24 @@ void cmt_write_data(int value)
         g_cmt.ext->cb_write(play_ticks, ~value);
 }
 
+/**
+ * @brief Nastaví volbu cpu_boost (automatická MAX SPEED během přehrávání).
+ *
+ * Změnu hned promítne do rychlosti emulace přes cmt_cpu_boost_apply():
+ * zapnutí během aktivního transportu (PLAY/RECORD bez pauzy) zapne MAX
+ * SPEED, vypnutí vypne MAX SPEED jen tehdy, když ji zapnul cpu_boost.
+ * Dříve se při vypnutí volalo emulator_max_speed(false) a pauza transportu
+ * se neřešila (zapnutí v pauze hned zapnulo MAX SPEED).
+ *
+ * @param cpu_boost Nová hodnota volby.
+ *
+ * @pre Voláno z emulátorového vlákna nebo při pozastavené emulaci
+ *      (propagace konfigurace).
+ */
 void cmt_cpu_boost_set(en_CMT_CPU_BOOST cpu_boost)
 {
-
     g_cmt.cpu_boost = cpu_boost;
-
-    if (!CMT_TEST_STOP)
-    {
-        if (g_cmt.cpu_boost == CMT_CPU_BOOST_ENABLED)
-        {
-            emulator_max_speed(true);
-        }
-        else
-        {
-            emulator_max_speed(false);
-        };
-    };
+    cmt_cpu_boost_apply();
 }
 
 void cmt_mzfsize_check_set(en_CMT_MZFSIZE_CHECK mzfsize_check)

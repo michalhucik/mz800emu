@@ -17,10 +17,15 @@
  * Backward compat: pole `readonly` a `filename` jsou nová (Fáze 4). Starý
  * snapshot bez těchto klíčů projde loadem - `snapshot_xml_read_*` vrátí
  * false a runtime defaulty z init/mount se nezmění.
+ *
+ * Připojení a typ mechaniky (connected, type) jsou stav stroje: snapshot je
+ * obnoví pro běh, INI ([QDISK] mz1f11_connected, mz1f11_type) si drží volbu
+ * uživatele (snapshot_config_pin_ini_value).
  */
 
 #include "snapshot/snapshot_mgr.h"
 #include "snapshot/snapshot_xml.h"
+#include "snapshot/snapshot_config.h"
 
 #if CFG_HWEXT_HAVE_QDISK
 
@@ -116,8 +121,13 @@ static en_SNAPSHOT_RESULT snap_qdisk_load(st_SNAPSHOT_CONTEXT *ctx)
     }
 
     /* Základní stav */
+    /* connected a type jen pro běh - INI hodnoty se připnou. */
+    unsigned ini_connected = g_qdisk.connected;
+    unsigned ini_type = g_qdisk.type;
     snapshot_xml_read_uint(r, "connected", &g_qdisk.connected);
     snapshot_xml_read_uint(r, "type", &g_qdisk.type);
+    snapshot_config_pin_ini_value("QDISK", "mz1f11_connected", ini_connected);
+    snapshot_config_pin_ini_value("QDISK", "mz1f11_type", ini_type);
     snapshot_xml_read_uint(r, "status", &g_qdisk.status);
     snapshot_xml_read_uint(r, "image_position", &g_qdisk.image_position);
 

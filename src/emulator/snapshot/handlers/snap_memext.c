@@ -1,6 +1,12 @@
 /**
  * @file snap_memext.c
  * @brief Snapshot handler: MEMEXT — uložení a načtení stavu paměťového rozšíření
+ *
+ * Připojení (connection) a typ rozšíření jsou stav stroje: snapshot je
+ * obnoví pro běh, ale INI ([MEMEXT] connected, type) si drží volbu
+ * uživatele (snapshot_config_pin_ini_value). Volby init_mem a init_luftner
+ * (čím se plní paměť při zapnutí) jsou uživatelské preference: ukládají
+ * se kvůli starším verzím, při načtení se ignorují.
  */
 
 #include <stdio.h>
@@ -10,6 +16,7 @@
 #include "snapshot/snapshot_mgr.h"
 #include "snapshot/snapshot_xml.h"
 #include "snapshot/snapshot.h"
+#include "snapshot/snapshot_config.h"
 #include "hw-generic/memory/memext.h"
 #include "hw-generic/memory/memory.h"
 
@@ -90,11 +97,14 @@ static en_SNAPSHOT_RESULT snap_memext_load(st_SNAPSHOT_CONTEXT *ctx)
     int ival;
     uint16_t hval16;
 
-    /* Konfigurace */
+    /* Konfigurace. connection a type jen pro běh (INI hodnota se připne),
+     * init_mem a init_luftner záměrně nečteme (uživatelské preference). */
+    unsigned ini_connection = (unsigned)g_memext.connection;
+    unsigned ini_type = (unsigned)g_memext.type;
     if (snapshot_xml_read_int(r, "connection", &ival)) g_memext.connection = (en_MEMEXT_CONNECTION)ival;
     if (snapshot_xml_read_int(r, "type", &ival)) g_memext.type = (en_MEMEXT_TYPE)ival;
-    if (snapshot_xml_read_int(r, "init_mem", &ival)) g_memext.init_mem = (en_MEMEXT_INIT_MEM)ival;
-    if (snapshot_xml_read_int(r, "init_luftner", &ival)) g_memext.init_luftner = (en_MEMEXT_INIT_LUFTNER)ival;
+    snapshot_config_pin_ini_value("MEMEXT", "connected", ini_connection);
+    snapshot_config_pin_ini_value("MEMEXT", "type", ini_type);
     if (snapshot_xml_read_hex16(r, "addr_mask", &hval16)) g_memext.addr_mask = hval16;
 
     /* Mapovací tabulka */

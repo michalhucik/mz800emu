@@ -79,13 +79,13 @@ extern "C"
     /**
      * @brief Registrace persistence klíčů panelu I/O Ports do cfgmain.
      *
-     * Vytvoří modul "IO_PORTS_PANEL" v g_cfgmain a registruje klíče:
+     * Do modulu "IO_PORTS_PANEL" (vytváří debugger_init) registruje klíče:
      *   - collapse_<chip>      (bool, default 0 = expanded) - per chip skupina
-     *   - history_capacity     (uint, default 10000, range 1000..50000)
      *   - history_auto_follow  (bool, default 1)
-     *   - tracking_active      (bool, default 0 = user opt-in)
-     *   - record_mask          (text, 64-hex bitmap pro 256 portu,
-     *                           default vse 'F' = vse zaznamenavano)
+     *   - tracking_active      (bool, default 1, gated na otevřené okno)
+     *
+     * Klíče history_capacity a record_mask registruje jádro
+     * (io_history_register_persistence).
      *
      * Po registraci volat cfgmodule_parse + cfgmodule_propagate (= viz
      * existující debugger.c pattern).

@@ -51,10 +51,15 @@
  * Při prvním otevření okna (initialized == false):
  * 1. Zavoláme debugger_ui_state_init() — inicializace UI stavu
  * 2. Zavoláme debugger_ui_state_refresh_from_cpu() — sync s CPU registry
- * 3. Nastavíme g_debugger.active = 1
+ *
+ * Při každém renderu otevřeného okna: pokud g_debugger.active == 0
+ * (rozjetí flagu a okna, např. po MCP debugger_deactivate), nastavíme
+ * g_debugger.active = 1 a přepočet callbacků pošleme emu vláknu
+ * (dbg_ui_debugger_state_recompute).
  *
  * Při zavření okna:
- * 1. Nastavíme g_debugger.active = 0
+ * 1. debugger_hide_main_window_request() - g_debugger.active = 0
+ *    + přepočet callbacků na emu vlákně
  *
  * KLÁVESOVÉ ZKRATKY
  * =================
@@ -109,6 +114,7 @@
 #include "sections/dbg_disassembled.h"
 #include "sections/dbg_inline_asm.h"
 #include "sections/dbg_focus_to.h"
+#include "dbgapi_helpers.h"
 
 
 /*
@@ -287,16 +293,16 @@ void imgui_debugger_window(bool *p_open)
     {
         /*
          * Okno je zavřené — zajistíme korektní deaktivaci debuggeru.
-         * Sem se dostaneme buď po debugger_hide_main_window() (z ESC, Alt+D,
+         * Sem se dostaneme buď po debugger_hide_main_window_request() (z ESC, Alt+D,
          * File→Hide), nebo po kliknutí na X tlačítko v titulbaru (ImGui
          * nastaví *p_open = false interně).
          *
          * Kontrola g_debugger.active zabraňuje duplicitnímu volání
-         * v případě, že debugger_hide_main_window() již proběhl.
+         * v případě, že debugger_hide_main_window_request() již proběhl.
          */
         if (g_debugger.active)
         {
-            debugger_hide_main_window();
+            debugger_hide_main_window_request();
         };
         return;
     };
@@ -309,7 +315,6 @@ void imgui_debugger_window(bool *p_open)
     {
         debugger_ui_state_init();
         debugger_ui_state_refresh_from_cpu();
-        g_debugger.active = 1;
         s_was_paused = EMULATOR_TEST_PAUSED;
     };
 
@@ -317,10 +322,22 @@ void imgui_debugger_window(bool *p_open)
      * Synchronizace g_debugger.active s viditelností okna.
      * Jádro debuggeru potřebuje vědět, že je debugger aktivní,
      * aby provádělo záznam historie instrukcí atd.
+     *
+     * Normálně flag nastavila už cesta, která okno otevřela
+     * (debugger_show_main_window[_request] = flag + přepočet callbacků).
+     * Sem se dostaneme jen při rozjetí flagu a okna, typicky po MCP
+     * debugger_deactivate při otevřeném okně. Samotný zápis flagu dřív
+     * nestačil: TEST_DEBUGGER_NEED_DEBUG_CALLBACKS (cpuhist / heatmapa
+     * v režimu "s oknem") se vyhodnocuje jen při přepočtu, takže CPU
+     * mohlo zůstat na rychlých callbackách bez záznamu. Proto flag +
+     * DBGAPI_CMD_DEBUGGER_STATE_RECOMPUTE na emu vlákně (vzor cpuhist,
+     * ui-thread-writes T6e). Při timeoutu přepočtu srovná callbacky
+     * nejbližší další přepočet.
      */
     if (!g_debugger.active)
     {
         g_debugger.active = 1;
+        (void)dbg_ui_debugger_state_recompute();
     };
 
     /*
@@ -431,7 +448,7 @@ void imgui_debugger_window(bool *p_open)
         ImGui::End();
         /* X tlačítko mohlo nastavit *p_open = false i při kolapsnutém okně */
         if (!*p_open && g_debugger.active)
-            debugger_hide_main_window();
+            debugger_hide_main_window_request();
         return;
     };
 
@@ -557,13 +574,15 @@ void imgui_debugger_window(bool *p_open)
     {
         if (ImGui::IsKeyPressed(ImGuiKey_Escape, false))
         {
-            debugger_hide_main_window();
+            debugger_hide_main_window_request();
         };
 
-        /* Ctrl+R: Forced Full Screen Refresh */
+        /* Ctrl+R: Forced Full Screen Refresh. Framebuffer plní emu vlákno,
+         * refresh proto vykoná ono (DBGAPI_CMD_SCREEN_REFRESH); dřív se
+         * volal přímo odsud bez ohledu na pauzu. */
         if (ImGui::GetIO().KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_R, false))
         {
-            debugger_forced_screen_update();
+            (void)dbg_ui_screen_refresh();
         };
 
         /*
@@ -582,7 +601,7 @@ void imgui_debugger_window(bool *p_open)
 
     /* X tlačítko v titulbaru — ImGui nastavil *p_open = false v Begin() */
     if (!*p_open && g_debugger.active)
-        debugger_hide_main_window();
+        debugger_hide_main_window_request();
 }
 
 #endif /* MZ800EMU_CFG_DEBUGGER_ENABLED */

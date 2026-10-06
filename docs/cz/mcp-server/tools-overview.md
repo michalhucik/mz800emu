@@ -22,7 +22,7 @@ dokumentu [Resources overview](resources-overview.md).
 | `emu_mem_read` | ne | Čte bajty z Z80 paměti (base64) |
 | `emu_mem_write` | **ANO** | Zápis bajtů do RAM - region check, **destruktivní** |
 | `emu_bp_add` | ne | Přidá breakpoint (exec, nebo typed memw/memr/ior/iow + condition) |
-| `emu_bp_list` | ne | Vypíše breakpointy (id/addr/enabled + type/zone/bank_id/hits/condition) |
+| `emu_bp_list` | ne | Vypíše breakpointy (id/addr/addr_end/addr_match_mode/addr_mask/enabled + type/zone/bank_id/bank_id_end/bank_match_mode/bank_id_mask/hits/condition) |
 | `emu_bp_remove` | ne | Odebere konkrétní BP podle ID |
 | `emu_bp_clear` | ne | Smaže všechny breakpointy najednou |
 | `emu_bp_enable` | ne | Toggle BP enabled flagu (bez mazání) |
@@ -67,6 +67,12 @@ dokumentu [Resources overview](resources-overview.md).
 | `emu_trace_stop` | ne | Zastaví trace záznam kanálu (segment uzavřen) |
 | `emu_trace_reset` | ne | Vynuluje aktuální segment trace kanálu |
 | `emu_trace_save` | ne | Uloží/přesměruje segment trace kanálu (volitelný path) |
+| `emu_videorec_start` | ano (vytvoří / přepíše soubor) | Spustí bezeztrátové nahrávání videa (volitelná cesta, automatický stop po N snímcích) |
+| `emu_videorec_stop` | ne | Ukončí nahrávání videa, standardně počká na uložení souborů |
+| `emu_videorec_pause` | ne | Pauza nahrávání (emulace běží dál): pauza / pokračování / přepnutí |
+| `emu_videorec_marker` | ne | Marker (kapitola) na aktuální pozici nahrávky |
+| `emu_videorec_status` | ne | Stav nahrávání videa (stav, snímky, segment, velikost, cesta, poslední událost) |
+| `emu_videorec_timebase` | ne | Časová základna nahrávání: emulační čas nebo podle reality |
 | `emu_profiler_start` | ne | Start CPU profileru (hot-path overhead) |
 | `emu_profiler_stop` | ne | Stop profileru (data zachována) |
 | `emu_profiler_reset` | ne | Vynuluje agregátor profileru |
@@ -171,13 +177,42 @@ přítomnost `error` v odpovědi. Na úspěch nese odpověď datová pole
 konkrétního toolu (viz popisy níže), pole `error` v úspěšné odpovědi
 není.
 
+Text v `error` zároveň říká, zda emulátor příkaz provedl:
+
+- `Emulator busy: command not executed ...` / `Emulator busy: command
+  queue full ...` - příkaz se **neprovedl** (emulační vlákno ho do 10 s
+  nevyzvedlo, nebo byla fronta plná); stav emulátoru je beze změny
+  a volání je bezpečné zopakovat.
+- `Emulator busy: command only partially executed ...` - vícekrokový
+  tool skončil po provedení dřívějšího kroku; před opakováním
+  zkontrolujte stav.
+- `Emulator busy: command still running ...` - emulační vlákno příkaz
+  převzalo, ale zhruba do 20 s (u nástrojů se souborovým I/O, např.
+  trace_save nebo snapshot_save, do 10 min) ho nedokončilo; výsledek není znám
+  (příkaz může doběhnout později). Před opakováním zkontrolujte stav.
+- `Emulator is shutting down ...` - neprovedeno, další požadavky už
+  neposílejte.
+- jakýkoliv jiný text (např. `bp_remove failed (unknown id?)`) - příkaz
+  se provedl a selhal (nebo byly odmítnuty parametry); opakování beze
+  změny nepomůže.
+
+Texty `Emulator busy: ...` / `Emulator is shutting down ...` končí
+původní zprávou toolu v hranatých závorkách (kvůli kompatibilitě), např.
+`... safe to retry [bp_remove failed (unknown id?)]`; testujte prefix.
+Jakmile emulační vlákno příkaz vyzvedne, volání počká na jeho dokončení
+a vrátí skutečný výsledek. Podrobnosti pro AI klienty:
+`emulator://docs/error_handling`.
+
 ## Popis jednotlivých tools
 
 ### `emu_status`
 
 Vrátí stav emulátoru: jestli běží nebo je zapauzovaný, kolik framů
 už proběhlo, jestli je transport connected. Nedestruktivní, vhodné
-jako první volání po připojení.
+jako první volání po připojení. Pokud emulátor nečekaně skončil,
+výsledek je `{"running": false, "connected": false, "last_exit":
+"..."}` (viz [Python wrapper](python-wrapper.md), sekce *Konec
+emulátoru a automatický restart*).
 
 ### `emu_ping`
 
@@ -302,11 +337,21 @@ Vrátí seznam aktuálních breakpointů. Návrat:
 
 - `id` (int) - handle breakpointu
 - `addr` (int) - adresa
+- `addr_end` (int) - horní mez rozsahu adres (včetně); platí jen pro
+  `addr_match_mode` `RANGE`
+- `addr_match_mode` (string) - `SINGLE` (jen `addr`), `RANGE`
+  (`addr`..`addr_end`) nebo `MASK` (`(x & addr_mask) == (addr & addr_mask)`);
+  týká se `PC_EXEC` / `MEM_R` / `MEM_W`
+- `addr_mask` (int) - AND maska; platí jen pro `addr_match_mode` `MASK`
 - `enabled` (bool)
 - `type` (string) - kanonický UPPER_SNAKE typ (`PC_EXEC` / `MEM_R` /
   `MEM_W` / `IORQ_R` / `IORQ_W` / ...)
 - `zone` (string) - paměťová zóna (`CPU_VIEW` / `RAM` / ...)
 - `bank_id` (int) - index banky (pro zónu `MMEXT_BANK`)
+- `bank_id_end` (int) - horní mez rozsahu bank (včetně); platí jen pro
+  `bank_match_mode` `RANGE`
+- `bank_match_mode` (string) - `SINGLE` / `RANGE` / `MASK` pro `bank_id`
+- `bank_id_mask` (int) - AND maska pro `bank_id`; platí jen v režimu `MASK`
 - `hits` (int) - počítadlo střelení BP
 - `condition` (string nebo null, pokud bezpodmínečný)
 
@@ -819,6 +864,96 @@ Uloží / přesměruje segment kanálu. Argument:
 
 Vrací `{"saved": true, "path": <str|null>}`.
 
+## Video recording tools
+
+Bezeztrátové nahrávání obrazu a zvuku emulovaného počítače (viz
+[Nahrávání videa](../video-recording.md)) ovládané AI klientem: start,
+hraní hry, markery, retake přes snapshot, stop. Celý postup včetně
+exportu do MP4 je v MCP dokumentu `emulator://docs/videorec_workflow`.
+
+Nahrávka standardně používá emulační čas (jeden emulovaný snímek = jeden
+snímek videa, 50 snímků/s, na MZ-700 NTSC a MZ-1500 60), takže pauzy mezi voláními tools ani MAX SPEED
+se ve videu neprojeví. Režim podle reality (`emu_videorec_timebase`)
+nahrává naopak to, co bylo vidět a slyšet v reálném čase. Požadavky (start, pauza, marker, stop) se provedou na
+konci nejbližšího emulovaného snímku; stop v pauze emulace se provede
+hned. Dostupné ve všech buildech (MZ-800, MZ-700 PAL/NTSC, MZ-1500).
+
+Každá úspěšná odpověď obsahuje stav nahrávání:
+
+| Pole | Význam |
+|------|--------|
+| `supported` | Nahrávání je k dispozici (vždy `true`). |
+| `state` | `idle`, `recording` nebo `paused` (pauza nahrávání). |
+| `start_pending` | Start přijat, nahrávání začne na konci nejbližšího snímku. |
+| `frames`, `fps`, `duration_s` | Počet nahraných snímků, snímková frekvence, délka v sekundách. |
+| `segment`, `segment_open` | Číslo aktuálního segmentu (od 1) a zda je otevřený. |
+| `bytes`, `parts` | Velikost a počet AVI souborů běžící nebo poslední nahrávky. |
+| `retake_mode` | `discard`, `seam` nebo `off` - co udělá nahrání snapshotu. |
+| `path`, `sidecar` | První AVI soubor a soubor `.cuts.json`. |
+| `last_error` | Poslední chyba nebo `null`. |
+| `last_event` | `null` nebo `{seq, kind, frame, path, text}`; `kind` = `started`, `saved`, `failed`, `retake`, `seam`. |
+| `timebase`, `timebase_effective` | Požadovaná a skutečná časová základna (`emulated` / `realtime`); skutečná je `emulated` i při požadované `realtime`, když volba `realtime_speed = emulated_when_fast` a rychlost není 100 %. |
+| `rt_activity` | Režim podle reality: `off` (emulační čas), `live` (živý obraz), `frozen` (pauza emulace, zamrzlý obraz), `skipping` (nezapisuje se). |
+
+### `emu_videorec_start` (sensitive - vytvoří / přepíše soubor)
+
+Argumenty:
+
+- `path` (string, volitelný) - cílový `.avi`; existující soubor se
+  přepíše. Bez něj se vygeneruje jméno `mz800_YYYYMMDD_HHMMSS.avi`
+  ve výstupní složce nahrávek.
+- `frames` (int, volitelný, výchozí 0) - automaticky ukončit po tolika
+  nahraných snímcích (emulátor běží dál); 0 = bez limitu.
+
+Soubor se vytvoří hned, takže chyba (např. `Cannot create video file:
+<cesta>`) se vrátí okamžitě. Snímek, na kterém se start zpracuje, se
+nenahraje. Vrací stav a navíc `start_requested` a `stop_after_frames`.
+Chyba `Video recording is already running`, pokud nahrávání běží.
+
+### `emu_videorec_stop`
+
+Argumenty: `wait` (bool, výchozí `true`), `timeout_s` (výchozí 30).
+S `wait` tool počká, až jsou soubory nahrávky hotové, a vrátí `saved`
+(bool) a `recorded_frames`. Stop ještě nezpracovaného startu ho zruší
+a soubor smaže (`start_cancelled: true`). Bez nahrávání: `Video recording
+is not running`.
+
+### `emu_videorec_pause`
+
+Argument `paused` (bool, volitelný): `true` = pauza nahrávání, `false` =
+pokračovat, bez argumentu = přepnout. Emulace běží dál; pokračování
+začne nový segment (v exportu střih s přechodem). Vrací stav a navíc
+`pause_requested` a `paused_target`.
+
+### `emu_videorec_marker`
+
+Argument `label` (string, volitelný; výchozí `Marker at frame N`). Marker
+dostane index příštího nahraného snímku a při exportu z něj vznikne
+kapitola. Markery v bodě snapshotu použitého pro retake a za ním se
+zahodí spolu se zahozenou částí nahrávky.
+
+### `emu_videorec_status`
+
+Bez argumentů. Vrací stav popsaný výše.
+
+### `emu_videorec_timebase`
+
+Argument `timebase` (string, povinný): `emulated` nebo `realtime`.
+Platí pro běžící nahrávku i pro příští start (INI `[VIDEOREC] timebase`).
+Mění tedy trvalé uživatelské nastavení - stejně jako přepnutí v GUI
+(`Alt + U`, okno ovládání nahrávání, dialog nastavení): při ukončení
+emulátoru se uloží do INI (pokud neběží s `--no-save-ini`) a platí
+i pro uživatele GUI po restartu. Agent, který přepnul do `realtime` na
+sdílené instanci, by měl na konci vrátit `emulated`.
+Do režimu podle reality se nahrávka přepne do jedné periody snímku (20 ms, při 60 snímcích/s 16,7 ms), zpět do emulačního
+času na konci nejbližšího emulovaného snímku; každé přepnutí začne nový
+segment. Podle reality se 50x (na MZ-700 NTSC a MZ-1500 60x) za sekundu reálného času zapíše to, co bylo
+na obrazovce, se zvukem, který šel do reproduktoru (turbo je zrychlené,
+pauza podle `realtime_pause`). Bez zvukového zařízení (`--headless`,
+`--mcp-pipe`, nebo když se v okně nepodaří otevřít zvukové zařízení) se
+zvuk vyrobí stejnou cestou, jen se nepřehraje. Vrací
+stav a navíc `timebase_requested`; neplatná hodnota je chyba parametrů.
+
 ## Profiler tools
 
 CPU profiler agreguje per-function statistiky (calls, exclusive
@@ -1233,8 +1368,29 @@ která je paralelní k fyzické scan matrix. Z80 emulace AND-uje obě
 matrix při čtení PORT B, takže virtual press se Z80 jeví jako reálná
 klávesa držená uživatelem.
 
-Rozsah klávesových jmen: RETURN, BREAK, SHIFT, CONTROL, GRAPH, ALPHA,
-ARROW_*, F1..F9, plus ASCII fallback (`"A"`, `"ASCII:A"`, ...).
+Klávesová jména (JEDNA tabulka sdílená nástroji `emu_input_send_key`,
+`emu_input_send_keys` s `encoding=key_names`, `emu_input_press_key`,
+`emu_input_release_key` a `emu_input_send_keys_with_delays`; bez ohledu na velikost písmen):
+
+| Jméno / jména | Klávesa |
+|---------------|---------|
+| `RETURN`, `ENTER`, `CR` | CR (Enter) |
+| `SPACE`, `TAB` (jen MZ-800), `BLANK`, `GRAPH`, `ALPHA` | klávesa stejného jména |
+| `LIBRA` | `£` (= pozice SHIFT + DOWN_ARROW), `F9` = stejná pozice bez SHIFT |
+| `INSERT`, `INS`, `INST` | INST |
+| `DELETE`, `DEL`, `BACKSPACE` | DEL |
+| `ARROW_UP`, `UP`, `CURSOR_UP` (obdobně `DOWN`, `LEFT`, `RIGHT`) | kurzorové klávesy (pohyb kurzoru) |
+| `UP_ARROW`, `DOWN_ARROW` | znakové klávesy se šipkou (NE pohyb kurzoru) |
+| `ESC`, `ESCAPE`, `BREAK`, `END` | ESC / BREAK |
+| `CTRL`, `CONTROL`, `SHIFT` | modifikátory |
+| `F1`..`F9` | funkční klávesy (`F6`-`F8` = `@`, `\`, `?`; `F9` = pozice LIBRA bez SHIFT, tj. DOWN_ARROW) |
+
+Plus ASCII fallback (`"A"`, `"ASCII:A"`, ...). Názvy z
+`emulator://docs/mz800_keyboard` (`CURSOR_*`, `INST`, ...) se akceptují jako
+aliasy a starší názvy dál fungují. Neznámé jméno vrátí chybu
+`Unknown key '<jméno>'. Closest valid names: ...` (u `send_keys` s
+`key_names` a `send_keys_with_delays` selže celé volání ještě před odesláním
+jakékoli klávesy).
 
 Joystick state byte používá Sharp MZ standard:
 
@@ -1401,7 +1557,11 @@ Args:
   `expr`, `action`, `event_name`) přijímají `None` jako clear.
 
 Returns: JSON `{"id": int, "created": bool}`. `id` = -1 při
-selhání.
+selhání. Pokud je `addr_end` nastaveno na jinou hodnotu než `addr`, ale
+`addr_match_mode` není nastaven na `RANGE` (nový breakpoint začíná
+v `SINGLE`), breakpoint se přesto vytvoří, hlídá jen `addr` a výsledek
+nese navíc `warning`. Pro hlídání rozsahu uveď ve `fields` obě pole,
+`"addr_end"` i `"addr_match_mode"` (hodnota `"RANGE"`).
 
 Pole `fwd_min_interval_ms` a `fwd_max_fires` jsou per-BP override
 rate-limitu forward akcí (snapshot / trace_save) - viz sekce
@@ -1730,6 +1890,7 @@ Returns: `{"ok": true, "action": "play_paused"}`.
 ### `emu_cmt_stop` (sensitive)
 
 Zastaví transport (PLAY nebo RECORD -> STOP). No-op pokud už zastaveno.
+Bez vložené pásky transport také uvede do STOP.
 
 Returns: `{"ok": true, "action": "stop"}`.
 
@@ -1810,6 +1971,8 @@ Args:
 
 Zapne/vypne CPU boost během transportu pásky (= běh na maximální
 rychlosti pro rychlé dlouhé loady). Odráží se v `cpu_boost`.
+Uživatelská preference: načtení snapshotu ji neobnovuje (snapshot ji
+kvůli starším verzím emulátoru dál obsahuje).
 
 Args:
 - `enabled` (required): true = boost, false = reálný čas.
@@ -1833,13 +1996,20 @@ Args:
 - `path` (required): cesta k CMT souboru (přípona vybírá backend).
 - `play_immediately` (default false): spustit přehrávání po openu.
 
-Returns: `{"ok": true, "path": <str>, "playing": <bool>}`.
+Returns: `{"ok": true, "path": <str>, "playing": <bool>, "state": <str>,
+"paused": <bool>}`. `playing`, `state` (`"stop"` / `"play"` / `"record"`)
+a `paused` hlásí skutečný stav transportu po operaci (stejný význam jako
+v `emulator://periph/cmt`); `playing` je true jen pro PLAY bez pauzy. Pokud
+byl požadován `play_immediately`, ale páska po operaci nehraje, výsledek
+obsahuje navíc `warning`.
 
 ### `emu_cmt_tape_seek` (sensitive)
 
-Seek na blok pásky (SIMPLE_TAPE multi-blok containery). Pro jednoblokový
-container (např. plain .mzf) je jen blok 0 a seek nemusí být podporován.
-Vyžaduje naloženou pásku. Seznam bloků viz `emulator://periph/cmt/tape`.
+Seek na blok pásky (SIMPLE_TAPE multi-blok containery: .mzt, .tap).
+Jednosouborový container (SINGLE: samostatné .mzf nebo .wav) seek
+nepodporuje - volání selže i pro blok 0; pro přehrání od začátku použij
+`emu_cmt_stop` + `emu_cmt_play`. Vyžaduje naloženou pásku. Seznam bloků
+viz `emulator://periph/cmt/tape`.
 
 Args:
 - `block_id` (required): index bloku (0-based).

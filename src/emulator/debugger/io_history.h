@@ -84,7 +84,11 @@ extern "C" {
  * cca 1 nanosekundovem okenku znamena nejvyse 1-2 eventu navic zaznamenanych
  * (= acceptable, jako global tracking_active flag pattern).
  *
- * Default po io_history_init = vsechny 1 (zachovani back-compat chovani).
+ * Výchozí stav = všechny 1 už staticky (inicializátor v io_history.c).
+ * Hodnotu z INI (klíč `[IO_PORTS_PANEL] record_mask`) nastaví propagate
+ * z io_history_register_persistence(); io_history_init() ani
+ * io_history_set_capacity() masku nemění. Za běhu ji přepíná okno I/O
+ * Ports (checkbox Rec u portu) přímým bajtovým zápisem.
  *
  * Pozn.: 256 bytes je marginal misto, ale dovoluje O(1) lookup v hot-path
  * bez bit shift/mask costu (= optimalizace na cache line: vejde se do 4 cache
@@ -96,8 +100,13 @@ extern uint8_t g_io_history_record_enabled[ IO_HISTORY_RECORD_MAP_SIZE ];
 /**
  * @brief Nastavi vsechny porty na record_enabled = 1 (= default state).
  *
- * Volat z @ref io_history_init pro reset behem reinicializace. Bezpecne
- * volat i z UI vlakna (= "Reset Record mask" tlacitko).
+ * Používá propagate klíče `record_mask` jako návrat k výchozímu stavu při
+ * neplatné hodnotě v INI a testy. io_history_init() ji nevolá (maska
+ * přežije init i změnu kapacity). Jen bajtové zápisy - souběh s emu
+ * vláknem dá nejvýš mix starých a nových platných hodnot.
+ *
+ * @post Všech IO_HISTORY_RECORD_MAP_SIZE položek
+ *       g_io_history_record_enabled = 1.
  */
 void io_history_record_enable_all ( void );
 
@@ -194,6 +203,16 @@ extern st_IO_HISTORY_RING g_io_history;
  *
  * Idempotentni - pokud je uz inicializovany, jen vynuluje stav.
  * Volat z debugger_init().
+ *
+ * Masku zaznamenávaných portů (g_io_history_record_enabled) nemění -
+ * jinak by po startu i po každé změně kapacity zahodila masku z INI.
+ *
+ * @param capacity Počet událostí; 0 = IO_HISTORY_DEFAULT_CAPACITY, mimo
+ *                 [MIN, MAX] se ořízne.
+ *
+ * @pre Emu vlákno neběží nebo volá emu vlákno (realokace ringu).
+ * @post Ring prázdný (head = count = 0, overflow = false); při selhání
+ *       calloc je events NULL a io_history_record() zkusí init znovu.
  */
 void io_history_init ( size_t capacity );
 
@@ -210,9 +229,77 @@ void io_history_destroy ( void );
  * Realokuje events[] na novou velikost a ZAHODI predchozi data.
  * UI by mela zobrazit potvrzovaci dialog ("History bude vymazana").
  *
- * @param new_capacity  Nova velikost (musi byt v [MIN, MAX]).
+ * @param new_capacity  Nová velikost; mimo [MIN, MAX] se clampuje.
+ *
+ * @pre Volat jen z emu vlákna (nebo když emu vlákno neběží): free + calloc
+ *      ringu souběžně s io_history_record by zapisovalo do uvolněné
+ *      paměti. UI používá DBGAPI_CMD_IO_HISTORY_SET_CAPACITY.
+ * @post g_io_history_cfg_capacity = nová (oříznutá) kapacita - při
+ *       uložení konfigurace se do INI zapíše (stejně jako
+ *       eventlog_set_capacity() u Event Vieweru).
  */
 void io_history_set_capacity ( size_t new_capacity );
+
+
+/**
+ * @brief Kapacita ringu historie I/O z konfigurace (klíč
+ *        `[IO_PORTS_PANEL] history_capacity`).
+ *
+ * Proměnná jádra (ne UI), na kterou je navázaný cfg prvek
+ * z io_history_register_persistence(). Cfg propagate ji naplní z INI,
+ * io_history_set_capacity() ji drží rovnou skutečné kapacitě, cfg save
+ * ji zapíše. Typ unsigned odpovídá cfg prvku CFGENTYPE_UNSIGNED.
+ *
+ * Zapisuje: cfg propagate (start, před emu vláknem) a
+ * io_history_set_capacity() (emu vlákno). Okno I/O Ports ji jen čte
+ * (zobrazení vybrané kapacity v comboboxu).
+ *
+ * @invariant Po propagate leží v [IO_HISTORY_MIN_CAPACITY,
+ *            IO_HISTORY_MAX_CAPACITY] (rozsah cfg prvku); jinak
+ *            io_history_init_from_cfg() hodnotu ořízne.
+ */
+extern unsigned g_io_history_cfg_capacity;
+
+
+/**
+ * @brief Zaregistruje cfg prvky jádra `history_capacity` a `record_mask`
+ *        do modulu `IO_PORTS_PANEL`.
+ *
+ * - `history_capacity`: CFGENTYPE_UNSIGNED (default
+ *   IO_HISTORY_DEFAULT_CAPACITY, rozsah IO_HISTORY_MIN_CAPACITY..
+ *   IO_HISTORY_MAX_CAPACITY) navázaný na g_io_history_cfg_capacity.
+ * - `record_mask`: CFGENTYPE_TEXT, 64 hex znaků (port i = bit i%8 bajtu
+ *   i/8, default samé F = všechny porty); propagate/save callback plní
+ *   a čte g_io_history_record_enabled. Neplatná hodnota = všechny porty.
+ *
+ * Oba klíče dřív registrovalo okno I/O Ports (io_window_register_persistence):
+ * kapacitu do UI proměnné, kterou jádro nesmí číst, a masku sice do jádra,
+ * ale io_history_init() ji po propagate přepsal na "vše". Formát klíčů
+ * v INI je beze změny.
+ *
+ * @param cmod_void Ukazatel na st_CFGMODULE modulu IO_PORTS_PANEL
+ *                  (typeless jako io_window_register_persistence). NULL
+ *                  = no-op.
+ *
+ * @pre Volat před cfgmodule_parse() + cfgmodule_propagate() modulu.
+ * @post Po propagate drží g_io_history_cfg_capacity a
+ *       g_io_history_record_enabled hodnoty z INI (nebo default).
+ */
+void io_history_register_persistence ( void *cmod_void );
+
+
+/**
+ * @brief Inicializuje ring s kapacitou z konfigurace.
+ *
+ * io_history_init(g_io_history_cfg_capacity) - mimo rozsah se ořízne,
+ * 0 = IO_HISTORY_DEFAULT_CAPACITY. Volá debugger_init() po propagate
+ * modulu IO_PORTS_PANEL.
+ *
+ * @pre Emu vlákno ještě neběží (nebo volat z emu vlákna) - realokace
+ *      ringu, viz io_history_set_capacity().
+ * @post g_io_history.capacity = oříznutá kapacita z konfigurace.
+ */
+void io_history_init_from_cfg ( void );
 
 
 /**
@@ -268,6 +355,10 @@ void io_history_record_mem ( bool is_read, uint16_t addr, uint8_t value,
 
 /**
  * @brief Vyprazdneni ringu (= count=0, head=0, overflow=false).
+ *
+ * @pre Volat jen z emu vlákna (nebo když emu vlákno neběží), jinak souběh
+ *      s inkrementací head/count v io_history_record. UI používá
+ *      DBGAPI_CMD_IO_HISTORY_CLEAR.
  */
 void io_history_clear ( void );
 

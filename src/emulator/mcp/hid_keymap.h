@@ -41,6 +41,7 @@
 #define MZ800EMU_MCP_HID_KEYMAP_H
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -99,6 +100,15 @@ typedef struct st_HID_KEYMAP_RESOLVED {
  *   F8 (= ?)            - col 7 bit 1
  *   F9 (= LIBRA-key)    - col 0 bit 5
  *
+ * Aliasy podle primárních názvů v docs/agent/mz800_keyboard.md (stejná
+ * sada jmen platí pro VŠECHNY MCP nástroje: send_key, send_keys
+ * (encoding=key_names), press_key, release_key, send_keys_with_delays):
+ *   INST                - alias INSERT (col 7 bit 7)
+ *   CURSOR_UP/DOWN/
+ *   LEFT/RIGHT          - alias ARROW_* (col 7 bit 5/4/2/3)
+ *   UP_ARROW            - ZNAKOVÁ klávesa (glyf šipky), col 6 bit 6
+ *   DOWN_ARROW          - ZNAKOVÁ klávesa (glyf šipky), col 0 bit 5
+ *
  * Pro klávesy s prefixem `ASCII:<znak>` se použije ASCII fallback
  * přes `hid_keymap_resolve_ascii(<znak>, ...)`.
  *
@@ -115,6 +125,24 @@ typedef struct st_HID_KEYMAP_RESOLVED {
  *       volat z libovolného vlákna.
  */
 bool hid_keymap_resolve(const char *name, st_HID_KEYMAP_RESOLVED *out_res);
+
+
+/**
+ * @brief Navrhne nejbližší platná jména kláves k neznámému jménu.
+ *
+ * Vybere až 3 jména z tabulky: nejdřív ta, která jméno obsahují nebo jsou
+ * v něm obsažena (prefix/podřetězec), pak podle editační vzdálenosti.
+ * Výsledek je seznam oddělený ", " (např. "CURSOR_UP, ARROW_UP").
+ *
+ * @param[in]  name      neznámé jméno (case-insensitive)
+ * @param[out] out       výstupní buffer; při žádném návrhu prázdný řetězec
+ * @param[in]  out_size  velikost out v bajtech (0 = nic se nezapíše)
+ *
+ * @note Čistá funkce, bez side effects mimo `out`. Výstup je vždy
+ *       ukončen '\0' (pokud out_size > 0); nevejde-li se návrh celý,
+ *       je zahozen.
+ */
+void hid_keymap_suggest(const char *name, char *out, size_t out_size);
 
 
 /**

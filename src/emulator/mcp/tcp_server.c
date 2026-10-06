@@ -10,7 +10,7 @@
  *        rejection řádek a close,
  *      - jinak spawnuje per-conn vlákno.
  *  2. Per-connection thread - vlastní `client_sock`, čte JSONL řádky,
- *     dispatchuje přes `mcp_dispatch_request`, posílá odpovědi.
+ *     dispatchuje přes `mcp_dispatch_runner_request`, posílá odpovědi.
  *  3. Main / GUI thread - volá `_create`, `_start`, `_stop`, čte status.
  *
  * Shutdown koordinace:
@@ -114,6 +114,7 @@ typedef int SOCKET;             /**< @brief POSIX socket deskriptor. */
 #include "tcp_server.h"
 #include "jsonl_io.h"
 #include "dispatch.h"
+#include "dispatch_runner.h"
 #include "cooperation.h"
 #include "event_bus.h"
 #include "trap_manager.h"
@@ -556,7 +557,10 @@ static gpointer _client_thread_func(gpointer data)
         }
 
         char *response = NULL;
-        en_MCP_DISPATCH_RESULT dr = mcp_dispatch_request(msg, &response);
+        /* Runner přebírá vlastnictví msg (uvolní ho sám) a při zaseknutí
+         * emu vlákna odpoví "Emulator busy" v omezeném čase. */
+        en_MCP_DISPATCH_RESULT dr = mcp_dispatch_runner_request(msg, &response);
+        msg = NULL;
 
         if (response)
         {
@@ -564,7 +568,6 @@ static gpointer _client_thread_func(gpointer data)
             {
                 /* Klient pravděpodobně zavřel během dispatche. */
                 free(response);
-                jsonl_msg_free(msg);
                 g_free(line);
                 break;
             }
@@ -580,7 +583,6 @@ static gpointer _client_thread_func(gpointer data)
             }
         }
 
-        jsonl_msg_free(msg);
         g_free(line);
     }
 

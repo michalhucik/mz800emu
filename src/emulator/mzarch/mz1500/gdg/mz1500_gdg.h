@@ -152,11 +152,31 @@ extern "C"
 #define gdg_1m1_on_screen_done_event() {g_gdg.ctc0clk++;}
 #endif
 
+/**
+ * @brief Uzavře snímek: zvýší čítač snímků a odečte délku snímku od tiků.
+ *
+ * Volá se jen z gdg_process_events() při zpracování události konce
+ * posledního řádku. V tu chvíli platí
+ * g_gdg.total_elapsed.ticks >= VIDEO_SCREEN_TICKS (událost má ticks ==
+ * VIDEO_SCREEN_TICKS). Pokud by to neplatilo (konec snímku zpracovaný
+ * dvakrát), unsigned odečet by přetekl na ~2^32 a emulace by minuty
+ * zpracovávala události bez instrukcí. Pojistka to nahlásí přes
+ * mzarch_main_report_screen_done_underflow() a tiky srovná na 0.
+ * Kontrola je jednou za snímek, ne v per-instruction hot path.
+ */
 #define gdg_on_screen_done_event()                       \
     {                                                    \
         g_gdg.total_elapsed.screens++;                   \
         g_mzarch_main.cursor_timer++;                          \
-        g_gdg.total_elapsed.ticks -= VIDEO_SCREEN_TICKS; \
+        if (g_gdg.total_elapsed.ticks >= VIDEO_SCREEN_TICKS) \
+        {                                                \
+            g_gdg.total_elapsed.ticks -= VIDEO_SCREEN_TICKS; \
+        }                                                \
+        else                                             \
+        {                                                \
+            mzarch_main_report_screen_done_underflow(g_gdg.total_elapsed.ticks); \
+            g_gdg.total_elapsed.ticks = 0;               \
+        }                                                \
         g_gdg.beam_row = 0;                              \
         gdg_1m1_on_screen_done_event();                  \
     }

@@ -19,9 +19,13 @@
 #include "emulator/debugger/dbgapi_emu.h"
 #include "emulator/i18n_lang.h"
 #include "emulator.h"
+#include "emulator/customspeed.h"
+#include "emulator/mzarch/mzarch.h"
+#include "version_info.h"
 
 #ifdef MZ800EMU_CFG_MCP_SERVER_ENABLED
 #include "emulator/mcp/main_pipe.h"
+#include "emulator/mcp/dispatch_runner.h"
 #endif
 
 #ifdef MZ800EMU_CFG_MCP_TCP_ENABLED
@@ -65,12 +69,18 @@ static const char *const MCP_PROFILE_VALUES[] = {
 static const st_SDLAPP_OPTION_DEF g_known_options[] = {
     { "--help",             SDLAPP_OPTION_FLAG,  SDLAPP_OPTVAL_NONE,        NULL,        NULL,
       "Print this option list and exit." },
+    { "--version",          SDLAPP_OPTION_FLAG,  SDLAPP_OPTVAL_NONE,        NULL,        NULL,
+      "Print version, revision, source origin and build details, then exit." },
 #ifdef _WIN32
     { "--console",          SDLAPP_OPTION_FLAG,  SDLAPP_OPTVAL_NONE,        NULL,        NULL,
       "Windows: allocate a console window for stdout/stderr." },
 #endif
     { "--run-mzf",          SDLAPP_OPTION_VALUE, SDLAPP_OPTVAL_STRING,      NULL,        "<filepath>",
       "Automatically load and run the given MZF file after the emulator boots." },
+    { "--record",           SDLAPP_OPTION_VALUE, SDLAPP_OPTVAL_STRING,      NULL,        "<file.avi>",
+      "Start video recording (lossless AVI + .cuts.json sidecar) right after boot." },
+    { "--record-frames",    SDLAPP_OPTION_VALUE, SDLAPP_OPTVAL_UINT,        NULL,        "<count>",
+      "Stop video recording after <count> frames; in --headless mode then quit the emulator." },
     { "--cdl-mode",         SDLAPP_OPTION_VALUE, SDLAPP_OPTVAL_ENUM,        MODE_VALUES, "<off|window|always>",
       "Set the CDL (Memory Heatmap) recording mode." },
     { "--cdl-dir",          SDLAPP_OPTION_VALUE, SDLAPP_OPTVAL_STRING,      NULL,        "<dirpath>",
@@ -199,6 +209,11 @@ static const st_SDLAPP_OPTION_DEF g_known_options[] = {
       "Centronics interface (data, STROBE, BUSY). Overrides the [MZ1P16] active "
       "value from the INI. Only available on architectures with a Z80 PIO "
       "(MZ-800, MZ-1500)." },
+    { "--mode-switch",      SDLAPP_OPTION_VALUE, SDLAPP_OPTVAL_STRING,      NULL,        "<700|800>",
+      "Set the MZ-800 rear mode switch (SW1): 700 = MZ-700 mode, 800 = MZ-800 "
+      "mode. The ROM reads it when starting a program. Overrides the [MZ800] "
+      "mode_switch value from the INI. Invalid value = error and exit. Only "
+      "available on MZ-800." },
     { "--no-save-ini",      SDLAPP_OPTION_FLAG,  SDLAPP_OPTVAL_NONE,        NULL,        NULL,
       "Do not write the .ini file at exit (CLI overrides become session-only)." },
     { "--no-first-run-windows", SDLAPP_OPTION_FLAG, SDLAPP_OPTVAL_NONE,     NULL,        NULL,
@@ -216,6 +231,12 @@ static const st_SDLAPP_OPTION_DEF g_known_options[] = {
       "(efficiency %, throughput, FB-FPS, distribution) to the console. Works in "
       "both full and NO_DEBUGGER builds. Intended for headless A/B efficiency "
       "measurement - combine with --headless and --run-mzf." },
+    { "--speed",            SDLAPP_OPTION_VALUE, SDLAPP_OPTVAL_STRING,      NULL,        "<percent|max>",
+      "Set the emulation speed at start: 'max' = MAX SPEED (no frame pacing), "
+      "an integer 1..4000 = custom speed in percent (100 = normal speed). "
+      "Works in both GUI and --headless (where emulation otherwise runs in "
+      "real time). Invalid value = error and exit. If combined with "
+      "--maxspeed-bench, MAX SPEED wins." },
     { "--home-dir",         SDLAPP_OPTION_VALUE, SDLAPP_OPTVAL_STRING,      NULL,        "<dirpath>",
       "Override the home directory (where the binary's read-only assets live: "
       "ui_resources/, locale/, certs/). Default: auto-detected from the binary "
@@ -273,10 +294,23 @@ int main(int argc, char *argv[])
      * své options vytáhnout v dalších fázích startu. */
     sdlapp_options_init(argc, argv);
 
-    /* --help: vypsat usage a skončit. */
+    /* --help: vypsat usage a skončit. Na Windows se GUI binárka nejdřív
+     * připojí ke konzoli rodiče, jinak by se výpis z cmd.exe ztratil. */
     if (sdlapp_option_present("--help"))
     {
+        version_info_prepare_console();
         sdlapp_options_print_help(argv[0], g_known_options);
+        return EXIT_SUCCESS;
+    };
+
+    /* --version: vypsat informace o verzi a buildu a skončit. Stejně jako
+     * --help se vyhodnocuje před validací ostatních voleb a před jakoukoliv
+     * inicializací (SDL video/audio, cfgmain, emulátor); má proto přednost
+     * i před --mcp-pipe. */
+    if (sdlapp_option_present("--version"))
+    {
+        version_info_prepare_console();
+        version_info_print(stdout);
         return EXIT_SUCCESS;
     };
 
@@ -284,6 +318,33 @@ int main(int argc, char *argv[])
     if (!sdlapp_options_validate(g_known_options))
     {
         return EXIT_FAILURE;
+    };
+
+    /* --speed: hodnota se ověří hned (neplatná = chyba a konec), aplikuje ji
+     * až emulátorové vlákno při startu (emulator.c). */
+    if (sdlapp_option_present("--speed"))
+    {
+        bool speed_max = false;
+        int speed_percent = 100;
+        if (!customspeed_parse_cli_value(sdlapp_option_value("--speed"), &speed_max, &speed_percent))
+        {
+            return EXIT_FAILURE;
+        };
+    };
+
+    /* --mode-switch: hodnota se ověří hned (neplatná = chyba a konec),
+     * aplikuje ji mz800_main při registraci konfigurace. Jinde než na MZ-800
+     * se přepínač z příkazové řádky nenastavuje. */
+    if (sdlapp_option_present("--mode-switch"))
+    {
+        en_MZ800_MODE_SW mode;
+        if (!mzarch_mode_sw_parse_cli(sdlapp_option_value("--mode-switch"), &mode))
+        {
+            return EXIT_FAILURE;
+        };
+#if MZARCH != 800
+        fprintf(stderr, "Warning: --mode-switch is only supported on MZ-800, ignoring\n");
+#endif
     };
 
     /* --spdfd: alternativní launch mód. Větvíme dřív, než se inicializuje
@@ -479,14 +540,29 @@ int main(int argc, char *argv[])
      */
     mcp_tcp_server_shutdown_global();
 #endif
+#ifdef MZ800EMU_CFG_MCP_SERVER_ENABLED
+    /* Opuštěný (zaseknutý) MCP požadavek mohl ještě dokončovat handler na
+     * pracovním vlákně (dispatch_runner.c); zámky dbgapi se smí zrušit až
+     * po něm. */
+    bool mcp_runner_idle = mcp_dispatch_runner_wait_idle(2000);
+    if (!mcp_runner_idle)
+        fprintf(stderr, "[MCP] abandoned MCP request still running at exit, "
+                "skipping dbgapi teardown\n");
+#else
+    bool mcp_runner_idle = true;
+#endif
+    (void) mcp_runner_idle;
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
     /* Odregistrace dispatcheru - po této funkci se MSGy zahodí. */
     dbgapi_dispatcher_shutdown();
 
     /* Destrukce dbgapi fronty - po ukončení EMU vlákna a dispatcheru
-     * (= žádný producer ani konzument už nebude přistupovat). */
-    dbgapi_destroy(&g_dbgapi_cmdrq_queue);
+     * (= žádný producer ani konzument už nebude přistupovat). Pokud
+     * opuštěný MCP požadavek ještě běží, zámky nerušíme (únik při exitu
+     * je neškodný, zrušený zámek pod běžícím vláknem ne). */
+    if (mcp_runner_idle)
+        dbgapi_destroy(&g_dbgapi_cmdrq_queue);
 #endif
 
     iface_exit();

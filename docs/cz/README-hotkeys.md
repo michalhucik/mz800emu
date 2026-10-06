@@ -59,6 +59,18 @@ Globální klávesové zkratky dostupné napříč celým oknem emulátoru.
 | `Alt + F8`                 | Rychlé uložení                                                              |
 | `Alt + F9`                 | Rychlé načtení                                                              |
 
+## Nahrávání videa
+
+Všechny platformy. Podrobnosti viz [`video-recording.md`](video-recording.md).
+
+| Klávesa                    | Akce                                                                        |
+|----------------------------|-----------------------------------------------------------------------------|
+| `Alt + O`                  | Zahájit / ukončit nahrávání videa                                           |
+| `Alt + Shift + O`          | Pozastavit / obnovit nahrávání (emulace běží dál)                           |
+| `Alt + L`                  | Vložit marker do nahrávky                                                   |
+| `Alt + Shift + L`          | Zobrazit / skrýt okno dálkového ovládání nahrávání                          |
+| `Alt + U`                  | Přepnout časovou základnu nahrávání: emulační čas / podle reality (i během nahrávání) |
+
 ## Debugger
 
 Dostupné pouze v buildech s `MZ800EMU_CFG_DEBUGGER_ENABLED`.

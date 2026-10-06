@@ -58,11 +58,134 @@ extern "C"
  * ============================================================================ */
 
 /*
- * Synchronní odeslání příkazu do emulátoru s explicitním origin.
+ * Synchronní odeslání příkazu do emulátoru s podrobným výsledkem.
  *
  * Vloží příkaz do CMDRQ fronty s identifikací zdroje (cmd_origin),
- * probudí emulátorové vlákno (queue_cond) a čeká na odpověď
- * (slot->cond) s timeoutem.
+ * probudí emulátorové vlákno (queue_cond) a čeká ve smyčce na zpracování
+ * (slot->cond; předčasné probuzení čekání neukončí).
+ *
+ * Sémantika timeoutu (timeout_ms > 0):
+ *   - pokud emu příkaz do timeoutu NEvyzvedlo z fronty, příkaz se zruší
+ *     (slot CANCELLED), emu ho později přeskočí a NEprovede ho; vrací
+ *     DBGAPI_SUBMIT_TIMEOUT,
+ *   - pokud emu příkaz už vyzvedlo (rozpracovaný), funkce čeká bez limitu
+ *     na jeho dokončení a vrátí skutečný výsledek handleru; timeout tedy
+ *     omezuje jen čekání ve frontě, ne dobu zpracování. Volající, který
+ *     potřebuje omezenou dobu odpovědi, použije
+ *     dbgapi_ui_submit_cmd_sync_watched().
+ *   Slot se nikdy neopouští rozpracovaný, proto data_ptr/result_ptr stačí
+ *   udržet platné do návratu z funkce.
+ *
+ * Parametry:
+ *   queue:       ukazatel na CMDRQ frontu
+ *   cmd:         příkaz (en_DBGAPI_CMD), volitelně OR s DBGAPI_CMDFLAG_BLOCKING
+ *   origin:      zdroj příkazu (USER/MCP/TEST/INTERNAL)
+ *   data_ptr:    vstupní data pro emulátor (NULL pokud příkaz nepotřebuje data)
+ *   result_ptr:  buffer pro odpověď (NULL pokud příkaz nevrací data)
+ *   timeout_ms:  limit čekání na vyzvednutí emulátorem v ms (0 = neomezený)
+ *
+ * Vrací (en_DBGAPI_SUBMIT_STATUS):
+ *   DBGAPI_SUBMIT_OK         = provedeno, handler uspěl
+ *   DBGAPI_SUBMIT_FAILED     = provedeno, handler neuspěl (rq->success == false)
+ *   DBGAPI_SUBMIT_TIMEOUT    = nevyzvednuto do timeoutu, zrušeno, NEprovedeno
+ *   DBGAPI_SUBMIT_QUEUE_FULL = fronta plná, nezařazeno, NEprovedeno
+ *   DBGAPI_SUBMIT_ENDING     = emulátor se ukončuje, nezařazeno, NEprovedeno
+ *
+ * Předpoklady: nesmí se volat z emu vlákna (deadlock). Handler v dispatch
+ * nesmí čekat na vlákno odesílatele (odesílatel čeká na rozpracovaný
+ * příkaz bez limitu).
+ */
+en_DBGAPI_SUBMIT_STATUS dbgapi_ui_submit_cmd_sync_ex(st_DBGAPI_CMDRQ_QUEUE *queue,
+                                                     en_DBGAPI_CMD cmd,
+                                                     en_DBGAPI_CMD_ORIGIN origin,
+                                                     void *data_ptr,
+                                                     void *result_ptr,
+                                                     int timeout_ms);
+
+
+/**
+ * @brief Hlášení, že vyzvednutý příkaz se nedokončil v dodatečném limitu.
+ *
+ * Volá ho dbgapi_ui_submit_cmd_sync_watched() nejvýš jednou za submit,
+ * z vlákna odesílatele, bez držení zámků fronty i slotu. Callback nesmí
+ * čekat na emu vlákno ani submitovat další příkaz; typicky jen probudí
+ * jiné vlákno, které klientovi odpoví (MCP, viz dispatch_runner.c).
+ *
+ * @param user_data Kontext předaný do dbgapi_ui_submit_cmd_sync_watched().
+ */
+typedef void (*dbgapi_submit_stall_cb_t)(void *user_data);
+
+
+/**
+ * @brief Synchronní submit s hlášením zaseknutého rozpracovaného příkazu.
+ *
+ * Chová se přesně jako dbgapi_ui_submit_cmd_sync_ex() (stejné návratové
+ * hodnoty, stejná pravidla vlastnictví dat). Navíc: pokud emu vlákno
+ * příkaz do @p timeout_ms vyzvedlo, ale nedokončilo, čeká se ještě
+ * @p stall_ms a pokud ani pak není hotový, zavolá se @p stall_cb. Potom
+ * funkce dál čeká bez limitu na dokončení a vrátí skutečný výsledek.
+ *
+ * Proč se rozpracovaný slot neopouští ani tady: emu vlákno během dispatch
+ * pracuje s @p data_ptr / @p result_ptr, které obvykle leží na zásobníku
+ * odesílatele. Opuštěním by emu po návratu zapisovalo do uvolněné paměti.
+ * Omezenou dobu odpovědi proto musí zajistit volající tím, že nechá čekat
+ * jiné vlákno, než které odpovídá klientovi (callback mu dá signál).
+ *
+ * @param queue           CMDRQ fronta.
+ * @param cmd             Příkaz (volitelně OR s DBGAPI_CMDFLAG_BLOCKING).
+ * @param origin          Zdroj příkazu (USER/MCP/TEST/INTERNAL).
+ * @param data_ptr        Vstupní data, vlastní volající, platná do návratu.
+ * @param result_ptr      Buffer odpovědi, vlastní volající, platný do návratu.
+ * @param timeout_ms      Limit čekání na vyzvednutí v ms; musí být > 0, jinak
+ *                        se čeká bez limitu a @p stall_cb se nevolá.
+ * @param stall_ms        Dodatečný limit pro dokončení vyzvednutého příkazu
+ *                        (počítá se od vypršení @p timeout_ms; záporný = 0).
+ * @param stall_cb        Callback zaseknutí; NULL = chování _ex.
+ * @param stall_user_data Kontext pro @p stall_cb.
+ * @return Viz dbgapi_ui_submit_cmd_sync_ex(); po zavolání @p stall_cb vždy
+ *         OK nebo FAILED (příkaz se provedl).
+ *
+ * @pre Nevolat z emu vlákna (deadlock).
+ * @post Slot je po návratu volný; @p stall_cb byl zavolán nejvýš jednou.
+ */
+en_DBGAPI_SUBMIT_STATUS dbgapi_ui_submit_cmd_sync_watched(st_DBGAPI_CMDRQ_QUEUE *queue,
+                                                          en_DBGAPI_CMD cmd,
+                                                          en_DBGAPI_CMD_ORIGIN origin,
+                                                          void *data_ptr,
+                                                          void *result_ptr,
+                                                          int timeout_ms,
+                                                          int stall_ms,
+                                                          dbgapi_submit_stall_cb_t stall_cb,
+                                                          void *stall_user_data);
+
+
+/**
+ * @brief Testovací háček: jednou pozdrží zpracování zadaného příkazu.
+ *
+ * Nastaví, že emu vlákno při nejbližším dispatchi příkazu @p cmd od
+ * MCP klienta (origin MCP) nejdřív @p ms milisekund spí. Simuluje tak
+ * zaseknuté emu vlákno uprostřed příkazu pro regresní test omezené
+ * odpovědi MCP. Jednorázové: po uplatnění se háček sám vypne.
+ *
+ * V produkci se nepoužívá; aktivuje ho jen MCP vrstva na základě
+ * proměnných prostředí MZ800EMU_TEST_STALL_MCP_CMD a
+ * MZ800EMU_TEST_STALL_MS (viz dispatch.c). Kontrola v dispatch je jedno
+ * atomické čtení na příkaz, ne na instrukci.
+ *
+ * @param cmd Příkaz, který se má pozdržet (bez BLOCKING flagu).
+ * @param ms  Doba spánku v ms (0 = háček vypnout).
+ *
+ * Thread-safe (atomické proměnné).
+ */
+void dbgapi_test_arm_dispatch_stall(en_DBGAPI_CMD cmd, int ms);
+
+
+/*
+ * Synchronní odeslání příkazu do emulátoru s explicitním origin.
+ *
+ * Obal nad dbgapi_ui_submit_cmd_sync_ex() se zjednodušeným výsledkem
+ * (true jen pro DBGAPI_SUBMIT_OK). Sémantika čekání a timeoutu viz
+ * dbgapi_ui_submit_cmd_sync_ex().
  *
  * Origin propagace:
  *   - cmd_origin se zkopíruje do slot->cmd_origin při zařazení do fronty
@@ -77,11 +200,12 @@ extern "C"
  *   origin:      zdroj příkazu (USER/MCP/TEST/INTERNAL)
  *   data_ptr:    vstupní data pro emulátor (NULL pokud příkaz nepotřebuje data)
  *   result_ptr:  buffer pro odpověď (NULL pokud příkaz nevrací data)
- *   timeout_ms:  maximální čekání na odpověď v milisekundách (0 = neomezený)
+ *   timeout_ms:  limit čekání na vyzvednutí emulátorem v ms (0 = neomezený)
  *
  * Vrací:
  *   true  = příkaz byl úspěšně zpracován (rq->success == true)
- *   false = chyba (timeout, fronta plná, emulátor se ukončuje, rq->success == false)
+ *   false = chyba (timeout = příkaz neproveden, fronta plná, emulátor se
+ *           ukončuje, rq->success == false); rozlišení viz _ex varianta
  */
 bool dbgapi_ui_submit_cmd_sync_with_origin(st_DBGAPI_CMDRQ_QUEUE *queue,
                                             en_DBGAPI_CMD cmd,

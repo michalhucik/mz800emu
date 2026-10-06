@@ -14,12 +14,16 @@
  *     1 atomic byte load + branch (branch predictor naučí default OFF)
  *
  * Threading:
- *   - storage mutace (add/remove/clear) jen z UI vlákna (typicky z Memory
- *     Browser context menu)
+ *   - storage mutace (add/remove/clear) jen z EMU vlákna (nebo
+ *     z jednovláknového kontextu - init, testy). Memory Browser context
+ *     menu je posílá frontou dbgapi (DBGAPI_CMD_FREEZE_ADD / _REMOVE,
+ *     UI helpery dbg_ui_freeze_add / dbg_ui_freeze_remove). Dřívější
+ *     přímé volání z UI vlákna zapisovalo pole slotu a in_use bez
+ *     synchronizace, takže apply mohl vidět napůl vyplněný recyklovaný
+ *     slot (ui-thread-writes T6a).
  *   - freeze_apply_all() z EMU vlákna per-frame (mzarch screen_done callback)
- *   - žádný mutex - "shear" je v praxi tolerovatelný (V1: max 1 frame
- *     vynechání pokud UI právě modifikuje storage při tom co EMU vlákno
- *     iteruje). Pro V2+ lze přidat lock-free queue.
+ *   - čtení (is_frozen / count / get_slot) z UI vlákna je povolené jen pro
+ *     zobrazení - bez mutexu může vidět stav o jeden zápis starší.
  *
  * Hot path discipline:
  *   - freeze_apply_all() MUSÍ skončit v O(1) když g_freeze_active = 0
@@ -122,6 +126,9 @@ void freeze_clear ( void );
  * @param offset       Offset v rámci regionu.
  * @param value        Hodnota která se má zapisovat při apply.
  * @return true při úspěchu, false pokud je storage plný.
+ *
+ * @pre Volat z EMU vlákna (UI přes DBGAPI_CMD_FREEZE_ADD) nebo
+ *      z jednovláknového kontextu.
  */
 bool freeze_add ( int region_kind, int sub_id, uint32_t offset, uint8_t value );
 
@@ -130,6 +137,9 @@ bool freeze_add ( int region_kind, int sub_id, uint32_t offset, uint8_t value );
  * @brief Odstraní freeze záznam.
  *
  * @return true pokud byl entry nalezen a smazán, false pokud neexistoval.
+ *
+ * @pre Volat z EMU vlákna (UI přes DBGAPI_CMD_FREEZE_REMOVE) nebo
+ *      z jednovláknového kontextu.
  */
 bool freeze_remove ( int region_kind, int sub_id, uint32_t offset );
 

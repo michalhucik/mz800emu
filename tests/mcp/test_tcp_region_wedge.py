@@ -24,6 +24,7 @@ import asyncio
 import base64
 import json
 import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -52,8 +53,12 @@ def _find_venv_python():
 # launcher) bez FastMCP, re-execneme se pod venv interpretem. Když venv není,
 # test skipneme (exit 77).
 #
-# Smyčku re-execu hlídá sentinel ``MZ_MCP_REEXEC`` v prostředí (os.execv
-# dědí aktuální env), ne porovnání cest interpretů: na Linuxu je
+# Spouští se přes subprocess.call s předáním exit kódu, ne os.execv: na
+# Windows os.execv proces nenahradí - rodič hned skončí s kódem 0, výstup
+# testu se ztratí a ctest hlásí falešný PASS.
+#
+# Smyčku opakovaného spuštění hlídá sentinel ``MZ_MCP_REEXEC`` v prostředí
+# (dítě dědí aktuální env), ne porovnání cest interpretů: na Linuxu je
 # ``.venv/bin/python`` symlink na systémový python, takže jeho ``resolve()``
 # je shodný se ``sys.executable`` a porovnání by re-exec chybně potlačilo
 # (na MSYS2 je venv python ``.exe`` kopie s odlišnou cestou, proto tam
@@ -65,8 +70,8 @@ except ImportError:
     _venv = _find_venv_python()
     if _venv is not None and not os.environ.get("MZ_MCP_REEXEC"):
         os.environ["MZ_MCP_REEXEC"] = "1"
-        os.execv(str(_venv),
-                 [str(_venv), str(Path(__file__).resolve()), *sys.argv[1:]])
+        sys.exit(subprocess.call(
+            [str(_venv), str(Path(__file__).resolve()), *sys.argv[1:]]))
     print("SKIP: FastMCP/mcp není dostupný (.venv chybí nebo nemá mcp)",
           file=sys.stderr)
     sys.exit(SKIP_EXIT)

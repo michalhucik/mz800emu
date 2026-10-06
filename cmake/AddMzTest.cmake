@@ -116,6 +116,7 @@ mz_glob_sources(_test_emu_sources
     src/emulator/hw-generic
     src/emulator/debugger
     src/emulator/snapshot
+    src/emulator/videorec
     src/emulator/mzarch/mz800
     src/emulator/mcp
 )

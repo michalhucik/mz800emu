@@ -53,6 +53,9 @@ mz_add_lib(mzlib_mzglyphs         SOURCES mzglyphs/mzglyphs.c)
 mz_add_lib(mzlib_wav              SOURCES wav/wav.c
                                   DEPS    mz::glib)
 mz_add_lib(mzlib_qd_image         SOURCES qd_image/qd_image.c)
+mz_add_lib(mzlib_avirec           SOURCES avirec/zmbv_enc.c
+                                  avirec/avi_writer.c
+                                  DEPS    ZLIB::ZLIB)
 
 mz_add_lib(mzlib_cfgfile          SOURCES cfgfile/cfgelement.c
                                           cfgfile/cfgmodule.c
@@ -196,6 +199,7 @@ target_link_libraries(mz_libs INTERFACE
     mzlib_mzglyphs
     mzlib_wav
     mzlib_qd_image
+    mzlib_avirec
     mzlib_cfgfile
     mzlib_cmt_stream
     mzlib_cmtspeed

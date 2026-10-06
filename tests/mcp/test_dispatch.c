@@ -76,8 +76,15 @@
  * 0017 FÁZE 1 doplnil 4 Tracking lifecycle Tools (= trace_start,
  * trace_stop, trace_reset, trace_save, přidány na KONEC cmd_map[])
  * = 158 + 4 = 162.
+ *
+ * video-capture Task 15 doplnil 5 Tools video záznamu (= videorec_start,
+ * videorec_stop, videorec_pause, videorec_marker, videorec_status,
+ * přidány na KONEC cmd_map[]) = 162 + 5 = 167.
+ *
+ * video-capture Task 18 doplnil videorec_timebase (přepnutí časové základny
+ * emulated / realtime, přidán na KONEC cmd_map[]) = 167 + 1 = 168.
  */
-#define MCP_EXPECTED_CMD_COUNT 162
+#define MCP_EXPECTED_CMD_COUNT 168
 
 
 /* ====================================================================== */
@@ -573,6 +580,107 @@ void test_bp_list_serializes_typed_fields(void) {
 
 
 /*
+ * bp_list musí vracet addr_end, addr_match_mode (string) a addr_mask - bez
+ * nich nešlo poznat, že BP s addr_end v režimu SINGLE hlídá jen addr.
+ */
+void test_bp_list_serializes_addr_match_fields(void) {
+    g_stub_state.fill_bp_list_count = 2;
+    g_stub_state.bp_list_fake_type            = 2;   /* MEM_W */
+    g_stub_state.bp_list_fake_addr_end        = 0x10FF;
+    g_stub_state.bp_list_fake_addr_match_mode = 1;   /* RANGE */
+    g_stub_state.bp_list_fake_addr_mask       = 0xFFFF;
+    g_stub_state.bp_list_fake_bank_id_end     = 6;
+    g_stub_state.bp_list_fake_bank_match_mode = 2;   /* MASK */
+    g_stub_state.bp_list_fake_bank_id_mask    = 0xFE;
+    st_JSONL_MESSAGE *req = _make_request(
+        "{\"type\":\"request\",\"req_id\":23,\"cmd\":\"bp_list\"}");
+    char *resp = NULL;
+
+    en_MCP_DISPATCH_RESULT rc = mcp_dispatch_request(req, &resp);
+
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, rc);
+    JsonParser *parser = NULL;
+    JsonObject *obj = _parse_response_object(resp, &parser);
+    JsonObject *data = json_object_get_object_member(obj, "data");
+    JsonArray *arr = json_object_get_array_member(data, "breakpoints");
+    JsonObject *bp0 = json_array_get_object_element(arr, 0);
+    TEST_ASSERT_EQUAL_INT(0x10FF, json_object_get_int_member(bp0, "addr_end"));
+    TEST_ASSERT_EQUAL_STRING("RANGE",
+        json_object_get_string_member(bp0, "addr_match_mode"));
+    TEST_ASSERT_EQUAL_INT(0xFFFF, json_object_get_int_member(bp0, "addr_mask"));
+    TEST_ASSERT_EQUAL_INT(6, json_object_get_int_member(bp0, "bank_id_end"));
+    TEST_ASSERT_EQUAL_STRING("MASK",
+        json_object_get_string_member(bp0, "bank_match_mode"));
+    TEST_ASSERT_EQUAL_INT(0xFE, json_object_get_int_member(bp0, "bank_id_mask"));
+    /* Druhý BP bez nastavení -> výchozí SINGLE. */
+    JsonObject *bp1 = json_array_get_object_element(arr, 1);
+    TEST_ASSERT_EQUAL_STRING("SINGLE",
+        json_object_get_string_member(bp1, "addr_match_mode"));
+    TEST_ASSERT_TRUE(json_object_has_member(bp1, "addr_end"));
+    g_object_unref(parser);
+
+    free(resp);
+    jsonl_msg_free(req);
+}
+
+
+/**
+ * @brief Pošle bp_create_with_init a vrátí, zda odpověď nese "warning".
+ *
+ * @param json Celý JSONL request.
+ * @return true, pokud úspěšná odpověď obsahuje data.warning.
+ */
+static bool _bp_create_has_warning(const char *json) {
+    st_JSONL_MESSAGE *req = _make_request(json);
+    char *resp = NULL;
+    en_MCP_DISPATCH_RESULT rc = mcp_dispatch_request(req, &resp);
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, rc);
+    JsonParser *parser = NULL;
+    JsonObject *obj = _parse_response_object(resp, &parser);
+    JsonObject *data = json_object_get_object_member(obj, "data");
+    TEST_ASSERT_TRUE(json_object_get_boolean_member(data, "created"));
+    bool has = json_object_has_member(data, "warning");
+    g_object_unref(parser);
+    free(resp);
+    jsonl_msg_free(req);
+    return has;
+}
+
+/*
+ * BP s addr_end != addr, ale bez addr_match_mode RANGE: vznikne (chování
+ * beze změny), odpověď ale nese warning. S RANGE, nebo s addr_end == addr,
+ * warning není.
+ */
+void test_bp_create_addr_end_without_range_warns(void) {
+    g_stub_state.bp_create_fake_id = 12;
+    TEST_ASSERT_TRUE(_bp_create_has_warning(
+        "{\"type\":\"request\",\"req_id\":34,\"cmd\":\"bp_create_with_init\","
+        "\"data\":{\"fields\":[\"type\",\"addr\",\"addr_end\"],"
+        "\"type\":\"MEM_W\",\"addr\":4096,\"addr_end\":4351}}"));
+    TEST_ASSERT_TRUE(_bp_create_has_warning(
+        "{\"type\":\"request\",\"req_id\":35,\"cmd\":\"bp_create_with_init\","
+        "\"data\":{\"fields\":[\"type\",\"addr\",\"addr_end\",\"addr_match_mode\"],"
+        "\"type\":\"MEM_W\",\"addr\":4096,\"addr_end\":4351,"
+        "\"addr_match_mode\":\"SINGLE\"}}"));
+    TEST_ASSERT_FALSE(_bp_create_has_warning(
+        "{\"type\":\"request\",\"req_id\":36,\"cmd\":\"bp_create_with_init\","
+        "\"data\":{\"fields\":[\"type\",\"addr\",\"addr_end\",\"addr_match_mode\"],"
+        "\"type\":\"MEM_W\",\"addr\":4096,\"addr_end\":4351,"
+        "\"addr_match_mode\":\"RANGE\"}}"));
+    TEST_ASSERT_FALSE(_bp_create_has_warning(
+        "{\"type\":\"request\",\"req_id\":37,\"cmd\":\"bp_create_with_init\","
+        "\"data\":{\"fields\":[\"type\",\"addr\",\"addr_end\"],"
+        "\"type\":\"MEM_W\",\"addr\":4096,\"addr_end\":4096}}"));
+    TEST_ASSERT_FALSE(_bp_create_has_warning(
+        "{\"type\":\"request\",\"req_id\":38,\"cmd\":\"bp_create_with_init\","
+        "\"data\":{\"fields\":[\"type\",\"addr\"],"
+        "\"type\":\"MEM_W\",\"addr\":4096}}"));
+    /* Chování beze změny: backend dostal create pětkrát. */
+    TEST_ASSERT_EQUAL_INT(5, g_stub_state.bp_create_calls);
+}
+
+
+/*
  * Neznámé jméno v poli fields[] = invalid_params (= "neznámý type" cesta z
  * akceptačního kritéria; remap by takový vstup neměl propustit do backendu).
  */
@@ -862,6 +970,107 @@ void test_pause_emu_failure_reports_error(void) {
 }
 
 
+/**
+ * @brief Pomocník: provede request a vrátí text pole "error" (g_strdup).
+ *
+ * Ověří, že odpověď je neúspěch s kódem MCP_DISPATCH_EMU_ERROR.
+ * Vlastnictví: volající uvolní vrácený řetězec přes g_free.
+ */
+static char *_dispatch_expect_emu_error(const char *request_json) {
+    st_JSONL_MESSAGE *req = _make_request(request_json);
+    char *resp = NULL;
+
+    en_MCP_DISPATCH_RESULT rc = mcp_dispatch_request(req, &resp);
+
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_EMU_ERROR, rc);
+    TEST_ASSERT_NOT_NULL(resp);
+    JsonParser *parser = NULL;
+    JsonObject *obj = _parse_response_object(resp, &parser);
+    TEST_ASSERT_FALSE(json_object_get_boolean_member(obj, "success"));
+    char *err = g_strdup(json_object_get_string_member(obj, "error"));
+    g_object_unref(parser);
+    free(resp);
+    jsonl_msg_free(req);
+    return err;
+}
+
+
+/** Timeout ve frontě: zpráva musí říct, že se příkaz neprovedl
+ *  (dřív zavádějící "unknown id?"). */
+void test_bp_remove_timeout_reports_not_executed(void) {
+    g_stub_state.fail_next = true;
+    g_stub_state.fail_status = DBGAPI_SUBMIT_TIMEOUT;
+    char *err = _dispatch_expect_emu_error(
+        "{\"type\":\"request\",\"req_id\":1581,\"cmd\":\"bp_remove\","
+        "\"data\":{\"id\":181}}");
+    TEST_ASSERT_TRUE(g_str_has_prefix(err, "Emulator busy: command not executed"));
+    TEST_ASSERT_NOT_NULL(strstr(err, "safe to retry"));
+    /* Původní zpráva handleru zůstává v hranatých závorkách (kompatibilita). */
+    TEST_ASSERT_TRUE(g_str_has_suffix(err, " [bp_remove failed (unknown id?)]"));
+    g_free(err);
+}
+
+
+/** Skutečné selhání handleru (neexistující ID) ponechá původní zprávu. */
+void test_bp_remove_handler_failure_keeps_message(void) {
+    g_stub_state.fail_next = true;   /* fail_status 0 = DBGAPI_SUBMIT_FAILED */
+    char *err = _dispatch_expect_emu_error(
+        "{\"type\":\"request\",\"req_id\":1582,\"cmd\":\"bp_remove\","
+        "\"data\":{\"id\":999}}");
+    TEST_ASSERT_EQUAL_STRING("bp_remove failed (unknown id?)", err);
+    g_free(err);
+}
+
+
+/** Plná fronta a ukončování emulátoru mají vlastní zprávy. */
+void test_queue_full_and_ending_messages(void) {
+    g_stub_state.fail_next = true;
+    g_stub_state.fail_status = DBGAPI_SUBMIT_QUEUE_FULL;
+    char *err = _dispatch_expect_emu_error(
+        "{\"type\":\"request\",\"req_id\":201,\"cmd\":\"bp_list\"}");
+    TEST_ASSERT_TRUE(g_str_has_prefix(err, "Emulator busy: command queue full"));
+    g_free(err);
+
+    g_stub_state.fail_next = true;
+    g_stub_state.fail_status = DBGAPI_SUBMIT_ENDING;
+    err = _dispatch_expect_emu_error(
+        "{\"type\":\"request\",\"req_id\":202,\"cmd\":\"pause\"}");
+    TEST_ASSERT_TRUE(g_str_has_prefix(err, "Emulator is shutting down"));
+    g_free(err);
+}
+
+
+/** Vícekrokový handler: první submit proveden, druhý zrušen timeoutem
+ *  -> "partially executed", opakování není bezpečné. */
+void test_partial_execution_reported(void) {
+    g_stub_state.fail_on_call = 2;
+    g_stub_state.fail_status = DBGAPI_SUBMIT_TIMEOUT;
+    char *err = _dispatch_expect_emu_error(
+        "{\"type\":\"request\",\"req_id\":203,"
+        "\"cmd\":\"set_user_cycle_origin\"}");
+    TEST_ASSERT_TRUE(g_str_has_prefix(err, "Emulator busy: command only partially executed"));
+    g_free(err);
+}
+
+
+/** Sledování se nuluje per request: předchozí timeout neovlivní
+ *  validační ani handlerovou chybu dalšího požadavku. */
+void test_submit_track_reset_per_request(void) {
+    g_stub_state.fail_next = true;
+    g_stub_state.fail_status = DBGAPI_SUBMIT_TIMEOUT;
+    char *err = _dispatch_expect_emu_error(
+        "{\"type\":\"request\",\"req_id\":204,\"cmd\":\"pause\"}");
+    g_free(err);
+
+    g_stub_state.fail_next = true;
+    g_stub_state.fail_status = DBGAPI_SUBMIT_OK;  /* = FAILED */
+    err = _dispatch_expect_emu_error(
+        "{\"type\":\"request\",\"req_id\":205,\"cmd\":\"pause\"}");
+    TEST_ASSERT_EQUAL_STRING("Pause failed", err);
+    g_free(err);
+}
+
+
 void test_non_request_message_rejected(void) {
     /* HELLO message není REQUEST - dispatcher musí odmítnout */
     st_JSONL_MESSAGE *msg = NULL;
@@ -996,6 +1205,38 @@ void test_build_hello_contains_19_commands(void) {
 
     g_object_unref(parser);
     free(line);
+}
+
+
+/**
+ * @brief Tabulka dodatečného limitu převzatého příkazu
+ *        (mcp_dispatch_stall_limit_ms): souborové I/O má dlouhý limit,
+ *        ostatní běžný; BLOCKING flag se ignoruje.
+ */
+void test_stall_limit_table(void) {
+    const int normal = mcp_dispatch_stall_limit_ms(DBGAPI_CMD_GET_ALL_REGS);
+    TEST_ASSERT_EQUAL_INT(10000, normal);
+    TEST_ASSERT_EQUAL_INT(10000, mcp_dispatch_stall_limit_ms(DBGAPI_CMD_PAUSE));
+    TEST_ASSERT_EQUAL_INT(10000, mcp_dispatch_stall_limit_ms(DBGAPI_CMD_REGIONS_WRITE));
+
+    const int long_cmds[] = {
+        DBGAPI_CMD_TRACE_SAVE, DBGAPI_CMD_TRACE_STOP,
+        DBGAPI_CMD_SNAPSHOT_SAVE_FILE, DBGAPI_CMD_SNAPSHOT_LOAD_FILE,
+        DBGAPI_CMD_SNAPSHOT_SAVE_BUFFER, DBGAPI_CMD_SNAPSHOT_LOAD_BUFFER,
+        DBGAPI_CMD_PROFILER_EXPORT, DBGAPI_CMD_CDL_EXPORT,
+        DBGAPI_CMD_VIDEOREC, DBGAPI_CMD_MEDIA_LOAD_MZF,
+        DBGAPI_CMD_MEDIA_LOAD_BINARY, DBGAPI_CMD_MEDIA_INSERT,
+        DBGAPI_CMD_MEDIA_EJECT, DBGAPI_CMD_CMT_OPEN, DBGAPI_CMD_CMT_RECORD,
+        DBGAPI_CMD_GET_FRAME_SCREENSHOT_PNG,
+    };
+    for (size_t i = 0; i < sizeof(long_cmds) / sizeof(long_cmds[0]); i++) {
+        TEST_ASSERT_EQUAL_INT(600000, mcp_dispatch_stall_limit_ms(long_cmds[i]));
+    }
+    /* BLOCKING flag (horní bit) nesmí výběr změnit. */
+    TEST_ASSERT_EQUAL_INT(600000, mcp_dispatch_stall_limit_ms(
+        (int)(DBGAPI_CMD_TRACE_SAVE | DBGAPI_CMDFLAG_BLOCKING)));
+    TEST_ASSERT_EQUAL_INT(10000, mcp_dispatch_stall_limit_ms(
+        (int)(DBGAPI_CMD_PAUSE | DBGAPI_CMDFLAG_BLOCKING)));
 }
 
 
@@ -3100,6 +3341,283 @@ void test_cdl_export_missing_path(void) {
 
 
 /* ====================================================================== */
+/* video-capture Task 15 - videorec_* Tools                                */
+/* ====================================================================== */
+
+/**
+ * @brief Pomocník: dispatchne request, vrátí rc a odpověď (caller uvolní free()).
+ */
+static en_MCP_DISPATCH_RESULT _vr_dispatch(const char *line, char **out_resp) {
+    st_JSONL_MESSAGE *req = _make_request(line);
+    *out_resp = NULL;
+    en_MCP_DISPATCH_RESULT rc = mcp_dispatch_request(req, out_resp);
+    jsonl_msg_free(req);
+    return rc;
+}
+
+/**
+ * @brief videorec_start s cestou a frames: předá START, path, frames; odpověď
+ *        nese start_requested a stav (čekající start, cesta, sidecar).
+ */
+void test_videorec_start_with_path_and_frames(void) {
+    dispatch_stub_reset();
+    g_stub_state.videorec_fake.out_supported = 1;
+    g_stub_state.videorec_fake.out_start_pending = 1;
+    g_stub_state.videorec_fake.out_fps = 50;
+    g_strlcpy(g_stub_state.videorec_fake.out_path, "C:/rec/game.avi",
+              sizeof(g_stub_state.videorec_fake.out_path));
+    char *resp = NULL;
+    en_MCP_DISPATCH_RESULT rc = _vr_dispatch(
+        "{\"type\":\"request\",\"req_id\":1501,\"cmd\":\"videorec_start\","
+        "\"data\":{\"path\":\"C:/rec/game.avi\",\"frames\":250}}", &resp);
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, rc);
+    TEST_ASSERT_EQUAL_INT(DBGAPI_CMD_VIDEOREC, g_stub_state.last_cmd);
+    TEST_ASSERT_EQUAL_INT(DBGAPI_VIDEOREC_OP_START, g_stub_state.videorec_last_op);
+    TEST_ASSERT_EQUAL_STRING("C:/rec/game.avi", g_stub_state.videorec_last_path);
+    TEST_ASSERT_EQUAL_UINT64(250, g_stub_state.videorec_last_frames);
+
+    JsonParser *parser = NULL;
+    JsonObject *root = _parse_response_object(resp, &parser);
+    TEST_ASSERT_TRUE(json_object_get_boolean_member(root, "success"));
+    JsonObject *d = json_object_get_object_member(root, "data");
+    TEST_ASSERT_TRUE(json_object_get_boolean_member(d, "start_requested"));
+    TEST_ASSERT_TRUE(json_object_get_boolean_member(d, "start_pending"));
+    TEST_ASSERT_EQUAL_STRING("idle", json_object_get_string_member(d, "state"));
+    TEST_ASSERT_EQUAL_STRING("C:/rec/game.avi", json_object_get_string_member(d, "path"));
+    TEST_ASSERT_EQUAL_STRING("C:/rec/game.cuts.json", json_object_get_string_member(d, "sidecar"));
+    TEST_ASSERT_EQUAL_INT(250, json_object_get_int_member(d, "stop_after_frames"));
+    g_object_unref(parser);
+    free(resp);
+}
+
+/** @brief videorec_start bez parametrů: path NULL (vygenerované jméno), frames 0. */
+void test_videorec_start_without_path(void) {
+    dispatch_stub_reset();
+    char *resp = NULL;
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, _vr_dispatch(
+        "{\"type\":\"request\",\"req_id\":1502,\"cmd\":\"videorec_start\"}", &resp));
+    TEST_ASSERT_EQUAL_INT(1, g_stub_state.videorec_calls);
+    TEST_ASSERT_NULL(g_stub_state.videorec_last_path);
+    TEST_ASSERT_EQUAL_UINT64(0, g_stub_state.videorec_last_frames);
+    /* Prázdná cesta ve stavu => path null. */
+    TEST_ASSERT_TRUE(strstr(resp, "\"path\":null") != NULL);
+    free(resp);
+}
+
+/** @brief Neplatné parametry startu (frames záporné / ne-int, path ne-string) => INVALID_PARAMS bez submitu. */
+void test_videorec_start_invalid_params(void) {
+    const char *bad[] = {
+        "{\"type\":\"request\",\"req_id\":1503,\"cmd\":\"videorec_start\",\"data\":{\"frames\":-1}}",
+        "{\"type\":\"request\",\"req_id\":1504,\"cmd\":\"videorec_start\",\"data\":{\"frames\":\"10\"}}",
+        "{\"type\":\"request\",\"req_id\":1505,\"cmd\":\"videorec_start\",\"data\":{\"path\":42}}",
+    };
+    for (size_t i = 0; i < sizeof(bad) / sizeof(bad[0]); i++) {
+        dispatch_stub_reset();
+        char *resp = NULL;
+        TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_INVALID_PARAMS, _vr_dispatch(bad[i], &resp));
+        TEST_ASSERT_EQUAL_INT(0, g_stub_state.videorec_calls);
+        TEST_ASSERT_TRUE(strstr(resp, "\"success\":false") != NULL);
+        free(resp);
+    }
+}
+
+/** @brief Chyba jádra (např. nepodporovaná platforma) se vrátí čitelně anglicky. */
+void test_videorec_start_core_error(void) {
+    dispatch_stub_reset();
+    g_stub_state.videorec_fake.out_result = DBGAPI_VIDEOREC_RESULT_FAILED;
+    g_strlcpy(g_stub_state.videorec_fake.out_error,
+              "Video recording is not possible on this platform: test",
+              sizeof(g_stub_state.videorec_fake.out_error));
+    char *resp = NULL;
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_EMU_ERROR, _vr_dispatch(
+        "{\"type\":\"request\",\"req_id\":1506,\"cmd\":\"videorec_start\"}", &resp));
+    TEST_ASSERT_TRUE(strstr(resp, "\"success\":false") != NULL);
+    TEST_ASSERT_TRUE(strstr(resp, "Video recording is not possible on this platform: test") != NULL);
+    free(resp);
+}
+
+/** @brief videorec_stop: op STOP, odpověď stop_requested + start_cancelled. */
+void test_videorec_stop(void) {
+    dispatch_stub_reset();
+    g_stub_state.videorec_fake.out_start_cancelled = 1;
+    char *resp = NULL;
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, _vr_dispatch(
+        "{\"type\":\"request\",\"req_id\":1507,\"cmd\":\"videorec_stop\"}", &resp));
+    TEST_ASSERT_EQUAL_INT(DBGAPI_VIDEOREC_OP_STOP, g_stub_state.videorec_last_op);
+    TEST_ASSERT_TRUE(strstr(resp, "\"stop_requested\":true") != NULL);
+    TEST_ASSERT_TRUE(strstr(resp, "\"start_cancelled\":true") != NULL);
+    free(resp);
+}
+
+/** @brief videorec_pause: bez paused = toggle (-1, paused_target null), true = 1, false = 0, jiný typ = INVALID_PARAMS. */
+void test_videorec_pause_variants(void) {
+    struct { const char *line; int expect; const char *target; } ok[] = {
+        { "{\"type\":\"request\",\"req_id\":1508,\"cmd\":\"videorec_pause\"}", -1, "\"paused_target\":null" },
+        { "{\"type\":\"request\",\"req_id\":1509,\"cmd\":\"videorec_pause\",\"data\":{\"paused\":null}}", -1, "\"paused_target\":null" },
+        { "{\"type\":\"request\",\"req_id\":1510,\"cmd\":\"videorec_pause\",\"data\":{\"paused\":true}}", 1, "\"paused_target\":true" },
+        { "{\"type\":\"request\",\"req_id\":1511,\"cmd\":\"videorec_pause\",\"data\":{\"paused\":false}}", 0, "\"paused_target\":false" },
+    };
+    for (size_t i = 0; i < sizeof(ok) / sizeof(ok[0]); i++) {
+        dispatch_stub_reset();
+        char *resp = NULL;
+        TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, _vr_dispatch(ok[i].line, &resp));
+        TEST_ASSERT_EQUAL_INT(DBGAPI_VIDEOREC_OP_PAUSE, g_stub_state.videorec_last_op);
+        TEST_ASSERT_EQUAL_INT(ok[i].expect, g_stub_state.videorec_last_paused);
+        TEST_ASSERT_TRUE(strstr(resp, "\"pause_requested\":true") != NULL);
+        TEST_ASSERT_TRUE_MESSAGE(strstr(resp, ok[i].target) != NULL, ok[i].target);
+        free(resp);
+    }
+    dispatch_stub_reset();
+    char *resp = NULL;
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_INVALID_PARAMS, _vr_dispatch(
+        "{\"type\":\"request\",\"req_id\":1512,\"cmd\":\"videorec_pause\",\"data\":{\"paused\":\"yes\"}}", &resp));
+    TEST_ASSERT_EQUAL_INT(0, g_stub_state.videorec_calls);
+    free(resp);
+}
+
+/** @brief videorec_marker: předá label, vrátí skutečně použitý popisek. */
+void test_videorec_marker_label(void) {
+    dispatch_stub_reset();
+    g_strlcpy(g_stub_state.videorec_fake.out_label, "Level 2",
+              sizeof(g_stub_state.videorec_fake.out_label));
+    char *resp = NULL;
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, _vr_dispatch(
+        "{\"type\":\"request\",\"req_id\":1513,\"cmd\":\"videorec_marker\",\"data\":{\"label\":\"Level 2\"}}", &resp));
+    TEST_ASSERT_EQUAL_INT(DBGAPI_VIDEOREC_OP_MARKER, g_stub_state.videorec_last_op);
+    TEST_ASSERT_EQUAL_STRING("Level 2", g_stub_state.videorec_last_label);
+    TEST_ASSERT_TRUE(strstr(resp, "\"label\":\"Level 2\"") != NULL);
+    free(resp);
+
+    dispatch_stub_reset();
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_INVALID_PARAMS, _vr_dispatch(
+        "{\"type\":\"request\",\"req_id\":1514,\"cmd\":\"videorec_marker\",\"data\":{\"label\":7}}", &resp));
+    TEST_ASSERT_EQUAL_INT(0, g_stub_state.videorec_calls);
+    free(resp);
+}
+
+/** @brief Marker / pauza bez nahrávání => čitelná chyba z jádra (NOT_RUNNING). */
+void test_videorec_marker_not_running(void) {
+    dispatch_stub_reset();
+    g_stub_state.videorec_fake.out_result = DBGAPI_VIDEOREC_RESULT_NOT_RUNNING;
+    g_strlcpy(g_stub_state.videorec_fake.out_error, "Video recording is not running",
+              sizeof(g_stub_state.videorec_fake.out_error));
+    char *resp = NULL;
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_EMU_ERROR, _vr_dispatch(
+        "{\"type\":\"request\",\"req_id\":1515,\"cmd\":\"videorec_marker\"}", &resp));
+    TEST_ASSERT_TRUE(strstr(resp, "Video recording is not running") != NULL);
+    free(resp);
+}
+
+/** @brief videorec_status: kompletní payload stavu včetně poslední události. */
+/**
+ * @brief videorec_timebase: "realtime" / "emulated" => op TIMEBASE s 1 / 0,
+ *        odpověď timebase_requested + stav (timebase, timebase_effective,
+ *        rt_activity); chybějící nebo neplatná hodnota => INVALID_PARAMS bez submitu.
+ */
+void test_videorec_timebase(void) {
+    struct { const char *line; int expect; } ok[] = {
+        { "{\"type\":\"request\",\"req_id\":1520,\"cmd\":\"videorec_timebase\",\"data\":{\"timebase\":\"realtime\"}}", 1 },
+        { "{\"type\":\"request\",\"req_id\":1521,\"cmd\":\"videorec_timebase\",\"data\":{\"timebase\":\"emulated\"}}", 0 },
+    };
+    for (size_t i = 0; i < sizeof(ok) / sizeof(ok[0]); i++) {
+        dispatch_stub_reset();
+        g_stub_state.videorec_fake.out_timebase = 1;
+        g_stub_state.videorec_fake.out_timebase_effective = 0;
+        g_stub_state.videorec_fake.out_rt_activity = 0;
+        char *resp = NULL;
+        TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, _vr_dispatch(ok[i].line, &resp));
+        TEST_ASSERT_EQUAL_INT(DBGAPI_VIDEOREC_OP_TIMEBASE, g_stub_state.videorec_last_op);
+        TEST_ASSERT_EQUAL_INT(ok[i].expect, g_stub_state.videorec_last_timebase);
+        TEST_ASSERT_TRUE(strstr(resp, "\"timebase_requested\":true") != NULL);
+        TEST_ASSERT_TRUE(strstr(resp, "\"timebase\":\"realtime\"") != NULL);
+        TEST_ASSERT_TRUE(strstr(resp, "\"timebase_effective\":\"emulated\"") != NULL);
+        TEST_ASSERT_TRUE(strstr(resp, "\"rt_activity\":\"off\"") != NULL);
+        free(resp);
+    }
+    const char *bad[] = {
+        "{\"type\":\"request\",\"req_id\":1522,\"cmd\":\"videorec_timebase\"}",
+        "{\"type\":\"request\",\"req_id\":1523,\"cmd\":\"videorec_timebase\",\"data\":{\"timebase\":\"fast\"}}",
+        "{\"type\":\"request\",\"req_id\":1524,\"cmd\":\"videorec_timebase\",\"data\":{\"timebase\":1}}",
+    };
+    for (size_t i = 0; i < sizeof(bad) / sizeof(bad[0]); i++) {
+        dispatch_stub_reset();
+        char *resp = NULL;
+        TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_INVALID_PARAMS, _vr_dispatch(bad[i], &resp));
+        TEST_ASSERT_EQUAL_INT(0, g_stub_state.videorec_calls);
+        free(resp);
+    }
+}
+
+void test_videorec_status_payload(void) {
+    dispatch_stub_reset();
+    st_DBGAPI_VIDEOREC_PARAM *f = &g_stub_state.videorec_fake;
+    f->out_supported = 1;
+    f->out_state = 2; /* PAUSED */
+    f->out_frames = 125;
+    f->out_fps = 50;
+    f->out_segment = 3;
+    f->out_segment_open = 0;
+    f->out_bytes = 123456;
+    f->out_parts = 1;
+    f->out_retake_mode = 1; /* DISCARD */
+    g_strlcpy(f->out_path, "out/x.avi", sizeof(f->out_path));
+    f->out_event_seq = 7;
+    f->out_event_kind = 4; /* RETAKE */
+    f->out_event_frame = 100;
+    g_strlcpy(f->out_event_text, "Retake: rewound to 00:00:02", sizeof(f->out_event_text));
+    f->out_timebase = 1;           /* REALTIME */
+    f->out_timebase_effective = 1; /* REALTIME */
+    f->out_rt_activity = 2;        /* FROZEN */
+    char *resp = NULL;
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, _vr_dispatch(
+        "{\"type\":\"request\",\"req_id\":1516,\"cmd\":\"videorec_status\"}", &resp));
+    TEST_ASSERT_EQUAL_INT(DBGAPI_VIDEOREC_OP_STATUS, g_stub_state.videorec_last_op);
+
+    JsonParser *parser = NULL;
+    JsonObject *root = _parse_response_object(resp, &parser);
+    JsonObject *d = json_object_get_object_member(root, "data");
+    TEST_ASSERT_TRUE(json_object_get_boolean_member(d, "supported"));
+    TEST_ASSERT_EQUAL_STRING("paused", json_object_get_string_member(d, "state"));
+    TEST_ASSERT_EQUAL_INT(125, json_object_get_int_member(d, "frames"));
+    TEST_ASSERT_EQUAL_INT(50, json_object_get_int_member(d, "fps"));
+    TEST_ASSERT_TRUE(json_object_get_double_member(d, "duration_s") > 2.49
+                     && json_object_get_double_member(d, "duration_s") < 2.51);
+    TEST_ASSERT_EQUAL_INT(3, json_object_get_int_member(d, "segment"));
+    TEST_ASSERT_FALSE(json_object_get_boolean_member(d, "segment_open"));
+    TEST_ASSERT_EQUAL_INT(123456, json_object_get_int_member(d, "bytes"));
+    TEST_ASSERT_EQUAL_INT(1, json_object_get_int_member(d, "parts"));
+    TEST_ASSERT_EQUAL_STRING("discard", json_object_get_string_member(d, "retake_mode"));
+    TEST_ASSERT_EQUAL_STRING("out/x.avi", json_object_get_string_member(d, "path"));
+    TEST_ASSERT_EQUAL_STRING("out/x.cuts.json", json_object_get_string_member(d, "sidecar"));
+    TEST_ASSERT_EQUAL_STRING("realtime", json_object_get_string_member(d, "timebase"));
+    TEST_ASSERT_EQUAL_STRING("realtime", json_object_get_string_member(d, "timebase_effective"));
+    TEST_ASSERT_EQUAL_STRING("frozen", json_object_get_string_member(d, "rt_activity"));
+    TEST_ASSERT_TRUE(json_object_get_null_member(d, "last_error"));
+    JsonObject *ev = json_object_get_object_member(d, "last_event");
+    TEST_ASSERT_NOT_NULL(ev);
+    TEST_ASSERT_EQUAL_INT(7, json_object_get_int_member(ev, "seq"));
+    TEST_ASSERT_EQUAL_STRING("retake", json_object_get_string_member(ev, "kind"));
+    TEST_ASSERT_EQUAL_INT(100, json_object_get_int_member(ev, "frame"));
+    TEST_ASSERT_EQUAL_STRING("Retake: rewound to 00:00:02",
+                             json_object_get_string_member(ev, "text"));
+    g_object_unref(parser);
+    free(resp);
+}
+
+/** @brief Bez jediné události je last_event null. */
+void test_videorec_status_no_event(void) {
+    dispatch_stub_reset();
+    char *resp = NULL;
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, _vr_dispatch(
+        "{\"type\":\"request\",\"req_id\":1517,\"cmd\":\"videorec_status\"}", &resp));
+    TEST_ASSERT_TRUE(strstr(resp, "\"last_event\":null") != NULL);
+    TEST_ASSERT_TRUE(strstr(resp, "\"state\":\"idle\"") != NULL);
+    TEST_ASSERT_TRUE(strstr(resp, "\"retake_mode\":\"off\"") != NULL);
+    free(resp);
+}
+
+
+/* ====================================================================== */
 /* 0017 FÁZE 1 - Tracking lifecycle Tools tests                            */
 /* ====================================================================== */
 
@@ -3974,6 +4492,157 @@ void test_input_press_release_hold_pattern(void) {
     TEST_ASSERT_EQUAL_INT(1, g_stub_state.hid_release_calls);
     free(resp2);
     jsonl_msg_free(req2);
+}
+
+
+/**
+ * @brief Pomocná: pošle input_press_key s daným jménem a vrátí odpověď.
+ *
+ * @param[in]  key     jméno klávesy
+ * @param[out] out_rc  výsledek dispatche
+ * @return vlastněný JSONL řádek odpovědi (caller free)
+ */
+static char *_press_key_resp(const char *key, en_MCP_DISPATCH_RESULT *out_rc) {
+    char buf[256];
+    snprintf(buf, sizeof(buf),
+        "{\"type\":\"request\",\"id\":2030,\"cmd\":\"input_press_key\","
+        "\"data\":{\"key\":\"%s\"}}", key);
+    st_JSONL_MESSAGE *req = _make_request(buf);
+    char *resp = NULL;
+    *out_rc = mcp_dispatch_request(req, &resp);
+    jsonl_msg_free(req);
+    return resp;
+}
+
+
+/**
+ * @brief press_key přijímá názvy ze send_keys / mz800_keyboard (CURSOR_*,
+ *        INST, UP_ARROW, DOWN_ARROW) a mapuje je na stejnou polohu
+ *        jako staré názvy (ARROW_*, INSERT).
+ */
+void test_input_press_key_aliases(void) {
+    static const struct { const char *name; int col; int bit; } k[] = {
+        { "CURSOR_RIGHT", 7, 3 }, { "CURSOR_LEFT", 7, 2 },
+        { "CURSOR_UP", 7, 5 },    { "CURSOR_DOWN", 7, 4 },
+        { "INST", 7, 7 },         { "UP_ARROW", 6, 6 },
+        { "DOWN_ARROW", 0, 5 },   { "cursor_right", 7, 3 },
+    };
+    for (size_t i = 0; i < sizeof(k) / sizeof(k[0]); i++) {
+        dispatch_stub_reset();
+        en_MCP_DISPATCH_RESULT rc;
+        char *resp = _press_key_resp(k[i].name, &rc);
+        TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, rc);
+        TEST_ASSERT_EQUAL_INT(1, g_stub_state.hid_press_calls);
+        TEST_ASSERT_EQUAL_INT(k[i].col, g_stub_state.hid_last_col);
+        TEST_ASSERT_EQUAL_INT(k[i].bit, g_stub_state.hid_last_bit);
+        free(resp);
+    }
+}
+
+
+/**
+ * @brief Staré názvy (RIGHT, ARROW_RIGHT, INSERT) dál fungují a mají
+ *        stejnou polohu jako jejich aliasy.
+ */
+void test_input_press_key_old_names_still_work(void) {
+    static const char *const names[] = { "RIGHT", "ARROW_RIGHT" };
+    for (size_t i = 0; i < 2; i++) {
+        dispatch_stub_reset();
+        en_MCP_DISPATCH_RESULT rc;
+        char *resp = _press_key_resp(names[i], &rc);
+        TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, rc);
+        TEST_ASSERT_EQUAL_INT(7, g_stub_state.hid_last_col);
+        TEST_ASSERT_EQUAL_INT(3, g_stub_state.hid_last_bit);
+        free(resp);
+    }
+    dispatch_stub_reset();
+    en_MCP_DISPATCH_RESULT rc;
+    char *resp = _press_key_resp("INSERT", &rc);
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, rc);
+    TEST_ASSERT_EQUAL_INT(7, g_stub_state.hid_last_col);
+    TEST_ASSERT_EQUAL_INT(7, g_stub_state.hid_last_bit);
+    free(resp);
+}
+
+
+/**
+ * @brief release_key přijímá aliasy ze send_keys.
+ */
+void test_input_release_key_alias(void) {
+    dispatch_stub_reset();
+    st_JSONL_MESSAGE *req = _make_request(
+        "{\"type\":\"request\",\"id\":2031,\"cmd\":\"input_release_key\","
+        "\"data\":{\"key\":\"CURSOR_DOWN\"}}");
+    char *resp = NULL;
+    en_MCP_DISPATCH_RESULT rc = mcp_dispatch_request(req, &resp);
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, rc);
+    TEST_ASSERT_EQUAL_INT(1, g_stub_state.hid_release_calls);
+    TEST_ASSERT_EQUAL_INT(7, g_stub_state.hid_last_col);
+    TEST_ASSERT_EQUAL_INT(4, g_stub_state.hid_last_bit);
+    free(resp);
+    jsonl_msg_free(req);
+}
+
+
+/**
+ * @brief Neznámá klávesa: chyba "Unknown key" s nejbližšími názvy,
+ *        nic se nestiskne.
+ */
+void test_input_press_key_unknown_suggests(void) {
+    dispatch_stub_reset();
+    en_MCP_DISPATCH_RESULT rc;
+    char *resp = _press_key_resp("CURSOR_RIGT", &rc);
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_INVALID_PARAMS, rc);
+    TEST_ASSERT_EQUAL_INT(0, g_stub_state.hid_press_calls);
+    TEST_ASSERT_NOT_NULL(resp);
+    TEST_ASSERT_NOT_NULL(strstr(resp, "Unknown key"));
+    TEST_ASSERT_NOT_NULL(strstr(resp, "Closest valid names"));
+    TEST_ASSERT_NOT_NULL(strstr(resp, "CURSOR_RIGHT"));
+    free(resp);
+
+    /* Prefixový překlep: "CURSOR" navrhne CURSOR_* jména. */
+    resp = _press_key_resp("CURSOR", &rc);
+    TEST_ASSERT_NOT_NULL(strstr(resp, "CURSOR_"));
+    free(resp);
+
+    /* Nesmysl bez podobného jména: odkaz na dokumentaci. */
+    resp = _press_key_resp("QQQQQQQQQQQQQQQQ", &rc);
+    TEST_ASSERT_NOT_NULL(strstr(resp, "Unknown key"));
+    TEST_ASSERT_NOT_NULL(strstr(resp, "mz800_keyboard"));
+    free(resp);
+}
+
+
+/**
+ * @brief send_keys key_names: alias CURSOR_RIGHT se odešle; neznámé jméno
+ *        vrátí chybu s nápovědou a NEodešle nic (dřív se tiše přeskočilo).
+ */
+void test_input_send_keys_key_names_alias_and_unknown(void) {
+    dispatch_stub_reset();
+    st_JSONL_MESSAGE *req = _make_request(
+        "{\"type\":\"request\",\"id\":2032,\"cmd\":\"input_send_keys\","
+        "\"data\":{\"text\":\"[\\\"CURSOR_RIGHT\\\",\\\"RIGHT\\\"]\","
+        "\"encoding\":\"key_names\",\"frame_per_key\":1}}");
+    char *resp = NULL;
+    en_MCP_DISPATCH_RESULT rc = mcp_dispatch_request(req, &resp);
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, rc);
+    TEST_ASSERT_EQUAL_INT(2, g_stub_state.hid_press_calls);
+    free(resp);
+    jsonl_msg_free(req);
+
+    dispatch_stub_reset();
+    req = _make_request(
+        "{\"type\":\"request\",\"id\":2033,\"cmd\":\"input_send_keys\","
+        "\"data\":{\"text\":\"[\\\"SHIFT\\\",\\\"CURSOR_RIGT\\\"]\","
+        "\"encoding\":\"key_names\",\"frame_per_key\":1}}");
+    resp = NULL;
+    rc = mcp_dispatch_request(req, &resp);
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_INVALID_PARAMS, rc);
+    TEST_ASSERT_EQUAL_INT(0, g_stub_state.hid_press_calls);
+    TEST_ASSERT_NOT_NULL(strstr(resp, "Unknown key"));
+    TEST_ASSERT_NOT_NULL(strstr(resp, "CURSOR_RIGHT"));
+    free(resp);
+    jsonl_msg_free(req);
 }
 
 
@@ -5798,6 +6467,11 @@ int main(void) {
 
     /* Success path - 10 dbgapi handlerů (ping a shutdown jsou lokální) */
     RUN_TEST(test_ping_handler_returns_pong);
+    RUN_TEST(test_bp_remove_timeout_reports_not_executed);
+    RUN_TEST(test_bp_remove_handler_failure_keeps_message);
+    RUN_TEST(test_queue_full_and_ending_messages);
+    RUN_TEST(test_partial_execution_reported);
+    RUN_TEST(test_submit_track_reset_per_request);
     RUN_TEST(test_get_state_running_true);
     RUN_TEST(test_pause_handler_uses_origin_mcp);
     RUN_TEST(test_run_handler_uses_origin_mcp);
@@ -5807,6 +6481,8 @@ int main(void) {
     RUN_TEST(test_mem_write_writes_bytes_and_returns_length);
     RUN_TEST(test_bp_add_returns_assigned_id);
     RUN_TEST(test_bp_list_returns_array);
+    RUN_TEST(test_bp_list_serializes_addr_match_fields);
+    RUN_TEST(test_bp_create_addr_end_without_range_warns);
 
     /* F015b - typed BP create + bp_list serializace + leak smoke */
     RUN_TEST(test_bp_create_typed_passes_type_to_dbgapi);
@@ -5833,6 +6509,7 @@ int main(void) {
     /* Hello + commands */
     RUN_TEST(test_build_hello_contains_19_commands);
     RUN_TEST(test_supported_commands_list);
+    RUN_TEST(test_stall_limit_table);
     RUN_TEST(test_supported_cmd_names_generated_from_cmd_map);
     RUN_TEST(test_transport_kind_default_and_setter);
 
@@ -5930,6 +6607,17 @@ int main(void) {
     RUN_TEST(test_cdl_export_happy);
     RUN_TEST(test_cdl_export_missing_path);
     /* 0017 FÁZE 1 - Tracking lifecycle Tools */
+    RUN_TEST(test_videorec_start_with_path_and_frames);
+    RUN_TEST(test_videorec_start_without_path);
+    RUN_TEST(test_videorec_start_invalid_params);
+    RUN_TEST(test_videorec_start_core_error);
+    RUN_TEST(test_videorec_stop);
+    RUN_TEST(test_videorec_pause_variants);
+    RUN_TEST(test_videorec_marker_label);
+    RUN_TEST(test_videorec_marker_not_running);
+    RUN_TEST(test_videorec_timebase);
+    RUN_TEST(test_videorec_status_payload);
+    RUN_TEST(test_videorec_status_no_event);
     RUN_TEST(test_trace_start_stop_reset_lifecycle);
     RUN_TEST(test_trace_save_with_path);
     RUN_TEST(test_trace_save_without_path);
@@ -5978,6 +6666,11 @@ int main(void) {
     RUN_TEST(test_input_release_all_when_no_key);
     RUN_TEST(test_input_send_joystick_bit_mask);
     RUN_TEST(test_input_send_joystick_invalid_port);
+    RUN_TEST(test_input_press_key_aliases);
+    RUN_TEST(test_input_press_key_old_names_still_work);
+    RUN_TEST(test_input_release_key_alias);
+    RUN_TEST(test_input_press_key_unknown_suggests);
+    RUN_TEST(test_input_send_keys_key_names_alias_and_unknown);
     RUN_TEST(test_input_send_keys_with_delays_event_list);
     RUN_TEST(test_input_send_keys_with_delays_empty_rejected);
 

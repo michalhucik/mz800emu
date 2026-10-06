@@ -124,7 +124,7 @@ static int fdc_drive_flush_to_file(st_FDDrive *drv);
  * @param fdc instance FDC řadiče (NULL = vrátí "FDC").
  * @return statický C-string s názvem sekce, nikdy NULL.
  */
-static const char *fdc_cfg_section_name(const st_FDC *fdc)
+const char *fdc_cfg_section_name(const st_FDC *fdc)
 {
     if (fdc && fdc->index == FDC1)
         return "FDC1";

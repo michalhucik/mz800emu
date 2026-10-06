@@ -1,3 +1,13 @@
+/**
+ * @file sdl3_audio.c
+ * @brief SDL3 backend audio výstupu (lowlevel část iface_audio).
+ *
+ * Otevírá výstupní audio stream s callbackem, který odebírá připravené
+ * audio snímky z iface_audio (a tím udává tempo emulace). Bez zařízení
+ * (headless, nebo po selhání SDL audia či otevření zařízení v GUI) se
+ * nic neotevírá a tempo emulace řídí monotónní hodiny (sync_by_timer).
+ */
+
 #include "main.h"
 #include <stdio.h>
 #include <SDL3/SDL.h>
@@ -71,7 +81,7 @@ void iface_audio_lowlevel_pause(void)
         // is_paused = SDL_AudioStreamDevicePaused(g_audio_stream);
         // g_print("%s(%d) - DONE! SDL audio stream state: %s\n", __func__, __LINE__, (is_paused) ? "paused" : "running");
     }
-    else
+    else if (!g_iface_audio.sync_by_timer) /* headless: NULL stream je očekávaný stav */
     {
         g_print("%s(%d) - SDL audio stream is NULL\n", __func__, __LINE__);
     };
@@ -87,28 +97,62 @@ void iface_audio_lowlevel_resume(void)
         // is_paused = SDL_AudioStreamDevicePaused(g_audio_stream);
         // g_print("%s(%d) - DONE! SDL audio stream state: %s\n", __func__, __LINE__, (is_paused) ? "paused" : "running");
     }
-    else
+    else if (!g_iface_audio.sync_by_timer) /* headless: NULL stream je očekávaný stav */
     {
         g_print("%s(%d) - SDL audio stream is NULL\n", __func__, __LINE__);
     };
+}
+
+/**
+ * @brief Náhradní režim bez audio zařízení po selhání SDL audia mimo headless.
+ *
+ * Nahrazuje dřívější návrat false, který shodil iface_init() a emulace se
+ * vůbec nespustila. Přepne synchronizaci emulace na monotónní hodiny
+ * (g_iface_audio.sync_by_timer - stejná cesta jako headless režim, včetně
+ * výroby zvuku pro video záznam podle reality) a nastaví
+ * g_iface_audio.device_open_failed, podle kterého UI jednou zobrazí
+ * upozornění. Stav bufferu zůstává NORMAL z iface_audio_buffer_init(), takže
+ * emulace běží 100 % reálným časem bez zvuku; pauza, vlastní rychlost
+ * a MAX SPEED procházejí stejným stavovým automatem jako se zařízením.
+ *
+ * @param reason Krátký anglický popis selhání pro log.
+ * @param detail Text chyby z SDL_GetError() (nesmí být NULL, může být prázdný).
+ * @return Vždy true - inicializace audia pokračuje bez zařízení.
+ * @pre g_audio_stream == NULL; volá jen iface_audio_lowlevel_init() před
+ *      startem emulačního vlákna (členy g_iface_audio bez zámku).
+ * @post g_iface_audio.sync_by_timer == true a g_iface_audio.device_open_failed == true.
+ */
+static bool sdl3_audio_fallback_no_device(const char *reason, const char *detail)
+{
+    g_printerr("WARNING: %s (%s) - running without sound, emulation synced by system clock\n", reason, detail);
+    g_iface_audio.sync_by_timer = true;
+    g_iface_audio.device_open_failed = true;
+    return true;
 }
 
 bool iface_audio_lowlevel_init(void)
 {
     if (!sdl3_backend_audio_init())
     {
-        SDLAPP_ERROR("Failed to initialize SDL audio");
-        return false;
+        /* Selhal SDL audio subsystém (žádný použitelný audio driver, např.
+         * neplatný SDL_AUDIO_DRIVER). Detail už vypsal backend. */
+        return sdl3_audio_fallback_no_device("Failed to initialize SDL audio", SDL_GetError());
     };
 
     /* Headless režim: žádný SDL audio device neotevíráme. @c g_audio_stream
      * zůstává NULL, což ostatní funkce v tomto souboru (pause/resume) i v
      * iface_audio už korektně ošetřují. Nahoře v iface_audio_init je
-     * potřeba zachovat alokaci interních bufferů, takže vracíme TRUE. */
+     * potřeba zachovat alokaci interních bufferů, takže vracíme TRUE.
+     *
+     * Bez zařízení neexistuje audio callback, který by udával tempo emulace,
+     * proto iface_audio_20ms_sync() synchronizuje podle monotónních hodin
+     * (sync_by_timer). Stav bufferu zůstává NORMAL z iface_audio_buffer_init(),
+     * stejně jako po iface_audio_pause_emulation(0) s reálným zařízením níže -
+     * pauza a MAX SPEED pak procházejí stejným stavovým automatem jako v GUI. */
     if (sdlapp_option_present("--headless"))
     {
-        g_print("Headless mode: skipping SDL audio device open (no-op)\n");
-        g_iface_audio.state = IFACE_AUDIO_BUFFER_STATE_PAUSED;
+        g_print("Headless mode: skipping SDL audio device open, emulation synced by system clock\n");
+        g_iface_audio.sync_by_timer = true;
         return true;
     };
 
@@ -126,8 +170,9 @@ bool iface_audio_lowlevel_init(void)
     g_audio_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, sdl3_audio_callback, NULL);
     if (!g_audio_stream)
     {
-        fprintf(stderr, "%s():%d - Couldn't create audio stream: %s\n", __func__, __LINE__, SDL_GetError());
-        return false;
+        /* Subsystém běží, ale výstupní zařízení nejde otevřít (žádné
+         * zařízení, odpojené, obsazené). */
+        return sdl3_audio_fallback_no_device("Couldn't open audio device", SDL_GetError());
     };
 
     bool is_paused = SDL_AudioStreamDevicePaused(g_audio_stream);

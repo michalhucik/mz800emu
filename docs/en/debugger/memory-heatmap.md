@@ -250,7 +250,8 @@ Loading:
    zeroed) and a warning appears in the Import status line
 4. On success the Show toggle is automatically switched to **Imported**
 
-Import allocates a parallel buffer (~2 MB for MZ-800, ~700 KB for MZ-1500).
+Import allocates a parallel buffer (~13.5 MB for MZ-800, ~11 MB for MZ-1500
+and MZ-700).
 The buffer lives until the window is closed or the emulator exits.
 
 Important: Import is a **read-only visualization**. Live recording keeps

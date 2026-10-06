@@ -25,30 +25,39 @@ The test is idempotent and does not require a running GUI emulator -
 ``mcp_server.py`` in pipe mode spawns its own headless ``mz800emu.exe``
 child process.
 
-Exit code: 0 if all assertions PASS, 1 otherwise.
+Exit code: 0 if all assertions PASS, 1 otherwise, 77 = SKIP (no venv).
 
 Environment notes:
 
 * ``MZ_MCP_VENV_PY`` env var can override the Python interpreter
   (otherwise the test uses ``mcp-server/.venv/Scripts/python.exe``
-  on Windows, fallback to ``sys.executable``).
+  on Windows; without the venv the test is SKIPPED with exit code 77).
 * The emulator subprocess inherits ``cwd = repo root`` from
   ``_PipeTransport.connect``; ``mz800emu.exe`` must therefore be present
   in the repo root (= where ``Makefile`` puts it after ``make mz800emu``).
+* Its ``--work-dir`` is a temporary directory (``MZ800EMU_WORK_DIR``),
+  so relative outputs (CDL export on exit) do not land in the repo root.
 """
 
 import json
 import os
+import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import emu_test_proc  # noqa: E402 - úklid spuštěných procesů
 
 
 _TESTS_DIR = Path(__file__).resolve().parent
 _REPO_ROOT = _TESTS_DIR.parent.parent
 _MCP_SERVER_DIR = _REPO_ROOT / "mcp-server"
 _MCP_SERVER_PY = _MCP_SERVER_DIR / "mcp_server.py"
+
+# Exit kód pro ctest "skip" (SKIP_RETURN_CODE v tests/mcp/CMakeLists.txt).
+SKIP_EXIT = 77
 
 
 def _find_python():
@@ -57,7 +66,13 @@ def _find_python():
     Priorita:
       1. env override ``MZ_MCP_VENV_PY``
       2. mcp-server/.venv/Scripts/python.exe (Win) nebo bin/python (POSIX)
-      3. ``sys.executable`` (= Python kterým běží tento test)
+
+    Systémový Python (``sys.executable``) se záměrně NEpoužívá jako záloha:
+    nemá balíček ``mcp`` (FastMCP), server by nenastartoval a test by selhal
+    při INITIALIZE. Bez venv interpretu funkce vrací None a test se přeskočí.
+
+    Returns:
+        Path k venv interpretu, nebo None (venv chybí).
     """
     env = os.environ.get("MZ_MCP_VENV_PY")
     if env and Path(env).is_file():
@@ -70,9 +85,7 @@ def _find_python():
     for c in candidates:
         if c.is_file():
             return c
-    print(f"WARN: no .venv interpreter found, falling back to {sys.executable}",
-          file=sys.stderr)
-    return Path(sys.executable)
+    return None
 
 
 def _readline_with_timeout(proc, timeout_sec):
@@ -94,7 +107,16 @@ def _readline_with_timeout(proc, timeout_sec):
 
 
 def main():
+    # Úklid spuštěných procesů i při selhání, přerušení nebo zabití
+    # ctestem; vnitřní limit je kratší než TIMEOUT testu v ctestu.
+    emu_test_proc.install(deadline_s=80)
     py = _find_python()
+    if py is None:
+        print("SKIP: mcp-server/.venv interpreter not found "
+              "(the 'mcp' package is required to run mcp_server.py); "
+              "create the venv or set MZ_MCP_VENV_PY",
+              file=sys.stderr)
+        sys.exit(SKIP_EXIT)
     if not _MCP_SERVER_PY.is_file():
         print(f"ERROR: mcp_server.py not found at {_MCP_SERVER_PY}",
               file=sys.stderr)
@@ -107,6 +129,11 @@ def main():
     # CMAKE_BINARY_DIR.
     exe = _REPO_ROOT / ("mz800emu.exe" if sys.platform == "win32" else "mz800emu")
     env["MZ800EMU_EXE"] = str(exe)
+    # Dočasný work_dir emulátoru: CDL export při ukončení (výchozí
+    # cdl_export_dir = "cdl-export" relativně k work_dir) nesmí vzniknout
+    # v kořeni repa.
+    work_dir = tempfile.mkdtemp(prefix="mz_mcp_stdio_e2e_")
+    env["MZ800EMU_WORK_DIR"] = work_dir
 
     print(f"Python:     {py}")
     print(f"Server:     {_MCP_SERVER_PY}")
@@ -731,6 +758,25 @@ def main():
                 proc.wait(timeout=5.0)
             except subprocess.TimeoutExpired:
                 pass
+        _cleanup_work_dir(work_dir)
+
+
+def _cleanup_work_dir(work_dir):
+    """Smaže dočasný work_dir emulátoru.
+
+    Emulátor (potomek mcp_server.py) může po skončení wrapperu ještě chvíli
+    běžet a při ukončení zapsat CDL export; proto se nejdřív počká (max.
+    10 s), až export vznikne, a mazání se pak zkusí opakovaně.
+    """
+    marker = Path(work_dir) / "cdl-export" / "cdl-export.json"
+    deadline = time.time() + 10.0
+    while time.time() < deadline and not marker.exists():
+        time.sleep(0.2)
+    for _ in range(25):
+        shutil.rmtree(work_dir, ignore_errors=True)
+        if not Path(work_dir).exists():
+            return
+        time.sleep(0.2)
 
 
 if __name__ == "__main__":

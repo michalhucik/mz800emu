@@ -59,7 +59,9 @@ Notes:
 - `mingw-w64-x86_64-json-glib` is required since the `D.0.5.B.1` release
   (build/cmake commit `48ed161`).
 - On MSYS2 `minizip-ng` is provided as a DLL package, so unlike on Linux there
-  is no need to install `zlib` explicitly - it is pulled in transitively.
+  is no need to install `zlib` explicitly - it is pulled in transitively
+  (the `minizip-ng` package depends on the `zlib` package). zlib is also used
+  directly by video recording (ZMBV codec), which needs nothing extra.
 - The `Makefile` is a thin wrapper around CMake. It defaults to the **UCRT64**
   toolchain (modern CRT, better C99/C11 support) when invoked from a UCRT64
   shell or with `make MSYSTEM=UCRT64`. From a MINGW64 shell it picks MINGW64

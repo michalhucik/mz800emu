@@ -6,12 +6,13 @@
  * Bank index = region sub_id 0..2.
  *
  * Editor layout:
- *   [Bank: combo 1/2/3]  [Char #: input 0..255]  [< >]
- *   [Inverse] [Mirror H] [Mirror V] [Rotate 90 CW]
+ *   [Bank: combo 1/2/3]  [Char #: input 0..1023]  [< >]
+ *   [Inverse] [Mirror H] [Mirror V] [Rotate 90 CW] [Clear] [Fill]
  *   +-------------------+
- *   |  8x8 grid editor  |  (cell size ~32 px, click toggle pixel)
+ *   |  8x8 grid editor  |  (cell size 32 px, click toggle pixel)
  *   +-------------------+
- *   Raw bytes: B0 B1 ... B7 (hex display read-only)
+ *   Raw: B0 B1 ... B7 (hex display read-only)
+ *   Bank addr range: char*8 .. char*8+7
  *
  * Pixel mapping (per existing emu konvence - viz vram_sim PCG):
  *   row 0..7 = byte[row]
@@ -50,7 +51,7 @@ extern "C" {
 
 /* State okna - drží se mezi frame. */
 static int s_bank_idx = 0;     /* 0..2 */
-static int s_char_idx = 0;     /* 0..255 */
+static int s_char_idx = 0;     /* 0..MEMBROWSER_PCG_CHAR_COUNT - 1 */
 static bool s_focus_requested = false;
 static int s_pending_bank = 0;
 static int s_pending_char = 0;
@@ -59,7 +60,7 @@ static int s_pending_char = 0;
 extern "C" void membrowser_pcg_window_focus_at ( int bank_idx, int char_idx )
 {
     if ( bank_idx < 0 || bank_idx > 2 ) bank_idx = 0;
-    if ( char_idx < 0 || char_idx > 255 ) char_idx = 0;
+    if ( char_idx < 0 || char_idx >= MEMBROWSER_PCG_CHAR_COUNT ) char_idx = 0;
     s_pending_bank = bank_idx;
     s_pending_char = char_idx;
     s_focus_requested = true;
@@ -215,12 +216,12 @@ extern "C" void membrowser_pcg_window_render ( bool *p_open )
     ImGui::SetNextItemWidth ( 80.0f );
     ImGui::InputInt ( _L( "Char #" ), &s_char_idx );
     if ( s_char_idx < 0 ) s_char_idx = 0;
-    if ( s_char_idx > 255 ) s_char_idx = 255;
+    if ( s_char_idx > MEMBROWSER_PCG_CHAR_COUNT - 1 ) s_char_idx = MEMBROWSER_PCG_CHAR_COUNT - 1;
 
     ImGui::SameLine ( );
     if ( ImGui::Button ( _L( "<" ) ) && s_char_idx > 0 ) s_char_idx--;
     ImGui::SameLine ( );
-    if ( ImGui::Button ( _L( ">" ) ) && s_char_idx < 255 ) s_char_idx++;
+    if ( ImGui::Button ( _L( ">" ) ) && s_char_idx < MEMBROWSER_PCG_CHAR_COUNT - 1 ) s_char_idx++;
 
     /* Region availability check. */
     int region_id = find_pcg_region_id ( s_bank_idx );

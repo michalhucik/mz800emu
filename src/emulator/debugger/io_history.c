@@ -11,6 +11,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "libs/cfgfile/cfgmodule.h"
+
+
+unsigned g_io_history_cfg_capacity = IO_HISTORY_DEFAULT_CAPACITY;
+
 
 /**
  * Globalni instance ringu.
@@ -24,19 +29,29 @@ st_IO_HISTORY_RING g_io_history = {
 };
 
 
+/** @brief 4 jedničky inicializátoru masky (pomocné makro, jen tady). */
+#define IO_HISTORY_ONES_4    1u, 1u, 1u, 1u
+/** @brief 16 jedniček inicializátoru masky. */
+#define IO_HISTORY_ONES_16   IO_HISTORY_ONES_4, IO_HISTORY_ONES_4, IO_HISTORY_ONES_4, IO_HISTORY_ONES_4
+/** @brief 64 jedniček inicializátoru masky. */
+#define IO_HISTORY_ONES_64   IO_HISTORY_ONES_16, IO_HISTORY_ONES_16, IO_HISTORY_ONES_16, IO_HISTORY_ONES_16
+
+/* Inicializátor níže musí pokrýt celou mapu (4 x 64). */
+_Static_assert ( IO_HISTORY_RECORD_MAP_SIZE == 256u,
+                 "inicializátor g_io_history_record_enabled počítá s 256 porty" );
+
+
 /**
  * Per-port record_enabled mapa (V1.7+ 2.6).
  *
- * Default = vsechny 1 (= behavior beze zmeny). io_history_init() pripadne
- * cfg propagate callback ji prepise. Filter aplikovan v io_history_record().
+ * Výchozí stav = všech 256 portů 1 už při překladu (statický
+ * inicializátor), aby nezávisel na pořadí initu. Z INI ji naplní propagate
+ * klíče `record_mask` (io_history_register_persistence); io_history_init()
+ * ani io_history_set_capacity() ji nemění. Filtr aplikován
+ * v io_history_record().
  */
 uint8_t g_io_history_record_enabled[ IO_HISTORY_RECORD_MAP_SIZE ] = {
-    /* compile-time inicializace na 1 by vyzadovala 256 hodnot - misto toho
-     * inicializujeme za behu v io_history_record_enable_all() volane z
-     * io_history_init. Tady je sance nepouzit (kdyz nikdo init nezavola)
-     * = vse zustane 0 = zadny port se nezaznamenava. Auto-init v
-     * io_history_record() volajici io_history_init() to vyresi. */
-    0
+    IO_HISTORY_ONES_64, IO_HISTORY_ONES_64, IO_HISTORY_ONES_64, IO_HISTORY_ONES_64
 };
 
 
@@ -53,9 +68,9 @@ static size_t clamp_capacity ( size_t cap )
 
 void io_history_record_enable_all ( void )
 {
-    /* Nastavi vsech 256 portu na 1 = default capture. Byte writes
-     * jsou atomicke - volat z UI vlakna je bezpecne i kdyz emu vlakno
-     * pravě cte (= dostane mix starych a novych hodnot, ale obe valid).
+    /* Nastaví všech 256 portů na 1 = výchozí záznam. Bajtové zápisy
+     * jsou atomické - souběžně čtoucí emu vlákno uvidí mix starých
+     * a nových hodnot, obě platné.
      */
     for ( size_t i = 0; i < IO_HISTORY_RECORD_MAP_SIZE; i++ ) {
         g_io_history_record_enabled[ i ] = 1u;
@@ -65,10 +80,9 @@ void io_history_record_enable_all ( void )
 
 void io_history_init ( size_t capacity )
 {
-    /* Default record map = vse aktivni. Cfg propagate callback to muze
-     * pozdeji prepsat na ulozenou hodnotu z [IO_PORTS_PANEL]. */
-    io_history_record_enable_all ( );
-
+    /* Masku zaznamenávaných portů (g_io_history_record_enabled) init
+     * záměrně nemění: drží uživatelskou volbu z INI (propagate proběhne
+     * dřív než init) i přes změnu kapacity (set_capacity volá init). */
     if ( capacity == 0 ) capacity = IO_HISTORY_DEFAULT_CAPACITY;
     capacity = clamp_capacity ( capacity );
 
@@ -108,6 +122,128 @@ void io_history_set_capacity ( size_t new_capacity )
     new_capacity = clamp_capacity ( new_capacity );
     io_history_destroy ( );
     io_history_init ( new_capacity );
+    /* Zvolená kapacita se při uložení konfigurace zapíše do INI. */
+    g_io_history_cfg_capacity = (unsigned) new_capacity;
+}
+
+
+/**
+ * @brief Hex znak (0-9 / A-F / a-f) na 4bitový nibble.
+ * @param c Znak.
+ * @return 0..15, nebo -1 pro neplatný znak.
+ */
+static int io_history_hex_nibble ( char c )
+{
+    if ( c >= '0' && c <= '9' ) return c - '0';
+    if ( c >= 'A' && c <= 'F' ) return 10 + ( c - 'A' );
+    if ( c >= 'a' && c <= 'f' ) return 10 + ( c - 'a' );
+    return -1;
+}
+
+
+/**
+ * @brief Propagate callback klíče `record_mask`: 64 hex znaků -> 256 flagů.
+ *
+ * Formát: 64 hex znaků = 32 bajtů; bajt n (znaky 2n, 2n+1) nese porty
+ * n*8 .. n*8+7, bit 0 = nejnižší port (port i = bit i%8 bajtu i/8).
+ * Při chybě (jiná délka než 64, neplatný znak) se zaznamenávají všechny
+ * porty (io_history_record_enable_all) - bezpečný návrat k výchozímu stavu.
+ *
+ * @param e    st_CFGELEMENT* prvku `record_mask`.
+ * @param data Nepoužito.
+ *
+ * @pre Volá cfgmodule_propagate() při startu (debugger_init), před
+ *      spuštěním emu vlákna.
+ * @post g_io_history_record_enabled odpovídá hodnotě z INI (nebo
+ *       výchozímu "vše").
+ */
+static void io_history_cfg_propagate_record_mask ( void *e, void *data )
+{
+    (void) data;
+    st_CFGELEMENT *elm = (st_CFGELEMENT *) e;
+    const char *txt = cfgelement_get_text_value ( elm );
+    if ( !txt || strlen ( txt ) != 64 ) {
+        io_history_record_enable_all ( );
+        return;
+    }
+    for ( size_t byte = 0; byte < 32; byte++ ) {
+        int hi = io_history_hex_nibble ( txt[ byte * 2 ] );
+        int lo = io_history_hex_nibble ( txt[ byte * 2 + 1 ] );
+        if ( hi < 0 || lo < 0 ) {
+            /* Už zapsané bajty přepíše výchozí stav. */
+            io_history_record_enable_all ( );
+            return;
+        }
+        uint8_t b = (uint8_t) ( ( hi << 4 ) | lo );
+        for ( int bit = 0; bit < 8; bit++ ) {
+            g_io_history_record_enabled[ byte * 8 + (size_t) bit ] =
+                (uint8_t) ( ( b >> bit ) & 1u );
+        }
+    }
+}
+
+
+/**
+ * @brief Save callback klíče `record_mask`: 256 flagů -> 64 hex znaků.
+ *
+ * Inverze io_history_cfg_propagate_record_mask() (velká písmena A-F).
+ *
+ * @param e    st_CFGELEMENT* prvku `record_mask`.
+ * @param data Nepoužito.
+ *
+ * @post Textová hodnota prvku odpovídá aktuální masce.
+ */
+static void io_history_cfg_save_record_mask ( void *e, void *data )
+{
+    (void) data;
+    st_CFGELEMENT *elm = (st_CFGELEMENT *) e;
+    char buf[ 65 ];
+    static const char hex[] = "0123456789ABCDEF";
+    for ( size_t byte = 0; byte < 32; byte++ ) {
+        uint8_t b = 0;
+        for ( int bit = 0; bit < 8; bit++ ) {
+            if ( g_io_history_record_enabled[ byte * 8 + (size_t) bit ] ) {
+                b |= (uint8_t) ( 1u << bit );
+            }
+        }
+        buf[ byte * 2 ]     = hex[ ( b >> 4 ) & 0x0Fu ];
+        buf[ byte * 2 + 1 ] = hex[ b & 0x0Fu ];
+    }
+    buf[ 64 ] = '\0';
+    cfgelement_set_text_value ( elm, buf );
+}
+
+
+void io_history_register_persistence ( void *cmod_void )
+{
+    if ( !cmod_void ) return;
+    st_CFGMODULE *cmod = (st_CFGMODULE *) cmod_void;
+
+    /* UNSIGNED 1000..50000, default 10000. */
+    st_CFGELEMENT *elm = cfgmodule_register_new_element ( cmod,
+        (char *) "history_capacity",
+        CFGENTYPE_UNSIGNED, (int) IO_HISTORY_DEFAULT_CAPACITY,
+        (int) IO_HISTORY_MIN_CAPACITY, (int) IO_HISTORY_MAX_CAPACITY );
+    cfgelement_set_handlers ( elm,
+        (void *) &g_io_history_cfg_capacity,
+        (void *) &g_io_history_cfg_capacity );
+
+    /* Maska zaznamenávaných portů (V1.7+ 2.6): 64 hex znaků, výchozí
+     * samé F = všechny porty. Pro 256 portů by jednotlivé klíče byly
+     * v INI nečitelné; řetězec jde i ručně upravit. */
+    elm = cfgmodule_register_new_element ( cmod,
+        (char *) "record_mask", CFGENTYPE_TEXT,
+        (char *) "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF" );
+    cfgelement_set_propagate_cb ( elm,
+        io_history_cfg_propagate_record_mask, NULL );
+    cfgelement_set_save_cb ( elm,
+        io_history_cfg_save_record_mask, NULL );
+}
+
+
+void io_history_init_from_cfg ( void )
+{
+    io_history_init ( (size_t) g_io_history_cfg_capacity );
 }
 
 

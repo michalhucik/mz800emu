@@ -3,7 +3,8 @@
  * @brief Konfigurační okno pro mapování banků MemExt na adresní prostor Z80
  *
  * 16 address pointů po 4 KB (0x0000-0xFFFF).
- * PEHU: 8 editovatelných řádků (sudé address pointy, 8 KB banky)
+ * PEHU: 8 editovatelných řádků (sudé address pointy, číslo 8 KB banky
+ *       0x00-0x3F = hodnota OUT E7h, ne 4 KB raw banka z g_memext.map[])
  * Luftner: 16 editovatelných řádků (4 KB banky, bit 7 = FLASH)
  */
 
@@ -25,22 +26,46 @@ extern "C"
 #include "emulator/hw-generic/memory/memext.h"
 }
 
-/* Dočasný stav mapování */
+/**
+ * @brief Editované hodnoty mapování - hodnoty zápisu OUT E7h pro address
+ *        pointy 0..15.
+ *
+ * LUFTNER: 4 KB raw banka (bit 7 = FLASH). PEHU: číslo 8 KB banky
+ * (0x00-0x3F), sudý a lichý point páru drží stejnou hodnotu; při Apply se
+ * použijí jen sudé pointy (memext_map_request_process()).
+ */
 static uint8_t s_bank_values[MEMEXT_RAW_MAP_SIZE];
+
+/** @brief true = s_bank_values je načtené pro aktuální otevření okna. */
 static bool s_initialized = false;
 
-/* Načtení z g_memext.map[] */
+/**
+ * @brief Načte s_bank_values z aktuální mapy MemExt.
+ *
+ * Převod přes memext_map_get_out_values(): u PEHU g_memext.map[] drží
+ * 4 KB raw banky (2n, 2n+1), editace a OUT E7h ale pracují s číslem
+ * 8 KB banky n. Dřívější přímé kopírování map[i] dávalo u PEHU dvojnásobná
+ * čísla a Apply bez úprav mapu rozházelo (2,3,6,7,...,30,31 místo 0..15).
+ */
 static void load_map_state(void) {
-    for (int i = 0; i < MEMEXT_RAW_MAP_SIZE; i++) {
-        s_bank_values[i] = (uint8_t)(g_memext.map[i] & 0xFF);
-    }
+    memext_map_get_out_values(s_bank_values);
 }
 
-/* Aplikovat mapování */
+/**
+ * @brief Aplikuje upravené mapování (tlačítka Apply a OK).
+ *
+ * Zápis g_memext.map[] a memory_reconnect_ram() (RAM ukazatele, MZ-800
+ * fast-path CPU) smí provést jen emu vlákno - souběžně s ním probíhají
+ * přístupy CPU do paměti i OUT E7h. Proto okno jen předá kopii
+ * s_bank_values přes memext_map_request(); memext_map_pwrite() pro
+ * address pointy (LUFTNER 0..15, PEHU jen sudé) zavolá emu vlákno při
+ * nejbližší emulační události (v pauze do ~20 ms). Funguje s debuggerem
+ * i bez něj (nepoužívá frontu dbgapi).
+ *
+ * Asynchronní: Refresh hned po Apply může ještě ukázat původní hodnoty.
+ */
 static void apply_map(void) {
-    for (int i = 0; i < MEMEXT_RAW_MAP_SIZE; i++) {
-        memext_map_pwrite(i, s_bank_values[i]);
-    }
+    memext_map_request(s_bank_values);
 }
 
 extern "C" void imgui_memext_map_window(bool *p_open) {

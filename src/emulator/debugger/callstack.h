@@ -236,9 +236,10 @@ int callstack_get_recent_diverg ( st_CALLSTACK_DIVERG_EVENT *out_events );
  * @brief Globální gate flag - non-zero = subsystém aktivní.
  *
  * Default 0 (= callbacky nezaregistrovány v z80_t, listener není
- * volán). Měněn výhradně přes @ref callstack_set_active z hlavního
- * vlákna v rámci cfgmain propagate / CLI parsování / UI Settings
- * checkbox. Hot path subsystém čte přes vlastní static state -
+ * volán). Měněn výhradně přes @ref callstack_set_active: z hlavního
+ * vlákna před startem emu vlákna (cfgmain propagate / CLI parsování),
+ * jinak na emu vlákně (profiler, DBGAPI_CMD_CALLSTACK_SET_ACTIVE z panelu
+ * Callstack). Hot path subsystém čte přes vlastní static state -
  * tento flag slouží pro UI / diagnostiku.
  *
  * @note Měnit hodnotu přímo bez @ref callstack_set_active je
@@ -279,8 +280,8 @@ void callstack_apply_cli_options ( void );
  * se aktivuje automaticky - příslušné mzarch_*_cb forwardují do
  * callstack interních funkcí jen pokud g_callstack_active.
  *
- * Při OFF: odregistruje Z80 CALL/RET hooky (NULL), vynuluje shadow.
- * Statistiky se zachovávají (= viewable v UI po stop).
+ * Při OFF: odregistruje Z80 CALL/RET hooky (NULL). Shadow stack ani
+ * statistiky nenuluje (= viewable v UI po stop).
  *
  * Idempotentní (= opakované volání se stejnou hodnotou = no-op).
  *
@@ -288,7 +289,8 @@ void callstack_apply_cli_options ( void );
  *
  * @note Musí být voláno z hlavního vlákna před spuštěním emu vlákna
  *       nebo z emu vlákna v safe-point (= dbgapi sync handler).
- *       Z80 callback slot manipulace není atomická.
+ *       Z80 callback slot manipulace není atomická. UI vlákno posílá
+ *       DBGAPI_CMD_CALLSTACK_SET_ACTIVE (helper dbg_ui_callstack_set_active).
  */
 void callstack_set_active ( bool enable );
 
@@ -297,6 +299,11 @@ void callstack_set_active ( bool enable );
  *
  * Idempotentní. Volá se z mzarch_platform_fn_emu_reset hooku +
  * z @ref callstack_set_active při zapnutí.
+ *
+ * @pre Volat z emu vlákna (nebo z jednovláknového kontextu). Nulování
+ *      g_depth souběžně s push/pop v CALL/RET hoocích by mohlo g_depth
+ *      snížit pod nulu. UI vlákno posílá DBGAPI_CMD_CALLSTACK_RESET
+ *      (helper dbg_ui_callstack_reset).
  */
 void callstack_reset ( void );
 

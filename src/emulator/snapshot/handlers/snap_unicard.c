@@ -1,10 +1,15 @@
 /**
  * @file snap_unicard.c
  * @brief Snapshot handler: Unicard — uložení a načtení stavu Unicardu
+ *
+ * Připojení (connected) a emulovaná verze firmware (fw_emulated) jsou stav
+ * stroje: snapshot je obnoví pro běh, INI ([UNICARD] connected,
+ * fw_version) si drží volbu uživatele (snapshot_config_pin_ini_value).
  */
 
 #include "snapshot/snapshot_mgr.h"
 #include "snapshot/snapshot_xml.h"
+#include "snapshot/snapshot_config.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -74,8 +79,11 @@ static en_SNAPSHOT_RESULT snap_unicard_load(st_SNAPSHOT_CONTEXT *ctx)
 
     /* Stav připojení */
     unsigned uval;
+    unsigned ini_connected = (unsigned)g_unicard.connected;
+    unsigned ini_fw = (unsigned)g_unicard.fw_emulated;
     if (snapshot_xml_read_uint(r, "connected", &uval))
         g_unicard.connected = (en_UNICARD_CONNECTION)uval;
+    snapshot_config_pin_ini_value("UNICARD", "connected", ini_connected);
 
     /* Simulovaná verze firmware. Nastavujeme přímo (ne přes
      * unicard_set_fw, který má side effects disconnect+reconnect -
@@ -89,6 +97,8 @@ static en_SNAPSHOT_RESULT snap_unicard_load(st_SNAPSHOT_CONTEXT *ctx)
         }
         g_unicard.fw_emulated = fw;
     }
+    /* Verze FW jen pro běh - INI hodnota se připne. */
+    snapshot_config_pin_ini_value("UNICARD", "fw_version", ini_fw);
 
     /* Pracovní adresář (CWD uvnitř SD karty - FatFS vlastnost, stav stroje).
      * Obnovujeme přes unicard_chdir(), který nastaví g_unicard.work_dir

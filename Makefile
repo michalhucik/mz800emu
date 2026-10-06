@@ -483,7 +483,9 @@ dist:
 	$(QUIET)cp -r ui_resources $(DIST_DIR)/
 	@echo "Copying docs/"
 	$(QUIET)mkdir -p $(DIST_DIR)/docs
-	$(QUIET)find ./docs -type f ! -path "./docs/unimportant_notes/*" -exec \
+	@# __pycache__ / *.pyc vznikají spuštěním testů exportního skriptu v docs/tools
+	$(QUIET)find ./docs -type f ! -path "./docs/unimportant_notes/*" \
+	    ! -path "*/__pycache__/*" ! -name "*.pyc" -exec \
 	    sh -c 'for f; do d="$(DIST_DIR)/docs/$${f#./docs/}"; \
 	        mkdir -p "$$(dirname "$$d")"; cp "$$f" "$$d"; done' _ {} +
 	@echo "Copying binaries"

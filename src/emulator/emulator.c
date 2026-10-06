@@ -33,6 +33,7 @@
 
 #include "version_check/version_check.h"
 #include "snapshot/snapshot.h"
+#include "videorec/videorec.h"
 
 st_EMULATOR g_emulator;
 
@@ -48,6 +49,8 @@ void emulator_quit(int exit_value)
         fprintf(stderr, "Application is normaly exiting...\n");
 
         version_check_exit();
+        /* Video záznam: synchronní stop (flush, sidecar, finalizace AVI, join writeru). */
+        videorec_exit();
         snapshot_exit();
         cfgmain_exit();
 
@@ -190,6 +193,7 @@ gpointer emulator_thread(gpointer ptr)
 
         mzarch_platform_fn_init();
         snapshot_init();
+        videorec_init();
         emulator_print_hint();
         if (g_iface_video_callbacks->set_window_focus)
         {
@@ -201,6 +205,34 @@ gpointer emulator_thread(gpointer ptr)
         };
 
         emulator_measuring_init();
+
+        /* --speed <procenta|max>: počáteční rychlost emulace. Hodnota byla
+         * ověřena už v main() (neplatná = ukončení před startem emulátoru).
+         * `max` zapne MAX SPEED, číslo nastaví vlastní rychlost v % (100 =
+         * normální). Aplikuje se PŘED --maxspeed-bench, takže ten při
+         * souběhu vždy vyhrává (benchmark měří MAX SPEED); souběh s jinou
+         * hodnotou než `max` se hlásí varováním. */
+        if (sdlapp_option_present("--speed"))
+        {
+            bool speed_max = false;
+            int speed_percent = 100;
+            if (customspeed_parse_cli_value(sdlapp_option_value("--speed"), &speed_max, &speed_percent))
+            {
+                if (speed_max)
+                {
+                    emulator_max_speed(true);
+                }
+                else
+                {
+                    customspeed_set_request(speed_percent);
+                    emulator_max_speed(false);
+                    if (sdlapp_option_present("--maxspeed-bench"))
+                    {
+                        fprintf(stderr, "Warning: --speed %d is overridden by --maxspeed-bench (MAX SPEED)\n", speed_percent);
+                    };
+                };
+            };
+        };
 
         /* --maxspeed-bench: headless A/B režim - spusť v MAX SPEED a nech
          * sampling thread periodicky tisknout report na konzoli. */
@@ -235,7 +267,16 @@ void emulator_switch_to_custom_speed(void)
     emulator_max_speed(false);
 }
 
-void emulator_max_speed(bool value)
+/**
+ * @brief Přepne MAX SPEED bez ohledu na původce (společné jádro).
+ *
+ * Nastaví g_emulator.max_speed, vypíše novou rychlost na stdout, aktualizuje
+ * měření MAX SPEED benchmarku a stav audio bufferu. Příznak max_speed_boost
+ * neřeší - to dělají volající (emulator_max_speed, emulator_max_speed_boost).
+ *
+ * @param value true = MAX SPEED, false = normální/vlastní rychlost.
+ */
+static void emulator_max_speed_apply(bool value)
 {
     value = (value) ? true : false;
     if (value == g_emulator.max_speed)
@@ -265,6 +306,32 @@ void emulator_max_speed(bool value)
     emulator_measuring_maxspeed_update_segment();
 
     iface_audio_update_buffer_state();
+}
+
+/* Doxygen viz emulator.h. */
+void emulator_max_speed(bool value)
+{
+    /* O rychlosti rozhodl uživatel - automatika ji už nesmí vypnout. */
+    g_emulator.max_speed_boost = false;
+    emulator_max_speed_apply(value);
+}
+
+/* Doxygen viz emulator.h. */
+void emulator_max_speed_boost(bool value)
+{
+    if (value)
+    {
+        if (g_emulator.max_speed)
+            return; /* běží už (uživatelská nebo dřívější automatická) */
+        g_emulator.max_speed_boost = true;
+        emulator_max_speed_apply(true);
+        return;
+    };
+
+    if (!g_emulator.max_speed_boost)
+        return; /* MAX SPEED nezapnula automatika - nesahat */
+    g_emulator.max_speed_boost = false;
+    emulator_max_speed_apply(false);
 }
 
 void emulator_pause(bool value)

@@ -21,16 +21,24 @@ dispatch capabilities):
  10. shutdown              -> {"shutdown": true}, exit code 0
 
 Exit code: 0 if all assertions PASS, 1 otherwise.
+
+Výstupy emulátoru (např. CDL export při ukončení, výchozí
+``cdl_export_dir`` = ``cdl-export`` relativně k work_dir) jdou do
+dočasného ``--work-dir``, ne do kořene repa.
 """
 
 import json
 import os
 import queue
+import shutil
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import emu_test_proc  # noqa: E402 - úklid spuštěných procesů
 
 
 # Resolve binary path: tests/mcp/test_pipe.py -> repo root mz800emu.exe
@@ -85,11 +93,17 @@ def _spawn_line_reader(proc):
 
 
 def main():
+    # Úklid spuštěných procesů i při selhání, přerušení nebo zabití
+    # ctestem; vnitřní limit je kratší než TIMEOUT testu v ctestu.
+    emu_test_proc.install(deadline_s=50)
     exe = _find_exe()
     print(f"Using binary: {exe}")
 
+    # Dočasný work_dir: relativní výstupy (CDL export on exit) nesmí
+    # vzniknout v kořeni repa.
+    work_dir = tempfile.mkdtemp(prefix="mz_mcp_pipe_e2e_")
     proc = subprocess.Popen(
-        [str(exe), "--mcp-pipe"],
+        [str(exe), "--mcp-pipe", f"--work-dir={work_dir}"],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
@@ -275,6 +289,7 @@ def main():
                 proc.kill()
             except Exception:
                 pass
+        shutil.rmtree(work_dir, ignore_errors=True)
 
 
 if __name__ == "__main__":

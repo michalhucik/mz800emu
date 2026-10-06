@@ -43,6 +43,7 @@
 
 #include "debugger/debugger.h"
 #include "debugger/mhmap.h"
+#include "ui-imgui/debugger/dbgapi_helpers.h"
 
 #include "mhmap_window.h"
 #include "mhmap_window_state.h"
@@ -655,8 +656,8 @@ static void render_import_dialog ( void )
 /**
  * @brief Render Mode radio (Off / Window / Always).
  *
- * Klik volá @c mhmap_set_mode, který přepíná @c g_debugger.mhmap_mode
- * a triggeruje swap CPU callbacků.
+ * Klik volá @c dbg_ui_mhmap_set_mode: zapíše @c g_debugger.mhmap_mode
+ * a swap CPU callbacků deleguje na emu vlákno (RECOMPUTE přes frontu dbgapi).
  */
 static void render_mode_radio ( void )
 {
@@ -665,7 +666,7 @@ static void render_mode_radio ( void )
     ImGui::SameLine ( );
     if ( ImGui::RadioButton ( _L( "Off##mhmap_mode" ), &mode, (int)DEBUGGER_MHMAP_MODE_OFF ) )
     {
-        mhmap_set_mode ( DEBUGGER_MHMAP_MODE_OFF );
+        dbg_ui_mhmap_set_mode ( DEBUGGER_MHMAP_MODE_OFF );
     };
     if ( ImGui::IsItemHovered ( ) )
     {
@@ -675,7 +676,7 @@ static void render_mode_radio ( void )
     ImGui::SameLine ( );
     if ( ImGui::RadioButton ( _L( "With Window##mhmap_mode" ), &mode, (int)DEBUGGER_MHMAP_MODE_WITH_WINDOW ) )
     {
-        mhmap_set_mode ( DEBUGGER_MHMAP_MODE_WITH_WINDOW );
+        dbg_ui_mhmap_set_mode ( DEBUGGER_MHMAP_MODE_WITH_WINDOW );
     };
     if ( ImGui::IsItemHovered ( ) )
     {
@@ -686,7 +687,7 @@ static void render_mode_radio ( void )
     ImGui::SameLine ( );
     if ( ImGui::RadioButton ( _L( "Always##mhmap_mode" ), &mode, (int)DEBUGGER_MHMAP_MODE_ALWAYS ) )
     {
-        mhmap_set_mode ( DEBUGGER_MHMAP_MODE_ALWAYS );
+        dbg_ui_mhmap_set_mode ( DEBUGGER_MHMAP_MODE_ALWAYS );
     };
     if ( ImGui::IsItemHovered ( ) )
     {
@@ -818,7 +819,8 @@ static void render_top_bar ( void )
     ImGui::SameLine ( );
     if ( ImGui::Button ( _L( "Reset##mhmap_top" ) ) )
     {
-        mhmap_reset ( );
+        /* Nulování counterů vykoná emu vlákno (DBGAPI_CMD_CDL_RESET). */
+        dbg_ui_mhmap_reset ( );
     };
 
     ImGui::SameLine ( );
@@ -856,7 +858,8 @@ static void render_top_bar ( void )
         };
     }
 
-    /* Status řádek - co se právě děje. */
+    /* Status řádek - co se právě děje. Text přes _() (i18n); hodnota
+     * mhmap_mode je technický identifikátor režimu, nepřekládá se. */
     const char *mode_str = "OFF";
     switch ( g_debugger.mhmap_mode )
     {
@@ -868,11 +871,11 @@ static void render_top_bar ( void )
     if ( TEST_DEBUGGER_MHMAP_ACTIVE )
     {
         ImGui::TextColored ( ImVec4 ( 0.4f, 1.0f, 0.4f, 1.0f ),
-                             "Status: Recording active (mhmap_mode=%s)", mode_str );
+                             _( "Status: Recording active (mhmap_mode=%s)" ), mode_str );
     }
     else
     {
-        ImGui::TextDisabled ( "Status: Recording inactive (mhmap_mode=%s)", mode_str );
+        ImGui::TextDisabled ( _( "Status: Recording inactive (mhmap_mode=%s)" ), mode_str );
     };
 
     /* Import status (poslední pokus o import) - barevný feedback. */
@@ -923,28 +926,22 @@ static int try_get_bus_addr ( const st_MHMAP_EXPORT_REGION *region, int offset )
 
 
 /**
- * @brief Reset counterů jen v aktivním regionu.
- *
- * Rychlejší alternativa k @c mhmap_reset (= reset all). Region buffer
- * je @c size_bytes, vynulujeme přes memset. Bezpečné protože counter typ
- * je @c uint32_t = trivial layout.
- */
-static void reset_single_region ( const st_MHMAP_EXPORT_REGION *region )
-{
-    if ( !region || !region->buffer || region->size_bytes == 0 ) return;
-    memset ( (void *)region->buffer, 0, region->size_bytes );
-}
-
-
-/**
  * @brief Render side panel s detailem selection a region statistikami.
  *
  * Volá se uvnitř BeginChild dedikovaného pro panel. Layout:
  *  - Hlavička "Selected cell" + addr/region/offset/R/W/X
  *  - Hlavička "Region statistics" + active_cells/totals/max
  *  - Tlačítko "Reset region only"
+ *
+ * Mutace živých counterů (Add / Sub importovaných dat, Reset region only)
+ * vykoná emu vlákno přes frontu dbgapi (dbg_ui_mhmap_*); UI je jen odešle.
+ *
+ * @param region       Popis zobrazeného regionu z @c mhmap_get_export_regions.
+ * @param region_index Index @p region v téže tabulce (pro Reset region only).
+ * @param stats        Statistiky regionu spočtené pro aktuální snímek.
  */
 static void render_side_panel ( const st_MHMAP_EXPORT_REGION *region,
+                                size_t region_index,
                                 const st_MHMAP_REGION_STATS *stats )
 {
     if ( !region || !stats ) return;
@@ -988,19 +985,9 @@ static void render_side_panel ( const st_MHMAP_EXPORT_REGION *region,
         ImGui::SameLine ( );
         if ( ImGui::Button ( _L( "Add##mhmap_imp" ) ) )
         {
-            /* Per-cell saturating sčítání live += imported. Saturace na
-             * UINT32_MAX zabraňuje wrap-around. */
-            const uint32_t *src = (const uint32_t *)g_mhmap_window.import_data;
-            uint32_t       *dst = (uint32_t *)&g_mhmap;
-            size_t cells_total = sizeof ( g_mhmap ) / sizeof ( uint32_t );
-            for ( size_t k = 0; k < cells_total; k++ )
-            {
-                uint32_t a = dst[ k ];
-                uint32_t b = src[ k ];
-                uint32_t sum = a + b;
-                if ( sum < a ) sum = 0xFFFFFFFFu;  /* saturate at overflow */
-                dst[ k ] = sum;
-            };
+            /* Per-cell live += imported se saturací na UINT32_MAX; vykoná
+             * emu vlákno (mhmap_merge), import_data čte jen do návratu. */
+            dbg_ui_mhmap_merge ( (const st_MHMAP *)g_mhmap_window.import_data, MHMAP_MERGE_ADD );
         };
         if ( ImGui::IsItemHovered ( ) )
         {
@@ -1010,17 +997,9 @@ static void render_side_panel ( const st_MHMAP_EXPORT_REGION *region,
         ImGui::SameLine ( );
         if ( ImGui::Button ( _L( "Sub##mhmap_imp" ) ) )
         {
-            /* Per-cell live -= imported s ochranou proti podtečení.
-             * Pokud imported > live, výsledek je 0 (clamp na 0). */
-            const uint32_t *src = (const uint32_t *)g_mhmap_window.import_data;
-            uint32_t       *dst = (uint32_t *)&g_mhmap;
-            size_t cells_total = sizeof ( g_mhmap ) / sizeof ( uint32_t );
-            for ( size_t k = 0; k < cells_total; k++ )
-            {
-                uint32_t a = dst[ k ];
-                uint32_t b = src[ k ];
-                dst[ k ] = ( a >= b ) ? ( a - b ) : 0;
-            };
+            /* Per-cell live -= imported s ořezem na 0; vykoná emu vlákno
+             * (mhmap_merge), import_data čte jen do návratu. */
+            dbg_ui_mhmap_merge ( (const st_MHMAP *)g_mhmap_window.import_data, MHMAP_MERGE_SUB );
         };
         if ( ImGui::IsItemHovered ( ) )
         {
@@ -1095,8 +1074,11 @@ static void render_side_panel ( const st_MHMAP_EXPORT_REGION *region,
     ImGui::BeginDisabled ( !can_reset );
     if ( ImGui::Button ( _L( "Reset region only##mhmap_side" ) ) )
     {
-        reset_single_region ( region );
-        g_mhmap_window.selected_cell_offset = -1;
+        /* Nulování regionu vykoná emu vlákno; výběr se ruší jen po úspěchu. */
+        if ( dbg_ui_mhmap_reset_region ( (uint32_t)region_index ) )
+        {
+            g_mhmap_window.selected_cell_offset = -1;
+        };
     };
     ImGui::EndDisabled ( );
 }
@@ -1559,7 +1541,7 @@ static void render_region_tabs ( void )
                     ImGui::TableNextColumn ( );
                     ImGui::BeginChild ( "##mhmap_side_panel", ImVec2 ( 0, 0 ),
                                         ImGuiChildFlags_Borders );
-                    render_side_panel ( &regions[ i ], &stats );
+                    render_side_panel ( &regions[ i ], i, &stats );
                     ImGui::EndChild ( );
 
                     ImGui::EndTable ( );

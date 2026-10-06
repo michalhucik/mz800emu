@@ -23,7 +23,8 @@
  *         cmd / SIGINT).
  *      2. Stdin reader thread (`_stdin_reader_thread`): cyklicky čte
  *         JSONL řádky ze stdin, parsuje je, dispatchuje přes
- *         `mcp_dispatch_request` a zapisuje odpověď na stdout
+ *         `mcp_dispatch_runner_request` (dispatch na pracovním vlákně,
+ *         viz dispatch_runner.h) a zapisuje odpověď na stdout
  *         (chráněné `g_stdout_mutex`).
  *      3. Emulator thread (`emulator_thread` z `emulator.c`):
  *         standardní emu vlákno z hlavního codebase, řízené přes
@@ -94,9 +95,11 @@
 
 #include "jsonl_io.h"
 #include "dispatch.h"
+#include "dispatch_runner.h"
 #include "cooperation.h"
 #include "event_bus.h"
 #include "trap_manager.h"
+#include "version_info.h"
 
 #include <SDL3/SDL.h>
 
@@ -288,7 +291,9 @@ static void _signal_handler(int signum)
  *
  * Čte JSONL řádek po řádku z `stdin`. Pro každý:
  *   - parsuje přes `jsonl_parse_line`,
- *   - pokud zpráva je REQUEST, dispatchuje přes `mcp_dispatch_request`,
+ *   - pokud zpráva je REQUEST, dispatchuje přes
+ *     `mcp_dispatch_runner_request` (pracovní vlákno, omezená doba
+ *     odpovědi při zaseknutí emu vlákna; zprávu přebírá),
  *   - serializuje odpověď na stdout chráněnou `g_stdout_mutex`,
  *   - free / cleanup.
  *
@@ -351,7 +356,9 @@ static gpointer _stdin_reader_thread(gpointer data)
         }
 
         char *response = NULL;
-        en_MCP_DISPATCH_RESULT dr = mcp_dispatch_request(msg, &response);
+        /* Runner přebírá vlastnictví msg (uvolní ho sám). */
+        en_MCP_DISPATCH_RESULT dr = mcp_dispatch_runner_request(msg, &response);
+        msg = NULL;
 
         if (response)
         {
@@ -372,7 +379,6 @@ static gpointer _stdin_reader_thread(gpointer data)
             }
         }
 
-        jsonl_msg_free(msg);
         g_free(line);
     }
 
@@ -390,6 +396,8 @@ static gpointer _stdin_reader_thread(gpointer data)
  * Záměrně minimální - pipe binárka je spouštěná jako subprocess
  * MCP wrapperem a uživatelská CLI prakticky nemá smysl. Necháváme:
  *  - --help (=  vypsat options a skončit)
+ *  - --version (= vypsat informace o verzi a buildu a skončit; stdout
+ *    v tu chvíli ještě není vyhrazený pro JSONL)
  *  - --headless (= rozpoznat jako standardní flag; pipe ho stejně
  *    interně injektuje, ale duplicita nevadí)
  *  - --home-dir / --cfg-dir / --work-dir (= override paths pro
@@ -402,6 +410,8 @@ static gpointer _stdin_reader_thread(gpointer data)
 static const st_SDLAPP_OPTION_DEF g_pipe_known_options[] = {
     { "--help",                 SDLAPP_OPTION_FLAG,  SDLAPP_OPTVAL_NONE,   NULL, NULL,
       "Print this option list and exit." },
+    { "--version",              SDLAPP_OPTION_FLAG,  SDLAPP_OPTVAL_NONE,   NULL, NULL,
+      "Print version, revision, source origin and build details, then exit." },
     { "--mcp-pipe",             SDLAPP_OPTION_FLAG,  SDLAPP_OPTVAL_NONE,   NULL, NULL,
       "Switch to MCP pipe transport (already detected in main.c; harmless "
       "to re-validate inside mcp_pipe_main)." },
@@ -498,6 +508,16 @@ int mcp_pipe_main(int argc, char *argv[])
     if (sdlapp_option_present("--help"))
     {
         sdlapp_options_print_help(aug_argv[0], g_pipe_known_options);
+        g_free(aug_argv);
+        return EXIT_SUCCESS;
+    }
+
+    /* --version: výpis jde na skutečný stdout - proběhne dřív než
+     * přesměrování stdout na stderr a dřív než se pošle JSONL hello,
+     * takže nemůže poškodit JSONL proud (žádný proud ještě neexistuje). */
+    if (sdlapp_option_present("--version"))
+    {
+        version_info_print(stdout);
         g_free(aug_argv);
         return EXIT_SUCCESS;
     }
@@ -660,21 +680,33 @@ int mcp_pipe_main(int argc, char *argv[])
         g_stdin_thread = NULL;
     }
 
-    /* Odregistruj shutdown callback (= žádný další request nesmí
-     * volat _on_shutdown_command po join). */
-    mcp_dispatch_set_shutdown_callback(NULL);
-    mcp_dispatch_set_transport_kind(MCP_DISPATCH_TRANSPORT_NONE);
-    mcp_dispatch_shutdown();
-
     /* Emu thread - sdlapp_quit byl už zavolán v _request_shutdown,
      * takže emulator_thread by měl skončit při příští kontrole
      * sdlapp_is_running. */
     gpointer emuret = g_thread_join(emu_thread);
     int emuretval = emuret ? *(int *)emuret : EXIT_FAILURE;
 
+    /* Opuštěný (zaseknutý) MCP požadavek mohl ještě dokončovat handler
+     * na pracovním vlákně (dispatch_runner.c). Dispatch vrstva i zámky
+     * dbgapi se smí zrušit až po něm. Pokud ani po limitu nedoběhl,
+     * NEuklízíme je: běžící handler by sahal na zrušené zámky a uvolněné
+     * pole příkazů. Únik při ukončení procesu je neškodný. */
+    bool runner_idle = mcp_dispatch_runner_wait_idle(2000);
+    if (!runner_idle)
+        fprintf(stderr, "[mcp-pipe] abandoned MCP request still running at exit, "
+                "skipping MCP/dbgapi teardown\n");
+
+    /* Odregistruj shutdown callback (= žádný další request nesmí
+     * volat _on_shutdown_command po join). */
+    mcp_dispatch_set_shutdown_callback(NULL);
+    mcp_dispatch_set_transport_kind(MCP_DISPATCH_TRANSPORT_NONE);
+    if (runner_idle)
+        mcp_dispatch_shutdown();
+
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
     dbgapi_dispatcher_shutdown();
-    dbgapi_destroy(&g_dbgapi_cmdrq_queue);
+    if (runner_idle)
+        dbgapi_destroy(&g_dbgapi_cmdrq_queue);
 #endif
 
     /* V1.A.4: cleanup event bus + trap manager. Po shutdown už emu

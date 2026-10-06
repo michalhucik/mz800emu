@@ -25,6 +25,8 @@
 #include "debugger/debugger.h"
 #include "emulator/emulator.h"
 #include "mzarch/mzarch.h"
+#include "mzarch/mzarch_platform_functions.h"
+#include "hw-generic/memory/memory.h"
 #include "libs/cpu-z80/z80.h"
 
 #include <string.h>
@@ -143,6 +145,59 @@ void test_cmd_debugger_deactivate_clears_flag ( void ) {
     bool ok = call_dispatch ( DBGAPI_CMD_DEBUGGER_DEACTIVATE, NULL, NULL );
     TEST_ASSERT_TRUE ( ok );
     TEST_ASSERT_FALSE ( TEST_DEBUGGER_ACTIVE );
+}
+
+
+/* ========================================================================= */
+/*  CMD_DEBUGGER_ACTIVATE / _DEACTIVATE - přepočet CPU callbacků              */
+/* ========================================================================= */
+
+
+/**
+ * @brief Vrátí true, pokud CPU právě používá logging (pomalé) callbacky.
+ *
+ * Swap provádí mzarch_platform_fn_debugger_state_changed(); čtecí callback
+ * paměti je jeho spolehlivý indikátor (vzor test_mhmap_window_queue.c).
+ */
+static bool cpu_on_logging_callbacks ( void ) {
+    return g_mzarch_main.cpu->mread_cb == memory_read_with_logging_cb;
+}
+
+
+/**
+ * @brief MCP debugger_activate / _deactivate přepne CPU callbacky.
+ *
+ * Regrese: handlery dřív jen zapsaly g_debugger.active bez přepočtu
+ * callbacků. Při cpuhist v režimu WITH_WINDOW (a ničem jiném, co by
+ * pomalé callbacky vyžadovalo) pak po aktivaci CPU zůstalo na rychlých
+ * callbackách a historie nezaznamenávala; po deaktivaci naopak zůstaly
+ * pomalé callbacky.
+ */
+void test_cmd_debugger_activate_deactivate_swaps_callbacks ( void ) {
+    en_DEBUGGER_CPUHIST_MODE saved_cpuhist = g_debugger.cpuhist_mode;
+    en_DEBUGGER_MHMAP_MODE saved_mhmap = g_debugger.mhmap_mode;
+
+    g_debugger.active = 0;
+    g_debugger.cpuhist_mode = DEBUGGER_CPUHIST_MODE_WITH_WINDOW;
+    g_debugger.mhmap_mode = DEBUGGER_MHMAP_MODE_OFF;
+    mzarch_platform_fn_debugger_state_changed ( false );
+    /* Předpoklad: bez aktivního debuggeru nic pomalé callbacky nepotřebuje. */
+    TEST_ASSERT_FALSE ( cpu_on_logging_callbacks ( ) );
+
+    TEST_ASSERT_TRUE ( call_dispatch ( DBGAPI_CMD_DEBUGGER_ACTIVATE, NULL, NULL ) );
+    bool logging_after_activate = cpu_on_logging_callbacks ( );
+
+    TEST_ASSERT_TRUE ( call_dispatch ( DBGAPI_CMD_DEBUGGER_DEACTIVATE, NULL, NULL ) );
+    bool logging_after_deactivate = cpu_on_logging_callbacks ( );
+
+    /* Úklid před asserty, aby selhání nezanechalo stav pro další testy. */
+    g_debugger.active = 0;
+    g_debugger.cpuhist_mode = saved_cpuhist;
+    g_debugger.mhmap_mode = saved_mhmap;
+    mzarch_platform_fn_debugger_state_changed ( false );
+
+    TEST_ASSERT_TRUE ( logging_after_activate );
+    TEST_ASSERT_FALSE ( logging_after_deactivate );
 }
 
 
@@ -1057,6 +1112,7 @@ int main ( int argc, char *argv[] ) {
 
     RUN_TEST ( test_cmd_debugger_activate_sets_flag );
     RUN_TEST ( test_cmd_debugger_deactivate_clears_flag );
+    RUN_TEST ( test_cmd_debugger_activate_deactivate_swaps_callbacks );
 
     RUN_TEST ( test_cmd_pause_sets_paused_flag );
     RUN_TEST ( test_cmd_pause_idempotent );

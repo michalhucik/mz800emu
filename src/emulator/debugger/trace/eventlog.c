@@ -50,16 +50,16 @@ int      g_eventlog_active      = 0;
 uint64_t g_eventlog_active_mask = UINT64_C ( 0xFFFFFFFFFFFFFFFF );
 
 /* Pause-on-match trigger gate + callback pointer (Commit 19).
- * Default OFF - hot-path má jen 1 load + 1 branch režii. UI vrstva
- * registruje callback při init Events okna a přepíná gate při toggle
- * checkboxu "Pause on match" + úspěšném parse filteru. */
+ * Default OFF - hot-path má jen 1 load + 1 branch režii. Callback i gate
+ * nastavuje eventlog_trigger_set() na emu vlákně (okno Events posílá
+ * změny příkazem dbgapi), viz eventlog_trigger.h. */
 int               g_eventlog_pause_trigger_active = 0;
 evlog_pause_cb_t  g_eventlog_pause_callback       = NULL;
 
 /* Auto-mark on match trigger gate + callback pointer (Commit 20).
  * Identický pattern s pause triggerem - nezávislá feature, oba mohou
- * běžet paralelně. Re-entry guard (USER_MARK skip) řeší UI callback,
- * eventlog vrstva o tom neví. */
+ * běžet paralelně. Re-entry guard (USER_MARK skip) řeší callback
+ * v eventlog_trigger.c, eventlog_record o tom neví. */
 int                  g_eventlog_automark_trigger_active = 0;
 evlog_automark_cb_t  g_eventlog_automark_callback       = NULL;
 
@@ -203,9 +203,9 @@ void eventlog_destroy ( void )
     g_eventlog.count    = 0;
     g_eventlog.overflow = false;
     g_eventlog_active   = 0;
-    /* Pause-on-match gate + callback - po destroy nemůžeme volat UI
-     * vrstvu, vyresetujeme gate (callback pointer ponecháme - UI ho
-     * případně registruje znovu při dalším initu). */
+    /* Pause-on-match gate - po destroy ring není, gate vypneme (callback
+     * pointer ponecháme). Filtry triggerů uvolňuje
+     * eventlog_trigger_shutdown(), které debugger_exit volá před námi. */
     g_eventlog_pause_trigger_active = 0;
     /* Auto-mark gate má stejný kontrakt jako pause. */
     g_eventlog_automark_trigger_active = 0;
@@ -501,7 +501,7 @@ void eventlog_record ( uint8_t category, uint8_t subtype,
 
     /* Auto-mark on match hook (Commit 20) - paralelní s pause, eval
      * jiný filter, match -> marklog_record(). Re-entry guard (= skip
-     * USER_MARK kategorie) řeší UI callback, ne eventlog vrstva. */
+     * USER_MARK kategorie) řeší callback v eventlog_trigger.c. */
     if ( g_eventlog_automark_trigger_active && g_eventlog_automark_callback ) {
         g_eventlog_automark_callback ( e );
     }

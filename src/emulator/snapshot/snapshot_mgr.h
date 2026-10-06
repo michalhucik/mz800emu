@@ -83,6 +83,19 @@ int snapshot_register_component(const char *name,
  */
 int snapshot_mgr_get_component_count(void);
 
+/**
+ * @brief Vrátí jméno komponenty na pozici @p index v pořadí zpracování (pro testy).
+ *
+ * Pořadí odpovídá pořadí volání save/load callbacků: vzestupně podle
+ * priority, v rámci stejné priority podle pořadí registrace.
+ *
+ * @param index Pozice 0 .. snapshot_mgr_get_component_count() - 1.
+ * @return Jméno předané do snapshot_register_component() (vlastní ho
+ *         registrující handler, typicky řetězcový literál), nebo NULL při
+ *         indexu mimo rozsah.
+ */
+const char *snapshot_mgr_get_component_name(int index);
+
 
 /* ========================================================================= */
 /*               Deklarace registračních funkcí handlerů                     */
@@ -101,6 +114,31 @@ extern void snap_ctc8253_register(void);
 extern void snap_pio8255_register(void);
 extern void snap_psg_register(void);
 extern void snap_audio_register(void);
+
+/**
+ * @brief Registruje komponentu "videorec" (informace o video záznamu pro retake).
+ *
+ * Volá snapshot_init() hned za snap_audio_register(): stejná priorita
+ * SNAPSHOT_PRIORITY_DEVICE, pořadí v rámci priority je pořadí registrace.
+ * Komponenta je volitelná (is_optional = true).
+ */
+extern void snap_videorec_register(void);
+
+/**
+ * @brief Oznámí lepidlu video záznamu dokončený úspěšný load snapshotu.
+ *
+ * Volá snapshot_load_through_io() po načtení všech komponent, těsně před
+ * návratem SNAPSHOT_OK. Předá informace přečtené load callbackem komponenty
+ * "videorec" (nebo NULL, když je snapshot neobsahoval) do
+ * videorec_on_snapshot_loaded() a zapomene je.
+ *
+ * @par Vlákna Vlákno, které snapshot nahrává: UI vlákno při pozastavené
+ *      emulaci, nebo emu vlákno při zpracování dbgapi/MCP příkazu (v paused
+ *      smyčce i za běhu emulace mezi snímky - emulace pak v pauze není);
+ *      bere zámek lepidla videorec, požadavek se zpracuje na nejbližším
+ *      konci snímku (viz videorec_on_snapshot_loaded()).
+ */
+extern void snap_videorec_after_load(void);
 
 #if HAVE_PIOZ80
 extern void snap_pioz80_register(void);

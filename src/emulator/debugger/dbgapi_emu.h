@@ -96,6 +96,11 @@ bool dbgapi_emu_has_pending(st_DBGAPI_CMDRQ_QUEUE *queue);
  * Thread-safe (zamyká queue_mutex).
  * Vrací ukazatel na slot, nebo NULL pokud je fronta prázdná.
  *
+ * Sloty zrušené odesílatelem po timeoutu (DBGAPI_CMDSTATE_CANCELLED)
+ * přeskočí a uvolní - takový příkaz se neprovede. Vrácený slot označí
+ * jako vyzvednutý (dequeued = true); od té chvíle ho odesílatel nezruší
+ * a čeká na dbgapi_emu_complete().
+ *
  * POZOR: Vrácený slot je platný do volání dbgapi_emu_complete().
  * Emulátor musí zpracovat příkaz a zavolat complete() před dalším dequeue().
  */

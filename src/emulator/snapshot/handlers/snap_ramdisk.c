@@ -1,10 +1,17 @@
 /**
  * @file snap_ramdisk.c
  * @brief Snapshot handler: RAM disk — uložení a načtení stavu RAM disku (STD + Pezik)
+ *
+ * Připojení, typ, velikost a portmask ramdisků jsou stav stroje: snapshot
+ * je obnoví pro běh, INI ([RAMDISK] mr1r18_*, pezik_*_pluged, _portmask)
+ * si drží volbu uživatele (snapshot_config_pin_ini_value). Příznak
+ * backuped (záloha Pezik ramdisku do souboru hosta) je uživatelská
+ * preference: ukládá se kvůli starším verzím, při načtení se ignoruje.
  */
 
 #include "snapshot/snapshot_mgr.h"
 #include "snapshot/snapshot_xml.h"
+#include "snapshot/snapshot_config.h"
 
 #if CFG_HWEXT_HAVE_RAMDISK
 
@@ -98,9 +105,16 @@ static en_SNAPSHOT_RESULT snap_ramdisk_load(st_SNAPSHOT_CONTEXT *ctx)
         uint16_t hval16;
         uint8_t hval8;
 
+        /* connected, type a size jen pro běh - INI hodnoty se připnou. */
+        unsigned ini_connected = g_ramdisk.std.connected;
+        unsigned ini_type = (unsigned)g_ramdisk.std.type;
+        unsigned ini_size = (unsigned)g_ramdisk.std.size;
         snapshot_xml_read_uint(r, "connected", &g_ramdisk.std.connected);
         if (snapshot_xml_read_int(r, "type", &ival)) g_ramdisk.std.type = (en_RAMDISK_TYPE)ival;
         if (snapshot_xml_read_int(r, "size", &ival)) g_ramdisk.std.size = (en_RAMDISK_BANKMASK)ival;
+        snapshot_config_pin_ini_value("RAMDISK", "mr1r18_pluged", ini_connected);
+        snapshot_config_pin_ini_value("RAMDISK", "mr1r18_type", ini_type);
+        snapshot_config_pin_ini_value("RAMDISK", "mr1r18_size", ini_size);
         if (snapshot_xml_read_hex16(r, "offset", &hval16)) g_ramdisk.std.offset = hval16;
         if (snapshot_xml_read_hex8(r, "bank", &hval8)) g_ramdisk.std.bank = hval8;
 
@@ -115,10 +129,18 @@ static en_SNAPSHOT_RESULT snap_ramdisk_load(st_SNAPSHOT_CONTEXT *ctx)
         if (snapshot_xml_enter_element(r, elem_name)) {
             uint16_t hval16;
 
+            /* connected a portmask jen pro běh (INI se připne), backuped
+             * záměrně nečteme (uživatelská preference). Index pole odpovídá
+             * RAMDISK_PEZIK_68 / RAMDISK_PEZIK_E8. */
+            const char *key_conn = (i == RAMDISK_PEZIK_E8) ? "pezik_e8_pluged" : "pezik_68_pluged";
+            const char *key_mask = (i == RAMDISK_PEZIK_E8) ? "pezik_e8_portmask" : "pezik_68_portmask";
+            unsigned ini_connected = g_ramdisk.pezik[i].connected;
+            unsigned ini_portmask = g_ramdisk.pezik[i].portmask;
             snapshot_xml_read_uint(r, "connected", &g_ramdisk.pezik[i].connected);
             if (snapshot_xml_read_hex16(r, "latch", &hval16)) g_ramdisk.pezik[i].latch = hval16;
             snapshot_xml_read_uint(r, "portmask", &g_ramdisk.pezik[i].portmask);
-            snapshot_xml_read_uint(r, "backuped", &g_ramdisk.pezik[i].backuped);
+            snapshot_config_pin_ini_value("RAMDISK", key_conn, ini_connected);
+            snapshot_config_pin_ini_value("RAMDISK", key_mask, ini_portmask);
 
             snapshot_xml_leave_element(r); /* pezik_N */
         }

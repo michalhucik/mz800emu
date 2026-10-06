@@ -40,6 +40,7 @@
 #include "cfgmain.h"
 #include "emulator.h"
 #include "iface/iface_audio.h"
+#include "videorec/videorec.h"
 
 st_AUDIO g_audio;
 
@@ -298,6 +299,11 @@ static inline void audio_changed(st_AUDIO_LOG *log, en_AUDIO_SOURCE audio_source
     sample->value = value;
     sample->count_ticks = 0;
     src->last_value = value;
+
+    /* Video záznam: jen živé změny (log == g_audio.log). Události přesouvané
+     * v audiolog_finish_20ms_frame() do nového logu už tapnuté byly. */
+    if (log == g_audio.log && videorec_wants_emu_audio())
+        videorec_audio_tap((unsigned)src_id, (uint8_t)value, total_event_ticks);
 }
 
 void audio_ctc0_changed(bool ctc0_state, uint64_t total_event_ticks)
@@ -361,6 +367,11 @@ void audiolog_finish_20ms_frame(uint64_t total_event_ticks)
 {
     // dokoncime PSG
     audio_log_fill_psg(total_event_ticks);
+
+    /* Video záznam: všechny události do last_psg_timestamp jsou doručené
+     * (CTC0 živě až do total_event_ticks, PSG po krocích do last_psg_timestamp). */
+    if (videorec_wants_emu_audio())
+        videorec_audio_horizon(g_audio.log->last_psg_timestamp);
 
     // zaevidujeme konec frame
     st_AUDIO_LOG *log = g_audio.log;

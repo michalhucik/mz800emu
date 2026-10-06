@@ -5,6 +5,11 @@
  * Jediné místo v Memory Browser kódu kde se volá dbgapi_regions_*.
  * Core hex view chodí pres st_HEX_VIEW_BACKEND vtable.
  *
+ * Zápisy jdou přes CMDRQ frontu (DBGAPI_CMD_REGIONS_WRITE), vykoná je
+ * emu vlákno. Čtení zůstává přímé z UI vlákna (živý náhled bez pauzy,
+ * viz dbgapi_regions.c "Thread safety"); u regionu LOGICAL může čtení
+ * E001 v režimu MZ-700 posunout autotype ukazatel 8255 (známá výhrada).
+ *
  * ----------------------------- License -------------------------------------
  *
  * GPL-3.0-or-later.
@@ -24,6 +29,22 @@
 extern "C" {
 #include "emulator/debugger/dbgapi_regions.h"
 }
+/* dbgapi_ui.h má vlastní extern "C" a tahá glib.h (C++ šablony), proto
+ * mimo blok extern "C". */
+#include "emulator/debugger/dbgapi_ui.h"
+
+
+/**
+ * @brief Limit (ms) čekání zápisu Memory Browseru na vyzvednutí emu vláknem.
+ *
+ * Zápis jde přes CMDRQ frontu (viz emu_backend_write). V pauze ji emu
+ * vlákno obslouží hned (paused smyčka čeká na podmínku fronty), za běhu
+ * na nejbližším konci snímku (~20 ms při 100 %). 1 s pokrývá i výrazně
+ * zpomalenou emulaci; při překročení se zápis zruší a NEprovede (hex view
+ * ukáže "Write failed"). Hodnota je zvolená úvahou, ne měřením
+ * [neověřeno].
+ */
+#define MEMBROWSER_WRITE_TIMEOUT_MS 1000
 
 /* Static buffer pro region snapshot - vlastní per session, refresh přepíše. */
 static st_REGION_DESC s_regions_buf[MEMBROWSER_MAX_REGIONS];
@@ -324,14 +345,49 @@ static int emu_backend_read ( void *ctx, uint64_t offset, uint8_t *out, uint32_t
 }
 
 
-/* Write wrapper: ctx = (void*)(intptr_t)region_id. Po úspěšném write
- * invalidate ovlivněné cache stránky (jinak by další read vrátil starou
- * hodnotu). */
+/**
+ * @brief Write wrapper backendu: zápis do regionu přes CMDRQ frontu.
+ *
+ * Zápis se NEprovádí přímo z UI vlákna, ale příkazem
+ * DBGAPI_CMD_REGIONS_WRITE, který vykoná emu vlákno v konzistentním bodě
+ * mezi instrukcemi (drain fronty). Dřívější přímé volání
+ * dbgapi_regions_write() z UI vlákna běželo souběžně s emulací: u regionu
+ * LOGICAL prošlo memory_write_byte(), tedy MEM_W breakpointy
+ * (breakpoints_enforce_mem_w z UI vlákna), zápisy do 8255/8253/GDG na
+ * E000-E008 v režimu MZ-700 a VRAM přes GDG write-format, vše bez
+ * synchronizace s emu vláknem.
+ *
+ * Chování: v pauze se zápis provede téměř hned, za běhu na nejbližším
+ * konci snímku (UI vlákno na něj synchronně čeká, nejvýš
+ * MEMBROWSER_WRITE_TIMEOUT_MS). Po úspěchu invaliduje ovlivněné stránky
+ * page cache, jinak by další read vrátil starou hodnotu.
+ *
+ * @param ctx    (void*)(intptr_t)region_id
+ * @param offset Offset v regionu (max 32 bitů).
+ * @param in     Data k zápisu (vlastní volající, platná do návratu).
+ * @param len    Počet bajtů.
+ * @return Počet zapsaných bajtů (může být méně než len na konci regionu),
+ *         -1 při chybě regionu, timeoutu, plné frontě nebo ukončování.
+ *
+ * @pre Volat z UI vlákna (ne z emu vlákna - synchronní submit by se zasekl).
+ */
 static int emu_backend_write ( void *ctx, uint64_t offset, const uint8_t *in, uint32_t len )
 {
     int region_id = ( int ) ( intptr_t ) ctx;
     if ( offset > 0xFFFFFFFFu ) return -1;
-    int wr = dbgapi_regions_write ( region_id, ( uint32_t ) offset, in, len );
+    if ( !in || len == 0 ) return -1;
+
+    st_DBGAPI_REGIONS_WRITE_PARAM p;
+    std::memset ( &p, 0, sizeof ( p ) );
+    p.region_id = region_id;
+    p.offset = ( uint32_t ) offset;
+    p.data = in;
+    p.len = len;
+    p.out_count = -1;
+    en_DBGAPI_SUBMIT_STATUS st = dbgapi_ui_submit_cmd_sync_ex (
+        &g_dbgapi_cmdrq_queue, DBGAPI_CMD_REGIONS_WRITE,
+        DBGAPI_CMD_ORIGIN_USER, &p, NULL, MEMBROWSER_WRITE_TIMEOUT_MS );
+    int wr = ( st == DBGAPI_SUBMIT_OK ) ? p.out_count : -1;
     if ( wr > 0 ) {
         cache_invalidate_range ( region_id, offset, ( uint32_t ) wr );
     }

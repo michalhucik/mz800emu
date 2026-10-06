@@ -1,1 +1,2 @@
+# mcp 2.x removed mcp.server.fastmcp (mcp_server.py: ModuleNotFoundError), so stay on 1.x
 mcp[cli]>=1.0.0,<2

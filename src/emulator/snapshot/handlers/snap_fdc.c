@@ -8,6 +8,10 @@
  * obnovují z cfgfile (`wd279x_fddX_dskpath`); snapshot ukládá filename
  * a flagy pouze pro informaci a kontinuitu.
  *
+ * Připojení řadiče (connected) je stav stroje: snapshot ho obnoví pro
+ * běh, INI ([FDC] / [FDC1] connected) si drží volbu uživatele
+ * (snapshot_config_pin_ini_value).
+ *
  * ## Zpětná kompatibilita
  *
  * Historicky existovaly dvě implementační varianty FDC (_old_/_new_)
@@ -21,6 +25,7 @@
 
 #include "snapshot/snapshot_mgr.h"
 #include "snapshot/snapshot_xml.h"
+#include "snapshot/snapshot_config.h"
 
 #if CFG_HWEXT_HAVE_FDC
 
@@ -127,7 +132,10 @@ static en_SNAPSHOT_RESULT snap_fdc_load_instance(st_SNAPSHOT_CONTEXT *ctx,
 {
     /* Předpoklad: caller už vstoupil do <fdc_state>. */
 
+    /* connected jen pro běh - INI hodnota se připne. */
+    unsigned ini_connected = fdc->connected;
     snapshot_xml_read_uint(r, "connected", &fdc->connected);
+    snapshot_config_pin_ini_value(fdc_cfg_section_name(fdc), "connected", ini_connected);
 
     /* hd_patch / bus_xlate jsou informativní - aktivní hodnoty jsou
      * z cfgfile/CLI, ne ze snapshotu. */

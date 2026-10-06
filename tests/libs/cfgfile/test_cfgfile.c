@@ -923,6 +923,92 @@ void test_handler_propagate_and_save ( void ) {
 }
 
 
+/**
+ * @brief Připnutá INI hodnota: save zapisuje hodnotu před přepsáním,
+ *        dokud proměnná drží hodnotu jen pro běh.
+ */
+void test_pin_save_value_keeps_ini ( void ) {
+    st_CFGROOT *r = cfgroot_new ( test_ini_file );
+    st_CFGMODULE *m = cfgroot_register_new_module ( r, "TEST" );
+    st_CFGELEMENT *e = cfgmodule_register_new_element ( m, "conn", CFGENTYPE_BOOL, 1 );
+
+    int app_var = 1;
+    cfgelement_set_handlers ( e, &app_var, &app_var );
+
+    /* Snapshot přepíše proměnnou jen pro běh. */
+    app_var = 0;
+    cfgelement_pin_save_value ( e, 1 );
+
+    open_ini_for_save ( r );
+    cfgelement_save ( e );
+    close_ini_after_save ( r );
+    TEST_ASSERT_EQUAL_INT ( 1, cfgelement_get_bool_value ( e ) );
+    TEST_ASSERT_EQUAL_INT ( 0, app_var );
+
+    cfgroot_destroy ( r );
+}
+
+
+/** @brief Změna proměnné po připnutí (uživatel v menu) se do INI uloží. */
+void test_pin_save_value_user_change_wins ( void ) {
+    st_CFGROOT *r = cfgroot_new ( test_ini_file );
+    st_CFGMODULE *m = cfgroot_register_new_module ( r, "TEST" );
+    st_CFGELEMENT *e = cfgmodule_register_new_element ( m, "size", CFGENTYPE_UNSIGNED, 1, 0, 10 );
+
+    unsigned app_var = 1;
+    cfgelement_set_handlers ( e, &app_var, &app_var );
+
+    app_var = 5;                        /* snapshot */
+    cfgelement_pin_save_value ( e, 1 );
+    app_var = 7;                        /* uživatel */
+
+    open_ini_for_save ( r );
+    cfgelement_save ( e );
+    close_ini_after_save ( r );
+    TEST_ASSERT_EQUAL_UINT ( 7, cfgelement_get_unsigned_value ( e ) );
+
+    /* Připnutí je zrušené: návrat na 5 se už uloží. */
+    app_var = 5;
+    open_ini_for_save ( r );
+    cfgelement_save ( e );
+    close_ini_after_save ( r );
+    TEST_ASSERT_EQUAL_UINT ( 5, cfgelement_get_unsigned_value ( e ) );
+
+    cfgroot_destroy ( r );
+}
+
+
+/** @brief Druhý snapshot po prvním zachová původní INI hodnotu. */
+void test_pin_save_value_repeated_keeps_original ( void ) {
+    st_CFGROOT *r = cfgroot_new ( test_ini_file );
+    st_CFGMODULE *m = cfgroot_register_new_module ( r, "TEST" );
+    st_CFGELEMENT *e = cfgmodule_register_new_element ( m, "type", CFGENTYPE_KEYWORD, 0,
+                                                        0, "A", 1, "B", 2, "C", -1 );
+
+    int app_var = 0;
+    cfgelement_set_handlers ( e, &app_var, &app_var );
+
+    app_var = 1;                        /* snapshot 1 */
+    cfgelement_pin_save_value ( e, 0 );
+    int before = app_var;
+    app_var = 2;                        /* snapshot 2 */
+    cfgelement_pin_save_value ( e, ( unsigned ) before );
+
+    open_ini_for_save ( r );
+    cfgelement_save ( e );
+    close_ini_after_save ( r );
+    TEST_ASSERT_EQUAL_INT ( 0, cfgelement_get_keyword_value ( e ) );
+
+    /* Snapshot se stejnou hodnotou jako INI připnutí zruší. */
+    before = app_var;
+    app_var = 0;
+    cfgelement_pin_save_value ( e, ( unsigned ) before );
+    TEST_ASSERT_EQUAL_INT ( 0, e->save_pin_active );
+
+    cfgroot_destroy ( r );
+}
+
+
 /** @brief Testuje propagate a save pres set_pointers pro TEXT element */
 void test_pointer_propagate_and_save ( void ) {
     st_CFGROOT *r = cfgroot_new ( test_ini_file );
@@ -1079,6 +1165,9 @@ int main ( int argc, char *argv[] ) {
     /* Propagate/save handlery */
     RUN_TEST ( test_handler_propagate_and_save );
     RUN_TEST ( test_pointer_propagate_and_save );
+    RUN_TEST ( test_pin_save_value_keeps_ini );
+    RUN_TEST ( test_pin_save_value_user_change_wins );
+    RUN_TEST ( test_pin_save_value_repeated_keeps_original );
 
     /* Reset */
     RUN_TEST ( test_root_reset );

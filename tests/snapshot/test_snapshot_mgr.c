@@ -13,6 +13,7 @@
 
 #include "emulator/snapshot/snapshot.h"
 #include "emulator/snapshot/snapshot_mgr.h"
+#include "emulator/snapshot/snapshot_io.h"
 #include "emulator/emulator.h"
 #include "hw-generic/memory/memory.h"
 
@@ -34,6 +35,43 @@ void test_mgr_components_registered(void)
     /* snapshot_init() se volá v mztest_init() —
      * ověříme, že se zaregistrovalo >0 komponent */
     TEST_ASSERT_GREATER_THAN(0, snapshot_mgr_get_component_count());
+}
+
+/* Komponenta "videorec" je registrovaná a v pořadí až za komponentou "audio"
+ * (load "videorec" smí počítat s resetovaným audio logem). */
+void test_videorec_component_registered(void)
+{
+    int n = snapshot_mgr_get_component_count();
+    int i_audio = -1, i_vr = -1;
+    for (int i = 0; i < n; i++) {
+        const char *name = snapshot_mgr_get_component_name(i);
+        TEST_ASSERT_NOT_NULL(name);
+        if (strcmp(name, "audio") == 0) i_audio = i;
+        if (strcmp(name, "videorec") == 0) i_vr = i;
+    }
+    TEST_ASSERT_NULL(snapshot_mgr_get_component_name(-1));
+    TEST_ASSERT_NULL(snapshot_mgr_get_component_name(n));
+    TEST_ASSERT_TRUE_MESSAGE(i_audio >= 0, "component 'audio' not registered");
+    TEST_ASSERT_TRUE_MESSAGE(i_vr >= 0, "component 'videorec' not registered");
+    TEST_ASSERT_GREATER_THAN(i_audio, i_vr);
+}
+
+/* Bez nahrávání snapshot neobsahuje videorec/state.bin. */
+void test_videorec_state_absent_when_idle(void)
+{
+    g_emulator.paused = true;
+    uint8_t *data = NULL;
+    size_t size = 0;
+    en_SNAPSHOT_RESULT res = snapshot_save_to_buffer("videorec idle", &data, &size);
+    g_emulator.paused = false;
+    TEST_ASSERT_EQUAL_INT_MESSAGE(SNAPSHOT_OK, res, snapshot_result_to_string(res));
+
+    snapshot_io_t *io = snapshot_io_open_read_buffer(data, size);
+    TEST_ASSERT_NOT_NULL(io);
+    TEST_ASSERT_TRUE(snapshot_io_entry_exists(io, "manifest.xml"));
+    TEST_ASSERT_FALSE(snapshot_io_entry_exists(io, "videorec/state.bin"));
+    snapshot_io_close(io);
+    g_free(data);
 }
 
 /* snapshot_result_to_string vrací nenulový string pro každý kód */
@@ -236,6 +274,8 @@ int main(int argc, char *argv[])
     /* smoke */
     RUN_TEST(test_mgr_components_registered);
     RUN_TEST(test_mgr_result_to_string);
+    RUN_TEST(test_videorec_component_registered);
+    RUN_TEST(test_videorec_state_absent_when_idle);
 
     /* unit */
     RUN_TEST(test_mgr_save_load_roundtrip);

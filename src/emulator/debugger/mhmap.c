@@ -60,8 +60,10 @@
 /**
  * @brief Globální stav Memory Heatmap - statická alokace v BSS.
  *
- * Velikost ~2.7 MB pro MZ-800 po V5 (cell má 16 B = 4× uint32 R/W/X/S).
- * Před V5 mělo 12 B per cell (~2 MB). Žádný malloc, žádné lazy alloc.
+ * Cela má 16 B (4× uint32 R/W/X/S, od V5; dřív 12 B). Pro MZ-800
+ * sizeof(st_MHMAP) = 13 508 608 B (~12.9 MiB, změřeno 2026-10-04), z toho
+ * 8 MiB region memext; přehled všech arch viz mhmap.h. Žádný malloc, žádné
+ * lazy alloc.
  */
 st_MHMAP g_mhmap;
 
@@ -101,6 +103,52 @@ void mhmap_set_mode ( en_DEBUGGER_MHMAP_MODE mode )
      * rychlou a pomalou cestou.
      */
     mzarch_platform_fn_debugger_state_changed ( TEST_DEBUGGER_ACTIVE );
+}
+
+
+bool mhmap_reset_region ( size_t region_index )
+{
+    size_t count = 0;
+    const st_MHMAP_EXPORT_REGION *regions = mhmap_get_export_regions ( &count );
+    if ( region_index >= count ) return false;
+
+    const st_MHMAP_EXPORT_REGION *region = &regions[ region_index ];
+    if ( !region->buffer || region->size_bytes == 0 ) return false;
+
+    /* buffer ukazuje do g_mhmap (const jen kvůli read-only API tabulky). */
+    memset ( (void *) region->buffer, 0, region->size_bytes );
+    return true;
+}
+
+
+bool mhmap_merge ( const st_MHMAP *src, en_MHMAP_MERGE_OP op )
+{
+    if ( !src ) return false;
+    if ( op != MHMAP_MERGE_ADD && op != MHMAP_MERGE_SUB ) return false;
+
+    /* Celá mapa jako pole uint32_t: st_MHMAP je jen pole buněk se čtyřmi
+     * uint32_t countery, bez paddingu mezi nimi. */
+    const uint32_t *s = (const uint32_t *) src;
+    uint32_t *d = (uint32_t *) &g_mhmap;
+    size_t cells_total = sizeof ( g_mhmap ) / sizeof ( uint32_t );
+
+    if ( op == MHMAP_MERGE_ADD )
+    {
+        for ( size_t k = 0; k < cells_total; k++ )
+        {
+            uint32_t sum = d[ k ] + s[ k ];
+            if ( sum < d[ k ] ) sum = 0xFFFFFFFFu;     /* saturace při přetečení */
+            d[ k ] = sum;
+        };
+    }
+    else
+    {
+        for ( size_t k = 0; k < cells_total; k++ )
+        {
+            d[ k ] = ( d[ k ] >= s[ k ] ) ? ( d[ k ] - s[ k ] ) : 0;
+        };
+    };
+    return true;
 }
 
 
@@ -963,4 +1011,4 @@ void mhmap_view_destroy ( mhmap_view_t *view )
 }
 
 
-#endif /* MZ800EMU_CFG_DEBUGGER_ENABLED && (MZARCH == 800 || MZARCH == 1500) */
+#endif /* MZ800EMU_CFG_DEBUGGER_ENABLED && (MZARCH == 800 || MZARCH == 1500 || MZARCH == 700) */

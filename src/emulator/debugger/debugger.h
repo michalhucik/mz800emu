@@ -292,17 +292,26 @@ extern int g_eventlog_active; /* fwd decl pro TEST_DEBUGGER_NEED_DEBUG_CALLBACKS
     extern uint8_t debugger_dasm_pure_ram_read_cb(uint16_t addr, void *user_data);
     extern uint8_t debugger_dasm_history_read_cb(uint16_t addr, void *user_data);
     extern void debugger_memory_write_byte(uint16_t addr, uint8_t value);
-    extern void debugger_mmap_mount(unsigned value);
-    extern void debugger_mmap_umount(unsigned value);
     extern void debugger_change_z80_flagbit(unsigned flagbit, unsigned value);
     extern void debugger_change_z80_register(z80_reg_t reg, uint16_t value);
-    extern void debugger_change_dmd(uint8_t value);
     extern void debugger_change_gdg_reg_border(uint8_t value);
     extern void debugger_change_gdg_reg_palgrp(uint8_t value);
     extern void debugger_change_gdg_reg_pal(uint8_t pal, uint8_t value);
     extern void debugger_change_gdg_wfr(uint8_t value);
     extern void debugger_change_gdg_rfr(uint8_t value);
     extern uint32_t debuger_hextext_to_uint32(const char *txt);
+    /**
+     * @brief Vynucený plný refresh obrazovky (tenký wrapper nad
+     *        mzarch_forced_full_screen_refresh()).
+     *
+     * Přegeneruje framebuffer z VRAM a dokončí snímek (výměna bufferů
+     * g_framebuffer), takže se obraz překreslí i v pauze.
+     *
+     * @pre Volat z emu vlákna (krok debuggeru se screen_refresh_at_step,
+     *      dbgapi handlery) nebo před startem emu vlákna. Framebuffer plní
+     *      emu vlákno; UI (Ctrl+R, menu) posílá DBGAPI_CMD_SCREEN_REFRESH
+     *      přes helper dbg_ui_screen_refresh().
+     */
     extern void debugger_forced_screen_update(void);
 
     /**
@@ -313,13 +322,18 @@ extern int g_eventlog_active; /* fwd decl pro TEST_DEBUGGER_NEED_DEBUG_CALLBACKS
      * vizuální podoby obrazovky bez běhu emulace - tj.:
      *   - debugger_memory_write_byte() po zápisu do VRAM/CGRAM (gated
      *     flagem g_debugger.memop_vram_touched),
-     *   - DMD mode změna v Memory Map okně (MZ-800),
-     *   - banking změna v Memory Map okně,
+     *   - DMD mode a banking změna z okna Memory Map (handler
+     *     DBGAPI_CMD_MEMMAP_SET na emu vlákně),
      *   - (budoucí) GDG chip inspect editace.
      *
      * Bez tohoto helperu by změna byla viditelná až po dalším frame nebo
-     * step CPU. Bezpečné volat z UI vlákna - emulátor MUSI byt v paused
-     * stavu (vyvolává force screen redraw).
+     * step CPU.
+     *
+     * @pre Volat z emu vlákna (všichni současní volající jsou handlery
+     *      dbgapi a debugger_memory_write_byte() volaná z nich). Dřívější
+     *      poznámka "bezpečné volat z UI vlákna v pauze" neplatila: ani
+     *      v pauze se framebuffer nesmí plnit souběžně s příkazy fronty,
+     *      které refresh volají také. UI posílá DBGAPI_CMD_SCREEN_REFRESH.
      */
     extern void debugger_screen_refresh_if_enabled(void);
 

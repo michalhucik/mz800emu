@@ -8,6 +8,7 @@
 #include "emulator.h"
 #include "display.h"
 #include "emulator/emulator_measuring.h"
+#include "videorec/videorec.h"
 
 typedef struct iface_video_callbacks_t
 {
@@ -103,6 +104,8 @@ static inline void iface_video_framebuffer_screen_done(uint8_t *pixels)
         };
     };
 #else
+    /* Video záznam podle reality: poslední zobrazený snímek (bez nahrávání 1 atomické čtení). */
+    videorec_on_displayed_frame(pixels);
     APP_MUTEX_LOCK(g_iface_video->fbsnapshot_pixels_mutex);
     g_iface_video->fbsnapshot_screen_id++;
     g_iface_video->fbsnapshot_pixels = pixels;

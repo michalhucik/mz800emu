@@ -13,6 +13,13 @@
  *   - g_memext.connection / g_memext.type (typ memextu)
  *   - g_memext.map[] (16x raw 4 kB bank ID, bit 7 = FLASH)
  *
+ * Zápisy (banking toggly, popup Mount/Umount, DMD roletka) okno NEprovádí
+ * samo: posílá je emu vláknu přes DBGAPI_CMD_MEMMAP_SET (helpery
+ * dbg_ui_memmap_change_map / dbg_ui_memmap_set_dmd). Emu vlákno pak volá
+ * memory_reconnect_ram() (MZ-800: i přepočet RAM fast-path) a refresh obrazu.
+ * Čtení stavu pro vykreslení zůstává přímé (jen čtení, viz komentář
+ * v memmap_window_render).
+ *
  * Per-arch dispatch: memmap_query() je definovaná v
  * src/emulator/mzarch/<arch>/memory/<arch>_memory.c, deklarace v
  * hw-generic/memory/memory.h. UI volá jednotné jméno.
@@ -41,6 +48,7 @@
 
 #include "ui-imgui/bootstrap/myimgui.h"
 #include "../debugger_state.h"
+#include "../dbgapi_helpers.h"
 #include "debugger/debugger.h"
 #include "ui-imgui/auto_layout.h"
 #include "memmap_window.h"
@@ -93,19 +101,50 @@ extern "C" void memmap_window_request_focus_at ( unsigned addr )
 
 
 /**
- * @brief Aplikuje banking změnu - memory_reconnect_ram + případný screen refresh.
+ * @brief Pošle emu vláknu změnu banking bitů (clear, pak set).
  *
- * Sdílený helper pro všechny banking-change callbacky v tomto okně
- * (banking cell levý klik + popup Mount/Umount/Mount-All/Umount-All).
- * Po update mapovacích pointerů zavolá debugger_screen_refresh_if_enabled() -
- * při zapnutém "Auto refresh on edit" v Settings -> Screen se obraz překreslí,
- * protože banking změna může přemapovat 4 KB stránku mezi RAM/VRAM/ROM/PCG
- * a obsah obrazu se může změnit i bez emulace.
+ * Sdílený vstup všech banking akcí okna (levý klik na buňku, popup
+ * Mount/Umount/Inhibit/Mount All/Umount All, MZ-1500 D000 SPEC). Emu vlákno
+ * v DBGAPI_CMD_MEMMAP_SET provede g_memory.map = (map & ~clear) | set,
+ * memory_reconnect_ram() (MZ-800 i přepočet RAM fast-path) a při zapnutém
+ * "Auto refresh on edit" refresh obrazu - banking změna může přemapovat
+ * 4 KB stránku mezi RAM/VRAM/ROM/PCG a obraz se může změnit i bez emulace.
+ *
+ * Masky počítá volající z hodnoty, kterou okno právě vidí. Bity mimo masky
+ * emu vlákno nemění, takže souběžná změna jiných bitů z OUT / IN E0-E6 se
+ * neztratí.
+ *
+ * Při timeoutu (emu vlákno frontu nevyzvedlo do DBG_UI_MEMMAP_CMD_TIMEOUT_MS)
+ * se změna neprovede; okno to nehlásí, buňka v dalším snímku ukáže
+ * skutečný (nezměněný) stav.
+ *
+ * @param clear_mask Bity g_memory.map k vynulování (0xFF = celá hodnota).
+ * @param set_mask   Bity g_memory.map k nastavení.
+ * @pre Volat z UI vlákna (blokuje do provedení příkazu).
  */
-static void memmap_apply_banking_change ( void )
+static void memmap_request_map_change ( uint8_t clear_mask, uint8_t set_mask )
 {
-    memory_reconnect_ram ( );
-    debugger_screen_refresh_if_enabled ( );
+    ( void ) dbg_ui_memmap_change_map ( clear_mask, set_mask, NULL );
+}
+
+
+/**
+ * @brief Pošle emu vláknu inverzi zadaných bitů vůči stavu, který okno vidí.
+ *
+ * Ekvivalent dřívějšího g_memory.map ^= mask, ale vyjádřený jako clear/set
+ * podle hodnoty přečtené teď na UI vlákně: bity, které okno vidí nastavené,
+ * se vynulují, ostatní z masky se nastaví. Výsledek je tedy stav, ke
+ * kterému uživatel klikal, i kdyby emu vlákno mezitím stejné bity změnilo
+ * (prosté XOR na emu vlákně by je v takovém případě vrátilo zpět).
+ *
+ * @param mask Bity g_memory.map k inverzi.
+ * @pre Volat z UI vlákna.
+ */
+static void memmap_request_map_toggle ( uint8_t mask )
+{
+    uint8_t seen = g_memory.map;
+    memmap_request_map_change ( ( uint8_t ) ( seen & mask ),
+                                ( uint8_t ) ( ~seen & mask ) );
 }
 
 
@@ -237,8 +276,9 @@ static void memmap_kind_get_visual ( en_MEMMAP_REGION_KIND kind,
  * 9 položek mapuje hodnotu g_gdg.regDMD & 0x0F na human-readable label.
  * Indexace: 0 = MZ-700, 1..8 = DMD 0..7.
  *
- * Klik = direct write do g_gdg.regDMD (bez IORQ funkce). U "MZ-700"
- * se zapíše 0x08 (= bity 0-2 nezachovává, autoritativní volba).
+ * Klik = nastavení DMD na emu vlákně přes dbg_ui_memmap_set_dmd()
+ * (gdg_debug_set_regDMD - vedlejší efekty jako OUT CEh). U "MZ-700" se
+ * zapíše 0x08 (= bity 0-2 nezachovává, autoritativní volba).
  */
 static const struct {
     const char *label;
@@ -273,11 +313,15 @@ static int memmap_dmd_to_combo_idx ( uint8_t dmd )
 /**
  * @brief Renderuje DMD roletku na vrcholu okna (jen MZ-800).
  *
- * Klik na položku zapíše příslušnou hodnotu DMD (0x00-0x07 nebo 0x08)
- * přímo do g_gdg.regDMD (= žádná IORQ funkce, bez side-effectů které
- * IORQ dispatcher provádí). Po zápisu se zavolá memory_reconnect_ram()
- * pro aktualizaci memram_read[]/write[] dispatch tabulek (DMD bit 3
- * 700 vs 800 mode ovlivňuje zda VRAM/CGRAM v 8000-CFFF přepíše RAM).
+ * Klik na položku pošle emu vláknu (dbg_ui_memmap_set_dmd ->
+ * DBGAPI_CMD_MEMMAP_SET) hodnotu DMD (0x00-0x07 nebo 0x08). Emu vlákno ji
+ * nastaví přes gdg_debug_set_regDMD() se stejnými vedlejšími efekty jako
+ * OUT CEh (CTC0 GATE0, vynulování latche MZ-700 při přechodu do 800 módu,
+ * framebuffer), jen bez záznamu hwlog a HW event breakpointu "mode
+ * change". Potom zavolá memory_reconnect_ram()
+ * (DMD bit 3 700 vs 800 mode ovlivňuje zda VRAM/CGRAM v 8000-CFFF
+ * přepíše RAM; na MZ-800 i přepočet RAM fast-path) a při "Auto refresh
+ * on edit" refresh obrazu. Při timeoutu se DMD nezmění.
  *
  * Vizuální layout (per review V0):
  *   - žádný viditelný label před comboboxem
@@ -295,15 +339,13 @@ static void memmap_render_dmd_combo ( void )
         for ( int i = 0; i < 9; i++ ) {
             bool selected = ( i == current_idx );
             if ( ImGui::Selectable ( k_dmd_combo_items[ i ].label, selected ) ) {
-                /* Direct write - bez IORQ funkce. */
-                g_gdg.regDMD = k_dmd_combo_items[ i ].dmd_value;
-                /* Aktualizace dispatch tabulek RAM/VRAM (DMD bit 3 přepíná
-                 * 700 vs 800 mode v 8000-CFFF). Side-effect-free na úrovni
-                 * Z80 - pouze přepojí pointery v g_memory.memram_*. Helper
-                 * navíc trigeruje screen refresh při zapnutém "Auto refresh
-                 * on edit" - DMD mode změna typicky mění video renderer
-                 * (700 vs 800, HICOLOR/SCRW640, ...) i sadu mapovaných stránek. */
-                memmap_apply_banking_change ( );
+                /* Na emu vlákně jako OUT CEh (bez hwlog / HWE BP): DMD
+                 * čte CPU smyčka při každém přístupu do 8000h-DFFFh.
+                 * Handler přepojí RAM pointery (+ MZ-800 fast-path)
+                 * a při "Auto refresh on edit" překreslí obraz - DMD mode
+                 * změna typicky mění video renderer (700 vs 800,
+                 * HICOLOR/SCRW640, ...) i sadu mapovaných stránek. */
+                ( void ) dbg_ui_memmap_set_dmd ( k_dmd_combo_items[ i ].dmd_value );
             };
             if ( selected ) ImGui::SetItemDefaultFocus ( );
         };
@@ -317,9 +359,12 @@ static void memmap_render_dmd_combo ( void )
 /* ---------------------------------------------------------------------------
  *  Banking sloupec - interakce (levý klik rotace, pravý klik popup menu).
  *
- *  Per-arch implementace dispatch přes #if MZARCH. Klik handlery zapisují
- *  direct do g_memory.map a volají memory_reconnect_ram() (= analogicky
- *  DMD roletka, bez IORQ funkce). Side-effect-free vůči Z80 vrstvě.
+ *  Per-arch implementace dispatch přes #if MZARCH. Klik handlery spočítají
+ *  z viděného g_memory.map clear/set masky a pošlou je emu vláknu
+ *  (memmap_request_map_change / _toggle -> DBGAPI_CMD_MEMMAP_SET), které
+ *  bity změní a zavolá memory_reconnect_ram(). Banking bity se zapisují
+ *  přímo (bez IORQ funkce OUT/IN E0-E6) - side-effect-free vůči Z80
+ *  vrstvě; DMD roletka naopak jde cestou OUT CEh (gdg_debug_set_regDMD).
  * --------------------------------------------------------------------------- */
 
 /* Forward decl - popup content je definován níže, ale volá se z
@@ -432,7 +477,8 @@ static bool memmap_banking_is_clickable ( int row )
  *  - MZ-1500: $0000 toggle ROM_0000; $D000-$EFFF rotace SPEC
  *    (NONE/CGROM/PCG1/PCG2/PCG3); $F000 toggle ROM_UPPER.
  *
- * Side effects: zápis do g_memory.map + memory_reconnect_ram().
+ * Side effects: odešle DBGAPI_CMD_MEMMAP_SET (zápis g_memory.map +
+ * memory_reconnect_ram() na emu vlákně) a čeká na jeho provedení.
  * Pokud stránka není klikatelná (viz memmap_banking_is_clickable), no-op.
  *
  * @param row  4 kB stránka 0..15.
@@ -444,7 +490,7 @@ static void memmap_banking_left_click ( int row )
 #if MZARCH == 800
     switch ( row ) {
         case 0x00:
-            g_memory.map ^= MEMORY_MZ800_MAP_FLAG_ROM_0000;
+            memmap_request_map_toggle ( MEMORY_MZ800_MAP_FLAG_ROM_0000 );
             break;
         case 0x01:
         case 0x08: case 0x09: case 0x0a: case 0x0b:
@@ -456,10 +502,10 @@ static void memmap_banking_left_click ( int row )
              * Výjimka: v 700 modu pro $D000 platí ROM_E000 flag
              * (= VRAM D000 + ROM E000 jeden bit). */
             if ( row == 0x0d && GDG_MZ800_DMD_TEST_MZ700 ) {
-                g_memory.map ^= MEMORY_MZ800_MAP_FLAG_ROM_E000;
+                memmap_request_map_toggle ( MEMORY_MZ800_MAP_FLAG_ROM_E000 );
             } else {
-                g_memory.map ^= ( MEMORY_MZ800_MAP_FLAG_ROM_1000
-                                | MEMORY_MZ800_MAP_FLAG_CGRAM_VRAM );
+                memmap_request_map_toggle ( MEMORY_MZ800_MAP_FLAG_ROM_1000
+                                          | MEMORY_MZ800_MAP_FLAG_CGRAM_VRAM );
             };
             break;
         case 0x0e: case 0x0f: {
@@ -471,16 +517,16 @@ static void memmap_banking_left_click ( int row )
             int prh   = MEMORY_MZ800_MAP_TEST_PROHIBITED ? 1 : 0;
             if ( rom_e && !prh ) {
                 /* ROM -> RAM */
-                g_memory.map &= ~MEMORY_MZ800_MAP_FLAG_ROM_E000;
-                g_memory.map &= ~MEMORY_MZ800_MAP_FLAG_PROHIBITED;
+                memmap_request_map_change ( MEMORY_MZ800_MAP_FLAG_ROM_E000
+                                          | MEMORY_MZ800_MAP_FLAG_PROHIBITED, 0 );
             } else if ( !rom_e && !prh ) {
                 /* RAM -> Prohibited (= ROM_E000 zpět + Prohibited set) */
-                g_memory.map |= MEMORY_MZ800_MAP_FLAG_ROM_E000;
-                g_memory.map |= MEMORY_MZ800_MAP_FLAG_PROHIBITED;
+                memmap_request_map_change ( 0, MEMORY_MZ800_MAP_FLAG_ROM_E000
+                                             | MEMORY_MZ800_MAP_FLAG_PROHIBITED );
             } else {
                 /* Prohibited -> ROM (clear Prohibited, ponechat ROM_E000) */
-                g_memory.map &= ~MEMORY_MZ800_MAP_FLAG_PROHIBITED;
-                g_memory.map |= MEMORY_MZ800_MAP_FLAG_ROM_E000;
+                memmap_request_map_change ( MEMORY_MZ800_MAP_FLAG_PROHIBITED,
+                                            MEMORY_MZ800_MAP_FLAG_ROM_E000 );
             };
             break;
         }
@@ -489,12 +535,12 @@ static void memmap_banking_left_click ( int row )
 #elif MZARCH == 700
     switch ( row ) {
         case 0x00:
-            g_memory.map ^= MEMORY_MZ700_MAP_FLAG_ROM_0000;
+            memmap_request_map_toggle ( MEMORY_MZ700_MAP_FLAG_ROM_0000 );
             break;
         case 0x0d: case 0x0e:
             /* $D000 (VRAM) i $E000 (ports + horní ROM) jsou řízeny stejným
              * flagem ROM_E000 v MZ-700 modelu. */
-            g_memory.map ^= MEMORY_MZ700_MAP_FLAG_ROM_E000;
+            memmap_request_map_toggle ( MEMORY_MZ700_MAP_FLAG_ROM_E000 );
             break;
         case 0x0f: {
             /* 3-stav rotace pro $F000 (ROM <-> RAM <-> Prohibited).
@@ -502,14 +548,14 @@ static void memmap_banking_left_click ( int row )
             int rom_e = MEMORY_MZ700_MAP_TEST_ROM_E000 ? 1 : 0;
             int prh   = MEMORY_MZ700_MAP_TEST_PROHIBITED ? 1 : 0;
             if ( rom_e && !prh ) {
-                g_memory.map &= ~MEMORY_MZ700_MAP_FLAG_ROM_E000;
-                g_memory.map &= ~MEMORY_MZ700_MAP_FLAG_PROHIBITED;
+                memmap_request_map_change ( MEMORY_MZ700_MAP_FLAG_ROM_E000
+                                          | MEMORY_MZ700_MAP_FLAG_PROHIBITED, 0 );
             } else if ( !rom_e && !prh ) {
-                g_memory.map |= MEMORY_MZ700_MAP_FLAG_ROM_E000;
-                g_memory.map |= MEMORY_MZ700_MAP_FLAG_PROHIBITED;
+                memmap_request_map_change ( 0, MEMORY_MZ700_MAP_FLAG_ROM_E000
+                                             | MEMORY_MZ700_MAP_FLAG_PROHIBITED );
             } else {
-                g_memory.map &= ~MEMORY_MZ700_MAP_FLAG_PROHIBITED;
-                g_memory.map |= MEMORY_MZ700_MAP_FLAG_ROM_E000;
+                memmap_request_map_change ( MEMORY_MZ700_MAP_FLAG_PROHIBITED,
+                                            MEMORY_MZ700_MAP_FLAG_ROM_E000 );
             };
             break;
         }
@@ -518,7 +564,7 @@ static void memmap_banking_left_click ( int row )
 #elif MZARCH == 1500
     switch ( row ) {
         case 0x00:
-            g_memory.map ^= MEMORY_MZ1500_MAP_FLAG_ROM_0000;
+            memmap_request_map_toggle ( MEMORY_MZ1500_MAP_FLAG_ROM_0000 );
             break;
         case 0x0d: case 0x0e: {
             /* SPEC rotace 0..4: NONE -> CGROM -> PCG1 -> PCG2 -> PCG3 -> NONE.
@@ -527,21 +573,19 @@ static void memmap_banking_left_click ( int row )
             uint8_t spec = ( g_memory.map & MEMORY_MZ1500_MAP_D000_MASK )
                            >> MEMORY_MZ1500_FLAG_SPEC_BITPOS;
             spec = ( spec + 1 ) % 5;
-            g_memory.map &= ~MEMORY_MZ1500_MAP_D000_MASK;
-            g_memory.map |= ( spec << MEMORY_MZ1500_FLAG_SPEC_BITPOS )
-                            & MEMORY_MZ1500_MAP_D000_MASK;
+            memmap_request_map_change ( MEMORY_MZ1500_MAP_D000_MASK,
+                                        ( uint8_t ) ( ( spec << MEMORY_MZ1500_FLAG_SPEC_BITPOS )
+                                                      & MEMORY_MZ1500_MAP_D000_MASK ) );
             break;
         }
         case 0x0f:
             /* $F000 - toggle ROM_UPPER (= mapování horní ROM E800-FFFF).
              * Pozn: ROM_UPPER ovládá také $D000-$EFFF (vrátí RAM pokud OFF). */
-            g_memory.map ^= MEMORY_MZ1500_MAP_FLAG_ROM_UPPER;
+            memmap_request_map_toggle ( MEMORY_MZ1500_MAP_FLAG_ROM_UPPER );
             break;
         default: return;
     };
 #endif
-
-    memmap_apply_banking_change ( );
 }
 
 
@@ -550,7 +594,10 @@ static void memmap_banking_left_click ( int row )
  *
  * Volá se z renderu okna při OpenPopup. Obsahuje sub-menu mount/umount
  * pro klíčové banking položky + Mount All / Umount All globální akce.
- * Po každé změně g_memory.map zavolá memory_reconnect_ram().
+ * Každou změnu pošle emu vláknu jako clear/set masky
+ * (memmap_request_map_change -> DBGAPI_CMD_MEMMAP_SET), které zapíše
+ * g_memory.map a zavolá memory_reconnect_ram(). Mount All / Umount All
+ * nahrazují celou hodnotu (clear maska 0xFF).
  *
  * MZ-800 záležitosti:
  *  - "CG-ROM $1000" a "CG-RAM/VRAM" jsou v HW propojeny stejným flagem
@@ -562,12 +609,10 @@ static void memmap_banking_render_popup_content ( void )
 #if MZARCH == 800
     if ( ImGui::BeginMenu ( _L( "ROM $0000" ) ) ) {
         if ( ImGui::MenuItem ( _L( "Mount" ) ) ) {
-            g_memory.map |= MEMORY_MZ800_MAP_FLAG_ROM_0000;
-            memmap_apply_banking_change ( );
+            memmap_request_map_change ( 0, MEMORY_MZ800_MAP_FLAG_ROM_0000 );
         };
         if ( ImGui::MenuItem ( _L( "Umount" ) ) ) {
-            g_memory.map &= ~MEMORY_MZ800_MAP_FLAG_ROM_0000;
-            memmap_apply_banking_change ( );
+            memmap_request_map_change ( MEMORY_MZ800_MAP_FLAG_ROM_0000, 0 );
         };
         ImGui::EndMenu ( );
     };
@@ -577,112 +622,104 @@ static void memmap_banking_render_popup_content ( void )
      * ROM_1000 + CGRAM_VRAM. */
     if ( ImGui::BeginMenu ( _L( "CG-ROM $1000" ) ) ) {
         if ( ImGui::MenuItem ( _L( "Mount" ) ) ) {
-            g_memory.map |= ( MEMORY_MZ800_MAP_FLAG_ROM_1000
-                            | MEMORY_MZ800_MAP_FLAG_CGRAM_VRAM );
-            memmap_apply_banking_change ( );
+            memmap_request_map_change ( 0,
+                                        MEMORY_MZ800_MAP_FLAG_ROM_1000
+                                      | MEMORY_MZ800_MAP_FLAG_CGRAM_VRAM );
         };
         if ( ImGui::MenuItem ( _L( "Umount" ) ) ) {
-            g_memory.map &= ~( MEMORY_MZ800_MAP_FLAG_ROM_1000
-                             | MEMORY_MZ800_MAP_FLAG_CGRAM_VRAM );
-            memmap_apply_banking_change ( );
+            memmap_request_map_change ( MEMORY_MZ800_MAP_FLAG_ROM_1000
+                                      | MEMORY_MZ800_MAP_FLAG_CGRAM_VRAM,
+                                        0 );
         };
         ImGui::EndMenu ( );
     };
     if ( ImGui::BeginMenu ( _L( "CG-RAM/VRAM" ) ) ) {
         if ( ImGui::MenuItem ( _L( "Mount" ) ) ) {
-            g_memory.map |= ( MEMORY_MZ800_MAP_FLAG_ROM_1000
-                            | MEMORY_MZ800_MAP_FLAG_CGRAM_VRAM );
-            memmap_apply_banking_change ( );
+            memmap_request_map_change ( 0,
+                                        MEMORY_MZ800_MAP_FLAG_ROM_1000
+                                      | MEMORY_MZ800_MAP_FLAG_CGRAM_VRAM );
         };
         if ( ImGui::MenuItem ( _L( "Umount" ) ) ) {
-            g_memory.map &= ~( MEMORY_MZ800_MAP_FLAG_ROM_1000
-                             | MEMORY_MZ800_MAP_FLAG_CGRAM_VRAM );
-            memmap_apply_banking_change ( );
+            memmap_request_map_change ( MEMORY_MZ800_MAP_FLAG_ROM_1000
+                                      | MEMORY_MZ800_MAP_FLAG_CGRAM_VRAM,
+                                        0 );
         };
         ImGui::EndMenu ( );
     };
     if ( ImGui::BeginMenu ( _L( "ROM $E000" ) ) ) {
         if ( ImGui::MenuItem ( _L( "Mount" ) ) ) {
-            g_memory.map |= MEMORY_MZ800_MAP_FLAG_ROM_E000;
-            g_memory.map &= ~MEMORY_MZ800_MAP_FLAG_PROHIBITED;
-            memmap_apply_banking_change ( );
+            memmap_request_map_change ( MEMORY_MZ800_MAP_FLAG_PROHIBITED,
+                                        MEMORY_MZ800_MAP_FLAG_ROM_E000 );
         };
         if ( ImGui::MenuItem ( _L( "Umount" ) ) ) {
-            g_memory.map &= ~MEMORY_MZ800_MAP_FLAG_ROM_E000;
-            g_memory.map &= ~MEMORY_MZ800_MAP_FLAG_PROHIBITED;
-            memmap_apply_banking_change ( );
+            memmap_request_map_change ( MEMORY_MZ800_MAP_FLAG_ROM_E000
+                                      | MEMORY_MZ800_MAP_FLAG_PROHIBITED,
+                                        0 );
         };
         if ( ImGui::MenuItem ( _L( "Inhibit" ) ) ) {
             /* Prohibited mode aktivuje OUT E5 (= ROM_E000 zůstává set,
              * stránky $E000-$FFFF vrací 0x1A shadow). */
-            g_memory.map |= MEMORY_MZ800_MAP_FLAG_ROM_E000;
-            g_memory.map |= MEMORY_MZ800_MAP_FLAG_PROHIBITED;
-            memmap_apply_banking_change ( );
+            memmap_request_map_change ( 0,
+                                        MEMORY_MZ800_MAP_FLAG_ROM_E000
+                                      | MEMORY_MZ800_MAP_FLAG_PROHIBITED );
         };
         ImGui::EndMenu ( );
     };
     ImGui::Separator ( );
     if ( ImGui::MenuItem ( _L( "Mount All" ) ) ) {
         /* Vše mounted, Prohibited clear. */
-        g_memory.map = MEMORY_MZ800_MAP_FLAG_ROM_0000
-                     | MEMORY_MZ800_MAP_FLAG_ROM_1000
-                     | MEMORY_MZ800_MAP_FLAG_CGRAM_VRAM
-                     | MEMORY_MZ800_MAP_FLAG_ROM_E000;
-        memmap_apply_banking_change ( );
+        memmap_request_map_change ( 0xFF,
+                                    MEMORY_MZ800_MAP_FLAG_ROM_0000
+                                  | MEMORY_MZ800_MAP_FLAG_ROM_1000
+                                  | MEMORY_MZ800_MAP_FLAG_CGRAM_VRAM
+                                  | MEMORY_MZ800_MAP_FLAG_ROM_E000 );
     };
     if ( ImGui::MenuItem ( _L( "Umount All" ) ) ) {
-        g_memory.map = 0;
-        memmap_apply_banking_change ( );
+        memmap_request_map_change ( 0xFF, 0 );
     };
 #elif MZARCH == 700
     if ( ImGui::BeginMenu ( _L( "ROM $0000" ) ) ) {
         if ( ImGui::MenuItem ( _L( "Mount" ) ) ) {
-            g_memory.map |= MEMORY_MZ700_MAP_FLAG_ROM_0000;
-            memmap_apply_banking_change ( );
+            memmap_request_map_change ( 0, MEMORY_MZ700_MAP_FLAG_ROM_0000 );
         };
         if ( ImGui::MenuItem ( _L( "Umount" ) ) ) {
-            g_memory.map &= ~MEMORY_MZ700_MAP_FLAG_ROM_0000;
-            memmap_apply_banking_change ( );
+            memmap_request_map_change ( MEMORY_MZ700_MAP_FLAG_ROM_0000, 0 );
         };
         ImGui::EndMenu ( );
     };
     if ( ImGui::BeginMenu ( _L( "ROM $E000" ) ) ) {
         if ( ImGui::MenuItem ( _L( "Mount" ) ) ) {
-            g_memory.map |= MEMORY_MZ700_MAP_FLAG_ROM_E000;
-            g_memory.map &= ~MEMORY_MZ700_MAP_FLAG_PROHIBITED;
-            memmap_apply_banking_change ( );
+            memmap_request_map_change ( MEMORY_MZ700_MAP_FLAG_PROHIBITED,
+                                        MEMORY_MZ700_MAP_FLAG_ROM_E000 );
         };
         if ( ImGui::MenuItem ( _L( "Umount" ) ) ) {
-            g_memory.map &= ~MEMORY_MZ700_MAP_FLAG_ROM_E000;
-            g_memory.map &= ~MEMORY_MZ700_MAP_FLAG_PROHIBITED;
-            memmap_apply_banking_change ( );
+            memmap_request_map_change ( MEMORY_MZ700_MAP_FLAG_ROM_E000
+                                      | MEMORY_MZ700_MAP_FLAG_PROHIBITED,
+                                        0 );
         };
         if ( ImGui::MenuItem ( _L( "Inhibit" ) ) ) {
-            g_memory.map |= MEMORY_MZ700_MAP_FLAG_ROM_E000;
-            g_memory.map |= MEMORY_MZ700_MAP_FLAG_PROHIBITED;
-            memmap_apply_banking_change ( );
+            memmap_request_map_change ( 0,
+                                        MEMORY_MZ700_MAP_FLAG_ROM_E000
+                                      | MEMORY_MZ700_MAP_FLAG_PROHIBITED );
         };
         ImGui::EndMenu ( );
     };
     ImGui::Separator ( );
     if ( ImGui::MenuItem ( _L( "Mount All" ) ) ) {
-        g_memory.map = MEMORY_MZ700_MAP_FLAG_ROM_0000
-                     | MEMORY_MZ700_MAP_FLAG_ROM_E000;
-        memmap_apply_banking_change ( );
+        memmap_request_map_change ( 0xFF,
+                                    MEMORY_MZ700_MAP_FLAG_ROM_0000
+                                  | MEMORY_MZ700_MAP_FLAG_ROM_E000 );
     };
     if ( ImGui::MenuItem ( _L( "Umount All" ) ) ) {
-        g_memory.map = 0;
-        memmap_apply_banking_change ( );
+        memmap_request_map_change ( 0xFF, 0 );
     };
 #elif MZARCH == 1500
     if ( ImGui::BeginMenu ( _L( "ROM $0000" ) ) ) {
         if ( ImGui::MenuItem ( _L( "Mount" ) ) ) {
-            g_memory.map |= MEMORY_MZ1500_MAP_FLAG_ROM_0000;
-            memmap_apply_banking_change ( );
+            memmap_request_map_change ( 0, MEMORY_MZ1500_MAP_FLAG_ROM_0000 );
         };
         if ( ImGui::MenuItem ( _L( "Umount" ) ) ) {
-            g_memory.map &= ~MEMORY_MZ1500_MAP_FLAG_ROM_0000;
-            memmap_apply_banking_change ( );
+            memmap_request_map_change ( MEMORY_MZ1500_MAP_FLAG_ROM_0000, 0 );
         };
         ImGui::EndMenu ( );
     };
@@ -692,12 +729,10 @@ static void memmap_banking_render_popup_content ( void )
          * MEMORY_MZ1500_MAP_TEST_E800_ROM = MEMORY_MZ1500_MAP_TEST_D000_VRAM
          * = ROM_UPPER && SPEC=0). */
         if ( ImGui::MenuItem ( _L( "Mount" ) ) ) {
-            g_memory.map |= MEMORY_MZ1500_MAP_FLAG_ROM_UPPER;
-            memmap_apply_banking_change ( );
+            memmap_request_map_change ( 0, MEMORY_MZ1500_MAP_FLAG_ROM_UPPER );
         };
         if ( ImGui::MenuItem ( _L( "Umount" ) ) ) {
-            g_memory.map &= ~MEMORY_MZ1500_MAP_FLAG_ROM_UPPER;
-            memmap_apply_banking_change ( );
+            memmap_request_map_change ( MEMORY_MZ1500_MAP_FLAG_ROM_UPPER, 0 );
         };
         ImGui::EndMenu ( );
     };
@@ -717,11 +752,11 @@ static void memmap_banking_render_popup_content ( void )
         for ( int i = 0; i < 5; i++ ) {
             if ( ImGui::MenuItem ( items[ i ].label, NULL,
                                    cur == items[ i ].value ) ) {
-                g_memory.map &= ~MEMORY_MZ1500_MAP_D000_MASK;
-                g_memory.map |= ( items[ i ].value
-                                  << MEMORY_MZ1500_FLAG_SPEC_BITPOS )
-                                & MEMORY_MZ1500_MAP_D000_MASK;
-                memmap_apply_banking_change ( );
+                uint8_t spec_bits = ( uint8_t ) ( ( items[ i ].value
+                                                    << MEMORY_MZ1500_FLAG_SPEC_BITPOS )
+                                                  & MEMORY_MZ1500_MAP_D000_MASK );
+                memmap_request_map_change ( MEMORY_MZ1500_MAP_D000_MASK,
+                                            spec_bits );
             };
         };
         ImGui::EndMenu ( );
@@ -729,13 +764,12 @@ static void memmap_banking_render_popup_content ( void )
     ImGui::Separator ( );
     if ( ImGui::MenuItem ( _L( "Mount All" ) ) ) {
         /* All ROM/upper, SPEC = 0 (= VRAM, ne PCG). */
-        g_memory.map = MEMORY_MZ1500_MAP_FLAG_ROM_0000
-                     | MEMORY_MZ1500_MAP_FLAG_ROM_UPPER;
-        memmap_apply_banking_change ( );
+        memmap_request_map_change ( 0xFF,
+                                    MEMORY_MZ1500_MAP_FLAG_ROM_0000
+                                  | MEMORY_MZ1500_MAP_FLAG_ROM_UPPER );
     };
     if ( ImGui::MenuItem ( _L( "Umount All" ) ) ) {
-        g_memory.map = 0;
-        memmap_apply_banking_change ( );
+        memmap_request_map_change ( 0xFF, 0 );
     };
 #endif
 }
@@ -1106,8 +1140,11 @@ extern "C" void memmap_window_render ( bool *p_open )
     };
 
     /* Auto-pauza (původně reagující na klik kamkoliv do okna) byla
-     * v review V0 ZRUŠENA. Pokud uživatel přepíná DMD za běhu emu,
-     * change proběhne přímo - drobnou race s emu vláknem nereší. */
+     * v review V0 ZRUŠENA. Změny DMD i banking bitů za běhu emu jdou přes
+     * frontu dbgapi (DBGAPI_CMD_MEMMAP_SET) a provede je emu vlákno mezi
+     * instrukcemi - souběh zápisu s CPU smyčkou už nenastává. Vykreslení
+     * okna čte g_memory.map / g_gdg.regDMD / g_memext přímo (jen čtení,
+     * bajtové hodnoty); za běhu může ukázat stav o snímek starší. */
 
     /* ---- 1) DMD roletka (jen MZ-800) ---- */
 #if MZARCH == 800

@@ -204,6 +204,7 @@ The wrapper reads transport from env variables:
 |---------|---------|------------------|
 | `MZ800EMU_TRANSPORT` | `pipe` | `pipe`, `tcp` |
 | `MZ800EMU_EXE` | `../mz800emu.exe` | path to binary (pipe only) |
+| `MZ800EMU_WORK_DIR` | (empty) | work directory of the spawned emulator, passed as `--work-dir` (pipe only); relative outputs such as the CDL export on exit go there |
 | `MZ800EMU_TCP_HOST` | `127.0.0.1` | hostname (tcp only) |
 | `MZ800EMU_TCP_PORT` | `23800` | port number (tcp only) |
 
@@ -236,6 +237,33 @@ the Claude client is therefore instant. This means:
   (= pipe spawn or TCP connect).
 - If the transport fails, you see the error at the first tool call,
   not at discovery.
+
+## Emulator exit and automatic restart
+
+If the emulator process ends while a tool call is waiting for its
+response (crash, or the process exited for another reason), the call
+fails **immediately** with an error such as
+`emulator process exited (exit code 3221225477 = 0xC0000005) while
+waiting for the response (cmd=run); ...` - it does not wait for the
+30 s request timeout. In pipe mode the emulator state is lost. In TCP
+mode the text is `emulator connection closed (...)`; only the
+connection was lost - the GUI emulator may still be running with its
+state.
+
+After such an unexpected end:
+
+- `emu_status` returns `{"running": false, "connected": false,
+  "last_exit": "<reason>"}`.
+- The next tool call that needs the emulator starts a fresh emulator
+  process (pipe; RAM, registers, breakpoints and inserted media are
+  back to defaults) or reconnects (TCP). The tool call that triggered
+  the restart reports it: its result carries `"restarted": true` and
+  `"restart_reason"`; if that call fails, its error text ends with
+  `[restarted: true; <reason>]`. Only that one call reports it, also
+  when several calls run at the same time. If the restart was triggered
+  by reading a resource, the next tool result carries the fields.
+- `emu_stop` followed by another tool call, or an explicit
+  `emu_start`, is not reported as a restart.
 
 ## Logging
 

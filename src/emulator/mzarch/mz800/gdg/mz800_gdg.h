@@ -163,6 +163,35 @@ extern "C"
     extern uint8_t gdg_read_dmd_status_ioop(void);
     extern void gdg_write_byte(unsigned addr, uint8_t value);
 
+    /**
+     * @brief Nastaví registr DMD stejnou cestou jako OUT (CEh), pro
+     *        debugger.
+     *
+     * Provede totéž co větev CEh v gdg_write_byte() - maskování na dolní
+     * 4 bity, nic při beze změny, aktualizace framebufferu do aktuální
+     * pozice paprsku a gdg_set_regDMD(): ctc82530_on_regDMD_changed()
+     * (GATE0 CTC0 = 1 v 800 módu, = regct53g7 v 700 módu), vynulování
+     * g_vramctrl.mz700_wr_latch_is_used při přechodu do 800 módu
+     * a přepočet RAM fast-path tabulky (MZ800EMU_CFG_RAM_FASTPATH).
+     *
+     * Na rozdíl od gdg_write_byte(0x00CE, value) NEzapíše záznam hwlog
+     * (GDG_MODE) a NEspustí HW event breakpoint BP_EVENT_GDG_MODE_CHANGE -
+     * zásah z debuggeru není OUT programu a nemá se v trace ani
+     * v breakpointech tvářit jako OUT.
+     *
+     * Čas změny (event_ticks pro CTC0) = gdg_get_insigeop_ticks(); mezi
+     * instrukcemi je instruction_insideop_sync_ticks = 0 (nuluje ho
+     * hlavní smyčka mzarch po každé instrukci), takže jde o aktuální
+     * g_gdg.total_elapsed.ticks.
+     *
+     * @param value Nová hodnota DMD (použijí se bity 0-3).
+     *
+     * @pre Volat jen z emu vlákna mezi instrukcemi (drain fronty dbgapi)
+     *      nebo když emu vlákno neběží.
+     * @post g_gdg.regDMD == (value & 0x0F).
+     */
+    extern void gdg_debug_set_regDMD(uint8_t value);
+
 #define gdg_compute_total_ticks(now_ticks) (now_ticks + ((uint64_t)g_gdg.total_elapsed.screens * VIDEO_SCREEN_TICKS))
 #define gdg_get_total_ticks() gdg_compute_total_ticks(g_gdg.total_elapsed.ticks)
 #define gdg_get_insigeop_ticks() (g_gdg.total_elapsed.ticks + g_mzarch_main.instruction_insideop_sync_ticks)
@@ -176,11 +205,31 @@ extern "C"
 #define gdg_1m1_on_screen_done_event() {g_gdg.ctc0clk++;}
 #endif
 
+/**
+ * @brief Uzavře snímek: zvýší čítač snímků a odečte délku snímku od tiků.
+ *
+ * Volá se jen z gdg_process_events() při zpracování události konce
+ * posledního řádku. V tu chvíli platí
+ * g_gdg.total_elapsed.ticks >= VIDEO_SCREEN_TICKS (událost má ticks ==
+ * VIDEO_SCREEN_TICKS). Pokud by to neplatilo (konec snímku zpracovaný
+ * dvakrát), unsigned odečet by přetekl na ~2^32 a emulace by minuty
+ * zpracovávala události bez instrukcí. Pojistka to nahlásí přes
+ * mzarch_main_report_screen_done_underflow() a tiky srovná na 0.
+ * Kontrola je jednou za snímek, ne v per-instruction hot path.
+ */
 #define gdg_on_screen_done_event()                       \
     {                                                    \
         g_gdg.total_elapsed.screens++;                   \
         g_mzarch_main.cursor_timer++;                          \
-        g_gdg.total_elapsed.ticks -= VIDEO_SCREEN_TICKS; \
+        if (g_gdg.total_elapsed.ticks >= VIDEO_SCREEN_TICKS) \
+        {                                                \
+            g_gdg.total_elapsed.ticks -= VIDEO_SCREEN_TICKS; \
+        }                                                \
+        else                                             \
+        {                                                \
+            mzarch_main_report_screen_done_underflow(g_gdg.total_elapsed.ticks); \
+            g_gdg.total_elapsed.ticks = 0;               \
+        }                                                \
         g_gdg.beam_row = 0;                              \
         gdg_1m1_on_screen_done_event();                  \
     }

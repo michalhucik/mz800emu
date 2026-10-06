@@ -632,6 +632,13 @@ void eventlog_stop ( void );
  * Stav Events okna je interní static (zatím v Commit 1 vždy 0).
  * UI v Commit 7 přidá setter @c eventlog_set_window_open() (= TODO).
  *
+ * Volající: handler @c DBGAPI_CMD_EVENTLOG_SET_MODE (emu vlákno, změna
+ * režimu z okna Events) a @ref eventlog_notify_window_open() (UI vlákno,
+ * hrana otevření / zavření okna). Funkce mění jen @c int příznak
+ * @ref g_eventlog_active (a vypisuje do stderr), nic nealokuje; oba
+ * volající spouští UI vlákno a změna režimu je synchronní příkaz, takže
+ * se spolu nepřekrývají.
+ *
  * @param debugger_active  Reserved pro budoucí use (= sjednocení API
  *                         s tlog @c *_recompute_active(int)). V Commit 1
  *                         se nepoužívá.
@@ -756,10 +763,11 @@ uint32_t eventlog_filename_hash ( const char *filename );
  * právě zapsaný event a může (podle vlastní filter logiky) zavolat
  * @c emulator_pause(true) pro async halt.
  *
- * Thread safety: callback je vždy volán z EMU vlákna (= hot path).
- * UI vlákno vlastní filter state a smí jej mutovat, ale callback čte
- * filter v emu vlákně - krátký race je akceptovatelný (max 1-2 missed
- * nebo extra eventy než UI re-parse dokončí).
+ * Thread safety: callback je volán z vlákna, které volá
+ * @ref eventlog_record() (běžně EMU vlákno, hot path). Implementace
+ * v @c eventlog_trigger.c čte jen stav, který mění výhradně emu vlákno
+ * (výměna filtru přes @c eventlog_trigger_set() v drainu fronty dbgapi),
+ * takže výměna nikdy neproběhne uprostřed vyhodnocení.
  *
  * @param e  Pointer na právě zapsaný event v ringu (read-only, lifetime
  *           do dalšího wrap-around).
@@ -773,11 +781,12 @@ typedef void ( *evlog_pause_cb_t ) ( const st_EVENTLOG_EVENT *e );
  * branchu v @ref eventlog_record()). @c jiné než 0 = callback se volá,
  * pokud @ref g_eventlog_pause_callback != NULL.
  *
- * UI nastavuje na @c 1 při (enable && parsed_filter_valid), jinak @c 0.
+ * Zapisuje @c eventlog_trigger_set() (@c 1 = trigger má filtr, @c 0 =
+ * vypnutý), @c eventlog_trigger_shutdown() a @ref eventlog_destroy().
  *
- * Thread safety: int store je atomický na x86, krátký race vůči hot
- * path emit je acceptable (= max 1-2 missed / extra eventy než UI
- * dokončí toggle).
+ * Thread safety: zapisuje jen emu vlákno (okno Events posílá změny
+ * příkazem @c DBGAPI_CMD_EVENTLOG_TRIGGER_SET); UI smí číst jen pro
+ * zobrazení (@c eventlog_trigger_get_status()).
  */
 extern int g_eventlog_pause_trigger_active;
 
@@ -785,9 +794,10 @@ extern int g_eventlog_pause_trigger_active;
  * @brief Callback pointer volaný z @ref eventlog_record() při aktivním
  *        gate.
  *
- * Default @c NULL (= callback se nevolá ani při aktivním gate). UI
- * registruje při init Events okna na svou interní funkci, která eval
- * filter a případně volá @c emulator_pause(true).
+ * Default @c NULL (= callback se nevolá ani při aktivním gate).
+ * @c eventlog_trigger_set() ho na emu vlákně nastaví na interní funkci
+ * modulu @c eventlog_trigger.c, která vyhodnotí filtr a při shodě volá
+ * @c emulator_pause(true). Testy ho smí nastavit přímo.
  *
  * Volání NULL pointer je no-op (= obě podmínky se testují v hot path).
  */
@@ -808,8 +818,8 @@ extern evlog_pause_cb_t g_eventlog_pause_callback;
  *
  * Pozor na re-entry: @c marklog_record() volá zpět @c eventlog_record()
  * s kategorií @c EVENTLOG_CAT_USER_MARK. Callback proto MUSÍ defenzivně
- * skipnout události této kategorie (jinak infinite re-entry, protože UI
- * vlákno mezitím gate nevypne). Stejný kontrakt platí pro testy.
+ * skipnout události této kategorie (jinak nekonečná rekurze - gate se
+ * uvnitř callbacku nevypne). Stejný kontrakt platí pro testy.
  *
  * Thread safety: identicky s @ref evlog_pause_cb_t (volání z EMU vlákna).
  *
@@ -825,8 +835,9 @@ typedef void ( *evlog_automark_cb_t ) ( const st_EVENTLOG_EVENT *e );
  * @ref eventlog_record()). @c jiné než 0 = callback se volá, pokud
  * @ref g_eventlog_automark_callback != NULL.
  *
- * UI nastavuje na @c 1 při (enable && parsed_filter_valid && non-empty
- * name), jinak @c 0.
+ * Zapisuje @c eventlog_trigger_set() (@c 1 = trigger má filtr a jméno
+ * markeru, @c 0 = vypnutý), @c eventlog_trigger_shutdown() a
+ * @ref eventlog_destroy().
  *
  * Thread safety: identicky s @ref g_eventlog_pause_trigger_active.
  */
@@ -836,9 +847,10 @@ extern int g_eventlog_automark_trigger_active;
  * @brief Callback pointer volaný z @ref eventlog_record() při aktivním
  *        @ref g_eventlog_automark_trigger_active.
  *
- * Default @c NULL. UI registruje při init Events okna na svou interní
- * funkci, která eval filter a případně volá @c marklog_register() +
- * @c marklog_record().
+ * Default @c NULL. @c eventlog_trigger_set() ho na emu vlákně nastaví na
+ * interní funkci modulu @c eventlog_trigger.c, která vyhodnotí filtr
+ * a při shodě volá @c marklog_register() (první shoda pod daným jménem)
+ * + @c marklog_record(). Testy ho smí nastavit přímo.
  *
  * Volání NULL pointer je no-op (= obě podmínky se testují v hot path).
  *
@@ -1004,8 +1016,13 @@ int eventlog_export_to_file ( const char *path );
  *  - Volá @ref eventlog_clear před zápisem (= stávající data se ztratí).
  *  - Může volat @ref eventlog_set_capacity pokud @c record_count > capacity.
  *
- * Threading: volat z UI vlákna při pauznutém / vypnutém recording, jinak
- * data race s emu vláknem (= ring se přepisuje paralelně s emu eventy).
+ * Threading: volat jen z emu vlákna (UI přes
+ * @c DBGAPI_CMD_EVENTLOG_IMPORT_FILE, helper @c dbg_ui_eventlog_import_file)
+ * nebo při initu, kdy emu smyčka ještě neběží (replay v @c debugger.c).
+ * Funkce může realokovat ring (@ref eventlog_set_capacity = free + calloc)
+ * a čte záznamy přímo do @c events[]; souběh s @ref eventlog_record() by
+ * zapisoval do uvolněné paměti. Čtenáři ringu z UI vlákna (Log, Strip)
+ * musí po návratu příkazu počítat se změnou @c count / @c capacity.
  *
  * @param path  Cesta k input souboru. MUSÍ být non-NULL.
  *

@@ -110,6 +110,13 @@ int snapshot_mgr_get_component_count(void)
 }
 
 
+const char *snapshot_mgr_get_component_name(int index)
+{
+    if (index < 0 || index >= g_snapshot_registry_count) return NULL;
+    return g_snapshot_registry[index].name;
+}
+
+
 /* ========================================================================= */
 /*                         Manifest save/load                                */
 /* ========================================================================= */
@@ -296,6 +303,7 @@ void snapshot_init(void)
 #endif
 
     snap_audio_register();
+    snap_videorec_register(); /* za "audio": při stejné prioritě rozhoduje pořadí registrace */
 
     snap_cmt_register();
 
@@ -557,6 +565,9 @@ static en_SNAPSHOT_RESULT snapshot_load_through_io(snapshot_io_t *io)
      * debugger_forced_screen_update). Společná cesta pro file i buffer load
      * (quickload) - pokrývá všechny varianty jedním voláním. */
     mzarch_forced_full_screen_refresh();
+
+    /* Video záznam: retake nebo šev (časová osa emulace se právě změnila). */
+    snap_videorec_after_load();
 
     return SNAPSHOT_OK;
 }

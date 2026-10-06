@@ -3,6 +3,7 @@
 
 #include "main.h"
 #include <stdint.h>
+#include <stdbool.h>
 #include "mzarch/mzarch.h"
 
 #define CUSTOMSPEED_MAX_VALUE 4000
@@ -38,6 +39,8 @@ extern "C"
     extern void customspeed_step_down_request(int step);
     extern void customspeed_store_speed(void);
     extern void customspeed_restore_speed(void);
+    /** Zpracuje hodnotu CLI volby --speed (max | 1..CUSTOMSPEED_MAX_VALUE); viz customspeed.c. */
+    extern bool customspeed_parse_cli_value(const char *text, bool *out_max, int *out_percent);
 
 #ifdef __cplusplus
 }
