@@ -1,6 +1,9 @@
 /**
  * @file snap_gdg.c
  * @brief Snapshot handler: GDG — zobrazovací řadič
+ *
+ * Čekající GDG událost (g_gdg.event) se do snapshotu neukládá - při loadu
+ * se dopočítá z obnovené pozice paprsku, viz snap_gdg_event_resync().
  */
 
 #include <stdio.h>
@@ -9,6 +12,7 @@
 #include "snapshot/snapshot_mgr.h"
 #include "snapshot/snapshot_xml.h"
 #include "hw-generic/gdg/gdg.h"
+#include "hw-generic/gdg/video.h"
 
 static en_SNAPSHOT_RESULT snap_gdg_save(st_SNAPSHOT_CONTEXT *ctx)
 {
@@ -105,6 +109,60 @@ static en_SNAPSHOT_RESULT snap_gdg_save(st_SNAPSHOT_CONTEXT *ctx)
     return res;
 }
 
+/**
+ * @brief Dopočítá čekající GDG událost (g_gdg.event) z obnovené pozice paprsku.
+ *
+ * g_gdg.event je další GDG událost, kterou plánovač (mzarch_main_queue_next_event,
+ * gdg_event_set_next) čeká. Snapshot ji neukládá, a bez dopočtu by po loadu
+ * zůstala z předchozího stroje: např. AFTER_LAST_SCREEN_PIXEL řádku 103
+ * zpracovaná při obnoveném beam_row = 0 čte VRAM mimo rozsah (index
+ * (beam_row - 46) * 40 přeteče) a emulátor spadne; jindy se přeskočí nebo
+ * posunou události řádku (HBLN, VSYNC, hrana CTC1 z REAL_HSYNC_START).
+ *
+ * Mezi instrukcemi (jen tam se snapshot ukládá a načítá) mzarch_main_process_events
+ * zpracoval všechny události s ticks <= total_elapsed.ticks, takže čekající
+ * událost je první aktivní událost aktuálního řádku (v pořadí g_gdgevent[],
+ * seřazeném vzestupně podle event_column) s ticks > total_elapsed.ticks -
+ * tedy totéž, co by vybral gdg_event_set_next. V konzistentním stavu takovou
+ * událost najdeme vždy: poslední událost řádku SCREEN_ROW_END leží na
+ * (beam_row + 1) * VIDEO_SCREEN_WIDTH.
+ *
+ * Index do g_gdgevent[] je hodnota en_MZEVENT (MZEVENT_GDG_HBLN_END = 0 ..
+ * MZEVENT_GDG_SCREEN_ROW_END), stejně jako v gdg_event_set_next.
+ *
+ * @pre g_gdg.beam_row a g_gdg.total_elapsed.ticks jsou už obnovené ze snapshotu
+ *      a g_gdg.beam_row < VIDEO_SCREEN_HEIGHT.
+ * @post g_gdg.event odpovídá obnovenému rastru. Pokud je total_elapsed.ticks
+ *       za koncem řádku (nekonzistentní snapshot), nastaví se SCREEN_ROW_END
+ *       aktuálního řádku - zpracuje se hned při dalším mzarch_main_process_events
+ *       a plánovač se tím sám srovná.
+ * @note Volá se na EMU vlákně v pauze (snapshot load), bez dalšího zamykání.
+ *       Hlavní událost g_mzarch_main.event obnovuje snap_mzarch; z g_gdg.event
+ *       ji plánovač přepočítá při nejbližším mzarch_main_queue_next_event.
+ */
+static void snap_gdg_event_resync(void)
+{
+    unsigned row = g_gdg.beam_row;
+    unsigned row_ticks = row * VIDEO_SCREEN_WIDTH;
+
+    for (int name = MZEVENT_GDG_HBLN_END; name <= MZEVENT_GDG_SCREEN_ROW_END; name++)
+    {
+        const st_GDGEVENT *ev = &g_gdgevent[name];
+        unsigned ticks = row_ticks + ev->event_column;
+        if (row >= ev->start_row && row < ev->start_row + ev->num_rows &&
+            ticks > g_gdg.total_elapsed.ticks)
+        {
+            g_gdg.event.event_name = (en_MZEVENT)name;
+            g_gdg.event.ticks = ticks;
+            return;
+        }
+    }
+
+    /* total_elapsed za koncem řádku - nekonzistentní stav, viz @post */
+    g_gdg.event.event_name = MZEVENT_GDG_SCREEN_ROW_END;
+    g_gdg.event.ticks = row_ticks + g_gdgevent[MZEVENT_GDG_SCREEN_ROW_END].event_column;
+}
+
 static en_SNAPSHOT_RESULT snap_gdg_load(st_SNAPSHOT_CONTEXT *ctx)
 {
     char *xml = NULL;
@@ -137,6 +195,14 @@ static en_SNAPSHOT_RESULT snap_gdg_load(st_SNAPSHOT_CONTEXT *ctx)
 
     /* Pozice paprsku */
     snapshot_xml_read_uint(r, "beam_row", &g_gdg.beam_row);
+    if (g_gdg.beam_row >= VIDEO_SCREEN_HEIGHT) {
+        SNAP_ERR("gdg", "beam_row %u out of range", g_gdg.beam_row);
+        snapshot_xml_reader_free(r);
+        return SNAPSHOT_ERR_CORRUPTED;
+    }
+
+    /* Čekající GDG událost patří k obnovenému rastru, ne k předchozímu stroji. */
+    snap_gdg_event_resync();
 
     /* Registry */
     if (snapshot_xml_enter_element(r, "registers")) {

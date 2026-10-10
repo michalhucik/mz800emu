@@ -363,6 +363,25 @@ if(Python3_FOUND)
     message(STATUS "  tests/mcp: registered mcp_cmt_snapshot "
                    "(Python ${Python3_VERSION})")
 
+    # Snapshot obnoví i čekající GDG událost (GitHub issue #6): stav po
+    # snapshot_load přes "špinavý" stroj + run se shoduje s během bez
+    # loadu (všechny 4 binárky, fáze s každou čekající GDG událostí);
+    # dřív MZ-800 spadl (0xC0000005) a jinde ujel raster nebo CTC1.
+    # Pipe, bez TCP. Bez binárek 77 (SKIP).
+    add_test(
+        NAME    mcp_snapshot_gdg_event
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_snapshot_gdg_event.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_snapshot_gdg_event PROPERTIES
+        LABELS  "e2e;mcp;pipe;snapshot"
+        TIMEOUT 180
+        SKIP_RETURN_CODE 77
+    )
+    message(STATUS "  tests/mcp: registered mcp_snapshot_gdg_event "
+                   "(Python ${Python3_VERSION})")
+
     # -----------------------------------------------------------
     # MZT s hlavičkou CMTSPEED (UniCMT) a vlastní délky pulzů (pipe)
     # -----------------------------------------------------------
