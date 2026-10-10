@@ -107,7 +107,7 @@ const struct st_GDGEVENT g_gdgevent[] = {
     //{ MZEVENT_GDG_STS_HSYNC_START, 0, BEAM_TOTAL_ROWS, 926 },
 
     /* row: ALL, col: 950 - realny HSYNC ma delku 80 px, jeho konec nas ale nezajima */
-    {MZEVENT_GDG_REAL_HSYNC_START, 0, VIDEO_SCREEN_HEIGHT, 950},
+    {MZEVENT_GDG_REAL_HSYNC_START, 0, VIDEO_SCREEN_HEIGHT, VIDEO_REAL_HSYNC_START_COLUMN},
 
     /* row: ALL, col: 1133 - podle mych mereni konci zde */
     //{ MZEVENT_GDG_STS_HSYNC_END, 0, BEAM_TOTAL_ROWS, 1133 },

@@ -28,6 +28,7 @@
 #include "ctc8253.h"
 #include "hw-generic/gdg/gdgclk.h"
 #include "hw-generic/gdg/gdg.h"
+#include "gdg/video.h"
 
 #include "mzarch/mzarch.h"
 #include "mzarch/interrupt.h"
@@ -118,6 +119,120 @@ static inline void ctc8253_set_out(unsigned cs, unsigned value, unsigned event_t
 #endif
 }
 
+/* LOW pulz HSYNC nesmí přecházet přes konec řádku (test v ctc8253_clk_is_high) */
+_Static_assert((VIDEO_REAL_HSYNC_START_COLUMN + VIDEO_H_SYNC_TICKS) <= VIDEO_SCREEN_WIDTH, "HSYNC pulse wraps over row end");
+
+/**
+ * @brief Zjistí úroveň vstupu CLK čítače v okamžiku zápisu z CPU.
+ *
+ * Potřebuje ji pravidlo nahrání hodnoty (viz st_CTC8253.load_wait_rise):
+ * hodnota dopsaná při CLK = HIGH se nahraje až druhou sestupnou hranou,
+ * dopsaná při CLK = LOW první.
+ *
+ * - CLK2 = OUT1 (kaskáda, bez inverze - změřeno: CTC2 se mění na začátku LOW
+ *   pulzu OUT1).
+ * - CLK1 = HSYNC: LOW od sestupné hrany (sloupec VIDEO_REAL_HSYNC_START_COLUMN,
+ *   kde se volá ctc8253_clkfall(CTC_CS1)) po dobu VIDEO_H_SYNC_TICKS, jinak
+ *   HIGH. Délka pulzu podle video.h / báze 08a-video-timing.md, na HW
+ *   neměřeno vůči CTC [neověřeno].
+ * - CLK0 = 1M1 (pxCLK / GDGCLK_CTC0_DIVIDER): sestupná hrana tam, kde je
+ *   total_ticks % GDGCLK_CTC0_DIVIDER == 0, střída 50 % (hypotéza; u děliče
+ *   /13 v MZ-700 NTSC tím spíš neověřeno).
+ *
+ * @param cs Index čítače (CTC_CS0..CTC_CS2).
+ * @param ticks Okamžik zápisu v tikách snímku (gdg_get_insigeop_ticks()).
+ * @return 1 = CLK je HIGH, 0 = CLK je LOW.
+ * @note Bez vedlejších efektů.
+ */
+static unsigned ctc8253_clk_is_high(unsigned cs, unsigned ticks)
+{
+    switch (cs)
+    {
+    case CTC_CS2:
+        return g_ctc8253[CTC_CS1].out;
+
+    case CTC_CS1:
+    {
+        unsigned col = VIDEO_GET_SCREEN_COL(ticks);
+        if ((col >= VIDEO_REAL_HSYNC_START_COLUMN) && (col < (VIDEO_REAL_HSYNC_START_COLUMN + VIDEO_H_SYNC_TICKS)))
+        {
+            return 0;
+        };
+        return 1;
+    }
+
+    default:
+    {
+        unsigned phase = (unsigned)(gdg_compute_total_ticks(ticks) % GDGCLK_CTC0_DIVIDER);
+        return (phase >= (GDGCLK_CTC0_DIVIDER / 2)) ? 1 : 0;
+    }
+    };
+}
+
+/**
+ * @brief Velikost kroku čítače v režimu 3 pro nejbližší sestupnou hranu CLK.
+ *
+ * Podle datasheetu 8254 a měření na HW MZ-800 (CTCLOAD 3: N = 4 čte
+ * 04 02 04 02, N = 5 čte 05 04 02 05 02 05 04 02): čítač se snižuje po 2;
+ * při lichém N je první krok po nahrání -1 při OUT = 1 a -3 při OUT = 0.
+ * Fáze OUT = 1 tak trvá (N + 1) / 2 CLK, fáze OUT = 0 (N - 1) / 2 CLK.
+ *
+ * @param ctc Čítač v režimu 3 ve stavu CTC_STATE_COUNTDOWN.
+ * @return Krok 1, 2 nebo 3.
+ * @note "Hned po nahrání" se pozná podle value == preset_value: při lichém
+ *       presetu nabývá čítač mezi nahráními jen sudých hodnot. Po přepisu
+ *       hodnoty uprostřed půlperiody (nový preset_value) může tento test
+ *       výjimečně trefit náhodnou shodu (neměřeno).
+ */
+static inline unsigned ctc8253_mode3_step(const st_CTC8253 *ctc)
+{
+    if ((ctc->value == ctc->preset_value) && (ctc->preset_value & 1))
+    {
+        return (ctc->out == 1) ? 1 : 3;
+    };
+    return 2;
+}
+
+#ifdef MZ800EMU_CFG_CLK1M1_FAST
+
+/**
+ * @brief Počet sestupných hran CLK do konce půlperiody v režimu 3.
+ *
+ * @param ctc Čítač v režimu 3 ve stavu CTC_STATE_COUNTDOWN.
+ * @return Počet hran (>= 1); poslední z nich přepne OUT a nahraje preset.
+ */
+static inline unsigned ctc8253_mode3_clocks_to_tc(const st_CTC8253 *ctc)
+{
+    unsigned step = ctc8253_mode3_step(ctc);
+    if (ctc->value <= step)
+    {
+        return 1;
+    };
+    return 1 + ((ctc->value - step) + 1) / 2;
+}
+
+/**
+ * @brief Posune čítač v režimu 3 o @p clocks hran CLK, bez dosažení konce půlperiody.
+ *
+ * Pro rychlou cestu CTC0, která čítač dopočítává z uplynulých tiků.
+ *
+ * @param ctc Čítač v režimu 3 ve stavu CTC_STATE_COUNTDOWN.
+ * @param clocks Počet hran; musí být menší než ctc8253_mode3_clocks_to_tc().
+ * @post value je hodnota po @p clocks hranách (>= 2). Kdyby volající
+ *       předal víc hran, hodnota se zastaví na 2 (poslední krok před koncem
+ *       půlperiody) místo podtečení.
+ */
+static inline void ctc8253_mode3_advance(st_CTC8253 *ctc, unsigned clocks)
+{
+    if (clocks == 0)
+        return;
+    unsigned step = ctc8253_mode3_step(ctc);
+    unsigned total = step + 2 * (clocks - 1);
+    ctc->value = (ctc->value > total + 1) ? ctc->value - total : 2;
+}
+
+#endif
+
 void ctc8253_init(void)
 {
     g_ctc8253_last_cw_byte = 0x00;
@@ -133,6 +248,7 @@ void ctc8253_init(void)
     {
         g_ctc8253[cs].state = CTC_STATE_INIT_DONE;
         g_ctc8253[cs].load_done = 0;
+        g_ctc8253[cs].load_wait_rise = 0;
         g_ctc8253[cs].mode = CTC_MODE0;
         g_ctc8253[cs].out = 0;
         g_ctc8253[cs].value = 0;
@@ -151,12 +267,33 @@ void ctc8253_init(void)
 
 #ifdef MZ800EMU_CFG_CLK1M1_FAST
 
+/**
+ * @brief Dopočítá hodnotu CTC0 z tiků uplynulých od posledního zpracování (rychlá cesta).
+ *
+ * @param event_total_ticks Okamžik (celkové tiky), ke kterému se čítač dopočítá.
+ * @pre CTC0 je ve stavu >= CTC_STATE_COUNTDOWN a má naplánovaný event.
+ * @post value odpovídá počtu celých period CLK0 od clk1m1_last_event_total_ticks;
+ *       ten se posune o zpracované periody. V režimu 3 čítá po 2
+ *       (ctc8253_mode3_advance()), v BLIND_COUNT se drží v 16 bitech.
+ */
 static inline void ctc8253_update_ctc0_by_totalticks(unsigned event_total_ticks)
 {
-    unsigned elapsed_ticks = event_total_ticks - g_ctc8253[CTC_CS0].clk1m1_last_event_total_ticks;
+    st_CTC8253 *ctc0 = &g_ctc8253[CTC_CS0];
+    unsigned elapsed_ticks = event_total_ticks - ctc0->clk1m1_last_event_total_ticks;
     unsigned decremented = elapsed_ticks / GDGCLK_CTC0_DIVIDER;
-    g_ctc8253[CTC_CS0].value -= decremented;
-    g_ctc8253[CTC_CS0].clk1m1_last_event_total_ticks += decremented * GDGCLK_CTC0_DIVIDER;
+    if ((ctc0->mode == CTC_MODE3) && (ctc0->state == CTC_STATE_COUNTDOWN))
+    {
+        ctc8253_mode3_advance(ctc0, decremented);
+    }
+    else
+    {
+        ctc0->value -= decremented;
+        if (ctc0->state == CTC_STATE_BLIND_COUNT)
+        {
+            ctc0->value &= 0xffff;
+        };
+    };
+    ctc0->clk1m1_last_event_total_ticks += decremented * GDGCLK_CTC0_DIVIDER;
 }
 
 void ctc8253_sync_ctc0(void)
@@ -269,6 +406,24 @@ uint8_t ctc8253_read_byte(unsigned cs)
     return retval;
 }
 
+/**
+ * @brief Zápis CPU do 8253: řídicí slovo (CW), Counter Latch nebo bajt hodnoty čítače.
+ *
+ * - CW: nastaví režim, RL formát a BCD, stav CTC_STATE_INIT a startovní
+ *   úroveň OUT (režim 0: 0, ostatní: 1). Čítač pak čeká na hodnotu.
+ * - Counter Latch (RL = 00): zachytí value do read_latch.
+ * - Hodnota: po posledním bajtu (podle RL formátu) přejde čítač ze stavů
+ *   < CTC_STATE_LOAD_DONE do LOAD_DONE a load_wait_rise se nastaví podle
+ *   úrovně CLK v okamžiku zápisu (ctc8253_clk_is_high()). Režim 0 při
+ *   přepisu během čítání shodí OUT hned prvním bajtem. Režimy 2 a 3 během
+ *   čítání jen uloží nový preset, použije se při dalším nahrání.
+ *
+ * @param addr Adresa v rámci 8253 (spodní 2 bity: CTCADDR_CTC0..CTCADDR_CWREG).
+ * @param value Zapisovaný bajt.
+ * @note Vedlejší efekty: změna OUT (callback), u CTC0 v rychlé cestě
+ *       přeplánování eventu MZEVENT_CTC0, záznam do hwlog (debugger).
+ * @pre Volat z emu vlákna (CPU IORQ / MMIO).
+ */
 void ctc8253_write_byte(unsigned addr, uint8_t value)
 {
 
@@ -434,32 +589,23 @@ void ctc8253_write_byte(unsigned addr, uint8_t value)
 
         if (g_ctc8253[cs].mode == CTC_MODE3)
         {
-
+            /* MSM82C53-2: N = 1 v rezimu 3 = perioda 65537 CLK (baze hw/06-ctc-8253.md) */
             if (g_ctc8253[cs].preset_value == 1)
             {
                 g_ctc8253[cs].preset_value = 0x10001;
             };
-
-            g_ctc8253[cs].mode3_half_value = g_ctc8253[cs].preset_value;
-            if (g_ctc8253[cs].mode3_half_value & 1)
-            {
-                g_ctc8253[cs].mode3_half_value++;
-            };
-            g_ctc8253[cs].mode3_half_value >>= 1;
         };
 
-        /* Dokoncen LOAD */
+        /* Dokoncen LOAD: hodnota se nahraje na sestupne hrane CLK, pred kterou
+         * po zapisu probehla vzestupna hrana (HW MZ-800, CTCLOAD 1-3); na tom,
+         * kdy prislo CW, nezalezi. Zapis pri CLK = HIGH -> nejblizsi sestupnou
+         * hranu preskocime. */
 
         if (g_ctc8253[cs].state < CTC_STATE_LOAD_DONE)
         {
-            if (g_ctc8253[cs].state == CTC_STATE_INIT)
-            {
-                g_ctc8253[cs].load_done = 1;
-            }
-            else
-            {
-                g_ctc8253[cs].state = CTC_STATE_LOAD_DONE;
-            };
+            g_ctc8253[cs].state = CTC_STATE_LOAD_DONE;
+            g_ctc8253[cs].load_done = 0;
+            g_ctc8253[cs].load_wait_rise = ctc8253_clk_is_high(cs, gdg_get_insigeop_ticks());
         }
         else if (g_ctc8253[cs].state == CTC_STATE_MODE1_TRIGGER_ERROR)
         {
@@ -486,21 +632,52 @@ void ctc8253_write_byte(unsigned addr, uint8_t value)
 #endif
 }
 
+/**
+ * @brief Zpracuje sestupnou hranu vstupu CLK čítače.
+ *
+ * Chování podle režimu (0-3; 4 a 5 nejsou implementované). Společné:
+ * ve stavu CTC_STATE_LOAD_DONE s load_wait_rise = 1 hrana hodnotu nenahraje,
+ * jen vynuluje load_wait_rise (hodnota byla dopsána při CLK = HIGH, nahraje
+ * ji až další sestupná hrana).
+ *
+ * - Režim 0: nahrání presetu, pak -1 za hranu; při dosažení 0 OUT = 1 a čítač
+ *   ukazuje 0000h po celou periodu CLK, 0FFFFh až po další hraně (HW,
+ *   CTCLOAD 1-3), dál čítá dolů v 16 bitech.
+ * - Režim 2: preset .. 1, při 1 OUT = 0 na jednu periodu, pak nové nahrání.
+ * - Režim 3: po 2 (ctc8253_mode3_step()); při dosažení 0 se přepne OUT
+ *   a nahraje preset.
+ *
+ * @param cs Index čítače (CTC_CS0..CTC_CS2).
+ * @param event_ticks Okamžik hrany v tikách snímku (pro callback výstupu).
+ * @note Vedlejší efekty: změna OUT volá output_cb (CTC1 -> takt CTC2,
+ *       CTC2 -> přerušení, CTC0 -> zvuk a PIO).
+ * @pre Volat z emu vlákna.
+ */
 void ctc8253_clkfall(unsigned cs, unsigned event_ticks)
 {
+
+    if ((g_ctc8253[cs].state == CTC_STATE_LOAD_DONE) && (g_ctc8253[cs].load_wait_rise))
+    {
+        g_ctc8253[cs].load_wait_rise = 0;
+        return;
+    };
 
     switch (g_ctc8253[cs].mode)
     {
 
     case CTC_MODE0:
-        if (g_ctc8253[cs].state >= CTC_STATE_COUNTDOWN)
+        if (g_ctc8253[cs].state == CTC_STATE_BLIND_COUNT)
+        {
+            g_ctc8253[cs].value = (g_ctc8253[cs].value - 1) & 0xffff;
+            return;
+        }
+        else if (g_ctc8253[cs].state >= CTC_STATE_COUNTDOWN)
         {
             g_ctc8253[cs].value--;
             if (g_ctc8253[cs].value == 0x0000)
             {
                 ctc8253_set_out(cs, 1, event_ticks);
                 g_ctc8253[cs].state = CTC_STATE_BLIND_COUNT;
-                g_ctc8253[cs].value = 0xffff;
             };
             return;
         }
@@ -618,27 +795,25 @@ void ctc8253_clkfall(unsigned cs, unsigned event_ticks)
 
         if (g_ctc8253[cs].state == CTC_STATE_COUNTDOWN)
         {
+            unsigned step = ctc8253_mode3_step(&g_ctc8253[cs]);
 
-            g_ctc8253[cs].value--;
-
-            if (g_ctc8253[cs].value == g_ctc8253[cs].mode3_destination_value)
+            if (g_ctc8253[cs].value > step)
             {
+                g_ctc8253[cs].value -= step;
+            }
+            else
+            {
+                /* konec pulperiody: prepnout OUT a nahrat preset */
+                g_ctc8253[cs].value = g_ctc8253[cs].preset_value;
 
                 if (g_ctc8253[cs].out == 1)
                 {
-
                     ctc8253_set_out(cs, 0, event_ticks);
-
-                    g_ctc8253[cs].value = g_ctc8253[cs].mode3_half_value;
-                    g_ctc8253[cs].mode3_destination_value = 0;
                 }
                 else
                 {
 
                     ctc8253_set_out(cs, 1, event_ticks);
-
-                    g_ctc8253[cs].value = g_ctc8253[cs].preset_value;
-                    g_ctc8253[cs].mode3_destination_value = g_ctc8253[cs].mode3_half_value;
 
                     if (g_ctc8253[cs].gate == 1)
                     {
@@ -657,7 +832,6 @@ void ctc8253_clkfall(unsigned cs, unsigned event_ticks)
             ctc8253_set_out(cs, 1, event_ticks);
 
             g_ctc8253[cs].value = g_ctc8253[cs].preset_value;
-            g_ctc8253[cs].mode3_destination_value = g_ctc8253[cs].mode3_half_value;
 
             if (g_ctc8253[cs].gate == 1)
             {
@@ -840,8 +1014,16 @@ void ctc8253_ctc1m1_event(unsigned event_ticks)
         int elapsed_ticks = event_total_ticks - ctc0->clk1m1_last_event_total_ticks;
         if (elapsed_ticks > 0)
         {
+            /* dopocitat hrany pred touto (posledni zpracuje ctc8253_clkfall()) */
             elapsed_ticks -= GDGCLK_CTC0_DIVIDER;
-            ctc0->value -= elapsed_ticks / GDGCLK_CTC0_DIVIDER;
+            if ((ctc0->mode == CTC_MODE3) && (ctc0->state == CTC_STATE_COUNTDOWN))
+            {
+                ctc8253_mode3_advance(ctc0, elapsed_ticks / GDGCLK_CTC0_DIVIDER);
+            }
+            else
+            {
+                ctc0->value -= elapsed_ticks / GDGCLK_CTC0_DIVIDER;
+            };
         }
         else
         {
@@ -856,7 +1038,11 @@ void ctc8253_ctc1m1_event(unsigned event_ticks)
                 ctc0->value = 2;
                 break;
             case CTC_MODE3:
-                ctc0->value = ctc0->mode3_destination_value + 1;
+                /* posledni krok pred koncem pulperiody */
+                if (ctc0->value != ctc0->preset_value)
+                {
+                    ctc0->value = 2;
+                };
                 break;
             case CTC_MODE4:
             case CTC_MODE5:
@@ -880,7 +1066,7 @@ void ctc8253_ctc1m1_event(unsigned event_ticks)
         /* M0 - value = 1 */
         /* M1 - value = 1 */
         /* M2 - value = 2 */
-        /* M3 - value =  g_ctc8253[cs].mode3_destination_value + 1 */
+        /* M3 - posledni krok pulperiody (viz ctc8253_mode3_clocks_to_tc()) */
 
         unsigned destination_clk1m1_falls = 0;
 
@@ -896,7 +1082,7 @@ void ctc8253_ctc1m1_event(unsigned event_ticks)
             break;
 
         case CTC_MODE3:
-            destination_clk1m1_falls = ctc0->value - ctc0->mode3_destination_value;
+            destination_clk1m1_falls = ctc8253_mode3_clocks_to_tc(ctc0);
             break;
 
         case CTC_MODE4:

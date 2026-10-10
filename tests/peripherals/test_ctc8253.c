@@ -319,6 +319,179 @@ void test_ctc_read_lsbmsb_ignores_memop_call(void)
 }
 #endif
 
+/* ================================================================
+ * NAHRÁNÍ HODNOTY A ČTENÍ ČÍTAČE PODLE MĚŘENÍ NA HW
+ *
+ * emu-experiments/ctc-mode0-load, CTCLOAD 1-3 (MZ-800, MSM82C53,
+ * 2026-10-09/10): CTC2 taktovaný OUT1 (CTC1 v režimu 2). Hodnota se
+ * nahraje na sestupné hraně CLK, před kterou po zápisu proběhla vzestupná
+ * hrana; okamžik CW nerozhoduje. Režim 0 po dosažení 0 čte 0000h, 0FFFFh
+ * až po další hraně. Režim 3 čítá po 2 (N = 5: 05 04 02 05 02 ...).
+ *
+ * Testy tu OUT1 nastavují přímo (bez callbacku) a sestupnou hranu CLK2
+ * volají ručně; pulz OUT1 = LOW, sestupná hrana CLK2, zpět HIGH.
+ * ================================================================ */
+
+/* CLK2 = OUT1 v klidu HIGH */
+static void ct2_clk_high(void) { g_ctc8253[CTC_CS1].out = 1; }
+
+/* CLK2 = OUT1 LOW (začátek pulzu, sestupná hrana) */
+static void ct2_clk_fall(void)
+{
+    g_ctc8253[CTC_CS1].out = 0;
+    ctc8253_clkfall(CTC_CS2, 0);
+}
+
+/* celý pulz OUT1: sestupná hrana, pak zpět HIGH */
+static void ct2_pulse(void)
+{
+    ct2_clk_fall();
+    ct2_clk_high();
+}
+
+/* CTC2 přes Counter Latch, jak ho čte CPU */
+static unsigned ct2_read(void)
+{
+    ctc8253_write_byte(CTCADDR_CWREG, 0x80);
+    unsigned lsb = ctc8253_read_byte(CTC_CS2);
+    unsigned msb = ctc8253_read_byte(CTC_CS2);
+    return (msb << 8) | lsb;
+}
+
+/* CW CTC2 (LSB+MSB, režim mode) */
+static void ct2_cw(unsigned mode) { ctc8253_write_byte(CTCADDR_CWREG, 0xB0 | (mode << 1)); }
+
+/* hodnota CTC2 (LSB, MSB) */
+static void ct2_load(unsigned n)
+{
+    ctc8253_write_byte(CTCADDR_CTC2, n & 0xff);
+    ctc8253_write_byte(CTCADDR_CTC2, (n >> 8) & 0xff);
+}
+
+/* známý zbytek v čítači: režim 0, 00E0h, tři pulzy -> 00DFh */
+static void ct2_prime(void)
+{
+    ctc8253_init();
+    ct2_clk_high();
+    ct2_cw(0);
+    ct2_load(0xE0);
+    ct2_pulse();
+    ct2_pulse();
+    ct2_pulse();
+    TEST_ASSERT_EQUAL_HEX16(0x00DF, ct2_read());
+}
+
+/* CTCLOAD 1, A1: CW i hodnota při CLK = HIGH -> nahraje 2. hrana, OUT po 3. */
+void test_ctc_hw_mode0_write_high(void)
+{
+    MZTEST_REQUIRE_LEVEL(MZTEST_LEVEL_UNIT);
+    ct2_prime();
+    ct2_cw(0);
+    ct2_load(1);
+    ct2_pulse();
+    TEST_ASSERT_EQUAL_HEX16(0x00DF, ct2_read());
+    TEST_ASSERT_EQUAL_INT(0, g_ctc8253[CTC_CS2].out);
+    ct2_pulse();
+    TEST_ASSERT_EQUAL_HEX16(0x0001, ct2_read());
+    TEST_ASSERT_EQUAL_INT(0, g_ctc8253[CTC_CS2].out);
+    ct2_pulse();
+    TEST_ASSERT_EQUAL_HEX16(0x0000, ct2_read());
+    TEST_ASSERT_EQUAL_INT(1, g_ctc8253[CTC_CS2].out);
+    ct2_pulse();
+    TEST_ASSERT_EQUAL_HEX16(0xFFFF, ct2_read());
+    TEST_ASSERT_EQUAL_INT(1, g_ctc8253[CTC_CS2].out);
+}
+
+/* CTCLOAD 1, B1: CW o pulz dřív, hodnota při HIGH -> stejně OUT až po 3. */
+void test_ctc_hw_mode0_cw_earlier(void)
+{
+    MZTEST_REQUIRE_LEVEL(MZTEST_LEVEL_UNIT);
+    ct2_prime();
+    ct2_cw(0);
+    ct2_pulse();
+    ct2_load(1);
+    ct2_pulse();
+    ct2_pulse();
+    TEST_ASSERT_EQUAL_INT(0, g_ctc8253[CTC_CS2].out);
+    ct2_pulse();
+    TEST_ASSERT_EQUAL_INT(1, g_ctc8253[CTC_CS2].out);
+}
+
+/* CTCLOAD 2, E1 (a CTCLOAD 3, 01L): CW i hodnota během LOW pulzu -> nahraje
+ * 1. sestupná hrana po něm, OUT po 2.; čítač se mění už na začátku pulzu */
+void test_ctc_hw_mode0_write_low(void)
+{
+    MZTEST_REQUIRE_LEVEL(MZTEST_LEVEL_UNIT);
+    ct2_prime();
+    ct2_clk_fall();
+    ct2_cw(0);
+    ct2_load(1);
+    ct2_clk_high();                 /* konec tohoto pulzu (vzestupná hrana);
+                                     * sestupná hrana před CW snížila zbytek na DE */
+    TEST_ASSERT_EQUAL_HEX16(0x00DE, ct2_read());
+    ct2_clk_fall();                 /* pulz 1: nahrání už na sestupné hraně */
+    TEST_ASSERT_EQUAL_HEX16(0x0001, ct2_read());
+    ct2_clk_high();
+    ct2_clk_fall();                 /* pulz 2 */
+    TEST_ASSERT_EQUAL_HEX16(0x0000, ct2_read());
+    TEST_ASSERT_EQUAL_INT(1, g_ctc8253[CTC_CS2].out);
+    ct2_clk_high();
+    ct2_pulse();
+    TEST_ASSERT_EQUAL_HEX16(0xFFFF, ct2_read());
+}
+
+/* CTCLOAD 3, 24H: režim 2, N = 4 při HIGH -> DF, 4, 3, 2, 1, 4 */
+void test_ctc_hw_mode2_write_high(void)
+{
+    MZTEST_REQUIRE_LEVEL(MZTEST_LEVEL_UNIT);
+    static const unsigned expect[] = { 0x00DF, 4, 3, 2, 1, 4, 3, 2 };
+    ct2_prime();
+    ct2_cw(2);
+    ct2_load(4);
+    for (unsigned i = 0; i < sizeof(expect) / sizeof(expect[0]); i++)
+    {
+        ct2_pulse();
+        TEST_ASSERT_EQUAL_HEX16(expect[i], ct2_read());
+    }
+}
+
+/* CTCLOAD 3, 34H: režim 3, N = 4 při HIGH -> DF, 4, 2, 4, 2 */
+void test_ctc_hw_mode3_even(void)
+{
+    MZTEST_REQUIRE_LEVEL(MZTEST_LEVEL_UNIT);
+    static const unsigned expect[] = { 0x00DF, 4, 2, 4, 2, 4, 2, 4 };
+    static const unsigned out[]    = { 1,      1, 1, 0, 0, 1, 1, 0 };
+    ct2_prime();
+    ct2_cw(3);
+    ct2_load(4);
+    for (unsigned i = 0; i < sizeof(expect) / sizeof(expect[0]); i++)
+    {
+        ct2_pulse();
+        TEST_ASSERT_EQUAL_HEX16(expect[i], ct2_read());
+        TEST_ASSERT_EQUAL_INT(out[i], g_ctc8253[CTC_CS2].out);
+    }
+}
+
+/* CTCLOAD 3, 35L: režim 3, N = 5 během LOW -> 5, 4, 2, 5, 2, 5, 4, 2;
+ * OUT HIGH 3 CLK, LOW 2 CLK (datasheet 8254, OUT na HW neměřen) */
+void test_ctc_hw_mode3_odd(void)
+{
+    MZTEST_REQUIRE_LEVEL(MZTEST_LEVEL_UNIT);
+    static const unsigned expect[] = { 5, 4, 2, 5, 2, 5, 4, 2 };
+    static const unsigned out[]    = { 1, 1, 1, 0, 0, 1, 1, 1 };
+    ct2_prime();
+    ct2_cw(3);
+    ct2_clk_fall();
+    ct2_load(5);
+    ct2_clk_high();
+    for (unsigned i = 0; i < sizeof(expect) / sizeof(expect[0]); i++)
+    {
+        ct2_pulse();
+        TEST_ASSERT_EQUAL_HEX16(expect[i], ct2_read());
+        TEST_ASSERT_EQUAL_INT(out[i], g_ctc8253[CTC_CS2].out);
+    }
+}
+
 /* === MAIN === */
 
 int main(int argc, char *argv[])
@@ -345,6 +518,12 @@ int main(int argc, char *argv[])
     RUN_TEST(test_ctc_all_channels_independent);
     RUN_TEST(test_ctc_output_callback);
     RUN_TEST(test_ctc_read_lsbmsb_sequence);
+    RUN_TEST(test_ctc_hw_mode0_write_high);
+    RUN_TEST(test_ctc_hw_mode0_cw_earlier);
+    RUN_TEST(test_ctc_hw_mode0_write_low);
+    RUN_TEST(test_ctc_hw_mode2_write_high);
+    RUN_TEST(test_ctc_hw_mode3_even);
+    RUN_TEST(test_ctc_hw_mode3_odd);
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
     RUN_TEST(test_ctc_read_lsbmsb_ignores_memop_call);
 #endif

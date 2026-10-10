@@ -132,7 +132,7 @@ extern "C" {
 
 
     /* Definice obrazoveho radku */
-#define VIDEO_H_SYNC_TICKS          65 /* skutecny Hsync, ktery je na video vystupu pocitace - v emulaci jej nepouzivame */
+#define VIDEO_H_SYNC_TICKS          65 /* skutecny Hsync na video vystupu (soucast VIDEO_SCREEN_WIDTH; delka LOW urovne CLK1 pro ctc8253) */
 #define VIDEO_H_BACK_PORCH_TICKS    104
 #define VIDEO_H_ENABLED_TICKS       VIDEO_DISPLAY_WIDTH
 //#define VIDEO_H_FRONT_PORCH_TICKS   104
@@ -141,6 +141,9 @@ extern "C" {
 
     /* Celkove rozmery screen */
 #define VIDEO_SCREEN_WIDTH          ( VIDEO_H_SYNC_TICKS + VIDEO_H_BACK_PORCH_TICKS + VIDEO_H_ENABLED_TICKS + VIDEO_H_FRONT_PORCH_TICKS )
+/** Sloupec sestupné hrany skutečného HSYNC (= CLK1 čítače 8253, událost
+ *  MZEVENT_GDG_REAL_HSYNC_START); HSYNC je pak LOW po VIDEO_H_SYNC_TICKS. */
+#define VIDEO_REAL_HSYNC_START_COLUMN ( VIDEO_DISPLAY_WIDTH + VIDEO_H_FRONT_PORCH_TICKS )
 #define VIDEO_SCREEN_HEIGHT         ( 16 + 200 + 16 + 30)
 #define VIDEO_SCREEN_TICKS          ( VIDEO_SCREEN_HEIGHT * VIDEO_SCREEN_WIDTH )
 

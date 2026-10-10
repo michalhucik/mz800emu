@@ -35,6 +35,7 @@ static en_SNAPSHOT_RESULT snap_ctc8253_save(st_SNAPSHOT_CONTEXT *ctx)
         snapshot_xml_write_uint(w, "rlf", (unsigned)ctc->rlf);
         snapshot_xml_write_uint(w, "state", (unsigned)ctc->state);
         snapshot_xml_write_uint(w, "load_done", ctc->load_done);
+        snapshot_xml_write_uint(w, "load_wait_rise", ctc->load_wait_rise);
         snapshot_xml_write_uint(w, "rl_byte", ctc->rl_byte);
         snapshot_xml_write_uint(w, "latch_op", ctc->latch_op);
 
@@ -101,6 +102,9 @@ static en_SNAPSHOT_RESULT snap_ctc8253_load(st_SNAPSHOT_CONTEXT *ctx)
         if (snapshot_xml_read_uint(r, "rlf", &uval)) ctc->rlf = (en_CTC_RLF)uval;
         if (snapshot_xml_read_uint(r, "state", &uval)) ctc->state = (en_CTC_STATE)uval;
         if (snapshot_xml_read_uint(r, "load_done", &uval)) ctc->load_done = uval;
+        /* od opravy nahrání 8253 (2026-10); starší snapshot = 0 */
+        ctc->load_wait_rise = 0;
+        if (snapshot_xml_read_uint(r, "load_wait_rise", &uval)) ctc->load_wait_rise = uval;
         if (snapshot_xml_read_uint(r, "rl_byte", &uval)) ctc->rl_byte = uval;
         if (snapshot_xml_read_uint(r, "latch_op", &uval)) ctc->latch_op = uval;
 

@@ -103,7 +103,23 @@ extern "C"
         unsigned bcd;     /* BCD: 0|1 */
         en_CTC_RLF rlf;   /* Read / Load Format */
         en_CTC_STATE state;
+        /**
+         * Historický příznak "hodnota zapsána ve stavu INIT". Nový kód ho
+         * nenastavuje (nahrání řídí load_wait_rise); zůstává kvůli formátu
+         * snapshotu a hwlog - snapshot ze starší verze s load_done = 1 se
+         * dokončí původní cestou INIT -> LOAD_DONE v ctc8253_clkfall().
+         */
         unsigned load_done;
+        /**
+         * 1 = hodnota byla dopsána při CLK = HIGH a nejbližší sestupná hrana
+         * CLK ji ještě nenahraje (musí jí předcházet vzestupná hrana).
+         * Platí jen ve stavu CTC_STATE_LOAD_DONE; nastavuje
+         * ctc8253_write_byte(), nuluje ctc8253_clkfall(). Změřeno na HW
+         * MZ-800 (emu-experiments/ctc-mode0-load, CTCLOAD 1-3): hodnota se
+         * nahraje na sestupné hraně CLK, před kterou po zápisu proběhla
+         * vzestupná hrana; okamžik zápisu CW nerozhoduje.
+         */
+        unsigned load_wait_rise;
 
         unsigned rl_byte; /* pocet bajtu, ktere uz byly do ctc zapsany, nebo precteny - v 8253 je na to skutecne jen jeden registr! */
 
@@ -111,8 +127,16 @@ extern "C"
         unsigned read_latch;
         unsigned preset_value;
         unsigned preset_latch;
+        /**
+         * Aktuální stav čítače tak, jak ho čte CPU (dolních 16 bitů; hodnota
+         * 0x10000 / 0x10001 jen hned po nahrání presetu 0 / režimu 3 s N = 1).
+         * V režimu 3 čítá po 2 (liché N: první krok po nahrání -1 při OUT = 1,
+         * -3 při OUT = 0), viz ctc8253_mode3_step().
+         */
         unsigned value;
+        /** Nepoužívá se (dřívější model režimu 3); zůstává kvůli formátu snapshotu a hwlog. */
         unsigned mode3_destination_value;
+        /** Nepoužívá se (dřívější model režimu 3); zůstává kvůli formátu snapshotu a hwlog. */
         unsigned mode3_half_value;
         ctc8253_out_cb_t output_cb; /* tento callback je zavolan pri kazde zmene vystupniho stavu citace */
 
