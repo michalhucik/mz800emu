@@ -27,7 +27,7 @@ Pro binárky mz700emu-pal, mz700emu-ntsc, mz800emu a mz1500emu v kořeni repa
 
 Srovnává se: registry CPU kromě R, příznaky a režim přerušení, 8255,
 8253 (bez běžících čítačů), Z80 PIO, PSG, mapování paměti, stav GDG bez
-časových čítačů, RAM, kterou bootstrap nastavuje (trampolína 1038h,
+časových čítačů a signálů daných paprskem (HBLN, VBLN, HSYNC, VSYNC), RAM, kterou bootstrap nastavuje (trampolína 1038h,
 hlavička 10F0h-116Fh, proměnné 119Bh-11A2h), a text na obrazovce.
 Vynechané položky a důvody viz _VOLATILE_KEYS.
 
@@ -87,12 +87,18 @@ _RAM_RANGES = [(0x1038, 3), (0x10F0, 0x80), (0x119B, 8)]
 #:  - ``tempo``/``tempo_divider``: signál TEMPO nuluje emulátor jen při
 #:    startu procesu (gdg_init), reset ho nemění - stejně jako tlačítko Reset,
 #:  - ``read_latch`` CTC: zbytek posledního Counter Latch; 8253 nemá vstup
-#:    reset, program ho přečte až po novém latchi.
+#:    reset, program ho přečte až po novém latchi,
+#:  - ``hbln``/``vbln``/``sts_hsync``/``sts_vsync`` GDG: signály dané jen
+#:    pozicí paprsku (nastavují je události GDG). Reset raster nenuluje
+#:    (gdg_reset mění jen registry), takže v B závisí na tom, kde zastavil
+#:    předchozí ``run`` - např. MZ-700 PAL za sloupcem 28 (HBLN_END) má
+#:    hbln = 1, v A (paprsek 0/0) 0.
 _VOLATILE_KEYS = {"total_ticks", "total_screens", "ticks", "screens",
                   "beam_x", "beam_y", "raster_x", "raster_y",
                   "counter", "current_value", "value", "output",
                   "cycles", "total_cycles", "frame_cycles", "r", "op_tstate",
-                  "tempo", "tempo_divider", "read_latch"}
+                  "tempo", "tempo_divider", "read_latch",
+                  "hbln", "vbln", "sts_hsync", "sts_vsync"}
 
 
 class TestFailure(Exception):
