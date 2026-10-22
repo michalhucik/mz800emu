@@ -657,7 +657,8 @@ static void am_json_files(JsonBuilder *b, bool screenshot_ok, bool snapshot_ok)
  * @param path Cesta.
  * @param machine true = se stavem stroje (`time`, `cpu`, `raster`, `hashes`,
  *        `coverage`);
- *        false = jen základ (chyba před startem emulace).
+ *        false = jen základ (chyba před startem emulace). Objekt `replay`
+ *        se zapisuje v obou případech (`null` bez záznamu i přehrávání).
  * @param screenshot_ok, snapshot_ok Viz am_json_files().
  * @return true = zapsáno.
  */

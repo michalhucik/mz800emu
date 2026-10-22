@@ -29,7 +29,7 @@ the command line.
   a new version, a changed operand is flagged. Each version has counters
   (executions, condition met, not met). The entries take 32 bytes each;
   the table has a fixed capacity, and what does not fit is reported. Slows
-  the emulation by about 78-115 %, because the emulator has to record the
+  the emulation by about 35-95 %, because the emulator has to record the
   bytes as the CPU fetches them.
 
 The data are **complete** when nothing was dropped (full table), every
@@ -124,7 +124,8 @@ The marks are turned off in the debugger window menu `Settings` ->
   (default 65536).
 - `--coverage-save-on-exit FILE` - write all rows when the emulator exits
   (`.csv` = CSV, otherwise JSON; a relative path is relative to the
-  working directory).
+  current directory the emulator was started from, as with
+  `--result-json`).
 
 The same settings in the INI section `[COVERAGE]`: `mode` (`OFF`,
 `BRANCH`, `DETAIL`), `key`, `capacity`, `reset_on_discontinuity` (clear

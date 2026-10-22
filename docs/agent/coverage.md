@@ -12,7 +12,7 @@ version of self-modifying code ran. Use `emu_coverage_start`,
 | Level | Key | What it records | Cost |
 |-------|-----|-----------------|------|
 | `branch` | logical PC | executed addresses; for every conditional instruction whether the condition was true and/or false; first instruction of an interrupt handler | about +16-29 % emulation time (bytes decoded from memory after the step) |
-| `detail` | physical cell of the first byte + PC + code version | everything of `branch` plus one unit per code version with `exec`, `taken`, `not_taken`, last operand, last next PC, flags | about +78-115 % emulation time (bytes from the instruction fetch, forces the slow memory callbacks) |
+| `detail` | physical cell of the first byte + PC + code version | everything of `branch` plus one unit per code version with `exec`, `taken`, `not_taken`, last operand, last next PC, flags | about +35-95 % emulation time (bytes from the instruction fetch, forces the slow memory callbacks) |
 
 Choose `branch` to find untested code and half-covered branches. Choose
 `detail` when banking or self-modifying code matters, or when the

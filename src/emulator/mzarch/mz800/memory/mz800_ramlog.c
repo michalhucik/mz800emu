@@ -31,6 +31,17 @@
 #include "mzarch/mz800/gdg/mz800_vramctrl.h"
 
 
+uint32_t ramlog_platform_map_key(void)
+{
+    /* ramlog_platform_targets() čte g_memory.map (ROM, VRAM/CG-RAM, PROHIBITED)
+     * a z DMD režim MZ-700 (CG-RAM C000, VRAM D000 místo 8000) a šířku 640
+     * (VRAM i v A000-BFFF). Zápisové registry grafické VRAM ne, viz
+     * ramlog_hook.h. */
+    return (uint32_t) g_memory.map
+           | ( (uint32_t) ( g_gdg.regDMD & ( REGISTER_DMD_FLAG_MZ700 | REGISTER_DMD_FLAG_SCRW640 ) ) << 8 );
+}
+
+
 bool ramlog_platform_ram_cell(const uint8_t *ptr, uint8_t *out_space, uint32_t *out_offset)
 {
     /* Porovnání přes uintptr_t (ukazatele do různých polí, viz memext.c). */

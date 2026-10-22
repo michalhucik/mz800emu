@@ -16,7 +16,9 @@
  *   z paměti s příznakem COVERAGE_F_FETCH_FALLBACK,
  * - fyzická buňka prvního bajtu (jen detail) se určí podle mapování po
  *   kroku: RAM a MemExt podle ukazatele čtení stránky (memram_read),
- *   ROM, VRAM MZ-700, PCG podle ramlog_platform_targets(); grafická VRAM
+ *   ROM, VRAM MZ-700, PCG podle ramlog_platform_targets(), s cache po
+ *   4 KiB stránkách platnou pro klíč ramlog_platform_map_key() a ukazatel
+ *   memram_read stránky (okno portů E000-E008 mimo cache); grafická VRAM
  *   MZ-800 a mapované porty nemají fyzickou buňku (prostor
  *   COVERAGE_SPACE_BUS, offset = CPU adresa, příznak COVERAGE_F_CELL_BUS).
  *   Instrukce, která přepne banking pod sebou, dostane buňku podle nového
@@ -134,7 +136,7 @@ void coverage_recompute_active ( void );
 
 /**
  * @brief Konec emulátoru: export dat do souboru `--coverage-save-on-exit`
- *        (relativní cesta vůči pracovnímu adresáři).
+ *        (relativní cesta vůči aktuálnímu adresáři procesu, ne `--work-dir`).
  *
  * Bez nastaveného souboru nebo bez dat nedělá nic. Chybu zápisu ohlásí na
  * stderr. Volá se z debugger_exit před coverage_free().

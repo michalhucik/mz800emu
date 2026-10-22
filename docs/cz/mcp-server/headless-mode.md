@@ -161,8 +161,8 @@ Běh ukončený breakpointem má například `"reason" : "exit_action"` a
   `--coverage detail` (nebo `[COVERAGE] mode` v INI), všechny řádky na
   konci zapíše `--coverage-save-on-exit SOUBOR` (`.csv` = CSV, jinak
   JSON, viz [Přehled MCP tools](tools-overview.md); relativní cesta je
-  vůči pracovnímu adresáři). `--coverage-key` a `--coverage-capacity`
-  nastavují úroveň `detail`.
+  vůči aktuálnímu adresáři jako u `--result-json`). `--coverage-key`
+  a `--coverage-capacity` nastavují úroveň `detail`.
 - `trigger.hits`: zásahy breakpointu počítané až po přeskočených.
 - `time.frames` a `time.gdg_ticks` se počítají od začátku běhu,
   `frames_total` a `gdg_ticks_total` od začátku emulace. `emulated_seconds`
@@ -175,8 +175,8 @@ Běh ukončený breakpointem má například `"reason" : "exit_action"` a
   stavu: WZ, Q, odložení po EI, čekající INT a NMI). Dva běhy se stejnými
   volbami dají stejné hashe, takže je skript může porovnat s referencí.
 - Po chybě před startem emulace (neplatná volba) má soubor jen `schema`,
-  `emulator`, `reason`, `exit_code`, `message`, `trigger`, `artifacts`,
-  `inputs` a `warnings`.
+  `emulator`, `reason`, `exit_code`, `message`, `trigger`, `replay`,
+  `artifacts`, `inputs` a `warnings`.
 
 Standardní build na Windows nemá výstup do konzole, proto je soubor
 s výsledkem pro úlohu CI spolehlivý kanál.

@@ -171,8 +171,8 @@ line).
   mode` in the INI), write all rows at the end with
   `--coverage-save-on-exit FILE` (`.csv` = CSV, otherwise JSON, see
   [MCP tools overview](tools-overview.md); a relative path is relative to
-  the working directory). `--coverage-key` and `--coverage-capacity` set
-  the `detail` level.
+  the current directory, as with `--result-json`). `--coverage-key` and
+  `--coverage-capacity` set the `detail` level.
 - `trigger.hits`: hits of the breakpoint counted after the skipped ones.
 - `time.frames` and `time.gdg_ticks` count from the start of the run;
   `frames_total` and `gdg_ticks_total` from the start of the emulation.
@@ -187,7 +187,7 @@ line).
   them with a reference.
 - After an error before the emulation starts (invalid option), the file
   has only `schema`, `emulator`, `reason`, `exit_code`, `message`,
-  `trigger`, `artifacts`, `inputs` and `warnings`.
+  `trigger`, `replay`, `artifacts`, `inputs` and `warnings`.
 
 On Windows the standard build has no console output, so the result file
 is the reliable channel for a CI job.

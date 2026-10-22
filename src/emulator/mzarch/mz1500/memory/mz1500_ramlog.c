@@ -33,6 +33,14 @@
 #include "hw-generic/memory/memext.h"
 
 
+uint32_t ramlog_platform_map_key(void)
+{
+    /* ramlog_platform_targets() čte jen g_memory.map (ROM 0000, horní ROM,
+     * SPEC_ID = VRAM / CG-ROM / PCG banka v D000-EFFF). */
+    return g_memory.map;
+}
+
+
 bool ramlog_platform_ram_cell(const uint8_t *ptr, uint8_t *out_space, uint32_t *out_offset)
 {
     /* Porovnání přes uintptr_t (ukazatele do různých polí, viz memext.c). */

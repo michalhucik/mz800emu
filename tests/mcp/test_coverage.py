@@ -20,8 +20,9 @@ Ověřuje:
      a vypnutým pokrytím dá stejné registry a paměť;
   8  MZ-700 a MZ-1500 (pokud binárky existují): jednotka v RAM;
   9  konfigurace: INI ``[COVERAGE] mode = DETAIL`` spustí sběr při startu,
-     ``--coverage`` přebije INI, ``--coverage-save-on-exit`` zapíše CSV,
-     ``result.json`` má objekt ``coverage`` (bez dat ``null``).
+     ``--coverage`` přebije INI, ``--coverage-save-on-exit`` zapíše CSV
+     (relativně k adresáři procesu, ne ``--work-dir``), ``result.json``
+     má objekt ``coverage`` (bez dat ``null``).
 
 Program z rešerše (debug-gaps research/09, sonda cov_probe.py) má
 očekávané hodnoty ověřené prototypem. Procesy izolované (dočasný
@@ -281,12 +282,14 @@ def case_config(exe, tmp):
     make_mzf(tmp / "exittest.mzf")
     ini = "[BREAKPOINTS]\nauto_load = 0\n[COVERAGE]\nmode = DETAIL\n"
     r = Run(exe, tmp, "cfg_ini", ["--exit-after-frames", "20", "--result-json", "result.json",
-                                  "--coverage-save-on-exit", "cov.csv"], ini_text=ini)
+                                  "--coverage-save-on-exit", "cov.csv"], ini_text=ini, work_dir="wd")
     cov = (r.result or {}).get("coverage")
     check(r.code == 0 and cov and cov["level"] == "detail" and cov["active"] and cov["units"] > 5,
           f"INI [COVERAGE] mode = DETAIL started at boot, result.json coverage ({cov}, {r.tail()})")
     csv_path = r.dir / "cov.csv"
-    check(csv_path.is_file(), f"--coverage-save-on-exit wrote {csv_path.name} ({r.tail()})")
+    check(csv_path.is_file() and not (r.dir / "wd" / "cov.csv").exists(),
+          f"--coverage-save-on-exit wrote {csv_path.name} relative to the process directory,"
+          f" not --work-dir, like --result-json ({r.tail()})")
     lines = csv_path.read_text(encoding="utf-8").splitlines()
     check(lines[0].startswith("pc,space,offset,key") and len(lines) - 1 == cov["units"],
           f"saved CSV: header and one row per unit ({len(lines) - 1}, {cov['units']})")

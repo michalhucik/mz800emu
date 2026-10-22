@@ -108,6 +108,25 @@ void ramlog_platform_space_sizes(uint32_t out[RAMLOG_SPACE_COUNT]);
  */
 bool ramlog_platform_ram_cell(const uint8_t *ptr, uint8_t *out_space, uint32_t *out_offset);
 
+/**
+ * @brief Klíč stavu mapování paměti (platforma).
+ *
+ * Zahrnuje vstupy ramlog_platform_targets() kromě adresy, ukazatelů
+ * `g_memory.memram_read[]` / `memram_write[]` a zápisových registrů
+ * grafické VRAM MZ-800 (mapa ROM, VRAM, CG-RAM a PCG, u MZ-800 i režim
+ * DMD). Při stejném klíči a stejných ukazatelích memram dá
+ * ramlog_platform_targets() pro tutéž adresu tytéž prostory a offsety,
+ * jen počet plánů grafické VRAM MZ-800 se může lišit (pokrytí ji bere
+ * celou jako sběrnici). Podle toho ověřuje platnost cache buňky pokrytí
+ * kódu (coverage_hook.c). Kdo přidá do ramlog_platform_targets() nový
+ * vstup, musí ho přidat i sem.
+ *
+ * Bez vedlejších efektů, emu vlákno.
+ *
+ * @return Klíč (hodnota nemá jiný význam než porovnání na rovnost).
+ */
+uint32_t ramlog_platform_map_key(void);
+
 /** @brief Provede zápis (callback platformy nebo zápis bez synchronizace). */
 typedef void (*ramlog_write_fn)(uint16_t addr, uint8_t value, void *ctx);
 

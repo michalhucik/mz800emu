@@ -22,8 +22,6 @@
 #include "emulator/cfgmain.h"
 #include "libs/cfgfile/cfgmodule.h"
 #include "libs/sdlapp/sdlapp_options.h"
-#include "libs/sdlapp/sdlapp_paths.h"
-#include "main.h"   /* g_sdlapp pro sdlapp_paths_resolve_work */
 
 #include <stdio.h>
 
@@ -105,6 +103,61 @@ static uint32_t ch_cell ( uint16_t addr, uint16_t *flags )
 }
 
 
+/**
+ * @brief Buňka jedné 4 KiB stránky CPU v mapování platném při výpočtu.
+ *
+ * @invariant Je-li @c valid, pak pro každou adresu stránky mimo okno
+ *            E000-E008 platí ch_cell(addr) == base + (addr & 0x0FFF)
+ *            a příznaky @c flags, dokud se nezmění @c map_key ani @c rd.
+ */
+typedef struct st_CH_PAGE {
+    const uint8_t *rd; /**< g_memory.memram_read[stránka] při výpočtu. */
+    uint32_t map_key;  /**< ramlog_platform_map_key() při výpočtu. */
+    uint32_t base;     /**< Buňka prvního bajtu stránky. */
+    uint16_t flags;    /**< COVERAGE_F_CELL_BUS, nebo 0. */
+    bool valid;        /**< Záznam platí. */
+} st_CH_PAGE;
+
+/** Cache buněk po stránkách (úroveň detail), jen emu vlákno. */
+static st_CH_PAGE s_ch_page[ 16 ];
+
+
+/**
+ * @brief Fyzická buňka bajtu na CPU adrese přes cache po stránkách.
+ *
+ * Výsledek je stejný jako ch_cell(), ta se ale volá jen při první adrese
+ * stránky po změně mapování (klíč ramlog_platform_map_key() nebo ukazatel
+ * memram_read stránky). Buňka je v rámci stránky lineární ve všech
+ * prostorech (RAM, MemExt, ROM, VRAM, CG-RAM, PCG, sběrnice); výjimkou je
+ * okno portů E000-E008, které jde vždy přes ch_cell().
+ *
+ * @param addr  CPU adresa.
+ * @param flags Příznaky kroku; bez fyzické buňky dostanou COVERAGE_F_CELL_BUS.
+ * @return Buňka (COVERAGE_CELL).
+ */
+static uint32_t ch_cell_cached ( uint16_t addr, uint16_t *flags )
+{
+    if ( addr >= 0xE000u && addr <= 0xE008u ) {
+        return ch_cell ( addr, flags );
+    };
+    st_CH_PAGE *pg = &s_ch_page[ addr >> 12 ];
+    const uint8_t *rd = g_memory.memram_read[ addr >> 12 ];
+    uint32_t key = ramlog_platform_map_key ( );
+    if ( !pg->valid || pg->map_key != key || pg->rd != rd ) {
+        /* Poslední bajt stránky: nikdy neleží v okně E000-E008. */
+        uint16_t f = 0;
+        uint32_t last = ch_cell ( (uint16_t) ( addr | 0x0FFFu ), &f );
+        pg->base = last - 0x0FFFu;
+        pg->flags = f;
+        pg->rd = rd;
+        pg->map_key = key;
+        pg->valid = true;
+    };
+    *flags |= pg->flags;
+    return pg->base + ( addr & 0x0FFFu );
+}
+
+
 /** @brief Přepočítá příznak logovacích callbacků, masku háčků a callbacky CPU. */
 static void ch_apply ( void )
 {
@@ -149,7 +202,7 @@ void coverage_hook_on_instruction ( const st_MZARCH_INSN_INFO *insn )
     if ( g_coverage_need_fetch ) {
         s.read = ch_read_fetch;
         s.fallback = &ctx.fallback;
-        s.cell = ch_cell ( insn->pc, &s.flags );
+        s.cell = ch_cell_cached ( insn->pc, &s.flags );
     } else {
         s.read = ch_read_mem;
     };
@@ -263,8 +316,10 @@ void coverage_recompute_active ( void )
 void coverage_on_exit ( void )
 {
     if ( !g_coverage_ini.save_on_exit || !g_coverage_ini.save_on_exit[ 0 ] ) return;
-    /* Relativní cesta vůči pracovnímu adresáři (jako export CDL při konci). */
-    char *path = sdlapp_paths_resolve_work ( g_sdlapp->paths, g_coverage_ini.save_on_exit );
+    /* Relativní cesta vůči aktuálnímu adresáři procesu, jako u ostatních
+     * voleb příkazové řádky se souborem (--result-json, --record, ...);
+     * --work-dir platí pro dialogy a výstupní adresáře debuggeru z INI. */
+    char *path = g_canonicalize_filename ( g_coverage_ini.save_on_exit, NULL );
     st_COVERAGE_SNAPSHOT *s = g_new0 ( st_COVERAGE_SNAPSHOT, 1 );
     if ( !coverage_snapshot_take ( s, true ) ) {
         fprintf ( stderr, "[COVERAGE] not saved to '%s': out of memory\n", path );

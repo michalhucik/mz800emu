@@ -1793,7 +1793,7 @@ address.
   stays one unit flagged `operand_varied` (key `opcode`), with key
   `full_bytes` every operand value is its own unit. The bytes are taken
   as the CPU fetched them, which needs the slower memory path.
-  Measured cost: about +78 to +115 % emulation time.
+  Measured cost: about +35 to +95 % emulation time.
 - An idle HALT is not counted; reset, snapshot load and replay seek /
   rewind keep the data and increase `discontinuities`.
 - The same collection can be started from the command line

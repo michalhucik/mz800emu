@@ -1748,7 +1748,7 @@ výsledky skončí na stejné adrese.
   jednotkou s příznakem `operand_varied` (klíč `opcode`), s klíčem
   `full_bytes` je každá hodnota operandu samostatná jednotka. Bajty se
   berou tak, jak je CPU načetlo, což potřebuje pomalejší cestu přístupu
-  do paměti. Naměřená cena: asi +78 až +115 % času emulace.
+  do paměti. Naměřená cena: asi +35 až +95 % času emulace.
 - Nečinný HALT se nepočítá; reset, načtení snapshotu a skok
   v přehrávání záznamu data ponechají a zvýší `discontinuities`.
 - Stejný sběr jde spustit z příkazové řádky (`--coverage`,

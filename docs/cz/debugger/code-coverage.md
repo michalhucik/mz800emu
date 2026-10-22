@@ -28,7 +28,7 @@ v oknech Disassembly, přes MCP, v akcích breakpointů a z příkazové řádky
   novou verzi, změněný operand se označí. Každá verze má čítače
   (vykonání, podmínka splněna, nesplněna). Záznam zabírá 32 bajtů,
   tabulka má pevnou kapacitu a co se nevejde, se ohlásí. Zpomalí emulaci
-  zhruba o 78-115 %, protože emulátor musí zaznamenávat bajty tak, jak je
+  zhruba o 35-95 %, protože emulátor musí zaznamenávat bajty tak, jak je
   procesor načítá.
 
 Data jsou **úplná**, když se nic nezahodilo (plná tabulka), všechny
@@ -121,8 +121,8 @@ Značky se vypínají v menu okna debuggeru `Settings` -> `Disassembled` ->
 - `--coverage-capacity N` - velikost tabulky úrovně detail, 1-1048576
   záznamů (výchozí 65536).
 - `--coverage-save-on-exit SOUBOR` - zapsat všechny řádky při ukončení
-  emulátoru (`.csv` = CSV, jinak JSON; relativní cesta je vůči pracovnímu
-  adresáři).
+  emulátoru (`.csv` = CSV, jinak JSON; relativní cesta je vůči aktuálnímu
+  adresáři, ze kterého se emulátor spustil, jako u `--result-json`).
 
 Stejná nastavení v sekci INI `[COVERAGE]`: `mode` (`OFF`, `BRANCH`,
 `DETAIL`), `key`, `capacity`, `reset_on_discontinuity` (při resetu,

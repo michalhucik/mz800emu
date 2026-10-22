@@ -3979,7 +3979,7 @@ async def emu_coverage_start(level: str = "branch", key: str = "opcode",
     stay one unit flagged ``operand_varied``); ``key="full_bytes"``: the
     first 4 bytes of the step including operands. Bytes come from the
     instruction fetch (exactly what the CPU read), which forces the slow
-    memory callbacks: about +78-115 % emulation time (measured).
+    memory callbacks: about +35-95 % emulation time (measured).
 
     Reset, snapshot load and replay seek/rewind do not clear the data, they
     are counted in ``discontinuities`` (``reset_on_discontinuity=true``

@@ -33,9 +33,12 @@ paragraph is the description.
 | `emulator://docs/videorec_workflow` | `videorec_workflow.md` |
 | `emulator://docs/trace_read` | `trace_read.md` |
 | `emulator://docs/audio_capture_read` | `audio_capture_read.md` |
+| `emulator://docs/screenshot_workflow` | `screenshot_workflow.md` |
 | `emulator://docs/ramlog` | `ramlog.md` |
 | `emulator://docs/memsearch_workflow` | `memsearch_workflow.md` |
 | `emulator://docs/unattended_runs` | `unattended_runs.md` |
+| `emulator://docs/run_control` | `run_control.md` |
+| `emulator://docs/replay` | `replay.md` |
 | `emulator://docs/state_observe` | `state_observe.md` |
 | `emulator://docs/conditional_writes` | `conditional_writes.md` |
 | `emulator://docs/coverage` | `coverage.md` |

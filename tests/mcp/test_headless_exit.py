@@ -87,12 +87,21 @@ def make_mzf(path):
 
 
 class Run:
-    """Jeden headless běh do konce procesu."""
+    """Jeden headless běh do konce procesu.
+
+    Aktuální adresář procesu je ``self.dir``; ``--work-dir`` je ``self.dir``,
+    nebo jeho podadresář ``work_dir`` (relativní cesty voleb se pak dají
+    odlišit od pracovního adresáře).
+    """
 
     def __init__(self, exe, tmp, name, extra, mzf=True, timeout=60,
-                 ini_text="[BREAKPOINTS]\nauto_load = 0\n", cfg_files=None):
+                 ini_text="[BREAKPOINTS]\nauto_load = 0\n", cfg_files=None, work_dir=None):
         self.dir = tmp / name
         self.dir.mkdir()
+        wdir = self.dir
+        if work_dir:
+            wdir = self.dir / work_dir
+            wdir.mkdir()
         cfg = self.dir / "cfg"
         cfg.mkdir()
         for fname, text in (cfg_files or {}).items():
@@ -100,7 +109,7 @@ class Run:
         ini = cfg / "emu.ini"
         ini.write_text(ini_text, encoding="utf-8")
         args = [str(exe), "--headless", "--no-save-ini", "--no-first-run-windows",
-                f"--cfg-dir={cfg}", f"--work-dir={self.dir}", f"--config={ini}",
+                f"--cfg-dir={cfg}", f"--work-dir={wdir}", f"--config={ini}",
                 "--speed", "max"]
         if mzf:
             args += ["--run-mzf", str(tmp / "exittest.mzf")]
