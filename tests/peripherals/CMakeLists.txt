@@ -90,3 +90,60 @@ mz_add_test(cmt_unicmt
     SOURCES  test_cmt_unicmt.c
     LABELS   "emu;peripherals;cmt"
 )
+
+# Fronta zásahů GUI do zařízení: zařazení nic neprovede, vyřídí až
+# device_request_poll() (emu vlákno), při replay odmítnuto, zámek stavu
+# zařízení držený UI zásahy odloží.
+mz_add_test(device-request
+    TYPE     EMU
+    SOURCES  test_device_request.c
+    LABELS   "emu;peripherals"
+)
+
+# Zásahy GUI do FDC (fdc_request.h): stav FDC se změní až v
+# device_request_poll(), při replay se zásah neprovede.
+mz_add_test(fdc-request
+    TYPE     EMU
+    SOURCES  test_fdc_request.c
+    LABELS   "emu;peripherals"
+)
+
+# Zásahy GUI do Quick Disku (qdisk_request.h): stav QD se změní až
+# v device_request_poll(), při replay se zásah neprovede.
+mz_add_test(qdisk-request
+    TYPE     EMU
+    SOURCES  test_qdisk_request.c
+    LABELS   "emu;peripherals"
+)
+
+# Zásahy GUI do RAM disků (ramdisk_request.h): realokace a odpojení
+# až v device_request_poll(), při replay se zásah neprovede.
+mz_add_test(ramdisk-request
+    TYPE     EMU
+    SOURCES  test_ramdisk_request.c
+    LABELS   "emu;peripherals"
+)
+
+# Zásahy GUI do MemExt (memext_request.h): připojení a načtení souboru
+# až v device_request_poll(), při replay se zásah neprovede.
+mz_add_test(memext-request
+    TYPE     EMU
+    SOURCES  test_memext_request.c
+    LABELS   "emu;peripherals"
+)
+
+# Zásahy GUI do IDE8 a Unicardu (ide8_request.h, unicard_request.h):
+# změna až v device_request_poll(), při replay se zásah neprovede.
+mz_add_test(ide8-unicard-request
+    TYPE     EMU
+    SOURCES  test_ide8_unicard_request.c
+    LABELS   "emu;peripherals"
+)
+
+# Zásahy GUI do tiskárny (printer_request.h): standard, zachytávání
+# a zavření souboru až v device_request_poll(), při replay neprovedeno.
+mz_add_test(printer-request
+    TYPE     EMU
+    SOURCES  test_printer_request.c
+    LABELS   "emu;peripherals"
+)

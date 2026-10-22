@@ -13,6 +13,7 @@
 #include "emulator/hw-generic/cmt/cmt.h"
 #if (MZARCH == 800) || (MZARCH == 1500)
 #include "emulator/hw-generic/pioz80/pioz80.h"
+#include "emulator/hw-generic/printer/printer_request.h"
 #include "emulator/hw-generic/mz1p16/mz1p16_emu.h"
 #endif
 
@@ -83,8 +84,8 @@ void imgui_menu_mz800_dip_switch(void)
 
         if (ImGui::MenuItem(str2->str, NULL, printer_mz, !std_locked))
         {
-            pioz80_set_printer_std(printer_mz ? PIOZ80_PRINTER_STD_CENTRONICS
-                                              : PIOZ80_PRINTER_STD_MZ);
+            printer_request_set_std(printer_mz ? PIOZ80_PRINTER_STD_CENTRONICS
+                                               : PIOZ80_PRINTER_STD_MZ);
         };
         g_string_free(str2, TRUE);
 #endif /* (MZARCH == 800) || (MZARCH == 1500) */

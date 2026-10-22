@@ -13,6 +13,7 @@
 #include "emulator/hw-generic/printer/printer.h"
 #include "emulator/hw-generic/mz1p16/mz1p16_emu.h"
 #include "emulator/hw-generic/pioz80/pioz80.h"
+#include "emulator/hw-generic/printer/printer_request.h"
 
 extern "C"
 {
@@ -55,7 +56,8 @@ void imgui_menu_printer(void)
 
         /* Standard tiskárny (polarita řídicích signálů, zadní DIP SW2/SW3).
          * Duplicitně k HW & Devices -> Rear DIP Switch, zde jako radio.
-         * Mění týž stav v pioz80 (pioz80_set_printer_std). Dokud je plotter
+         * Mění týž stav v pioz80 (pioz80_set_printer_std, provede emu vlákno
+         * přes printer_request_set_std). Dokud je plotter
          * připojený (okno otevřené), je standard zamčený na MZ (auto-přepnutí) -
          * změna by rozhodila handshake, proto disabled. */
         int std_val = (pioz80_get_printer_std() == PIOZ80_PRINTER_STD_MZ) ? 1 : 0;
@@ -63,11 +65,11 @@ void imgui_menu_printer(void)
         ImGui::BeginDisabled(plotter_on);
         if (ImGui::RadioButton(_L("Centronics"), &std_val, 0))
         {
-            pioz80_set_printer_std(PIOZ80_PRINTER_STD_CENTRONICS);
+            printer_request_set_std(PIOZ80_PRINTER_STD_CENTRONICS);
         };
         if (ImGui::RadioButton(_L("MZ"), &std_val, 1))
         {
-            pioz80_set_printer_std(PIOZ80_PRINTER_STD_MZ);
+            printer_request_set_std(PIOZ80_PRINTER_STD_MZ);
         };
         ImGui::EndDisabled();
         if (plotter_on)
@@ -79,7 +81,7 @@ void imgui_menu_printer(void)
 
         if (ImGui::MenuItem(_L("Capture Enabled"), NULL, capture_active))
         {
-            printer_set_active(!capture_active);
+            printer_request_set_active(!capture_active);
         };
 
         ImGui::Separator();
@@ -105,7 +107,7 @@ void imgui_menu_printer(void)
         // Uzavření aktuálního souboru (další bajt založí nový jedinečný soubor)
         if (ImGui::MenuItem(_L("Close Capture File"), NULL, false, g_printer.fp != NULL))
         {
-            printer_close_file();
+            printer_request_close_file();
         };
 
         ImGui::Separator();

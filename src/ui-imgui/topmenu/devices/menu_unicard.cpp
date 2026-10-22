@@ -11,6 +11,9 @@
 #include "ui-imgui/topmenu/topmenu.h"
 
 #include "hw-generic/unicard/unicard.h"
+#include "hw-generic/unicard/unicard_request.h"
+#include "device_request.h"
+#include "ui-imgui/devices/device_request_ui.h"
 #include "baseui/baseui_filechooser.h"
 #include "emulator/mzarch/mzarch_platform.h"
 #include "ui-imgui/message/message_window.h"
@@ -51,9 +54,65 @@ static const char *unicard_runtime_label(int detected)
 }
 
 
-/* Modal dialog s nabidkou {Reinit, Continue, Cancel} pri mismatch
- * mezi SD runtime a aktualni FW volbou. Vola se z imgui_message_window
- * call-site (= per-frame, v main_window render path). */
+/**
+ * @brief Oznámí výsledek reinicializace runtime Unicardu (zásah emu vlákna).
+ *
+ * @param res Výsledek zásahu (device_request_take_result()).
+ * @return true = výsledek patří Unicardu a byl ohlášen; false = jiný zásah.
+ * @note UI vlákno (imgui_device_request_results()).
+ */
+bool imgui_unicard_device_request_result(const st_DEVICE_REQ_RESULT *res)
+{
+    if (res->status != DEVICE_REQ_DONE) return false;
+    const char *name = res->name;
+    bool ok = (res->rc == 0);
+
+    if (strcmp(name, UNICARD_REQUEST_NAME_REINIT_CONNECT) == 0)
+    {
+        if (!ok) imgui_message_create(MESSAGE_TYPE_ERROR, _("Failed to reinitialize SD runtime."));
+        return true;
+    }
+    if (strcmp(name, UNICARD_REQUEST_NAME_REINIT_UC1) == 0)
+    {
+        if (ok)
+            imgui_message_create(MESSAGE_TYPE_INFO, _("Unicard runtime reinstalled with mgr V2.4 (uc1)."));
+        else
+            imgui_message_create(MESSAGE_TYPE_WARNING, _("Unicard runtime reinitialization failed."));
+        return true;
+    }
+    if (strcmp(name, UNICARD_REQUEST_NAME_REINIT_UC3) == 0)
+    {
+        if (ok)
+            imgui_message_create(MESSAGE_TYPE_INFO, _("Unicard runtime reinstalled with mgr V2.11b (uc3)."));
+        else
+            imgui_message_create(MESSAGE_TYPE_WARNING, _("Unicard runtime reinitialization failed."));
+        return true;
+    }
+    if (strcmp(name, UNICARD_REQUEST_NAME_REINIT_DEFAULT) == 0)
+    {
+        if (ok)
+            imgui_message_create(MESSAGE_TYPE_INFO,
+                                 _("Unicard runtime files in '{SD}/unicard/' have been reinitialized."));
+        else
+            imgui_message_create(MESSAGE_TYPE_WARNING, _("Unicard runtime reinitialization failed."));
+        return true;
+    }
+    return false;
+}
+
+
+/**
+ * @brief Modální dialog nesouladu runtime na SD s volbou firmware.
+ *
+ * Nabídne Reinitialize, Continue a Cancel. Volá se každý snímek
+ * z main_window pod zámkem stavu zařízení, otevře se při nenulovém
+ * `g_unicard_runtime_mismatch_pending` (nastaví ho unicard_set_connected()
+ * v emu vlákně). Volby jen zařadí zásah (unicard_request.h) a dialog
+ * zavřou; neúspěšnou reinicializaci ohlásí
+ * imgui_unicard_device_request_result(), Unicard pak zůstane odpojený.
+ *
+ * @pre UI vlákno, volající drží zámek stavu zařízení.
+ */
 void imgui_unicard_runtime_mismatch_dialog(void)
 {
     if (g_unicard_runtime_mismatch_pending == 0) return;
@@ -84,21 +143,12 @@ void imgui_unicard_runtime_mismatch_dialog(void)
 
         if (ImGui::Button(_L("Reinitialize##unicard_rt_reinit"), ImVec2(120, 0)))
         {
-            /* Smaze stary MGR + nainstaluje aktualni FW manager + cfg. */
-            if (EXIT_SUCCESS == unicard_reinit_sd_for_current_fw())
-            {
-                g_unicard_runtime_mismatch_pending = 0;
-                ImGui::CloseCurrentPopup();
-                /* Pripojit s ciste prepisem - ted match. */
-                unicard_set_connected(UNICARD_CONNECTION_CONNECTED);
-            }
-            else
-            {
-                /* Reinit selhal - zobrazime error a necháme dialog
-                 * otevreny ať user zkusí Cancel. */
-                imgui_message_create(MESSAGE_TYPE_ERROR,
-                    _("Failed to reinitialize SD runtime."));
-            }
+            /* Smaze stary MGR + nainstaluje aktualni FW manager + cfg,
+             * po uspechu pripoji (emu vlakno). Selhani ohlasi okno zprav,
+             * Unicard pak zustane odpojeny. */
+            g_unicard_runtime_mismatch_pending = 0;
+            ImGui::CloseCurrentPopup();
+            unicard_request_reinit(UNICARD_REQUEST_NAME_REINIT_CONNECT);
         }
         ImGui::SameLine();
         if (ImGui::Button(_L("Continue##unicard_rt_continue"), ImVec2(120, 0)))
@@ -108,8 +158,7 @@ void imgui_unicard_runtime_mismatch_dialog(void)
             /* Pripojit s zachovanim stareho runtime (mismatch). Klient
              * uvidi staré MGR ale dispatch běží podle nové FW volby.
              * One-shot bypass aby se znovu neotevřel mismatch dialog. */
-            unicard_bypass_runtime_check_once();
-            unicard_set_connected(UNICARD_CONNECTION_CONNECTED);
+            unicard_request_connect_bypass_check();
         }
         ImGui::SameLine();
         if (ImGui::Button(_L("Cancel##unicard_rt_cancel"), ImVec2(120, 0)))
@@ -123,10 +172,16 @@ void imgui_unicard_runtime_mismatch_dialog(void)
 }
 
 
-/* Modal dialog na MZ-800 pri rucnim Reinit Runtime z menu - nabidne
- * uzivateli volbu mgr V2.4 (uc1) vs V2.11b (uc3). Volba je nezavisla
- * na aktualnim FW radio (user muze explicitne chtit jinou verzi pro
- * testovani). Vola se per-frame z main_window render path. */
+/**
+ * @brief Modální dialog volby verze manageru při ruční reinicializaci (MZ-800).
+ *
+ * Nabídne mgr V2.4 (uc1) a V2.11b (uc3); volba nezávisí na zvoleném
+ * firmware (pro testování jde nainstalovat i druhou verzi). Volá se každý
+ * snímek z main_window pod zámkem stavu zařízení. Reinicializaci provede
+ * emu vlákno, výsledek ohlásí imgui_unicard_device_request_result().
+ *
+ * @pre UI vlákno, volající drží zámek stavu zařízení.
+ */
 void imgui_unicard_reinit_choice_dialog(void)
 {
     if (!s_unicard_reinit_choice_pending) return;
@@ -153,32 +208,14 @@ void imgui_unicard_reinit_choice_dialog(void)
         {
             s_unicard_reinit_choice_pending = false;
             ImGui::CloseCurrentPopup();
-            if (EXIT_SUCCESS == unicard_reinit_sd_for_fw(UNICARD_FW_UC1))
-            {
-                imgui_message_create(MESSAGE_TYPE_INFO,
-                    _("Unicard runtime reinstalled with mgr V2.4 (uc1)."));
-            }
-            else
-            {
-                imgui_message_create(MESSAGE_TYPE_WARNING,
-                    _("Unicard runtime reinitialization failed."));
-            }
+            unicard_request_reinit(UNICARD_REQUEST_NAME_REINIT_UC1);
         }
         ImGui::SameLine();
         if (ImGui::Button(_L("mgr V2.11b (uc3)##unicard_reinit_v211b")))
         {
             s_unicard_reinit_choice_pending = false;
             ImGui::CloseCurrentPopup();
-            if (EXIT_SUCCESS == unicard_reinit_sd_for_fw(UNICARD_FW_UC3))
-            {
-                imgui_message_create(MESSAGE_TYPE_INFO,
-                    _("Unicard runtime reinstalled with mgr V2.11b (uc3)."));
-            }
-            else
-            {
-                imgui_message_create(MESSAGE_TYPE_WARNING,
-                    _("Unicard runtime reinitialization failed."));
-            }
+            unicard_request_reinit(UNICARD_REQUEST_NAME_REINIT_UC3);
         }
         ImGui::SameLine();
         if (ImGui::Button(_L("Cancel##unicard_reinit_cancel")))
@@ -201,8 +238,7 @@ void imgui_menu_unicard(void)
                                   : _L("Unicard Not Connected");
         if (ImGui::MenuItem(conn_label, NULL, UNICARD_TEST_IS_CONNECTED))
         {
-            bool was_connected = UNICARD_TEST_IS_CONNECTED;
-            unicard_set_connected(was_connected ? UNICARD_CONNECTION_DISCONNECTED : UNICARD_CONNECTION_CONNECTED);
+            unicard_request_set_connected(UNICARD_TEST_IS_CONNECTED ? 0 : 1);
         };
 
         ImGui::Separator();
@@ -227,7 +263,7 @@ void imgui_menu_unicard(void)
             bool is_uc1 = (current_fw == UNICARD_FW_UC1);
             if (ImGui::MenuItem(_L("Firmware: uc1 (rev.60)"), NULL, is_uc1))
             {
-                if (!is_uc1) unicard_set_fw(UNICARD_FW_UC1);
+                if (!is_uc1) unicard_request_set_fw(UNICARD_FW_UC1);
             };
 
             bool is_uc3 = (current_fw == UNICARD_FW_UC3);
@@ -239,14 +275,14 @@ void imgui_menu_unicard(void)
                      UNICARD_FW_UC3_MAJOR, UNICARD_FW_UC3_MINOR);
             if (ImGui::MenuItem(uc3_label, NULL, is_uc3))
             {
-                if (!is_uc3) unicard_set_fw(UNICARD_FW_UC3);
+                if (!is_uc3) unicard_request_set_fw(UNICARD_FW_UC3);
             };
         }
 
         bool runtime_check = unicard_get_runtime_check_on_connect() ? true : false;
         if (ImGui::MenuItem(_L("Check runtime version on connect"), NULL, runtime_check))
         {
-            unicard_set_runtime_check_on_connect(runtime_check ? 0 : 1);
+            unicard_request_set_runtime_check(runtime_check ? 0 : 1);
         };
         if (ImGui::IsItemHovered())
         {
@@ -262,7 +298,7 @@ void imgui_menu_unicard(void)
         bool ro = unicard_test_readonly() ? true : false;
         if (ImGui::MenuItem(_L("Read-only SD"), NULL, ro))
         {
-            unicard_set_readonly(ro ? 0 : 1);
+            unicard_request_set_readonly(ro ? 0 : 1);
         };
 
         ImGui::Separator();
@@ -283,15 +319,15 @@ void imgui_menu_unicard(void)
         {
             if (ImGui::MenuItem(_L("None"), NULL, managed_fdc == UNICARD_MANAGED_FDC_NONE))
             {
-                unicard_set_managed_fdc(UNICARD_MANAGED_FDC_NONE);
+                unicard_request_set_managed_fdc(UNICARD_MANAGED_FDC_NONE);
             };
             if (ImGui::MenuItem(_L("FDC0 (standard)"), NULL, managed_fdc == UNICARD_MANAGED_FDC_FDC0))
             {
-                unicard_set_managed_fdc(UNICARD_MANAGED_FDC_FDC0);
+                unicard_request_set_managed_fdc(UNICARD_MANAGED_FDC_FDC0);
             };
             if (ImGui::MenuItem(_L("FDC1 (secondary)"), NULL, managed_fdc == UNICARD_MANAGED_FDC_FDC1))
             {
-                unicard_set_managed_fdc(UNICARD_MANAGED_FDC_FDC1);
+                unicard_request_set_managed_fdc(UNICARD_MANAGED_FDC_FDC1);
             };
             ImGui::EndMenu();
         };
@@ -337,17 +373,8 @@ void imgui_menu_unicard(void)
             else
             {
                 /* Ostatní mzarch: jen jedna varianta (V2.11b uc3),
-                 * provedeme rovnou s overwrite. */
-                if (EXIT_SUCCESS == unicard_reinit_sd_for_fw(UNICARD_FW_UC3))
-                {
-                    imgui_message_create(MESSAGE_TYPE_INFO,
-                        _("Unicard runtime files in '{SD}/unicard/' have been reinitialized."));
-                }
-                else
-                {
-                    imgui_message_create(MESSAGE_TYPE_WARNING,
-                        _("Unicard runtime reinitialization failed."));
-                };
+                 * provedeme rovnou s overwrite (emu vlákno). */
+                unicard_request_reinit(UNICARD_REQUEST_NAME_REINIT_DEFAULT);
             }
         };
         if (ImGui::IsItemHovered())

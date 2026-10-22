@@ -1,6 +1,10 @@
 /**
  * @file memext_load_dialog.cpp
  * @brief Dialog pro nahrání souboru do MemExt RAM nebo FLASH paměti
+ *
+ * Samotné čtení souboru do paměti MemExt provede emu vlákno
+ * (memext_request_load()); dialog jen ověří, že soubor jde otevřít,
+ * a zásah zařadí. Chybu čtení pak ohlásí okno zpráv.
  */
 
 #include "main.h"
@@ -22,6 +26,7 @@
 extern "C"
 {
 #include "emulator/hw-generic/memory/memext.h"
+#include "emulator/hw-generic/memory/memext_request.h"
 #include "baseui/baseui.h"
 }
 
@@ -160,18 +165,16 @@ extern "C" void imgui_memext_load_dialog(void) {
         if (!can_load) ImGui::BeginDisabled();
 
         if (ImGui::Button(_L("Load"), ImVec2(120, 0))) {
+            /* Otevření ověří dialog (chyba zůstane v dialogu), čtení do
+             * paměti MemExt provede emu vlákno. */
             FILE *fp = fopen(s_load_filepath, "rb");
             if (fp) {
-                fseek(fp, s_load_file_offset, SEEK_SET);
-                uint8_t *dst = (s_load_type == MEMEXT_CONTENT_RAM) ?
-                    g_memext.RAM : g_memext.FLASH;
-                size_t read = fread(dst + s_load_mem_from, 1, s_load_mem_size, fp);
                 fclose(fp);
-                if (read != s_load_mem_size) {
-                    snprintf(s_load_error, sizeof(s_load_error),
-                             "Read only %u of %u bytes", (unsigned)read, s_load_mem_size);
-                } else {
+                if (memext_request_load(s_load_type == MEMEXT_CONTENT_FLASH, s_load_filepath,
+                                        s_load_file_offset, s_load_mem_from, s_load_mem_size)) {
                     s_load_open = false;
+                } else {
+                    snprintf(s_load_error, sizeof(s_load_error), "%s", _("Cannot open file"));
                 }
             } else {
                 snprintf(s_load_error, sizeof(s_load_error), "%s", _("Cannot open file"));

@@ -12,6 +12,7 @@
 #include "ui-imgui/bootstrap/myimgui.h"
 
 #include "emulator/hw-generic/ide8/ide8.h"
+#include "emulator/hw-generic/ide8/ide8_request.h"
 #include "baseui/baseui_filechooser.h"
 
 extern "C"
@@ -42,6 +43,11 @@ void imgui_ide8_gstring_add_filepath(GString *str, en_IDE8_DRIVE drive_id)
     };
 }
 
+/**
+ * @brief Callback výběru obrazu IDE8: nasazení zařadí do emu vlákna
+ *        (ide8_request_set_image()).
+ * @param fch Dialog (zničí se zde); `user_data` nese číslo mechaniky.
+ */
 void imgui_ide8_open_file_cb(baseui_fchooser_t *fch)
 {
     if (fch->state != BASEUI_FCHOOSER_STATE_CLOSED_OK)
@@ -59,28 +65,24 @@ void imgui_ide8_open_file_cb(baseui_fchooser_t *fch)
         return;
     };
 
-    if(ide8_drive_get_connected(drive_id))
+    if (fch->selected_filePathName)
     {
-        ide8_drive_close_image(&g_ide8.drive[drive_id]);
-    };
-
-    if (EXIT_SUCCESS == ide8_drive_open_image(&g_ide8.drive[drive_id], fch->selected_filePathName))
-    {
-        g_ide8.drive[drive_id].filepath = fch->selected_filePathName;
-        fch->selected_filePathName = NULL;
+        ide8_request_set_image(drive_id, fch->selected_filePathName);
     };
 
     baseui_filechooser_destroy(fch);
 }
 
+/**
+ * @brief Otevře dialog výběru obrazu IDE8.
+ *
+ * Připojený obraz zavře až zásah po výběru (ide8_request_set_image());
+ * položka menu je navíc povolená jen u odpojené mechaniky.
+ *
+ * @param drive_id Mechanika.
+ */
 void imgui_ide8_open_file(en_IDE8_DRIVE drive_id)
 {
-    // pokud je drive pripojen, tak se nejprve odpoji
-    if (ide8_drive_get_connected(drive_id))
-    {
-        ide8_drive_close_image(&g_ide8.drive[drive_id]);
-    };
-
     const char *title = (drive_id == IDE8_DRIVE_MASTER) ? _("Select IDE8 HDD0 image file to open") : _("Select IDE8 HDD1 image file to open");
 
     baseui_fchooser_t *fch = baseui_filechooser_open_rw_file(BASEUI_FCHOOSER_CAT_HDD, title, ".img, .dat, .*", NULL, NULL, ide8_drive_get_filepath(drive_id), imgui_ide8_open_file_cb, (gpointer)drive_id);
@@ -106,7 +108,7 @@ void imgui_menu_ide8(void)
 
         if (ImGui::MenuItem(str0->str, NULL, IDE8_TEST_MASTER_CONNECTED))
         {
-            ide8_drive_set_connected(IDE8_DRIVE_MASTER, (!IDE8_TEST_MASTER_CONNECTED) ? IDE8_STATE_CONNECTED : IDE8_STATE_DISCONNECTED);
+            ide8_request_set_connected(IDE8_DRIVE_MASTER, IDE8_TEST_MASTER_CONNECTED ? 0 : 1);
         };
         g_string_free(str0, TRUE);
 
@@ -129,7 +131,7 @@ void imgui_menu_ide8(void)
 
         if (ImGui::MenuItem(str1->str, NULL, IDE8_TEST_SLAVE_CONNECTED))
         {
-            ide8_drive_set_connected(IDE8_DRIVE_SLAVE, (!IDE8_TEST_SLAVE_CONNECTED) ? IDE8_STATE_CONNECTED : IDE8_STATE_DISCONNECTED);
+            ide8_request_set_connected(IDE8_DRIVE_SLAVE, IDE8_TEST_SLAVE_CONNECTED ? 0 : 1);
         };
         g_string_free(str1, TRUE);
 

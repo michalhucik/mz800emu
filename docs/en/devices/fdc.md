@@ -125,8 +125,8 @@ Current values can be inspected in the FDC State debugger window.
 ## FDC chip HW options
 
 In the menu Devices / FD Controller there is a "Hardware options"
-section with these toggles. A change requires emulator restart to
-apply (the UI shows the tooltip "Restart emulator to apply change").
+section with these toggles. A change applies immediately, the
+controller reads both options while running; no restart is needed.
 
 | Option                      | Meaning                                                 |
 |-----------------------------|---------------------------------------------------------|

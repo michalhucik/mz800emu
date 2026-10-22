@@ -56,6 +56,7 @@
 #include "fdc/fdc.h"
 #include "baseui/baseui.h"
 #include "baseui/baseui_filechooser.h"
+#include "unicard_request.h"
 
 st_UNICARD g_unicard;
 
@@ -2241,29 +2242,14 @@ void unicard_fdc_mount ( uint8_t drive_id, char *filepath ) {
     };
 }
 
-static void unicard_ui_select_sd_root_directory_cb(baseui_fchooser_t *fch)
-{
-    if (fch == NULL)
-    {
-        return;
-    };
-
-    if (fch->state != BASEUI_FCHOOSER_STATE_CLOSED_OK)
-    {
-        baseui_filechooser_destroy(fch);
-        return;
-    };
-
-    char *dirpath = fch->selected_path;
-    if (!dirpath)
-        return;
+void unicard_apply_sd_root ( const char *dirpath ) {
+    if ( dirpath == NULL || dirpath[0] == 0 ) return;
 
     /* Pokud uživatel vybral stejný adresář jako aktuální root, není co
      * dělat - vyhneme se zbytečnému disruptivnímu reconnectu (analogicky
      * early-return v unicard_set_fw). */
     char *cur_root = unicard_get_sd_root_dirpath ( );
     if ( cur_root && 0 == g_strcmp0 ( cur_root, dirpath ) ) {
-        baseui_filechooser_destroy ( fch );
         return;
     }
 
@@ -2282,7 +2268,9 @@ static void unicard_ui_select_sd_root_directory_cb(baseui_fchooser_t *fch)
         unicard_set_connected ( UNICARD_CONNECTION_DISCONNECTED );
     }
 
-    unicard_set_sd_root_dirpath ( dirpath );
+    char *dirdup = g_strdup ( dirpath );
+    unicard_set_sd_root_dirpath ( dirdup );
+    g_free ( dirdup );
 
     if ( was_connected ) {
         /* Pokud nový root ještě není inicializovaná SD (adresář neexistuje,
@@ -2303,6 +2291,35 @@ static void unicard_ui_select_sd_root_directory_cb(baseui_fchooser_t *fch)
         }
         unicard_set_connected ( UNICARD_CONNECTION_CONNECTED );
     }
+}
+
+
+/**
+ * @brief Callback výběru SD root adresáře.
+ *
+ * Běží v UI vlákně (file chooser při renderu), proto změnu jen zařadí
+ * (unicard_request_set_sd_root()); unicard_apply_sd_root() provede emu
+ * vlákno.
+ *
+ * @param fch Dialog (zničí se zde).
+ */
+static void unicard_ui_select_sd_root_directory_cb(baseui_fchooser_t *fch)
+{
+    if (fch == NULL)
+    {
+        return;
+    };
+
+    if (fch->state != BASEUI_FCHOOSER_STATE_CLOSED_OK)
+    {
+        baseui_filechooser_destroy(fch);
+        return;
+    };
+
+    if (fch->selected_path)
+    {
+        unicard_request_set_sd_root(fch->selected_path);
+    };
 
     baseui_filechooser_destroy(fch);
 }

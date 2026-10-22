@@ -121,8 +121,8 @@ hodnoty lze sledovat v FDC State debugger okně.
 ## HW volby FDC chipu
 
 V menu Devices / FD Controller je sekce "Hardware options" s těmito
-přepínači. Změna vyžaduje restart emulátoru, aby se aplikovala (UI
-zobrazuje tooltip "Restart emulator to apply change").
+přepínači. Změna platí hned, řadič čte obě volby za běhu; restart
+emulátoru není potřeba.
 
 | Volba                       | Význam                                                  |
 |-----------------------------|---------------------------------------------------------|

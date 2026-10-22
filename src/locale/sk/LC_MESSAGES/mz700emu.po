@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mz800emu 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-22 15:09+0200\n"
+"POT-Creation-Date: 2026-10-22 19:04+0200\n"
 "PO-Revision-Date: 2026-03-11 21:00+0100\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -105,20 +105,20 @@ msgstr "Vyberte CMT súbor na otvorenie"
 msgid "Select a MZF File"
 msgstr "Vyberte MZF súbor"
 
-#: src/emulator/hw-generic/fdc/fdc.c:1220
+#: src/emulator/hw-generic/fdc/fdc.c:1204
 #, c-format
 msgid "Select DSK image file for FDC%u drive FD%d"
 msgstr "Vyberte súbor obrazu DSK pre FDC%u mechaniku FD%d"
 
-#: src/emulator/hw-generic/qdisk/qdisk.c:817
+#: src/emulator/hw-generic/qdisk/qdisk.c:833
 msgid "Select existing .MZQ file or create new QD image"
 msgstr "Vyberte existujúci .MZQ súbor alebo vytvorte nový QD obraz"
 
-#: src/emulator/hw-generic/qdisk/qdisk.c:819
+#: src/emulator/hw-generic/qdisk/qdisk.c:835
 msgid "Select directory to mount as virtual Quick Disk"
 msgstr "Vyberte adresár na pripojenie ako virtuálny Quick Disk"
 
-#: src/emulator/hw-generic/unicard/unicard.c:2312
+#: src/emulator/hw-generic/unicard/unicard.c:2329
 msgid "Select SD root directory for Unicard"
 msgstr "Vyberte koreňový adresár SD pre Unicard"
 
@@ -496,7 +496,7 @@ msgstr "Zachytiť zvuk (%s) spustí a zastaví zachytenie."
 #: src/ui-imgui/dsk/dsk_create_window.cpp:104
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:109
 #: src/ui-imgui/joy/joy_setup_window.cpp:567
-#: src/ui-imgui/message/message_window.cpp:90
+#: src/ui-imgui/message/message_window.cpp:139
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:442
 #: src/ui-imgui/snapshot/snapshot_notification.cpp:95
 #: src/ui-imgui/videorec/videorec_setup_dialog.cpp:338
@@ -511,7 +511,7 @@ msgstr "OK"
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:104
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:111
 #: src/ui-imgui/joy/joy_setup_window.cpp:579
-#: src/ui-imgui/memext/memext_load_dialog.cpp:185
+#: src/ui-imgui/memext/memext_load_dialog.cpp:188
 #: src/ui-imgui/memext/memext_map_window.cpp:291
 #: src/ui-imgui/memext/memext_save_dialog.cpp:207
 #: src/ui-imgui/ramdisk/pezik_settings_window.cpp:289
@@ -519,8 +519,8 @@ msgstr "OK"
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:447
 #: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:127
 #: src/ui-imgui/snapshot/snapshot_setup_dialog.cpp:176
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:99
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:93
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:89
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:96
 #: src/ui-imgui/topmenu/menu_replay.cpp:217
 #: src/ui-imgui/videorec/videorec_setup_dialog.cpp:343
 msgid "Cancel"
@@ -718,7 +718,7 @@ msgstr "Názov"
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:132
 #: src/ui-imgui/joy/joy_setup_window.cpp:240
 #: src/ui-imgui/memext/memext_map_window.cpp:105
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:153
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:155
 msgid "Type"
 msgstr "Typ"
 
@@ -728,7 +728,7 @@ msgstr "Typ"
 #: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:209
 #: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:211
 #: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:213
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:123
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:125
 msgid "Size"
 msgstr "Veľkosť"
 
@@ -1370,7 +1370,7 @@ msgstr ""
 "Len PEHU memext."
 
 #: src/ui-imgui/debugger/breakpoints/bpt_edit_panel.cpp:1537
-#: src/ui-imgui/memext/memext_load_dialog.cpp:130
+#: src/ui-imgui/memext/memext_load_dialog.cpp:135
 msgid "Offset:"
 msgstr "Offset:"
 
@@ -3211,7 +3211,7 @@ msgstr ""
 
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:2155
 #: src/ui-imgui/joy/joy_setup_window.cpp:416
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:284
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:308
 msgid "None"
 msgstr "Žiadne"
 
@@ -3723,14 +3723,14 @@ msgid "FDC State"
 msgstr "FDC State"
 
 #: src/ui-imgui/debugger/fdc_window.cpp:198
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:427
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:288
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:403
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:312
 msgid "FDC0 (standard)"
 msgstr "FDC0 (štandardný)"
 
 #: src/ui-imgui/debugger/fdc_window.cpp:199
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:433
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:292
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:409
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:316
 msgid "FDC1 (secondary)"
 msgstr "FDC1 (sekundárny)"
 
@@ -5456,8 +5456,8 @@ msgstr "Snímka Δ"
 #: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:497
 #: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:148
 #: src/ui-imgui/maxspeed_bench_window.cpp:156
-#: src/ui-imgui/plotter/plotter_window.cpp:414
-#: src/ui-imgui/topmenu/topmenu.cpp:53
+#: src/ui-imgui/plotter/plotter_window.cpp:431
+#: src/ui-imgui/topmenu/topmenu.cpp:58
 msgid "Reset"
 msgstr "Resetovať"
 
@@ -6187,7 +6187,7 @@ msgstr "Pripojiť"
 #: src/ui-imgui/debugger/memmap/memmap_window.cpp:695
 #: src/ui-imgui/debugger/memmap/memmap_window.cpp:721
 #: src/ui-imgui/debugger/memmap/memmap_window.cpp:734
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:193
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:184
 msgid "Umount"
 msgstr "Odpojiť"
 
@@ -6727,9 +6727,9 @@ msgid "Memory Search###memsearch_window"
 msgstr "Hľadanie v pamäti###memsearch_window"
 
 #: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:110
-#: src/ui-imgui/memext/memext_load_dialog.cpp:107
+#: src/ui-imgui/memext/memext_load_dialog.cpp:112
 #: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:99
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:259
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:252
 #: src/ui-imgui/topmenu/replay_window.cpp:223
 #: src/ui-imgui/topmenu/replay_window.cpp:229
 msgid "File"
@@ -6752,7 +6752,7 @@ msgid "Max Speed"
 msgstr "Maximálna rýchlosť"
 
 #: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:160
-#: src/ui-imgui/topmenu/topmenu.cpp:48
+#: src/ui-imgui/topmenu/topmenu.cpp:53
 msgid "Pause Emulation"
 msgstr "Pozastaviť emuláciu"
 
@@ -6861,7 +6861,9 @@ msgstr "Zaznamenávať registre"
 msgid ""
 "Store CPU registers after each instruction (32 bytes per record instead of "
 "12). Takes effect when recording (re)starts."
-msgstr "Ukladať registre CPU po každej inštrukcii (32 bajtov na záznam namiesto 12). Prejaví sa pri (znovu)spustení záznamu."
+msgstr ""
+"Ukladať registre CPU po každej inštrukcii (32 bajtov na záznam namiesto 12). "
+"Prejaví sa pri (znovu)spustení záznamu."
 
 #: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:558
 msgid "PC range filter [lo,hi]:"
@@ -7141,7 +7143,7 @@ msgid "Deferred ICENA event (idle = -1, otherwise GDG ticks)"
 msgstr "Odložený ICENA event (idle = -1, inak GDG ticks)"
 
 #: src/ui-imgui/debugger/pioz80_window.cpp:448
-#: src/ui-imgui/plotter/plotter_window.cpp:508
+#: src/ui-imgui/plotter/plotter_window.cpp:525
 msgid "idle"
 msgstr "necinny"
 
@@ -7768,17 +7770,17 @@ msgid "MZ-1R18 (Standard)"
 msgstr "MZ-1R18 (Štandard)"
 
 #: src/ui-imgui/debugger/ramdisk_window.cpp:153
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:96
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:100
 msgid "Pezik 0xE8 - 0xEF"
 msgstr "Pezik 0xE8 - 0xEF"
 
 #: src/ui-imgui/debugger/ramdisk_window.cpp:160
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:108
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:111
 msgid "Pezik 0x68 - 0x6F"
 msgstr "Pezik 0x68 - 0x6F"
 
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:120
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:56
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:61
 msgid "MemExt"
 msgstr "MemExt"
 
@@ -7817,7 +7819,7 @@ msgid "Tape (CMT hack)"
 msgstr "Páska (CMT hack)"
 
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:137
-#: src/ui-imgui/memext/memext_load_dialog.cpp:162
+#: src/ui-imgui/memext/memext_load_dialog.cpp:167
 msgid "Load"
 msgstr "Načítať"
 
@@ -10732,6 +10734,15 @@ msgstr "Nahradiť##watch_load_ok"
 msgid "Cancel##watch_load_cancel"
 msgstr "Zrušiť##watch_load_cancel"
 
+#: src/ui-imgui/devices/device_request_ui.cpp:36
+#: src/ui-imgui/topmenu/topmenu.cpp:43
+msgid ""
+"Machine settings cannot be changed while a replay is recorded or played. "
+"Stop it in the Replay menu first."
+msgstr ""
+"Nastavenie stroja sa nedá meniť počas záznamu alebo prehrávania vstupov. "
+"Najprv ho zastavte v ponuke Záznam vstupov."
+
 #: src/ui-imgui/dsk/dsk_create_window.cpp:53
 msgid "DSK Tools - mzdisk###dsk_info_window"
 msgstr "Nástroje pre DSK - mzdisk###dsk_info_window"
@@ -10968,7 +10979,7 @@ msgstr "Znovu prehľadať zariadenia"
 msgid "Joystick"
 msgstr "Joystick"
 
-#: src/ui-imgui/main_window.cpp:110
+#: src/ui-imgui/main_window.cpp:114
 msgid "No audio device - running without sound"
 msgstr "Žiadne zvukové zariadenie - beží bez zvuku"
 
@@ -11382,53 +11393,54 @@ msgstr "Aktuálne je:"
 msgid "Update Interval (s):"
 msgstr "Interval aktualizácie (s):"
 
-#: src/ui-imgui/memext/memext_load_dialog.cpp:96
+#: src/ui-imgui/memext/memext_load_dialog.cpp:101
 msgid "Load MemExt RAM From File"
 msgstr "Načítať MemExt RAM zo súboru"
 
-#: src/ui-imgui/memext/memext_load_dialog.cpp:96
+#: src/ui-imgui/memext/memext_load_dialog.cpp:101
 msgid "Load MemExt FLASH From File"
 msgstr "Načítať MemExt FLASH zo súboru"
 
-#: src/ui-imgui/memext/memext_load_dialog.cpp:105
+#: src/ui-imgui/memext/memext_load_dialog.cpp:110
 msgid "Input File"
 msgstr "Vstupný súbor"
 
-#: src/ui-imgui/memext/memext_load_dialog.cpp:112
-#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:198
+#: src/ui-imgui/memext/memext_load_dialog.cpp:117
+#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:199
 #: src/ui-imgui/rom/rom_settings_window.cpp:163
 msgid "Browse..."
 msgstr "Prehľadávať..."
 
-#: src/ui-imgui/memext/memext_load_dialog.cpp:120
+#: src/ui-imgui/memext/memext_load_dialog.cpp:125
 msgid "Select file"
 msgstr "Vyberte súbor"
 
-#: src/ui-imgui/memext/memext_load_dialog.cpp:125
+#: src/ui-imgui/memext/memext_load_dialog.cpp:130
 #: src/ui-imgui/videorec/videorec_remote_window.cpp:193
 msgid "File size"
 msgstr "Veľkosť súboru"
 
-#: src/ui-imgui/memext/memext_load_dialog.cpp:129
+#: src/ui-imgui/memext/memext_load_dialog.cpp:134
 msgid "File Offset"
 msgstr "Offset v súbore"
 
-#: src/ui-imgui/memext/memext_load_dialog.cpp:134
+#: src/ui-imgui/memext/memext_load_dialog.cpp:139
 #: src/ui-imgui/memext/memext_save_dialog.cpp:115
 msgid "Memory Allocation"
 msgstr "Alokácia pamäte"
 
-#: src/ui-imgui/memext/memext_load_dialog.cpp:137
+#: src/ui-imgui/memext/memext_load_dialog.cpp:142
 #: src/ui-imgui/memext/memext_save_dialog.cpp:117
 msgid "From:"
 msgstr "Od:"
 
-#: src/ui-imgui/memext/memext_load_dialog.cpp:145
+#: src/ui-imgui/memext/memext_load_dialog.cpp:150
 #: src/ui-imgui/memext/memext_save_dialog.cpp:121
 msgid "Size:"
 msgstr "Veľkosť:"
 
 #: src/ui-imgui/memext/memext_load_dialog.cpp:177
+#: src/ui-imgui/memext/memext_load_dialog.cpp:180
 msgid "Cannot open file"
 msgstr "Nemožno otvoriť súbor"
 
@@ -11496,16 +11508,16 @@ msgstr "Názov súboru:"
 msgid "Save file"
 msgstr "Uložiť súbor"
 
-#: src/ui-imgui/message/message_window.cpp:62
-#: src/ui-imgui/message/message_window.cpp:74
+#: src/ui-imgui/message/message_window.cpp:111
+#: src/ui-imgui/message/message_window.cpp:123
 msgid "Information"
 msgstr "Informácia"
 
-#: src/ui-imgui/message/message_window.cpp:66
+#: src/ui-imgui/message/message_window.cpp:115
 msgid "Error"
 msgstr "Chyba"
 
-#: src/ui-imgui/message/message_window.cpp:70
+#: src/ui-imgui/message/message_window.cpp:119
 msgid "Warning"
 msgstr "Varovanie"
 
@@ -11528,149 +11540,149 @@ msgstr ""
 "MZ-1500. Port 0xF2 je stále mono PSG (ľavý + pravý kanál).\n"
 "Port 0xF3 je iba PSG0 (ľavý) a port 0xF9 je iba PSG1 (pravý)."
 
-#: src/ui-imgui/plotter/plotter_window.cpp:99
+#: src/ui-imgui/plotter/plotter_window.cpp:107
 msgid "Black"
 msgstr "Čierna"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:100
+#: src/ui-imgui/plotter/plotter_window.cpp:108
 msgid "Red"
 msgstr "Červená"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:101
+#: src/ui-imgui/plotter/plotter_window.cpp:109
 #: src/ui-imgui/topmenu/interface/menu_display.cpp:38
 msgid "Green"
 msgstr "Zelená"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:102
+#: src/ui-imgui/plotter/plotter_window.cpp:110
 msgid "Blue"
 msgstr "Modrá"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:360
+#: src/ui-imgui/plotter/plotter_window.cpp:368
 msgid "Save plotter drawing"
 msgstr "Uložiť kresbu plotra"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:360
+#: src/ui-imgui/plotter/plotter_window.cpp:368
 msgid "plotter.png"
 msgstr "plotter.png"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:387
+#: src/ui-imgui/plotter/plotter_window.cpp:405
 msgid "Plotter MZ-1P16"
 msgstr "Plotter MZ-1P16"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:396
+#: src/ui-imgui/plotter/plotter_window.cpp:414
 msgid "Save..."
 msgstr "Uložiť..."
 
-#: src/ui-imgui/plotter/plotter_window.cpp:401
+#: src/ui-imgui/plotter/plotter_window.cpp:419
 msgid "Clear paper"
 msgstr "Vyčistiť papier"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:407
+#: src/ui-imgui/plotter/plotter_window.cpp:424
 msgid "Clear the drawing and reset the plotter (plain RESET keeps the paper)"
 msgstr "Zmaže kresbu a resetuje plotter (samotný RESET papier ponechá)"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:410
+#: src/ui-imgui/plotter/plotter_window.cpp:427
 msgid "Plotter buttons:"
 msgstr "Tlačidlá plotra:"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:420
+#: src/ui-imgui/plotter/plotter_window.cpp:437
 msgid "Paper feed"
 msgstr "Posuv papiera"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:430
+#: src/ui-imgui/plotter/plotter_window.cpp:447
 msgid "Hold to feed paper"
 msgstr "Podržaním posuniete papier"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:433
+#: src/ui-imgui/plotter/plotter_window.cpp:450
 msgid "Run drawing self-test"
 msgstr "Spustiť kresliaci self-test"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:442
+#: src/ui-imgui/plotter/plotter_window.cpp:459
 msgid "Reset with PAPER FEED held -> writes the character set in 4 colors"
 msgstr "Reset s podržaným PAPER FEED -> vypíše znakovú sadu v 4 farbách"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:447
+#: src/ui-imgui/plotter/plotter_window.cpp:464
 msgid "Zoom"
 msgstr "Priblíženie"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:449
+#: src/ui-imgui/plotter/plotter_window.cpp:466
 msgid "Preview scale: pixels per motor step"
 msgstr "Mierka náhľadu: pixelov na krok motora"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:452
+#: src/ui-imgui/plotter/plotter_window.cpp:469
 msgid "Show carriage"
 msgstr "Zobraziť vozík"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:454
+#: src/ui-imgui/plotter/plotter_window.cpp:471
 msgid "Live marker at the current pen/carriage position"
 msgstr "Živý marker na aktuálnej pozícii pera/vozíka"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:478
+#: src/ui-imgui/plotter/plotter_window.cpp:495
 #, c-format
 msgid "X: %ld"
 msgstr "X: %ld"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:480
+#: src/ui-imgui/plotter/plotter_window.cpp:497
 #, c-format
 msgid "Y: %ld"
 msgstr "Y: %ld"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:484
+#: src/ui-imgui/plotter/plotter_window.cpp:501
 msgid "Color:"
 msgstr "Farba:"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:497
+#: src/ui-imgui/plotter/plotter_window.cpp:514
 #, c-format
 msgid "Pen: %s"
 msgstr "Pero: %s"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:497
+#: src/ui-imgui/plotter/plotter_window.cpp:514
 msgid "DOWN"
 msgstr "DOLE"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:497
+#: src/ui-imgui/plotter/plotter_window.cpp:514
 msgid "UP"
 msgstr "HORE"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:503
+#: src/ui-imgui/plotter/plotter_window.cpp:520
 msgid "BUSY"
 msgstr "BUSY"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:513
+#: src/ui-imgui/plotter/plotter_window.cpp:530
 #, c-format
 msgid "Strokes: %u"
 msgstr "Ťahy: %u"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:517
+#: src/ui-imgui/plotter/plotter_window.cpp:534
 #, c-format
 msgid "(dropped %u)"
 msgstr "(zahodené %u)"
 
-#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:111
+#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:112
 msgid "Connected"
 msgstr "Pripojené"
 
-#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:140
+#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:141
 msgid "Ports:"
 msgstr "Porty:"
 
-#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:185
+#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:186
 msgid "Backuped"
 msgstr "Zálohované"
 
-#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:207
+#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:208
 msgid "Select backup file"
 msgstr "Vyberte zálohovací súbor"
 
-#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:235
+#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:236
 msgid "Settings for PEZIK Ramdisks"
 msgstr "Nastavenie pre PEZIK Ramdisky"
 
-#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:245
+#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:246
 msgid "Standard PEZIK:"
 msgstr "Štandardný PEZIK:"
 
-#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:250
+#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:251
 msgid "Experimental PEZIK:"
 msgstr "Experimentálny PEZIK:"
 
@@ -12146,359 +12158,347 @@ msgstr "Opraviť ukončovač FNAME"
 msgid "HW & Devices"
 msgstr "HW a zariadenia"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:82
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:84
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:72
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:74
 msgid "FDC: Unsaved RAM changes"
 msgstr "FDC: neuložené zmeny v RAM"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:87
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:77
 #, c-format
 msgid "Drive %d is in Discard mode and has unsaved RAM changes."
 msgstr "Mechanika %d je v režime Discard a obsahuje neuložené zmeny v RAM."
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:88
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:84
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:78
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:87
 #, c-format
 msgid "Switching to '%s' mode will close the current RAM buffer."
 msgstr "Prepnutie do režimu '%s' zavrie aktuálny RAM buffer."
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:91
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:86
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:81
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:89
 msgid "What to do with the changes?"
 msgstr "Čo urobiť so zmenami?"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:97
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:91
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:87
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:94
 msgid "Save and switch"
 msgstr "Uložiť a prepnúť"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:98
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:92
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:88
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:95
 msgid "Switch and discard"
 msgstr "Prepnúť a zahodiť"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:173
-#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:41
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:164
+#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:42
 msgid "No image"
 msgstr "Bez obrazu"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:186
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:177
 msgid "Mount..."
 msgstr "Pripojiť..."
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:186
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:177
 msgid "Re-Mount..."
 msgstr "Znovu pripojiť..."
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:211
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:202
 msgid "Read-only (FS write-protected)"
 msgstr "Iba na čítanie (súbor chránený proti zápisu)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:217
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:208
 msgid "Read-only"
 msgstr "Iba na čítanie"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:242
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:353
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:221
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:346
 msgid "Storage mode"
 msgstr "Režim úložiska"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:260
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:375
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:239
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:368
 msgid "Cached (sync at reset/umount/exit)"
 msgstr "Cached (sync pri resete/odpojení/konci)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:265
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:380
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:244
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:373
 msgid "Direct (write-through to file)"
 msgstr "Direct (priamy zápis do súboru)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:270
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:385
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:249
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:378
 msgid "Discard changes (in-RAM, no sync)"
 msgstr "Discard (iba v RAM, bez synchronizácie)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:278
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:257
 msgid "Sync now"
 msgstr "Synchronizovať teraz"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:292
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:271
 msgid "FDD "
 msgstr "FDD "
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:300
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:279
 msgid "(Empty)"
 msgstr "(Prázdny)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:328
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:308
 msgid "Hardware options"
 msgstr "Nastavenie hardvéru"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:331
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:311
 msgid "HD Patch enabled"
 msgstr "HD Patch povolený"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:336
-msgid "Restart emulator to apply change."
-msgstr "Pre uplatnenie zmeny reštartujte emulátor."
-
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:339
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:317
 msgid "Bus translation: invert (Sharp)"
 msgstr "Preklad zbernice: invertovať (Sharp)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:344
-msgid ""
-"Sharp MZ default - XOR 0xFF between CPU bus and WD279x chip. Restart "
-"emulator to apply change."
-msgstr ""
-"Predvolené pre Sharp MZ - XOR 0xFF medzi CPU zbernicou a čipom WD279x. Pre "
-"uplatnenie zmeny reštartujte emulátor."
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:322
+msgid "Sharp MZ default - XOR 0xFF between CPU bus and WD279x chip."
+msgstr "Predvolené pre Sharp MZ - XOR 0xFF medzi CPU zbernicou a čipom WD279x."
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:347
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:324
 msgid "Bus translation: passthrough"
 msgstr "Preklad zbernice: passthrough"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:355
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:332
 msgid ""
 "NOT compatible with Sharp MZ - no inversion between CPU bus and WD279x chip. "
-"Reserved for future 'true bus' ROMs / experiments. Restart emulator to apply "
-"change."
-msgstr ""
-"NIE JE kompatibilné so Sharp MZ - bez inverzie medzi CPU zbernicou a čipom "
-"WD279x. Vyhradené pre budúce 'true bus' ROM / experimenty. Pre uplatnenie "
-"zmeny reštartujte emulátor."
+"Reserved for future 'true bus' ROMs / experiments."
+msgstr "NIE JE kompatibilné so Sharp MZ - bez inverzie medzi CPU zbernicou a čipom WD279x. Vyhradené pre budúce 'true bus' ROM / experimenty."
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:375
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:351
 msgid "Floppy Drives"
 msgstr "Disketové mechaniky"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:389
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:365
 msgid "FD Controller"
 msgstr "FD radič"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:399
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:59
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:183
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:65
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:375
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:64
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:188
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:70
 msgid "Not Connected"
 msgstr "Nepripojené"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:409
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:385
 msgid "WD279x (standard)"
 msgstr "WD279x (štandardný)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:414
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:390
 msgid "Default FDC on ports 0xD8 - 0xDF"
 msgstr "Predvolený FDC na portoch 0xD8 - 0xDF"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:416
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:392
 msgid "WD279x (secondary)"
 msgstr "WD279x (sekundárny)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:421
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:397
 msgid "Unicard alternate FDC ports 0x58 - 0x5F"
 msgstr "Alternatívne porty 0x58 - 0x5F pre Unicard FDC"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:440
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:416
 #: src/ui-imgui/topmenu/menu_tools.cpp:32
 msgid "Tools"
 msgstr "Nástroje"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:442
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:418
 msgid "FDC State (debugger)..."
 msgstr "Stav FDC (debugger)..."
 
-#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:84
+#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:86
 msgid "Select IDE8 HDD0 image file to open"
 msgstr "Vyberte súbor obrazu IDE8 HDD0"
 
-#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:84
+#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:86
 msgid "Select IDE8 HDD1 image file to open"
 msgstr "Vyberte súbor obrazu IDE8 HDD1"
 
-#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:95
+#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:97
 msgid "IDE8"
 msgstr "IDE8"
 
-#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:97
+#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:99
 msgid "IDE8 Master: "
 msgstr "IDE8 Master: "
 
-#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:104
-#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:127
+#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:106
+#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:129
 msgid "Disconnected"
 msgstr "Odpojené"
 
-#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:113
+#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:115
 msgid "Set HDD0 Image..."
 msgstr "Nastaviť obraz HDD0..."
 
-#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:120
+#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:122
 msgid "IDE8 Slave: "
 msgstr "IDE8 Slave: "
 
-#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:136
+#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:138
 msgid "Set HDD1 Image..."
 msgstr "Nastaviť obraz HDD1..."
 
-#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:144
+#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:146
 msgid "IDE8 State (debugger)..."
 msgstr "Stav IDE8 (debugger)..."
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:45
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:50
 msgid "Select FLASH image file to open"
 msgstr "Vyberte súbor obrazu FLASH"
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:64
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:69
 msgid "Model - 'Peroutka & Hučík'"
 msgstr "Model - 'Peroutka & Hučík'"
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:69
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:74
 msgid "Model - 'Luftner'"
 msgstr "Model - 'Luftner'"
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:76
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:81
 msgid "RAM Initialization on Boot"
 msgstr "Inicializácia RAM pri štarte"
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:79
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:84
 msgid "Filled of Zeros"
 msgstr "Vyplnené nulami"
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:84
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:89
 msgid "Filled of Random Values"
 msgstr "Vyplnené náhodnými hodnotami"
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:89
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:94
 msgid "Filled as Sharp DRAM"
 msgstr "Vyplnené ako Sharp DRAM"
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:99
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:104
 msgid "Luftner Forced Auto Init"
 msgstr "Luftner vynútená auto inicializácia"
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:104
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:109
 msgid "Luftner FLASH Image"
 msgstr "Luftner FLASH obraz"
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:106
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:111
 msgid "File: "
 msgstr "Súbor: "
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:122
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:127
 msgid "Select FLASH Autoload File..."
 msgstr "Vyberte súbor pre automatické načítanie FLASH..."
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:132
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:137
 msgid "Memory Map Settings..."
 msgstr "Nastavenie mapy pamäte..."
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:137
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:142
 msgid "Memory Content"
 msgstr "Obsah pamäte"
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:139
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:144
 msgid "Load MemExt RAM From File..."
 msgstr "Načítať MemExt RAM zo súboru..."
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:144
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:149
 msgid "Save MemExt RAM Into File..."
 msgstr "Uložiť MemExt RAM do súboru..."
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:151
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:156
 msgid "Load MemExt FLASH From File..."
 msgstr "Načítať MemExt FLASH zo súboru..."
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:156
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:161
 msgid "Save MemExt FLASH Into File..."
 msgstr "Uložiť MemExt FLASH do súboru..."
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:39
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:40
 msgid "Printer"
 msgstr "Tlačiareň"
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:47
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:48
 msgid "Status: ONLINE"
 msgstr "Stav: ONLINE"
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:51
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:52
 msgid "Status: OFFLINE"
 msgstr "Stav: OFFLINE"
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:62
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:64
 msgid "Printer Standard:"
 msgstr "Štandard tlačiarne:"
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:64
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:66
 msgid "Centronics"
 msgstr "Centronics"
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:68
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:72
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:70
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:73
 msgid "MZ"
 msgstr "MZ"
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:75
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:77
 msgid "(locked: plotter connected)"
 msgstr "(uzamknuté: plotter pripojený)"
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:80
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:82
 msgid "Capture Enabled"
 msgstr "Záznam zapnutý"
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:90
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:92
 #, c-format
 msgid "Capture file: %s"
 msgstr "Súbor záznamu: %s"
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:91
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:93
 #, c-format
 msgid "Bytes captured: %u"
 msgstr "Zachytených bajtov: %u"
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:95
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:97
 msgid "No capture file open"
 msgstr "Žiadny súbor záznamu nie je otvorený"
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:100
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:102
 #, c-format
 msgid "Session total: %u bytes"
 msgstr "Spolu za reláciu: %u bajtov"
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:106
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:108
 msgid "Close Capture File"
 msgstr "Zatvoriť súbor záznamu"
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:122
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:124
 msgid "Plotter MZ-1P16 connected"
 msgstr "Plotter MZ-1P16 pripojený"
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:127
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:129
 msgid "Open plotter window"
 msgstr "Otvoriť okno plotra"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:78
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:80
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:81
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:83
 msgid "QD: Unsaved RAM changes"
 msgstr "QD: neuložené zmeny v RAM"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:83
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:86
 msgid "Quick Disk is in Discard mode and has unsaved RAM changes."
 msgstr "Quick Disk je v režime Discard a obsahuje neuložené zmeny v RAM."
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:171
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:176
 msgid "Create new QD image"
 msgstr "Vytvoriť nový QD obraz"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:171
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:176
 msgid "qdimage.mzq"
 msgstr "qdimage.mzq"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:181
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:186
 msgid "Quick Disk"
 msgstr "Quick Disk"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:189
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:193
 msgid "MZ 1F11"
 msgstr "MZ 1F11"
 
@@ -12506,200 +12506,200 @@ msgstr "MZ 1F11"
 msgid "Virtual - Mapped Directory"
 msgstr "Virtuálny - Mapovaný adresár"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:213
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:210
 msgid "Unicard Boot Loader"
 msgstr "Unicard Boot Loader"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:230
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:223
 msgid "Empty"
 msgstr "Prázdny"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:234
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:227
 msgid "image"
 msgstr "obraz"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:238
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:231
 msgid "directory"
 msgstr "adresár"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:242
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:195
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:235
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:220
 msgid "Unicard"
 msgstr "Unicard"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:245
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:238
 msgid "QD Drive"
 msgstr "QD mechanika"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:248
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:241
 #, c-format
 msgid " (%s)"
 msgstr " (%s)"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:259
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:252
 msgid "Dir"
 msgstr "Adr"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:266
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:259
 #, c-format
 msgid "%s: %s..."
 msgstr "%s: %s..."
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:270
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:263
 #, c-format
 msgid "%s: %s"
 msgstr "%s: %s"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:280
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:273
 msgid "Mount Image..."
 msgstr "Pripojiť obraz..."
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:280
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:273
 msgid "Mount Directory..."
 msgstr "Pripojiť adresár..."
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:287
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:280
 msgid "Unmount"
 msgstr "Odpojiť"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:304
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:297
 msgid "Write Protected"
 msgstr "Chránené proti zápisu"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:310
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:303
 msgid "Forced R/O by UNICARD - cannot be changed."
 msgstr "Vynútene iba na čítanie cez UNICARD - nemožno zmeniť."
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:320
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:313
 msgid "    [FS R/O]"
 msgstr "    [FS R/O]"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:324
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:317
 msgid ""
 "File on disk is not writable - effective R/O regardless of user setting."
 msgstr ""
 "Súbor na disku nie je zapisovateľný - efektívne iba na čítanie bez ohľadu na "
 "používateľské nastavenie."
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:337
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:330
 msgid "Save now"
 msgstr "Uložiť teraz"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:394
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:387
 msgid "UNICARD mode is locked to Cached storage."
 msgstr "Režim UNICARD je uzamknutý na úložisko Cached."
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:399
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:392
 msgid "Create New Image..."
 msgstr "Vytvoriť nový obraz..."
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:407
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:400
 msgid "QDisk State (debugger)..."
 msgstr "Stav QDisk (debugger)..."
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:46
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:51
 msgid "Select SRAM disk image file to open"
 msgstr "Vyberte súbor obrazu SRAM disku"
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:51
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:56
 msgid "Select ROM disk image file to open"
 msgstr "Vyberte súbor obrazu ROM disku"
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:63
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:68
 msgid "Memory Disk"
 msgstr "Pamäťový disk"
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:77
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:82
 msgid "MZ-1R18 Compatible"
 msgstr "MZ-1R18 kompatibilný"
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:116
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:118
 msgid "Pezik Settings..."
 msgstr "Nastavenia Pezik..."
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:121
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:123
 msgid "MZ-1R18 Options"
 msgstr "Nastavenia MZ-1R18"
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:125
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:127
 msgid "64 KB"
 msgstr "64 KB"
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:130
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:132
 msgid "256 KB"
 msgstr "256 KB"
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:135
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:137
 msgid "512 KB"
 msgstr "512 KB"
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:140
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:142
 msgid "1 MB"
 msgstr "1 MB"
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:145
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:147
 msgid "16 MB"
 msgstr "16 MB"
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:155
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:157
 msgid "Unbacked RAM Disk"
 msgstr "Nezálohovaný RAM Disk"
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:160
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:162
 msgid "SRAM Emulation"
 msgstr "SRAM emulácia"
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:165
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:167
 msgid "ROM Disk"
 msgstr "ROM Disk"
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:173
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:175
 msgid "RAM Disk File..."
 msgstr "Súbor RAM Disku..."
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:181
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:183
 msgid "Memory Disk State (debugger)..."
 msgstr "Stav pamäťového disku (debugger)..."
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:26
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:27
 msgid "Rear DIP Switch"
 msgstr "Zadný DIP prepínač"
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:29
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:30
 msgid "Mode 700 Compat.: "
 msgstr "Režim 700 kompat.: "
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:32
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:33
 msgid "OFF"
 msgstr "VYP"
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:36
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:37
 msgid "ON (default)"
 msgstr "ZAP (predvolené)"
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:46
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:47
 msgid "CMT Polarity: "
 msgstr "CMT polarita: "
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:49
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:50
 msgid "Inverted"
 msgstr "Invertovaná"
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:53
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:54
 #: src/ui-imgui/topmenu/interface/menu_display.cpp:30
 #: src/ui-imgui/topmenu/interface/menu_display.cpp:65
 msgid "Normal"
 msgstr "Normálna"
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:69
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:70
 msgid "Printer Standard: "
 msgstr "Štandard tlačiarne: "
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:76
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:77
 msgid "Centronics (default)"
 msgstr "Centronics (predvolené)"
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:80
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:81
 msgid " (locked: plotter connected)"
 msgstr " (uzamknuté: plotter pripojený)"
 
@@ -12708,6 +12708,28 @@ msgid "Settings for User Defined..."
 msgstr "Nastavenia pre používateľsky definovaný..."
 
 #: src/ui-imgui/topmenu/devices/menu_unicard.cpp:72
+msgid "Failed to reinitialize SD runtime."
+msgstr "Reinicializácia SD runtime zlyhala."
+
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:78
+msgid "Unicard runtime reinstalled with mgr V2.4 (uc1)."
+msgstr "Unicard runtime preinštalovaný s mgr V2.4 (uc1)."
+
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:80
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:88
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:97
+msgid "Unicard runtime reinitialization failed."
+msgstr "Reinicializácia Unicard runtime zlyhala."
+
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:86
+msgid "Unicard runtime reinstalled with mgr V2.11b (uc3)."
+msgstr "Unicard runtime preinštalovaný s mgr V2.11b (uc3)."
+
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:95
+msgid "Unicard runtime files in '{SD}/unicard/' have been reinitialized."
+msgstr "Súbory Unicard runtime v '{SD}/unicard/' boli reinicializované."
+
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:124
 msgid ""
 "SD card runtime in '{SD}/unicard/' is missing, incomplete, or does not match "
 "the selected firmware."
@@ -12715,15 +12737,15 @@ msgstr ""
 "Runtime SD karty v '{SD}/unicard/' chýba, je neúplný alebo nezodpovedá "
 "vybranému firmvéru."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:75
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:127
 msgid "State on SD:"
 msgstr "Stav na SD:"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:76
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:128
 msgid "Selected firmware:"
 msgstr "Vybraný firmvér:"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:79
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:131
 msgid ""
 "[Reinitialize] overwrites the SD manager files to match the selected "
 "firmware. [Continue] connects with the mismatch (client may see inconsistent "
@@ -12733,23 +12755,19 @@ msgstr ""
 "vybranému firmvéru. [Pokračovať] pripojí cez nezhodu (klient môže vykazovať "
 "nekonzistentné správanie). [Zrušiť] ponechá Unicard odpojený."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:85
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:137
 msgid "Reinitialize##unicard_rt_reinit"
 msgstr "Reinicializovať##unicard_rt_reinit"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:100
-msgid "Failed to reinitialize SD runtime."
-msgstr "Reinicializácia SD runtime zlyhala."
-
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:104
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:147
 msgid "Continue##unicard_rt_continue"
 msgstr "Pokračovať##unicard_rt_continue"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:115
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:157
 msgid "Cancel##unicard_rt_cancel"
 msgstr "Zrušiť##unicard_rt_cancel"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:140
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:183
 msgid ""
 "Choose which manager version to install in '{SD}/unicard/'. This will "
 "overwrite the existing manager files."
@@ -12757,7 +12775,7 @@ msgstr ""
 "Vyberte, ktorú verziu správcu nainštalovať do '{SD}/unicard/'. Toto prepíše "
 "existujúce súbory správcu."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:144
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:187
 msgid ""
 "Note: This choice is independent of the currently selected simulated "
 "firmware. You can install one version while simulating the other (useful for "
@@ -12767,54 +12785,40 @@ msgstr ""
 "firmvéru. Môžete nainštalovať jednu verziu a simulovať druhú (užitočné pre "
 "testovanie)."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:152
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:195
 msgid "mgr V2.4 (uc1)##unicard_reinit_v24"
 msgstr "mgr V2.4 (uc1)##unicard_reinit_v24"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:159
-msgid "Unicard runtime reinstalled with mgr V2.4 (uc1)."
-msgstr "Unicard runtime preinštalovaný s mgr V2.4 (uc1)."
-
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:164
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:180
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:349
-msgid "Unicard runtime reinitialization failed."
-msgstr "Reinicializácia Unicard runtime zlyhala."
-
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:168
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:202
 msgid "mgr V2.11b (uc3)##unicard_reinit_v211b"
 msgstr "mgr V2.11b (uc3)##unicard_reinit_v211b"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:175
-msgid "Unicard runtime reinstalled with mgr V2.11b (uc3)."
-msgstr "Unicard runtime preinštalovaný s mgr V2.11b (uc3)."
-
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:184
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:209
 msgid "Cancel##unicard_reinit_cancel"
 msgstr "Zrušiť##unicard_reinit_cancel"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:200
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:225
 msgid "Unicard Connected"
 msgstr "Unicard pripojený"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:201
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:226
 msgid "Unicard Not Connected"
 msgstr "Unicard nepripojený"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:228
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:252
 msgid "Firmware: uc1 (rev.60)"
 msgstr "Firmvér: uc1 (rev.60)"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:238
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:262
 #, c-format
 msgid "Firmware: uc3 (v%d.%d)###unicard_fw_uc3"
 msgstr "Firmvér: uc3 (v%d.%d)###unicard_fw_uc3"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:247
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:271
 msgid "Check runtime version on connect"
 msgstr "Pri pripojení kontrolovať verziu runtime"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:254
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:278
 msgid ""
 "On Connect, verify that {SD}/unicard/ contains the manager matching the "
 "selected firmware. Mismatch shows a dialog with option to reinitialize."
@@ -12823,15 +12827,15 @@ msgstr ""
 "vybranému firmvéru. Pri nezhode sa zobrazí dialóg s možnosťou "
 "reinicializácie."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:263
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:287
 msgid "Read-only SD"
 msgstr "SD iba na čítanie"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:274
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:298
 msgid "Managed FDC"
 msgstr "Spravovaný FDC"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:278
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:302
 msgid ""
 "Which FDC controller the Unicard API manages (DSK mount).\n"
 "'None' disables Unicard FDD commands.\n"
@@ -12841,11 +12845,11 @@ msgstr ""
 "'Žiadne' vypne FDD príkazy Unicard.\n"
 "Zmena ovplyvní len budúce operácie."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:305
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:329
 msgid "Set SD Root Directory..."
 msgstr "Nastaviť koreňový adresár SD..."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:312
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:336
 msgid ""
 "Change the host directory used as the Unicard SD root.\n"
 "If connected, the Unicard is automatically reconnected to the new root."
@@ -12853,15 +12857,11 @@ msgstr ""
 "Zmení hostiteľský adresár používaný ako SD root Unicard.\n"
 "Ak je pripojená, Unicard sa automaticky znova pripojí k novému rootu."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:330
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:354
 msgid "Reinitialize Runtime..."
 msgstr "Reinicializovať runtime..."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:344
-msgid "Unicard runtime files in '{SD}/unicard/' have been reinitialized."
-msgstr "Súbory Unicard runtime v '{SD}/unicard/' boli reinicializované."
-
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:356
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:371
 msgid ""
 "Overwrites manager files in '{SD}/unicard/' (mgr.mzf, mgr800.mzf, "
 "mgr700.mzf, mgr1500.mzf) with the selected version.\n"
@@ -13546,15 +13546,7 @@ msgstr "Snímka %d = %s; späť cez checkpoint, dopredu maximálnou rýchlosťou
 msgid "Available while playing a replay."
 msgstr "Dostupné pri prehrávaní záznamu."
 
-#: src/ui-imgui/topmenu/topmenu.cpp:38
-msgid ""
-"Machine settings cannot be changed while a replay is recorded or played. "
-"Stop it in the Replay menu first."
-msgstr ""
-"Nastavenie stroja sa nedá meniť počas záznamu alebo prehrávania vstupov. "
-"Najprv ho zastavte v ponuke Záznam vstupov."
-
-#: src/ui-imgui/topmenu/topmenu.cpp:69
+#: src/ui-imgui/topmenu/topmenu.cpp:74
 msgid "About..."
 msgstr "O programe..."
 
@@ -14075,6 +14067,25 @@ msgstr "MZ-1500 Virtuálna klávesnica"
 #: src/ui-imgui/vkbd_window.cpp:229
 msgid "MZ-800 Virtual Keyboard"
 msgstr "MZ-800 Virtuálna klávesnica"
+
+#~ msgid "Restart emulator to apply change."
+#~ msgstr "Pre uplatnenie zmeny reštartujte emulátor."
+
+#~ msgid ""
+#~ "Sharp MZ default - XOR 0xFF between CPU bus and WD279x chip. Restart "
+#~ "emulator to apply change."
+#~ msgstr ""
+#~ "Predvolené pre Sharp MZ - XOR 0xFF medzi CPU zbernicou a čipom WD279x. "
+#~ "Pre uplatnenie zmeny reštartujte emulátor."
+
+#~ msgid ""
+#~ "NOT compatible with Sharp MZ - no inversion between CPU bus and WD279x "
+#~ "chip. Reserved for future 'true bus' ROMs / experiments. Restart emulator "
+#~ "to apply change."
+#~ msgstr ""
+#~ "NIE JE kompatibilné so Sharp MZ - bez inverzie medzi CPU zbernicou a "
+#~ "čipom WD279x. Vyhradené pre budúce 'true bus' ROM / experimenty. Pre "
+#~ "uplatnenie zmeny reštartujte emulátor."
 
 #~ msgid "Open Last Capture Folder"
 #~ msgstr "Otvoriť zložku posledného zachytenia"

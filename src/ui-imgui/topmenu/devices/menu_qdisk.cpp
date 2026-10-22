@@ -13,6 +13,7 @@
 #include "ui-imgui/bootstrap/myimgui.h"
 #include "ui-imgui/mywidgets/mywidgets.h"
 #include "emulator/hw-generic/qdisk/qdisk.h"
+#include "emulator/hw-generic/qdisk/qdisk_request.h"
 #include "emulator/hw-generic/unicard/unicard.h"
 #include "baseui/baseui_filechooser.h"
 
@@ -60,8 +61,10 @@ static void imgui_qdisk_storage_switch_activate(const char *target_mode)
  *  - Switch and discard - jen switch (RAM zmeny se ztrati)
  *  - Cancel - mod zustane DISCARD, zadna akce
  *
- * Volano z main_window.cpp pokud g_gui->showQdiskStorageSwitchWindow == true.
- * Tlacitka maji jednotnou sirku podle nejsirsiho label textu (centrovano).
+ * Volano z main_window.cpp pokud g_gui->showQdiskStorageSwitchWindow == true
+ * (pod zámkem stavu zařízení). Tlacitka maji jednotnou sirku podle
+ * nejsirsiho label textu (centrovano). Prepnuti jen zaradi zasah
+ * (qdisk_request_set_storage_mode()), provede ho emu vlakno.
  *
  * @param p_open ImGui pattern - pointer na bool, ktery se nastavi false po
  *               zavreni popupu.
@@ -116,10 +119,8 @@ void imgui_qdisk_storage_switch_popup(bool *p_open)
         {
             /* Save and switch: nejdriv ulozime memory buffer do souboru
              * pres force_save (bypass storage_mode gate - jeste jsme v
-             * DISCARD), pak provedeme switch. Faze 4: konsoliduje primy
-             * generic_driver_save_memory na verejne API. */
-            (void)qdisk_drive_force_save_to_file();
-            qdisk_apply_storage_mode_switch(target);
+             * DISCARD), pak provedeme switch. Obojí v emu vlákně. */
+            qdisk_request_set_storage_mode(target, true);
             g_qdisk_storage_switch_pending.target_mode[0] = 0;
             *p_open = false;
             ImGui::CloseCurrentPopup();
@@ -128,7 +129,7 @@ void imgui_qdisk_storage_switch_popup(bool *p_open)
         ImGui::SameLine();
         if (ImGui::Button(btn_discard, ImVec2(button_width, 0)))
         {
-            qdisk_apply_storage_mode_switch(target);
+            qdisk_request_set_storage_mode(target, false);
             g_qdisk_storage_switch_pending.target_mode[0] = 0;
             *p_open = false;
             ImGui::CloseCurrentPopup();
@@ -146,6 +147,10 @@ void imgui_qdisk_storage_switch_popup(bool *p_open)
     };
 }
 
+/**
+ * @brief Callback dialogu "Create New Image": vytvoření zařadí do emu vlákna.
+ * @param fch Dialog (zničí se zde).
+ */
 void qdisk_create_image_cb(baseui_fchooser_t *fch)
 {
     if (fch->state != BASEUI_FCHOOSER_STATE_CLOSED_OK)
@@ -158,7 +163,7 @@ void qdisk_create_image_cb(baseui_fchooser_t *fch)
 
     if (filename)
     {
-        qdisk_create_image((char *)filename);
+        qdisk_request_create_image(filename);
     };
 
     baseui_filechooser_destroy(fch);
@@ -182,25 +187,17 @@ void imgui_menu_qdisk(void)
     {
         if (MenuRadioItem(_("Not Connected"), !QDISK_TEST_CONNECTED))
         {
-            qdisk_close();
-            QDISK_SET_DISCONNECTED();
+            qdisk_request_set_connection(QDISK_REQ_DISCONNECTED);
         };
 
         if (MenuRadioItem(_("MZ 1F11"), (QDISK_TEST_CONNECTED && QDISK_TEST_TYPE_IMAGE)))
         {
-            qdisk_close();
-            QDISK_SET_CONNECTED();
-            qdisk_deactivate_unicard_boot_loader();
-            QDISK_SET_TYPE_IMAGE();
-            qdisk_open();
+            qdisk_request_set_connection(QDISK_REQ_MZ1F11);
         };
 
         if (MenuRadioItem(_("Virtual - Mapped Directory"), (QDISK_TEST_CONNECTED && QDISK_TEST_TYPE_VIRTUAL)))
         {
-            qdisk_close();
-            QDISK_SET_CONNECTED();
-            qdisk_deactivate_unicard_boot_loader();
-            QDISK_SET_TYPE_VIRTUAL();
+            qdisk_request_set_connection(QDISK_REQ_VIRTUAL);
         };
 
         bool is_dissabled = (!UNICARD_TEST_IS_CONNECTED);
@@ -212,11 +209,7 @@ void imgui_menu_qdisk(void)
 
         if (MenuRadioItem(_("Unicard Boot Loader"), (QDISK_TEST_CONNECTED && QDISK_TEST_TYPE_UNICARD && UNICARD_TEST_IS_CONNECTED)))
         {
-            qdisk_close();
-            QDISK_SET_CONNECTED();
-            qdisk_activate_unicard_boot_loader();
-            QDISK_SET_TYPE_UNICARD();
-            qdisk_open();
+            qdisk_request_set_connection(QDISK_REQ_UNICARD);
         };
 
         if (is_dissabled)
@@ -286,7 +279,7 @@ void imgui_menu_qdisk(void)
 
             if (ImGui::MenuItem(_L("Unmount"), NULL, false, (drive_option != drive_empty)))
             {
-                qdisk_umount();
+                qdisk_request_umount();
             };
 
             ImGui::EndMenu();
@@ -303,7 +296,7 @@ void imgui_menu_qdisk(void)
 
         if (ImGui::MenuItem(_L("Write Protected"), NULL, wrprot_shown, wrprot_enabled))
         {
-            qdisk_set_write_protected(qdisc_get_write_protected() ? 0 : 1);
+            qdisk_request_set_write_protected(qdisc_get_write_protected() ? 0 : 1);
         };
         if (is_unicard && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
         {
@@ -336,7 +329,7 @@ void imgui_menu_qdisk(void)
         bool has_unsaved = qdisk_drive_has_unsaved_changes() != 0;
         if (ImGui::MenuItem(_L("Save now"), NULL, false, has_unsaved))
         {
-            (void)qdisk_sync_drive();
+            qdisk_request_sync();
         };
 
         /* --- Faze 3: Storage mode submenu ---
@@ -369,7 +362,7 @@ void imgui_menu_qdisk(void)
                 if (needs_prompt)
                     imgui_qdisk_storage_switch_activate(target);
                 else
-                    qdisk_apply_storage_mode_switch(target);
+                    qdisk_request_set_storage_mode(target, false);
             };
 
             if (MenuRadioItem(_("Cached (sync at reset/umount/exit)"), mode_cached))

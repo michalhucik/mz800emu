@@ -296,6 +296,22 @@ extern "C"
 
 #ifdef COMPILE_FOR_EMULATOR
     /**
+     * @brief Mount image nebo adresáře virtuálního QD (výběr z dialogu).
+     *
+     * Image (`is_dir` == 0, typ IMAGE): neexistující soubor se vytvoří,
+     * pak qdisk_open_image() (cesta do INI). Adresář (`is_dir` != 0, typ
+     * VIRTUAL): qdisk_virt_open_directory(). Obnoví cestu pro menu.
+     *
+     * @param path   Cesta (zkopíruje se).
+     * @param is_dir 0 = soubor image, jinak adresář.
+     * @return 0 = mount proveden (chyby otevření hlásí qdisk sám);
+     *         -1 = prázdná cesta nebo typ mechaniky neodpovídá `is_dir`.
+     * @pre Emu vlákno (zásah device_request) nebo emulace nestojí
+     *      uprostřed přístupu na QD.
+     */
+    int qdisk_mount_path(const char *path, int is_dir);
+
+    /**
      * @brief Vrať aktuální storage mode jako string z CFGELM.
      *
      * Hodnota je vždy jedna z "cached"/"direct"/"discard" (CFGELM default

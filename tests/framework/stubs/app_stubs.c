@@ -186,16 +186,28 @@ void baseui_filechooser_destroy(void *fc)
     (void)fc;
 }
 
-/* zprávy a chyby — v testech jen logujeme na stderr */
+/* zprávy a chyby — v testech jen logujeme na stderr. Signatura musí
+ * odpovídat baseui.h (formát + argumenty), jinak volání z jádra
+ * (např. zásahy device_request) předá jako text celé číslo. */
 
-void baseui_show_message(const char *msg)
+void baseui_show_message(bool is_error, char *format, ...)
 {
-    fprintf(stderr, "[stub] baseui_show_message: %s\n", msg);
+    va_list args;
+    va_start(args, format);
+    fprintf(stderr, "[stub] baseui_show_message(%d): ", is_error ? 1 : 0);
+    vfprintf(stderr, format, args);
+    fprintf(stderr, "\n");
+    va_end(args);
 }
 
-void baseui_show_error_message(const char *msg)
+void baseui_show_error_message(char *format, ...)
 {
-    fprintf(stderr, "[stub] baseui_show_error_message: %s\n", msg);
+    va_list args;
+    va_start(args, format);
+    fprintf(stderr, "[stub] baseui_show_error_message: ");
+    vfprintf(stderr, format, args);
+    fprintf(stderr, "\n");
+    va_end(args);
 }
 
 int baseui_cmt_check_mzf_filesize(const char *filename, unsigned int expected_size, unsigned int real_size)

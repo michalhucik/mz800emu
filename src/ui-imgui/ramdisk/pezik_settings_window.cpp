@@ -27,6 +27,7 @@
 extern "C"
 {
 #include "emulator/hw-generic/ramdisk/ramdisk.h"
+#include "emulator/hw-generic/ramdisk/ramdisk_request.h"
 }
 
 /* Dočasný stav pro jeden PEZIK modul */
@@ -263,22 +264,21 @@ extern "C" void imgui_pezik_settings_window(bool *p_open) {
             ImGui::SetCursorPosX(ImGui::GetCursorPosX() + offset);
 
         if (ImGui::Button("OK", ImVec2(120, 0))) {
+            /* Konfiguraci provede emu vlákno (ramdisk_request.h), v pořadí
+             * E8 a pak 68. */
 #if MZARCH != 1500
             /* Při zapínání E8 PEZIK — odpojit MZ-1R18 (sdílí porty 0xE8-0xEF) */
-            if (s_state.e8.connected && RAMDISK_TEST_STD_CONNECTED) {
-                ramdisk_std_disconnect();
-            }
-            ramdisk_pezik_init(RAMDISK_PEZIK_E8,
-                               s_state.e8.connected ? RAMDISK_CONNECTED : RAMDISK_DISCONNECTED,
-                               s_state.e8.portmask,
-                               s_state.e8.backuped ? PEZIK_BACKUPED_YES : PEZIK_BACKUPED_NO,
-                               s_state.e8.filepath);
+            ramdisk_request_pezik_init(RAMDISK_PEZIK_E8,
+                                       s_state.e8.connected ? RAMDISK_CONNECTED : RAMDISK_DISCONNECTED,
+                                       s_state.e8.portmask,
+                                       s_state.e8.backuped ? PEZIK_BACKUPED_YES : PEZIK_BACKUPED_NO,
+                                       s_state.e8.filepath, true);
 #endif
-            ramdisk_pezik_init(RAMDISK_PEZIK_68,
-                               s_state.p68.connected ? RAMDISK_CONNECTED : RAMDISK_DISCONNECTED,
-                               s_state.p68.portmask,
-                               s_state.p68.backuped ? PEZIK_BACKUPED_YES : PEZIK_BACKUPED_NO,
-                               s_state.p68.filepath);
+            ramdisk_request_pezik_init(RAMDISK_PEZIK_68,
+                                       s_state.p68.connected ? RAMDISK_CONNECTED : RAMDISK_DISCONNECTED,
+                                       s_state.p68.portmask,
+                                       s_state.p68.backuped ? PEZIK_BACKUPED_YES : PEZIK_BACKUPED_NO,
+                                       s_state.p68.filepath, false);
 
             s_initialized = false;
             *p_open = false;

@@ -18,15 +18,18 @@
  *
  * Toolbar 1. řada: Save (export do PNG + file dialog), Clear paper (smaže
  * kresbu - jediná akce, která maže papír; RESET ho NEmaže).
- * 2. řada (fyzická tlačítka plotteru): Reset (mz1p16_emu_reset, papír zachová),
+ * 2. řada (fyzická tlačítka plotteru): Reset (mz1p16_request_reset, papír zachová),
  * Paper feed (momentální - posunuje papír dokud drženo, T1=0) a Run drawing
  * self-test. Zoom slider (px/krok) řídí měřítko náhledu. Statusbar: X, Y,
  * aktivní barva (swatch), pero up/down, BUSY (modelovaný host-ready) a počet
  * úseček (strokes).
  *
  * Vztah okno <-> plotter: plotter je aktivní jen když je okno otevřené
- * (zavřené okno = plotter odpojený). Při přechodu zavřeno->otevřeno se volá
- * mz1p16_emu_set_active(true), při zavření false.
+ * (zavřené okno = plotter odpojený). Při přechodu zavřeno->otevřeno se zařadí
+ * mz1p16_request_set_active(true), při zavření false.
+ *
+ * Aktivaci a reset plotteru provede emu vlákno (mz1p16_request.h): obě akce
+ * mění i stav tiskárny, který vlastní zámek plotteru nechrání.
  */
 
 #include "main.h"
@@ -47,6 +50,7 @@
 #if (MZARCH == 800) || (MZARCH == 1500)
 #include "emulator/hw-generic/mz1p16/mz1p16.h"
 #include "emulator/hw-generic/mz1p16/mz1p16_emu.h"
+#include "emulator/hw-generic/mz1p16/mz1p16_request.h"
 #include "emulator/debugger/png_encode.h"
 #include "baseui/baseui_filechooser.h"
 #endif
@@ -68,6 +72,10 @@ static bool s_show_carriage = true;
 
 /** true = uživatel drží toggle Paper feed (T1=0). */
 static bool s_paper_feed_held = false;
+
+/** @brief Stav aktivace zařazený do emu vlákna a ještě neprovedený
+ *         (-1 = žádný); brání opakovanému zařazení v každém snímku. */
+static int s_active_requested = -1;
 
 /**
  * @brief Mapuje index barvy karuselu na RGB (ImU32).
@@ -376,8 +384,18 @@ void imgui_plotter_window(bool *p_open)
      * drahý homing jen na náběžné hraně, takže se volá pouze při skutečné
      * změně (open_now != aktuální stav). */
     bool open_now = (p_open == NULL) || *p_open;
-    if (open_now != mz1p16_emu_get_active())
-        mz1p16_emu_set_active(open_now);
+    bool active_now = mz1p16_emu_get_active();
+    if (open_now == active_now)
+    {
+        s_active_requested = -1;
+    }
+    else if (s_active_requested != (int)open_now)
+    {
+        /* Provede emu vlákno; do té doby se znovu nezařazuje. Odmítnutí
+         * (běží replay) ohlásí okno zpráv a stav zůstane rozejitý. */
+        mz1p16_request_set_active(open_now);
+        s_active_requested = (int)open_now;
+    }
 
     if (!open_now)
         return;
@@ -400,8 +418,7 @@ void imgui_plotter_window(bool *p_open)
      * + vozík na home). Samotný RESET papír NEmaže. */
     if (ImGui::Button(_L("Clear paper")))
     {
-        mz1p16_emu_reset();
-        mz1p16_emu_clear_paper();
+        mz1p16_request_reset(true);
     }
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("%s", _("Clear the drawing and reset the plotter (plain RESET keeps the paper)"));
@@ -412,7 +429,7 @@ void imgui_plotter_window(bool *p_open)
 
     /* RESET = reset jádra 8050 + mechaniky. Papír (kresbu) NEmaže. */
     if (ImGui::Button(_L("Reset")))
-        mz1p16_emu_reset();
+        mz1p16_request_reset(false);
     ImGui::SameLine();
 
     /* Paper feed = momentální tlačítko: posunuje papír, dokud je drženo

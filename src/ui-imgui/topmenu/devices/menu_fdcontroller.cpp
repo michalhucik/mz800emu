@@ -14,6 +14,7 @@
 
 #if CFG_HWEXT_HAVE_FDC
 #include "hw-generic/fdc/fdc.h"
+#include "hw-generic/fdc/fdc_request.h"
 #endif
 
 extern "C"
@@ -49,26 +50,15 @@ static void imgui_fdc_storage_switch_activate(int fdc_index, int drive_id, const
 }
 
 /**
- * @brief Provedení skutečného přepnutí storage mode (= zapiš cfgkey + remount).
+ * @brief Popup "FDC: Unsaved RAM changes" před přepnutím z režimu Discard.
  *
- * Tato pomocná funkce sdílí kód mezi okamžitým switchem (= bez popupu)
- * a popup "Switch" tlačítky.
+ * Tlačítka přepnutí jen zařadí zásah (fdc_request_set_storage_mode(),
+ * u "Save and switch" s předchozím zápisem obrazu do souboru), provede
+ * ho emu vlákno.
+ *
+ * @param p_open Příznak otevření popupu (nastaví se na false po volbě).
+ * @pre UI vlákno; volající drží zámek stavu zařízení (main_window).
  */
-static void imgui_fdc_storage_apply_switch(int fdc_index, int drive_id, const char *target_mode)
-{
-    st_FDC *fdc = &g_fdc[fdc_index];
-    fdc_cfg_set_storage_mode(fdc, (unsigned)drive_id, target_mode);
-    if (FDC_TEST_DRIVE_ID_MOUNTED(fdc, drive_id))
-    {
-        char *pathdup = g_strdup(fdc_get_dsk_filepath(fdc, (unsigned)drive_id));
-        if (pathdup)
-        {
-            fdc_mount_dskfile(fdc, (unsigned)drive_id, pathdup);
-            g_free(pathdup);
-        }
-    }
-}
-
 void imgui_fdc_storage_switch_popup(bool *p_open)
 {
     int fi = g_fdc_storage_switch_pending.fdc_index;
@@ -120,8 +110,8 @@ void imgui_fdc_storage_switch_popup(bool *p_open)
 
         if (ImGui::Button(btn_save, ImVec2(button_width, 0)))
         {
-            fdc_drive_force_save_to_file(&g_fdc[fi], (unsigned)drv);
-            imgui_fdc_storage_apply_switch(fi, drv, g_fdc_storage_switch_pending.target_mode);
+            fdc_request_set_storage_mode((unsigned)fi, (unsigned)drv,
+                                         g_fdc_storage_switch_pending.target_mode, true);
             *p_open = false;
             g_fdc_storage_switch_pending.drive_id = -1;
             ImGui::CloseCurrentPopup();
@@ -130,7 +120,8 @@ void imgui_fdc_storage_switch_popup(bool *p_open)
         ImGui::SameLine();
         if (ImGui::Button(btn_discard, ImVec2(button_width, 0)))
         {
-            imgui_fdc_storage_apply_switch(fi, drv, g_fdc_storage_switch_pending.target_mode);
+            fdc_request_set_storage_mode((unsigned)fi, (unsigned)drv,
+                                         g_fdc_storage_switch_pending.target_mode, false);
             *p_open = false;
             g_fdc_storage_switch_pending.drive_id = -1;
             ImGui::CloseCurrentPopup();
@@ -192,7 +183,7 @@ void SubmenuFDDriveImage(st_FDC *fdc, int drive_id)
 
     if (ImGui::MenuItem(_L("Umount"), umount_accel->str, false, FDC_TEST_DRIVE_ID_MOUNTED(fdc, drive_id)))
     {
-        fdc_umount(fdc, drive_id);
+        fdc_request_umount(fdc->index, (unsigned)drive_id);
     };
 
     /* --- Per-drive R/O + Storage mode --- */
@@ -216,20 +207,8 @@ void SubmenuFDDriveImage(st_FDC *fdc, int drive_id)
         bool ro_pref = (user_ro_cfg != 0);
         if (ImGui::MenuItem(_L("Read-only"), NULL, &ro_pref, true))
         {
-            fdc_cfg_set_readonly(fdc, drive_id, ro_pref ? 1 : 0);
-            /* Pro reflexi změny: pokud je drive aktuálně mounted, remount
-             * aplikuje novou volbu. */
-            if (is_mounted)
-            {
-                char *path = (char *)fdc_get_dsk_filepath(fdc, drive_id);
-                if (path)
-                {
-                    /* g_strdup aby nám remount nezneplatnil path. */
-                    char *pathdup = g_strdup(path);
-                    fdc_mount_dskfile(fdc, drive_id, pathdup);
-                    g_free(pathdup);
-                }
-            }
+            /* Zápis volby a remount nasazeného obrazu provede emu vlákno. */
+            fdc_request_set_readonly(fdc->index, (unsigned)drive_id, ro_pref ? 1 : 0);
         }
     }
 
@@ -253,7 +232,7 @@ void SubmenuFDDriveImage(st_FDC *fdc, int drive_id)
         }
         else
         {
-            imgui_fdc_storage_apply_switch((int)fdc->index, drive_id, target);
+            fdc_request_set_storage_mode(fdc->index, (unsigned)drive_id, target, false);
         }
     };
 
@@ -277,7 +256,7 @@ void SubmenuFDDriveImage(st_FDC *fdc, int drive_id)
                         && (fdc_drive_has_unsaved_changes(fdc, drive_id) != 0);
     if (ImGui::MenuItem(_L("Sync now"), NULL, false, sync_enabled))
     {
-        fdc_sync_drive(fdc, drive_id);
+        fdc_request_sync(fdc->index, (unsigned)drive_id);
     }
 
     g_string_free(image_basename, TRUE);
@@ -317,9 +296,10 @@ void SubmenuFDDrive(st_FDC *fdc, int drive_id)
  *  - Checkbox HD Patch (port 0xDF EINT obvod).
  *  - Radio bus_xlate (invert = Sharp default / passthrough = experimental).
  *
- * Změna se NEAPLIKUJE za běhu - obě volby jsou čtené při inicializaci
- * chipu. UI pouze přepíše hodnoty v `fdc->*` dané instance (které se
- * uloží do INI při exitu) a zobrazí "restart required" tooltip.
+ * Obě volby čte řadič za běhu (`hd_patch` přes `hd_patch_ref` ve
+ * wd279x.c, `bus_xlate` při každém přístupu na port), změna tedy platí
+ * hned. Zápis do `fdc->*` provede emu vlákno (fdc_request_set_hd_patch(),
+ * fdc_request_set_bus_xlate()); hodnoty se uloží do INI při exitu.
  *
  * @param fdc instance FDC řadiče, jehož HW volby se konfigurují.
  */
@@ -330,31 +310,27 @@ static void SubmenuFDCHardwareOptions(st_FDC *fdc)
     bool hd_patch = (fdc->hd_patch != 0);
     if (ImGui::MenuItem(_L("HD Patch enabled"), NULL, &hd_patch, true))
     {
-        fdc->hd_patch = hd_patch ? 1 : 0;
+        fdc_request_set_hd_patch(fdc->index, hd_patch ? 1 : 0);
     };
-    if (ImGui::IsItemHovered())
-        ImGui::SetTooltip("%s", _("Restart emulator to apply change."));
 
     bool xlate_invert = (fdc->bus_xlate == FDC_BUS_XLATE_INVERT);
     if (MenuRadioItem(_("Bus translation: invert (Sharp)"), xlate_invert))
     {
-        fdc->bus_xlate = FDC_BUS_XLATE_INVERT;
+        fdc_request_set_bus_xlate(fdc->index, FDC_BUS_XLATE_INVERT);
     };
     if (ImGui::IsItemHovered())
-        ImGui::SetTooltip("%s", _("Sharp MZ default - XOR 0xFF between CPU bus and WD279x chip. "
-                                   "Restart emulator to apply change."));
+        ImGui::SetTooltip("%s", _("Sharp MZ default - XOR 0xFF between CPU bus and WD279x chip."));
 
     if (MenuRadioItem(_("Bus translation: passthrough"), !xlate_invert))
     {
-        fdc->bus_xlate = FDC_BUS_XLATE_PASSTHROUGH;
+        fdc_request_set_bus_xlate(fdc->index, FDC_BUS_XLATE_PASSTHROUGH);
     };
     if (ImGui::IsItemHovered())
     {
         ImGui::BeginTooltip();
         ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
         ImGui::TextUnformatted(_("NOT compatible with Sharp MZ - no inversion between CPU bus "
-                                  "and WD279x chip. Reserved for future 'true bus' ROMs / experiments. "
-                                  "Restart emulator to apply change."));
+                                  "and WD279x chip. Reserved for future 'true bus' ROMs / experiments."));
         ImGui::PopTextWrapPos();
         ImGui::EndTooltip();
     }
@@ -398,8 +374,8 @@ void imgui_menu_fdcontroller(void)
          * oba odpojené (= výchozí stav bez floppy). */
         if (ImGui::MenuItem(_L("Not Connected"), NULL, (!fdc0_connected && !fdc1_connected)))
         {
-            g_fdc[FDC0].connected = FDC_DISCONNECTED;
-            g_fdc[FDC1].connected = FDC_DISCONNECTED;
+            fdc_request_set_connected(FDC0, 0);
+            fdc_request_set_connected(FDC1, 0);
             fdc0_connected = false;
             fdc1_connected = false;
         };
@@ -408,14 +384,14 @@ void imgui_menu_fdcontroller(void)
 
         if (ImGui::MenuItem(_L("WD279x (standard)"), NULL, &fdc0_connected, true))
         {
-            g_fdc[FDC0].connected = fdc0_connected ? FDC_CONNECTED : FDC_DISCONNECTED;
+            fdc_request_set_connected(FDC0, fdc0_connected ? 1 : 0);
         };
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("%s", _("Default FDC on ports 0xD8 - 0xDF"));
 
         if (ImGui::MenuItem(_L("WD279x (secondary)"), NULL, &fdc1_connected, true))
         {
-            g_fdc[FDC1].connected = fdc1_connected ? FDC_CONNECTED : FDC_DISCONNECTED;
+            fdc_request_set_connected(FDC1, fdc1_connected ? 1 : 0);
         };
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("%s", _("Unicard alternate FDC ports 0x58 - 0x5F"));

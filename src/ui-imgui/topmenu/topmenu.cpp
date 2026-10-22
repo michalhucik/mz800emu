@@ -10,6 +10,7 @@
 
 #include "emulator.h"
 #include "emulator/replay.h"
+#include "emulator/device_request.h"
 #include "mzarch/mzarch_platform_functions.h"
 // #include "iface/iface_video.h"
 #include "topmenu.h"
@@ -31,7 +32,11 @@ void imgui_topmenu_body(void)
      * (záznam by změnu nezopakoval, rozhodnutí M6a v1). */
     bool replay_active = replay_is_active();
     ImGui::BeginDisabled(replay_active);
+    /* Menu zařízení čte cesty a buffery zařízení; zásahy (device_request.h)
+     * provádí emu vlákno, které po dobu kreslení menu čeká. */
+    device_state_lock();
     imgui_menu_devices();
+    device_state_unlock();
     ImGui::EndDisabled();
     if (replay_active && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
     {

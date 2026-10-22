@@ -76,6 +76,7 @@
 
 #include "replay.h"
 #include "snapshot/snapshot_request.h"
+#include "device_request.h"
 #include "replay_cli.h"
 
 // TODO: tohle volame v mz800_main_do_emulator_paused()
@@ -1144,6 +1145,10 @@ static inline void mzzarch_main_do_emulator_paused(void)
         /* Přemapování MemExt vyžádané z UI i během pauzy (do ~20 ms). */
         memext_map_request_poll();
 
+        /* Zásahy GUI do zařízení (device_request.h) i během pauzy. Bez
+         * zásahu jedno atomické čtení. */
+        device_request_poll();
+
         /* Záznam a přehrání vstupů: start, stop, reset a autotype v pauze
          * (replay.h). Bez záznamu a požadavku jen dvě čtení. */
         replay_on_paused();
@@ -1241,6 +1246,10 @@ static inline void mzzarch_main_do_emulator_paused(void)
 
         /* Přemapování MemExt vyžádané z UI i během pauzy (do ~20 ms). */
         memext_map_request_poll();
+
+        /* Zásahy GUI do zařízení (device_request.h) i během pauzy. Bez
+         * zásahu jedno atomické čtení. */
+        device_request_poll();
 
         /* Záznam a přehrání vstupů: start, stop, reset a autotype v pauze
          * (replay.h). Bez záznamu a požadavku jen dvě čtení. */
@@ -1724,6 +1733,11 @@ void mzarch_main(void)
              * požadavku 1 atomické čtení v per-event bloku, ne v
              * per-instruction hot path. */
             memext_map_request_poll();
+
+            /* Zásahy GUI do zařízení (menu a okna zařízení,
+             * device_request.h). CPU stojí mezi instrukcemi; funguje i bez
+             * debuggeru. Bez zásahu 1 atomické čtení v per-event bloku. */
+            device_request_poll();
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
             /* Per-frame body debuggeru (drain fronty dbgapi, Freeze Bytes),

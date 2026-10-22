@@ -41,6 +41,7 @@
 #include "dbgapi_regions.h"
 #include "debugger.h"
 #include "emulator.h"
+#include "device_request.h"
 #include "customspeed.h"
 #include "bptmap.h"
 #include "breakpoints.h"
@@ -5755,6 +5756,9 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                 break;
             };
             int rc = -1;
+            /* Mount mění cesty a buffery, které čte menu zařízení v UI
+             * vlákně pod stejným zámkem (device_request.h). */
+            device_state_lock();
             switch ( p->slot )
             {
                 case DBGAPI_MEDIA_SLOT_CMT:
@@ -5829,6 +5833,7 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                     rc = -1;
                     break;
             };
+            device_state_unlock();
             p->out_result = rc;
             rq->success = ( rc == 0 );
             break;
@@ -5844,6 +5849,9 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                 break;
             };
             int rc = -1;
+            /* Mount mění cesty a buffery, které čte menu zařízení v UI
+             * vlákně pod stejným zámkem (device_request.h). */
+            device_state_lock();
             switch ( p->slot )
             {
                 case DBGAPI_MEDIA_SLOT_CMT:
@@ -5903,6 +5911,7 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                     rc = -1;
                     break;
             };
+            device_state_unlock();
             p->out_result = rc;
             rq->success = ( rc == 0 );
             break;

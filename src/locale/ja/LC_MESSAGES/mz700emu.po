@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mz800emu 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-22 15:09+0200\n"
+"POT-Creation-Date: 2026-10-22 19:04+0200\n"
 "PO-Revision-Date: 2026-03-11 21:00+0100\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -105,20 +105,20 @@ msgstr "開くCMTファイルを選択"
 msgid "Select a MZF File"
 msgstr "MZFファイルを選択"
 
-#: src/emulator/hw-generic/fdc/fdc.c:1220
+#: src/emulator/hw-generic/fdc/fdc.c:1204
 #, c-format
 msgid "Select DSK image file for FDC%u drive FD%d"
 msgstr "FDC%u ドライブ FD%d 用の DSK イメージファイルを選択"
 
-#: src/emulator/hw-generic/qdisk/qdisk.c:817
+#: src/emulator/hw-generic/qdisk/qdisk.c:833
 msgid "Select existing .MZQ file or create new QD image"
 msgstr "既存の.MZQファイルを選択、または新しいQDイメージを作成"
 
-#: src/emulator/hw-generic/qdisk/qdisk.c:819
+#: src/emulator/hw-generic/qdisk/qdisk.c:835
 msgid "Select directory to mount as virtual Quick Disk"
 msgstr "仮想Quick Diskとしてマウントするディレクトリを選択"
 
-#: src/emulator/hw-generic/unicard/unicard.c:2312
+#: src/emulator/hw-generic/unicard/unicard.c:2329
 msgid "Select SD root directory for Unicard"
 msgstr "UnicardのSDルートディレクトリを選択"
 
@@ -495,7 +495,7 @@ msgstr "オーディオをキャプチャ (%s) でキャプチャを開始/停�
 #: src/ui-imgui/dsk/dsk_create_window.cpp:104
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:109
 #: src/ui-imgui/joy/joy_setup_window.cpp:567
-#: src/ui-imgui/message/message_window.cpp:90
+#: src/ui-imgui/message/message_window.cpp:139
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:442
 #: src/ui-imgui/snapshot/snapshot_notification.cpp:95
 #: src/ui-imgui/videorec/videorec_setup_dialog.cpp:338
@@ -510,7 +510,7 @@ msgstr "OK"
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:104
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:111
 #: src/ui-imgui/joy/joy_setup_window.cpp:579
-#: src/ui-imgui/memext/memext_load_dialog.cpp:185
+#: src/ui-imgui/memext/memext_load_dialog.cpp:188
 #: src/ui-imgui/memext/memext_map_window.cpp:291
 #: src/ui-imgui/memext/memext_save_dialog.cpp:207
 #: src/ui-imgui/ramdisk/pezik_settings_window.cpp:289
@@ -518,8 +518,8 @@ msgstr "OK"
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:447
 #: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:127
 #: src/ui-imgui/snapshot/snapshot_setup_dialog.cpp:176
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:99
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:93
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:89
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:96
 #: src/ui-imgui/topmenu/menu_replay.cpp:217
 #: src/ui-imgui/videorec/videorec_setup_dialog.cpp:343
 msgid "Cancel"
@@ -718,7 +718,7 @@ msgstr "名前"
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:132
 #: src/ui-imgui/joy/joy_setup_window.cpp:240
 #: src/ui-imgui/memext/memext_map_window.cpp:105
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:153
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:155
 msgid "Type"
 msgstr "タイプ"
 
@@ -728,7 +728,7 @@ msgstr "タイプ"
 #: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:209
 #: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:211
 #: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:213
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:123
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:125
 msgid "Size"
 msgstr "サイズ"
 
@@ -1362,7 +1362,7 @@ msgstr ""
 "PEHU memext のみ。"
 
 #: src/ui-imgui/debugger/breakpoints/bpt_edit_panel.cpp:1537
-#: src/ui-imgui/memext/memext_load_dialog.cpp:130
+#: src/ui-imgui/memext/memext_load_dialog.cpp:135
 msgid "Offset:"
 msgstr "オフセット:"
 
@@ -3184,7 +3184,7 @@ msgstr "イベントカテゴリ色でLogテーブル行を着色 (Stripタブ�
 
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:2155
 #: src/ui-imgui/joy/joy_setup_window.cpp:416
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:284
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:308
 msgid "None"
 msgstr "なし"
 
@@ -3694,14 +3694,14 @@ msgid "FDC State"
 msgstr "FDC State"
 
 #: src/ui-imgui/debugger/fdc_window.cpp:198
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:427
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:288
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:403
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:312
 msgid "FDC0 (standard)"
 msgstr "FDC0 (標準)"
 
 #: src/ui-imgui/debugger/fdc_window.cpp:199
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:433
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:292
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:409
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:316
 msgid "FDC1 (secondary)"
 msgstr "FDC1 (セカンダリ)"
 
@@ -5421,8 +5421,8 @@ msgstr "スナップショット Δ"
 #: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:497
 #: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:148
 #: src/ui-imgui/maxspeed_bench_window.cpp:156
-#: src/ui-imgui/plotter/plotter_window.cpp:414
-#: src/ui-imgui/topmenu/topmenu.cpp:53
+#: src/ui-imgui/plotter/plotter_window.cpp:431
+#: src/ui-imgui/topmenu/topmenu.cpp:58
 msgid "Reset"
 msgstr "リセット"
 
@@ -6150,7 +6150,7 @@ msgstr "マウント"
 #: src/ui-imgui/debugger/memmap/memmap_window.cpp:695
 #: src/ui-imgui/debugger/memmap/memmap_window.cpp:721
 #: src/ui-imgui/debugger/memmap/memmap_window.cpp:734
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:193
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:184
 msgid "Umount"
 msgstr "アンマウント"
 
@@ -6695,9 +6695,9 @@ msgid "Memory Search###memsearch_window"
 msgstr "メモリ検索###memsearch_window"
 
 #: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:110
-#: src/ui-imgui/memext/memext_load_dialog.cpp:107
+#: src/ui-imgui/memext/memext_load_dialog.cpp:112
 #: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:99
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:259
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:252
 #: src/ui-imgui/topmenu/replay_window.cpp:223
 #: src/ui-imgui/topmenu/replay_window.cpp:229
 msgid "File"
@@ -6720,7 +6720,7 @@ msgid "Max Speed"
 msgstr "最高速度"
 
 #: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:160
-#: src/ui-imgui/topmenu/topmenu.cpp:48
+#: src/ui-imgui/topmenu/topmenu.cpp:53
 msgid "Pause Emulation"
 msgstr "エミュレーションを一時停止"
 
@@ -6829,7 +6829,9 @@ msgstr "レジスタを記録"
 msgid ""
 "Store CPU registers after each instruction (32 bytes per record instead of "
 "12). Takes effect when recording (re)starts."
-msgstr "各命令の後に CPU レジスタを保存します (1 レコード 12 バイトではなく 32 バイト)。記録の(再)開始時に有効になります。"
+msgstr ""
+"各命令の後に CPU レジスタを保存します (1 レコード 12 バイトではなく 32 バイ"
+"ト)。記録の(再)開始時に有効になります。"
 
 #: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:558
 msgid "PC range filter [lo,hi]:"
@@ -7109,7 +7111,7 @@ msgid "Deferred ICENA event (idle = -1, otherwise GDG ticks)"
 msgstr "遅延された ICENA イベント (idle = -1、それ以外は GDG ティック)"
 
 #: src/ui-imgui/debugger/pioz80_window.cpp:448
-#: src/ui-imgui/plotter/plotter_window.cpp:508
+#: src/ui-imgui/plotter/plotter_window.cpp:525
 msgid "idle"
 msgstr "アイドル"
 
@@ -7731,17 +7733,17 @@ msgid "MZ-1R18 (Standard)"
 msgstr "MZ-1R18 (標準)"
 
 #: src/ui-imgui/debugger/ramdisk_window.cpp:153
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:96
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:100
 msgid "Pezik 0xE8 - 0xEF"
 msgstr "Pezik 0xE8 - 0xEF"
 
 #: src/ui-imgui/debugger/ramdisk_window.cpp:160
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:108
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:111
 msgid "Pezik 0x68 - 0x6F"
 msgstr "Pezik 0x68 - 0x6F"
 
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:120
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:56
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:61
 msgid "MemExt"
 msgstr "MemExt"
 
@@ -7780,7 +7782,7 @@ msgid "Tape (CMT hack)"
 msgstr "テープ (CMT hack)"
 
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:137
-#: src/ui-imgui/memext/memext_load_dialog.cpp:162
+#: src/ui-imgui/memext/memext_load_dialog.cpp:167
 msgid "Load"
 msgstr "読み込み"
 
@@ -10680,6 +10682,15 @@ msgstr "置換##watch_load_ok"
 msgid "Cancel##watch_load_cancel"
 msgstr "キャンセル##watch_load_cancel"
 
+#: src/ui-imgui/devices/device_request_ui.cpp:36
+#: src/ui-imgui/topmenu/topmenu.cpp:43
+msgid ""
+"Machine settings cannot be changed while a replay is recorded or played. "
+"Stop it in the Replay menu first."
+msgstr ""
+"リプレイの記録中または再生中はマシン設定を変更できません。先にリプレイメ"
+"ニューで停止してください。"
+
 #: src/ui-imgui/dsk/dsk_create_window.cpp:53
 msgid "DSK Tools - mzdisk###dsk_info_window"
 msgstr "DSKツール - mzdisk###dsk_info_window"
@@ -10916,7 +10927,7 @@ msgstr "デバイス再スキャン"
 msgid "Joystick"
 msgstr "ジョイスティック"
 
-#: src/ui-imgui/main_window.cpp:110
+#: src/ui-imgui/main_window.cpp:114
 msgid "No audio device - running without sound"
 msgstr "オーディオデバイスがありません - サウンドなしで実行中"
 
@@ -11327,53 +11338,54 @@ msgstr "現在値:"
 msgid "Update Interval (s):"
 msgstr "更新間隔 (秒):"
 
-#: src/ui-imgui/memext/memext_load_dialog.cpp:96
+#: src/ui-imgui/memext/memext_load_dialog.cpp:101
 msgid "Load MemExt RAM From File"
 msgstr "ファイルからMemExt RAMを読み込み"
 
-#: src/ui-imgui/memext/memext_load_dialog.cpp:96
+#: src/ui-imgui/memext/memext_load_dialog.cpp:101
 msgid "Load MemExt FLASH From File"
 msgstr "ファイルからMemExt FLASHを読み込み"
 
-#: src/ui-imgui/memext/memext_load_dialog.cpp:105
+#: src/ui-imgui/memext/memext_load_dialog.cpp:110
 msgid "Input File"
 msgstr "入力ファイル"
 
-#: src/ui-imgui/memext/memext_load_dialog.cpp:112
-#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:198
+#: src/ui-imgui/memext/memext_load_dialog.cpp:117
+#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:199
 #: src/ui-imgui/rom/rom_settings_window.cpp:163
 msgid "Browse..."
 msgstr "参照..."
 
-#: src/ui-imgui/memext/memext_load_dialog.cpp:120
+#: src/ui-imgui/memext/memext_load_dialog.cpp:125
 msgid "Select file"
 msgstr "ファイルを選択"
 
-#: src/ui-imgui/memext/memext_load_dialog.cpp:125
+#: src/ui-imgui/memext/memext_load_dialog.cpp:130
 #: src/ui-imgui/videorec/videorec_remote_window.cpp:193
 msgid "File size"
 msgstr "ファイルサイズ"
 
-#: src/ui-imgui/memext/memext_load_dialog.cpp:129
+#: src/ui-imgui/memext/memext_load_dialog.cpp:134
 msgid "File Offset"
 msgstr "ファイルオフセット"
 
-#: src/ui-imgui/memext/memext_load_dialog.cpp:134
+#: src/ui-imgui/memext/memext_load_dialog.cpp:139
 #: src/ui-imgui/memext/memext_save_dialog.cpp:115
 msgid "Memory Allocation"
 msgstr "メモリアロケーション"
 
-#: src/ui-imgui/memext/memext_load_dialog.cpp:137
+#: src/ui-imgui/memext/memext_load_dialog.cpp:142
 #: src/ui-imgui/memext/memext_save_dialog.cpp:117
 msgid "From:"
 msgstr "開始:"
 
-#: src/ui-imgui/memext/memext_load_dialog.cpp:145
+#: src/ui-imgui/memext/memext_load_dialog.cpp:150
 #: src/ui-imgui/memext/memext_save_dialog.cpp:121
 msgid "Size:"
 msgstr "サイズ:"
 
 #: src/ui-imgui/memext/memext_load_dialog.cpp:177
+#: src/ui-imgui/memext/memext_load_dialog.cpp:180
 msgid "Cannot open file"
 msgstr "ファイルを開けません"
 
@@ -11441,16 +11453,16 @@ msgstr "ファイル名:"
 msgid "Save file"
 msgstr "ファイルを保存"
 
-#: src/ui-imgui/message/message_window.cpp:62
-#: src/ui-imgui/message/message_window.cpp:74
+#: src/ui-imgui/message/message_window.cpp:111
+#: src/ui-imgui/message/message_window.cpp:123
 msgid "Information"
 msgstr "情報"
 
-#: src/ui-imgui/message/message_window.cpp:66
+#: src/ui-imgui/message/message_window.cpp:115
 msgid "Error"
 msgstr "エラー"
 
-#: src/ui-imgui/message/message_window.cpp:70
+#: src/ui-imgui/message/message_window.cpp:119
 msgid "Warning"
 msgstr "警告"
 
@@ -11474,149 +11486,149 @@ msgstr ""
 "れます。\n"
 "ポート0xF3はPSG0のみ（左）、ポート0xF9はPSG1のみ（右）です。"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:99
+#: src/ui-imgui/plotter/plotter_window.cpp:107
 msgid "Black"
 msgstr "黒"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:100
+#: src/ui-imgui/plotter/plotter_window.cpp:108
 msgid "Red"
 msgstr "赤"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:101
+#: src/ui-imgui/plotter/plotter_window.cpp:109
 #: src/ui-imgui/topmenu/interface/menu_display.cpp:38
 msgid "Green"
 msgstr "グリーン"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:102
+#: src/ui-imgui/plotter/plotter_window.cpp:110
 msgid "Blue"
 msgstr "青"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:360
+#: src/ui-imgui/plotter/plotter_window.cpp:368
 msgid "Save plotter drawing"
 msgstr "プロッタの描画を保存"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:360
+#: src/ui-imgui/plotter/plotter_window.cpp:368
 msgid "plotter.png"
 msgstr "plotter.png"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:387
+#: src/ui-imgui/plotter/plotter_window.cpp:405
 msgid "Plotter MZ-1P16"
 msgstr "Plotter MZ-1P16"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:396
+#: src/ui-imgui/plotter/plotter_window.cpp:414
 msgid "Save..."
 msgstr "保存..."
 
-#: src/ui-imgui/plotter/plotter_window.cpp:401
+#: src/ui-imgui/plotter/plotter_window.cpp:419
 msgid "Clear paper"
 msgstr "用紙をクリア"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:407
+#: src/ui-imgui/plotter/plotter_window.cpp:424
 msgid "Clear the drawing and reset the plotter (plain RESET keeps the paper)"
 msgstr "描画を消去してプロッタをリセット（通常のRESETでは用紙は残ります）"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:410
+#: src/ui-imgui/plotter/plotter_window.cpp:427
 msgid "Plotter buttons:"
 msgstr "プロッタのボタン:"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:420
+#: src/ui-imgui/plotter/plotter_window.cpp:437
 msgid "Paper feed"
 msgstr "用紙送り"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:430
+#: src/ui-imgui/plotter/plotter_window.cpp:447
 msgid "Hold to feed paper"
 msgstr "押し続けると用紙を送ります"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:433
+#: src/ui-imgui/plotter/plotter_window.cpp:450
 msgid "Run drawing self-test"
 msgstr "描画セルフテストを実行"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:442
+#: src/ui-imgui/plotter/plotter_window.cpp:459
 msgid "Reset with PAPER FEED held -> writes the character set in 4 colors"
 msgstr "PAPER FEED を押しながらリセット -> 文字セットを4色で印字します"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:447
+#: src/ui-imgui/plotter/plotter_window.cpp:464
 msgid "Zoom"
 msgstr "ズーム"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:449
+#: src/ui-imgui/plotter/plotter_window.cpp:466
 msgid "Preview scale: pixels per motor step"
 msgstr "プレビュー倍率: モーター1ステップあたりのピクセル数"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:452
+#: src/ui-imgui/plotter/plotter_window.cpp:469
 msgid "Show carriage"
 msgstr "キャリッジを表示"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:454
+#: src/ui-imgui/plotter/plotter_window.cpp:471
 msgid "Live marker at the current pen/carriage position"
 msgstr "ペン/キャリッジの現在位置を示すライブマーカー"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:478
+#: src/ui-imgui/plotter/plotter_window.cpp:495
 #, c-format
 msgid "X: %ld"
 msgstr "X: %ld"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:480
+#: src/ui-imgui/plotter/plotter_window.cpp:497
 #, c-format
 msgid "Y: %ld"
 msgstr "Y: %ld"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:484
+#: src/ui-imgui/plotter/plotter_window.cpp:501
 msgid "Color:"
 msgstr "色:"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:497
+#: src/ui-imgui/plotter/plotter_window.cpp:514
 #, c-format
 msgid "Pen: %s"
 msgstr "ペン: %s"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:497
+#: src/ui-imgui/plotter/plotter_window.cpp:514
 msgid "DOWN"
 msgstr "下"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:497
+#: src/ui-imgui/plotter/plotter_window.cpp:514
 msgid "UP"
 msgstr "上"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:503
+#: src/ui-imgui/plotter/plotter_window.cpp:520
 msgid "BUSY"
 msgstr "BUSY"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:513
+#: src/ui-imgui/plotter/plotter_window.cpp:530
 #, c-format
 msgid "Strokes: %u"
 msgstr "ストローク数: %u"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:517
+#: src/ui-imgui/plotter/plotter_window.cpp:534
 #, c-format
 msgid "(dropped %u)"
 msgstr "(破棄 %u)"
 
-#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:111
+#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:112
 msgid "Connected"
 msgstr "接続済み"
 
-#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:140
+#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:141
 msgid "Ports:"
 msgstr "ポート:"
 
-#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:185
+#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:186
 msgid "Backuped"
 msgstr "バックアップ済み"
 
-#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:207
+#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:208
 msgid "Select backup file"
 msgstr "バックアップファイルを選択"
 
-#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:235
+#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:236
 msgid "Settings for PEZIK Ramdisks"
 msgstr "PEZIK Ramdisks の設定"
 
-#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:245
+#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:246
 msgid "Standard PEZIK:"
 msgstr "標準 PEZIK:"
 
-#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:250
+#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:251
 msgid "Experimental PEZIK:"
 msgstr "実験的 PEZIK:"
 
@@ -12094,358 +12106,347 @@ msgstr "FNAMEターミネータを修正"
 msgid "HW & Devices"
 msgstr "HWとデバイス"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:82
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:84
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:72
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:74
 msgid "FDC: Unsaved RAM changes"
 msgstr "FDC: 未保存のRAM変更"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:87
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:77
 #, c-format
 msgid "Drive %d is in Discard mode and has unsaved RAM changes."
 msgstr "ドライブ %d はDiscardモードで、未保存のRAM変更があります。"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:88
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:84
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:78
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:87
 #, c-format
 msgid "Switching to '%s' mode will close the current RAM buffer."
 msgstr "'%s' モードへの切り替えで現在のRAMバッファが閉じられます。"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:91
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:86
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:81
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:89
 msgid "What to do with the changes?"
 msgstr "変更をどうしますか?"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:97
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:91
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:87
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:94
 msgid "Save and switch"
 msgstr "保存して切り替え"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:98
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:92
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:88
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:95
 msgid "Switch and discard"
 msgstr "切り替えて破棄"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:173
-#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:41
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:164
+#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:42
 msgid "No image"
 msgstr "イメージなし"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:186
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:177
 msgid "Mount..."
 msgstr "マウント..."
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:186
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:177
 msgid "Re-Mount..."
 msgstr "再マウント..."
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:211
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:202
 msgid "Read-only (FS write-protected)"
 msgstr "読み取り専用 (FS書き込み保護)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:217
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:208
 msgid "Read-only"
 msgstr "読み取り専用"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:242
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:353
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:221
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:346
 msgid "Storage mode"
 msgstr "ストレージモード"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:260
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:375
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:239
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:368
 msgid "Cached (sync at reset/umount/exit)"
 msgstr "Cached (reset/umount/exit時にsync)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:265
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:380
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:244
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:373
 msgid "Direct (write-through to file)"
 msgstr "Direct (ファイルへwrite-through)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:270
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:385
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:249
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:378
 msgid "Discard changes (in-RAM, no sync)"
 msgstr "Discard (RAMのみ、syncなし)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:278
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:257
 msgid "Sync now"
 msgstr "今すぐsync"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:292
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:271
 msgid "FDD "
 msgstr "FDD "
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:300
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:279
 msgid "(Empty)"
 msgstr "(空)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:328
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:308
 msgid "Hardware options"
 msgstr "ハードウェアオプション"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:331
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:311
 msgid "HD Patch enabled"
 msgstr "HD Patch 有効"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:336
-msgid "Restart emulator to apply change."
-msgstr "変更を適用するにはエミュレータを再起動してください。"
-
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:339
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:317
 msgid "Bus translation: invert (Sharp)"
 msgstr "バス変換: invert (Sharp)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:344
-msgid ""
-"Sharp MZ default - XOR 0xFF between CPU bus and WD279x chip. Restart "
-"emulator to apply change."
-msgstr ""
-"Sharp MZのデフォルト - CPUバスとWD279xチップ間でXOR 0xFF。変更を適用するには"
-"エミュレータを再起動。"
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:322
+msgid "Sharp MZ default - XOR 0xFF between CPU bus and WD279x chip."
+msgstr "Sharp MZのデフォルト - CPUバスとWD279xチップ間でXOR 0xFF。"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:347
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:324
 msgid "Bus translation: passthrough"
 msgstr "バス変換: passthrough"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:355
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:332
 msgid ""
 "NOT compatible with Sharp MZ - no inversion between CPU bus and WD279x chip. "
-"Reserved for future 'true bus' ROMs / experiments. Restart emulator to apply "
-"change."
-msgstr ""
-"Sharp MZと非互換 - CPUバスとWD279xチップ間に反転なし。将来の'true bus' ROM / "
-"実験用に予約。変更を適用するにはエミュレータを再起動。"
+"Reserved for future 'true bus' ROMs / experiments."
+msgstr "Sharp MZと非互換 - CPUバスとWD279xチップ間に反転なし。将来の'true bus' ROM / 実験用に予約。"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:375
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:351
 msgid "Floppy Drives"
 msgstr "フロッピードライブ"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:389
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:365
 msgid "FD Controller"
 msgstr "FDコントローラ"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:399
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:59
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:183
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:65
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:375
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:64
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:188
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:70
 msgid "Not Connected"
 msgstr "未接続"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:409
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:385
 msgid "WD279x (standard)"
 msgstr "WD279x (標準)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:414
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:390
 msgid "Default FDC on ports 0xD8 - 0xDF"
 msgstr "標準 FDC (ポート 0xD8 - 0xDF)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:416
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:392
 msgid "WD279x (secondary)"
 msgstr "WD279x (セカンダリ)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:421
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:397
 msgid "Unicard alternate FDC ports 0x58 - 0x5F"
 msgstr "Unicard 代替 FDC ポート 0x58 - 0x5F"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:440
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:416
 #: src/ui-imgui/topmenu/menu_tools.cpp:32
 msgid "Tools"
 msgstr "ツール"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:442
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:418
 msgid "FDC State (debugger)..."
 msgstr "FDC State (debugger)..."
 
-#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:84
+#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:86
 msgid "Select IDE8 HDD0 image file to open"
 msgstr "開くIDE8 HDD0イメージファイルを選択"
 
-#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:84
+#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:86
 msgid "Select IDE8 HDD1 image file to open"
 msgstr "開くIDE8 HDD1イメージファイルを選択"
 
-#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:95
+#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:97
 msgid "IDE8"
 msgstr "IDE8"
 
-#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:97
+#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:99
 msgid "IDE8 Master: "
 msgstr "IDE8 Master: "
 
-#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:104
-#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:127
+#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:106
+#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:129
 msgid "Disconnected"
 msgstr "切断済み"
 
-#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:113
+#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:115
 msgid "Set HDD0 Image..."
 msgstr "HDD0イメージを設定..."
 
-#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:120
+#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:122
 msgid "IDE8 Slave: "
 msgstr "IDE8 Slave: "
 
-#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:136
+#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:138
 msgid "Set HDD1 Image..."
 msgstr "HDD1イメージを設定..."
 
-#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:144
+#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:146
 msgid "IDE8 State (debugger)..."
 msgstr "IDE8 State (debugger)..."
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:45
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:50
 msgid "Select FLASH image file to open"
 msgstr "開くFLASHイメージファイルを選択"
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:64
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:69
 msgid "Model - 'Peroutka & Hučík'"
 msgstr "Model - 'Peroutka & Hučík'"
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:69
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:74
 msgid "Model - 'Luftner'"
 msgstr "Model - 'Luftner'"
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:76
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:81
 msgid "RAM Initialization on Boot"
 msgstr "起動時のRAM初期化"
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:79
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:84
 msgid "Filled of Zeros"
 msgstr "ゼロで充填"
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:84
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:89
 msgid "Filled of Random Values"
 msgstr "ランダム値で充填"
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:89
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:94
 msgid "Filled as Sharp DRAM"
 msgstr "Sharp DRAMとして充填"
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:99
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:104
 msgid "Luftner Forced Auto Init"
 msgstr "Luftner強制自動初期化"
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:104
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:109
 msgid "Luftner FLASH Image"
 msgstr "Luftner FLASHイメージ"
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:106
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:111
 msgid "File: "
 msgstr "ファイル: "
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:122
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:127
 msgid "Select FLASH Autoload File..."
 msgstr "FLASH自動読み込みファイルを選択..."
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:132
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:137
 msgid "Memory Map Settings..."
 msgstr "メモリマップ設定..."
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:137
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:142
 msgid "Memory Content"
 msgstr "メモリ内容"
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:139
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:144
 msgid "Load MemExt RAM From File..."
 msgstr "ファイルからMemExt RAMを読み込み..."
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:144
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:149
 msgid "Save MemExt RAM Into File..."
 msgstr "MemExt RAMをファイルに保存..."
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:151
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:156
 msgid "Load MemExt FLASH From File..."
 msgstr "ファイルからMemExt FLASHを読み込み..."
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:156
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:161
 msgid "Save MemExt FLASH Into File..."
 msgstr "MemExt FLASHをファイルに保存..."
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:39
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:40
 msgid "Printer"
 msgstr "プリンタ"
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:47
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:48
 msgid "Status: ONLINE"
 msgstr "状態: オンライン"
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:51
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:52
 msgid "Status: OFFLINE"
 msgstr "状態: オフライン"
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:62
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:64
 msgid "Printer Standard:"
 msgstr "プリンタ規格:"
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:64
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:66
 msgid "Centronics"
 msgstr "Centronics"
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:68
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:72
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:70
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:73
 msgid "MZ"
 msgstr "MZ"
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:75
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:77
 msgid "(locked: plotter connected)"
 msgstr "(ロック中: プロッタ接続)"
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:80
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:82
 msgid "Capture Enabled"
 msgstr "キャプチャ有効"
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:90
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:92
 #, c-format
 msgid "Capture file: %s"
 msgstr "キャプチャファイル: %s"
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:91
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:93
 #, c-format
 msgid "Bytes captured: %u"
 msgstr "キャプチャしたバイト数: %u"
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:95
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:97
 msgid "No capture file open"
 msgstr "キャプチャファイルが開いていません"
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:100
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:102
 #, c-format
 msgid "Session total: %u bytes"
 msgstr "セッション合計: %u バイト"
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:106
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:108
 msgid "Close Capture File"
 msgstr "キャプチャファイルを閉じる"
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:122
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:124
 msgid "Plotter MZ-1P16 connected"
 msgstr "プロッタ MZ-1P16 接続済み"
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:127
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:129
 msgid "Open plotter window"
 msgstr "プロッタウィンドウを開く"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:78
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:80
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:81
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:83
 msgid "QD: Unsaved RAM changes"
 msgstr "QD: 未保存のRAM変更"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:83
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:86
 msgid "Quick Disk is in Discard mode and has unsaved RAM changes."
 msgstr "Quick DiskはDiscardモードで、未保存のRAM変更があります。"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:171
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:176
 msgid "Create new QD image"
 msgstr "新しいQDイメージを作成"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:171
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:176
 msgid "qdimage.mzq"
 msgstr "qdimage.mzq"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:181
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:186
 msgid "Quick Disk"
 msgstr "Quick Disk"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:189
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:193
 msgid "MZ 1F11"
 msgstr "MZ 1F11"
 
@@ -12453,198 +12454,198 @@ msgstr "MZ 1F11"
 msgid "Virtual - Mapped Directory"
 msgstr "仮想 - マップされたディレクトリ"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:213
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:210
 msgid "Unicard Boot Loader"
 msgstr "Unicard Boot Loader"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:230
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:223
 msgid "Empty"
 msgstr "空"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:234
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:227
 msgid "image"
 msgstr "イメージ"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:238
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:231
 msgid "directory"
 msgstr "ディレクトリ"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:242
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:195
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:235
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:220
 msgid "Unicard"
 msgstr "Unicard"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:245
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:238
 msgid "QD Drive"
 msgstr "QDドライブ"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:248
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:241
 #, c-format
 msgid " (%s)"
 msgstr " (%s)"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:259
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:252
 msgid "Dir"
 msgstr "Dir"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:266
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:259
 #, c-format
 msgid "%s: %s..."
 msgstr "%s: %s..."
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:270
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:263
 #, c-format
 msgid "%s: %s"
 msgstr "%s: %s"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:280
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:273
 msgid "Mount Image..."
 msgstr "イメージをマウント..."
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:280
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:273
 msgid "Mount Directory..."
 msgstr "ディレクトリをマウント..."
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:287
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:280
 msgid "Unmount"
 msgstr "アンマウント"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:304
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:297
 msgid "Write Protected"
 msgstr "書き込み保護"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:310
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:303
 msgid "Forced R/O by UNICARD - cannot be changed."
 msgstr "UNICARDにより強制R/O - 変更不可。"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:320
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:313
 msgid "    [FS R/O]"
 msgstr "    [FS R/O]"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:324
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:317
 msgid ""
 "File on disk is not writable - effective R/O regardless of user setting."
 msgstr "ディスク上のファイルは書き込み不可 - ユーザー設定に関わらず実質R/O。"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:337
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:330
 msgid "Save now"
 msgstr "今すぐ保存"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:394
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:387
 msgid "UNICARD mode is locked to Cached storage."
 msgstr "UNICARDモードはCachedストレージに固定。"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:399
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:392
 msgid "Create New Image..."
 msgstr "新しいイメージを作成..."
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:407
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:400
 msgid "QDisk State (debugger)..."
 msgstr "QDisk State (debugger)..."
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:46
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:51
 msgid "Select SRAM disk image file to open"
 msgstr "開くSRAMディスクイメージファイルを選択"
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:51
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:56
 msgid "Select ROM disk image file to open"
 msgstr "開くROMディスクイメージファイルを選択"
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:63
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:68
 msgid "Memory Disk"
 msgstr "メモリディスク"
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:77
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:82
 msgid "MZ-1R18 Compatible"
 msgstr "MZ-1R18互換"
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:116
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:118
 msgid "Pezik Settings..."
 msgstr "Pezik設定..."
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:121
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:123
 msgid "MZ-1R18 Options"
 msgstr "MZ-1R18オプション"
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:125
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:127
 msgid "64 KB"
 msgstr "64 KB"
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:130
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:132
 msgid "256 KB"
 msgstr "256 KB"
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:135
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:137
 msgid "512 KB"
 msgstr "512 KB"
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:140
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:142
 msgid "1 MB"
 msgstr "1 MB"
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:145
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:147
 msgid "16 MB"
 msgstr "16 MB"
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:155
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:157
 msgid "Unbacked RAM Disk"
 msgstr "バックアップなしRAMディスク"
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:160
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:162
 msgid "SRAM Emulation"
 msgstr "SRAMエミュレーション"
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:165
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:167
 msgid "ROM Disk"
 msgstr "ROMディスク"
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:173
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:175
 msgid "RAM Disk File..."
 msgstr "RAMディスクファイル..."
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:181
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:183
 msgid "Memory Disk State (debugger)..."
 msgstr "Memory Disk State (debugger)..."
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:26
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:27
 msgid "Rear DIP Switch"
 msgstr "背面DIPスイッチ"
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:29
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:30
 msgid "Mode 700 Compat.: "
 msgstr "700互換モード: "
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:32
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:33
 msgid "OFF"
 msgstr "OFF"
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:36
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:37
 msgid "ON (default)"
 msgstr "ON (デフォルト)"
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:46
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:47
 msgid "CMT Polarity: "
 msgstr "CMT極性: "
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:49
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:50
 msgid "Inverted"
 msgstr "反転"
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:53
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:54
 #: src/ui-imgui/topmenu/interface/menu_display.cpp:30
 #: src/ui-imgui/topmenu/interface/menu_display.cpp:65
 msgid "Normal"
 msgstr "標準"
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:69
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:70
 msgid "Printer Standard: "
 msgstr "プリンタ規格: "
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:76
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:77
 msgid "Centronics (default)"
 msgstr "Centronics (既定)"
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:80
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:81
 msgid " (locked: plotter connected)"
 msgstr " (ロック中: プロッタ接続)"
 
@@ -12653,6 +12654,28 @@ msgid "Settings for User Defined..."
 msgstr "ユーザー定義の設定..."
 
 #: src/ui-imgui/topmenu/devices/menu_unicard.cpp:72
+msgid "Failed to reinitialize SD runtime."
+msgstr "SDランタイムの再初期化に失敗。"
+
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:78
+msgid "Unicard runtime reinstalled with mgr V2.4 (uc1)."
+msgstr "mgr V2.4 (uc1) でUnicardランタイムを再インストールしました。"
+
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:80
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:88
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:97
+msgid "Unicard runtime reinitialization failed."
+msgstr "Unicardランタイムの再初期化に失敗。"
+
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:86
+msgid "Unicard runtime reinstalled with mgr V2.11b (uc3)."
+msgstr "mgr V2.11b (uc3) でUnicardランタイムを再インストールしました。"
+
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:95
+msgid "Unicard runtime files in '{SD}/unicard/' have been reinitialized."
+msgstr "'{SD}/unicard/' のUnicardランタイムファイルが再初期化されました。"
+
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:124
 msgid ""
 "SD card runtime in '{SD}/unicard/' is missing, incomplete, or does not match "
 "the selected firmware."
@@ -12660,15 +12683,15 @@ msgstr ""
 "'{SD}/unicard/' のSDカードランタイムが欠落、不完全、または選択ファームウェア"
 "と不一致。"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:75
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:127
 msgid "State on SD:"
 msgstr "SDの状態:"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:76
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:128
 msgid "Selected firmware:"
 msgstr "選択ファームウェア:"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:79
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:131
 msgid ""
 "[Reinitialize] overwrites the SD manager files to match the selected "
 "firmware. [Continue] connects with the mismatch (client may see inconsistent "
@@ -12678,23 +12701,19 @@ msgstr ""
 "き。[Continue] は不一致のまま接続 (クライアントが不一致挙動を見る可能性)。"
 "[Cancel] はUnicardを未接続のまま。"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:85
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:137
 msgid "Reinitialize##unicard_rt_reinit"
 msgstr "Reinitialize##unicard_rt_reinit"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:100
-msgid "Failed to reinitialize SD runtime."
-msgstr "SDランタイムの再初期化に失敗。"
-
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:104
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:147
 msgid "Continue##unicard_rt_continue"
 msgstr "続行##unicard_rt_continue"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:115
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:157
 msgid "Cancel##unicard_rt_cancel"
 msgstr "キャンセル##unicard_rt_cancel"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:140
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:183
 msgid ""
 "Choose which manager version to install in '{SD}/unicard/'. This will "
 "overwrite the existing manager files."
@@ -12702,7 +12721,7 @@ msgstr ""
 "'{SD}/unicard/' にインストールするマネージャバージョンを選択。既存のマネー"
 "ジャファイルを上書きします。"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:144
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:187
 msgid ""
 "Note: This choice is independent of the currently selected simulated "
 "firmware. You can install one version while simulating the other (useful for "
@@ -12711,54 +12730,40 @@ msgstr ""
 "注: この選択は現在選択中のシミュレートファームウェアとは独立。一方のバージョ"
 "ンをインストールしつつ他方をシミュレート可 (テストに便利)。"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:152
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:195
 msgid "mgr V2.4 (uc1)##unicard_reinit_v24"
 msgstr "mgr V2.4 (uc1)##unicard_reinit_v24"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:159
-msgid "Unicard runtime reinstalled with mgr V2.4 (uc1)."
-msgstr "mgr V2.4 (uc1) でUnicardランタイムを再インストールしました。"
-
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:164
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:180
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:349
-msgid "Unicard runtime reinitialization failed."
-msgstr "Unicardランタイムの再初期化に失敗。"
-
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:168
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:202
 msgid "mgr V2.11b (uc3)##unicard_reinit_v211b"
 msgstr "mgr V2.11b (uc3)##unicard_reinit_v211b"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:175
-msgid "Unicard runtime reinstalled with mgr V2.11b (uc3)."
-msgstr "mgr V2.11b (uc3) でUnicardランタイムを再インストールしました。"
-
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:184
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:209
 msgid "Cancel##unicard_reinit_cancel"
 msgstr "キャンセル##unicard_reinit_cancel"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:200
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:225
 msgid "Unicard Connected"
 msgstr "Unicard接続済み"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:201
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:226
 msgid "Unicard Not Connected"
 msgstr "Unicard未接続"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:228
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:252
 msgid "Firmware: uc1 (rev.60)"
 msgstr "ファームウェア: uc1 (rev.60)"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:238
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:262
 #, c-format
 msgid "Firmware: uc3 (v%d.%d)###unicard_fw_uc3"
 msgstr "Firmware: uc3 (v%d.%d)###unicard_fw_uc3"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:247
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:271
 msgid "Check runtime version on connect"
 msgstr "接続時にランタイムバージョンを確認"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:254
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:278
 msgid ""
 "On Connect, verify that {SD}/unicard/ contains the manager matching the "
 "selected firmware. Mismatch shows a dialog with option to reinitialize."
@@ -12766,15 +12771,15 @@ msgstr ""
 "接続時に {SD}/unicard/ に選択ファームウェアと合致するマネージャがあるか確認。"
 "不一致時は再初期化オプション付きダイアログを表示。"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:263
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:287
 msgid "Read-only SD"
 msgstr "読み取り専用SD"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:274
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:298
 msgid "Managed FDC"
 msgstr "管理対象 FDC"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:278
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:302
 msgid ""
 "Which FDC controller the Unicard API manages (DSK mount).\n"
 "'None' disables Unicard FDD commands.\n"
@@ -12784,11 +12789,11 @@ msgstr ""
 "'なし' は Unicard の FDD コマンドを無効にします。\n"
 "変更は今後の操作にのみ影響します。"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:305
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:329
 msgid "Set SD Root Directory..."
 msgstr "SDルートディレクトリを設定..."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:312
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:336
 msgid ""
 "Change the host directory used as the Unicard SD root.\n"
 "If connected, the Unicard is automatically reconnected to the new root."
@@ -12796,15 +12801,11 @@ msgstr ""
 "Unicard の SD ルートとして使用するホストディレクトリを変更します。\n"
 "接続中の場合、Unicard は新しいルートに自動的に再接続されます。"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:330
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:354
 msgid "Reinitialize Runtime..."
 msgstr "ランタイムを再初期化..."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:344
-msgid "Unicard runtime files in '{SD}/unicard/' have been reinitialized."
-msgstr "'{SD}/unicard/' のUnicardランタイムファイルが再初期化されました。"
-
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:356
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:371
 msgid ""
 "Overwrites manager files in '{SD}/unicard/' (mgr.mzf, mgr800.mzf, "
 "mgr700.mzf, mgr1500.mzf) with the selected version.\n"
@@ -13488,15 +13489,7 @@ msgstr ""
 msgid "Available while playing a replay."
 msgstr "リプレイ再生中に使用できます。"
 
-#: src/ui-imgui/topmenu/topmenu.cpp:38
-msgid ""
-"Machine settings cannot be changed while a replay is recorded or played. "
-"Stop it in the Replay menu first."
-msgstr ""
-"リプレイの記録中または再生中はマシン設定を変更できません。先にリプレイメ"
-"ニューで停止してください。"
-
-#: src/ui-imgui/topmenu/topmenu.cpp:69
+#: src/ui-imgui/topmenu/topmenu.cpp:74
 msgid "About..."
 msgstr "バージョン情報..."
 
@@ -14016,6 +14009,24 @@ msgstr "MZ-1500仮想キーボード"
 #: src/ui-imgui/vkbd_window.cpp:229
 msgid "MZ-800 Virtual Keyboard"
 msgstr "MZ-800仮想キーボード"
+
+#~ msgid "Restart emulator to apply change."
+#~ msgstr "変更を適用するにはエミュレータを再起動してください。"
+
+#~ msgid ""
+#~ "Sharp MZ default - XOR 0xFF between CPU bus and WD279x chip. Restart "
+#~ "emulator to apply change."
+#~ msgstr ""
+#~ "Sharp MZのデフォルト - CPUバスとWD279xチップ間でXOR 0xFF。変更を適用するに"
+#~ "はエミュレータを再起動。"
+
+#~ msgid ""
+#~ "NOT compatible with Sharp MZ - no inversion between CPU bus and WD279x "
+#~ "chip. Reserved for future 'true bus' ROMs / experiments. Restart emulator "
+#~ "to apply change."
+#~ msgstr ""
+#~ "Sharp MZと非互換 - CPUバスとWD279xチップ間に反転なし。将来の'true bus' "
+#~ "ROM / 実験用に予約。変更を適用するにはエミュレータを再起動。"
 
 #~ msgid "Open Last Capture Folder"
 #~ msgstr "最後のキャプチャのフォルダを開く"

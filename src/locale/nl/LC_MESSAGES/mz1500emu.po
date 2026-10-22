@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mz800emu 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-22 15:09+0200\n"
+"POT-Creation-Date: 2026-10-22 19:04+0200\n"
 "PO-Revision-Date: 2026-03-11 21:00+0100\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -105,20 +105,20 @@ msgstr "Selecteer CMT-bestand om te openen"
 msgid "Select a MZF File"
 msgstr "Selecteer een MZF-bestand"
 
-#: src/emulator/hw-generic/fdc/fdc.c:1220
+#: src/emulator/hw-generic/fdc/fdc.c:1204
 #, c-format
 msgid "Select DSK image file for FDC%u drive FD%d"
 msgstr "Selecteer DSK-imagebestand voor FDC%u station FD%d"
 
-#: src/emulator/hw-generic/qdisk/qdisk.c:817
+#: src/emulator/hw-generic/qdisk/qdisk.c:833
 msgid "Select existing .MZQ file or create new QD image"
 msgstr "Selecteer bestaand .MZQ-bestand of maak nieuw QD-image"
 
-#: src/emulator/hw-generic/qdisk/qdisk.c:819
+#: src/emulator/hw-generic/qdisk/qdisk.c:835
 msgid "Select directory to mount as virtual Quick Disk"
 msgstr "Selecteer map om als virtuele Quick Disk te koppelen"
 
-#: src/emulator/hw-generic/unicard/unicard.c:2312
+#: src/emulator/hw-generic/unicard/unicard.c:2329
 msgid "Select SD root directory for Unicard"
 msgstr "Selecteer SD-hoofdmap voor Unicard"
 
@@ -499,7 +499,7 @@ msgstr "Audio opnemen (%s) start en stopt de opname."
 #: src/ui-imgui/dsk/dsk_create_window.cpp:104
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:109
 #: src/ui-imgui/joy/joy_setup_window.cpp:567
-#: src/ui-imgui/message/message_window.cpp:90
+#: src/ui-imgui/message/message_window.cpp:139
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:442
 #: src/ui-imgui/snapshot/snapshot_notification.cpp:95
 #: src/ui-imgui/videorec/videorec_setup_dialog.cpp:338
@@ -514,7 +514,7 @@ msgstr "OK"
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:104
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:111
 #: src/ui-imgui/joy/joy_setup_window.cpp:579
-#: src/ui-imgui/memext/memext_load_dialog.cpp:185
+#: src/ui-imgui/memext/memext_load_dialog.cpp:188
 #: src/ui-imgui/memext/memext_map_window.cpp:291
 #: src/ui-imgui/memext/memext_save_dialog.cpp:207
 #: src/ui-imgui/ramdisk/pezik_settings_window.cpp:289
@@ -522,8 +522,8 @@ msgstr "OK"
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:447
 #: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:127
 #: src/ui-imgui/snapshot/snapshot_setup_dialog.cpp:176
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:99
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:93
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:89
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:96
 #: src/ui-imgui/topmenu/menu_replay.cpp:217
 #: src/ui-imgui/videorec/videorec_setup_dialog.cpp:343
 msgid "Cancel"
@@ -724,7 +724,7 @@ msgstr "Naam"
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:132
 #: src/ui-imgui/joy/joy_setup_window.cpp:240
 #: src/ui-imgui/memext/memext_map_window.cpp:105
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:153
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:155
 msgid "Type"
 msgstr "Type"
 
@@ -734,7 +734,7 @@ msgstr "Type"
 #: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:209
 #: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:211
 #: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:213
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:123
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:125
 msgid "Size"
 msgstr "Grootte"
 
@@ -1374,7 +1374,7 @@ msgstr ""
 "Alleen PEHU-memext."
 
 #: src/ui-imgui/debugger/breakpoints/bpt_edit_panel.cpp:1537
-#: src/ui-imgui/memext/memext_load_dialog.cpp:130
+#: src/ui-imgui/memext/memext_load_dialog.cpp:135
 msgid "Offset:"
 msgstr "Offset:"
 
@@ -3219,7 +3219,7 @@ msgstr ""
 
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:2155
 #: src/ui-imgui/joy/joy_setup_window.cpp:416
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:284
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:308
 msgid "None"
 msgstr "Geen"
 
@@ -3732,14 +3732,14 @@ msgid "FDC State"
 msgstr "FDC State"
 
 #: src/ui-imgui/debugger/fdc_window.cpp:198
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:427
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:288
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:403
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:312
 msgid "FDC0 (standard)"
 msgstr "FDC0 (standaard)"
 
 #: src/ui-imgui/debugger/fdc_window.cpp:199
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:433
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:292
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:409
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:316
 msgid "FDC1 (secondary)"
 msgstr "FDC1 (secundair)"
 
@@ -5470,8 +5470,8 @@ msgstr "Snapshot Δ"
 #: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:497
 #: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:148
 #: src/ui-imgui/maxspeed_bench_window.cpp:156
-#: src/ui-imgui/plotter/plotter_window.cpp:414
-#: src/ui-imgui/topmenu/topmenu.cpp:53
+#: src/ui-imgui/plotter/plotter_window.cpp:431
+#: src/ui-imgui/topmenu/topmenu.cpp:58
 msgid "Reset"
 msgstr "Herstellen"
 
@@ -6202,7 +6202,7 @@ msgstr "Koppelen"
 #: src/ui-imgui/debugger/memmap/memmap_window.cpp:695
 #: src/ui-imgui/debugger/memmap/memmap_window.cpp:721
 #: src/ui-imgui/debugger/memmap/memmap_window.cpp:734
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:193
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:184
 msgid "Umount"
 msgstr "Ontkoppelen"
 
@@ -6746,9 +6746,9 @@ msgid "Memory Search###memsearch_window"
 msgstr "Geheugen zoeken###memsearch_window"
 
 #: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:110
-#: src/ui-imgui/memext/memext_load_dialog.cpp:107
+#: src/ui-imgui/memext/memext_load_dialog.cpp:112
 #: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:99
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:259
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:252
 #: src/ui-imgui/topmenu/replay_window.cpp:223
 #: src/ui-imgui/topmenu/replay_window.cpp:229
 msgid "File"
@@ -6771,7 +6771,7 @@ msgid "Max Speed"
 msgstr "Maximale snelheid"
 
 #: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:160
-#: src/ui-imgui/topmenu/topmenu.cpp:48
+#: src/ui-imgui/topmenu/topmenu.cpp:53
 msgid "Pause Emulation"
 msgstr "Emulatie pauzeren"
 
@@ -6880,7 +6880,9 @@ msgstr "Registers opnemen"
 msgid ""
 "Store CPU registers after each instruction (32 bytes per record instead of "
 "12). Takes effect when recording (re)starts."
-msgstr "CPU-registers na elke instructie opslaan (32 bytes per item in plaats van 12). Wordt van kracht bij het (opnieuw) starten van de opname."
+msgstr ""
+"CPU-registers na elke instructie opslaan (32 bytes per item in plaats van "
+"12). Wordt van kracht bij het (opnieuw) starten van de opname."
 
 #: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:558
 msgid "PC range filter [lo,hi]:"
@@ -7160,7 +7162,7 @@ msgid "Deferred ICENA event (idle = -1, otherwise GDG ticks)"
 msgstr "Uitgesteld ICENA-event (idle = -1, anders GDG-ticks)"
 
 #: src/ui-imgui/debugger/pioz80_window.cpp:448
-#: src/ui-imgui/plotter/plotter_window.cpp:508
+#: src/ui-imgui/plotter/plotter_window.cpp:525
 msgid "idle"
 msgstr "inactief"
 
@@ -7791,17 +7793,17 @@ msgid "MZ-1R18 (Standard)"
 msgstr "MZ-1R18 (Standaard)"
 
 #: src/ui-imgui/debugger/ramdisk_window.cpp:153
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:96
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:100
 msgid "Pezik 0xE8 - 0xEF"
 msgstr "Pezik 0xE8 - 0xEF"
 
 #: src/ui-imgui/debugger/ramdisk_window.cpp:160
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:108
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:111
 msgid "Pezik 0x68 - 0x6F"
 msgstr "Pezik 0x68 - 0x6F"
 
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:120
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:56
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:61
 msgid "MemExt"
 msgstr "MemExt"
 
@@ -7840,7 +7842,7 @@ msgid "Tape (CMT hack)"
 msgstr "Band (CMT-hack)"
 
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:137
-#: src/ui-imgui/memext/memext_load_dialog.cpp:162
+#: src/ui-imgui/memext/memext_load_dialog.cpp:167
 msgid "Load"
 msgstr "Laden"
 
@@ -10769,6 +10771,15 @@ msgstr "Vervangen##watch_load_ok"
 msgid "Cancel##watch_load_cancel"
 msgstr "Annuleren##watch_load_cancel"
 
+#: src/ui-imgui/devices/device_request_ui.cpp:36
+#: src/ui-imgui/topmenu/topmenu.cpp:43
+msgid ""
+"Machine settings cannot be changed while a replay is recorded or played. "
+"Stop it in the Replay menu first."
+msgstr ""
+"Machine-instellingen kunnen niet worden gewijzigd tijdens het opnemen of "
+"afspelen van een replay. Stop het eerst in het menu Replay."
+
 #: src/ui-imgui/dsk/dsk_create_window.cpp:53
 msgid "DSK Tools - mzdisk###dsk_info_window"
 msgstr "DSK Tools - mzdisk###dsk_info_window"
@@ -11007,7 +11018,7 @@ msgstr "Apparaten opnieuw scannen"
 msgid "Joystick"
 msgstr "Joystick"
 
-#: src/ui-imgui/main_window.cpp:110
+#: src/ui-imgui/main_window.cpp:114
 msgid "No audio device - running without sound"
 msgstr "Geen audioapparaat - draait zonder geluid"
 
@@ -11420,53 +11431,54 @@ msgstr "Huidig is:"
 msgid "Update Interval (s):"
 msgstr "Bijwerkinterval (s):"
 
-#: src/ui-imgui/memext/memext_load_dialog.cpp:96
+#: src/ui-imgui/memext/memext_load_dialog.cpp:101
 msgid "Load MemExt RAM From File"
 msgstr "MemExt RAM laden uit bestand"
 
-#: src/ui-imgui/memext/memext_load_dialog.cpp:96
+#: src/ui-imgui/memext/memext_load_dialog.cpp:101
 msgid "Load MemExt FLASH From File"
 msgstr "MemExt FLASH laden uit bestand"
 
-#: src/ui-imgui/memext/memext_load_dialog.cpp:105
+#: src/ui-imgui/memext/memext_load_dialog.cpp:110
 msgid "Input File"
 msgstr "Invoerbestand"
 
-#: src/ui-imgui/memext/memext_load_dialog.cpp:112
-#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:198
+#: src/ui-imgui/memext/memext_load_dialog.cpp:117
+#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:199
 #: src/ui-imgui/rom/rom_settings_window.cpp:163
 msgid "Browse..."
 msgstr "Bladeren..."
 
-#: src/ui-imgui/memext/memext_load_dialog.cpp:120
+#: src/ui-imgui/memext/memext_load_dialog.cpp:125
 msgid "Select file"
 msgstr "Selecteer bestand"
 
-#: src/ui-imgui/memext/memext_load_dialog.cpp:125
+#: src/ui-imgui/memext/memext_load_dialog.cpp:130
 #: src/ui-imgui/videorec/videorec_remote_window.cpp:193
 msgid "File size"
 msgstr "Bestandsgrootte"
 
-#: src/ui-imgui/memext/memext_load_dialog.cpp:129
+#: src/ui-imgui/memext/memext_load_dialog.cpp:134
 msgid "File Offset"
 msgstr "Bestandsoffset"
 
-#: src/ui-imgui/memext/memext_load_dialog.cpp:134
+#: src/ui-imgui/memext/memext_load_dialog.cpp:139
 #: src/ui-imgui/memext/memext_save_dialog.cpp:115
 msgid "Memory Allocation"
 msgstr "Geheugentoewijzing"
 
-#: src/ui-imgui/memext/memext_load_dialog.cpp:137
+#: src/ui-imgui/memext/memext_load_dialog.cpp:142
 #: src/ui-imgui/memext/memext_save_dialog.cpp:117
 msgid "From:"
 msgstr "Van:"
 
-#: src/ui-imgui/memext/memext_load_dialog.cpp:145
+#: src/ui-imgui/memext/memext_load_dialog.cpp:150
 #: src/ui-imgui/memext/memext_save_dialog.cpp:121
 msgid "Size:"
 msgstr "Grootte:"
 
 #: src/ui-imgui/memext/memext_load_dialog.cpp:177
+#: src/ui-imgui/memext/memext_load_dialog.cpp:180
 msgid "Cannot open file"
 msgstr "Kan bestand niet openen"
 
@@ -11534,16 +11546,16 @@ msgstr "Bestandsnaam:"
 msgid "Save file"
 msgstr "Bestand opslaan"
 
-#: src/ui-imgui/message/message_window.cpp:62
-#: src/ui-imgui/message/message_window.cpp:74
+#: src/ui-imgui/message/message_window.cpp:111
+#: src/ui-imgui/message/message_window.cpp:123
 msgid "Information"
 msgstr "Informatie"
 
-#: src/ui-imgui/message/message_window.cpp:66
+#: src/ui-imgui/message/message_window.cpp:115
 msgid "Error"
 msgstr "Fout"
 
-#: src/ui-imgui/message/message_window.cpp:70
+#: src/ui-imgui/message/message_window.cpp:119
 msgid "Warning"
 msgstr "Waarschuwing"
 
@@ -11567,150 +11579,150 @@ msgstr ""
 "rechter kanaal).\n"
 "Poort 0xF3 is alleen PSG0 (links) en poort 0xF9 is alleen PSG1 (rechts)."
 
-#: src/ui-imgui/plotter/plotter_window.cpp:99
+#: src/ui-imgui/plotter/plotter_window.cpp:107
 msgid "Black"
 msgstr "Zwart"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:100
+#: src/ui-imgui/plotter/plotter_window.cpp:108
 msgid "Red"
 msgstr "Rood"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:101
+#: src/ui-imgui/plotter/plotter_window.cpp:109
 #: src/ui-imgui/topmenu/interface/menu_display.cpp:38
 msgid "Green"
 msgstr "Groen"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:102
+#: src/ui-imgui/plotter/plotter_window.cpp:110
 msgid "Blue"
 msgstr "Blauw"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:360
+#: src/ui-imgui/plotter/plotter_window.cpp:368
 msgid "Save plotter drawing"
 msgstr "Plottertekening opslaan"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:360
+#: src/ui-imgui/plotter/plotter_window.cpp:368
 msgid "plotter.png"
 msgstr "plotter.png"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:387
+#: src/ui-imgui/plotter/plotter_window.cpp:405
 msgid "Plotter MZ-1P16"
 msgstr "Plotter MZ-1P16"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:396
+#: src/ui-imgui/plotter/plotter_window.cpp:414
 msgid "Save..."
 msgstr "Opslaan..."
 
-#: src/ui-imgui/plotter/plotter_window.cpp:401
+#: src/ui-imgui/plotter/plotter_window.cpp:419
 msgid "Clear paper"
 msgstr "Papier wissen"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:407
+#: src/ui-imgui/plotter/plotter_window.cpp:424
 msgid "Clear the drawing and reset the plotter (plain RESET keeps the paper)"
 msgstr ""
 "Wist de tekening en reset de plotter (een gewone RESET behoudt het papier)"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:410
+#: src/ui-imgui/plotter/plotter_window.cpp:427
 msgid "Plotter buttons:"
 msgstr "Plotterknoppen:"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:420
+#: src/ui-imgui/plotter/plotter_window.cpp:437
 msgid "Paper feed"
 msgstr "Papierinvoer"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:430
+#: src/ui-imgui/plotter/plotter_window.cpp:447
 msgid "Hold to feed paper"
 msgstr "Ingedrukt houden om papier in te voeren"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:433
+#: src/ui-imgui/plotter/plotter_window.cpp:450
 msgid "Run drawing self-test"
 msgstr "Teken-zelftest uitvoeren"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:442
+#: src/ui-imgui/plotter/plotter_window.cpp:459
 msgid "Reset with PAPER FEED held -> writes the character set in 4 colors"
 msgstr "Reset met PAPER FEED ingedrukt -> schrijft de tekenset in 4 kleuren"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:447
+#: src/ui-imgui/plotter/plotter_window.cpp:464
 msgid "Zoom"
 msgstr "Zoom"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:449
+#: src/ui-imgui/plotter/plotter_window.cpp:466
 msgid "Preview scale: pixels per motor step"
 msgstr "Voorbeeldschaal: pixels per motorstap"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:452
+#: src/ui-imgui/plotter/plotter_window.cpp:469
 msgid "Show carriage"
 msgstr "Slede tonen"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:454
+#: src/ui-imgui/plotter/plotter_window.cpp:471
 msgid "Live marker at the current pen/carriage position"
 msgstr "Live-markering op de huidige pen-/sledepositie"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:478
+#: src/ui-imgui/plotter/plotter_window.cpp:495
 #, c-format
 msgid "X: %ld"
 msgstr "X: %ld"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:480
+#: src/ui-imgui/plotter/plotter_window.cpp:497
 #, c-format
 msgid "Y: %ld"
 msgstr "Y: %ld"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:484
+#: src/ui-imgui/plotter/plotter_window.cpp:501
 msgid "Color:"
 msgstr "Kleur:"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:497
+#: src/ui-imgui/plotter/plotter_window.cpp:514
 #, c-format
 msgid "Pen: %s"
 msgstr "Pen: %s"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:497
+#: src/ui-imgui/plotter/plotter_window.cpp:514
 msgid "DOWN"
 msgstr "OMLAAG"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:497
+#: src/ui-imgui/plotter/plotter_window.cpp:514
 msgid "UP"
 msgstr "OMHOOG"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:503
+#: src/ui-imgui/plotter/plotter_window.cpp:520
 msgid "BUSY"
 msgstr "BUSY"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:513
+#: src/ui-imgui/plotter/plotter_window.cpp:530
 #, c-format
 msgid "Strokes: %u"
 msgstr "Streken: %u"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:517
+#: src/ui-imgui/plotter/plotter_window.cpp:534
 #, c-format
 msgid "(dropped %u)"
 msgstr "(%u verworpen)"
 
-#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:111
+#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:112
 msgid "Connected"
 msgstr "Verbonden"
 
-#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:140
+#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:141
 msgid "Ports:"
 msgstr "Poorten:"
 
-#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:185
+#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:186
 msgid "Backuped"
 msgstr "Geback-upt"
 
-#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:207
+#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:208
 msgid "Select backup file"
 msgstr "Selecteer backup-bestand"
 
-#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:235
+#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:236
 msgid "Settings for PEZIK Ramdisks"
 msgstr "Instellingen voor PEZIK ramdisks"
 
-#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:245
+#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:246
 msgid "Standard PEZIK:"
 msgstr "Standaard PEZIK:"
 
-#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:250
+#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:251
 msgid "Experimental PEZIK:"
 msgstr "Experimentele PEZIK:"
 
@@ -12188,361 +12200,349 @@ msgstr "FNAME-terminator corrigeren"
 msgid "HW & Devices"
 msgstr "HW en apparaten"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:82
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:84
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:72
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:74
 msgid "FDC: Unsaved RAM changes"
 msgstr "FDC: niet-opgeslagen RAM-wijzigingen"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:87
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:77
 #, c-format
 msgid "Drive %d is in Discard mode and has unsaved RAM changes."
 msgstr ""
 "Station %d staat in Discard-modus en heeft niet-opgeslagen RAM-wijzigingen."
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:88
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:84
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:78
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:87
 #, c-format
 msgid "Switching to '%s' mode will close the current RAM buffer."
 msgstr "Overschakelen naar '%s'-modus sluit de huidige RAM-buffer."
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:91
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:86
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:81
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:89
 msgid "What to do with the changes?"
 msgstr "Wat te doen met de wijzigingen?"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:97
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:91
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:87
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:94
 msgid "Save and switch"
 msgstr "Opslaan en wisselen"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:98
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:92
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:88
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:95
 msgid "Switch and discard"
 msgstr "Wisselen en verwerpen"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:173
-#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:41
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:164
+#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:42
 msgid "No image"
 msgstr "Geen image"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:186
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:177
 msgid "Mount..."
 msgstr "Koppelen..."
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:186
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:177
 msgid "Re-Mount..."
 msgstr "Herkoppelen..."
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:211
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:202
 msgid "Read-only (FS write-protected)"
 msgstr "Alleen-lezen (FS schrijfbeveiligd)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:217
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:208
 msgid "Read-only"
 msgstr "Alleen-lezen"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:242
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:353
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:221
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:346
 msgid "Storage mode"
 msgstr "Opslagmodus"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:260
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:375
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:239
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:368
 msgid "Cached (sync at reset/umount/exit)"
 msgstr "Cached (sync bij reset/umount/exit)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:265
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:380
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:244
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:373
 msgid "Direct (write-through to file)"
 msgstr "Direct (write-through naar bestand)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:270
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:385
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:249
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:378
 msgid "Discard changes (in-RAM, no sync)"
 msgstr "Wijzigingen verwerpen (in-RAM, geen sync)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:278
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:257
 msgid "Sync now"
 msgstr "Nu synchroniseren"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:292
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:271
 msgid "FDD "
 msgstr "FDD "
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:300
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:279
 msgid "(Empty)"
 msgstr "(Leeg)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:328
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:308
 msgid "Hardware options"
 msgstr "Hardware-opties"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:331
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:311
 msgid "HD Patch enabled"
 msgstr "HD Patch ingeschakeld"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:336
-msgid "Restart emulator to apply change."
-msgstr "Herstart emulator om wijziging toe te passen."
-
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:339
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:317
 msgid "Bus translation: invert (Sharp)"
 msgstr "Busvertaling: inverteren (Sharp)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:344
-msgid ""
-"Sharp MZ default - XOR 0xFF between CPU bus and WD279x chip. Restart "
-"emulator to apply change."
-msgstr ""
-"Sharp MZ standaard - XOR 0xFF tussen CPU-bus en WD279x-chip. Herstart "
-"emulator om wijziging toe te passen."
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:322
+msgid "Sharp MZ default - XOR 0xFF between CPU bus and WD279x chip."
+msgstr "Sharp MZ standaard - XOR 0xFF tussen CPU-bus en WD279x-chip."
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:347
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:324
 msgid "Bus translation: passthrough"
 msgstr "Busvertaling: passthrough"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:355
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:332
 msgid ""
 "NOT compatible with Sharp MZ - no inversion between CPU bus and WD279x chip. "
-"Reserved for future 'true bus' ROMs / experiments. Restart emulator to apply "
-"change."
-msgstr ""
-"NIET compatibel met Sharp MZ - geen inversie tussen CPU-bus en WD279x-chip. "
-"Gereserveerd voor toekomstige 'true bus' ROM's / experimenten. Herstart "
-"emulator om wijziging toe te passen."
+"Reserved for future 'true bus' ROMs / experiments."
+msgstr "NIET compatibel met Sharp MZ - geen inversie tussen CPU-bus en WD279x-chip. Gereserveerd voor toekomstige 'true bus' ROM's / experimenten."
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:375
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:351
 msgid "Floppy Drives"
 msgstr "Diskettestations"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:389
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:365
 msgid "FD Controller"
 msgstr "FD-controller"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:399
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:59
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:183
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:65
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:375
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:64
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:188
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:70
 msgid "Not Connected"
 msgstr "Niet verbonden"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:409
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:385
 msgid "WD279x (standard)"
 msgstr "WD279x (standaard)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:414
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:390
 msgid "Default FDC on ports 0xD8 - 0xDF"
 msgstr "Standaard-FDC op poorten 0xD8 - 0xDF"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:416
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:392
 msgid "WD279x (secondary)"
 msgstr "WD279x (secundair)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:421
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:397
 msgid "Unicard alternate FDC ports 0x58 - 0x5F"
 msgstr "Alternatieve Unicard-FDC-poorten 0x58 - 0x5F"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:440
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:416
 #: src/ui-imgui/topmenu/menu_tools.cpp:32
 msgid "Tools"
 msgstr "Extra"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:442
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:418
 msgid "FDC State (debugger)..."
 msgstr "FDC State (debugger)..."
 
-#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:84
+#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:86
 msgid "Select IDE8 HDD0 image file to open"
 msgstr "Selecteer IDE8 HDD0-imagebestand om te openen"
 
-#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:84
+#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:86
 msgid "Select IDE8 HDD1 image file to open"
 msgstr "Selecteer IDE8 HDD1-imagebestand om te openen"
 
-#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:95
+#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:97
 msgid "IDE8"
 msgstr "IDE8"
 
-#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:97
+#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:99
 msgid "IDE8 Master: "
 msgstr "IDE8 Master: "
 
-#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:104
-#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:127
+#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:106
+#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:129
 msgid "Disconnected"
 msgstr "Losgekoppeld"
 
-#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:113
+#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:115
 msgid "Set HDD0 Image..."
 msgstr "HDD0-image instellen..."
 
-#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:120
+#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:122
 msgid "IDE8 Slave: "
 msgstr "IDE8 Slave: "
 
-#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:136
+#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:138
 msgid "Set HDD1 Image..."
 msgstr "HDD1-image instellen..."
 
-#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:144
+#: src/ui-imgui/topmenu/devices/menu_ide8.cpp:146
 msgid "IDE8 State (debugger)..."
 msgstr "IDE8 State (debugger)..."
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:45
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:50
 msgid "Select FLASH image file to open"
 msgstr "Selecteer FLASH-imagebestand om te openen"
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:64
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:69
 msgid "Model - 'Peroutka & Hučík'"
 msgstr "Model - 'Peroutka & Hučík'"
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:69
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:74
 msgid "Model - 'Luftner'"
 msgstr "Model - 'Luftner'"
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:76
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:81
 msgid "RAM Initialization on Boot"
 msgstr "RAM-initialisatie bij opstarten"
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:79
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:84
 msgid "Filled of Zeros"
 msgstr "Gevuld met nullen"
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:84
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:89
 msgid "Filled of Random Values"
 msgstr "Gevuld met willekeurige waarden"
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:89
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:94
 msgid "Filled as Sharp DRAM"
 msgstr "Gevuld als Sharp DRAM"
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:99
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:104
 msgid "Luftner Forced Auto Init"
 msgstr "Luftner geforceerde auto-initialisatie"
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:104
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:109
 msgid "Luftner FLASH Image"
 msgstr "Luftner FLASH-image"
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:106
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:111
 msgid "File: "
 msgstr "Bestand: "
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:122
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:127
 msgid "Select FLASH Autoload File..."
 msgstr "Selecteer FLASH-autoloadbestand..."
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:132
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:137
 msgid "Memory Map Settings..."
 msgstr "Memory Map-instellingen..."
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:137
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:142
 msgid "Memory Content"
 msgstr "Geheugeninhoud"
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:139
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:144
 msgid "Load MemExt RAM From File..."
 msgstr "MemExt RAM laden vanuit bestand..."
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:144
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:149
 msgid "Save MemExt RAM Into File..."
 msgstr "MemExt RAM opslaan in bestand..."
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:151
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:156
 msgid "Load MemExt FLASH From File..."
 msgstr "MemExt FLASH laden vanuit bestand..."
 
-#: src/ui-imgui/topmenu/devices/menu_memext.cpp:156
+#: src/ui-imgui/topmenu/devices/menu_memext.cpp:161
 msgid "Save MemExt FLASH Into File..."
 msgstr "MemExt FLASH opslaan in bestand..."
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:39
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:40
 msgid "Printer"
 msgstr "Printer"
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:47
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:48
 msgid "Status: ONLINE"
 msgstr "Status: ONLINE"
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:51
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:52
 msgid "Status: OFFLINE"
 msgstr "Status: OFFLINE"
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:62
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:64
 msgid "Printer Standard:"
 msgstr "Printerstandaard:"
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:64
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:66
 msgid "Centronics"
 msgstr "Centronics"
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:68
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:72
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:70
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:73
 msgid "MZ"
 msgstr "MZ"
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:75
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:77
 msgid "(locked: plotter connected)"
 msgstr "(vergrendeld: plotter verbonden)"
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:80
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:82
 msgid "Capture Enabled"
 msgstr "Opname ingeschakeld"
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:90
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:92
 #, c-format
 msgid "Capture file: %s"
 msgstr "Opnamebestand: %s"
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:91
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:93
 #, c-format
 msgid "Bytes captured: %u"
 msgstr "Vastgelegde bytes: %u"
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:95
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:97
 msgid "No capture file open"
 msgstr "Geen opnamebestand geopend"
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:100
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:102
 #, c-format
 msgid "Session total: %u bytes"
 msgstr "Sessietotaal: %u bytes"
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:106
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:108
 msgid "Close Capture File"
 msgstr "Opnamebestand sluiten"
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:122
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:124
 msgid "Plotter MZ-1P16 connected"
 msgstr "Plotter MZ-1P16 verbonden"
 
-#: src/ui-imgui/topmenu/devices/menu_printer.cpp:127
+#: src/ui-imgui/topmenu/devices/menu_printer.cpp:129
 msgid "Open plotter window"
 msgstr "Plottervenster openen"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:78
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:80
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:81
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:83
 msgid "QD: Unsaved RAM changes"
 msgstr "QD: niet-opgeslagen RAM-wijzigingen"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:83
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:86
 msgid "Quick Disk is in Discard mode and has unsaved RAM changes."
 msgstr ""
 "Quick Disk staat in Discard-modus en heeft niet-opgeslagen RAM-wijzigingen."
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:171
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:176
 msgid "Create new QD image"
 msgstr "Nieuw QD-image aanmaken"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:171
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:176
 msgid "qdimage.mzq"
 msgstr "qdimage.mzq"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:181
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:186
 msgid "Quick Disk"
 msgstr "Quick Disk"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:189
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:193
 msgid "MZ 1F11"
 msgstr "MZ 1F11"
 
@@ -12550,200 +12550,200 @@ msgstr "MZ 1F11"
 msgid "Virtual - Mapped Directory"
 msgstr "Virtueel - Gekoppelde map"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:213
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:210
 msgid "Unicard Boot Loader"
 msgstr "Unicard-bootloader"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:230
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:223
 msgid "Empty"
 msgstr "Leeg"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:234
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:227
 msgid "image"
 msgstr "image"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:238
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:231
 msgid "directory"
 msgstr "map"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:242
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:195
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:235
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:220
 msgid "Unicard"
 msgstr "Unicard"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:245
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:238
 msgid "QD Drive"
 msgstr "QD-station"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:248
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:241
 #, c-format
 msgid " (%s)"
 msgstr " (%s)"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:259
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:252
 msgid "Dir"
 msgstr "Map"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:266
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:259
 #, c-format
 msgid "%s: %s..."
 msgstr "%s: %s..."
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:270
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:263
 #, c-format
 msgid "%s: %s"
 msgstr "%s: %s"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:280
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:273
 msgid "Mount Image..."
 msgstr "Image koppelen..."
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:280
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:273
 msgid "Mount Directory..."
 msgstr "Map koppelen..."
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:287
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:280
 msgid "Unmount"
 msgstr "Ontkoppelen"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:304
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:297
 msgid "Write Protected"
 msgstr "Schrijfbeveiligd"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:310
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:303
 msgid "Forced R/O by UNICARD - cannot be changed."
 msgstr "Geforceerd R/O door UNICARD - kan niet gewijzigd worden."
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:320
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:313
 msgid "    [FS R/O]"
 msgstr "    [FS R/O]"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:324
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:317
 msgid ""
 "File on disk is not writable - effective R/O regardless of user setting."
 msgstr ""
 "Bestand op schijf is niet schrijfbaar - effectief R/O ongeacht "
 "gebruikersinstelling."
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:337
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:330
 msgid "Save now"
 msgstr "Nu opslaan"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:394
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:387
 msgid "UNICARD mode is locked to Cached storage."
 msgstr "UNICARD-modus is vergrendeld op Cached opslag."
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:399
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:392
 msgid "Create New Image..."
 msgstr "Nieuw image aanmaken..."
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:407
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:400
 msgid "QDisk State (debugger)..."
 msgstr "QDisk State (debugger)..."
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:46
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:51
 msgid "Select SRAM disk image file to open"
 msgstr "Selecteer SRAM-diskimagebestand om te openen"
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:51
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:56
 msgid "Select ROM disk image file to open"
 msgstr "Selecteer ROM-diskimagebestand om te openen"
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:63
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:68
 msgid "Memory Disk"
 msgstr "Geheugenschijf"
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:77
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:82
 msgid "MZ-1R18 Compatible"
 msgstr "MZ-1R18-compatibel"
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:116
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:118
 msgid "Pezik Settings..."
 msgstr "Pezik-instellingen..."
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:121
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:123
 msgid "MZ-1R18 Options"
 msgstr "MZ-1R18-opties"
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:125
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:127
 msgid "64 KB"
 msgstr "64 KB"
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:130
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:132
 msgid "256 KB"
 msgstr "256 KB"
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:135
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:137
 msgid "512 KB"
 msgstr "512 KB"
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:140
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:142
 msgid "1 MB"
 msgstr "1 MB"
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:145
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:147
 msgid "16 MB"
 msgstr "16 MB"
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:155
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:157
 msgid "Unbacked RAM Disk"
 msgstr "RAM-schijf zonder opslag"
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:160
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:162
 msgid "SRAM Emulation"
 msgstr "SRAM-emulatie"
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:165
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:167
 msgid "ROM Disk"
 msgstr "ROM-schijf"
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:173
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:175
 msgid "RAM Disk File..."
 msgstr "RAM-schijfbestand..."
 
-#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:181
+#: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:183
 msgid "Memory Disk State (debugger)..."
 msgstr "Memory Disk State (debugger)..."
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:26
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:27
 msgid "Rear DIP Switch"
 msgstr "Achterste DIP-schakelaar"
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:29
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:30
 msgid "Mode 700 Compat.: "
 msgstr "Modus 700 compat.: "
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:32
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:33
 msgid "OFF"
 msgstr "UIT"
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:36
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:37
 msgid "ON (default)"
 msgstr "AAN (standaard)"
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:46
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:47
 msgid "CMT Polarity: "
 msgstr "CMT-polariteit: "
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:49
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:50
 msgid "Inverted"
 msgstr "Geïnverteerd"
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:53
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:54
 #: src/ui-imgui/topmenu/interface/menu_display.cpp:30
 #: src/ui-imgui/topmenu/interface/menu_display.cpp:65
 msgid "Normal"
 msgstr "Normaal"
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:69
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:70
 msgid "Printer Standard: "
 msgstr "Printerstandaard: "
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:76
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:77
 msgid "Centronics (default)"
 msgstr "Centronics (standaard)"
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:80
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:81
 msgid " (locked: plotter connected)"
 msgstr " (vergrendeld: plotter verbonden)"
 
@@ -12752,6 +12752,29 @@ msgid "Settings for User Defined..."
 msgstr "Instellingen voor gebruikergedefinieerd..."
 
 #: src/ui-imgui/topmenu/devices/menu_unicard.cpp:72
+msgid "Failed to reinitialize SD runtime."
+msgstr "Reinitialiseren SD runtime mislukt."
+
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:78
+msgid "Unicard runtime reinstalled with mgr V2.4 (uc1)."
+msgstr "Unicard runtime opnieuw geinstalleerd met mgr V2.4 (uc1)."
+
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:80
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:88
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:97
+msgid "Unicard runtime reinitialization failed."
+msgstr "Unicard runtime reinitialisatie mislukt."
+
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:86
+msgid "Unicard runtime reinstalled with mgr V2.11b (uc3)."
+msgstr "Unicard runtime opnieuw geinstalleerd met mgr V2.11b (uc3)."
+
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:95
+msgid "Unicard runtime files in '{SD}/unicard/' have been reinitialized."
+msgstr ""
+"Unicard runtime-bestanden in '{SD}/unicard/' zijn opnieuw geinitialiseerd."
+
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:124
 msgid ""
 "SD card runtime in '{SD}/unicard/' is missing, incomplete, or does not match "
 "the selected firmware."
@@ -12759,15 +12782,15 @@ msgstr ""
 "SD-kaart runtime in '{SD}/unicard/' ontbreekt, is incompleet of komt niet "
 "overeen met geselecteerde firmware."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:75
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:127
 msgid "State on SD:"
 msgstr "Status op SD:"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:76
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:128
 msgid "Selected firmware:"
 msgstr "Geselecteerde firmware:"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:79
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:131
 msgid ""
 "[Reinitialize] overwrites the SD manager files to match the selected "
 "firmware. [Continue] connects with the mismatch (client may see inconsistent "
@@ -12777,23 +12800,19 @@ msgstr ""
 "met geselecteerde firmware. [Doorgaan] verbindt met mismatch (client kan "
 "inconsistent gedrag zien). [Annuleren] laat Unicard losgekoppeld."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:85
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:137
 msgid "Reinitialize##unicard_rt_reinit"
 msgstr "Reinitialiseren##unicard_rt_reinit"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:100
-msgid "Failed to reinitialize SD runtime."
-msgstr "Reinitialiseren SD runtime mislukt."
-
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:104
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:147
 msgid "Continue##unicard_rt_continue"
 msgstr "Doorgaan##unicard_rt_continue"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:115
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:157
 msgid "Cancel##unicard_rt_cancel"
 msgstr "Annuleren##unicard_rt_cancel"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:140
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:183
 msgid ""
 "Choose which manager version to install in '{SD}/unicard/'. This will "
 "overwrite the existing manager files."
@@ -12801,7 +12820,7 @@ msgstr ""
 "Kies welke managerversie te installeren in '{SD}/unicard/'. Dit overschrijft "
 "bestaande managerbestanden."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:144
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:187
 msgid ""
 "Note: This choice is independent of the currently selected simulated "
 "firmware. You can install one version while simulating the other (useful for "
@@ -12811,54 +12830,40 @@ msgstr ""
 "firmware. Je kunt een versie installeren terwijl je de andere simuleert "
 "(handig voor testen)."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:152
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:195
 msgid "mgr V2.4 (uc1)##unicard_reinit_v24"
 msgstr "mgr V2.4 (uc1)##unicard_reinit_v24"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:159
-msgid "Unicard runtime reinstalled with mgr V2.4 (uc1)."
-msgstr "Unicard runtime opnieuw geinstalleerd met mgr V2.4 (uc1)."
-
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:164
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:180
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:349
-msgid "Unicard runtime reinitialization failed."
-msgstr "Unicard runtime reinitialisatie mislukt."
-
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:168
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:202
 msgid "mgr V2.11b (uc3)##unicard_reinit_v211b"
 msgstr "mgr V2.11b (uc3)##unicard_reinit_v211b"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:175
-msgid "Unicard runtime reinstalled with mgr V2.11b (uc3)."
-msgstr "Unicard runtime opnieuw geinstalleerd met mgr V2.11b (uc3)."
-
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:184
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:209
 msgid "Cancel##unicard_reinit_cancel"
 msgstr "Annuleren##unicard_reinit_cancel"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:200
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:225
 msgid "Unicard Connected"
 msgstr "Unicard verbonden"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:201
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:226
 msgid "Unicard Not Connected"
 msgstr "Unicard niet verbonden"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:228
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:252
 msgid "Firmware: uc1 (rev.60)"
 msgstr "Firmware: uc1 (rev.60)"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:238
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:262
 #, c-format
 msgid "Firmware: uc3 (v%d.%d)###unicard_fw_uc3"
 msgstr "Firmware: uc3 (v%d.%d)###unicard_fw_uc3"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:247
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:271
 msgid "Check runtime version on connect"
 msgstr "Controleer runtime-versie bij verbinden"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:254
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:278
 msgid ""
 "On Connect, verify that {SD}/unicard/ contains the manager matching the "
 "selected firmware. Mismatch shows a dialog with option to reinitialize."
@@ -12867,15 +12872,15 @@ msgstr ""
 "met geselecteerde firmware. Mismatch toont dialoog met optie tot "
 "reinitialisatie."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:263
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:287
 msgid "Read-only SD"
 msgstr "Alleen-lezen SD"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:274
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:298
 msgid "Managed FDC"
 msgstr "Beheerde FDC"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:278
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:302
 msgid ""
 "Which FDC controller the Unicard API manages (DSK mount).\n"
 "'None' disables Unicard FDD commands.\n"
@@ -12885,11 +12890,11 @@ msgstr ""
 "'Geen' schakelt Unicard-FDD-opdrachten uit.\n"
 "De wijziging geldt alleen voor toekomstige bewerkingen."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:305
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:329
 msgid "Set SD Root Directory..."
 msgstr "SD-hoofdmap instellen..."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:312
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:336
 msgid ""
 "Change the host directory used as the Unicard SD root.\n"
 "If connected, the Unicard is automatically reconnected to the new root."
@@ -12898,16 +12903,11 @@ msgstr ""
 "Indien verbonden wordt de Unicard automatisch opnieuw verbonden met de "
 "nieuwe root."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:330
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:354
 msgid "Reinitialize Runtime..."
 msgstr "Runtime reinitialiseren..."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:344
-msgid "Unicard runtime files in '{SD}/unicard/' have been reinitialized."
-msgstr ""
-"Unicard runtime-bestanden in '{SD}/unicard/' zijn opnieuw geinitialiseerd."
-
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:356
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:371
 msgid ""
 "Overwrites manager files in '{SD}/unicard/' (mgr.mzf, mgr800.mzf, "
 "mgr700.mzf, mgr1500.mzf) with the selected version.\n"
@@ -13595,15 +13595,7 @@ msgstr "Frame %d = %s; terug via een checkpoint, vooruit op maximale snelheid."
 msgid "Available while playing a replay."
 msgstr "Beschikbaar tijdens het afspelen van een replay."
 
-#: src/ui-imgui/topmenu/topmenu.cpp:38
-msgid ""
-"Machine settings cannot be changed while a replay is recorded or played. "
-"Stop it in the Replay menu first."
-msgstr ""
-"Machine-instellingen kunnen niet worden gewijzigd tijdens het opnemen of "
-"afspelen van een replay. Stop het eerst in het menu Replay."
-
-#: src/ui-imgui/topmenu/topmenu.cpp:69
+#: src/ui-imgui/topmenu/topmenu.cpp:74
 msgid "About..."
 msgstr "Over..."
 
@@ -14129,6 +14121,25 @@ msgstr "MZ-1500 Virtueel toetsenbord"
 #: src/ui-imgui/vkbd_window.cpp:229
 msgid "MZ-800 Virtual Keyboard"
 msgstr "MZ-800 Virtueel toetsenbord"
+
+#~ msgid "Restart emulator to apply change."
+#~ msgstr "Herstart emulator om wijziging toe te passen."
+
+#~ msgid ""
+#~ "Sharp MZ default - XOR 0xFF between CPU bus and WD279x chip. Restart "
+#~ "emulator to apply change."
+#~ msgstr ""
+#~ "Sharp MZ standaard - XOR 0xFF tussen CPU-bus en WD279x-chip. Herstart "
+#~ "emulator om wijziging toe te passen."
+
+#~ msgid ""
+#~ "NOT compatible with Sharp MZ - no inversion between CPU bus and WD279x "
+#~ "chip. Reserved for future 'true bus' ROMs / experiments. Restart emulator "
+#~ "to apply change."
+#~ msgstr ""
+#~ "NIET compatibel met Sharp MZ - geen inversie tussen CPU-bus en WD279x-"
+#~ "chip. Gereserveerd voor toekomstige 'true bus' ROM's / experimenten. "
+#~ "Herstart emulator om wijziging toe te passen."
 
 #~ msgid "Open Last Capture Folder"
 #~ msgstr "Map van de laatste opname openen"

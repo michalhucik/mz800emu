@@ -54,6 +54,7 @@
 #include "ui-imgui/screenshot/screenshot_ui.h"
 #include "ui-imgui/audiocap/audio_capture_ui.h"
 #include "iface/iface_audio.h"
+#include "device_request.h"
 
 #ifdef MZ800EMU_CFG_MCP_SERVER_ENABLED
 /* MCP Activity okno (V1.C.2) - render funkce volaná za běhu pokud
@@ -76,6 +77,9 @@ extern "C"
     bool snapshot_notification_error_active(void);
     void imgui_snapshot_quicksave_handler(void);
     void imgui_snapshot_request_results(void);
+
+    /* Zásahy do zařízení přes emu vlákno (device_request_ui.h) */
+    void imgui_device_request_results(void);
 
     /* Jazyk */
     void imgui_language_window(void);
@@ -318,7 +322,12 @@ void imgui_main_window(GLuint texture)
 
 #if CFG_HWEXT_HAVE_FDC
     if (g_gui->showFdcStorageSwitchWindow)
+    {
+        /* Popup čte stav mechaniky; zásah mezitím neprovede emu vlákno. */
+        device_state_lock();
         imgui_fdc_storage_switch_popup(&g_gui->showFdcStorageSwitchWindow);
+        device_state_unlock();
+    }
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
     if (g_gui->showFdcStateWindow)
@@ -330,7 +339,12 @@ void imgui_main_window(GLuint texture)
     /* Faze 3 (qdisk-rewrite): switch storage mode popup pro DISCARD->jiny
      * mod s pending RAM changes. Aktivuje se z menu_qdisk.cpp. */
     if (g_gui->showQdiskStorageSwitchWindow)
+    {
+        /* Popup čte stav QD; zásah mezitím neprovede emu vlákno. */
+        device_state_lock();
         imgui_qdisk_storage_switch_popup(&g_gui->showQdiskStorageSwitchWindow);
+        device_state_unlock();
+    }
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
     /* Faze 6 (qdisk-rewrite): QDisk State debugger okno - live view chip
@@ -410,6 +424,9 @@ void imgui_main_window(GLuint texture)
     /* Výsledky snapshotů vyřízených emu vláknem: oznámení, obnovení běhu. */
     imgui_snapshot_request_results();
 
+    /* Zásahy do zařízení odmítnuté emu vláknem (běží replay): oznámení. */
+    imgui_device_request_results();
+
     /* Záznam a přehrání vstupů: dialogy nabídky Replay a oznámení výsledku */
     imgui_replay_dialogs();
     imgui_replay_window();
@@ -455,7 +472,12 @@ void imgui_main_window(GLuint texture)
 
     /* PEZIK nastavení */
     if (g_gui->showPezikSettingsWindow)
+    {
+        /* Okno čte stav Pezika; zásah mezitím neprovede emu vlákno. */
+        device_state_lock();
         imgui_pezik_settings_window(&g_gui->showPezikSettingsWindow);
+        device_state_unlock();
+    }
 
     /* ROM nastavení */
     if (g_gui->showRomSettingsWindow)
@@ -657,6 +679,9 @@ void imgui_main_window(GLuint texture)
 
     imgui_file_chooser_window();
     imgui_message_window();
+    /* Dialogy Unicard čtou stav Unicardu; zásah mezitím neprovede emu vlákno. */
+    device_state_lock();
     imgui_unicard_runtime_mismatch_dialog();
     imgui_unicard_reinit_choice_dialog();
+    device_state_unlock();
 }

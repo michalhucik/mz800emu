@@ -638,6 +638,20 @@ extern "C" {
     void unicard_ui_select_sd_root_directory(void);
 
     /**
+     * @brief Změní SD root adresář; připojený Unicard se znovu připojí.
+     *
+     * Stejný adresář jako dosavadní root = nic. Připojený Unicard se
+     * odpojí (zavře handly starého rootu), nastaví se nový root, a pokud
+     * root nemá runtime `{SD}/unicard/`, vytvoří se; pak se Unicard znovu
+     * připojí. Odpojený Unicard jen převezme nový root pro příští Connect.
+     *
+     * @param dirpath Nový root (zkopíruje se; NULL nebo "" = nic).
+     * @pre Emu vlákno (zásah device_request): odpojení zavírá soubory,
+     *      se kterými pracuje emulovaný Unicard.
+     */
+    void unicard_apply_sd_root ( const char *dirpath );
+
+    /**
      * Bezpečné vyhodnocení emu-supplied cesty proti SD root jailu.
      *
      * Vstupní cesta z emulovaného Z80 programu se normalizuje (sloučení

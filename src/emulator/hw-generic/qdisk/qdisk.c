@@ -77,6 +77,7 @@
 #endif
 #include "baseui/baseui_filechooser.h"
 #include "media_writes.h"
+#include "qdisk_request.h"
 
 #define ui_qdisk_set_std_path( x ) {g_free( g_qdisk.ui_std_filepath ); g_qdisk.ui_std_filepath = (x) ? g_strdup( x ) : g_strdup( "" );}
 #define ui_qdisk_set_virt_path( x ) {g_free( g_qdisk.ui_virt_filepath ); g_qdisk.ui_virt_filepath = (x) ? g_strdup( x ) : g_strdup( "" );}
@@ -766,6 +767,39 @@ void qdisk_open ( void ) {
 }
 
 
+int qdisk_mount_path ( const char *path, int is_dir ) {
+    if ( path == NULL || path[0] == 0 ) return -1;
+    char *pathdup = g_strdup ( path );
+    int rc = 0;
+
+    if ( !is_dir && ( g_qdisk.type == QDISK_TYPE_IMAGE ) ) {
+        if ( baseui_tools_file_access ( pathdup, F_OK ) == -1 ) {
+            /* soubor neexistuje - vyrobime novy */
+            qdisk_create_image ( pathdup );
+        };
+        qdisk_open_image ( pathdup );
+        ui_qdisk_set_std_path ( cfgelement_get_text_value ( g_elm_std_fp ) );
+    } else if ( is_dir && ( g_qdisk.type == QDISK_TYPE_VIRTUAL ) ) {
+        qdisk_virt_open_directory ( pathdup );
+        ui_qdisk_set_virt_path ( cfgelement_get_text_value ( g_elm_virt_fp ) );
+    } else {
+        /* Typ mechaniky se mezi výběrem v dialogu a provedením změnil. */
+        rc = -1;
+    };
+
+    g_free ( pathdup );
+    return rc;
+}
+
+
+/**
+ * @brief Callback file chooseru mountu (image nebo adresář virtuálního QD).
+ *
+ * Běží v UI vlákně (file chooser při renderu), proto mount jen zařadí
+ * (qdisk_request_mount()); qdisk_mount_path() provede emu vlákno.
+ *
+ * @param fch Dialog (zničí se zde).
+ */
 static void qdisk_ui_mount_cb(baseui_fchooser_t *fch)
 {
     if (!fch)
@@ -781,28 +815,10 @@ static void qdisk_ui_mount_cb(baseui_fchooser_t *fch)
     };
 
     if ( g_qdisk.type == QDISK_TYPE_IMAGE ) {
-        char *filename = fch->selected_filePathName;
-        if ( filename ) 
-        {
-            fch->selected_filePathName = NULL;
-            if ( baseui_tools_file_access ( filename, F_OK ) == -1 ) {
-                /* soubor neexistuje - vyrobime novy */
-                //printf ( "create new: '%s'\n", filename );
-                qdisk_create_image ( filename );
-            };
-
-            qdisk_open_image ( filename );
-            ui_qdisk_set_std_path ( cfgelement_get_text_value ( g_elm_std_fp ) );
-        };
+        if ( fch->selected_filePathName ) qdisk_request_mount ( fch->selected_filePathName, 0 );
     } else {
         /* virtual QDISK */
-        char *dirpath = fch->selected_path;
-        if ( dirpath )
-        {
-            fch->selected_path = NULL;
-            qdisk_virt_open_directory ( dirpath );
-            ui_qdisk_set_virt_path ( cfgelement_get_text_value ( g_elm_virt_fp ) );
-        };
+        if ( fch->selected_path ) qdisk_request_mount ( fch->selected_path, 1 );
     };
 
     baseui_filechooser_destroy(fch);

@@ -60,6 +60,7 @@
 #include <glib/gstdio.h>
 
 #include "fdc.h"
+#include "fdc_request.h"
 #include "wd279x.h"
 #include "baseui/baseui.h"
 #include "baseui/baseui_filechooser.h"
@@ -1148,8 +1149,9 @@ void fdc_umount(st_FDC *fdc, unsigned drive_id)
  * @brief Callback file chooseru po výběru DSK obrazu.
  *
  * Předaný `user_data` je drive_id zabalený přes `GINT_TO_POINTER`.
- * Po výběru souboru zavolá `fdc_mount_dskfile` který filename uloží
- * a otevře DSK image.
+ * Běží v UI vlákně (file chooser při renderu), proto mount jen zařadí
+ * (fdc_request_mount()); kontrolu připojení řadiče a délky cesty a samotný
+ * fdc_mount_dskfile() provede emu vlákno.
  *
  * @note user_data nese zabalený identifikátor `(fdc_index << 8) | drive_id`
  *       (viz fdc_ui_mount) - callback tak ví, do které instance FDC a
@@ -1171,15 +1173,6 @@ static void fdc_ui_mount_cb(baseui_fchooser_t *fch)
         baseui_filechooser_destroy(fch);
         return;
     }
-    st_FDC *fdc = &g_fdc[fdc_index];
-
-    if (!fdc->connected)
-    {
-        baseui_show_message(0, "Can't mount DSK image into FDC%u FD%d, because the FD controller is not connected.", fdc_index, drive_id);
-        baseui_filechooser_destroy(fch);
-        return;
-    };
-
     if (fch->state != BASEUI_FCHOOSER_STATE_CLOSED_OK)
     {
         /* Cancel / zavření dialogu bez výběru - mount necháváme BEZE ZMĚNY
@@ -1189,15 +1182,14 @@ static void fdc_ui_mount_cb(baseui_fchooser_t *fch)
         return;
     };
 
-    char *filename = fch->selected_filePathName;
-
-    if (strlen(filename) < sizeof(fdc->drive[drive_id].filename))
-    {
-        fdc_mount_dskfile(fdc, drive_id, filename);
-    }
-    else
+    const char *filename = fch->selected_filePathName;
+    if (filename && strlen(filename) >= sizeof(g_fdc[fdc_index].drive[drive_id].filename))
     {
         baseui_show_message(0, "Sorry, filepath is too big (%d).", (int)strlen(filename));
+    }
+    else if (filename)
+    {
+        fdc_request_mount(fdc_index, drive_id, filename);
     };
 
     baseui_filechooser_destroy(fch);

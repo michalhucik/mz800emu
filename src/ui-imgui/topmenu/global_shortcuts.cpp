@@ -22,6 +22,7 @@
 
 #if CFG_HWEXT_HAVE_FDC
 #include "hw-generic/fdc/fdc.h"
+#include "hw-generic/fdc/fdc_request.h"
 #endif /* CFG_HWEXT_HAVE_FDC */
 
 #include "debugger/debugger.h"
@@ -316,7 +317,7 @@ void imgui_global_shortcuts(void)
             if (io.KeyShift)
             {
                 printf("Eject FDC0 FD%d DSK image\n", drive_id);
-                fdc_umount(&g_fdc[FDC0], drive_id);
+                fdc_request_umount(FDC0, (unsigned)drive_id);
             }
             else
             {
@@ -334,7 +335,7 @@ void imgui_global_shortcuts(void)
             if (io.KeyShift)
             {
                 printf("Eject FDC0 FD%d DSK image\n", drive_id);
-                fdc_umount(&g_fdc[FDC0], drive_id);
+                fdc_request_umount(FDC0, (unsigned)drive_id);
             }
             else
             {
@@ -352,7 +353,7 @@ void imgui_global_shortcuts(void)
             if (io.KeyShift)
             {
                 printf("Eject FDC0 FD%d DSK image\n", drive_id);
-                fdc_umount(&g_fdc[FDC0], drive_id);
+                fdc_request_umount(FDC0, (unsigned)drive_id);
             }
             else
             {
@@ -370,7 +371,7 @@ void imgui_global_shortcuts(void)
             if (io.KeyShift)
             {
                 printf("Eject FDC0 FD%d DSK image\n", drive_id);
-                fdc_umount(&g_fdc[FDC0], drive_id);
+                fdc_request_umount(FDC0, (unsigned)drive_id);
             }
             else
             {

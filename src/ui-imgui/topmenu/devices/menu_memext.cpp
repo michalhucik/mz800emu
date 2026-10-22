@@ -14,6 +14,7 @@
 #include "ui-imgui/mywidgets/mywidgets.h"
 #include "ui-imgui/memext/memext_content.h"
 #include "emulator/hw-generic/memory/memext.h"
+#include "emulator/hw-generic/memory/memext_request.h"
 #include "baseui/baseui_filechooser.h"
 
 extern "C"
@@ -21,6 +22,10 @@ extern "C"
     void imgui_menu_memext(void);
 }
 
+/**
+ * @brief Callback výběru souboru FLASH Luftner: načtení zařadí do emu vlákna.
+ * @param fch Dialog (zničí se zde).
+ */
 void imgui_memext_luftner_select_flash_filepath_cb(baseui_fchooser_t *fch)
 {
     if (fch->state != BASEUI_FCHOOSER_STATE_CLOSED_OK)
@@ -32,7 +37,7 @@ void imgui_memext_luftner_select_flash_filepath_cb(baseui_fchooser_t *fch)
     char *filename = fch->selected_filePathName;
     if (filename)
     {
-        memext_luftner_set_flash_filepath(filename);
+        memext_request_set_flash_filepath(filename);
     };
 
     baseui_filechooser_destroy(fch);
@@ -58,17 +63,17 @@ void imgui_menu_memext(void)
 
         if (MenuRadioItem(_("Not Connected"), !MEMEXT_TEST_CONNECTED))
         {
-            memext_disconnect();
+            memext_request_set_connection(MEMEXT_REQUEST_DISCONNECT);
         };
 
         if (MenuRadioItem(_("Model - 'Peroutka & Hučík'"), MEMEXT_TEST_CONNECTED_PEHU))
         {
-            memext_connect(MEMEXT_TYPE_PEHU);
+            memext_request_set_connection(MEMEXT_TYPE_PEHU);
         };
 
         if (MenuRadioItem(_("Model - 'Luftner'"), MEMEXT_TEST_CONNECTED_LUFTNER))
         {
-            memext_connect(MEMEXT_TYPE_LUFTNER);
+            memext_request_set_connection(MEMEXT_TYPE_LUFTNER);
         };
 
         ImGui::Separator();
