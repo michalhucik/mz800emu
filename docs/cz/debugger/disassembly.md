@@ -151,6 +151,16 @@ Branch arrows nejsou implementovány pro `JP (HL)`, `JP (IX)`, `JP (IY)`,
 | `PC == addr` | zelený trojúhelník |
 | `PC` uvnitř instrukce (mid-instruction) | žlutá šipka |
 
+#### Značka pokrytí kódu
+
+Dokud existují data pokrytí kódu, barevná značka vpravo od PC slotu
+ukazuje pokrytí adresy: zelená = vykonáno (nebo podmíněná instrukce
+s oběma výsledky), žlutá = podmínka vždy splněna, oranžová = podmínka
+nikdy splněna, bez značky = nevykonáno. Se značkami je gutter o 6 px
+širší. Tooltip řádku dostane sekci Coverage. Vypíná se v `Settings` ->
+`Disassembled` -> `Show code coverage` (cfg klíč `disasm_show_coverage`).
+Viz [code-coverage.md](code-coverage.md).
+
 ### Sloupec ADDR (5 znaků)
 
 Adresa instrukce. Dvě varianty:
@@ -297,7 +307,8 @@ po release se Follow PC vrací k normálu.
 
 ## Tooltip per řádek
 
-Hover na řádku po ~500 ms zobrazí sjednocený tooltip se 4 sekcemi:
+Hover na řádku po ~500 ms zobrazí sjednocený tooltip s těmito sekcemi
+(sekce bez dat se vynechají):
 
 ### 1. Instrukční info
 
@@ -335,6 +346,12 @@ Jen pokud existuje fixed target (CALL/JP/JR/...) nebo přímý MEM access:
 Target: 0xE6DA -> CALC_HELPER
 Mem: (0x1234) -> SCREEN_BUFFER
 ```
+
+### Pokrytí kódu
+
+Jen když se zobrazují značky pokrytí: stav adresy a u úrovně detail
+verze kódu na adrese (buňka, bajty klíče, vykonání, podmínka splněna /
+nesplněna). Viz [code-coverage.md](code-coverage.md).
 
 ### 4. Edit hints
 
@@ -407,6 +424,7 @@ Modul `DEBUGGER`:
 | Klíč | Typ | Default | Popis |
 |------|-----|---------|-------|
 | `disasm_show_branch_arrows` | bool | true | Globální toggle pro branch arrows |
+| `disasm_show_coverage` | bool | true | Globální toggle pro značky pokrytí kódu |
 | `disasm_main_focus_addr` | uint16 | 0 | Hlavní okno focus |
 | `disasm_main_follow_pc` | bool | true | Hlavní okno Follow PC |
 | `disasm_main_show_tstates` | bool | false | Hlavní okno T-states sloupec |

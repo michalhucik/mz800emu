@@ -266,7 +266,7 @@ void coverage_on_exit ( void )
     /* Relativní cesta vůči pracovnímu adresáři (jako export CDL při konci). */
     char *path = sdlapp_paths_resolve_work ( g_sdlapp->paths, g_coverage_ini.save_on_exit );
     st_COVERAGE_SNAPSHOT *s = g_new0 ( st_COVERAGE_SNAPSHOT, 1 );
-    if ( !coverage_snapshot_take ( s ) ) {
+    if ( !coverage_snapshot_take ( s, true ) ) {
         fprintf ( stderr, "[COVERAGE] not saved to '%s': out of memory\n", path );
     } else if ( !s->status.has_data ) {
         fprintf ( stderr, "[COVERAGE] not saved to '%s': no coverage data\n", path );

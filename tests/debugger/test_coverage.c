@@ -6,7 +6,8 @@
  * emulátoru: úroveň branch (bitmapy, stavy větví), úroveň detail (verze
  * kódu na téže adrese, buňky, klíč DD CB d op, operand, kapacita a
  * `dropped`, chybějící bajty fetch), nečinný HALT, epochy, nespojitosti
- * a vstup do obsluhy přerušení.
+ * a vstup do obsluhy přerušení. K tomu snímek bez jednotek, stav adresy
+ * a filtr řádků z coverage_export.h (MCP coverage_read a okna GUI).
  *
  * @par Licence: GPLv3
  */
@@ -20,6 +21,7 @@
 /* Jádro se vkládá přímo (ne linkuje), aby test saturace mohl nastavit
  * čítač jednotky těsně pod 0xFFFFFFFF (stav s_cov je statický). */
 #include "emulator/debugger/coverage/coverage.c"
+#include "emulator/debugger/coverage/coverage_export.h"
 
 
 /** @brief Kontext čtení: bajty kroku a příznak "bajt mimo záznam fetch". */
@@ -417,6 +419,115 @@ void test_step_origin_flags ( void )
 }
 
 
+/* ===== snímek a filtr (coverage_export.h, MCP i GUI) ===== */
+
+static st_COVERAGE_SNAPSHOT s_snap;
+
+
+/** @brief Snímek bez jednotek nese bitmapy a stav; stav adresy podle bitmap. */
+void test_snapshot_without_units_pc_state ( void )
+{
+    start ( COVERAGE_LEVEL_DETAIL, COVERAGE_KEY_OPCODE, 16, false );
+    static const uint8_t jrnz[] = { 0x20, 0x10 };
+    static const uint8_t jpz[] = { 0xCA, 0x00, 0x50 };
+    static const uint8_t retnc[] = { 0xD0 };
+    static const uint8_t nop[] = { 0x00 };
+    step ( 0x3000, 0x3012, jrnz, 2, 0x00, 0 );   /* skok */
+    step ( 0x3000, 0x3002, jrnz, 2, 0x40, 0 );   /* propad */
+    step ( 0x3002, 0x5000, jpz, 3, 0x40, 0 );    /* jen skok */
+    step ( 0x3005, 0x3006, retnc, 1, 0x01, 0 );  /* C -> jen propad */
+    step ( 0x3006, 0x3007, nop, 1, 0x00, 0 );
+
+    TEST_ASSERT_TRUE ( coverage_snapshot_take ( &s_snap, false ) );
+    TEST_ASSERT_NULL ( s_snap.units );
+    TEST_ASSERT_EQUAL_UINT32 ( 0, s_snap.n_units );
+    TEST_ASSERT_EQUAL_UINT32 ( 4, s_snap.status.units );
+    TEST_ASSERT_EQUAL_UINT ( COVERAGE_STATE_BOTH, coverage_pc_state ( &s_snap, 0x3000 ) );
+    TEST_ASSERT_EQUAL_UINT ( COVERAGE_STATE_TAKEN_ONLY, coverage_pc_state ( &s_snap, 0x3002 ) );
+    TEST_ASSERT_EQUAL_UINT ( COVERAGE_STATE_NOT_TAKEN_ONLY, coverage_pc_state ( &s_snap, 0x3005 ) );
+    TEST_ASSERT_EQUAL_UINT ( COVERAGE_STATE_NONE, coverage_pc_state ( &s_snap, 0x3006 ) );
+    TEST_ASSERT_EQUAL_UINT ( 0, coverage_pc_state ( &s_snap, 0x3001 ) );
+    TEST_ASSERT_EQUAL_UINT ( 0, coverage_pc_state ( &s_snap, 0x5000 ) );
+
+    TEST_ASSERT_TRUE ( coverage_snapshot_take ( &s_snap, true ) );
+    TEST_ASSERT_NOT_NULL ( s_snap.units );
+    TEST_ASSERT_EQUAL_UINT32 ( 4, s_snap.n_units );
+    coverage_snapshot_clear ( &s_snap );
+}
+
+
+/** @brief Filtr řádků: rozsah, stav, epocha, příznak, prostor buňky. */
+void test_row_filter ( void )
+{
+    start ( COVERAGE_LEVEL_DETAIL, COVERAGE_KEY_OPCODE, 16, false );
+    static const uint8_t jrnz[] = { 0x20, 0x10 };
+    static const uint8_t jpz[] = { 0xCA, 0x00, 0x50 };
+    static const uint8_t nop[] = { 0x00 };
+    step ( 0x3000, 0x3012, jrnz, 2, 0x00, 0 );
+    step ( 0x3002, 0x5000, jpz, 3, 0x40, 0 );
+    coverage_mark ( );
+    step_ex ( 0x0038, 0x0039, nop, 1, 0, 0, false, COVERAGE_CELL ( 4, 0x0038 ), COVERAGE_F_INT_ENTRY, 255 );
+
+    TEST_ASSERT_TRUE ( coverage_snapshot_take ( &s_snap, true ) );
+    size_t n = 0;
+    st_COVERAGE_ROW *rows = coverage_rows_build ( &s_snap, &n );
+    TEST_ASSERT_EQUAL_size_t ( 3, n );
+
+    st_COVERAGE_FILTER f;
+    unsigned hits;
+    coverage_filter_init ( &f );
+    hits = 0;
+    for ( size_t i = 0; i < n; i++ ) hits += coverage_row_match ( &s_snap, &rows[ i ], &f );
+    TEST_ASSERT_EQUAL_UINT ( 3, hits );
+
+    /* Neúplné větve (partial). */
+    f.state_mask = coverage_state_bits ( "partial" );
+    hits = 0;
+    for ( size_t i = 0; i < n; i++ ) hits += coverage_row_match ( &s_snap, &rows[ i ], &f );
+    TEST_ASSERT_EQUAL_UINT ( 2, hits );
+
+    /* Rozsah 3001h-FFFFh a stav partial: jen JP Z na 3002h. */
+    f.pc_from = 0x3001;
+    hits = 0;
+    for ( size_t i = 0; i < n; i++ ) {
+        if ( coverage_row_match ( &s_snap, &rows[ i ], &f ) ) {
+            hits++;
+            TEST_ASSERT_EQUAL_HEX16 ( 0x3002, rows[ i ].pc );
+        };
+    };
+    TEST_ASSERT_EQUAL_UINT ( 1, hits );
+
+    /* Nové od značky (epocha 1): jen obsluha přerušení. */
+    coverage_filter_init ( &f );
+    f.has_epoch = true;
+    f.epoch_from = 1;
+    hits = 0;
+    for ( size_t i = 0; i < n; i++ ) {
+        if ( coverage_row_match ( &s_snap, &rows[ i ], &f ) ) {
+            hits++;
+            TEST_ASSERT_EQUAL_HEX16 ( 0x0038, rows[ i ].pc );
+        };
+    };
+    TEST_ASSERT_EQUAL_UINT ( 1, hits );
+
+    /* Příznak a prostor buňky. */
+    coverage_filter_init ( &f );
+    f.flags_any = COVERAGE_F_INT_ENTRY;
+    hits = 0;
+    for ( size_t i = 0; i < n; i++ ) hits += coverage_row_match ( &s_snap, &rows[ i ], &f );
+    TEST_ASSERT_EQUAL_UINT ( 1, hits );
+    coverage_filter_init ( &f );
+    f.has_space = true;
+    f.space = 4;
+    hits = 0;
+    for ( size_t i = 0; i < n; i++ ) hits += coverage_row_match ( &s_snap, &rows[ i ], &f );
+    TEST_ASSERT_EQUAL_UINT ( 1, hits );
+
+    g_free ( rows );
+    coverage_snapshot_clear ( &s_snap );
+}
+
+
 int main ( void )
 {
     UNITY_BEGIN ( );
@@ -434,6 +545,8 @@ int main ( void )
     RUN_TEST ( test_discontinuity );
     RUN_TEST ( test_start_continue_or_reset );
     RUN_TEST ( test_step_origin_flags );
+    RUN_TEST ( test_snapshot_without_units_pc_state );
+    RUN_TEST ( test_row_filter );
 
     return UNITY_END ( );
 }

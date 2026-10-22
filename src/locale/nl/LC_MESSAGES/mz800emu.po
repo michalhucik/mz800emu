@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mz800emu 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-21 07:25+0200\n"
+"POT-Creation-Date: 2026-10-21 18:44+0200\n"
 "PO-Revision-Date: 2026-03-11 22:00+0100\n"
 "Last-Translator: Claude Code\n"
 "Language-Team: Nederlands\n"
@@ -100,7 +100,7 @@ msgstr "Tapebestanden"
 msgid "Select CMT file to open"
 msgstr "Selecteer CMT-bestand om te openen"
 
-#: src/emulator/hw-generic/cmt/cmthack.c:240
+#: src/emulator/hw-generic/cmt/cmthack.c:245
 msgid "Select a MZF File"
 msgstr "Selecteer een MZF-bestand"
 
@@ -529,7 +529,7 @@ msgstr "Audio opnemen (%s) start en stopt de opname."
 #: src/ui-imgui/debugger/sections/dbg_cpu_panel.cpp:2421
 #: src/ui-imgui/dsk/dsk_create_window.cpp:104
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:109
-#: src/ui-imgui/joy/joy_setup_window.cpp:564
+#: src/ui-imgui/joy/joy_setup_window.cpp:567
 #: src/ui-imgui/message/message_window.cpp:90
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:442
 #: src/ui-imgui/snapshot/snapshot_notification.cpp:95
@@ -544,7 +544,7 @@ msgstr "OK"
 #: src/ui-imgui/debugger/sections/dbg_focus_to.cpp:264
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:104
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:111
-#: src/ui-imgui/joy/joy_setup_window.cpp:571
+#: src/ui-imgui/joy/joy_setup_window.cpp:579
 #: src/ui-imgui/memext/memext_load_dialog.cpp:185
 #: src/ui-imgui/memext/memext_map_window.cpp:291
 #: src/ui-imgui/memext/memext_save_dialog.cpp:207
@@ -753,7 +753,7 @@ msgstr "Naam"
 #: src/ui-imgui/debugger/memsearch_window/memsearch_window.cpp:576
 #: src/ui-imgui/debugger/watch/watch_window.cpp:1700
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:132
-#: src/ui-imgui/joy/joy_setup_window.cpp:239
+#: src/ui-imgui/joy/joy_setup_window.cpp:240
 #: src/ui-imgui/memext/memext_map_window.cpp:105
 #: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:153
 msgid "Type"
@@ -1057,7 +1057,7 @@ msgstr "Bladwijzer:"
 
 #: src/ui-imgui/debugger/bookmarks/bm_window.cpp:418
 #: src/ui-imgui/debugger/bookmarks/bm_window.cpp:489
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1644
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1671
 #: src/ui-imgui/debugger/symbols/sym_window.cpp:805
 #: src/ui-imgui/debugger/vars/vars_window.cpp:835
 #: src/ui-imgui/memext/memext_save_dialog.cpp:169
@@ -1410,7 +1410,7 @@ msgid "Offset:"
 msgstr "Offset:"
 
 #: src/ui-imgui/debugger/breakpoints/bpt_edit_panel.cpp:1537
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1641
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1668
 #: src/ui-imgui/debugger/sections/dbg_focus_to.cpp:211
 #: src/ui-imgui/debugger/watch/watch_window.cpp:465
 msgid "Address:"
@@ -3249,7 +3249,7 @@ msgstr ""
 "tabblad)."
 
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:2155
-#: src/ui-imgui/joy/joy_setup_window.cpp:415
+#: src/ui-imgui/joy/joy_setup_window.cpp:416
 #: src/ui-imgui/topmenu/devices/menu_unicard.cpp:284
 msgid "None"
 msgstr "Geen"
@@ -3781,11 +3781,13 @@ msgstr "Verbonden: %s"
 
 #: src/ui-imgui/debugger/fdc_window.cpp:203
 #: src/ui-imgui/debugger/gdg_window_mz800.cpp:285
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:609
 msgid "yes"
 msgstr "ja"
 
 #: src/ui-imgui/debugger/fdc_window.cpp:203
 #: src/ui-imgui/debugger/gdg_window_mz800.cpp:285
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:609
 msgid "no"
 msgstr "nee"
 
@@ -4576,6 +4578,7 @@ msgstr "Activiteitstellers wissen voor alle 256 poorten"
 
 #: src/ui-imgui/debugger/ioview/io_window.cpp:1014
 #: src/ui-imgui/debugger/ioview/io_window.cpp:2002
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:329
 msgid "Capacity:"
 msgstr "Capaciteit:"
 
@@ -4657,7 +4660,7 @@ msgid "Focus to..."
 msgstr "Focus naar..."
 
 #: src/ui-imgui/debugger/ioview/io_window.cpp:1754
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3328
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3368
 msgid "Add to bookmarks"
 msgstr "Aan bladwijzers toevoegen"
 
@@ -5027,6 +5030,7 @@ msgstr "Grootte (hex)###mb_save_size"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_fileio.cpp:473
 #: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1833
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:409
 #: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:307
 msgid "Range:"
 msgstr "Bereik:"
@@ -5182,6 +5186,7 @@ msgstr "Voorbeeld: \"AA BB CC\" of \"DEADBEEF\" - max 64 bytes"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_fill_dialog.cpp:262
 #: src/ui-imgui/debugger/sections/dbg_focus_to.cpp:274
+#: src/ui-imgui/joy/joy_setup_window.cpp:574
 #: src/ui-imgui/memext/memext_map_window.cpp:277
 #: src/ui-imgui/version_check/imgui_version_check.cpp:245
 #: src/ui-imgui/version_check/imgui_version_check.cpp:250
@@ -5311,8 +5316,8 @@ msgstr "Opnieuw uitvoeren  (%d niveaus)\tCtrl+Y"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:231
 #: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:276
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1683
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1687
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1710
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1714
 msgid "Target:"
 msgstr "Doel:"
 
@@ -6951,14 +6956,18 @@ msgid "Show branch arrows"
 msgstr "Branch-pijlen tonen"
 
 #: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:652
+msgid "Show code coverage"
+msgstr "Codedekking tonen"
+
+#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:661
 msgid "Screen"
 msgstr "Scherm"
 
-#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:667
+#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:676
 msgid "Auto refresh on edit"
 msgstr "Auto-refresh bij bewerken"
 
-#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:678
+#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:687
 msgid "Auto refresh at every CPU step"
 msgstr "Auto-refresh bij elke CPU-stap"
 
@@ -7381,17 +7390,21 @@ msgstr "Key-up gap duur in gdgclk ticks."
 msgid "Tick stamp of current phase start."
 msgstr "Tick-stempel van start huidige fase."
 
-#: src/ui-imgui/debugger/profiler/profiler_window.cpp:107
+#: src/ui-imgui/debugger/profiler/profiler_window.cpp:109
 msgid "CPU Profiler###profiler_window"
 msgstr "CPU Profiler###profiler_window"
 
-#: src/ui-imgui/debugger/profiler/profiler_window.cpp:121
+#: src/ui-imgui/debugger/profiler/profiler_window.cpp:124
 msgid "Functions###profiler_tab_func"
 msgstr "Functies###profiler_tab_func"
 
-#: src/ui-imgui/debugger/profiler/profiler_window.cpp:125
+#: src/ui-imgui/debugger/profiler/profiler_window.cpp:128
 msgid "Per PC###profiler_tab_pc"
 msgstr "Per PC###profiler_tab_pc"
+
+#: src/ui-imgui/debugger/profiler/profiler_window.cpp:132
+msgid "Coverage###profiler_tab_cov"
+msgstr "Dekking###profiler_tab_cov"
 
 #: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1159
 #: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1314
@@ -7768,8 +7781,8 @@ msgid "QDisk State"
 msgstr "QDisk State"
 
 #: src/ui-imgui/debugger/qdisk_window.cpp:154
-#: src/ui-imgui/joy/joy_setup_window.cpp:238
-#: src/ui-imgui/joy/joy_setup_window.cpp:284
+#: src/ui-imgui/joy/joy_setup_window.cpp:239
+#: src/ui-imgui/joy/joy_setup_window.cpp:285
 msgid "Device"
 msgstr "Apparaat"
 
@@ -8247,6 +8260,370 @@ msgstr ""
 "Tip: RET pc toont waar divergentie plaatsvond. Open in disasm om "
 "aanroeppatroon te onderzoeken."
 
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:123
+#: src/ui-imgui/debugger/sections/dbg_coverage_data.cpp:98
+#: src/ui-imgui/debugger/sections/dbg_coverage_data.cpp:251
+msgid "The emulator did not respond"
+msgstr "De emulator reageerde niet"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:269
+msgid "Export code coverage (JSON or CSV)"
+msgstr "Codedekking exporteren (JSON of CSV)"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:322
+msgid "Level:"
+msgstr "Niveau:"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:335
+msgid ""
+"Number of code versions the detail level can hold (32 bytes each).\n"
+"When the table is full, new versions are dropped and the data\n"
+"are reported as incomplete."
+msgstr ""
+"Aantal codeversies dat het niveau detail kan bevatten (elk 32 bytes).\n"
+"Als de tabel vol is, worden nieuwe versies weggegooid en worden de gegevens\n"
+"als onvolledig gemeld."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:343
+msgid "Stop###cov_startstop"
+msgstr "Stop###cov_startstop"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:343
+msgid "Start###cov_startstop"
+msgstr "Start###cov_startstop"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:347
+msgid ""
+"Start continues into the existing data if the level and capacity\n"
+"are the same, otherwise it starts with empty data.\n"
+"Stop keeps the data."
+msgstr ""
+"Start gaat verder in de bestaande gegevens als niveau en capaciteit\n"
+"gelijk zijn, anders begint het met lege gegevens.\n"
+"Stop behoudt de gegevens."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:353
+msgid "Reset###cov_reset"
+msgstr "Reset###cov_reset"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:357
+msgid "Clears the data; collecting continues if it is running."
+msgstr "Wist de gegevens; het verzamelen gaat door als het loopt."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:360
+msgid "Mark###cov_mark"
+msgstr "Markering###cov_mark"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:364
+msgid ""
+"Starts a new epoch. \"New since mark\" then lists only code\n"
+"executed for the first time after this point,\n"
+"for example what a key press adds."
+msgstr ""
+"Start een nieuw tijdvak. \"Nieuw sinds markering\" toont dan alleen code\n"
+"die na dit moment voor het eerst is uitgevoerd,\n"
+"bijvoorbeeld wat een toetsaanslag toevoegt."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:369
+msgid "Export...###cov_export"
+msgstr "Exporteren...###cov_export"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:378
+msgid "Code coverage"
+msgstr "Codedekking"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:380
+msgid ""
+"Records which instructions ran and which way the conditional ones went\n"
+"(JR, JP, CALL and RET with a condition, DJNZ, LDIR, CPIR, INIR, OTIR\n"
+"and the decrementing forms)."
+msgstr ""
+"Legt vast welke instructies zijn uitgevoerd en welke kant de voorwaardelijke "
+"op gingen\n"
+"(JR, JP, CALL en RET met voorwaarde, DJNZ, LDIR, CPIR, INIR, OTIR\n"
+"en de aftellende varianten)."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:383
+msgid "Taken = the condition was met (jump, call, return, repeat)."
+msgstr ""
+"Taken = aan de voorwaarde was voldaan (sprong, aanroep, terugkeer, "
+"herhaling)."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:384
+msgid "branch: by logical address, memory banks are not told apart."
+msgstr "branch: per logisch adres, geheugenbanken worden niet onderscheiden."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:385
+msgid ""
+"detail: also by physical memory cell and code version (banks,\n"
+"self-modifying code), with counters; slows the emulation more."
+msgstr ""
+"detail: ook per fysieke geheugencel en codeversie (banken,\n"
+"zelfmodificerende code), met tellers; vertraagt de emulatie meer."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:387
+msgid ""
+"Marks in the Disassembly windows show the same data\n"
+"(debugger window: Settings -> Disassembled -> Show code coverage)."
+msgstr ""
+"De markeringen in de Disassembly-vensters tonen dezelfde gegevens\n"
+"(debuggervenster: Instellingen -> Gedisassembleerd -> Codedekking tonen)."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:397
+msgid "Show:"
+msgstr "Tonen:"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:400
+msgid "Partial branches"
+msgstr "Onvolledige branches"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:401
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:642
+msgid "Both branches"
+msgstr "Beide takken"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:402
+msgid "All conditional"
+msgstr "Alle voorwaardelijke"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:403
+msgid "New since mark"
+msgstr "Nieuw sinds markering"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:404
+msgid "All"
+msgstr "Alles"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:430
+#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:342
+msgid "Collecting - the table fills while the emulation runs."
+msgstr "Bezig met verzamelen - de tabel vult zich terwijl de emulatie draait."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:431
+#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:343
+msgid "No data. Press Start and let the emulation run."
+msgstr "Geen gegevens. Druk op Start en laat de emulatie draaien."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:435
+msgid "No rows match the filter."
+msgstr "Geen rijen komen overeen met het filter."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:466
+#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:369
+msgid ""
+"Address of the instruction (logical PC).\n"
+"Left click: open in Disassembly #1."
+msgstr ""
+"Adres van de instructie (logische PC).\n"
+"Linksklik: openen in Disassembly #1."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:467
+#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:370
+msgid "Nearest symbol at or below the address, + offset."
+msgstr "Dichtstbijzijnde symbool op of onder het adres, + offset."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:468
+msgid ""
+"none = not a conditional instruction; both, taken_only, not_taken_only\n"
+"= which results of the condition were seen; unobserved = none yet."
+msgstr ""
+"none = geen voorwaardelijke instructie; both, taken_only, not_taken_only\n"
+"= welke uitkomsten van de voorwaarde zijn gezien; unobserved = nog geen."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:470
+msgid "How many times this code version was executed."
+msgstr "Hoe vaak deze codeversie is uitgevoerd."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:471
+msgid "How many times the condition was met (jump, call, return, repeat)."
+msgstr ""
+"Hoe vaak aan de voorwaarde is voldaan (sprong, aanroep, terugkeer, "
+"herhaling)."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:472
+msgid "How many times the condition was not met."
+msgstr "Hoe vaak niet aan de voorwaarde is voldaan."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:473
+msgid ""
+"Physical memory cell of the first byte: ram, rom, vram, pcg, memext\n"
+"and the offset; bus = no physical cell (graphic VRAM, mapped ports)."
+msgstr ""
+"Fysieke geheugencel van de eerste byte: ram, rom, vram, pcg, memext\n"
+"en de offset; bus = geen fysieke cel (grafisch VRAM, gemapte poorten)."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:475
+msgid "Bytes that tell code versions apart (prefixes and opcode)."
+msgstr "Bytes die codeversies onderscheiden (prefixen en opcode)."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:476
+msgid "Epoch of the first execution (Mark starts a new epoch)."
+msgstr "Tijdvak van de eerste uitvoering (Markering start een nieuw tijdvak)."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:477
+msgid ""
+"int = first instruction of an interrupt handler, smc = the operand changed,\n"
+"cmt = the CMT hack stepped in, halt = HALT, fallback = a byte was read\n"
+"from memory instead of the CPU fetch, saturated = a counter overflowed,\n"
+"bus = no physical cell, prefixes = a step of 64 prefixes only,\n"
+"long = key longer than 4 bytes (shortened)."
+msgstr ""
+"int = eerste instructie van een interruptroutine, smc = de operand "
+"veranderde,\n"
+"cmt = de CMT-hack greep in, halt = HALT, fallback = een byte werd\n"
+"uit het geheugen gelezen in plaats van uit de CPU-fetch, saturated = een "
+"teller liep over,\n"
+"bus = geen fysieke cel, prefixes = een stap van alleen 64 prefixen,\n"
+"long = sleutel langer dan 4 bytes (ingekort)."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:511
+msgid "Set Breakpoint###cov_bp"
+msgstr "Breakpoint instellen###cov_bp"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:515
+msgid "Show in Disassembly #2###cov_d2"
+msgstr "Tonen in Disassembly #2###cov_d2"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:516
+msgid "Show in Disassembly #3###cov_d3"
+msgstr "Tonen in Disassembly #3###cov_d3"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:517
+msgid "Show in Disassembly #4###cov_d4"
+msgstr "Tonen in Disassembly #4###cov_d4"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:518
+msgid "Show in Disassembly #5###cov_d5"
+msgstr "Tonen in Disassembly #5###cov_d5"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:573
+#: src/ui-imgui/debugger/sections/dbg_profiler.cpp:1146
+#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:463
+msgid "● RUNNING"
+msgstr "● DRAAIT"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:577
+#: src/ui-imgui/debugger/sections/dbg_profiler.cpp:1150
+#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:467
+msgid "○ STOPPED"
+msgstr "○ GESTOPT"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:587
+#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:472
+#, c-format
+msgid "Instructions: %llu"
+msgstr "Instructies: %llu"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:591
+#, c-format
+msgid "Branches: %u, both %u, taken only %u, not taken only %u"
+msgstr "Branches: %u, beide %u, alleen genomen %u, alleen niet genomen %u"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:597
+msgid "Complete"
+msgstr "Volledig"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:600
+msgid "Incomplete"
+msgstr "Onvolledig"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:603
+#, c-format
+msgid ""
+"Units: %u of %u\n"
+"Dropped steps (table full): %llu\n"
+"Bytes read from memory instead of the CPU fetch: %llu\n"
+"Counter overflow: %s\n"
+"Discontinuities (reset, snapshot load, replay seek): %u\n"
+"Host edits of PC or F: %u"
+msgstr ""
+"Eenheden: %u van %u\n"
+"Weggegooide stappen (tabel vol): %llu\n"
+"Uit het geheugen in plaats van de CPU-fetch gelezen bytes: %llu\n"
+"Telleroverloop: %s\n"
+"Onderbrekingen (reset, snapshot laden, sprong in afspelen): %u\n"
+"Wijzigingen van PC of F door de host: %u"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:615
+#, c-format
+msgid "Epoch: %u"
+msgstr "Tijdvak: %u"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:619
+#, c-format
+msgid "Rows: %u"
+msgstr "Rijen: %u"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:641
+msgid "Executed"
+msgstr "Uitgevoerd"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:643
+msgid "Taken only (condition always met)"
+msgstr "Alleen genomen (voorwaarde altijd voldaan)"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:644
+msgid "Not taken only (condition never met)"
+msgstr "Alleen niet genomen (voorwaarde nooit voldaan)"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:645
+msgid "Condition not observed"
+msgstr "Voorwaarde niet waargenomen"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:646
+msgid "Not executed"
+msgstr "Niet uitgevoerd"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:655
+msgid "Coverage"
+msgstr "Dekking"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:664
+msgid "  First instruction of an interrupt handler"
+msgstr "  Eerste instructie van een interruptroutine"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:667
+#, c-format
+msgid "  First executed in epoch %u"
+msgstr "  Voor het eerst uitgevoerd in tijdvak %u"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:675
+#, c-format
+msgid "  Code versions at this address: %u"
+msgstr "  Codeversies op dit adres: %u"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:683
+#, c-format
+msgid "  %s %06Xh [%s]: executed %u, taken %u, not taken %u"
+msgstr "  %s %06Xh [%s]: uitgevoerd %u, genomen %u, niet genomen %u"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:688
+#, c-format
+msgid "  %s %06Xh [%s]: executed %u"
+msgstr "  %s %06Xh [%s]: uitgevoerd %u"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:699
+#, c-format
+msgid "  ... and %u more (see CPU Profiler -> Coverage)"
+msgstr "  ... en nog %u (zie CPU Profiler -> Dekking)"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:731
+msgid "Coverage error###cov_error"
+msgstr "Dekkingsfout###cov_error"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:735
+msgid "OK###cov_error_ok"
+msgstr "OK###cov_error_ok"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage_data.cpp:263
+msgid "No coverage data"
+msgstr "Geen dekkingsgegevens"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage_data.cpp:269
+#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:275
+msgid "Export failed"
+msgstr "Exporteren mislukt"
+
 #: src/ui-imgui/debugger/sections/dbg_cpu_panel.cpp:1339
 #, c-format
 msgid ""
@@ -8381,206 +8758,206 @@ msgstr ""
 msgid "Change the bank mapping or edit VEC so it points to RAM."
 msgstr "Wijzig bank-mapping of bewerk VEC zodat het naar RAM wijst."
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1443
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1470
 msgid "History of already executed instructions"
 msgstr "Geschiedenis van reeds uitgevoerde instructies"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1550
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1557
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1577
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1584
 msgid "T-states:"
 msgstr "T-states:"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1553
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1580
 msgid "taken/not taken"
 msgstr "genomen/niet genomen"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1568
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1595
 msgid "Flags:"
 msgstr "Vlaggen:"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1639
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1666
 msgid "Symbol:"
 msgstr "Symbool:"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1648
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1675
 msgid "Module:"
 msgstr "Module:"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1703
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1707
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1730
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1734
 msgid "Mem:"
 msgstr "Geh:"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1741
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1746
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1768
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1773
 msgid "Focus to"
 msgstr "Focus naar"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1816
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1843
 msgid "enabled"
 msgstr "ingeschakeld"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1816
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1843
 msgid "disabled"
 msgstr "uitgeschakeld"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1835
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1855
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1862
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1882
 msgid "addr"
 msgstr "adr"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1838
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1865
 msgid "range"
 msgstr "bereik"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1842
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1869
 msgid "mask"
 msgstr "masker"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1850
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1877
 msgid "(no address - condition-based)"
 msgstr "(geen adres - conditie-gebaseerd)"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1862
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1889
 msgid "cond"
 msgstr "cond"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1868
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1895
 msgid "hits"
 msgstr "hits"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1930
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1957
 #: src/ui-imgui/topmenu/menu_debugger.cpp:112
 #: src/ui-imgui/topmenu/menu_debugger.cpp:324
 msgid "Breakpoints"
 msgstr "Breekpunten"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1944
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1978
 msgid "Double-click a row or start typing to open the inline assembler."
 msgstr "Dubbelklik op rij of begin met typen om inline assembler te openen."
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1945
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1979
 msgid "Right-click for context menu."
 msgstr "Rechterklik voor contextmenu."
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:2507
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:2541
 msgid "Address or symbol"
 msgstr "Adres of symbool"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:2522
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:2556
 msgid "Follow PC"
 msgstr "PC volgen"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:2528
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:2562
 msgid "T-states"
 msgstr "T-states"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:2986
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3026
 msgid "Set Breakpoint"
 msgstr "Breakpoint instellen"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:2999
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3039
 msgid "Remove Breakpoint"
 msgstr "Breakpoint verwijderen"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3006
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3046
 msgid "Disable Breakpoint"
 msgstr "Breakpoint uitschakelen"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3011
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3051
 msgid "Enable Breakpoint"
 msgstr "Breakpoint inschakelen"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3016
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3056
 msgid "Edit Breakpoint..."
 msgstr "Breakpoint bewerken..."
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3032
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3072
 #, c-format
 msgid "Show %d Breakpoints at 0x%04X in BP List"
 msgstr "%d breakpoints op 0x%04X tonen in BP-lijst"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3041
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3081
 msgid "Quick action on..."
 msgstr "Snelle actie op..."
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3058
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3098
 msgid "Disable"
 msgstr "Uitschakelen"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3063
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3103
 msgid "Enable"
 msgstr "Inschakelen"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3069
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3109
 msgid "Edit..."
 msgstr "Bewerken..."
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3074
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3114
 msgid "Remove"
 msgstr "Verwijderen"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3088
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3128
 msgid "Disable all at this address"
 msgstr "Alle op dit adres uitschakelen"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3097
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3137
 msgid "Enable all at this address"
 msgstr "Alle op dit adres inschakelen"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3106
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3146
 msgid "Add another Execution Breakpoint"
 msgstr "Nog een Execution Breakpoint toevoegen"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3117
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3157
 msgid "Set as PC"
 msgstr "Als PC instellen"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3149
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3189
 msgid "Focus To..."
 msgstr "Focus naar..."
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3161
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3201
 msgid "Focus to PC"
 msgstr "Focus naar PC"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3177
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3217
 msgid "Focus to register"
 msgstr "Focus naar register"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3283
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3323
 msgid "Show in"
 msgstr "Tonen in"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3291
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3331
 msgid "Disassembly #1"
 msgstr "Disassembly #1"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3299
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3339
 #: src/ui-imgui/topmenu/menu_debugger.cpp:177
 #: src/ui-imgui/topmenu/menu_debugger.cpp:476
 msgid "Disassembly #2"
 msgstr "Disassembly #2"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3300
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3340
 #: src/ui-imgui/topmenu/menu_debugger.cpp:182
 #: src/ui-imgui/topmenu/menu_debugger.cpp:481
 msgid "Disassembly #3"
 msgstr "Disassembly #3"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3301
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3341
 #: src/ui-imgui/topmenu/menu_debugger.cpp:187
 #: src/ui-imgui/topmenu/menu_debugger.cpp:486
 msgid "Disassembly #4"
 msgstr "Disassembly #4"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3302
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3342
 #: src/ui-imgui/topmenu/menu_debugger.cpp:192
 #: src/ui-imgui/topmenu/menu_debugger.cpp:491
 msgid "Disassembly #5"
 msgstr "Disassembly #5"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3346
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3386
 msgid "Edit row"
 msgstr "Rij bewerken"
 
@@ -8822,16 +9199,6 @@ msgstr "Tonen in Disassembly #4###pf_d4"
 msgid "Show in Disassembly #5###pf_d5"
 msgstr "Tonen in Disassembly #5###pf_d5"
 
-#: src/ui-imgui/debugger/sections/dbg_profiler.cpp:1146
-#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:463
-msgid "● RUNNING"
-msgstr "● DRAAIT"
-
-#: src/ui-imgui/debugger/sections/dbg_profiler.cpp:1150
-#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:467
-msgid "○ STOPPED"
-msgstr "○ GESTOPT"
-
 #: src/ui-imgui/debugger/sections/dbg_profiler.cpp:1160
 msgid ""
 "Total profiled T-states since last Reset.\n"
@@ -8940,10 +9307,6 @@ msgstr "OK###pf_export_error_ok"
 msgid "Export per-PC profile as CSV"
 msgstr "Profiel per PC als CSV exporteren"
 
-#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:275
-msgid "Export failed"
-msgstr "Exporteren mislukt"
-
 #: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:293
 msgid "Start clears the previous data."
 msgstr "Start wist de vorige gegevens."
@@ -8986,26 +9349,6 @@ msgstr ""
 "Alleen de eerste 1000 rijen van de gekozen sorteerkolom worden getoond;\n"
 "Exporteer CSV schrijft alle adressen."
 
-#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:342
-msgid "Collecting - the table fills while the emulation runs."
-msgstr "Bezig met verzamelen - de tabel vult zich terwijl de emulatie draait."
-
-#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:343
-msgid "No data. Press Start and let the emulation run."
-msgstr "Geen gegevens. Druk op Start en laat de emulatie draaien."
-
-#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:369
-msgid ""
-"Address of the instruction (logical PC).\n"
-"Left click: open in Disassembly #1."
-msgstr ""
-"Adres van de instructie (logische PC).\n"
-"Linksklik: openen in Disassembly #1."
-
-#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:370
-msgid "Nearest symbol at or below the address, + offset."
-msgstr "Dichtstbijzijnde symbool op of onder het adres, + offset."
-
 #: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:371
 msgid "How many times the instruction was executed."
 msgstr "Hoe vaak de instructie is uitgevoerd."
@@ -9034,11 +9377,6 @@ msgstr "Gemiddelde T-states per uitvoering = T-states / Aantal."
 msgid "Wait states inserted by the hardware (VRAM access, PSG write)."
 msgstr ""
 "Door de hardware ingevoegde wachttoestanden (VRAM-toegang, PSG-schrijven)."
-
-#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:472
-#, c-format
-msgid "Instructions: %llu"
-msgstr "Instructies: %llu"
 
 #: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:477
 #, c-format
@@ -10596,93 +10934,93 @@ msgstr "Afwijking:"
 msgid "Measuring Update Interval (s):"
 msgstr "Meetinterval bijwerken (s):"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:222
-#: src/ui-imgui/joy/joy_setup_window.cpp:230
+#: src/ui-imgui/joy/joy_setup_window.cpp:223
+#: src/ui-imgui/joy/joy_setup_window.cpp:231
 msgid "Trigger"
 msgstr "Trigger"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:239
+#: src/ui-imgui/joy/joy_setup_window.cpp:240
 msgid "Gamepad (standard mapping)"
 msgstr "Gamepad (standaard mapping)"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:243
+#: src/ui-imgui/joy/joy_setup_window.cpp:244
 msgid "Left Stick"
 msgstr "Linker stick"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:243
+#: src/ui-imgui/joy/joy_setup_window.cpp:244
 msgid "D-Pad"
 msgstr "D-Pad"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:246
-#: src/ui-imgui/joy/joy_setup_window.cpp:370
+#: src/ui-imgui/joy/joy_setup_window.cpp:247
+#: src/ui-imgui/joy/joy_setup_window.cpp:371
 msgid "Directions"
 msgstr "Richtingen"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:256
-#: src/ui-imgui/joy/joy_setup_window.cpp:319
+#: src/ui-imgui/joy/joy_setup_window.cpp:257
+#: src/ui-imgui/joy/joy_setup_window.cpp:320
 msgid "Deadzone"
 msgstr "Dode zone"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:265
-#: src/ui-imgui/joy/joy_setup_window.cpp:326
+#: src/ui-imgui/joy/joy_setup_window.cpp:266
+#: src/ui-imgui/joy/joy_setup_window.cpp:327
 msgid "Trigger 1"
 msgstr "Trigger 1"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:273
-#: src/ui-imgui/joy/joy_setup_window.cpp:333
+#: src/ui-imgui/joy/joy_setup_window.cpp:274
+#: src/ui-imgui/joy/joy_setup_window.cpp:334
 msgid "Trigger 2"
 msgstr "Trigger 2"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:286
+#: src/ui-imgui/joy/joy_setup_window.cpp:287
 msgid "Axes"
 msgstr "Assen"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:287
+#: src/ui-imgui/joy/joy_setup_window.cpp:288
 msgid "Buttons"
 msgstr "Knoppen"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:292
+#: src/ui-imgui/joy/joy_setup_window.cpp:293
 msgid "X Axis"
 msgstr "X-as"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:299
-#: src/ui-imgui/joy/joy_setup_window.cpp:312
+#: src/ui-imgui/joy/joy_setup_window.cpp:300
+#: src/ui-imgui/joy/joy_setup_window.cpp:313
 msgid "Invert"
 msgstr "Inverteren"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:305
+#: src/ui-imgui/joy/joy_setup_window.cpp:306
 msgid "Y Axis"
 msgstr "Y-as"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:357
+#: src/ui-imgui/joy/joy_setup_window.cpp:358
 msgid "Live Status"
 msgstr "Live status"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:399
+#: src/ui-imgui/joy/joy_setup_window.cpp:400
 msgid "Setup preferences for Joystick"
 msgstr "Voorkeuren instellen voor joystick"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:416
+#: src/ui-imgui/joy/joy_setup_window.cpp:417
 msgid "Emulated on numeric keypad"
 msgstr "Geemuleerd op numeriek toetsenbord"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:501
+#: src/ui-imgui/joy/joy_setup_window.cpp:502
 msgid "Joystick Setup"
 msgstr "Joystick-instelling"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:506
+#: src/ui-imgui/joy/joy_setup_window.cpp:507
 msgid "Initialize Joystick Subsystem"
 msgstr "Joystick-subsysteem initialiseren"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:516
+#: src/ui-imgui/joy/joy_setup_window.cpp:517
 msgid "need only for real gaming devices"
 msgstr "alleen nodig voor echte gaming-apparaten"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:520
+#: src/ui-imgui/joy/joy_setup_window.cpp:521
 msgid "Rescan Devices"
 msgstr "Apparaten opnieuw scannen"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:539
+#: src/ui-imgui/joy/joy_setup_window.cpp:540
 msgid "Joystick"
 msgstr "Joystick"
 

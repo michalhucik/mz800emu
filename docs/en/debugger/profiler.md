@@ -369,8 +369,8 @@ its own INI.
 
 ## 10. Per PC tab (per-PC profiler)
 
-The CPU Profiler window has two tabs: **Functions** (everything
-described above) and **Per PC**. The Per PC tab counts every executed
+The CPU Profiler window has three tabs: **Functions** (everything
+described above), **Per PC** and **Coverage** (section 11). The Per PC tab counts every executed
 instruction by its address, regardless of CALL and RET. It therefore
 also sees code that is jumped to, interrupt handlers and loops in the
 main program - what the Functions tab adds to one whole function is
@@ -420,3 +420,14 @@ Limits:
 The same data is available over MCP (`emu_profiler_pc_*`, see
 mcp-server/tools-overview.md), the executed addresses also as a bitmap
 for code coverage (`emu_profiler_pc_bitmap`).
+
+## 11. Coverage tab (code coverage)
+
+The **Coverage** tab collects code coverage: which instructions ran and
+which way the conditional instructions went (both branches, taken only,
+not taken only), at the `branch` level by address or at the `detail`
+level by code version with counters. It controls collecting (Start,
+Stop, Reset, Mark, Export...), filters the rows (partial branches, both
+branches, all conditional, new since mark) and opens a row in the
+Disassembly windows, which show the same data as colored marks. Full
+description: [code-coverage.md](code-coverage.md).

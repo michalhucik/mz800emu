@@ -250,6 +250,17 @@ mz_add_test(ramlog_window_queue
     LABELS   "emu;debugger;ramlog"
 )
 
+# Záložka Coverage okna CPU Profiler a značky pokrytí v Disassembly: data
+# jdou přes CMDRQ frontu (DBGAPI_CMD_COVERAGE, helper dbg_ui_coverage),
+# kopie v UI vlákně (dbg_coverage_data.cpp) s omezenou četností obnovy.
+mz_add_test(coverage_window_queue
+    TYPE     EMU
+    SOURCES  test_coverage_window_queue.c
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/debugger/dbgapi_helpers.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/debugger/sections/dbg_coverage_data.cpp
+    LABELS   "emu;debugger;coverage"
+)
+
 # Okno debuggeru (Ctrl+R) a menu Emulation: vynucený refresh obrazovky jde
 # přes CMDRQ frontu (DBGAPI_CMD_SCREEN_REFRESH, UI helper v dbgapi_helpers.cpp),
 # ne přímo z UI vlákna.
@@ -402,11 +413,14 @@ mz_add_test(coverage_decode
 )
 
 # Pokrytí kódu, jádro (coverage.h): úrovně branch a detail nad syntetickými
-# kroky - stavy větví, verze kódu, kapacita, nečinný HALT, epochy.
+# kroky - stavy větví, verze kódu, kapacita, nečinný HALT, epochy; snímek
+# a filtr řádků (coverage_export.h) pro MCP a GUI.
 mz_add_test(coverage
     TYPE     STANDALONE
     SOURCES  test_coverage.c
              ${CMAKE_SOURCE_DIR}/src/emulator/debugger/coverage/coverage_decode.c
+             ${CMAKE_SOURCE_DIR}/src/emulator/debugger/coverage/coverage_export.c
+    LIBS     mz::glib mz::json_glib
     LABELS   "standalone;debugger"
 )
 

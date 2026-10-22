@@ -645,6 +645,15 @@ static void dbg_menu_settings(void)
                 g_debugger.disasm_show_branch_arrows = show_arrows ? 0 : 1;
             };
 
+            /* Značky pokrytí kódu (proužek v ICONS gutteru, sekce
+             * v tooltipu řádku). Globální jako branch arrows; bez dat
+             * pokrytí se nic nekreslí. */
+            bool show_coverage = (g_debugger.disasm_show_coverage != 0);
+            if (ImGui::MenuItem(_L("Show code coverage"), NULL, show_coverage))
+            {
+                g_debugger.disasm_show_coverage = show_coverage ? 0 : 1;
+            };
+
             ImGui::EndMenu();
         };
 

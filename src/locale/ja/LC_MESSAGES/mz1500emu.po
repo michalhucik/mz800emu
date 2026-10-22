@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mz800emu 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-21 07:25+0200\n"
+"POT-Creation-Date: 2026-10-21 18:44+0200\n"
 "PO-Revision-Date: 2026-03-11 21:00+0100\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -101,7 +101,7 @@ msgstr "テープファイル"
 msgid "Select CMT file to open"
 msgstr "開くCMTファイルを選択"
 
-#: src/emulator/hw-generic/cmt/cmthack.c:240
+#: src/emulator/hw-generic/cmt/cmthack.c:245
 msgid "Select a MZF File"
 msgstr "MZFファイルを選択"
 
@@ -494,7 +494,7 @@ msgstr "オーディオをキャプチャ (%s) でキャプチャを開始/停�
 #: src/ui-imgui/debugger/sections/dbg_cpu_panel.cpp:2421
 #: src/ui-imgui/dsk/dsk_create_window.cpp:104
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:109
-#: src/ui-imgui/joy/joy_setup_window.cpp:564
+#: src/ui-imgui/joy/joy_setup_window.cpp:567
 #: src/ui-imgui/message/message_window.cpp:90
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:442
 #: src/ui-imgui/snapshot/snapshot_notification.cpp:95
@@ -509,7 +509,7 @@ msgstr "OK"
 #: src/ui-imgui/debugger/sections/dbg_focus_to.cpp:264
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:104
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:111
-#: src/ui-imgui/joy/joy_setup_window.cpp:571
+#: src/ui-imgui/joy/joy_setup_window.cpp:579
 #: src/ui-imgui/memext/memext_load_dialog.cpp:185
 #: src/ui-imgui/memext/memext_map_window.cpp:291
 #: src/ui-imgui/memext/memext_save_dialog.cpp:207
@@ -716,7 +716,7 @@ msgstr "名前"
 #: src/ui-imgui/debugger/memsearch_window/memsearch_window.cpp:576
 #: src/ui-imgui/debugger/watch/watch_window.cpp:1700
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:132
-#: src/ui-imgui/joy/joy_setup_window.cpp:239
+#: src/ui-imgui/joy/joy_setup_window.cpp:240
 #: src/ui-imgui/memext/memext_map_window.cpp:105
 #: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:153
 msgid "Type"
@@ -1018,7 +1018,7 @@ msgstr "ブックマーク:"
 
 #: src/ui-imgui/debugger/bookmarks/bm_window.cpp:418
 #: src/ui-imgui/debugger/bookmarks/bm_window.cpp:489
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1644
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1671
 #: src/ui-imgui/debugger/symbols/sym_window.cpp:805
 #: src/ui-imgui/debugger/vars/vars_window.cpp:835
 #: src/ui-imgui/memext/memext_save_dialog.cpp:169
@@ -1367,7 +1367,7 @@ msgid "Offset:"
 msgstr "オフセット:"
 
 #: src/ui-imgui/debugger/breakpoints/bpt_edit_panel.cpp:1537
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1641
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1668
 #: src/ui-imgui/debugger/sections/dbg_focus_to.cpp:211
 #: src/ui-imgui/debugger/watch/watch_window.cpp:465
 msgid "Address:"
@@ -3183,7 +3183,7 @@ msgid "Tint Log table rows by event category color (shared with Strip tab)."
 msgstr "イベントカテゴリ色でLogテーブル行を着色 (Stripタブと共有)。"
 
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:2155
-#: src/ui-imgui/joy/joy_setup_window.cpp:415
+#: src/ui-imgui/joy/joy_setup_window.cpp:416
 #: src/ui-imgui/topmenu/devices/menu_unicard.cpp:284
 msgid "None"
 msgstr "なし"
@@ -3712,11 +3712,13 @@ msgstr "接続済み: %s"
 
 #: src/ui-imgui/debugger/fdc_window.cpp:203
 #: src/ui-imgui/debugger/gdg_window_mz800.cpp:285
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:609
 msgid "yes"
 msgstr "はい"
 
 #: src/ui-imgui/debugger/fdc_window.cpp:203
 #: src/ui-imgui/debugger/gdg_window_mz800.cpp:285
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:609
 msgid "no"
 msgstr "いいえ"
 
@@ -4505,6 +4507,7 @@ msgstr "全256ポートのアクティビティカウンタをクリア"
 
 #: src/ui-imgui/debugger/ioview/io_window.cpp:1014
 #: src/ui-imgui/debugger/ioview/io_window.cpp:2002
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:329
 msgid "Capacity:"
 msgstr "容量:"
 
@@ -4584,7 +4587,7 @@ msgid "Focus to..."
 msgstr "フォーカス先..."
 
 #: src/ui-imgui/debugger/ioview/io_window.cpp:1754
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3328
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3368
 msgid "Add to bookmarks"
 msgstr "ブックマークに追加"
 
@@ -4953,6 +4956,7 @@ msgstr "サイズ (hex)###mb_save_size"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_fileio.cpp:473
 #: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1833
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:409
 #: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:307
 msgid "Range:"
 msgstr "範囲:"
@@ -5107,6 +5111,7 @@ msgstr "例: \"AA BB CC\" または \"DEADBEEF\" - 最大64バイト"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_fill_dialog.cpp:262
 #: src/ui-imgui/debugger/sections/dbg_focus_to.cpp:274
+#: src/ui-imgui/joy/joy_setup_window.cpp:574
 #: src/ui-imgui/memext/memext_map_window.cpp:277
 #: src/ui-imgui/version_check/imgui_version_check.cpp:245
 #: src/ui-imgui/version_check/imgui_version_check.cpp:250
@@ -5232,8 +5237,8 @@ msgstr "やり直し  (%d レベル)\tCtrl+Y"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:231
 #: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:276
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1683
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1687
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1710
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1714
 msgid "Target:"
 msgstr "ターゲット:"
 
@@ -6869,14 +6874,18 @@ msgid "Show branch arrows"
 msgstr "分岐矢印を表示"
 
 #: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:652
+msgid "Show code coverage"
+msgstr "コードカバレッジを表示"
+
+#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:661
 msgid "Screen"
 msgstr "スクリーン"
 
-#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:667
+#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:676
 msgid "Auto refresh on edit"
 msgstr "編集時に自動更新"
 
-#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:678
+#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:687
 msgid "Auto refresh at every CPU step"
 msgstr "毎CPUステップで自動更新"
 
@@ -7294,17 +7303,21 @@ msgstr "key-up ギャップ持続時間 (gdgclk ティック)."
 msgid "Tick stamp of current phase start."
 msgstr "現在のフェーズ開始時のティックスタンプ."
 
-#: src/ui-imgui/debugger/profiler/profiler_window.cpp:107
+#: src/ui-imgui/debugger/profiler/profiler_window.cpp:109
 msgid "CPU Profiler###profiler_window"
 msgstr "CPU プロファイラ###profiler_window"
 
-#: src/ui-imgui/debugger/profiler/profiler_window.cpp:121
+#: src/ui-imgui/debugger/profiler/profiler_window.cpp:124
 msgid "Functions###profiler_tab_func"
 msgstr "関数###profiler_tab_func"
 
-#: src/ui-imgui/debugger/profiler/profiler_window.cpp:125
+#: src/ui-imgui/debugger/profiler/profiler_window.cpp:128
 msgid "Per PC###profiler_tab_pc"
 msgstr "PC別###profiler_tab_pc"
+
+#: src/ui-imgui/debugger/profiler/profiler_window.cpp:132
+msgid "Coverage###profiler_tab_cov"
+msgstr "カバレッジ###profiler_tab_cov"
 
 #: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1159
 #: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1314
@@ -7677,8 +7690,8 @@ msgid "QDisk State"
 msgstr "QDisk State"
 
 #: src/ui-imgui/debugger/qdisk_window.cpp:154
-#: src/ui-imgui/joy/joy_setup_window.cpp:238
-#: src/ui-imgui/joy/joy_setup_window.cpp:284
+#: src/ui-imgui/joy/joy_setup_window.cpp:239
+#: src/ui-imgui/joy/joy_setup_window.cpp:285
 msgid "Device"
 msgstr "デバイス"
 
@@ -8152,6 +8165,364 @@ msgstr ""
 "ヒント: RET pcはdivergenceが発生した場所を示します。disasmで開いて呼び出しパ"
 "ターンを調査してください。"
 
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:123
+#: src/ui-imgui/debugger/sections/dbg_coverage_data.cpp:98
+#: src/ui-imgui/debugger/sections/dbg_coverage_data.cpp:251
+msgid "The emulator did not respond"
+msgstr "エミュレータが応答しませんでした"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:269
+msgid "Export code coverage (JSON or CSV)"
+msgstr "コードカバレッジをエクスポート (JSON または CSV)"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:322
+msgid "Level:"
+msgstr "レベル:"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:335
+msgid ""
+"Number of code versions the detail level can hold (32 bytes each).\n"
+"When the table is full, new versions are dropped and the data\n"
+"are reported as incomplete."
+msgstr ""
+"detail レベルが保持できるコードバージョンの数 (各 32 バイト)。\n"
+"テーブルが一杯になると新しいバージョンは破棄され、\n"
+"データは不完全として報告されます。"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:343
+msgid "Stop###cov_startstop"
+msgstr "停止###cov_startstop"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:343
+msgid "Start###cov_startstop"
+msgstr "開始###cov_startstop"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:347
+msgid ""
+"Start continues into the existing data if the level and capacity\n"
+"are the same, otherwise it starts with empty data.\n"
+"Stop keeps the data."
+msgstr ""
+"開始 はレベルと容量が同じなら既存のデータに追加し、\n"
+"そうでなければ空のデータから始めます。\n"
+"停止 はデータを保持します。"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:353
+msgid "Reset###cov_reset"
+msgstr "リセット###cov_reset"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:357
+msgid "Clears the data; collecting continues if it is running."
+msgstr "データを消去します。収集中なら収集は続きます。"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:360
+msgid "Mark###cov_mark"
+msgstr "マーク###cov_mark"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:364
+msgid ""
+"Starts a new epoch. \"New since mark\" then lists only code\n"
+"executed for the first time after this point,\n"
+"for example what a key press adds."
+msgstr ""
+"新しいエポックを開始します。以後「マーク以降の新規」には\n"
+"この時点の後に初めて実行されたコードだけが表示されます\n"
+"(例: キーを押したときに追加される処理)。"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:369
+msgid "Export...###cov_export"
+msgstr "エクスポート...###cov_export"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:378
+msgid "Code coverage"
+msgstr "コードカバレッジ"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:380
+msgid ""
+"Records which instructions ran and which way the conditional ones went\n"
+"(JR, JP, CALL and RET with a condition, DJNZ, LDIR, CPIR, INIR, OTIR\n"
+"and the decrementing forms)."
+msgstr ""
+"どの命令が実行され、条件付き命令がどちらに進んだかを記録します\n"
+"(条件付きの JR、JP、CALL、RET、DJNZ、LDIR、CPIR、INIR、OTIR\n"
+"およびデクリメント版)。"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:383
+msgid "Taken = the condition was met (jump, call, return, repeat)."
+msgstr "Taken = 条件が成立した (ジャンプ、コール、リターン、繰り返し)。"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:384
+msgid "branch: by logical address, memory banks are not told apart."
+msgstr "branch: 論理アドレス単位。メモリバンクは区別しません。"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:385
+msgid ""
+"detail: also by physical memory cell and code version (banks,\n"
+"self-modifying code), with counters; slows the emulation more."
+msgstr ""
+"detail: さらに物理メモリセルとコードバージョン (バンク、\n"
+"自己書き換えコード) 単位でカウンタ付き。エミュレーションはより遅くなります。"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:387
+msgid ""
+"Marks in the Disassembly windows show the same data\n"
+"(debugger window: Settings -> Disassembled -> Show code coverage)."
+msgstr ""
+"Disassembly ウィンドウのマークも同じデータを表示します\n"
+"(デバッガウィンドウ: 設定 -> 逆アセンブル済み -> コードカバレッジを表示)。"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:397
+msgid "Show:"
+msgstr "表示:"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:400
+msgid "Partial branches"
+msgstr "不完全な分岐"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:401
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:642
+msgid "Both branches"
+msgstr "両方の分岐"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:402
+msgid "All conditional"
+msgstr "すべての条件付き"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:403
+msgid "New since mark"
+msgstr "マーク以降の新規"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:404
+msgid "All"
+msgstr "すべて"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:430
+#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:342
+msgid "Collecting - the table fills while the emulation runs."
+msgstr "収集中 - エミュレーション実行中にテーブルが埋まります。"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:431
+#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:343
+msgid "No data. Press Start and let the emulation run."
+msgstr "データがありません。開始を押してエミュレーションを実行してください。"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:435
+msgid "No rows match the filter."
+msgstr "フィルタに一致する行はありません。"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:466
+#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:369
+msgid ""
+"Address of the instruction (logical PC).\n"
+"Left click: open in Disassembly #1."
+msgstr ""
+"命令のアドレス (論理PC)。\n"
+"左クリック: Disassembly #1で開く。"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:467
+#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:370
+msgid "Nearest symbol at or below the address, + offset."
+msgstr "アドレス以下で最も近いシンボル + オフセット。"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:468
+msgid ""
+"none = not a conditional instruction; both, taken_only, not_taken_only\n"
+"= which results of the condition were seen; unobserved = none yet."
+msgstr ""
+"none = 条件付き命令ではない。both、taken_only、not_taken_only\n"
+"= 観測された条件の結果。unobserved = まだなし。"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:470
+msgid "How many times this code version was executed."
+msgstr "このコードバージョンが実行された回数。"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:471
+msgid "How many times the condition was met (jump, call, return, repeat)."
+msgstr "条件が成立した回数 (ジャンプ、コール、リターン、繰り返し)。"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:472
+msgid "How many times the condition was not met."
+msgstr "条件が成立しなかった回数。"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:473
+msgid ""
+"Physical memory cell of the first byte: ram, rom, vram, pcg, memext\n"
+"and the offset; bus = no physical cell (graphic VRAM, mapped ports)."
+msgstr ""
+"先頭バイトの物理メモリセル: ram、rom、vram、pcg、memext\n"
+"とオフセット。bus = 物理セルなし (グラフィック VRAM、マップされたポート)。"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:475
+msgid "Bytes that tell code versions apart (prefixes and opcode)."
+msgstr "コードバージョンを区別するバイト (プレフィックスとオペコード)。"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:476
+msgid "Epoch of the first execution (Mark starts a new epoch)."
+msgstr "最初に実行されたエポック (マーク で新しいエポックを開始)。"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:477
+msgid ""
+"int = first instruction of an interrupt handler, smc = the operand changed,\n"
+"cmt = the CMT hack stepped in, halt = HALT, fallback = a byte was read\n"
+"from memory instead of the CPU fetch, saturated = a counter overflowed,\n"
+"bus = no physical cell, prefixes = a step of 64 prefixes only,\n"
+"long = key longer than 4 bytes (shortened)."
+msgstr ""
+"int = 割り込みハンドラの最初の命令、smc = オペランドが変化した、\n"
+"cmt = CMT ハックが介入した、halt = HALT、fallback = バイトを CPU の\n"
+"フェッチではなくメモリから読んだ、saturated = カウンタがオーバーフローし"
+"た、\n"
+"bus = 物理セルなし、prefixes = 64 個のプレフィックスだけのステップ、\n"
+"long = 4 バイトより長いキー (短縮)。"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:511
+msgid "Set Breakpoint###cov_bp"
+msgstr "ブレークポイントを設定###cov_bp"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:515
+msgid "Show in Disassembly #2###cov_d2"
+msgstr "Disassembly #2で表示###cov_d2"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:516
+msgid "Show in Disassembly #3###cov_d3"
+msgstr "Disassembly #3で表示###cov_d3"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:517
+msgid "Show in Disassembly #4###cov_d4"
+msgstr "Disassembly #4で表示###cov_d4"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:518
+msgid "Show in Disassembly #5###cov_d5"
+msgstr "Disassembly #5で表示###cov_d5"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:573
+#: src/ui-imgui/debugger/sections/dbg_profiler.cpp:1146
+#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:463
+msgid "● RUNNING"
+msgstr "● 実行中"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:577
+#: src/ui-imgui/debugger/sections/dbg_profiler.cpp:1150
+#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:467
+msgid "○ STOPPED"
+msgstr "○ 停止"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:587
+#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:472
+#, c-format
+msgid "Instructions: %llu"
+msgstr "命令数: %llu"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:591
+#, c-format
+msgid "Branches: %u, both %u, taken only %u, not taken only %u"
+msgstr "分岐: %u、両方 %u、成立のみ %u、不成立のみ %u"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:597
+msgid "Complete"
+msgstr "完全"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:600
+msgid "Incomplete"
+msgstr "不完全"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:603
+#, c-format
+msgid ""
+"Units: %u of %u\n"
+"Dropped steps (table full): %llu\n"
+"Bytes read from memory instead of the CPU fetch: %llu\n"
+"Counter overflow: %s\n"
+"Discontinuities (reset, snapshot load, replay seek): %u\n"
+"Host edits of PC or F: %u"
+msgstr ""
+"ユニット: %u / %u\n"
+"破棄されたステップ (テーブル満杯): %llu\n"
+"CPU フェッチではなくメモリから読んだバイト: %llu\n"
+"カウンタのオーバーフロー: %s\n"
+"不連続 (リセット、スナップショット読み込み、再生のシーク): %u\n"
+"ホストによる PC または F の変更: %u"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:615
+#, c-format
+msgid "Epoch: %u"
+msgstr "エポック: %u"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:619
+#, c-format
+msgid "Rows: %u"
+msgstr "行数: %u"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:641
+msgid "Executed"
+msgstr "実行済み"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:643
+msgid "Taken only (condition always met)"
+msgstr "成立のみ (条件は常に成立)"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:644
+msgid "Not taken only (condition never met)"
+msgstr "不成立のみ (条件は一度も成立せず)"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:645
+msgid "Condition not observed"
+msgstr "条件は未観測"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:646
+msgid "Not executed"
+msgstr "未実行"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:655
+msgid "Coverage"
+msgstr "カバレッジ"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:664
+msgid "  First instruction of an interrupt handler"
+msgstr "  割り込みハンドラの最初の命令"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:667
+#, c-format
+msgid "  First executed in epoch %u"
+msgstr "  初回実行のエポック %u"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:675
+#, c-format
+msgid "  Code versions at this address: %u"
+msgstr "  このアドレスのコードバージョン: %u"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:683
+#, c-format
+msgid "  %s %06Xh [%s]: executed %u, taken %u, not taken %u"
+msgstr "  %s %06Xh [%s]: 実行 %u、成立 %u、不成立 %u"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:688
+#, c-format
+msgid "  %s %06Xh [%s]: executed %u"
+msgstr "  %s %06Xh [%s]: 実行 %u"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:699
+#, c-format
+msgid "  ... and %u more (see CPU Profiler -> Coverage)"
+msgstr "  ... ほか %u 件 (CPU プロファイラ -> カバレッジ を参照)"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:731
+msgid "Coverage error###cov_error"
+msgstr "カバレッジエラー###cov_error"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:735
+msgid "OK###cov_error_ok"
+msgstr "OK###cov_error_ok"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage_data.cpp:263
+msgid "No coverage data"
+msgstr "カバレッジデータなし"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage_data.cpp:269
+#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:275
+msgid "Export failed"
+msgstr "エクスポートに失敗しました"
+
 #: src/ui-imgui/debugger/sections/dbg_cpu_panel.cpp:1339
 #, c-format
 msgid ""
@@ -8287,206 +8658,206 @@ msgid "Change the bank mapping or edit VEC so it points to RAM."
 msgstr ""
 "バンクマッピングを変更するか、VECを編集してRAMを指すようにしてください。"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1443
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1470
 msgid "History of already executed instructions"
 msgstr "実行済み命令の履歴"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1550
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1557
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1577
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1584
 msgid "T-states:"
 msgstr "T-states:"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1553
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1580
 msgid "taken/not taken"
 msgstr "成立/不成立"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1568
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1595
 msgid "Flags:"
 msgstr "フラグ:"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1639
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1666
 msgid "Symbol:"
 msgstr "シンボル:"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1648
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1675
 msgid "Module:"
 msgstr "モジュール:"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1703
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1707
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1730
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1734
 msgid "Mem:"
 msgstr "Mem:"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1741
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1746
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1768
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1773
 msgid "Focus to"
 msgstr "フォーカス先"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1816
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1843
 msgid "enabled"
 msgstr "有効"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1816
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1843
 msgid "disabled"
 msgstr "無効"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1835
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1855
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1862
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1882
 msgid "addr"
 msgstr "アドレス"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1838
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1865
 msgid "range"
 msgstr "範囲"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1842
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1869
 msgid "mask"
 msgstr "マスク"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1850
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1877
 msgid "(no address - condition-based)"
 msgstr "(アドレスなし - 条件ベース)"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1862
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1889
 msgid "cond"
 msgstr "cond"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1868
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1895
 msgid "hits"
 msgstr "ヒット"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1930
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1957
 #: src/ui-imgui/topmenu/menu_debugger.cpp:112
 #: src/ui-imgui/topmenu/menu_debugger.cpp:324
 msgid "Breakpoints"
 msgstr "ブレークポイント"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1944
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1978
 msgid "Double-click a row or start typing to open the inline assembler."
 msgstr "行をダブルクリックするか入力を開始してインラインアセンブラを開きます。"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1945
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1979
 msgid "Right-click for context menu."
 msgstr "右クリックでコンテキストメニュー。"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:2507
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:2541
 msgid "Address or symbol"
 msgstr "アドレスまたはシンボル"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:2522
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:2556
 msgid "Follow PC"
 msgstr "PCを追跡"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:2528
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:2562
 msgid "T-states"
 msgstr "T-states"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:2986
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3026
 msgid "Set Breakpoint"
 msgstr "ブレークポイントを設定"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:2999
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3039
 msgid "Remove Breakpoint"
 msgstr "ブレークポイントを削除"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3006
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3046
 msgid "Disable Breakpoint"
 msgstr "ブレークポイントを無効化"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3011
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3051
 msgid "Enable Breakpoint"
 msgstr "ブレークポイントを有効化"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3016
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3056
 msgid "Edit Breakpoint..."
 msgstr "ブレークポイントを編集..."
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3032
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3072
 #, c-format
 msgid "Show %d Breakpoints at 0x%04X in BP List"
 msgstr "BPリストで 0x%2$04X の %1$d ブレークポイントを表示"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3041
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3081
 msgid "Quick action on..."
 msgstr "クイックアクション..."
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3058
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3098
 msgid "Disable"
 msgstr "無効化"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3063
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3103
 msgid "Enable"
 msgstr "有効"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3069
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3109
 msgid "Edit..."
 msgstr "編集..."
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3074
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3114
 msgid "Remove"
 msgstr "削除"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3088
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3128
 msgid "Disable all at this address"
 msgstr "このアドレスのすべてを無効化"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3097
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3137
 msgid "Enable all at this address"
 msgstr "このアドレスのすべてを有効化"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3106
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3146
 msgid "Add another Execution Breakpoint"
 msgstr "別のExecution Breakpointを追加"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3117
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3157
 msgid "Set as PC"
 msgstr "PCとして設定"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3149
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3189
 msgid "Focus To..."
 msgstr "Focus To..."
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3161
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3201
 msgid "Focus to PC"
 msgstr "PCにフォーカス"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3177
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3217
 msgid "Focus to register"
 msgstr "レジスタにフォーカス"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3283
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3323
 msgid "Show in"
 msgstr "次で表示"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3291
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3331
 msgid "Disassembly #1"
 msgstr "Disassembly #1"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3299
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3339
 #: src/ui-imgui/topmenu/menu_debugger.cpp:177
 #: src/ui-imgui/topmenu/menu_debugger.cpp:476
 msgid "Disassembly #2"
 msgstr "Disassembly #2"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3300
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3340
 #: src/ui-imgui/topmenu/menu_debugger.cpp:182
 #: src/ui-imgui/topmenu/menu_debugger.cpp:481
 msgid "Disassembly #3"
 msgstr "Disassembly #3"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3301
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3341
 #: src/ui-imgui/topmenu/menu_debugger.cpp:187
 #: src/ui-imgui/topmenu/menu_debugger.cpp:486
 msgid "Disassembly #4"
 msgstr "Disassembly #4"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3302
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3342
 #: src/ui-imgui/topmenu/menu_debugger.cpp:192
 #: src/ui-imgui/topmenu/menu_debugger.cpp:491
 msgid "Disassembly #5"
 msgstr "Disassembly #5"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3346
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3386
 msgid "Edit row"
 msgstr "行を編集"
 
@@ -8728,16 +9099,6 @@ msgstr "Disassembly #4で表示###pf_d4"
 msgid "Show in Disassembly #5###pf_d5"
 msgstr "Disassembly #5で表示###pf_d5"
 
-#: src/ui-imgui/debugger/sections/dbg_profiler.cpp:1146
-#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:463
-msgid "● RUNNING"
-msgstr "● 実行中"
-
-#: src/ui-imgui/debugger/sections/dbg_profiler.cpp:1150
-#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:467
-msgid "○ STOPPED"
-msgstr "○ 停止"
-
 #: src/ui-imgui/debugger/sections/dbg_profiler.cpp:1160
 msgid ""
 "Total profiled T-states since last Reset.\n"
@@ -8845,10 +9206,6 @@ msgstr "OK###pf_export_error_ok"
 msgid "Export per-PC profile as CSV"
 msgstr "PC別プロファイルをCSVでエクスポート"
 
-#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:275
-msgid "Export failed"
-msgstr "エクスポートに失敗しました"
-
 #: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:293
 msgid "Start clears the previous data."
 msgstr "開始すると以前のデータは消去されます。"
@@ -8889,26 +9246,6 @@ msgstr ""
 "選択したソート列の先頭1000行のみ表示します。\n"
 "CSVエクスポートは全アドレスを書き出します。"
 
-#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:342
-msgid "Collecting - the table fills while the emulation runs."
-msgstr "収集中 - エミュレーション実行中にテーブルが埋まります。"
-
-#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:343
-msgid "No data. Press Start and let the emulation run."
-msgstr "データがありません。開始を押してエミュレーションを実行してください。"
-
-#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:369
-msgid ""
-"Address of the instruction (logical PC).\n"
-"Left click: open in Disassembly #1."
-msgstr ""
-"命令のアドレス (論理PC)。\n"
-"左クリック: Disassembly #1で開く。"
-
-#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:370
-msgid "Nearest symbol at or below the address, + offset."
-msgstr "アドレス以下で最も近いシンボル + オフセット。"
-
 #: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:371
 msgid "How many times the instruction was executed."
 msgstr "命令が実行された回数。"
@@ -8936,11 +9273,6 @@ msgstr "1回あたりの平均Tステート = Tステート / 回数。"
 #: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:375
 msgid "Wait states inserted by the hardware (VRAM access, PSG write)."
 msgstr "ハードウェアが挿入したウェイト (VRAMアクセス、PSG書き込み)。"
-
-#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:472
-#, c-format
-msgid "Instructions: %llu"
-msgstr "命令数: %llu"
 
 #: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:477
 #, c-format
@@ -10480,93 +10812,93 @@ msgstr "偏差:"
 msgid "Measuring Update Interval (s):"
 msgstr "測定更新間隔 (秒):"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:222
-#: src/ui-imgui/joy/joy_setup_window.cpp:230
+#: src/ui-imgui/joy/joy_setup_window.cpp:223
+#: src/ui-imgui/joy/joy_setup_window.cpp:231
 msgid "Trigger"
 msgstr "トリガー"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:239
+#: src/ui-imgui/joy/joy_setup_window.cpp:240
 msgid "Gamepad (standard mapping)"
 msgstr "ゲームパッド (標準マッピング)"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:243
+#: src/ui-imgui/joy/joy_setup_window.cpp:244
 msgid "Left Stick"
 msgstr "左スティック"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:243
+#: src/ui-imgui/joy/joy_setup_window.cpp:244
 msgid "D-Pad"
 msgstr "D-Pad"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:246
-#: src/ui-imgui/joy/joy_setup_window.cpp:370
+#: src/ui-imgui/joy/joy_setup_window.cpp:247
+#: src/ui-imgui/joy/joy_setup_window.cpp:371
 msgid "Directions"
 msgstr "方向"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:256
-#: src/ui-imgui/joy/joy_setup_window.cpp:319
+#: src/ui-imgui/joy/joy_setup_window.cpp:257
+#: src/ui-imgui/joy/joy_setup_window.cpp:320
 msgid "Deadzone"
 msgstr "デッドゾーン"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:265
-#: src/ui-imgui/joy/joy_setup_window.cpp:326
+#: src/ui-imgui/joy/joy_setup_window.cpp:266
+#: src/ui-imgui/joy/joy_setup_window.cpp:327
 msgid "Trigger 1"
 msgstr "トリガー 1"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:273
-#: src/ui-imgui/joy/joy_setup_window.cpp:333
+#: src/ui-imgui/joy/joy_setup_window.cpp:274
+#: src/ui-imgui/joy/joy_setup_window.cpp:334
 msgid "Trigger 2"
 msgstr "トリガー 2"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:286
+#: src/ui-imgui/joy/joy_setup_window.cpp:287
 msgid "Axes"
 msgstr "軸"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:287
+#: src/ui-imgui/joy/joy_setup_window.cpp:288
 msgid "Buttons"
 msgstr "ボタン"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:292
+#: src/ui-imgui/joy/joy_setup_window.cpp:293
 msgid "X Axis"
 msgstr "X 軸"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:299
-#: src/ui-imgui/joy/joy_setup_window.cpp:312
+#: src/ui-imgui/joy/joy_setup_window.cpp:300
+#: src/ui-imgui/joy/joy_setup_window.cpp:313
 msgid "Invert"
 msgstr "反転"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:305
+#: src/ui-imgui/joy/joy_setup_window.cpp:306
 msgid "Y Axis"
 msgstr "Y 軸"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:357
+#: src/ui-imgui/joy/joy_setup_window.cpp:358
 msgid "Live Status"
 msgstr "ライブステータス"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:399
+#: src/ui-imgui/joy/joy_setup_window.cpp:400
 msgid "Setup preferences for Joystick"
 msgstr "ジョイスティックの設定"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:416
+#: src/ui-imgui/joy/joy_setup_window.cpp:417
 msgid "Emulated on numeric keypad"
 msgstr "テンキーでエミュレート"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:501
+#: src/ui-imgui/joy/joy_setup_window.cpp:502
 msgid "Joystick Setup"
 msgstr "ジョイスティック設定"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:506
+#: src/ui-imgui/joy/joy_setup_window.cpp:507
 msgid "Initialize Joystick Subsystem"
 msgstr "ジョイスティックサブシステムを初期化"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:516
+#: src/ui-imgui/joy/joy_setup_window.cpp:517
 msgid "need only for real gaming devices"
 msgstr "実際のゲーミングデバイスのみ必要"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:520
+#: src/ui-imgui/joy/joy_setup_window.cpp:521
 msgid "Rescan Devices"
 msgstr "デバイス再スキャン"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:539
+#: src/ui-imgui/joy/joy_setup_window.cpp:540
 msgid "Joystick"
 msgstr "ジョイスティック"
 

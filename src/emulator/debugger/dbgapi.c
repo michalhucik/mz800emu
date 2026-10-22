@@ -6704,7 +6704,7 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                         g_strlcpy ( p->out_error, "Missing snapshot buffer", sizeof ( p->out_error ) );
                         break;
                     };
-                    if ( !coverage_snapshot_take ( p->snap ) )
+                    if ( !coverage_snapshot_take ( p->snap, !p->snap_without_units ) )
                     {
                         g_strlcpy ( p->out_error, "Not enough memory for the coverage snapshot", sizeof ( p->out_error ) );
                     };

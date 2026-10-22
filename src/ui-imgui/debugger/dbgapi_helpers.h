@@ -885,6 +885,30 @@ bool dbg_ui_screen_refresh(void);
  */
 bool dbg_ui_ramlog(st_DBGAPI_RAMLOG_PARAM *p);
 
+/* ============================================================================
+ * Pokrytí kódu (záložka Coverage v CPU Profileru, značky v Disassembly)
+ * ============================================================================ */
+
+/**
+ * @brief Provede operaci pokrytí kódu přes DBGAPI_CMD_COVERAGE.
+ *
+ * Stejný příkaz jako MCP coverage_*: start a stop přepínají callbacky CPU
+ * a masku háčků po instrukci, snímek kopíruje data z jednoho okamžiku,
+ * vše v emu vlákně.
+ *
+ * @param p          Vstup a výstup (st_DBGAPI_COVERAGE_PARAM). U operace
+ *                   SNAPSHOT strukturu p->snap alokuje volající, pole
+ *                   jednotek uvolní coverage_snapshot_clear().
+ * @param timeout_ms Limit vyzvednutí příkazu emu vláknem (ms, > 0); po
+ *                   vyzvednutí volání čeká na dokončení.
+ * @return true = provedeno bez chyby; false = chyba operace (anglický text
+ *         v p->out_error) nebo timeout (p->out_error prázdný, příkaz
+ *         neproveden).
+ *
+ * @pre Volat z UI vlákna; blokuje až do dokončení příkazu.
+ */
+bool dbg_ui_coverage(st_DBGAPI_COVERAGE_PARAM *p, int timeout_ms);
+
 #ifdef __cplusplus
 }
 #endif

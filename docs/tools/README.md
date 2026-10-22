@@ -7,6 +7,8 @@ distribution under `docs/tools/`).
   Scope debugger window (see below).
 - `videorec_export.py` - exports a video recording (AVI parts +
   `*.cuts.json` sidecar) to a YouTube-ready MP4 (see below).
+- `coverage_to_lcov.py` - converts a code coverage export (JSON) to an
+  lcov tracefile for `genhtml` and IDE coverage viewers (see below).
 
 ## example_psg_write_log_to_midi.py
 
@@ -148,3 +150,47 @@ Run `python3 docs/tools/videorec_export.py --help` for all options
 (`--target`, `--crop`, `--aspect`, `--transition`, `--transition-ms`,
 `--card-text`, `--font`, `--crf`, `--state-overlay`, `--dry-run`). Full description:
 `docs/en/video-recording.md`.
+
+## coverage_to_lcov.py
+
+Converts a code coverage export (JSON, format `mz800emu-coverage/1`: the
+Export... button of the Coverage tab in the CPU Profiler window, MCP
+`emu_coverage_export`, or `--coverage-save-on-exit`) into an lcov
+tracefile. The emulator knows addresses, not source lines, so an
+assembler listing maps addresses to lines:
+
+- With `--listing`, the listing itself is the source file of the
+  tracefile. Every listing line that emits instruction bytes is a line
+  with an execution count; a conditional instruction (JR, JP, CALL and
+  RET with a condition, DJNZ, LDIR, CPIR, INIR, OTIR and the decrementing
+  forms) has two branches: 0 = condition met (jump, call, return,
+  repeat), 1 = condition not met. Data lines (DB, DW, DS, DEFM, ...) are
+  skipped.
+- Without a listing, a pseudo source file `<output>.addresses.txt` with
+  one line per executed address is written next to the output.
+
+Supported listings: sjasmplus (`--lst`) and pasmo (`--listing`), checked
+against sjasmplus 1.22.0 and pasmo 0.6.0. At the detail level the counts
+are executions and condition results summed over all code versions at the
+address; the branch level has no counters (executed = 1, a seen result =
+1). The tracefile was not checked with genhtml itself.
+Code comments in this script are in English (an explicit exception from
+the project rule of Czech comments).
+
+### Requirements
+
+- Python 3 (standard library only)
+- lcov (`genhtml`) to turn the tracefile into an HTML report, or an editor
+  extension that reads lcov files
+
+### Usage
+
+```bash
+python3 docs/tools/coverage_to_lcov.py coverage.json -o coverage.info --listing game.lst
+genhtml coverage.info -o coverage-html
+```
+
+Options: `--listing FILE` (repeatable, one record per listing), `--format
+auto|sjasmplus|pasmo`, `--offset N` (added to listing addresses when the
+code runs at another address than it was assembled for), `--test-name`.
+Full description: `docs/en/debugger/code-coverage.md`.

@@ -1318,6 +1318,20 @@ void test_cmd_coverage_hook ( void ) {
     TEST_ASSERT_EQUAL_UINT64 ( 1, st.fetch_fallback );
     TEST_ASSERT_FALSE ( st.complete );
     coverage_snapshot_clear ( snap );
+
+    /* Snímek bez jednotek (okna GUI): bitmapy ano, tabulka ne. */
+    {
+        st_DBGAPI_COVERAGE_PARAM sp;
+        memset ( &sp, 0, sizeof ( sp ) );
+        sp.op = DBGAPI_COVERAGE_OP_SNAPSHOT;
+        sp.snap = snap;
+        sp.snap_without_units = true;
+        TEST_ASSERT_TRUE ( call_dispatch ( DBGAPI_CMD_COVERAGE, &sp, NULL ) );
+        TEST_ASSERT_NULL ( snap->units );
+        TEST_ASSERT_EQUAL_UINT32 ( 0, snap->n_units );
+        TEST_ASSERT_EQUAL_UINT32 ( 1, snap->status.units );
+        TEST_ASSERT_EQUAL_HEX8 ( 0x01, snap->exec[ 0x3000 >> 3 ] );
+    }
     g_free ( snap );
 
     st_COVERAGE_STATUS mk;

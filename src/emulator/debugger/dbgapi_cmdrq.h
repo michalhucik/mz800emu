@@ -3129,6 +3129,7 @@ typedef struct st_DBGAPI_COVERAGE_PARAM
     st_COVERAGE_CONFIG cfg;            /**< IN (START): nastavení sběru. */
     bool reset;                        /**< IN (START): začít s prázdnými daty. */
     st_COVERAGE_SNAPSHOT *snap;        /**< IN (SNAPSHOT): cíl kopie (coverage_snapshot_take()), strukturu alokuje volající, pole units uvolní coverage_snapshot_clear(). */
+    bool snap_without_units;           /**< IN (SNAPSHOT): true = bez jednotek úrovně detail (jen stav, bitmapy, epochy; okna GUI). */
     uint32_t out_epoch;                /**< OUT (MARK): nová epocha. */
     st_COVERAGE_STATUS out_status;     /**< OUT: stav po operaci. */
     char out_error[ 128 ];             /**< OUT: chyba v angličtině ("" = OK). */

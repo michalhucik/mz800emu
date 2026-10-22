@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mz800emu 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-21 07:25+0200\n"
+"POT-Creation-Date: 2026-10-21 18:44+0200\n"
 "PO-Revision-Date: 2026-03-11 22:00+0100\n"
 "Last-Translator: Claude Code\n"
 "Language-Team: Slovenčina\n"
@@ -100,7 +100,7 @@ msgstr "Súbory pások"
 msgid "Select CMT file to open"
 msgstr "Vyberte CMT súbor na otvorenie"
 
-#: src/emulator/hw-generic/cmt/cmthack.c:240
+#: src/emulator/hw-generic/cmt/cmthack.c:245
 msgid "Select a MZF File"
 msgstr "Vyberte MZF súbor"
 
@@ -526,7 +526,7 @@ msgstr "Zachytiť zvuk (%s) spustí a zastaví zachytenie."
 #: src/ui-imgui/debugger/sections/dbg_cpu_panel.cpp:2421
 #: src/ui-imgui/dsk/dsk_create_window.cpp:104
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:109
-#: src/ui-imgui/joy/joy_setup_window.cpp:564
+#: src/ui-imgui/joy/joy_setup_window.cpp:567
 #: src/ui-imgui/message/message_window.cpp:90
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:442
 #: src/ui-imgui/snapshot/snapshot_notification.cpp:95
@@ -541,7 +541,7 @@ msgstr "OK"
 #: src/ui-imgui/debugger/sections/dbg_focus_to.cpp:264
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:104
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:111
-#: src/ui-imgui/joy/joy_setup_window.cpp:571
+#: src/ui-imgui/joy/joy_setup_window.cpp:579
 #: src/ui-imgui/memext/memext_load_dialog.cpp:185
 #: src/ui-imgui/memext/memext_map_window.cpp:291
 #: src/ui-imgui/memext/memext_save_dialog.cpp:207
@@ -747,7 +747,7 @@ msgstr "Názov"
 #: src/ui-imgui/debugger/memsearch_window/memsearch_window.cpp:576
 #: src/ui-imgui/debugger/watch/watch_window.cpp:1700
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:132
-#: src/ui-imgui/joy/joy_setup_window.cpp:239
+#: src/ui-imgui/joy/joy_setup_window.cpp:240
 #: src/ui-imgui/memext/memext_map_window.cpp:105
 #: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:153
 msgid "Type"
@@ -1052,7 +1052,7 @@ msgstr "Záložka:"
 
 #: src/ui-imgui/debugger/bookmarks/bm_window.cpp:418
 #: src/ui-imgui/debugger/bookmarks/bm_window.cpp:489
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1644
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1671
 #: src/ui-imgui/debugger/symbols/sym_window.cpp:805
 #: src/ui-imgui/debugger/vars/vars_window.cpp:835
 #: src/ui-imgui/memext/memext_save_dialog.cpp:169
@@ -1406,7 +1406,7 @@ msgid "Offset:"
 msgstr "Offset:"
 
 #: src/ui-imgui/debugger/breakpoints/bpt_edit_panel.cpp:1537
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1641
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1668
 #: src/ui-imgui/debugger/sections/dbg_focus_to.cpp:211
 #: src/ui-imgui/debugger/watch/watch_window.cpp:465
 msgid "Address:"
@@ -3241,7 +3241,7 @@ msgstr ""
 "záložkou Strip)."
 
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:2155
-#: src/ui-imgui/joy/joy_setup_window.cpp:415
+#: src/ui-imgui/joy/joy_setup_window.cpp:416
 #: src/ui-imgui/topmenu/devices/menu_unicard.cpp:284
 msgid "None"
 msgstr "Žiadne"
@@ -3772,11 +3772,13 @@ msgstr "Pripojené: %s"
 
 #: src/ui-imgui/debugger/fdc_window.cpp:203
 #: src/ui-imgui/debugger/gdg_window_mz800.cpp:285
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:609
 msgid "yes"
 msgstr "áno"
 
 #: src/ui-imgui/debugger/fdc_window.cpp:203
 #: src/ui-imgui/debugger/gdg_window_mz800.cpp:285
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:609
 msgid "no"
 msgstr "nie"
 
@@ -4568,6 +4570,7 @@ msgstr "Vymazať čítače aktivity pre všetkých 256 portov"
 
 #: src/ui-imgui/debugger/ioview/io_window.cpp:1014
 #: src/ui-imgui/debugger/ioview/io_window.cpp:2002
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:329
 msgid "Capacity:"
 msgstr "Kapacita:"
 
@@ -4649,7 +4652,7 @@ msgid "Focus to..."
 msgstr "Zamerať na..."
 
 #: src/ui-imgui/debugger/ioview/io_window.cpp:1754
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3328
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3368
 msgid "Add to bookmarks"
 msgstr "Pridať do záložiek"
 
@@ -5019,6 +5022,7 @@ msgstr "Veľkosť (hex)###mb_save_size"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_fileio.cpp:473
 #: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1833
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:409
 #: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:307
 msgid "Range:"
 msgstr "Rozsah:"
@@ -5174,6 +5178,7 @@ msgstr "Príklad: \"AA BB CC\" alebo \"DEADBEEF\" - max 64 bajtov"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_fill_dialog.cpp:262
 #: src/ui-imgui/debugger/sections/dbg_focus_to.cpp:274
+#: src/ui-imgui/joy/joy_setup_window.cpp:574
 #: src/ui-imgui/memext/memext_map_window.cpp:277
 #: src/ui-imgui/version_check/imgui_version_check.cpp:245
 #: src/ui-imgui/version_check/imgui_version_check.cpp:250
@@ -5299,8 +5304,8 @@ msgstr "Redo  (%d úrovní)\tCtrl+Y"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:231
 #: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:276
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1683
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1687
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1710
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1714
 msgid "Target:"
 msgstr "Cieľ:"
 
@@ -6932,14 +6937,18 @@ msgid "Show branch arrows"
 msgstr "Zobraziť šípky vetvenia"
 
 #: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:652
+msgid "Show code coverage"
+msgstr "Zobraziť pokrytie kódu"
+
+#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:661
 msgid "Screen"
 msgstr "Obrazovka"
 
-#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:667
+#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:676
 msgid "Auto refresh on edit"
 msgstr "Auto refresh pri úprave"
 
-#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:678
+#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:687
 msgid "Auto refresh at every CPU step"
 msgstr "Auto refresh pri každom kroku CPU"
 
@@ -7363,17 +7372,21 @@ msgstr "Doba medzery key-up v gdgclk tikoch."
 msgid "Tick stamp of current phase start."
 msgstr "Casova znacka zaciatku aktualnej fazy."
 
-#: src/ui-imgui/debugger/profiler/profiler_window.cpp:107
+#: src/ui-imgui/debugger/profiler/profiler_window.cpp:109
 msgid "CPU Profiler###profiler_window"
 msgstr "CPU Profiler###profiler_window"
 
-#: src/ui-imgui/debugger/profiler/profiler_window.cpp:121
+#: src/ui-imgui/debugger/profiler/profiler_window.cpp:124
 msgid "Functions###profiler_tab_func"
 msgstr "Funkcie###profiler_tab_func"
 
-#: src/ui-imgui/debugger/profiler/profiler_window.cpp:125
+#: src/ui-imgui/debugger/profiler/profiler_window.cpp:128
 msgid "Per PC###profiler_tab_pc"
 msgstr "Podľa PC###profiler_tab_pc"
+
+#: src/ui-imgui/debugger/profiler/profiler_window.cpp:132
+msgid "Coverage###profiler_tab_cov"
+msgstr "Pokrytie###profiler_tab_cov"
 
 #: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1159
 #: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1314
@@ -7745,8 +7758,8 @@ msgid "QDisk State"
 msgstr "Stav QDisk"
 
 #: src/ui-imgui/debugger/qdisk_window.cpp:154
-#: src/ui-imgui/joy/joy_setup_window.cpp:238
-#: src/ui-imgui/joy/joy_setup_window.cpp:284
+#: src/ui-imgui/joy/joy_setup_window.cpp:239
+#: src/ui-imgui/joy/joy_setup_window.cpp:285
 msgid "Device"
 msgstr "Zariadenie"
 
@@ -8222,6 +8235,363 @@ msgstr ""
 "Tip: RET pc ukazuje miesto divergencie. Otvorte v disasm pre analýzu "
 "volajúceho vzoru."
 
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:123
+#: src/ui-imgui/debugger/sections/dbg_coverage_data.cpp:98
+#: src/ui-imgui/debugger/sections/dbg_coverage_data.cpp:251
+msgid "The emulator did not respond"
+msgstr "Emulátor neodpovedal"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:269
+msgid "Export code coverage (JSON or CSV)"
+msgstr "Export pokrytia kódu (JSON alebo CSV)"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:322
+msgid "Level:"
+msgstr "Úroveň:"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:335
+msgid ""
+"Number of code versions the detail level can hold (32 bytes each).\n"
+"When the table is full, new versions are dropped and the data\n"
+"are reported as incomplete."
+msgstr ""
+"Počet verzií kódu, ktoré úroveň detail pojme (každá 32 bajtov).\n"
+"Keď je tabuľka plná, nové verzie sa zahodia a dáta\n"
+"sa hlásia ako neúplné."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:343
+msgid "Stop###cov_startstop"
+msgstr "Stop###cov_startstop"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:343
+msgid "Start###cov_startstop"
+msgstr "Štart###cov_startstop"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:347
+msgid ""
+"Start continues into the existing data if the level and capacity\n"
+"are the same, otherwise it starts with empty data.\n"
+"Stop keeps the data."
+msgstr ""
+"Štart pokračuje do existujúcich dát, ak sú úroveň a kapacita\n"
+"rovnaké, inak začne s prázdnymi dátami.\n"
+"Stop dáta ponechá."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:353
+msgid "Reset###cov_reset"
+msgstr "Reset###cov_reset"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:357
+msgid "Clears the data; collecting continues if it is running."
+msgstr "Zmaže dáta; zber pokračuje, ak beží."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:360
+msgid "Mark###cov_mark"
+msgstr "Značka###cov_mark"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:364
+msgid ""
+"Starts a new epoch. \"New since mark\" then lists only code\n"
+"executed for the first time after this point,\n"
+"for example what a key press adds."
+msgstr ""
+"Začne novú epochu. \"Nové od značky\" potom vypíše len kód\n"
+"vykonaný prvýkrát po tomto okamihu,\n"
+"napríklad čo pridá stlačenie klávesu."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:369
+msgid "Export...###cov_export"
+msgstr "Export...###cov_export"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:378
+msgid "Code coverage"
+msgstr "Pokrytie kódu"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:380
+msgid ""
+"Records which instructions ran and which way the conditional ones went\n"
+"(JR, JP, CALL and RET with a condition, DJNZ, LDIR, CPIR, INIR, OTIR\n"
+"and the decrementing forms)."
+msgstr ""
+"Zaznamenáva, ktoré inštrukcie sa vykonali a ktorým smerom išli podmienené\n"
+"(JR, JP, CALL a RET s podmienkou, DJNZ, LDIR, CPIR, INIR, OTIR\n"
+"a zostupné varianty)."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:383
+msgid "Taken = the condition was met (jump, call, return, repeat)."
+msgstr "Taken = podmienka bola splnená (skok, volanie, návrat, opakovanie)."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:384
+msgid "branch: by logical address, memory banks are not told apart."
+msgstr "branch: podľa logickej adresy, pamäťové banky sa nerozlišujú."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:385
+msgid ""
+"detail: also by physical memory cell and code version (banks,\n"
+"self-modifying code), with counters; slows the emulation more."
+msgstr ""
+"detail: navyše podľa fyzickej bunky pamäte a verzie kódu (banky,\n"
+"samomodifikujúci kód), s počítadlami; spomaľuje emuláciu viac."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:387
+msgid ""
+"Marks in the Disassembly windows show the same data\n"
+"(debugger window: Settings -> Disassembled -> Show code coverage)."
+msgstr ""
+"Značky v oknách Disassembly ukazujú rovnaké dáta\n"
+"(okno debuggera: Nastavenia -> Disassemblované -> Zobraziť pokrytie kódu)."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:397
+msgid "Show:"
+msgstr "Zobraziť:"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:400
+msgid "Partial branches"
+msgstr "Neúplné vetvy"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:401
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:642
+msgid "Both branches"
+msgstr "Obe vetvy"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:402
+msgid "All conditional"
+msgstr "Všetky podmienené"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:403
+msgid "New since mark"
+msgstr "Nové od značky"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:404
+msgid "All"
+msgstr "Všetko"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:430
+#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:342
+msgid "Collecting - the table fills while the emulation runs."
+msgstr "Zbiera sa - tabuľka sa plní, kým emulácia beží."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:431
+#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:343
+msgid "No data. Press Start and let the emulation run."
+msgstr "Žiadne dáta. Stlačte Štart a nechajte emuláciu bežať."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:435
+msgid "No rows match the filter."
+msgstr "Filtru nezodpovedá žiadny riadok."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:466
+#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:369
+msgid ""
+"Address of the instruction (logical PC).\n"
+"Left click: open in Disassembly #1."
+msgstr ""
+"Adresa inštrukcie (logické PC).\n"
+"Ľavý klik: otvoriť v Disassembly #1."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:467
+#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:370
+msgid "Nearest symbol at or below the address, + offset."
+msgstr "Najbližší symbol na adrese alebo pod ňou, + posun."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:468
+msgid ""
+"none = not a conditional instruction; both, taken_only, not_taken_only\n"
+"= which results of the condition were seen; unobserved = none yet."
+msgstr ""
+"none = nepodmienená inštrukcia; both, taken_only, not_taken_only\n"
+"= ktoré výsledky podmienky nastali; unobserved = zatiaľ žiadny."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:470
+msgid "How many times this code version was executed."
+msgstr "Koľkokrát sa táto verzia kódu vykonala."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:471
+msgid "How many times the condition was met (jump, call, return, repeat)."
+msgstr "Koľkokrát bola podmienka splnená (skok, volanie, návrat, opakovanie)."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:472
+msgid "How many times the condition was not met."
+msgstr "Koľkokrát podmienka splnená nebola."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:473
+msgid ""
+"Physical memory cell of the first byte: ram, rom, vram, pcg, memext\n"
+"and the offset; bus = no physical cell (graphic VRAM, mapped ports)."
+msgstr ""
+"Fyzická bunka pamäte prvého bajtu: ram, rom, vram, pcg, memext\n"
+"a offset; bus = bez fyzickej bunky (grafická VRAM, mapované porty)."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:475
+msgid "Bytes that tell code versions apart (prefixes and opcode)."
+msgstr "Bajty, ktoré rozlišujú verzie kódu (prefixy a opkód)."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:476
+msgid "Epoch of the first execution (Mark starts a new epoch)."
+msgstr "Epocha prvého vykonania (Značka začne novú epochu)."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:477
+msgid ""
+"int = first instruction of an interrupt handler, smc = the operand changed,\n"
+"cmt = the CMT hack stepped in, halt = HALT, fallback = a byte was read\n"
+"from memory instead of the CPU fetch, saturated = a counter overflowed,\n"
+"bus = no physical cell, prefixes = a step of 64 prefixes only,\n"
+"long = key longer than 4 bytes (shortened)."
+msgstr ""
+"int = prvá inštrukcia obsluhy prerušenia, smc = operand sa menil,\n"
+"cmt = zasiahol CMT hack, halt = HALT, fallback = bajt sa čítal\n"
+"z pamäte namiesto z fetch CPU, saturated = počítadlo pretieklo,\n"
+"bus = bez fyzickej bunky, prefixes = krok len zo 64 prefixov,\n"
+"long = kľúč dlhší ako 4 bajty (skrátený)."
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:511
+msgid "Set Breakpoint###cov_bp"
+msgstr "Nastaviť Breakpoint###cov_bp"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:515
+msgid "Show in Disassembly #2###cov_d2"
+msgstr "Zobraziť v Disassembly #2###cov_d2"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:516
+msgid "Show in Disassembly #3###cov_d3"
+msgstr "Zobraziť v Disassembly #3###cov_d3"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:517
+msgid "Show in Disassembly #4###cov_d4"
+msgstr "Zobraziť v Disassembly #4###cov_d4"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:518
+msgid "Show in Disassembly #5###cov_d5"
+msgstr "Zobraziť v Disassembly #5###cov_d5"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:573
+#: src/ui-imgui/debugger/sections/dbg_profiler.cpp:1146
+#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:463
+msgid "● RUNNING"
+msgstr "● BEŽÍ"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:577
+#: src/ui-imgui/debugger/sections/dbg_profiler.cpp:1150
+#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:467
+msgid "○ STOPPED"
+msgstr "○ ZASTAVENÉ"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:587
+#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:472
+#, c-format
+msgid "Instructions: %llu"
+msgstr "Inštrukcie: %llu"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:591
+#, c-format
+msgid "Branches: %u, both %u, taken only %u, not taken only %u"
+msgstr "Vetvy: %u, obe %u, len skok %u, len prepad %u"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:597
+msgid "Complete"
+msgstr "Úplné"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:600
+msgid "Incomplete"
+msgstr "Neúplné"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:603
+#, c-format
+msgid ""
+"Units: %u of %u\n"
+"Dropped steps (table full): %llu\n"
+"Bytes read from memory instead of the CPU fetch: %llu\n"
+"Counter overflow: %s\n"
+"Discontinuities (reset, snapshot load, replay seek): %u\n"
+"Host edits of PC or F: %u"
+msgstr ""
+"Jednotky: %u z %u\n"
+"Zahodené kroky (plná tabuľka): %llu\n"
+"Bajty čítané z pamäte namiesto z fetch CPU: %llu\n"
+"Pretečenie počítadla: %s\n"
+"Nespojitosti (reset, načítanie snapshotu, skok prehrávania): %u\n"
+"Zásahy hostiteľa do PC alebo F: %u"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:615
+#, c-format
+msgid "Epoch: %u"
+msgstr "Epocha: %u"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:619
+#, c-format
+msgid "Rows: %u"
+msgstr "Riadky: %u"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:641
+msgid "Executed"
+msgstr "Vykonané"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:643
+msgid "Taken only (condition always met)"
+msgstr "Len skok (podmienka vždy splnená)"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:644
+msgid "Not taken only (condition never met)"
+msgstr "Len prepad (podmienka nikdy splnená)"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:645
+msgid "Condition not observed"
+msgstr "Podmienka zatiaľ bez výsledku"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:646
+msgid "Not executed"
+msgstr "Nevykonané"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:655
+msgid "Coverage"
+msgstr "Pokrytie"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:664
+msgid "  First instruction of an interrupt handler"
+msgstr "  Prvá inštrukcia obsluhy prerušenia"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:667
+#, c-format
+msgid "  First executed in epoch %u"
+msgstr "  Prvýkrát vykonané v epoche %u"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:675
+#, c-format
+msgid "  Code versions at this address: %u"
+msgstr "  Verzie kódu na tejto adrese: %u"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:683
+#, c-format
+msgid "  %s %06Xh [%s]: executed %u, taken %u, not taken %u"
+msgstr "  %s %06Xh [%s]: vykonané %u, skok %u, prepad %u"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:688
+#, c-format
+msgid "  %s %06Xh [%s]: executed %u"
+msgstr "  %s %06Xh [%s]: vykonané %u"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:699
+#, c-format
+msgid "  ... and %u more (see CPU Profiler -> Coverage)"
+msgstr "  ... a ďalších %u (pozri CPU Profiler -> Pokrytie)"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:731
+msgid "Coverage error###cov_error"
+msgstr "Chyba pokrytia###cov_error"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:735
+msgid "OK###cov_error_ok"
+msgstr "OK###cov_error_ok"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage_data.cpp:263
+msgid "No coverage data"
+msgstr "Žiadne dáta pokrytia"
+
+#: src/ui-imgui/debugger/sections/dbg_coverage_data.cpp:269
+#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:275
+msgid "Export failed"
+msgstr "Export zlyhal"
+
 #: src/ui-imgui/debugger/sections/dbg_cpu_panel.cpp:1339
 #, c-format
 msgid ""
@@ -8355,207 +8725,207 @@ msgstr ""
 msgid "Change the bank mapping or edit VEC so it points to RAM."
 msgstr "Zmeňte mapovanie banky alebo upravte VEC tak, aby ukazoval do RAM."
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1443
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1470
 msgid "History of already executed instructions"
 msgstr "História už vykonaných inštrukcií"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1550
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1557
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1577
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1584
 msgid "T-states:"
 msgstr "T-states:"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1553
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1580
 msgid "taken/not taken"
 msgstr "splnené/nesplnené"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1568
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1595
 msgid "Flags:"
 msgstr "Príznaky:"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1639
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1666
 msgid "Symbol:"
 msgstr "Symbol:"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1648
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1675
 msgid "Module:"
 msgstr "Modul:"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1703
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1707
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1730
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1734
 msgid "Mem:"
 msgstr "Pam:"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1741
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1746
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1768
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1773
 msgid "Focus to"
 msgstr "Zamerať na"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1816
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1843
 msgid "enabled"
 msgstr "povolené"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1816
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1843
 msgid "disabled"
 msgstr "zakázané"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1835
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1855
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1862
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1882
 msgid "addr"
 msgstr "adresa"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1838
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1865
 msgid "range"
 msgstr "rozsah"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1842
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1869
 msgid "mask"
 msgstr "maska"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1850
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1877
 msgid "(no address - condition-based)"
 msgstr "(bez adresy - podľa podmienky)"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1862
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1889
 msgid "cond"
 msgstr "podm"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1868
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1895
 msgid "hits"
 msgstr "zásahy"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1930
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1957
 #: src/ui-imgui/topmenu/menu_debugger.cpp:112
 #: src/ui-imgui/topmenu/menu_debugger.cpp:324
 msgid "Breakpoints"
 msgstr "Body prerušenia"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1944
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1978
 msgid "Double-click a row or start typing to open the inline assembler."
 msgstr ""
 "Dvojklik na riadok alebo začnite písať pre otvorenie inline assembleru."
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1945
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1979
 msgid "Right-click for context menu."
 msgstr "Pravý klik pre kontextové menu."
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:2507
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:2541
 msgid "Address or symbol"
 msgstr "Adresa alebo symbol"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:2522
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:2556
 msgid "Follow PC"
 msgstr "Sledovať PC"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:2528
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:2562
 msgid "T-states"
 msgstr "T-states"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:2986
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3026
 msgid "Set Breakpoint"
 msgstr "Nastaviť Breakpoint"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:2999
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3039
 msgid "Remove Breakpoint"
 msgstr "Odstrániť Breakpoint"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3006
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3046
 msgid "Disable Breakpoint"
 msgstr "Zakázať Breakpoint"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3011
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3051
 msgid "Enable Breakpoint"
 msgstr "Povoliť Breakpoint"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3016
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3056
 msgid "Edit Breakpoint..."
 msgstr "Upraviť Breakpoint..."
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3032
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3072
 #, c-format
 msgid "Show %d Breakpoints at 0x%04X in BP List"
 msgstr "Zobraziť %d Breakpointov na 0x%04X v zozname BP"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3041
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3081
 msgid "Quick action on..."
 msgstr "Rýchla akcia na..."
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3058
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3098
 msgid "Disable"
 msgstr "Zakázať"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3063
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3103
 msgid "Enable"
 msgstr "Povoliť"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3069
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3109
 msgid "Edit..."
 msgstr "Upraviť..."
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3074
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3114
 msgid "Remove"
 msgstr "Odstrániť"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3088
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3128
 msgid "Disable all at this address"
 msgstr "Zakázať všetky na tejto adrese"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3097
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3137
 msgid "Enable all at this address"
 msgstr "Povoliť všetky na tejto adrese"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3106
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3146
 msgid "Add another Execution Breakpoint"
 msgstr "Pridať ďalší execution Breakpoint"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3117
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3157
 msgid "Set as PC"
 msgstr "Nastaviť ako PC"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3149
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3189
 msgid "Focus To..."
 msgstr "Zamerať na..."
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3161
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3201
 msgid "Focus to PC"
 msgstr "Zamerať na PC"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3177
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3217
 msgid "Focus to register"
 msgstr "Zamerať na register"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3283
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3323
 msgid "Show in"
 msgstr "Zobraziť v"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3291
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3331
 msgid "Disassembly #1"
 msgstr "Disassembly #1"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3299
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3339
 #: src/ui-imgui/topmenu/menu_debugger.cpp:177
 #: src/ui-imgui/topmenu/menu_debugger.cpp:476
 msgid "Disassembly #2"
 msgstr "Disassembly #2"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3300
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3340
 #: src/ui-imgui/topmenu/menu_debugger.cpp:182
 #: src/ui-imgui/topmenu/menu_debugger.cpp:481
 msgid "Disassembly #3"
 msgstr "Disassembly #3"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3301
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3341
 #: src/ui-imgui/topmenu/menu_debugger.cpp:187
 #: src/ui-imgui/topmenu/menu_debugger.cpp:486
 msgid "Disassembly #4"
 msgstr "Disassembly #4"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3302
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3342
 #: src/ui-imgui/topmenu/menu_debugger.cpp:192
 #: src/ui-imgui/topmenu/menu_debugger.cpp:491
 msgid "Disassembly #5"
 msgstr "Disassembly #5"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3346
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3386
 msgid "Edit row"
 msgstr "Upraviť riadok"
 
@@ -8798,16 +9168,6 @@ msgstr "Zobraziť v Disassembly #4###pf_d4"
 msgid "Show in Disassembly #5###pf_d5"
 msgstr "Zobraziť v Disassembly #5###pf_d5"
 
-#: src/ui-imgui/debugger/sections/dbg_profiler.cpp:1146
-#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:463
-msgid "● RUNNING"
-msgstr "● BEŽÍ"
-
-#: src/ui-imgui/debugger/sections/dbg_profiler.cpp:1150
-#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:467
-msgid "○ STOPPED"
-msgstr "○ ZASTAVENÉ"
-
 #: src/ui-imgui/debugger/sections/dbg_profiler.cpp:1160
 msgid ""
 "Total profiled T-states since last Reset.\n"
@@ -8916,10 +9276,6 @@ msgstr "OK###pf_export_error_ok"
 msgid "Export per-PC profile as CSV"
 msgstr "Export profilu podľa PC do CSV"
 
-#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:275
-msgid "Export failed"
-msgstr "Export zlyhal"
-
 #: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:293
 msgid "Start clears the previous data."
 msgstr "Štart zmaže predchádzajúce dáta."
@@ -8961,26 +9317,6 @@ msgstr ""
 "Zobrazí sa len prvých 1000 riadkov podľa zvoleného stĺpca radenia;\n"
 "Export CSV zapíše všetky adresy."
 
-#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:342
-msgid "Collecting - the table fills while the emulation runs."
-msgstr "Zbiera sa - tabuľka sa plní, kým emulácia beží."
-
-#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:343
-msgid "No data. Press Start and let the emulation run."
-msgstr "Žiadne dáta. Stlačte Štart a nechajte emuláciu bežať."
-
-#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:369
-msgid ""
-"Address of the instruction (logical PC).\n"
-"Left click: open in Disassembly #1."
-msgstr ""
-"Adresa inštrukcie (logické PC).\n"
-"Ľavý klik: otvoriť v Disassembly #1."
-
-#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:370
-msgid "Nearest symbol at or below the address, + offset."
-msgstr "Najbližší symbol na adrese alebo pod ňou, + posun."
-
 #: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:371
 msgid "How many times the instruction was executed."
 msgstr "Koľkokrát bola inštrukcia vykonaná."
@@ -9008,11 +9344,6 @@ msgstr "Priemer T-stavov na vykonanie = T-stavy / Počet."
 #: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:375
 msgid "Wait states inserted by the hardware (VRAM access, PSG write)."
 msgstr "Čakacie stavy vložené hardvérom (prístup do VRAM, zápis do PSG)."
-
-#: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:472
-#, c-format
-msgid "Instructions: %llu"
-msgstr "Inštrukcie: %llu"
 
 #: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:477
 #, c-format
@@ -10564,93 +10895,93 @@ msgstr "Odchýlka:"
 msgid "Measuring Update Interval (s):"
 msgstr "Interval aktualizácie merania (s):"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:222
-#: src/ui-imgui/joy/joy_setup_window.cpp:230
+#: src/ui-imgui/joy/joy_setup_window.cpp:223
+#: src/ui-imgui/joy/joy_setup_window.cpp:231
 msgid "Trigger"
 msgstr "Spúšť"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:239
+#: src/ui-imgui/joy/joy_setup_window.cpp:240
 msgid "Gamepad (standard mapping)"
 msgstr "Gamepad (štandardné mapovanie)"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:243
+#: src/ui-imgui/joy/joy_setup_window.cpp:244
 msgid "Left Stick"
 msgstr "Ľavá páčka"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:243
+#: src/ui-imgui/joy/joy_setup_window.cpp:244
 msgid "D-Pad"
 msgstr "D-Pad"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:246
-#: src/ui-imgui/joy/joy_setup_window.cpp:370
+#: src/ui-imgui/joy/joy_setup_window.cpp:247
+#: src/ui-imgui/joy/joy_setup_window.cpp:371
 msgid "Directions"
 msgstr "Smery"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:256
-#: src/ui-imgui/joy/joy_setup_window.cpp:319
+#: src/ui-imgui/joy/joy_setup_window.cpp:257
+#: src/ui-imgui/joy/joy_setup_window.cpp:320
 msgid "Deadzone"
 msgstr "Mŕtva zóna"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:265
-#: src/ui-imgui/joy/joy_setup_window.cpp:326
+#: src/ui-imgui/joy/joy_setup_window.cpp:266
+#: src/ui-imgui/joy/joy_setup_window.cpp:327
 msgid "Trigger 1"
 msgstr "Spúšť 1"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:273
-#: src/ui-imgui/joy/joy_setup_window.cpp:333
+#: src/ui-imgui/joy/joy_setup_window.cpp:274
+#: src/ui-imgui/joy/joy_setup_window.cpp:334
 msgid "Trigger 2"
 msgstr "Spúšť 2"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:286
+#: src/ui-imgui/joy/joy_setup_window.cpp:287
 msgid "Axes"
 msgstr "Osi"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:287
+#: src/ui-imgui/joy/joy_setup_window.cpp:288
 msgid "Buttons"
 msgstr "Tlačidlá"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:292
+#: src/ui-imgui/joy/joy_setup_window.cpp:293
 msgid "X Axis"
 msgstr "Os X"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:299
-#: src/ui-imgui/joy/joy_setup_window.cpp:312
+#: src/ui-imgui/joy/joy_setup_window.cpp:300
+#: src/ui-imgui/joy/joy_setup_window.cpp:313
 msgid "Invert"
 msgstr "Invertovať"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:305
+#: src/ui-imgui/joy/joy_setup_window.cpp:306
 msgid "Y Axis"
 msgstr "Os Y"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:357
+#: src/ui-imgui/joy/joy_setup_window.cpp:358
 msgid "Live Status"
 msgstr "Živý stav"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:399
+#: src/ui-imgui/joy/joy_setup_window.cpp:400
 msgid "Setup preferences for Joystick"
 msgstr "Nastavenie predvolieb pre joystick"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:416
+#: src/ui-imgui/joy/joy_setup_window.cpp:417
 msgid "Emulated on numeric keypad"
 msgstr "Emulované na numerickej klávesnici"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:501
+#: src/ui-imgui/joy/joy_setup_window.cpp:502
 msgid "Joystick Setup"
 msgstr "Nastavenie joysticku"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:506
+#: src/ui-imgui/joy/joy_setup_window.cpp:507
 msgid "Initialize Joystick Subsystem"
 msgstr "Inicializovať subsystém joysticku"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:516
+#: src/ui-imgui/joy/joy_setup_window.cpp:517
 msgid "need only for real gaming devices"
 msgstr "potrebné iba pre skutočné herné zariadenia"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:520
+#: src/ui-imgui/joy/joy_setup_window.cpp:521
 msgid "Rescan Devices"
 msgstr "Znovu prehľadať zariadenia"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:539
+#: src/ui-imgui/joy/joy_setup_window.cpp:540
 msgid "Joystick"
 msgstr "Joystick"
 

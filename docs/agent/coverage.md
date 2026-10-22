@@ -102,3 +102,9 @@ interrupt / NMI handler), `first_epoch`.
   (`emulator://docs/replay`) and collect coverage while replaying.
 - The level `branch` keeps its own data; `emu_profiler_pc_bitmap` (the
   executed addresses of the PC profiler) stays independent.
+- A user sees the same data in the GUI (Coverage tab of the CPU Profiler
+  window, colored marks in the Disassembly windows); a collection started
+  over MCP shows up there and the user can stop or reset it.
+- Source line coverage: `docs/tools/coverage_to_lcov.py` converts an
+  export (JSON) with a sjasmplus or pasmo listing into an lcov tracefile
+  (`DA` per listing line, `BRDA` 0 = condition met, 1 = not met).

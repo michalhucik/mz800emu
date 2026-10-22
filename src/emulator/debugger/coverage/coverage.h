@@ -324,14 +324,18 @@ void coverage_get_first_epochs ( uint16_t *out );
 uint32_t coverage_copy_units ( st_COVERAGE_UNIT *out, uint32_t max );
 
 /**
- * @brief Zkopíruje stav, bitmapy, epochy a jednotky do snímku.
+ * @brief Zkopíruje stav, bitmapy, epochy a volitelně jednotky do snímku.
  *
- * @param out Snímek; předchozí obsah se přepíše (pole `units` předchozí
- *            kopie musí být uvolněné, coverage_snapshot_clear()).
+ * @param out        Snímek; předchozí obsah se přepíše (pole `units`
+ *                   předchozí kopie musí být uvolněné,
+ *                   coverage_snapshot_clear()).
+ * @param with_units false = bez jednotek úrovně detail (out->units NULL,
+ *                   n_units 0); okna GUI tak obnovují značky bez kopie
+ *                   tabulky, která může mít až 32 MiB.
  * @return false = nepodařila se alokace pole jednotek (out->units NULL,
  *         n_units 0, ostatní data vyplněná).
  */
-bool coverage_snapshot_take ( st_COVERAGE_SNAPSHOT *out );
+bool coverage_snapshot_take ( st_COVERAGE_SNAPSHOT *out, bool with_units );
 
 /**
  * @brief Uvolní pole jednotek snímku (strukturu samotnou ne).

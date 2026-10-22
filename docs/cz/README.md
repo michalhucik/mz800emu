@@ -229,6 +229,9 @@ Další debugger dokumenty:
   formáty .noi/.map/.sym/.lbl, UI panel Symbols)
 - [`debugger/io-ports.md`](debugger/io-ports.md) - I/O Ports panel V1.5
   (Overview tab, History tab, activity tracking, naming konvence)
+- [`debugger/code-coverage.md`](debugger/code-coverage.md) - pokrytí kódu:
+  vykonaný kód a výsledky větví (záložka Coverage v CPU Profileru, značky
+  v Disassembly, `--coverage*`, `[COVERAGE]`, lcov přes `docs/tools/`)
 - [`debugger/ram-write-log.md`](debugger/ram-write-log.md) - RAM Write Log:
   kdo zapsal bajt, historie zápisů buňky, nejnovější zápisy
   (`--ramlog-*`, `[RAMLOG]`)

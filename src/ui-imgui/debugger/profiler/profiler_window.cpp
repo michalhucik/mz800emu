@@ -1,9 +1,10 @@
 /*
  * profiler_window.cpp - CPU Profiler okno wrapper (mutant profiler V1, fáze F3).
  *
- * Tenký wrapper se dvěma záložkami: Functions = dbg_profiler_render()
+ * Tenký wrapper se třemi záložkami: Functions = dbg_profiler_render()
  * (sections/dbg_profiler.cpp), Per PC = dbg_profiler_pc_render()
- * (sections/dbg_profiler_pc.cpp).
+ * (sections/dbg_profiler_pc.cpp), Coverage = dbg_coverage_render()
+ * (sections/dbg_coverage.cpp).
  * Vytváří top-level ImGui okno s vlastním title a persistentní geometrií
  * (ImGui ini), uvnitř volá render záložek.
  *
@@ -41,6 +42,7 @@
 #include "profiler_window.h"
 #include "ui-imgui/debugger/sections/dbg_profiler.h"
 #include "ui-imgui/debugger/sections/dbg_profiler_pc.h"
+#include "ui-imgui/debugger/sections/dbg_coverage.h"
 #include "ui-imgui/auto_layout.h"
 #include "ui-imgui/bootstrap/myimgui.h"
 #include "libs/cfgfile/cfgmodule.h"
@@ -114,9 +116,10 @@ extern "C" void profiler_window_render ( bool *p_open ) {
         return;
     };
 
-    /* Dvě záložky: Functions (profiler po funkcích přes callstack)
-     * a Per PC (profiler podle adresy instrukce, profiler_pc.h). Každá
-     * má vlastní toolbar, tabulku a stavový řádek. */
+    /* Tři záložky: Functions (profiler po funkcích přes callstack),
+     * Per PC (profiler podle adresy instrukce, profiler_pc.h) a Coverage
+     * (pokrytí kódu, coverage.h). Každá má vlastní toolbar, tabulku
+     * a stavový řádek. */
     if ( ImGui::BeginTabBar ( "###profiler_tabs" ) ) {
         if ( ImGui::BeginTabItem ( _L ( "Functions###profiler_tab_func" ) ) ) {
             dbg_profiler_render ( );
@@ -124,6 +127,10 @@ extern "C" void profiler_window_render ( bool *p_open ) {
         };
         if ( ImGui::BeginTabItem ( _L ( "Per PC###profiler_tab_pc" ) ) ) {
             dbg_profiler_pc_render ( );
+            ImGui::EndTabItem ( );
+        };
+        if ( ImGui::BeginTabItem ( _L ( "Coverage###profiler_tab_cov" ) ) ) {
+            dbg_coverage_render ( );
             ImGui::EndTabItem ( );
         };
         ImGui::EndTabBar ( );

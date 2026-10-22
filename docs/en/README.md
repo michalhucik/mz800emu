@@ -222,6 +222,9 @@ Per-subsystem format details:
 
 Other debugger documents:
 
+- [`debugger/code-coverage.md`](debugger/code-coverage.md) - Code coverage:
+  executed code and branch results (Coverage tab in CPU Profiler, marks in
+  Disassembly, `--coverage*`, `[COVERAGE]`, lcov via `docs/tools/`)
 - [`debugger/ram-write-log.md`](debugger/ram-write-log.md) - RAM Write Log:
   who wrote a byte, write history of a cell, newest writes
   (`--ramlog-*`, `[RAMLOG]`)

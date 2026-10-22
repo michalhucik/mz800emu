@@ -1802,7 +1802,10 @@ address.
   and from a breakpoint action (`coverage_start`, `coverage_stop`,
   `coverage_mark`).
 
-Recipe for AI clients: `emulator://docs/coverage`.
+Recipe for AI clients: `emulator://docs/coverage`. In the GUI: Coverage
+tab of the CPU Profiler window and marks in the Disassembly windows, see
+[Code coverage](../debugger/code-coverage.md); lcov via
+`docs/tools/coverage_to_lcov.py`.
 
 Typical use:
 

@@ -159,6 +159,34 @@ uint32_t coverage_row_epoch ( const st_COVERAGE_SNAPSHOT *s, const st_COVERAGE_R
 }
 
 
+unsigned coverage_pc_state ( const st_COVERAGE_SNAPSHOT *s, uint16_t pc )
+{
+    if ( !cov_bit ( s->exec, pc ) ) return 0;
+    return coverage_state_bits ( coverage_branch_state_name ( cov_bit ( s->decision, pc ),
+                                                              cov_bit ( s->taken, pc ),
+                                                              cov_bit ( s->not_taken, pc ) ) );
+}
+
+
+void coverage_filter_init ( st_COVERAGE_FILTER *f )
+{
+    memset ( f, 0, sizeof ( *f ) );
+    f->pc_to = 0xFFFF;
+}
+
+
+bool coverage_row_match ( const st_COVERAGE_SNAPSHOT *s, const st_COVERAGE_ROW *r,
+                          const st_COVERAGE_FILTER *f )
+{
+    if ( r->pc < f->pc_from || r->pc > f->pc_to ) return false;
+    if ( f->has_space && ( !r->unit || COVERAGE_CELL_SPACE ( r->unit->cell ) != f->space ) ) return false;
+    if ( f->has_epoch && coverage_row_epoch ( s, r ) < f->epoch_from ) return false;
+    if ( f->state_mask && !( f->state_mask & coverage_state_bits ( coverage_row_state ( s, r ) ) ) ) return false;
+    if ( f->flags_any && !( f->flags_any & coverage_row_flags ( s, r ) ) ) return false;
+    return true;
+}
+
+
 unsigned coverage_state_bits ( const char *name )
 {
     if ( g_strcmp0 ( name, "none" ) == 0 ) return COVERAGE_STATE_NONE;

@@ -97,6 +97,51 @@ uint16_t coverage_row_flags ( const st_COVERAGE_SNAPSHOT *s, const st_COVERAGE_R
 uint32_t coverage_row_epoch ( const st_COVERAGE_SNAPSHOT *s, const st_COVERAGE_ROW *r );
 
 /**
+ * @brief Stav adresy podle bitmap snímku (obě úrovně).
+ *
+ * Značky v okně Disassembled: stav se počítá z bitmap podle logické
+ * adresy, tedy bez rozlišení bank a verzí kódu.
+ *
+ * @param s  Snímek.
+ * @param pc Logická adresa.
+ * @return 0 = adresa se nevykonala; jinak jeden bit COVERAGE_STATE_*
+ *         (NONE = vykonaná nepodmíněná instrukce).
+ */
+unsigned coverage_pc_state ( const st_COVERAGE_SNAPSHOT *s, uint16_t pc );
+
+/**
+ * @brief Filtr řádků (MCP coverage_read, záložka Coverage v GUI).
+ *
+ * @invariant pc_from <= pc_to.
+ */
+typedef struct st_COVERAGE_FILTER {
+    uint16_t pc_from;       /**< Nejnižší adresa (včetně). */
+    uint16_t pc_to;         /**< Nejvyšší adresa (včetně). */
+    bool has_space;         /**< Filtr prostoru buňky (jen detail, řádek bez jednotky nevyhoví). */
+    uint8_t space;          /**< Prostor (coverage_space_parse()). */
+    unsigned state_mask;    /**< Bity COVERAGE_STATE_*, 0 = všechny stavy. */
+    bool has_epoch;         /**< Filtr epochy vzniku. */
+    uint32_t epoch_from;    /**< Vyhoví coverage_row_epoch() >= epoch_from. */
+    uint16_t flags_any;     /**< Řádek musí mít aspoň jeden z příznaků COVERAGE_F_* (0 = bez filtru). */
+} st_COVERAGE_FILTER;
+
+/**
+ * @brief Nastaví filtr, kterému vyhoví každý řádek (0000h-FFFFh, bez podmínek).
+ * @param f Filtr.
+ */
+void coverage_filter_init ( st_COVERAGE_FILTER *f );
+
+/**
+ * @brief Řádek vyhovuje filtru.
+ * @param s Snímek.
+ * @param r Řádek (coverage_rows_build()).
+ * @param f Filtr.
+ * @return true = vyhovuje všem podmínkám.
+ */
+bool coverage_row_match ( const st_COVERAGE_SNAPSHOT *s, const st_COVERAGE_ROW *r,
+                          const st_COVERAGE_FILTER *f );
+
+/**
  * @brief Bity stavů podle jména (i skupiny "partial" a "decision").
  * @param name Jméno stavu.
  * @return Bity COVERAGE_STATE_*, 0 = neznámé jméno.

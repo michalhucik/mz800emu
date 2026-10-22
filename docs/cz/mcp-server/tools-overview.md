@@ -1756,7 +1756,10 @@ výsledky skončí na stejné adrese.
   ze sekce INI `[COVERAGE]` a z akce breakpointu (`coverage_start`,
   `coverage_stop`, `coverage_mark`).
 
-Postup pro AI klienty: `emulator://docs/coverage`.
+Postup pro AI klienty: `emulator://docs/coverage`. V GUI: záložka
+Coverage v okně CPU Profiler a značky v oknech Disassembly, viz
+[Pokrytí kódu](../debugger/code-coverage.md); lcov přes
+`docs/tools/coverage_to_lcov.py`.
 
 Typické použití:
 

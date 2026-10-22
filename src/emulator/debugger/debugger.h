@@ -111,6 +111,7 @@ extern "C"
         unsigned screen_refresh_on_edit;
         unsigned screen_refresh_at_step;
         unsigned disasm_show_branch_arrows;       /**< Zobrazovat vizualizaci skoků (šipky v ICONS gutteru) v dolní disasm tabulce (default 1). UI-only, persistovaný v cfgmain. */
+        unsigned disasm_show_coverage;            /**< Zobrazovat značky pokrytí kódu (ICONS gutter, tooltip) v oknech Disassembly #1-#5, když data pokrytí existují (default 1). UI-only, persistovaný v cfgmain. */
         uint32_t user_cycle_origin;               /**< V3.1: počátek uživatelského cycle counteru pro CPU window (display = cpu->total_cycles - user_cycle_origin). Default 0 = od resetu. Nastavováno přes DBGAPI_CMD_SET_USER_CYCLE_ORIGIN. */
         /* DBG Workplace - která auxiliary debug okna se mají automaticky
          * otevírat a zavírat společně s hlavním oknem debuggeru. User

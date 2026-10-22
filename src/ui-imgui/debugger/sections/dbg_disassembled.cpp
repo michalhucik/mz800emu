@@ -188,6 +188,8 @@
 #include "../breakpoints/bpt_edit_panel.h"    /* V1.7: open edit panel z popup menu */
 #include "../debugger_state.h"
 #include "../dbgapi_helpers.h"
+#include "dbg_coverage.h"                /* značky a tooltip pokrytí kódu */
+#include "dbg_coverage_data.h"
 
 #include <ctype.h>
 #include <stdlib.h>
@@ -489,17 +491,42 @@ static const float COL_ICONS_BASE_WIDTH = 20.0f;
 static const float COL_ICONS_ARROWS_WIDTH = 20.0f;
 
 /**
+ * @brief Šířka proužku značky pokrytí kódu vpravo v ICONS sloupci (px).
+ *
+ * Proužek leží za BPT/PC slotem; sloupec se o něj rozšíří jen tehdy, když
+ * se značky zobrazují (coverage_marks_shown()).
+ */
+static const float COL_ICONS_COVERAGE_WIDTH = 6.0f;
+
+/**
+ * @brief Zobrazují se značky pokrytí kódu.
+ *
+ * @return true = volba Show code coverage je zapnutá
+ *         (g_debugger.disasm_show_coverage) a existují data pokrytí
+ *         (poslední kopie z dbg_cov_data_poll()).
+ */
+static inline bool coverage_marks_shown(void)
+{
+    return (g_debugger.disasm_show_coverage != 0)
+           && dbg_cov_data_valid()
+           && dbg_cov_data_status()->has_data;
+}
+
+/**
  * @brief Aktuální šířka ICONS sloupce v px.
  *
- * @return COL_ICONS_BASE_WIDTH + COL_ICONS_ARROWS_WIDTH pokud je zapnutá
+ * @return COL_ICONS_BASE_WIDTH, + COL_ICONS_ARROWS_WIDTH pokud je zapnutá
  *         vizualizace skoků (g_debugger.disasm_show_branch_arrows != 0),
- *         jinak COL_ICONS_BASE_WIDTH.
+ *         + COL_ICONS_COVERAGE_WIDTH pokud se zobrazují značky pokrytí.
  */
 static inline float icons_col_width(void)
 {
-    return (g_debugger.disasm_show_branch_arrows != 0)
-               ? (COL_ICONS_BASE_WIDTH + COL_ICONS_ARROWS_WIDTH)
-               : COL_ICONS_BASE_WIDTH;
+    float w = COL_ICONS_BASE_WIDTH;
+    if (g_debugger.disasm_show_branch_arrows != 0)
+        w += COL_ICONS_ARROWS_WIDTH;
+    if (coverage_marks_shown())
+        w += COL_ICONS_COVERAGE_WIDTH;
+    return w;
 }
 
 /**
@@ -1875,8 +1902,8 @@ static void render_bpt_summary_in_tooltip(int bp_id)
  *
  * Vyvolává se pro hovered řádek (po Selectable() s ImGuiHoveredFlags_DelayNormal).
  * Sestaví tooltip obsahující instrukční info, symbol info pro adresu řádku,
- * symboly pro operandy, BP detail pokud jsou na adrese, a edit hints.
- * Sekce, ke kterým chybí data, se vynechají.
+ * symboly pro operandy, BP detail pokud jsou na adrese, pokrytí kódu
+ * a edit hints. Sekce, ke kterým chybí data, se vynechají.
  *
  * @param row řádek disassembly, nesmí být NULL
  *
@@ -1939,7 +1966,14 @@ static void render_row_tooltip(const DasmRow *row)
         g_array_free(bpt_ids, TRUE);
     };
 
-    /* 5. Edit hints - šedý dim text. */
+    /* 5. Pokrytí kódu (jen když se zobrazují značky). */
+    if (coverage_marks_shown())
+    {
+        ImGui::Separator();
+        dbg_coverage_render_tooltip(row->addr);
+    };
+
+    /* 6. Edit hints - šedý dim text. */
     ImGui::Separator();
     ImGui::TextDisabled("%s", _("Double-click a row or start typing to open the inline assembler."));
     ImGui::TextDisabled("%s", _("Right-click for context menu."));
@@ -2681,6 +2715,12 @@ static void render_disassembly_table(DisassembledView *self, float height, bool 
      */
     uint16_t current_pc = g_mzarch_main.cpu->pc;
 
+    /* Značky pokrytí kódu: obnova sdílené kopie dat (sama se omezí na
+     * řídký interval, viz dbg_coverage_data.h). */
+    if (g_debugger.disasm_show_coverage != 0)
+        dbg_cov_data_poll(false);
+    const bool show_coverage = coverage_marks_shown();
+
     /*
      * Výpočet šířek textových sloupců podle velikosti aktuálního fontu.
      *
@@ -3364,6 +3404,9 @@ static void render_disassembly_table(DisassembledView *self, float height, bool 
              * Pravý slot (PC indikátor):
              *   ► zelený trojúhelník = regPC == addr
              *   → žlutá šipka       = regPC uvnitř instrukce
+             *
+             * Proužek pokrytí kódu (za PC slotem, jen se zobrazenými
+             * značkami): barva podle dbg_coverage_state_color().
              */
             {
                 float row_h = ImGui::GetTextLineHeight();
@@ -3430,6 +3473,21 @@ static void render_disassembly_table(DisassembledView *self, float height, bool 
                         ImVec2(line_end, cy),
                         ImVec2(line_end - 5, cy + arrow_h),
                         yellow);
+                };
+
+                /* Značka pokrytí kódu - proužek vpravo za BPT/PC slotem
+                 * (barva podle stavu adresy, nevykonaná adresa bez značky). */
+                if (show_coverage)
+                {
+                    unsigned cov_state = dbg_cov_data_pc_state(rows[i].addr);
+                    if (cov_state != 0)
+                    {
+                        float x0 = bpt_pc_x0 + COL_ICONS_BASE_WIDTH + 1.0f;
+                        dl->AddRectFilled(ImVec2(x0, icons_cell_pos.y + 1.0f),
+                                          ImVec2(x0 + COL_ICONS_COVERAGE_WIDTH - 3.0f,
+                                                 icons_cell_pos.y + row_h - 1.0f),
+                                          dbg_coverage_state_color(cov_state));
+                    };
                 };
             };
 

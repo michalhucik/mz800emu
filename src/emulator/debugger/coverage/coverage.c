@@ -485,13 +485,13 @@ bool coverage_space_parse ( const char *name, uint8_t *out )
 }
 
 
-bool coverage_snapshot_take ( st_COVERAGE_SNAPSHOT *out )
+bool coverage_snapshot_take ( st_COVERAGE_SNAPSHOT *out, bool with_units )
 {
     coverage_get_status ( &out->status );
     coverage_get_bitmaps ( out->exec, out->decision, out->taken, out->not_taken, out->int_entry );
     coverage_get_first_epochs ( out->first_epoch );
     out->units = NULL;
-    out->n_units = coverage_copy_units ( NULL, 0 );
+    out->n_units = with_units ? coverage_copy_units ( NULL, 0 ) : 0;
     if ( out->n_units == 0 ) return true;
     out->units = malloc ( (size_t) out->n_units * sizeof ( st_COVERAGE_UNIT ) );
     if ( !out->units ) {

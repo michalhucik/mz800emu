@@ -409,6 +409,11 @@ void debugger_init ( void ) {
     elm = cfgmodule_register_new_element ( cmod, "disasm_show_branch_arrows", CFGENTYPE_BOOL, 1 );
     cfgelement_set_handlers ( elm, (void*) &g_debugger.disasm_show_branch_arrows, (void*) &g_debugger.disasm_show_branch_arrows );
 
+    /* Disassembled tabulka - značky pokrytí kódu (coverage). Default ON:
+     * bez dat pokrytí se nic nekreslí. */
+    elm = cfgmodule_register_new_element ( cmod, "disasm_show_coverage", CFGENTYPE_BOOL, 1 );
+    cfgelement_set_handlers ( elm, (void*) &g_debugger.disasm_show_coverage, (void*) &g_debugger.disasm_show_coverage );
+
     /* DBG Workplace flagy - která auxiliary okna se otevřou/zavřou současně
      * s hlavním oknem debuggeru. Defaults dle uživatelského sezení:
      * CPU Registers + Memory Map = ON, ostatní = OFF. */

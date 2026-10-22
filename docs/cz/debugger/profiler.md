@@ -359,8 +359,8 @@ Sort spec tabulky (= seřazení sloupců) ukládá ImGui sám do své INI.
 
 ## 10. Záložka Per PC (profiler podle PC)
 
-Okno CPU Profiler má dvě záložky: **Functions** (vše popsané výše)
-a **Per PC**. Záložka Per PC počítá každou vykonanou instrukci podle
+Okno CPU Profiler má tři záložky: **Functions** (vše popsané výše),
+**Per PC** a **Coverage** (oddíl 11). Záložka Per PC počítá každou vykonanou instrukci podle
 její adresy, bez ohledu na CALL a RET. Vidí proto i kód, na který se
 skáče, obsluhy přerušení a smyčky v hlavním programu - to, co záložka
 Functions přičte celé jedné funkci, tu je rozložené po jednotlivých
@@ -409,3 +409,13 @@ Omezení:
 Stejná data jsou dostupná přes MCP (`emu_profiler_pc_*`, viz
 mcp-server/tools-overview.md), vykonané adresy i jako bitmapa pro
 pokrytí kódu (`emu_profiler_pc_bitmap`).
+
+## 11. Záložka Coverage (pokrytí kódu)
+
+Záložka **Coverage** sbírá pokrytí kódu: které instrukce se vykonaly
+a kterým směrem šly podmíněné instrukce (obě větve, jen skok, jen
+propad), na úrovni `branch` podle adresy, nebo na úrovni `detail` podle
+verze kódu s čítači. Ovládá sběr (Start, Stop, Reset, Mark, Export...),
+filtruje řádky (neúplné větve, obě větve, všechny podmíněné, nové od
+značky) a otevírá řádek v oknech Disassembly, která stejná data ukazují
+barevnými značkami. Úplný popis: [code-coverage.md](code-coverage.md).

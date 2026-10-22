@@ -158,6 +158,17 @@ Branch arrows are not implemented for `JP (HL)`, `JP (IX)`, `JP (IY)`,
 | `PC == addr` | green triangle |
 | `PC` inside the instruction (mid-instruction) | yellow arrow |
 
+#### Code coverage mark
+
+While code coverage data exist, a colored mark to the right of the PC
+slot shows the coverage of the address: green = executed (or a
+conditional instruction with both results), yellow = condition always
+met, orange = condition never met, no mark = not executed. The gutter is
+6 px wider while the marks are shown. The row tooltip gets a Coverage
+section. Turned off in `Settings` -> `Disassembled` -> `Show code
+coverage` (cfg key `disasm_show_coverage`). See
+[code-coverage.md](code-coverage.md).
+
 ### ADDR column (5 characters)
 
 Instruction address. Two variants:
@@ -307,7 +318,8 @@ change** the flag - after release Follow PC returns to normal.
 
 ## Per-row tooltip
 
-Hovering on a row for ~500 ms shows a unified tooltip with 4 sections:
+Hovering on a row for ~500 ms shows a unified tooltip with these sections
+(sections without data are left out):
 
 ### 1. Instruction info
 
@@ -345,6 +357,12 @@ Only if there is a fixed target (CALL/JP/JR/...) or a direct MEM access:
 Target: 0xE6DA -> CALC_HELPER
 Mem: (0x1234) -> SCREEN_BUFFER
 ```
+
+### Code coverage
+
+Only while the coverage marks are shown: the state of the address and, at
+the detail level, the code versions at the address (cell, key bytes,
+executions, condition met / not met). See [code-coverage.md](code-coverage.md).
 
 ### 4. Edit hints
 
@@ -417,6 +435,7 @@ Module `DEBUGGER`:
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `disasm_show_branch_arrows` | bool | true | Global toggle for branch arrows |
+| `disasm_show_coverage` | bool | true | Global toggle for code coverage marks |
 | `disasm_main_focus_addr` | uint16 | 0 | Main window focus |
 | `disasm_main_follow_pc` | bool | true | Main window Follow PC |
 | `disasm_main_show_tstates` | bool | false | Main window T-states column |

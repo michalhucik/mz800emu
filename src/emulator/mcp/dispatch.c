@@ -19052,18 +19052,6 @@ static en_MCP_DISPATCH_RESULT _handle_replay_status(const st_JSONL_MESSAGE *req,
 /** @brief Rezerva znaků na obálku stránky (stav, kurzor) nad řádky. */
 #define COVERAGE_READ_ENVELOPE_CHARS 600
 
-/** @brief Filtr coverage_read (naparsovaný). */
-typedef struct st_COV_FILTER {
-    uint16_t pc_from;       /**< Nejnižší adresa (včetně). */
-    uint16_t pc_to;         /**< Nejvyšší adresa (včetně). */
-    bool has_space;         /**< Filtr prostoru buňky (detail). */
-    uint8_t space;          /**< Prostor (coverage_space_parse). */
-    unsigned state_mask;    /**< Bity COVERAGE_STATE_*, 0 = všechny stavy. */
-    bool has_epoch;         /**< Filtr epochy vzniku. */
-    uint32_t epoch_from;    /**< first_epoch >= epoch_from. */
-    uint16_t flags_any;     /**< Řádek musí mít aspoň jeden z příznaků (0 = bez filtru). */
-} st_COV_FILTER;
-
 /**
  * @brief Provede DBGAPI_CMD_COVERAGE.
  * @return false = příkaz se nepodařilo předat; jinak true a chyba operace v p->out_error.
@@ -19204,9 +19192,8 @@ static void _cov_snapshot_free(st_COVERAGE_SNAPSHOT *s) {
  * @param out    Výstup.
  * @return NULL OK, jinak statická chybová zpráva.
  */
-static const char *_cov_parse_filter(JsonObject *fo, bool detail, st_COV_FILTER *out) {
-    memset(out, 0, sizeof(*out));
-    out->pc_to = 0xFFFF;
+static const char *_cov_parse_filter(JsonObject *fo, bool detail, st_COVERAGE_FILTER *out) {
+    coverage_filter_init(out);
     if (!fo) return NULL;
     int hf = _videorec_member(fo, "pc_from", G_TYPE_INT64);
     int ht = _videorec_member(fo, "pc_to", G_TYPE_INT64);
@@ -19265,16 +19252,6 @@ static const char *_cov_parse_filter(JsonObject *fo, bool detail, st_COV_FILTER 
         }
     }
     return NULL;
-}
-
-/** @brief Řádek vyhovuje filtru. */
-static bool _cov_row_match(const st_COVERAGE_SNAPSHOT *s, const st_COVERAGE_ROW *r, const st_COV_FILTER *f) {
-    if (r->pc < f->pc_from || r->pc > f->pc_to) return false;
-    if (f->has_space && (!r->unit || COVERAGE_CELL_SPACE(r->unit->cell) != f->space)) return false;
-    if (f->has_epoch && coverage_row_epoch(s, r) < f->epoch_from) return false;
-    if (f->state_mask && !(f->state_mask & coverage_state_bits(coverage_row_state(s, r)))) return false;
-    if (f->flags_any && !(f->flags_any & coverage_row_flags(s, r))) return false;
-    return true;
 }
 
 /** @brief Délka JSON textu uzlu (místo, které zabere ve stránce). */
@@ -19376,7 +19353,7 @@ static en_MCP_DISPATCH_RESULT _handle_coverage_read(const st_JSONL_MESSAGE *req,
         }
         fo = json_node_get_object(fn);
     }
-    st_COV_FILTER f;
+    st_COVERAGE_FILTER f;
     const char *ferr = _cov_parse_filter(fo, detail, &f);
     if (ferr) {
         owned_err = g_strdup_printf("Invalid parameters: %s", ferr);
@@ -19396,7 +19373,7 @@ static en_MCP_DISPATCH_RESULT _handle_coverage_read(const st_JSONL_MESSAGE *req,
     gint64 returned = 0;
     bool page_full = false;
     while (i < n) {
-        if (!_cov_row_match(snap, &rows[i], &f)) {
+        if (!coverage_row_match(snap, &rows[i], &f)) {
             i++;
             continue;
         }
