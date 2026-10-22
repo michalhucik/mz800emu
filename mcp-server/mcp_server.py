@@ -1473,10 +1473,14 @@ async def emu_history_get() -> str:
     executed instructions).
 
     No arguments. Returns ``{current_position, length, entries}`` where
-    ``entries[i]`` is ``{addr, bytes_hex}`` in raw ring order (not
+    ``entries[i]`` is ``{addr, bytes_hex, regs}`` in raw ring order (not
     chronologically sorted). Use ``current_position`` to compute the
     chronological order: oldest entry is at ``(current_position + 1) %
-    length``, newest at ``current_position``.
+    length``, newest at ``current_position``. ``regs`` is the CPU state
+    just before that instruction (``af``, ``bc``, ``de``, ``hl``, ``ix``,
+    ``iy``, ``sp``, ``wz`` hex16, ``i``, ``r`` hex8, ``iff1``, ``iff2``,
+    ``im``); with a breakpoint hit this answers "what was HL before each
+    of the last instructions" without a trace.
 
     Mnemonic is not included to keep the response small; pass a single
     ``addr`` to ``emu_dasm(addr, 1)`` to obtain it.
@@ -3672,7 +3676,7 @@ def _trace_validate_channel(channel: str) -> "str | None":
 
 
 @mcp.tool()
-async def emu_trace_start(channel: str) -> str:
+async def emu_trace_start(channel: str, regs: bool | None = None) -> str:
     """Start trace recording for a trace-suite channel.
 
     Switches the selected channel's mode to ``ALWAYS`` and triggers the
@@ -3682,6 +3686,13 @@ async def emu_trace_start(channel: str) -> str:
     Args:
         channel: One of ``cputrack``, ``iorqlog``, ``intlog``, ``hwlog``,
             ``marklog``.
+        regs: cputrack only. ``True`` records the CPU registers after each
+            instruction (format 3, 32 bytes per record instead of 12), so
+            ``emu_trace_read`` can show them before and after every
+            instruction and filter by them; ``False`` records format 2;
+            omitted = the configured default (``[TRACE_CPUTRACK] regs``).
+            Fails while cputrack is already recording in the other format
+            (stop it first).
 
     Returns:
         JSON ``{"started": true}`` on success or ``{"error": "..."}``.
@@ -3689,7 +3700,10 @@ async def emu_trace_start(channel: str) -> str:
     err = _trace_validate_channel(channel)
     if err is not None:
         return json.dumps({"error": err})
-    resp = await _send_request("trace_start", {"channel": channel})
+    data: dict[str, Any] = {"channel": channel}
+    if regs is not None:
+        data["regs"] = bool(regs)
+    resp = await _send_request("trace_start", data)
     if not resp.get("success", False):
         return json.dumps({"error": resp.get("error", "trace_start failed")})
     return json.dumps(_data_or_error(resp))
@@ -3944,7 +3958,10 @@ async def emu_trace_status(channel: str = "") -> str:
         bytes_on_disk, dir, name, has_time}]}``. ``segment`` 0 means the
         channel has recorded nothing yet; after ``emu_trace_stop`` the
         last segment stays readable (``live: false``) until the next
-        start of the channel.
+        start of the channel. cputrack also has ``has_regs`` (segment
+        recorded with registers, format 3) and ``initial_regs`` (CPU
+        state at the start of the last segment, integer values, null
+        before the first recording).
     """
     data: dict[str, Any] = {}
     if channel:
@@ -4131,7 +4148,8 @@ async def emu_trace_read(channel: str, cursor: str = "", start: str = "oldest",
                          columns: list[str] | None = None,
                          filter: dict[str, Any] | None = None,
                          max_chars: int = 20000,
-                         max_scan: int = 2000000) -> str:
+                         max_scan: int = 2000000,
+                         regs: str = "after") -> str:
     """Read one page of trace-suite, Event Viewer or audio capture records,
     also while running.
 
@@ -4144,7 +4162,9 @@ async def emu_trace_read(channel: str, cursor: str = "", start: str = "oldest",
     read again from the start.
 
     Columns (``rows``, values in this canonical order):
-      cputrack: seq, pc, bytes, asm, t_std, wait, t, sym
+      cputrack: seq, pc, bytes, asm, t_std, wait, t, sym (default), kind,
+                af, bc, de, hl, ix, iy, sp, wz, i, r, iff1, iff2, im,
+                halted (registers only on request)
       iorqlog:  seq, t, frame, pos, type, dir, src, addr, value, pulse
       intlog:   seq, t, frame, pos, class, chip, pin, edge, state
       hwlog:    seq, t, frame, pos, chip, sub, payload
@@ -4160,7 +4180,17 @@ async def emu_trace_read(channel: str, cursor: str = "", start: str = "oldest",
     ``t`` is in GDG ticks since emulation start (cputrack: start of the
     instruction, only with ``has_time``, i.e. no PC range record filter).
     cputrack ``asm`` is decoded from the recorded bytes (not current
-    memory); an interrupt acknowledge record shows ``INT ACK``. The
+    memory); an interrupt acknowledge record shows ``INT ACK``. ``kind``
+    is ``insn``, ``loop`` (collapsed HALT or loop on itself, time in
+    ``wait``), ``int`` (interrupt acknowledge) or ``sync``. Register columns
+    need a segment recorded with ``emu_trace_start(regs=True)``
+    (``format_version`` 3): ``regs="after"`` shows the state after the
+    record, ``"before"`` the state before it (= the previous record; null
+    where unknown). A ``sync`` record (``asm`` ``SYNC start``,
+    ``SYNC pc_range``, ``SYNC write``) carries the CPU state at the start
+    of the segment, when execution returns into the PC range record
+    filter, and after a change outside an instruction (debugger, MCP,
+    reset, snapshot load); it takes no time. The
     Event Viewer ring (``eventlog``) overwrites its oldest events: a cursor
     below ``first_seq`` is no error, the page starts at ``first_seq`` and
     ``gap`` names the lost range.
@@ -4204,7 +4234,16 @@ async def emu_trace_read(channel: str, cursor: str = "", start: str = "oldest",
             ``channels`` (list of channel names such as ``"ctc0"``,
             ``"psg0_1"``; audio_levels, audio_psg_writes), ``reg``
             (``tone_lo``, ``tone``, ``volume``, ``noise``; audio_psg_writes),
-            ``t_from``/``t_to`` (channels with ``t``).
+            ``t_from``/``t_to`` (channels with ``t``), cputrack format 3:
+            register columns (``af``, ``bc``, ``de``, ``hl``, ``ix``,
+            ``iy``, ``sp``, ``wz``, ``i``, ``r``, ``iff1``, ``iff2``,
+            ``im``, ``halted``)
+            with a value (number or ``"0x..."`` string) or ``[lo, hi]``,
+            applied to the state chosen by ``regs`` - e.g.
+            ``{"hl": "0xC000"}`` with ``regs="after"`` finds where HL
+            became C000h.
+        regs: cputrack: ``"after"`` (default) or ``"before"`` - which state
+            the register columns and filters show.
         max_chars: Character budget of a ``rows`` page (1000-45000); the
             whole response stays within it.
         max_scan: Max records examined per call; when exhausted the page
@@ -4232,6 +4271,8 @@ async def emu_trace_read(channel: str, cursor: str = "", start: str = "oldest",
         data["columns"] = list(columns)
     if filter:
         data["filter"] = dict(filter)
+    if regs and regs != "after":
+        data["regs"] = regs
     resp = await _send_request("trace_read", data)
     if not resp.get("success", False):
         return json.dumps({"error": resp.get("error", "trace_read failed")})

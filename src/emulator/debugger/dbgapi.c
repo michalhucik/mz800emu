@@ -4980,6 +4980,18 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                 case DBGAPI_CMD_TRACE_RESET: op = DBGAPI_TRACE_OP_RESET; break;
                 default:                     op = DBGAPI_TRACE_OP_SAVE;  break;
             }
+            /* Formát cputrack pro nový segment (regs): běžící segment
+             * v jiném formátu se nepřepíše, start selže. */
+            if ( op == DBGAPI_TRACE_OP_START && p->channel == DBGAPI_TRACE_CHANNEL_CPUTRACK && p->regs >= 0 )
+            {
+                if ( cputrack_is_recording ( ) && cputrack_segment_has_regs ( ) != ( p->regs ? 1 : 0 ) )
+                {
+                    p->out_result = DBGAPI_TRACE_ERR_REGS_RUNNING;
+                    rq->success = false;
+                    break;
+                };
+                g_cputrack_config.regs = p->regs ? 1u : 0u;
+            };
             /* SAVE bere path z param; ostatní op path ignorují. */
             const char *path = ( cmd == DBGAPI_CMD_TRACE_SAVE ) ? p->path : NULL;
             int rc = dbgapi_trace_lifecycle ( p->channel, op, path );
@@ -6518,6 +6530,7 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
             p->out_ok = false;
             p->out_pc_range_full = false;
             p->out_ram_prefix_t = 0;
+            p->out_has_initial_regs = false;
             p->out_cpu_divider = tlog_common_get_cpu_divider ( );
             if ( p->channel == DBGAPI_TRACE_CHANNEL_RAMLOG )
             {
@@ -6617,21 +6630,28 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                 p->out_pc_range_full = ( g_cputrack_config.pc_range_lo == 0 &&
                                          g_cputrack_config.pc_range_hi >= 0xFFFF );
                 /* Součet T-stavů záznamů RAM bufferu před ram_copy_seq (nebo
-                 * před from_seq bez kopie): báze času stránky v RAM. */
-                if ( p->want_time && p->out.live && w->buffer && p->out.record_size == TLOG_RECORD_SIZE_CPUTRACK )
+                 * před from_seq bez kopie): báze času stránky v RAM.
+                 * Velikost záznamu ze segmentu (12 B v2, 32 B v3);
+                 * synchronizační záznam v3 čas nemá. */
+                size_t rs = p->out.record_size;
+                if ( p->want_time && p->out.live && w->buffer &&
+                     ( rs == TLOG_RECORD_SIZE_CPUTRACK || rs == CPUTRACK_RECORD_SIZE_REGS ) )
                 {
                     uint64_t until = p->out.ram_copy_count ? p->out.ram_copy_seq : p->from_seq;
                     if ( until > p->out.next_seq ) until = p->out.next_seq;
                     uint64_t sum = 0;
                     for ( uint64_t q = p->out.ram_first_seq; q < until; q++ )
                     {
-                        const uint8_t *r = w->buffer + ( q - p->out.ram_first_seq ) * TLOG_RECORD_SIZE_CPUTRACK;
+                        const uint8_t *r = w->buffer + ( q - p->out.ram_first_seq ) * rs;
+                        if ( r[ 2 ] == CPUTRACK_INSN_LEN_SYNC ) continue;
                         uint32_t wait = (uint32_t) r[ 7 ] | ( (uint32_t) r[ 8 ] << 8 ) |
                                         ( (uint32_t) r[ 9 ] << 16 ) | ( (uint32_t) r[ 10 ] << 24 );
                         sum += (uint64_t) r[ 11 ] + wait;
                     };
                     p->out_ram_prefix_t = sum;
                 };
+                p->out_has_initial_regs =
+                    cputrack_get_initial_regs ( &p->out_initial_regs, &p->out_initial_q ) ? true : false;
             };
             p->out_ok = true;
             rq->success = true;

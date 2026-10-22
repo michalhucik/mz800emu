@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mz800emu 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-21 18:44+0200\n"
+"POT-Creation-Date: 2026-10-22 15:09+0200\n"
 "PO-Revision-Date: 2026-03-11 21:00+0100\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -1027,7 +1027,7 @@ msgstr "Segnalibro:"
 
 #: src/ui-imgui/debugger/bookmarks/bm_window.cpp:418
 #: src/ui-imgui/debugger/bookmarks/bm_window.cpp:489
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1671
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1690
 #: src/ui-imgui/debugger/symbols/sym_window.cpp:805
 #: src/ui-imgui/debugger/vars/vars_window.cpp:835
 #: src/ui-imgui/memext/memext_save_dialog.cpp:169
@@ -1386,7 +1386,7 @@ msgid "Offset:"
 msgstr "Offset:"
 
 #: src/ui-imgui/debugger/breakpoints/bpt_edit_panel.cpp:1537
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1668
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1687
 #: src/ui-imgui/debugger/sections/dbg_focus_to.cpp:211
 #: src/ui-imgui/debugger/watch/watch_window.cpp:465
 msgid "Address:"
@@ -3776,13 +3776,13 @@ msgstr "Connesso: %s"
 
 #: src/ui-imgui/debugger/fdc_window.cpp:203
 #: src/ui-imgui/debugger/gdg_window_mz800.cpp:285
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:609
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:639
 msgid "yes"
 msgstr "sì"
 
 #: src/ui-imgui/debugger/fdc_window.cpp:203
 #: src/ui-imgui/debugger/gdg_window_mz800.cpp:285
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:609
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:639
 msgid "no"
 msgstr "no"
 
@@ -4575,7 +4575,7 @@ msgstr "Pulisci contatori di attività per tutte le 256 porte"
 
 #: src/ui-imgui/debugger/ioview/io_window.cpp:1014
 #: src/ui-imgui/debugger/ioview/io_window.cpp:2002
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:329
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:340
 msgid "Capacity:"
 msgstr "Capacità:"
 
@@ -4659,7 +4659,7 @@ msgid "Focus to..."
 msgstr "Focalizza su..."
 
 #: src/ui-imgui/debugger/ioview/io_window.cpp:1754
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3368
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3387
 msgid "Add to bookmarks"
 msgstr "Aggiungi ai segnalibri"
 
@@ -5036,7 +5036,7 @@ msgstr "Dimensione (hex)###mb_save_size"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_fileio.cpp:473
 #: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1833
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:409
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:433
 #: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:307
 msgid "Range:"
 msgstr "Intervallo:"
@@ -5319,8 +5319,8 @@ msgstr "Ripeti  (%d livelli)\tCtrl+Y"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:231
 #: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:276
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1710
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1714
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1729
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1733
 msgid "Target:"
 msgstr "Target:"
 
@@ -6914,43 +6914,53 @@ msgstr "Tutti i canali"
 msgid "CPU Track"
 msgstr "CPU Track"
 
-#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:546
+#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:545
+msgid "Record registers"
+msgstr "Registra i registri"
+
+#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:549
+msgid ""
+"Store CPU registers after each instruction (32 bytes per record instead of "
+"12). Takes effect when recording (re)starts."
+msgstr "Salva i registri della CPU dopo ogni istruzione (32 byte per voce invece di 12). Ha effetto al (ri)avvio della registrazione."
+
+#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:558
 msgid "PC range filter [lo,hi]:"
 msgstr "Filtro intervallo PC [lo,hi]:"
 
-#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:552
+#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:564
 msgid "lo (hex)"
 msgstr "lo (hex)"
 
-#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:559
+#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:571
 msgid "hi (hex)"
 msgstr "hi (hex)"
 
-#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:565
+#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:577
 msgid "Reset range (whole space)"
 msgstr "Reimposta intervallo (intero spazio)"
 
-#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:571
+#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:583
 msgid "IORQ Log"
 msgstr "IORQ Log"
 
-#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:580
+#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:592
 msgid "Interrupt Log"
 msgstr "Interrupt Log"
 
-#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:589
+#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:601
 msgid "HW Log"
 msgstr "HW Log"
 
-#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:601
+#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:613
 msgid "Marker Log"
 msgstr "Marker Log"
 
-#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:610
+#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:622
 msgid "Print marks to stdout"
 msgstr "Stampa i marcatori su stdout"
 
-#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:614
+#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:626
 msgid ""
 "Print [BP-MARK] <name> to stdout when a mark fires; independent of the "
 "binary log."
@@ -6958,27 +6968,27 @@ msgstr ""
 "Stampa [BP-MARK] <name> su stdout quando scatta un marcatore; indipendente "
 "dal log binario."
 
-#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:632
+#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:644
 msgid "Disassembled"
 msgstr "Disassemblato"
 
-#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:643
+#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:655
 msgid "Show branch arrows"
 msgstr "Mostra frecce di salto"
 
-#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:652
+#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:664
 msgid "Show code coverage"
 msgstr "Mostra copertura del codice"
 
-#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:661
+#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:673
 msgid "Screen"
 msgstr "Schermo"
 
-#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:676
+#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:688
 msgid "Auto refresh on edit"
 msgstr "Auto refresh alla modifica"
 
-#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:687
+#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:699
 msgid "Auto refresh at every CPU step"
 msgstr "Auto refresh ad ogni step CPU"
 
@@ -8277,21 +8287,21 @@ msgstr ""
 "Suggerimento: il pc del RET mostra dove è avvenuta la divergenza. Aprilo in "
 "disasm per analizzare il pattern di chiamata."
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:123
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:130
 #: src/ui-imgui/debugger/sections/dbg_coverage_data.cpp:98
 #: src/ui-imgui/debugger/sections/dbg_coverage_data.cpp:251
 msgid "The emulator did not respond"
 msgstr "L'emulatore non ha risposto"
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:269
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:276
 msgid "Export code coverage (JSON or CSV)"
 msgstr "Esporta copertura del codice (JSON o CSV)"
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:322
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:333
 msgid "Level:"
 msgstr "Livello:"
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:335
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:359
 msgid ""
 "Number of code versions the detail level can hold (32 bytes each).\n"
 "When the table is full, new versions are dropped and the data\n"
@@ -8302,15 +8312,15 @@ msgstr ""
 "Quando la tabella è piena, le nuove versioni vengono scartate e i dati\n"
 "risultano incompleti."
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:343
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:367
 msgid "Stop###cov_startstop"
 msgstr "Stop###cov_startstop"
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:343
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:367
 msgid "Start###cov_startstop"
 msgstr "Avvia###cov_startstop"
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:347
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:371
 msgid ""
 "Start continues into the existing data if the level and capacity\n"
 "are the same, otherwise it starts with empty data.\n"
@@ -8320,19 +8330,19 @@ msgstr ""
 "sono uguali, altrimenti parte con dati vuoti.\n"
 "Stop conserva i dati."
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:353
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:377
 msgid "Reset###cov_reset"
 msgstr "Reset###cov_reset"
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:357
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:381
 msgid "Clears the data; collecting continues if it is running."
 msgstr "Cancella i dati; la raccolta continua se è in corso."
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:360
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:384
 msgid "Mark###cov_mark"
 msgstr "Marca###cov_mark"
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:364
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:388
 msgid ""
 "Starts a new epoch. \"New since mark\" then lists only code\n"
 "executed for the first time after this point,\n"
@@ -8342,15 +8352,15 @@ msgstr ""
 "eseguito per la prima volta dopo questo momento,\n"
 "ad esempio cosa aggiunge la pressione di un tasto."
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:369
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:393
 msgid "Export...###cov_export"
 msgstr "Esporta...###cov_export"
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:378
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:402
 msgid "Code coverage"
 msgstr "Copertura del codice"
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:380
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:404
 msgid ""
 "Records which instructions ran and which way the conditional ones went\n"
 "(JR, JP, CALL and RET with a condition, DJNZ, LDIR, CPIR, INIR, OTIR\n"
@@ -8361,18 +8371,18 @@ msgstr ""
 "(JR, JP, CALL e RET con condizione, DJNZ, LDIR, CPIR, INIR, OTIR\n"
 "e le varianti decrescenti)."
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:383
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:407
 msgid "Taken = the condition was met (jump, call, return, repeat)."
 msgstr ""
 "Taken = la condizione era soddisfatta (salto, chiamata, ritorno, "
 "ripetizione)."
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:384
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:408
 msgid "branch: by logical address, memory banks are not told apart."
 msgstr ""
 "branch: per indirizzo logico, i banchi di memoria non vengono distinti."
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:385
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:409
 msgid ""
 "detail: also by physical memory cell and code version (banks,\n"
 "self-modifying code), with counters; slows the emulation more."
@@ -8380,7 +8390,7 @@ msgstr ""
 "detail: anche per cella fisica di memoria e versione del codice (banchi,\n"
 "codice automodificante), con contatori; rallenta di più l'emulazione."
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:387
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:411
 msgid ""
 "Marks in the Disassembly windows show the same data\n"
 "(debugger window: Settings -> Disassembled -> Show code coverage)."
@@ -8389,48 +8399,48 @@ msgstr ""
 "(finestra del debugger: Impostazioni -> Disassemblato -> Mostra copertura "
 "del codice)."
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:397
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:421
 msgid "Show:"
 msgstr "Mostra:"
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:400
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:424
 msgid "Partial branches"
 msgstr "Salti parziali"
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:401
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:642
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:425
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:672
 msgid "Both branches"
 msgstr "Entrambi i rami"
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:402
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:426
 msgid "All conditional"
 msgstr "Tutte le condizionali"
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:403
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:427
 msgid "New since mark"
 msgstr "Nuovo dalla marca"
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:404
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:428
 msgid "All"
 msgstr "Tutto"
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:430
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:454
 #: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:342
 msgid "Collecting - the table fills while the emulation runs."
 msgstr ""
 "Raccolta in corso - la tabella si riempie mentre l'emulazione è in "
 "esecuzione."
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:431
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:455
 #: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:343
 msgid "No data. Press Start and let the emulation run."
 msgstr "Nessun dato. Premere Avvia e lasciare eseguire l'emulazione."
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:435
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:459
 msgid "No rows match the filter."
 msgstr "Nessuna riga corrisponde al filtro."
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:466
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:490
 #: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:369
 msgid ""
 "Address of the instruction (logical PC).\n"
@@ -8439,12 +8449,12 @@ msgstr ""
 "Indirizzo dell'istruzione (PC logico).\n"
 "Clic sinistro: apri in Disasm #1."
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:467
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:491
 #: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:370
 msgid "Nearest symbol at or below the address, + offset."
 msgstr "Simbolo più vicino all'indirizzo o al di sotto, + offset."
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:468
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:492
 msgid ""
 "none = not a conditional instruction; both, taken_only, not_taken_only\n"
 "= which results of the condition were seen; unobserved = none yet."
@@ -8453,21 +8463,21 @@ msgstr ""
 "= quali risultati della condizione si sono visti; unobserved = ancora "
 "nessuno."
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:470
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:494
 msgid "How many times this code version was executed."
 msgstr "Quante volte è stata eseguita questa versione del codice."
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:471
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:495
 msgid "How many times the condition was met (jump, call, return, repeat)."
 msgstr ""
 "Quante volte la condizione è stata soddisfatta (salto, chiamata, ritorno, "
 "ripetizione)."
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:472
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:496
 msgid "How many times the condition was not met."
 msgstr "Quante volte la condizione non è stata soddisfatta."
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:473
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:497
 msgid ""
 "Physical memory cell of the first byte: ram, rom, vram, pcg, memext\n"
 "and the offset; bus = no physical cell (graphic VRAM, mapped ports)."
@@ -8475,15 +8485,15 @@ msgstr ""
 "Cella fisica di memoria del primo byte: ram, rom, vram, pcg, memext\n"
 "e l'offset; bus = nessuna cella fisica (VRAM grafica, porte mappate)."
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:475
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:499
 msgid "Bytes that tell code versions apart (prefixes and opcode)."
 msgstr "Byte che distinguono le versioni del codice (prefissi e opcode)."
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:476
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:500
 msgid "Epoch of the first execution (Mark starts a new epoch)."
 msgstr "Epoca della prima esecuzione (Marca avvia una nuova epoca)."
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:477
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:501
 msgid ""
 "int = first instruction of an interrupt handler, smc = the operand changed,\n"
 "cmt = the CMT hack stepped in, halt = HALT, fallback = a byte was read\n"
@@ -8500,58 +8510,58 @@ msgstr ""
 "bus = nessuna cella fisica, prefixes = un passo di soli 64 prefissi,\n"
 "long = chiave più lunga di 4 byte (accorciata)."
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:511
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:541
 msgid "Set Breakpoint###cov_bp"
 msgstr "Imposta Breakpoint###cov_bp"
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:515
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:545
 msgid "Show in Disassembly #2###cov_d2"
 msgstr "Mostra in Disasm #2###cov_d2"
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:516
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:546
 msgid "Show in Disassembly #3###cov_d3"
 msgstr "Mostra in Disasm #3###cov_d3"
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:517
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:547
 msgid "Show in Disassembly #4###cov_d4"
 msgstr "Mostra in Disasm #4###cov_d4"
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:518
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:548
 msgid "Show in Disassembly #5###cov_d5"
 msgstr "Mostra in Disasm #5###cov_d5"
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:573
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:603
 #: src/ui-imgui/debugger/sections/dbg_profiler.cpp:1146
 #: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:463
 msgid "● RUNNING"
 msgstr "● IN ESECUZIONE"
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:577
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:607
 #: src/ui-imgui/debugger/sections/dbg_profiler.cpp:1150
 #: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:467
 msgid "○ STOPPED"
 msgstr "○ FERMATO"
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:587
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:617
 #: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:472
 #, c-format
 msgid "Instructions: %llu"
 msgstr "Istruzioni: %llu"
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:591
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:621
 #, c-format
 msgid "Branches: %u, both %u, taken only %u, not taken only %u"
 msgstr "Salti: %u, entrambi %u, solo presi %u, solo non presi %u"
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:597
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:627
 msgid "Complete"
 msgstr "Completo"
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:600
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:630
 msgid "Incomplete"
 msgstr "Incompleto"
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:603
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:633
 #, c-format
 msgid ""
 "Units: %u of %u\n"
@@ -8568,74 +8578,74 @@ msgstr ""
 "Discontinuità (reset, caricamento snapshot, salto nella riproduzione): %u\n"
 "Modifiche di PC o F da parte dell'host: %u"
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:615
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:645
 #, c-format
 msgid "Epoch: %u"
 msgstr "Epoca: %u"
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:619
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:649
 #, c-format
 msgid "Rows: %u"
 msgstr "Righe: %u"
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:641
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:671
 msgid "Executed"
 msgstr "Eseguito"
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:643
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:673
 msgid "Taken only (condition always met)"
 msgstr "Solo preso (condizione sempre soddisfatta)"
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:644
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:674
 msgid "Not taken only (condition never met)"
 msgstr "Solo non preso (condizione mai soddisfatta)"
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:645
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:675
 msgid "Condition not observed"
 msgstr "Condizione non osservata"
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:646
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:676
 msgid "Not executed"
 msgstr "Non eseguito"
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:655
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:685
 msgid "Coverage"
 msgstr "Copertura"
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:664
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:694
 msgid "  First instruction of an interrupt handler"
 msgstr "  Prima istruzione di una routine di interrupt"
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:667
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:697
 #, c-format
 msgid "  First executed in epoch %u"
 msgstr "  Eseguito per la prima volta nell'epoca %u"
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:675
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:705
 #, c-format
 msgid "  Code versions at this address: %u"
 msgstr "  Versioni del codice a questo indirizzo: %u"
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:683
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:713
 #, c-format
 msgid "  %s %06Xh [%s]: executed %u, taken %u, not taken %u"
 msgstr "  %s %06Xh [%s]: eseguito %u, preso %u, non preso %u"
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:688
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:718
 #, c-format
 msgid "  %s %06Xh [%s]: executed %u"
 msgstr "  %s %06Xh [%s]: eseguito %u"
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:699
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:729
 #, c-format
 msgid "  ... and %u more (see CPU Profiler -> Coverage)"
 msgstr "  ... e altri %u (vedi CPU Profiler -> Copertura)"
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:731
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:761
 msgid "Coverage error###cov_error"
 msgstr "Errore di copertura###cov_error"
 
-#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:735
+#: src/ui-imgui/debugger/sections/dbg_coverage.cpp:765
 msgid "OK###cov_error_ok"
 msgstr "OK###cov_error_ok"
 
@@ -8783,208 +8793,212 @@ msgstr ""
 msgid "Change the bank mapping or edit VEC so it points to RAM."
 msgstr "Modifica il mapping dei banchi o modifica VEC perché punti alla RAM."
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1470
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1440
+msgid "Registers before this instruction:"
+msgstr "Registri prima di questa istruzione:"
+
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1489
 msgid "History of already executed instructions"
 msgstr "Cronologia delle istruzioni già eseguite"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1577
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1584
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1596
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1603
 msgid "T-states:"
 msgstr "T-states:"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1580
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1599
 msgid "taken/not taken"
 msgstr "preso/non preso"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1595
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1614
 msgid "Flags:"
 msgstr "Flag:"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1666
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1685
 msgid "Symbol:"
 msgstr "Simbolo:"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1675
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1694
 msgid "Module:"
 msgstr "Modulo:"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1730
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1734
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1749
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1753
 msgid "Mem:"
 msgstr "Mem:"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1768
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1773
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1787
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1792
 msgid "Focus to"
 msgstr "Focalizza su"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1843
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1862
 msgid "enabled"
 msgstr "abilitato"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1843
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1862
 msgid "disabled"
 msgstr "disabilitato"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1862
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1882
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1881
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1901
 msgid "addr"
 msgstr "indir"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1865
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1884
 msgid "range"
 msgstr "intervallo"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1869
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1888
 msgid "mask"
 msgstr "maschera"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1877
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1896
 msgid "(no address - condition-based)"
 msgstr "(nessun indirizzo - basato su condizione)"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1889
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1908
 msgid "cond"
 msgstr "cond"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1895
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1914
 msgid "hits"
 msgstr "hit"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1957
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1976
 #: src/ui-imgui/topmenu/menu_debugger.cpp:112
 #: src/ui-imgui/topmenu/menu_debugger.cpp:324
 msgid "Breakpoints"
 msgstr "Punti di interruzione"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1978
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1997
 msgid "Double-click a row or start typing to open the inline assembler."
 msgstr ""
 "Fai doppio clic su una riga o inizia a digitare per aprire l'assembler "
 "inline."
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1979
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1998
 msgid "Right-click for context menu."
 msgstr "Clic destro per il menu contestuale."
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:2541
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:2560
 msgid "Address or symbol"
 msgstr "Indirizzo o simbolo"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:2556
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:2575
 msgid "Follow PC"
 msgstr "Segui PC"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:2562
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:2581
 msgid "T-states"
 msgstr "T-states"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3026
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3045
 msgid "Set Breakpoint"
 msgstr "Imposta Breakpoint"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3039
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3058
 msgid "Remove Breakpoint"
 msgstr "Rimuovi Breakpoint"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3046
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3065
 msgid "Disable Breakpoint"
 msgstr "Disabilita Breakpoint"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3051
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3070
 msgid "Enable Breakpoint"
 msgstr "Abilita Breakpoint"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3056
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3075
 msgid "Edit Breakpoint..."
 msgstr "Modifica Breakpoint..."
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3072
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3091
 #, c-format
 msgid "Show %d Breakpoints at 0x%04X in BP List"
 msgstr "Mostra %d Breakpoint a 0x%04X nella lista BP"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3081
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3100
 msgid "Quick action on..."
 msgstr "Azione rapida su..."
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3098
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3117
 msgid "Disable"
 msgstr "Disabilita"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3103
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3122
 msgid "Enable"
 msgstr "Abilita"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3109
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3128
 msgid "Edit..."
 msgstr "Modifica..."
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3114
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3133
 msgid "Remove"
 msgstr "Rimuovi"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3128
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3147
 msgid "Disable all at this address"
 msgstr "Disabilita tutti a questo indirizzo"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3137
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3156
 msgid "Enable all at this address"
 msgstr "Abilita tutti a questo indirizzo"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3146
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3165
 msgid "Add another Execution Breakpoint"
 msgstr "Aggiungi un altro execution Breakpoint"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3157
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3176
 msgid "Set as PC"
 msgstr "Imposta come PC"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3189
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3208
 msgid "Focus To..."
 msgstr "Focalizza su..."
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3201
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3220
 msgid "Focus to PC"
 msgstr "Focalizza su PC"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3217
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3236
 msgid "Focus to register"
 msgstr "Focalizza sul registro"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3323
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3342
 msgid "Show in"
 msgstr "Mostra in"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3331
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3350
 msgid "Disassembly #1"
 msgstr "Disasm #1"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3339
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3358
 #: src/ui-imgui/topmenu/menu_debugger.cpp:177
 #: src/ui-imgui/topmenu/menu_debugger.cpp:476
 msgid "Disassembly #2"
 msgstr "Disasm #2"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3340
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3359
 #: src/ui-imgui/topmenu/menu_debugger.cpp:182
 #: src/ui-imgui/topmenu/menu_debugger.cpp:481
 msgid "Disassembly #3"
 msgstr "Disasm #3"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3341
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3360
 #: src/ui-imgui/topmenu/menu_debugger.cpp:187
 #: src/ui-imgui/topmenu/menu_debugger.cpp:486
 msgid "Disassembly #4"
 msgstr "Disasm #4"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3342
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3361
 #: src/ui-imgui/topmenu/menu_debugger.cpp:192
 #: src/ui-imgui/topmenu/menu_debugger.cpp:491
 msgid "Disassembly #5"
 msgstr "Disasm #5"
 
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3386
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3405
 msgid "Edit row"
 msgstr "Modifica riga"
 

@@ -29,6 +29,7 @@
 #include <time.h>
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
 #include "debugger/trace/ramlog.h"
+#include "debugger/trace/cputrack.h"
 #include "debugger/coverage/coverage.h"
 #endif
 
@@ -616,6 +617,9 @@ static en_SNAPSHOT_RESULT snapshot_load_through_io(snapshot_io_t *io)
     /* Pokrytí kódu: načtení snapshotu (i rewind a seek přehrávání) je
      * nespojitost běhu; data se nemažou, jen se započte. */
     coverage_note_discontinuity();
+    /* cputrack v3: obnovené registry = synchronizační záznam (i u checkpointu
+     * přehrávání mimo dbgapi). */
+    cputrack_sync_check();
 #endif
 
     return SNAPSHOT_OK;

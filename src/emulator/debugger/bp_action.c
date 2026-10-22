@@ -54,6 +54,7 @@
 #include "debugger/trace/ramlog.h"
 #include "debugger/trace/ramlog_hook.h"   /* ramlog_start/stop: ramlog_hook_start/stop */
 #include "debugger/coverage/coverage_hook.h" /* coverage_start/stop/mark */
+#include "debugger/trace/cputrack.h"   /* set na hranici instrukce: cputrack_sync_check */
 #include "replay.h"                 /* záznam vstupů: zápisy akcí mimo záznam */
 
 
@@ -2416,6 +2417,11 @@ static void execute_stmt ( const bp_action_stmt_t *s,
             if ( !write_cpu_reg ( s->setreg.reg, ctx->cpu, v ) ) {
                 fprintf ( stderr, "[BP-ACTION] set: unknown register '%s'\n",
                           s->setreg.reg );
+            } else if ( ctx->IsExec ) {
+                /* BP na PC: zápis mezi instrukcemi = synchronizační záznam
+                 * cputrack v3. U BP z paměti nebo portu (uvnitř instrukce)
+                 * patří změna do stavu po té instrukci. */
+                cputrack_sync_check ( );
             };
             break;
         };

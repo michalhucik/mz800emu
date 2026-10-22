@@ -38,6 +38,7 @@
 #include "audio_capture.h"
 #include "debugger/trace/tlog_common.h"
 #include "debugger/trace/ramlog.h"
+#include "debugger/trace/cputrack.h"
 #include "debugger/coverage/coverage.h"
 
 #ifdef __cplusplus
@@ -2941,7 +2942,14 @@ typedef enum en_DBGAPI_TRACE_CHANNEL
  * @field channel  Cílový trace kanál (cputrack/iorqlog/intlog/hwlog/marklog).
  * @field path     Cílová cesta segmentu pro TRACE_SAVE (NULL = jen flush+
  *                 restart na stávající dir/name). Ignorováno u START/STOP/RESET.
- * @field out_result  Výstup: 0 = OK, -1 = chyba (např. restart writeru selhal).
+ * @field regs     Jen TRACE_START kanálu cputrack: -1 = beze změny (volba
+ *                 z konfigurace), 0/1 = formát v2 / v3 s registry pro nový
+ *                 segment. Běží-li už záznam v jiném formátu, příkaz selže
+ *                 s @c out_result @ref DBGAPI_TRACE_ERR_REGS_RUNNING (data
+ *                 běžícího segmentu se nepřepíšou). Odesílatel pole musí
+ *                 nastavit (agregát s .regs = -1).
+ * @field out_result  Výstup: 0 = OK, -1 = chyba (např. restart writeru selhal),
+ *                 DBGAPI_TRACE_ERR_REGS_RUNNING = viz @c regs.
  *
  * @invariant @c channel musí být platná en_DBGAPI_TRACE_CHANNEL hodnota;
  *            dispatch vrstva odmítne neznámý channel string jako INVALID_PARAMS.
@@ -2950,8 +2958,12 @@ typedef struct st_DBGAPI_TRACE_PARAM
 {
     en_DBGAPI_TRACE_CHANNEL channel;
     const char             *path;
+    int                     regs;
     int                     out_result;
 } st_DBGAPI_TRACE_PARAM;
+
+/** @brief out_result TRACE_START: cputrack už nahrává v jiném formátu (regs). */
+#define DBGAPI_TRACE_ERR_REGS_RUNNING ( -2 )
 
 
 /**
@@ -2975,6 +2987,11 @@ typedef struct st_DBGAPI_TRACE_PARAM
  *                         záznamů RAM bufferu před `out.ram_copy_seq` (od
  *                         začátku RAM chunku), v T-stavech.
  * @field out_cpu_divider  Takty GDG na T-stav CPU (převod času cputrack).
+ * @field out_has_initial_regs cputrack: od startu emulátoru vznikl segment
+ *                         a @c out_initial_regs platí.
+ * @field out_initial_regs cputrack: počáteční stav CPU posledního segmentu
+ *                         (= `initial_regs` manifestu).
+ * @field out_initial_q    cputrack: registr Q v okamžiku startu segmentu.
  * @field out_ok           false = neznámý kanál nebo selhání alokace.
  */
 typedef struct st_DBGAPI_TRACE_SNAPSHOT_PARAM
@@ -2988,6 +3005,9 @@ typedef struct st_DBGAPI_TRACE_SNAPSHOT_PARAM
     bool                    out_pc_range_full;
     uint64_t                out_ram_prefix_t;
     unsigned                out_cpu_divider;
+    bool                    out_has_initial_regs;
+    st_CPUTRACK_REGS        out_initial_regs;
+    uint8_t                 out_initial_q;
     bool                    out_ok;
 } st_DBGAPI_TRACE_SNAPSHOT_PARAM;
 

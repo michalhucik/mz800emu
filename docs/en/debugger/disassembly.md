@@ -76,6 +76,11 @@ across a banking switch).
 The columns are identical to the lower table: ICONS / ADDR / BYTES /
 MNEM (+ TSTATES if the per-instance toggle is ON).
 
+A record also holds the CPU registers **before** the instruction (AF, BC,
+DE, HL, IX, IY, SP, WZ, I, R, IM, IFF1, IFF2). A tooltip shows them when
+the mouse is over the mnemonic of the row. With a breakpoint stop this
+shows the values the last 32 instructions ran with, without cputrack.
+
 The splitter between history and the lower table is drag-resizable (the
 ratio is remembered for the session).
 

@@ -563,6 +563,7 @@ uint8_t memory_read_with_logging_cb(z80_t *cpu, uint16_t addr, int m1_state, voi
             int position = debugger_history_position(g_debugger_history.position);
             g_debugger_history.row[position].addr = addr;
             g_debugger_history.row[position].byte[0] = retval;
+            debugger_history_capture_regs(&g_debugger_history.row[position].regs, cpu);
         } else if (access_kind == MHMAP_ACCESS_X) {
             int position = debugger_history_position(g_debugger_history.position);
             unsigned slot = g_debugger_history.byte_position - 1;

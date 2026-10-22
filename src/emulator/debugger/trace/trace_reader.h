@@ -38,7 +38,7 @@ extern "C"
  */
 typedef enum en_TRACE_KIND
 {
-    TRACE_KIND_CPUTRACK = 0, /**< 12B záznam instrukce. */
+    TRACE_KIND_CPUTRACK = 0, /**< Záznam instrukce: 12 B (v1, v2) nebo 32 B s registry (v3). */
     TRACE_KIND_IORQLOG,      /**< 24B I/O událost. */
     TRACE_KIND_INTLOG,       /**< 24B událost přerušení. */
     TRACE_KIND_HWLOG,        /**< 24B HW událost čipu. */
@@ -134,10 +134,51 @@ typedef struct st_TRACE_FILTER
     bool     has_t;      /**< t v [t_from, t_to] (jen řádky s časem). */
     uint64_t t_from;
     uint64_t t_to;
+    unsigned n_regs;     /**< cputrack v3: počet podmínek na registry v regs[] (0 = žádná). */
+    struct {
+        uint8_t  reg;    /**< Registr (TRACE_CPUTRACK_REG_*). */
+        uint16_t lo;     /**< Dolní mez hodnoty (včetně). */
+        uint16_t hi;     /**< Horní mez hodnoty (včetně). */
+    } regs[ 16 ];        /**< Podmínky na stav registrů (po/před podle st_TRACE_PAGE_REQ.regs_before). */
 } st_TRACE_FILTER;
 
 /** @brief Inicializovat filtr na "bez podmínek". */
 void trace_filter_init ( st_TRACE_FILTER *f );
+
+/**
+ * @name Registry cputrack v3 (sloupce a filtr trace_read)
+ *
+ * Pořadí odpovídá sloupcům za `kind` v trace_columns() (sloupec =
+ * TRACE_COL_CPUTRACK_REG0 + registr).
+ * @{
+ */
+#define TRACE_CPUTRACK_REG_AF     0u  /**< AF */
+#define TRACE_CPUTRACK_REG_BC     1u  /**< BC */
+#define TRACE_CPUTRACK_REG_DE     2u  /**< DE */
+#define TRACE_CPUTRACK_REG_HL     3u  /**< HL */
+#define TRACE_CPUTRACK_REG_IX     4u  /**< IX */
+#define TRACE_CPUTRACK_REG_IY     5u  /**< IY */
+#define TRACE_CPUTRACK_REG_SP     6u  /**< SP */
+#define TRACE_CPUTRACK_REG_WZ     7u  /**< WZ (MEMPTR) */
+#define TRACE_CPUTRACK_REG_I      8u  /**< I */
+#define TRACE_CPUTRACK_REG_R      9u  /**< R */
+#define TRACE_CPUTRACK_REG_IFF1   10u /**< IFF1 (0/1) */
+#define TRACE_CPUTRACK_REG_IFF2   11u /**< IFF2 (0/1) */
+#define TRACE_CPUTRACK_REG_IM     12u /**< Režim přerušení (0-2) */
+#define TRACE_CPUTRACK_REG_HALTED 13u /**< CPU v HALT (0/1) */
+#define TRACE_CPUTRACK_REG_COUNT  14u /**< Počet registrů. */
+/** @brief Index sloupce prvního registru (af) v sloupcích cputrack. */
+#define TRACE_COL_CPUTRACK_REG0   9u
+/** @brief Maska sloupců registrů cputrack (jen segment v3). */
+#define TRACE_CPUTRACK_REG_COLS_MASK ( ( ( 1u << TRACE_CPUTRACK_REG_COUNT ) - 1u ) << TRACE_COL_CPUTRACK_REG0 )
+/** @} */
+
+/**
+ * @brief Index registru cputrack v3 podle jména sloupce ("hl", "iff1", ...).
+ *
+ * @return TRACE_CPUTRACK_REG_*, nebo -1 pro neznámé jméno.
+ */
+int trace_cputrack_reg_index ( const char *name );
 
 /**
  * @brief Jméno zvukového kanálu podle indexu audio logu.
@@ -221,7 +262,9 @@ typedef struct st_TRACE_PAGE_REQ
     size_t          max_chars;     /**< Rozpočet znaků stránky rows. */
     uint64_t        max_scan;      /**< Strop prohledaných záznamů. */
     /* Čas cputrack */
-    bool            cputrack_time; /**< Kanál má časový sloupec (cputrack v2 bez filtru PC). */
+    bool            cputrack_time; /**< Kanál má časový sloupec (cputrack bez filtru PC). */
+    bool            regs_before;   /**< cputrack v3: sloupce a filtr registrů ukazují stav před
+                                        záznamem (= stav v předchozím záznamu), jinak po něm. */
     uint64_t        ram_prefix_t;  /**< T-stavy RAM chunku před snap->ram_copy_seq (z emu vlákna). */
     unsigned        cpu_divider;   /**< Takty GDG na T-stav (pro t v taktech GDG; u audio_psg_writes pro Hz). */
     uint64_t        audio_origin;  /**< audio_*: absolutní čas začátku zachycení [takty GDG] (pro time_us). */
@@ -239,7 +282,10 @@ typedef struct st_TRACE_PAGE_REQ
 const char *const *trace_columns ( en_TRACE_KIND kind, size_t *n );
 
 /**
- * @brief Maska sloupců ze seznamu jmen (NULL / prázdný = všechny).
+ * @brief Maska sloupců ze seznamu jmen (NULL / prázdný = výchozí).
+ *
+ * Výchozí jsou všechny sloupce druhu, u cputrack jen sloupce formátu v2
+ * (bez `kind` a registrů, o ty si klient řekne jménem).
  *
  * @param kind    Druh kanálu.
  * @param names   Jména sloupců.

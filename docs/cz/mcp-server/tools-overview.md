@@ -21,7 +21,7 @@ dokumentu [Resources overview](resources-overview.md).
 | `emu_get_registers` | ne | 14 Z80 registrů (AF..IR) |
 | `emu_set_register` | **ANO** | Zápis 16-bit hodnoty do registru (volitelně jen při staré hodnotě `expected`) - **destruktivní** |
 | `emu_dasm` | ne | Disassembluje N instrukcí od adresy (banking-aware) |
-| `emu_history_get` | ne | 32 posledních provedených instrukcí (ring buffer) |
+| `emu_history_get` | ne | 32 posledních provedených instrukcí (ring buffer) s registry před každou z nich |
 | `emu_mem_read` | ne | Čte bajty z Z80 paměti (base64 + SHA-256, nebo jen hash) |
 | `emu_mem_write` | **ANO** | Zápis bajtů do RAM - region check, volitelně jen při hashi `expected_sha256`, **destruktivní** |
 | `emu_bp_add` | ne | Přidá breakpoint (exec, nebo typed memw/memr/ior/iow + condition) |
@@ -1093,7 +1093,11 @@ Všechny 4 tooly mají povinný argument:
 
 ### `emu_trace_start`
 
-Spustí záznam kanálu (= režim ALWAYS). Vrací `{"started": true}`.
+Spustí záznam kanálu (= režim ALWAYS). Argument `regs` (bool, volitelný,
+jen cputrack): `true` zaznamená po každé instrukci registry CPU (formát 3,
+32 B na záznam místo 12), `false` formát 2; bez něj platí volba
+z konfigurace (`[TRACE_CPUTRACK] regs`). Když cputrack už nahrává v druhém
+formátu, volání selže (nejdřív ho zastavte). Vrací `{"started": true}`.
 
 ### `emu_trace_stop`
 
@@ -1126,8 +1130,10 @@ Stav kanálů pro čtení. Argument `channel` (volitelný; jeden z 5 trace
 kanálů nebo `eventlog` pro ring Event Vieweru; prázdný = všechny). Vrací
 `{"channels": [...]}` s položkami: `segment` (0 = zatím nic
 nezaznamenáno), `live`, `truncated`, `first_seq`, `next_seq`, `lost`,
-`record_size`, `format_version` (cputrack 2), `chunks`,
-`bytes_on_disk`, `dir`, `name` a `has_time`.
+`record_size`, `format_version` (cputrack 2, s registry 3), `chunks`,
+`bytes_on_disk`, `dir`, `name` a `has_time`; u cputrack navíc `has_regs`
+(segment s registry) a `initial_regs` (stav CPU na začátku posledního
+segmentu, celá čísla jako v manifestu; před prvním záznamem null).
 
 ### `emu_trace_read`
 
@@ -1145,8 +1151,14 @@ segment čitelný až do dalšího startu. Argumenty:
 - `limit` (int, výchozí 200, 1-5000) - nejvýš řádků; u `raw_b64` počet
   záznamů (0 = kolik se vejde do 1 MiB).
 - `format` (string) - `rows` (výchozí, dekódované) nebo `raw_b64`.
-- `columns` (seznam) - výběr sloupců kanálu.
-- `filter` (objekt) - `pc_from`/`pc_to` (cputrack), `port` (<= 0xFF
+- `columns` (seznam) - výběr sloupců kanálu (u cputrack výchozí bez
+  `kind` a registrů).
+- `regs` (string, cputrack) - `after` (výchozí) nebo `before`: který stav
+  ukazují sloupce a filtry registrů (`before` = předchozí záznam; null, kde
+  není znám).
+- `filter` (objekt) - `pc_from`/`pc_to` (cputrack), jména registrů
+  `af` .. `halted` s hodnotou nebo `[lo, hi]` (cputrack s registry),
+  `port` (<= 0xFF
   porovná dolní bajt), `dir` (`in`/`out`), `type` (`iorq`,
   `mreq_mapped`, `iorq_unconnected`) (iorqlog), `chip`/`sub` (hwlog),
   `marker` (id značky marklog), `channels` (seznam jmen kanálů `ctc0`,
@@ -1164,7 +1176,7 @@ Sloupce (vždy v tomto pořadí, `columns` v odpovědi):
 
 | Kanál | Sloupce |
 |-------|---------|
-| `cputrack` | `seq`, `pc`, `bytes`, `asm`, `t_std`, `wait`, `t`, `sym` |
+| `cputrack` | `seq`, `pc`, `bytes`, `asm`, `t_std`, `wait`, `t`, `sym` (výchozí); na požádání `kind`, `af`, `bc`, `de`, `hl`, `ix`, `iy`, `sp`, `wz`, `i`, `r`, `iff1`, `iff2`, `im`, `halted` |
 | `iorqlog` | `seq`, `t`, `frame`, `pos`, `type`, `dir`, `src`, `addr`, `value`, `pulse` |
 | `intlog` | `seq`, `t`, `frame`, `pos`, `class`, `chip`, `pin`, `edge`, `state` |
 | `hwlog` | `seq`, `t`, `frame`, `pos`, `chip`, `sub`, `payload` |
@@ -1177,7 +1189,12 @@ Sloupce (vždy v tomto pořadí, `columns` v odpovědi):
 
 `t` je v taktech GDG od startu emulace (cputrack: začátek instrukce,
 jen s `has_time`); `asm` u cputrack je disassembly z bajtů záznamu,
-záznam přijetí přerušení ukazuje `INT ACK`. `audio_*`: `t` absolutně,
+záznam přijetí přerušení ukazuje `INT ACK`. `kind` u cputrack je `insn`,
+`loop`, `int` nebo `sync`; sloupce registrů (16bitové hex, `i` / `r`
+8bitové hex, příznaky jako čísla) potřebují segment nahraný s registry,
+jinak volání selže. Řádek `sync` (`asm` `SYNC start`, `SYNC pc_range`,
+`SYNC write`) nese stav CPU na začátku záznamu, při návratu do rozsahu
+filtru PC a po změně mimo instrukci; čas nezabírá. `audio_*`: `t` absolutně,
 `time_us` od začátku zachycení; `hz` / `note` jen u nového děliče tónu;
 pole `audio_frames` jsou v pořadí `channels` z `emu_audio_capture_status`,
 `ref_*` / `sdl_*` jsou [L, R] int16 (bez zachycení null).

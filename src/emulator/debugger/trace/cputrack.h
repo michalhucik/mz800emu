@@ -24,6 +24,33 @@
  * @c wait_clk == 0 => běžná instrukce (žádný WAIT).
  * @c wait_clk == 0xFFFFFFFF => "saturated" (např. dlouhá HALT smyčka).
  *
+ * @section cputrack_v3 Formát v3: záznam s registry (32 B)
+ *
+ * Volba @c regs (INI `[TRACE_CPUTRACK] regs`, CLI `--cputrack-regs`, MCP
+ * `trace_start regs`) platí pro celý segment: při startu segmentu se zvolí
+ * velikost záznamu 32 B a `event_record_version` 3 (@ref
+ * CPUTRACK_RECORD_VERSION_REGS). Bajty 0-11 mají stejný význam jako ve v2,
+ * za nimi stav CPU **po** události záznamu:
+ *
+ * | Offset | Velikost | Pole                                          |
+ * |--------|----------|------------------------------------------------|
+ * | 12     | 16 B     | AF BC DE HL IX IY SP WZ (uint16_t LE)          |
+ * | 28     | 1 B      | I                                              |
+ * | 29     | 1 B      | R                                              |
+ * | 30     | 1 B      | příznaky @ref CPUTRACK_REGS_F_IFF1 a další     |
+ * | 31     | 1 B      | druh záznamu (@ref CPUTRACK_KIND_MASK), důvod  |
+ * |        |          | synchronizace, @ref CPUTRACK_FLAG_NO_BEFORE    |
+ *
+ * Stav "před" instrukcí N je stav v předchozím záznamu (libovolného
+ * druhu), pokud záznam N nemá @ref CPUTRACK_FLAG_NO_BEFORE. Řetěz drží
+ * synchronizační záznam (`insn_length` @ref CPUTRACK_INSN_LEN_SYNC): nese
+ * aktuální stav CPU, `regPC` = PC příští instrukce, bajty 3-10 =
+ * AF' BC' DE' HL' (LE), bajt 11 = 0; do času se nezapočítává. Zapíše se
+ * na začátku segmentu, při návratu do rozsahu filtru PC a po změně stavu
+ * CPU mimo instrukci (@ref cputrack_sync_check). Sbalený záznam (HALT,
+ * smyčka na sebe) nese stav po poslední sbalené iteraci, záznam přijetí
+ * přerušení stav po přijetí.
+ *
  * Hlavička recordingu (RAM dump + initial regs) se vytvoří v
  * @ref cputrack_start(). Hlavičkové binární soubory:
  *   `<dir>/<name>_initial_ram.bin`     - 64 KB RAM
@@ -52,6 +79,69 @@
 /** @brief Verze formátu záznamu cputrack (2 = bajt 11 nese standardní T-stavy). */
 #define CPUTRACK_RECORD_VERSION 2
 
+/** @brief Verze formátu záznamu s registry (32 B, viz @ref cputrack_v3). */
+#define CPUTRACK_RECORD_VERSION_REGS 3
+
+/** @brief Velikost záznamu s registry v bajtech (formát v3). */
+#define CPUTRACK_RECORD_SIZE_REGS 32u
+
+/**
+ * @name Formát v3: pole záznamu
+ * @{
+ */
+/** @brief `insn_length` synchronizačního záznamu (jen v3). */
+#define CPUTRACK_INSN_LEN_SYNC 0xFEu
+/** @brief Offset registrů AF..WZ (8x uint16_t LE) v záznamu v3. */
+#define CPUTRACK_V3_OFF_REGS 12u
+/** @brief Offset registru I v záznamu v3. */
+#define CPUTRACK_V3_OFF_I 28u
+/** @brief Offset registru R v záznamu v3. */
+#define CPUTRACK_V3_OFF_R 29u
+/** @brief Offset bajtu příznaků (CPUTRACK_REGS_F_*) v záznamu v3. */
+#define CPUTRACK_V3_OFF_FLAGS 30u
+/** @brief Offset bajtu druhu záznamu v záznamu v3. */
+#define CPUTRACK_V3_OFF_KIND 31u
+
+/** @brief Příznak IFF1 (bajt 30 záznamu v3, st_CPUTRACK_REGS.flags). */
+#define CPUTRACK_REGS_F_IFF1 0x01u
+/** @brief Příznak IFF2. */
+#define CPUTRACK_REGS_F_IFF2 0x02u
+/** @brief Posun režimu přerušení IM (0-2) v bajtu příznaků. */
+#define CPUTRACK_REGS_F_IM_SHIFT 2u
+/** @brief Maska režimu přerušení IM v bajtu příznaků. */
+#define CPUTRACK_REGS_F_IM_MASK 0x0Cu
+/** @brief Příznak HALT (CPU stojí v instrukci HALT). */
+#define CPUTRACK_REGS_F_HALTED 0x10u
+
+/** @brief Maska druhu záznamu v bajtu 31. */
+#define CPUTRACK_KIND_MASK 0x0Fu
+/** @brief Druh: vykonaná instrukce. */
+#define CPUTRACK_KIND_INSN 0u
+/** @brief Druh: sbalená smyčka (HALT, smyčka na sebe; `t_std` 0, čas ve `wait_clk`). */
+#define CPUTRACK_KIND_LOOP 1u
+/** @brief Druh: přijetí přerušení (`insn_length` 0). */
+#define CPUTRACK_KIND_INT 2u
+/** @brief Druh: synchronizační záznam (`insn_length` 0xFE). */
+#define CPUTRACK_KIND_SYNC 3u
+/** @brief Posun důvodu synchronizace v bajtu 31 (jen druh SYNC). */
+#define CPUTRACK_SYNC_REASON_SHIFT 4u
+/** @brief Maska důvodu synchronizace v bajtu 31. */
+#define CPUTRACK_SYNC_REASON_MASK 0x70u
+/** @brief Důvod synchronizace: začátek segmentu. */
+#define CPUTRACK_SYNC_START 0u
+/** @brief Důvod synchronizace: návrat do rozsahu filtru PC. */
+#define CPUTRACK_SYNC_PC_RANGE 1u
+/** @brief Důvod synchronizace: změna stavu CPU mimo instrukci (zápis
+ *  debuggerem, MCP, reset, načtení snapshotu, bootstrap, ...). */
+#define CPUTRACK_SYNC_WRITE 2u
+/**
+ * @brief Stav před záznamem není znám (řetěz přerušil filtr PC a nešlo ho
+ *        obnovit synchronizačním záznamem, např. přijetí přerušení do
+ *        rozsahu filtru po instrukci mimo něj).
+ */
+#define CPUTRACK_FLAG_NO_BEFORE 0x80u
+/** @} */
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -59,6 +149,35 @@ extern "C"
 
 #include <stdint.h>
 #include "tlog_common.h"
+
+/**
+ * @brief Stav registrů CPU, který nese záznam v3 a synchronizační záznam.
+ *
+ * Plní ho cputrack z @c g_mzarch_main.cpu. Porovnává se jako celek
+ * (memcmp), proto @c pad je vždy 0.
+ *
+ * @invariant @c pad == 0; @c flags má jen bity CPUTRACK_REGS_F_*.
+ */
+typedef struct st_CPUTRACK_REGS
+{
+    uint16_t pc;   /**< PC (u záznamu instrukce PC po kroku). */
+    uint16_t af;   /**< AF */
+    uint16_t bc;   /**< BC */
+    uint16_t de;   /**< DE */
+    uint16_t hl;   /**< HL */
+    uint16_t ix;   /**< IX */
+    uint16_t iy;   /**< IY */
+    uint16_t sp;   /**< SP */
+    uint16_t wz;   /**< WZ (MEMPTR) */
+    uint16_t af2;  /**< AF' */
+    uint16_t bc2;  /**< BC' */
+    uint16_t de2;  /**< DE' */
+    uint16_t hl2;  /**< HL' */
+    uint8_t  i;    /**< I */
+    uint8_t  r;    /**< R (celý bajt včetně bitu 7) */
+    uint8_t  flags;/**< IFF1, IFF2, IM, HALT (CPUTRACK_REGS_F_*) */
+    uint8_t  pad;  /**< Výplň, vždy 0. */
+} st_CPUTRACK_REGS;
 
 /**
  * @brief Konfigurace cputrack subsystému.
@@ -89,6 +208,8 @@ typedef struct st_CPUTRACK_CONFIG
     unsigned save_on_exit;        /**< Při ukončení emu vyflushnout zbytek (default 1) */
     uint16_t pc_range_lo;         /**< Dolní mez PC pro range-scope filtr (vč.) */
     uint16_t pc_range_hi;         /**< Horní mez PC pro range-scope filtr (vč.) */
+    unsigned regs;                /**< 1 = další segment ve formátu v3 s registry
+                                       (32 B); platí od startu segmentu. */
 } st_CPUTRACK_CONFIG;
 
 extern st_CPUTRACK_CONFIG g_cputrack_config;
@@ -180,6 +301,10 @@ void cputrack_stop ( void );
  * @param insn_tstates      Počet T-states které vykonaná instr trvala.
  * @param wait_extra_tstates Extra WAIT cycles (mimo standardní instr délku).
  *                          0 = žádný WAIT.
+ *
+ * @note V segmentu v3 (registry) se uvnitř uplatní i filtr PC a zapisují
+ *       synchronizační záznamy (viz @ref cputrack_v3); u v2 filtr PC
+ *       uplatňuje volající (@ref cputrack_hot_path_hook).
  */
 void cputrack_on_instruction_complete ( uint16_t pc,
                                         uint8_t insn_tstates,
@@ -201,6 +326,10 @@ void cputrack_on_instruction_complete ( uint16_t pc,
  *
  * Funkce NIKDY nesmí být inlinovaná do mzarch_main - to je celý smysl
  * (jinak by se přidaná práce a zarovnání vrátily zpět do hot smyčky).
+ *
+ * V segmentu s registry (v3) předá práci samostatné cestě v3 (filtr PC
+ * s udržením řetězu registrů, záznam 32 B); rozhoduje jedna podmínka na
+ * příznaku segmentu, cesta v2 zůstává beze změny.
  *
  * @param pc                Adresa právě vykonané instrukce (PC před stepem).
  * @param insn_tstates      Celkový počet T-states instrukce vč. WAIT.
@@ -228,9 +357,62 @@ void cputrack_hot_path_hook ( uint16_t pc,
  *
  * @pre Volat jen když @c TEST_TRACE_CPUTRACK_ACTIVE (caller gatuje).
  * @note Filtr PC (`pc_range_lo/hi`) se uplatní na @p isr_pc stejně jako
- *       na instrukce.
+ *       na instrukce. V segmentu v3 nese záznam stav po přijetí; obsluha
+ *       mimo filtr řetěz registrů přeruší (obnoví ho návrat do rozsahu)
+ *       a záznam přijetí po přerušeném řetězu má CPUTRACK_FLAG_NO_BEFORE.
  */
 void cputrack_on_interrupt_accept ( uint16_t isr_pc, uint32_t ack_tstates );
+
+/**
+ * @brief Kontrola řetězu registrů po možné změně CPU mimo instrukci (v3).
+ *
+ * Porovná aktuální stav CPU se stavem, který čtenář záznamu odvodí
+ * z posledního zapsaného záznamu (u rozpracované sbalené smyčky se stavem
+ * po její poslední iteraci). Při rozdílu zapíše rozpracovaný sbalený
+ * záznam a za něj synchronizační záznam s důvodem @ref CPUTRACK_SYNC_WRITE.
+ * Při řetězu přerušeném filtrem PC zapíše synchronizaci, jen když PC leží
+ * v rozsahu filtru (jinak ji zapíše až návrat do rozsahu). Bez změny
+ * nezapíše nic, nadbytečné volání je tedy neškodné.
+ *
+ * Volají ji studené cesty, které mohou změnit registry mimo instrukci:
+ * zpracování příkazu dbgapi (mzarch_main_dbgapi_dispatch_one()), výstup
+ * z pauzy, reset CPU, konec načtení snapshotu (i checkpoint přehrávání),
+ * přehraná událost debuggeru záznamu vstupů (replay_dbg_execute()),
+ * bootstrap MZF a akce breakpointu `set` na hranici instrukce.
+ *
+ * @pre Emu vlákno, mezi instrukcemi (ne z callbacku paměti uvnitř kroku).
+ * @post Bez otevřeného segmentu v3 (writer zavřený nebo segment v2) no-op.
+ */
+void cputrack_sync_check ( void );
+
+/**
+ * @brief Nahrává cputrack (writer segmentu je otevřený)?
+ *
+ * @return 1 = segment otevřený, 0 = nenahrává.
+ * @note Emu vlákno.
+ */
+int cputrack_is_recording ( void );
+
+/**
+ * @brief Má otevřený segment registry (formát v3)?
+ *
+ * @return 1 = writer otevřený se záznamem 32 B, 0 = zavřený nebo v2.
+ * @note Emu vlákno (čte stav writeru).
+ */
+int cputrack_segment_has_regs ( void );
+
+/**
+ * @brief Počáteční stav CPU posledního spuštěného segmentu.
+ *
+ * Tentýž stav, který manifest `<name>.json` nese jako `initial_regs`
+ * (zachycený v @ref cputrack_start).
+ *
+ * @param out  Výstup (jen při návratu 1).
+ * @param q    Výstup registru Q v okamžiku startu (smí být NULL).
+ * @return 1 = segment od startu emulátoru vznikl, 0 = ještě žádný.
+ * @note Emu vlákno.
+ */
+int cputrack_get_initial_regs ( st_CPUTRACK_REGS *out, uint8_t *q );
 
 /**
  * @brief Reset stavu collapse logiky (volat při emu reset).

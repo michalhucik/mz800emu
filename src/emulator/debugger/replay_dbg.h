@@ -80,6 +80,8 @@ extern "C"
      * @return true = příkaz proveden úspěšně.
      * @pre Emu vlákno, mezi instrukcemi; volající zajistí, že brána
      *      záznamu příkaz nepočítá jako živý zásah.
+     * @post Změnil-li příkaz registry CPU, nahrávaný segment cputrack v3
+     *       dostal synchronizační záznam (cputrack_sync_check()).
      */
     bool replay_dbg_execute(const char *cmd_name, const char *args_json, char **err);
 

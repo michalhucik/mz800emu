@@ -21,7 +21,7 @@ documented separately in [Resources overview](resources-overview.md).
 | `emu_get_registers` | no | 14 Z80 registers (AF..IR) |
 | `emu_set_register` | **YES** | Write 16-bit value to register (optionally only if it still holds `expected`) - **destructive** |
 | `emu_dasm` | no | Disassemble N instructions from an address (banking-aware) |
-| `emu_history_get` | no | 32 most recently executed instructions (ring buffer) |
+| `emu_history_get` | no | 32 most recently executed instructions (ring buffer) with registers before each |
 | `emu_mem_read` | no | Reads bytes from Z80 memory (base64 + SHA-256, or the hash only) |
 | `emu_mem_write` | **YES** | Writes bytes into RAM - region checked, optionally only if the bytes still have `expected_sha256`, **destructive** |
 | `emu_bp_add` | no | Adds a breakpoint (exec, or typed memw/memr/ior/iow + condition) |
@@ -1120,8 +1120,12 @@ All 4 tools have a mandatory argument:
 
 ### `emu_trace_start`
 
-Starts recording the channel (= ALWAYS mode). Returns
-`{"started": true}`.
+Starts recording the channel (= ALWAYS mode). Argument `regs` (bool,
+optional, cputrack only): `true` records the CPU registers after each
+instruction (format 3, 32 B per record instead of 12), `false` format 2;
+without it the configured default (`[TRACE_CPUTRACK] regs`) applies. While
+cputrack already records in the other format the call fails (stop it
+first). Returns `{"started": true}`.
 
 ### `emu_trace_stop`
 
@@ -1154,8 +1158,11 @@ State of the channels for reading. Argument `channel` (optional; one of
 the 5 trace channels or `eventlog` for the Event Viewer ring; empty =
 all). Returns `{"channels": [...]}` with per channel: `segment` (0 =
 nothing recorded yet), `live`, `truncated`, `first_seq`, `next_seq`,
-`lost`, `record_size`, `format_version` (cputrack 2), `chunks`,
-`bytes_on_disk`, `dir`, `name` and `has_time`.
+`lost`, `record_size`, `format_version` (cputrack 2, with registers 3),
+`chunks`, `bytes_on_disk`, `dir`, `name` and `has_time`; cputrack also
+`has_regs` (segment with registers) and `initial_regs` (CPU state at the
+start of the last segment, integers as in the manifest; null before the
+first recording).
 
 ### `emu_trace_read`
 
@@ -1173,8 +1180,14 @@ last segment stays readable until the next start. Arguments:
 - `limit` (int, default 200, 1-5000) - max rows; with `raw_b64` the
   record count (0 = as many as fit in 1 MiB).
 - `format` (string) - `rows` (default, decoded) or `raw_b64`.
-- `columns` (list) - subset of the channel columns.
-- `filter` (object) - `pc_from`/`pc_to` (cputrack), `port` (<= 0xFF
+- `columns` (list) - subset of the channel columns (cputrack default:
+  without `kind` and registers).
+- `regs` (string, cputrack) - `after` (default) or `before`: which state
+  the register columns and register filters show (`before` = the previous
+  record; null where it is not known).
+- `filter` (object) - `pc_from`/`pc_to` (cputrack), register names
+  `af` .. `halted` with a value or `[lo, hi]` (cputrack with registers),
+  `port` (<= 0xFF
   matches the low byte), `dir` (`in`/`out`), `type` (`iorq`,
   `mreq_mapped`, `iorq_unconnected`) (iorqlog), `chip`/`sub` (hwlog),
   `marker` (marklog id), `channels` (list of channel names `ctc0`,
@@ -1191,7 +1204,7 @@ Columns (always in this order, `columns` in the response):
 
 | Channel | Columns |
 |---------|---------|
-| `cputrack` | `seq`, `pc`, `bytes`, `asm`, `t_std`, `wait`, `t`, `sym` |
+| `cputrack` | `seq`, `pc`, `bytes`, `asm`, `t_std`, `wait`, `t`, `sym` (default); on request `kind`, `af`, `bc`, `de`, `hl`, `ix`, `iy`, `sp`, `wz`, `i`, `r`, `iff1`, `iff2`, `im`, `halted` |
 | `iorqlog` | `seq`, `t`, `frame`, `pos`, `type`, `dir`, `src`, `addr`, `value`, `pulse` |
 | `intlog` | `seq`, `t`, `frame`, `pos`, `class`, `chip`, `pin`, `edge`, `state` |
 | `hwlog` | `seq`, `t`, `frame`, `pos`, `chip`, `sub`, `payload` |
@@ -1204,7 +1217,13 @@ Columns (always in this order, `columns` in the response):
 
 `t` is in GDG ticks since emulation start (cputrack: start of the
 instruction, only with `has_time`); cputrack `asm` is decoded from the
-recorded bytes, an interrupt acknowledge record shows `INT ACK`.
+recorded bytes, an interrupt acknowledge record shows `INT ACK`. cputrack
+`kind` is `insn`, `loop`, `int` or `sync`; the register columns (16-bit
+hex, `i` / `r` 8-bit hex, flags as numbers) need a segment recorded with
+registers, otherwise the call fails. A `sync` row (`asm` `SYNC start`,
+`SYNC pc_range`, `SYNC write`) carries the CPU state at the start of the
+recording, on return into the PC range record filter and after a change
+outside an instruction; it takes no time.
 `audio_*`: `t` absolute, `time_us` since the capture start; `hz` / `note`
 only for a new tone divider; the `audio_frames` arrays follow the
 `channels` of `emu_audio_capture_status`, `ref_*` / `sdl_*` are [L, R]

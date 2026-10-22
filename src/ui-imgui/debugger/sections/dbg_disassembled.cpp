@@ -336,6 +336,7 @@ struct DisassembledView
      * memcmp dvou nulových struktur vrátil 0 = "beze změny"). */
     st_DEBUGGER_HISTORY last_history;             /**< poslední cachovaný stav historie */
     DasmRow hist_cached_rows[DEBUGGER_HISTORY_LENGTH];
+    st_DEBUGGER_HISTORY_REGS hist_cached_regs[DEBUGGER_HISTORY_LENGTH]; /**< registry před instrukcí řádku */
     int hist_cached_count;                        /**< počet řádků v cache */
     bool hist_cache_valid;                        /**< false = cache ještě nebyla naplněna */
 
@@ -1305,6 +1306,7 @@ static void read_debugger_history(DisassembledView *self, st_DEBUGGER_HISTORY db
         {
             out->bytes[b] = hrow->byte[b];
         };
+        self->hist_cached_regs[self->hist_cached_count] = hrow->regs;
 
         self->hist_cached_count++;
     };
@@ -1427,9 +1429,26 @@ static void render_history_table(DisassembledView *self, float height)
             ImGui::TableNextColumn();
             ImGui::TextUnformatted(bytes_str);
 
-            /* Sloupec 4 (MNEM): Z80 mnemonic */
+            /* Sloupec 4 (MNEM): Z80 mnemonic; tooltip s registry před
+             * instrukcí (zachycené při M1, debugger.h). */
             ImGui::TableNextColumn();
             ImGui::TextUnformatted(self->hist_cached_rows[i].mnemonic);
+            if (ImGui::IsItemHovered())
+            {
+                const st_DEBUGGER_HISTORY_REGS *hr = &self->hist_cached_regs[i];
+                ImGui::BeginTooltip();
+                ImGui::TextUnformatted(_("Registers before this instruction:"));
+                ImGui::Text("AF=%04X BC=%04X DE=%04X HL=%04X",
+                            hr->af, hr->bc, hr->de, hr->hl);
+                ImGui::Text("IX=%04X IY=%04X SP=%04X WZ=%04X",
+                            hr->ix, hr->iy, hr->sp, hr->wz);
+                ImGui::Text("I=%02X R=%02X IM %u IFF1=%u IFF2=%u",
+                            hr->i, hr->r,
+                            (unsigned) ((hr->flags & DEBUGGER_HISTORY_F_IM_MASK) >> DEBUGGER_HISTORY_F_IM_SHIFT),
+                            (hr->flags & DEBUGGER_HISTORY_F_IFF1) ? 1u : 0u,
+                            (hr->flags & DEBUGGER_HISTORY_F_IFF2) ? 1u : 0u);
+                ImGui::EndTooltip();
+            };
 
             /* Sloupec 5 (TSTATES, volitelný): počet T-stavů. Pro non-branch
              * jediné číslo, pro podmíněné větvení "taken/not" notace. */

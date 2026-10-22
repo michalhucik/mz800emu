@@ -328,6 +328,10 @@ static void mzarch_main_dbgapi_dispatch_one(st_DBGAPI_CMDRQ *rq)
 
     dbgapi_emu_dispatch(rq);
 
+    /* cputrack v3: příkaz mohl změnit registry mimo instrukci (set_register,
+     * příznaky CPU, run MZF, snapshot, reset, ...). Bez změny nic nezapíše. */
+    cputrack_sync_check();
+
     /* Úklid účtů insideop po operaci mimo instrukci (viz výše). */
     g_mzarch_main.instruction_insideop_sync_ticks = 0;
     g_mzarch_main.instruction_wait_tstates = 0;
@@ -1200,6 +1204,9 @@ static inline void mzzarch_main_do_emulator_paused(void)
      * neuplatní na novou adresu a BP na 0000 se správně aktivuje. */
     g_debugger.skip_bp_at_pc = (int) g_mzarch_main.cpu->pc;
 
+    /* cputrack v3: pojistka pro změny registrů během pauzy mimo dbgapi. */
+    cputrack_sync_check();
+
     /* Nové číslo běhu, vynulovaný důvod pauzy, událost "resumed" (jen
      * u rozběhu, ne u kroku). */
     run_control_on_resume();
@@ -1342,6 +1349,8 @@ static void mzarch_main_reset(void)
 
     z80_reset(g_mzarch_main.cpu);
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
+    /* cputrack v3: reset změnil registry mimo instrukci (synchronizační záznam). */
+    cputrack_sync_check();
     /* D.4 - re-init SP polling baseline po resetu, aby se nehodil
      * falešný edge (z80_reset nastaví SP na 0xFFFF, dále program ho
      * pravděpodobně rychle modifikuje). */

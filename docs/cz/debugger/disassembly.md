@@ -72,6 +72,11 @@ CPU fetch, ne live read přes banking switch).
 Sloupce identické s dolní tabulkou: ICONS / ADDR / BYTES / MNEM (+
 TSTATES pokud je per-instance toggle ON).
 
+Záznam nese i registry CPU **před** instrukcí (AF, BC, DE, HL, IX, IY,
+SP, WZ, I, R, IM, IFF1, IFF2). Ukáže je tooltip po najetí myší na
+mnemoniku řádku. U zastaveného breakpointu tak jde zjistit, s jakými
+hodnotami běželo posledních 32 instrukcí, bez zapnutého cputrack.
+
 Splitter mezi historií a dolní tabulkou je drag-resizable (poměr se
 pamatuje v rámci session).
 

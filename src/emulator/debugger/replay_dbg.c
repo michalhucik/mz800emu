@@ -15,6 +15,7 @@
 #include "dbgapi_emu.h"
 #include "dbgapi_regions.h"
 #include "replay.h"
+#include "trace/cputrack.h"
 
 
 en_REPLAY_DBG_CLASS replay_dbg_classify(en_DBGAPI_CMD cmd)
@@ -420,6 +421,10 @@ bool replay_dbg_execute(const char *cmd_name, const char *args_json, char **err)
         rq.cmd_origin = DBGAPI_CMD_ORIGIN_INTERNAL;
         rq.data_ptr = data_ptr;
         dbgapi_emu_dispatch(&rq);
+        /* Přehrání běží na hranici snímku mimo drain dbgapi
+         * (mzarch_main_dbgapi_dispatch_one()): zaznamenaný set_reg nebo
+         * set_cpu_flags = synchronizační záznam cputrack v3. */
+        cputrack_sync_check();
         ok = rq.success;
         if (cmd == DBGAPI_CMD_MEM_WRITE_CHECKED) ok = ok && checked.success;
         if (!ok) replay_dbg_err(err, "recorded debugger command failed");

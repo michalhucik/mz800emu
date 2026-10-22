@@ -62,6 +62,41 @@ Records still in the RAM buffer are readable too, so even a short run
   uses a PC range filter (`pc_range_lo/hi` in `[TRACE_CPUTRACK]`).
 - HALT and a loop on itself (`JR $`) are one collapsed row whose `wait`
   is the whole time spent in the loop.
+- Column `kind` (on request): `insn`, `loop` (collapsed row), `int`
+  (interrupt acknowledge), `sync` (format 3 only, see below).
+
+## Registers in the instruction trace
+
+Questions like "what was HL just before this instruction" or "when did
+SP become 10F0h" need a cputrack recording with registers:
+
+1. `emu_trace_start("cputrack", regs=True)` - format 3, 32 bytes per
+   record instead of 12 (`emu_trace_status`: `has_regs: true`,
+   `format_version` 3). It fails while cputrack is already recording in
+   format 2; stop it first.
+2. Ask for register columns: `columns=["seq","pc","asm","hl","sp"]`
+   (`af bc de hl ix iy sp wz` hex16, `i r` hex8, `iff1 iff2 im halted`
+   numbers). They are not in the default columns.
+3. `regs="after"` (default) shows the state after the record,
+   `regs="before"` the state before it (= the previous record, also across
+   pages; `null` where it is not known).
+4. Find the moment a register got a value with a register filter:
+   `filter={"hl":"0xC000"}` with `regs="after"` returns the records after
+   which HL was C000h - the first row is where it got the value; a range
+   is `{"sp":[0x1000,0x10FF]}`.
+   Filters combine with `pc_from`/`pc_to`.
+
+`sync` rows (`asm` `SYNC start`, `SYNC pc_range`, `SYNC write`) carry the
+CPU state at the start of the recording, when execution returns into the
+PC range record filter, and after a change outside an instruction (your
+`emu_set_register`, a reset, a snapshot load, a breakpoint action `set`).
+They take no time. `emu_trace_status` also returns `initial_regs`, the
+state at the start of the last recording.
+
+Without a trace, `emu_history_get` returns the registers before each of
+the last 32 executed instructions (`regs` in every entry) whenever the
+instruction history runs (debug window open, an enabled breakpoint, or
+`[DEBUGGER] cpuhist_mode = ALWAYS`).
 
 ## Errors and gaps
 
@@ -79,3 +114,5 @@ Records still in the RAM buffer are readable too, so even a short run
 - `format="raw_b64"` returns the raw records (`record_size`,
   `format_version`) for scripts; the layouts are in the Trace Suite
   format documentation.
+- `register columns and filters need a cputrack segment recorded with
+  regs` - the recording is format 2; start a new one with `regs=True`.

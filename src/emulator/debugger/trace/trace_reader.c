@@ -16,6 +16,7 @@
 #include "../../audio_analysis.h"
 #include "../../audio_capture.h"
 #include "ramlog.h"
+#include "cputrack.h"
 
 #include <math.h>
 #include <stddef.h>
@@ -66,8 +67,11 @@ static const char *const s_kind_names[ TRACE_KIND_COUNT ] = {
     "audio_psg_writes", "audio_levels", "audio_frames", "ramlog"
 };
 
-/** @brief Sloupce cputrack (pořadí = bity masky). */
-static const char *const s_cols_cputrack[] = { "seq", "pc", "bytes", "asm", "t_std", "wait", "t", "sym" };
+/** @brief Sloupce cputrack (pořadí = bity masky). Za `sym` druh záznamu
+ *  a registry formátu v3 (TRACE_CPUTRACK_REG_*), ty jen na požádání. */
+static const char *const s_cols_cputrack[] = { "seq", "pc", "bytes", "asm", "t_std", "wait", "t", "sym",
+                                               "kind", "af", "bc", "de", "hl", "ix", "iy", "sp", "wz",
+                                               "i", "r", "iff1", "iff2", "im", "halted" };
 /** @brief Sloupce iorqlog. */
 static const char *const s_cols_iorqlog[] = { "seq", "t", "frame", "pos", "type", "dir", "src", "addr", "value", "pulse" };
 /** @brief Sloupce intlog. */
@@ -98,6 +102,13 @@ static const char *const s_cols_ramlog[] = { "seq", "t", "frame", "pc", "sym", "
 #define TRACE_COL_CPUTRACK_T   6
 /** @brief Index sloupce `sym` u cputrack. */
 #define TRACE_COL_CPUTRACK_SYM 7
+/** @brief Index sloupce `kind` u cputrack. */
+#define TRACE_COL_CPUTRACK_KIND 8
+/** @brief Výchozí sloupce cputrack (formát v2: seq .. sym). */
+#define TRACE_CPUTRACK_DEFAULT_COLS_MASK ( ( 1u << ( TRACE_COL_CPUTRACK_SYM + 1 ) ) - 1u )
+
+G_STATIC_ASSERT ( TRACE_COL_CPUTRACK_REG0 == TRACE_COL_CPUTRACK_KIND + 1 );
+G_STATIC_ASSERT ( G_N_ELEMENTS ( s_cols_cputrack ) == TRACE_COL_CPUTRACK_REG0 + TRACE_CPUTRACK_REG_COUNT );
 /** @brief Index sloupce `name` u marklog. */
 #define TRACE_COL_MARKLOG_NAME 5
 /** @brief Index sloupce `text` u eventlog. */
@@ -140,7 +151,10 @@ uint32_t trace_columns_mask ( en_TRACE_KIND kind, const char *const *names, size
     const char *const *cols = trace_columns ( kind, &nc );
     *bad = NULL;
     if ( !cols ) return 0;
-    if ( !names || n == 0 ) return ( nc >= 32 ) ? 0xFFFFFFFFu : ( ( 1u << nc ) - 1u );
+    if ( !names || n == 0 ) {
+        if ( kind == TRACE_KIND_CPUTRACK ) return TRACE_CPUTRACK_DEFAULT_COLS_MASK;
+        return ( nc >= 32 ) ? 0xFFFFFFFFu : ( ( 1u << nc ) - 1u );
+    }
     uint32_t mask = 0;
     for ( size_t i = 0; i < n; i++ ) {
         size_t k = 0;
@@ -152,6 +166,16 @@ uint32_t trace_columns_mask ( en_TRACE_KIND kind, const char *const *names, size
         mask |= 1u << k;
     }
     return mask;
+}
+
+
+int trace_cputrack_reg_index ( const char *name )
+{
+    if ( !name ) return -1;
+    for ( unsigned i = 0; i < TRACE_CPUTRACK_REG_COUNT; i++ ) {
+        if ( strcmp ( s_cols_cputrack[ TRACE_COL_CPUTRACK_REG0 + i ], name ) == 0 ) return (int) i;
+    }
+    return -1;
 }
 
 
@@ -337,9 +361,10 @@ int trace_reader_fetch ( const st_TLOG_READ_SNAPSHOT *snap,
  *  Čas cputrack
  * =========================================================================== */
 
-/** @brief T-stavy záznamu cputrack v2 (t_std + wait_clk). */
+/** @brief T-stavy záznamu cputrack (t_std + wait_clk; synchronizační záznam v3 nemá čas). */
 static inline uint64_t cputrack_rec_t ( const uint8_t *r )
 {
+    if ( r[ 2 ] == CPUTRACK_INSN_LEN_SYNC ) return 0;
     uint32_t wait = (uint32_t) r[ 7 ] | ( (uint32_t) r[ 8 ] << 8 ) |
                     ( (uint32_t) r[ 9 ] << 16 ) | ( (uint32_t) r[ 10 ] << 24 );
     return (uint64_t) r[ 11 ] + wait;
@@ -389,7 +414,8 @@ static int trace_disk_prefix ( const st_TLOG_READ_SNAPSHOT *snap, uint64_t chunk
     g_mutex_unlock ( &s_time_lock );
 
     enum { BATCH = 65536 };
-    uint8_t *buf = (uint8_t *) g_malloc ( BATCH * TLOG_RECORD_SIZE_CPUTRACK );
+    size_t rs = snap->record_size;
+    uint8_t *buf = (uint8_t *) g_malloc ( BATCH * rs );
     int rc = 0;
     while ( from < seq ) {
         uint64_t n = seq - from;
@@ -398,7 +424,7 @@ static int trace_disk_prefix ( const st_TLOG_READ_SNAPSHOT *snap, uint64_t chunk
             rc = -1;
             break;
         }
-        for ( uint64_t k = 0; k < n; k++ ) prefix += cputrack_rec_t ( buf + k * TLOG_RECORD_SIZE_CPUTRACK );
+        for ( uint64_t k = 0; k < n; k++ ) prefix += cputrack_rec_t ( buf + k * rs );
         from += n;
     }
     g_free ( buf );
@@ -443,13 +469,21 @@ static void trace_time_locate ( st_TRACE_TIME *tm, const st_TLOG_READ_SNAPSHOT *
     tm->ok = false;
     if ( !tm->on ) return;
     if ( seq >= snap->ram_first_seq ) {
-        /* RAM chunk: báze z emu vlákna platí pro ram_copy_seq. */
-        if ( !snap->live || seq != snap->ram_copy_seq ) return;
+        /* RAM chunk: báze z emu vlákna platí pro ram_copy_seq; na záznamy
+         * za ní (čtení začalo o záznam dřív kvůli stavu před) se dopočítá
+         * z kopie. */
+        if ( !snap->live || seq < snap->ram_copy_seq ||
+             seq > snap->ram_copy_seq + snap->ram_copy_count ||
+             ( seq > snap->ram_copy_seq && !snap->ram_copy ) ) return;
+        uint64_t prefix = req->ram_prefix_t;
+        for ( uint64_t k = snap->ram_copy_seq; k < seq; k++ ) {
+            prefix += cputrack_rec_t ( snap->ram_copy + ( k - snap->ram_copy_seq ) * snap->record_size );
+        }
         tm->in_ram = true;
         tm->chunk_start = snap->ram_first_seq;
         tm->chunk_end = snap->next_seq;
         tm->anchor_px = snap->ram_start_pxclk;
-        tm->prefix = req->ram_prefix_t;
+        tm->prefix = prefix;
         tm->ok = true;
         return;
     }
@@ -689,7 +723,62 @@ typedef struct st_TRACE_HIT
     bool     has_t;      /**< Má čas. */
     uint64_t t;          /**< Čas v taktech GDG. */
     uint8_t  rec[ TRACE_MAX_RECORD_SIZE ]; /**< Kopie záznamu (nejvýš TRACE_MAX_RECORD_SIZE B). */
+    bool     v3;         /**< cputrack: záznam formátu v3 (32 B s registry). */
+    bool     has_prev;   /**< cputrack v3 se stavem před: prev platí. */
+    uint8_t  prev[ CPUTRACK_RECORD_SIZE_REGS ]; /**< Předchozí záznam (nese stav před tímto). */
 } st_TRACE_HIT;
+
+
+/**
+ * @brief Hodnota registru ze záznamu cputrack v3.
+ *
+ * @param r    Záznam v3 (32 B).
+ * @param idx  TRACE_CPUTRACK_REG_*.
+ */
+static unsigned cputrack_reg_value ( const uint8_t *r, unsigned idx )
+{
+    if ( idx <= TRACE_CPUTRACK_REG_WZ ) return rd16 ( r + CPUTRACK_V3_OFF_REGS + 2u * idx );
+    uint8_t f = r[ CPUTRACK_V3_OFF_FLAGS ];
+    switch ( idx ) {
+        case TRACE_CPUTRACK_REG_I:      return r[ CPUTRACK_V3_OFF_I ];
+        case TRACE_CPUTRACK_REG_R:      return r[ CPUTRACK_V3_OFF_R ];
+        case TRACE_CPUTRACK_REG_IFF1:   return ( f & CPUTRACK_REGS_F_IFF1 ) ? 1u : 0u;
+        case TRACE_CPUTRACK_REG_IFF2:   return ( f & CPUTRACK_REGS_F_IFF2 ) ? 1u : 0u;
+        case TRACE_CPUTRACK_REG_IM:     return ( f & CPUTRACK_REGS_F_IM_MASK ) >> CPUTRACK_REGS_F_IM_SHIFT;
+        case TRACE_CPUTRACK_REG_HALTED: return ( f & CPUTRACK_REGS_F_HALTED ) ? 1u : 0u;
+        default:                        return 0;
+    }
+}
+
+
+/**
+ * @brief Záznam cputrack v3, jehož stav ukazují sloupce a filtr registrů.
+ *
+ * @param r        Záznam.
+ * @param prev     Předchozí záznam (NULL = neznámý).
+ * @param before   true = stav před záznamem (= stav v předchozím záznamu).
+ * @return Záznam se stavem, nebo NULL (stav před není znám: první záznam,
+ *         předchozí záznam nedostupný, příznak CPUTRACK_FLAG_NO_BEFORE).
+ */
+static const uint8_t *cputrack_regs_src ( const uint8_t *r, const uint8_t *prev, bool before )
+{
+    if ( !before ) return r;
+    if ( !prev || ( r[ CPUTRACK_V3_OFF_KIND ] & CPUTRACK_FLAG_NO_BEFORE ) ) return NULL;
+    return prev;
+}
+
+
+/** @brief Vyhovuje stav registrů @p src podmínkám filtru (NULL = neznámý = ne)? */
+static bool cputrack_regs_match ( const uint8_t *src, const st_TRACE_FILTER *f )
+{
+    if ( f->n_regs == 0 ) return true;
+    if ( !src ) return false;
+    for ( unsigned i = 0; i < f->n_regs; i++ ) {
+        unsigned v = cputrack_reg_value ( src, f->regs[ i ].reg );
+        if ( v < f->regs[ i ].lo || v > f->regs[ i ].hi ) return false;
+    }
+    return true;
+}
 
 
 /** @brief Přidat hex16 řetězec ("0E9A") do pole. */
@@ -888,8 +977,12 @@ static JsonArray *trace_row ( const st_TRACE_PAGE_REQ *req, const st_TRACE_HIT *
 #define COL(i) ( mask & ( 1u << ( i ) ) )
     if ( kind == TRACE_KIND_CPUTRACK ) {
         uint8_t len = r[ 2 ];
-        /* v2: insn_length 0 = přijetí přerušení (pc = adresa obsluhy) */
+        /* v2: insn_length 0 = přijetí přerušení (pc = adresa obsluhy);
+         * v3: 0xFE = synchronizační záznam (bajty 3-10 = alternativní sada) */
         bool irq = ( len == 0 );
+        bool sync = ( len == CPUTRACK_INSN_LEN_SYNC );
+        bool v3 = h->v3;
+        if ( sync ) len = 0;
         if ( len > 4 ) len = 4;
         if ( COL ( 0 ) ) json_array_add_int_element ( a, (gint64) h->seq );
         if ( COL ( 1 ) ) add_hex16 ( a, rd16 ( r ) );
@@ -900,6 +993,10 @@ static JsonArray *trace_row ( const st_TRACE_PAGE_REQ *req, const st_TRACE_HIT *
         }
         if ( COL ( 3 ) && irq ) {
             json_array_add_string_element ( a, "INT ACK" );
+        } else if ( COL ( 3 ) && sync ) {
+            static const char *const reasons[] = { "SYNC start", "SYNC pc_range", "SYNC write" };
+            unsigned why = ( r[ CPUTRACK_V3_OFF_KIND ] & CPUTRACK_SYNC_REASON_MASK ) >> CPUTRACK_SYNC_REASON_SHIFT;
+            json_array_add_string_element ( a, ( why < G_N_ELEMENTS ( reasons ) ) ? reasons[ why ] : "SYNC" );
         } else if ( COL ( 3 ) ) {
             st_DASM_REC d = { rd16 ( r ), r + 3 };
             z80_dasm_inst_t inst;
@@ -908,13 +1005,34 @@ static JsonArray *trace_row ( const st_TRACE_PAGE_REQ *req, const st_TRACE_HIT *
             z80_dasm_to_str ( buf, (int) sizeof ( buf ), &inst, NULL );
             json_array_add_string_element ( a, buf );
         }
-        if ( COL ( 4 ) ) json_array_add_int_element ( a, r[ 11 ] );
-        if ( COL ( 5 ) ) json_array_add_int_element ( a, rd32 ( r + 7 ) );
+        if ( COL ( 4 ) ) json_array_add_int_element ( a, sync ? 0 : r[ 11 ] );
+        if ( COL ( 5 ) ) json_array_add_int_element ( a, sync ? 0 : (gint64) rd32 ( r + 7 ) );
         if ( COL ( TRACE_COL_CPUTRACK_T ) ) {
             if ( h->has_t ) json_array_add_int_element ( a, (gint64) h->t );
             else json_array_add_null_element ( a );
         }
         if ( COL ( TRACE_COL_CPUTRACK_SYM ) ) json_array_add_string_element ( a, extra ? extra : "" );
+        if ( COL ( TRACE_COL_CPUTRACK_KIND ) ) {
+            static const char *const kinds[] = { "insn", "loop", "int", "sync" };
+            unsigned k;
+            if ( v3 ) k = r[ CPUTRACK_V3_OFF_KIND ] & CPUTRACK_KIND_MASK;
+            else k = irq ? CPUTRACK_KIND_INT : ( r[ 11 ] == 0 ? CPUTRACK_KIND_LOOP : CPUTRACK_KIND_INSN );
+            json_array_add_string_element ( a, ( k < G_N_ELEMENTS ( kinds ) ) ? kinds[ k ] : "?" );
+        }
+        if ( mask & TRACE_CPUTRACK_REG_COLS_MASK ) {
+            const uint8_t *src = v3 ? cputrack_regs_src ( r, h->has_prev ? h->prev : NULL, req->regs_before ) : NULL;
+            for ( unsigned i = 0; i < TRACE_CPUTRACK_REG_COUNT; i++ ) {
+                if ( !COL ( TRACE_COL_CPUTRACK_REG0 + i ) ) continue;
+                if ( !src ) {
+                    json_array_add_null_element ( a );
+                    continue;
+                }
+                unsigned v = cputrack_reg_value ( src, i );
+                if ( i <= TRACE_CPUTRACK_REG_WZ ) add_hex16 ( a, v );
+                else if ( i <= TRACE_CPUTRACK_REG_R ) add_hex8 ( a, v );
+                else json_array_add_int_element ( a, (gint64) v );
+            }
+        }
         return a;
     }
     /* 24B kanály: seq, t, frame, pos společné. */
@@ -1040,6 +1158,16 @@ int trace_reader_page ( const st_TRACE_PAGE_REQ *req,
     tm.on = ( req->kind == TRACE_KIND_CPUTRACK ) && req->cputrack_time;
     if ( tm.on ) trace_time_locate ( &tm, snap, req, seq );
 
+    /* cputrack v3 se stavem před: předchozí záznam (i ten před stránkou). */
+    bool track_prev = ( req->kind == TRACE_KIND_CPUTRACK ) && ( rs == CPUTRACK_RECORD_SIZE_REGS ) &&
+                      req->regs_before;
+    uint8_t prev[ CPUTRACK_RECORD_SIZE_REGS ];
+    bool has_prev = false;
+    if ( track_prev && seq > snap->first_seq ) {
+        uint64_t got_prev = 0;
+        has_prev = ( trace_reader_fetch ( snap, seq - 1, 1, prev, &got_prev ) == 0 ) && got_prev == 1;
+    }
+
     enum { BATCH = 4096 };
     uint8_t *buf = (uint8_t *) g_malloc ( BATCH * rs );
     int rc = 0;
@@ -1075,13 +1203,26 @@ int trace_reader_page ( const st_TRACE_PAGE_REQ *req,
                 has_t = true;
                 t = rd64 ( r );
             }
-            if ( trace_match ( req->kind, r, has_t, t, &req->filter ) ) {
+            bool ok = trace_match ( req->kind, r, has_t, t, &req->filter );
+            if ( ok && req->filter.n_regs ) {
+                const uint8_t *src = ( rs == CPUTRACK_RECORD_SIZE_REGS )
+                                     ? cputrack_regs_src ( r, has_prev ? prev : NULL, req->regs_before ) : NULL;
+                ok = cputrack_regs_match ( src, &req->filter );
+            }
+            if ( ok ) {
                 st_TRACE_HIT *h = &hits[ nhits++ ];
                 h->seq = s;
                 h->has_t = has_t;
                 h->t = t;
                 memset ( h->rec, 0, sizeof ( h->rec ) );
                 memcpy ( h->rec, r, rs );
+                h->v3 = ( req->kind == TRACE_KIND_CPUTRACK ) && ( rs == CPUTRACK_RECORD_SIZE_REGS );
+                h->has_prev = track_prev && has_prev;
+                if ( h->has_prev ) memcpy ( h->prev, prev, sizeof ( prev ) );
+            }
+            if ( track_prev ) {
+                memcpy ( prev, r, sizeof ( prev ) );
+                has_prev = true;
             }
         }
         scanned += k;

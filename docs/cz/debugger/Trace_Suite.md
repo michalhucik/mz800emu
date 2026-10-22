@@ -57,6 +57,12 @@ Cputrack navíc (range-scoped tracking):
   ROM/OS rutiny. Hodnoty přijímají dec i hex (`0x` prefix), ořežou se
   na 16 bitů. Filtr je jen pro cputrack - ostatní subsystémy logují vždy
   vše.
+- `--cputrack-regs=on|off` (default `off`) - formát 3: u každé instrukce
+  i registry CPU po ní (32 B na záznam místo 12). Stav před instrukcí je
+  stav v předchozím záznamu; řetěz drží synchronizační záznamy na začátku
+  záznamu, při návratu do rozsahu filtru PC a po změně registrů mimo
+  instrukci. Formát popisuje
+  [CPU-track_format.md](formats/CPU-track_format.md#formát-v3-záznam-s-registry-32-b).
 
 #### Shorthand `--all-traces-*`
 
@@ -84,7 +90,9 @@ CLI / INI.
 Položka "All channels" nastaví mode / Save on Exit / Max size / Chunk / adresář
 u všech 5 kanálů (cputrack / iorqlog / intlog / hwlog / marklog) najednou.
 
-Submenu CPU Track má navíc pole "PC range filter [lo,hi]:" se dvěma hex
+Submenu CPU Track má navíc přepínač "Record registers" (formát 3 s registry,
+jako CLI `--cputrack-regs`; platí od dalšího startu záznamu) a pole
+"PC range filter [lo,hi]:" se dvěma hex
 vstupy (lo, hi) a položkou "Reset range (whole space)". Nastavuje stejný
 range-scope filtr jako CLI `--cputrack-pc-lo` / `--cputrack-pc-hi`
 (záznam jen pro PC v rozsahu). Reset vrátí rozsah na `0000`-`FFFF`

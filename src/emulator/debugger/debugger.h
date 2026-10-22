@@ -257,10 +257,55 @@ extern int g_coverage_need_fetch; /* fwd decl pro TEST_DEBUGGER_NEED_DEBUG_CALLB
 #define DEBUGGER_HISTORY_LENGTH (DEBUGGER_HISTORY_POSMASK + 1)
 #define DEBUGGER_MAX_INSTR_BYTES 4
 
+/** @brief Příznak IFF1 v st_DEBUGGER_HISTORY_REGS.flags. */
+#define DEBUGGER_HISTORY_F_IFF1     0x01u
+/** @brief Příznak IFF2. */
+#define DEBUGGER_HISTORY_F_IFF2     0x02u
+/** @brief Posun režimu přerušení IM (0-2) v bajtu příznaků. */
+#define DEBUGGER_HISTORY_F_IM_SHIFT 2u
+/** @brief Maska režimu přerušení IM v bajtu příznaků. */
+#define DEBUGGER_HISTORY_F_IM_MASK  0x0Cu
+
+    /**
+     * @brief Registry CPU před instrukcí řádku historie (20 B).
+     *
+     * Zachytí je logovací čtecí callback při M1 prvního bajtu instrukce:
+     * v té chvíli instrukce ještě nic nezměnila a R se za tento M1 ještě
+     * nezvýšil (jádro v z80_step() přičte R až po čtení). PC řádku je
+     * st_DEBUGGER_HISTORY_ROW.addr.
+     *
+     * @invariant Platí jen pro řádky zapsané s cpuhist; předpokládá krokové
+     *            jádro z80_step(), kde registry jsou přímo pole z80_t
+     *            (dávková varianta je drží v lokálních kopiích).
+     */
+    typedef struct st_DEBUGGER_HISTORY_REGS
+    {
+        uint16_t af;   /**< AF */
+        uint16_t bc;   /**< BC */
+        uint16_t de;   /**< DE */
+        uint16_t hl;   /**< HL */
+        uint16_t ix;   /**< IX */
+        uint16_t iy;   /**< IY */
+        uint16_t sp;   /**< SP */
+        uint16_t wz;   /**< WZ (MEMPTR) */
+        uint8_t  i;    /**< I */
+        uint8_t  r;    /**< R (celý bajt) */
+        uint8_t  flags;/**< IFF1, IFF2, IM (DEBUGGER_HISTORY_F_*) */
+        uint8_t  pad;  /**< Výplň, vždy 0. */
+    } st_DEBUGGER_HISTORY_REGS;
+
+    /**
+     * @brief Řádek historie instrukcí (cpuhist).
+     *
+     * @invariant byte[0] je opkód (prefix) z M1 na @c addr; další bajty
+     *            platí jen do délky instrukce (zbytek může být z dřívější
+     *            instrukce téhož slotu).
+     */
     typedef struct st_DEBUGGER_HISTORY_ROW
     {
-        uint16_t addr;
-        uint8_t byte[DEBUGGER_MAX_INSTR_BYTES];
+        uint16_t addr;                           /**< Adresa instrukce (PC před ní). */
+        uint8_t byte[DEBUGGER_MAX_INSTR_BYTES];  /**< Bajty instrukce z fetch. */
+        st_DEBUGGER_HISTORY_REGS regs;           /**< Registry před instrukcí. */
     } st_DEBUGGER_HISTORY_ROW;
 
     typedef struct st_DEBUGGER_HISTORY
@@ -322,6 +367,33 @@ extern int g_coverage_need_fetch; /* fwd decl pro TEST_DEBUGGER_NEED_DEBUG_CALLB
     }
 
 #define debugger_history_position(i) ((i) & DEBUGGER_HISTORY_POSMASK)
+
+    /**
+     * @brief Zachytit registry před instrukcí do řádku historie.
+     *
+     * Volá logovací čtecí callback (všechny platformy) při M1 prvního bajtu
+     * instrukce s aktivním cpuhist, tedy ve studené diagnostické cestě.
+     *
+     * @param o    Cíl (řádek historie).
+     * @param cpu  Jádro v okamžiku M1 (krokové z80_step()).
+     */
+    static inline void debugger_history_capture_regs(st_DEBUGGER_HISTORY_REGS *o, const z80_t *cpu)
+    {
+        o->af = cpu->af.w;
+        o->bc = cpu->bc.w;
+        o->de = cpu->de.w;
+        o->hl = cpu->hl.w;
+        o->ix = cpu->ix.w;
+        o->iy = cpu->iy.w;
+        o->sp = cpu->sp;
+        o->wz = cpu->wz.w;
+        o->i = cpu->i;
+        o->r = cpu->r;
+        o->flags = (uint8_t) ((cpu->iff1 ? DEBUGGER_HISTORY_F_IFF1 : 0u)
+                              | (cpu->iff2 ? DEBUGGER_HISTORY_F_IFF2 : 0u)
+                              | (((unsigned) cpu->im & 3u) << DEBUGGER_HISTORY_F_IM_SHIFT));
+        o->pad = 0;
+    }
 
     extern void debugger_step_call(unsigned value);
     extern void debugger_reset_history(void);

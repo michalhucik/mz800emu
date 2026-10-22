@@ -2339,6 +2339,8 @@ static en_MCP_DISPATCH_RESULT _handle_dasm(const st_JSONL_MESSAGE *req,
  *  - `entries` (array) - per entry:
  *    - `addr` (int) - adresa instrukce
  *    - `bytes_hex` (string) - max 4 bajty jako hex
+ *    - `regs` (object) - registry před instrukcí (st_DEBUGGER_HISTORY_REGS):
+ *      `af` .. `wz` hex16, `i`, `r` hex8, `iff1`, `iff2`, `im` čísla
  *
  * Pole `entries[i]` odpovídá `g_debugger_history.row[i]` (= raw
  * ring layout, NE chronologicky seřazený). Klient si zorientuje
@@ -2374,6 +2376,24 @@ static en_MCP_DISPATCH_RESULT _handle_history_get(const st_JSONL_MESSAGE *req,
                                   rows[i].byte[b]);
         }
         json_object_set_string_member(e, "bytes_hex", hex_buf);
+        /* Registry před instrukcí (zachycené při M1, debugger.h). */
+        const st_DEBUGGER_HISTORY_REGS *hr = &rows[i].regs;
+        JsonObject *ro = json_object_new();
+        static const char *const n16[8] = { "af", "bc", "de", "hl", "ix", "iy", "sp", "wz" };
+        const uint16_t v16[8] = { hr->af, hr->bc, hr->de, hr->hl, hr->ix, hr->iy, hr->sp, hr->wz };
+        char b[8];
+        for (int k = 0; k < 8; k++) {
+            g_snprintf(b, sizeof(b), "%04X", v16[k]);
+            json_object_set_string_member(ro, n16[k], b);
+        }
+        g_snprintf(b, sizeof(b), "%02X", hr->i);
+        json_object_set_string_member(ro, "i", b);
+        g_snprintf(b, sizeof(b), "%02X", hr->r);
+        json_object_set_string_member(ro, "r", b);
+        json_object_set_int_member(ro, "iff1", (hr->flags & DEBUGGER_HISTORY_F_IFF1) ? 1 : 0);
+        json_object_set_int_member(ro, "iff2", (hr->flags & DEBUGGER_HISTORY_F_IFF2) ? 1 : 0);
+        json_object_set_int_member(ro, "im", (hr->flags & DEBUGGER_HISTORY_F_IM_MASK) >> DEBUGGER_HISTORY_F_IM_SHIFT);
+        json_object_set_object_member(e, "regs", ro);
         json_array_add_object_element(entries, e);
     }
     json_object_set_array_member(data, "entries", entries);
@@ -8023,11 +8043,13 @@ static gboolean _trace_get_channel(const st_JSONL_MESSAGE *req,
  * @param out_response Výstupní JSON odpověď.
  * @param cmd         DBGAPI_CMD_TRACE_START nebo DBGAPI_CMD_TRACE_STOP.
  * @param state_key   Klíč boolean stavu v odpovědi ("started"/"stopped").
+ * @param regs        Jen START cputrack: -1 = podle konfigurace, 0/1 = formát
+ *                    nového segmentu (st_DBGAPI_TRACE_PARAM.regs).
  * @return Dispatch výsledek.
  */
 static en_MCP_DISPATCH_RESULT _trace_start_stop_common(
         const st_JSONL_MESSAGE *req, char **out_response,
-        en_DBGAPI_CMD cmd, const char *state_key) {
+        en_DBGAPI_CMD cmd, const char *state_key, int regs) {
     int64_t req_id = jsonl_msg_get_req_id(req);
     en_DBGAPI_TRACE_CHANNEL ch;
     if (!_trace_get_channel(req, &ch)) {
@@ -8035,8 +8057,13 @@ static en_MCP_DISPATCH_RESULT _trace_start_stop_common(
                              MCP_DISPATCH_INVALID_PARAMS, out_response);
     }
     st_DBGAPI_TRACE_PARAM param = { .channel = ch, .path = NULL,
-                                    .out_result = -1 };
+                                    .regs = regs, .out_result = -1 };
     if (!_submit_dbgapi(cmd, &param, NULL)) {
+        if (param.out_result == DBGAPI_TRACE_ERR_REGS_RUNNING) {
+            return _err_response(req_id, "cputrack is already recording in the other format; "
+                                 "stop it (trace_stop) before changing regs",
+                                 MCP_DISPATCH_INVALID_PARAMS, out_response);
+        }
         return _err_response(req_id, "trace command failed",
                              MCP_DISPATCH_EMU_ERROR, out_response);
     }
@@ -8048,13 +8075,35 @@ static en_MCP_DISPATCH_RESULT _trace_start_stop_common(
 /**
  * @brief `trace_start` handler - aktivuje trace recording kanálu (ALWAYS).
  *
- * Parametry: `channel` (cputrack/iorqlog/intlog/hwlog/marklog). Forward na
- * DBGAPI_CMD_TRACE_START. Response: `{"started": true}`.
+ * Parametry: `channel` (cputrack/iorqlog/intlog/hwlog/marklog), `regs`
+ * (bool, volitelný, jen cputrack: nový segment ve formátu v3 s registry,
+ * false = v2; bez něj volba z konfigurace `[TRACE_CPUTRACK] regs`).
+ * Forward na DBGAPI_CMD_TRACE_START. Response: `{"started": true}`.
+ * Běží-li už cputrack v jiném formátu, než žádá `regs`, chyba (běžící
+ * segment se nepřepíše).
  */
 static en_MCP_DISPATCH_RESULT _handle_trace_start(const st_JSONL_MESSAGE *req,
                                                   char **out_response) {
+    int regs = -1;
+    JsonNode *dn = (JsonNode *)jsonl_msg_get_data_node(req);
+    JsonObject *d = (dn && json_node_get_node_type(dn) == JSON_NODE_OBJECT)
+                    ? json_node_get_object(dn) : NULL;
+    if (d && json_object_has_member(d, "regs") && !json_node_is_null(json_object_get_member(d, "regs"))) {
+        int64_t req_id = jsonl_msg_get_req_id(req);
+        JsonNode *n = json_object_get_member(d, "regs");
+        if (json_node_get_node_type(n) != JSON_NODE_VALUE || json_node_get_value_type(n) != G_TYPE_BOOLEAN) {
+            return _err_response(req_id, "Invalid parameters: regs must be a boolean",
+                                 MCP_DISPATCH_INVALID_PARAMS, out_response);
+        }
+        en_DBGAPI_TRACE_CHANNEL ch;
+        if (_trace_get_channel(req, &ch) && ch != DBGAPI_TRACE_CHANNEL_CPUTRACK) {
+            return _err_response(req_id, "Invalid parameters: regs is only for cputrack",
+                                 MCP_DISPATCH_INVALID_PARAMS, out_response);
+        }
+        regs = json_node_get_boolean(n) ? 1 : 0;
+    }
     return _trace_start_stop_common(req, out_response,
-                                    DBGAPI_CMD_TRACE_START, "started");
+                                    DBGAPI_CMD_TRACE_START, "started", regs);
 }
 
 /**
@@ -8066,7 +8115,7 @@ static en_MCP_DISPATCH_RESULT _handle_trace_start(const st_JSONL_MESSAGE *req,
 static en_MCP_DISPATCH_RESULT _handle_trace_stop(const st_JSONL_MESSAGE *req,
                                                  char **out_response) {
     return _trace_start_stop_common(req, out_response,
-                                    DBGAPI_CMD_TRACE_STOP, "stopped");
+                                    DBGAPI_CMD_TRACE_STOP, "stopped", -1);
 }
 
 /**
@@ -8084,7 +8133,7 @@ static en_MCP_DISPATCH_RESULT _handle_trace_reset(const st_JSONL_MESSAGE *req,
                              MCP_DISPATCH_INVALID_PARAMS, out_response);
     }
     st_DBGAPI_TRACE_PARAM param = { .channel = ch, .path = NULL,
-                                    .out_result = -1 };
+                                    .regs = -1, .out_result = -1 };
     if (!_submit_dbgapi(DBGAPI_CMD_TRACE_RESET, &param, NULL)) {
         return _err_response(req_id, "trace_reset failed",
                              MCP_DISPATCH_EMU_ERROR, out_response);
@@ -8125,7 +8174,7 @@ static en_MCP_DISPATCH_RESULT _handle_trace_save(const st_JSONL_MESSAGE *req,
         }
     }
     st_DBGAPI_TRACE_PARAM param = { .channel = ch, .path = path,
-                                    .out_result = -1 };
+                                    .regs = -1, .out_result = -1 };
     if (!_submit_dbgapi(DBGAPI_CMD_TRACE_SAVE, &param, NULL)) {
         return _err_response(req_id, "trace_save failed",
                              MCP_DISPATCH_EMU_ERROR, out_response);
@@ -8180,10 +8229,53 @@ static bool _trace_kind_is_audio(en_TRACE_KIND k) {
            || k == TRACE_KIND_AUDIO_FRAMES;
 }
 
-/** @brief Verze formátu záznamu kanálu (cputrack v2, ostatní v1). */
-static unsigned _trace_format_version(en_TRACE_KIND k) {
-    /* cputrack v2 (bajt 11, záznam přijetí přerušení), ostatní v1 */
-    return (k == TRACE_KIND_CPUTRACK) ? 2u : 1u;
+/**
+ * @brief Verze formátu záznamu kanálu (cputrack 2 nebo 3, ostatní 1).
+ *
+ * @param k            Kanál.
+ * @param record_size  Velikost záznamu segmentu (cputrack: 32 B = v3 s registry).
+ */
+static unsigned _trace_format_version(en_TRACE_KIND k, size_t record_size) {
+    /* cputrack v2 (bajt 11, záznam přijetí přerušení), v3 (registry,
+     * synchronizační záznamy), ostatní v1 */
+    if (k != TRACE_KIND_CPUTRACK) return 1u;
+    return (record_size == CPUTRACK_RECORD_SIZE_REGS) ? CPUTRACK_RECORD_VERSION_REGS : CPUTRACK_RECORD_VERSION;
+}
+
+
+/**
+ * @brief Počáteční registry segmentu cputrack jako JSON objekt.
+ *
+ * Klíče a celočíselné hodnoty jako `initial_regs` v manifestu `<name>.json`.
+ *
+ * @param r  Stav CPU při startu segmentu.
+ * @param q  Registr Q při startu.
+ * @return Nový objekt (vlastní volající).
+ */
+static JsonObject *_trace_initial_regs_json(const st_CPUTRACK_REGS *r, uint8_t q) {
+    JsonObject *o = json_object_new();
+    json_object_set_int_member(o, "AF", r->af);
+    json_object_set_int_member(o, "BC", r->bc);
+    json_object_set_int_member(o, "DE", r->de);
+    json_object_set_int_member(o, "HL", r->hl);
+    json_object_set_int_member(o, "AF_alt", r->af2);
+    json_object_set_int_member(o, "BC_alt", r->bc2);
+    json_object_set_int_member(o, "DE_alt", r->de2);
+    json_object_set_int_member(o, "HL_alt", r->hl2);
+    json_object_set_int_member(o, "IX", r->ix);
+    json_object_set_int_member(o, "IY", r->iy);
+    json_object_set_int_member(o, "SP", r->sp);
+    json_object_set_int_member(o, "PC", r->pc);
+    json_object_set_int_member(o, "WZ", r->wz);
+    json_object_set_int_member(o, "IR", ((unsigned)r->i << 8) | r->r);
+    json_object_set_int_member(o, "I", r->i);
+    json_object_set_int_member(o, "R", r->r);
+    json_object_set_int_member(o, "IM", (r->flags & CPUTRACK_REGS_F_IM_MASK) >> CPUTRACK_REGS_F_IM_SHIFT);
+    json_object_set_int_member(o, "IFF1", (r->flags & CPUTRACK_REGS_F_IFF1) ? 1 : 0);
+    json_object_set_int_member(o, "IFF2", (r->flags & CPUTRACK_REGS_F_IFF2) ? 1 : 0);
+    json_object_set_int_member(o, "Q", q);
+    json_object_set_int_member(o, "halted", (r->flags & CPUTRACK_REGS_F_HALTED) ? 1 : 0);
+    return o;
 }
 
 /**
@@ -8279,7 +8371,9 @@ static void _trace_fill_state(JsonObject *o, en_TRACE_KIND k,
  * Parametry: `channel` (string, volitelný; bez něj všechny kanály).
  * Response: `{"channels": [{channel, segment, live, truncated, first_seq,
  * next_seq, lost, record_size, format_version, chunks, bytes_on_disk,
- * dir, name, has_time}]}`.
+ * dir, name, has_time}]}`; u cputrack navíc `has_regs` (segment v3)
+ * a `initial_regs` (počáteční stav CPU posledního segmentu jako
+ * v manifestu, null = ještě žádný segment).
  */
 static en_MCP_DISPATCH_RESULT _handle_trace_status(const st_JSONL_MESSAGE *req,
                                                    char **out_response) {
@@ -8317,7 +8411,7 @@ static en_MCP_DISPATCH_RESULT _handle_trace_status(const st_JSONL_MESSAGE *req,
             bytes += g_array_index(p.out.chunks, st_TLOG_CHUNK_META, k).bytes;
         }
         json_object_set_int_member(o, "record_size", (gint64)p.out.record_size);
-        json_object_set_int_member(o, "format_version", (gint64)_trace_format_version(kind));
+        json_object_set_int_member(o, "format_version", (gint64)_trace_format_version(kind, p.out.record_size));
         json_object_set_int_member(o, "chunks", (gint64)chunks);
         json_object_set_int_member(o, "bytes_on_disk", (gint64)bytes);
         if (p.out.dir) json_object_set_string_member(o, "dir", p.out.dir);
@@ -8325,6 +8419,16 @@ static en_MCP_DISPATCH_RESULT _handle_trace_status(const st_JSONL_MESSAGE *req,
         if (p.out.name) json_object_set_string_member(o, "name", p.out.name);
         else json_object_set_null_member(o, "name");
         json_object_set_boolean_member(o, "has_time", _trace_has_time(kind, &p) ? TRUE : FALSE);
+        if (kind == TRACE_KIND_CPUTRACK) {
+            json_object_set_boolean_member(o, "has_regs",
+                                           p.out.record_size == CPUTRACK_RECORD_SIZE_REGS ? TRUE : FALSE);
+            if (p.out_has_initial_regs) {
+                json_object_set_object_member(o, "initial_regs",
+                                              _trace_initial_regs_json(&p.out_initial_regs, p.out_initial_q));
+            } else {
+                json_object_set_null_member(o, "initial_regs");
+            }
+        }
         json_array_add_object_element(arr, o);
         tlog_read_snapshot_clear(&p.out);
     }
@@ -8355,6 +8459,35 @@ static bool _trace_resolve_cb(void *user, st_TRACE_RESOLVE_REQ *rr) {
     }
     g_free(hits);
     return ok;
+}
+
+/**
+ * @brief Hodnota registru ve filtru trace_read: číslo 0..65535 nebo řetězec
+ *        ("0xC000" hex, "49152" desítkově).
+ *
+ * @param n    Uzel hodnoty.
+ * @param out  Výstup (jen při true).
+ * @return true = platná hodnota.
+ */
+static bool _trace_parse_reg_value(JsonNode *n, unsigned *out) {
+    if (!n || json_node_get_node_type(n) != JSON_NODE_VALUE) return false;
+    GType t = json_node_get_value_type(n);
+    gint64 v;
+    if (t == G_TYPE_INT64) {
+        v = json_node_get_int(n);
+    } else if (t == G_TYPE_STRING) {
+        const char *sv = json_node_get_string(n);
+        char *end = NULL;
+        if (!sv || !sv[0]) return false;
+        guint64 u = g_ascii_strtoull(sv, &end, 0);
+        if (!end || *end || u > 0xFFFFu) return false;
+        v = (gint64)u;
+    } else {
+        return false;
+    }
+    if (v < 0 || v > 0xFFFF) return false;
+    *out = (unsigned)v;
+    return true;
 }
 
 /**
@@ -8458,6 +8591,33 @@ static const char *_trace_parse_filter(JsonObject *f, en_TRACE_KIND kind, st_TRA
         out->t_from = (uint64_t)_obj_int_or(f, "t_from", 0);
         out->t_to = (uint64_t)_obj_int_or(f, "t_to", G_MAXINT64);
     }
+    /* cputrack v3: podmínky na registry ("hl": 49152 | "0xC000" | [lo, hi]). */
+    size_t ncols = 0;
+    const char *const *cols = trace_columns(TRACE_KIND_CPUTRACK, &ncols);
+    for (unsigned i = 0; i < TRACE_CPUTRACK_REG_COUNT; i++) {
+        const char *rn = cols[TRACE_COL_CPUTRACK_REG0 + i];
+        if (!json_object_has_member(f, rn)) continue;
+        if (kind != TRACE_KIND_CPUTRACK) return "register filters (af .. halted) are only for cputrack";
+        if (out->n_regs >= G_N_ELEMENTS(out->regs)) return "too many register filters";
+        unsigned lo = 0, hi = 0;
+        JsonNode *n = json_object_get_member(f, rn);
+        if (json_node_get_node_type(n) == JSON_NODE_ARRAY) {
+            JsonArray *ra = json_node_get_array(n);
+            if (json_array_get_length(ra) != 2
+                || !_trace_parse_reg_value(json_array_get_element(ra, 0), &lo)
+                || !_trace_parse_reg_value(json_array_get_element(ra, 1), &hi) || lo > hi) {
+                return "register filter must be a value (number or \"0x..\" string) or [lo, hi]";
+            }
+        } else if (_trace_parse_reg_value(n, &lo)) {
+            hi = lo;
+        } else {
+            return "register filter must be a value (number or \"0x..\" string) or [lo, hi]";
+        }
+        out->regs[out->n_regs].reg = (uint8_t)i;
+        out->regs[out->n_regs].lo = (uint16_t)lo;
+        out->regs[out->n_regs].hi = (uint16_t)hi;
+        out->n_regs++;
+    }
     return NULL;
 }
 
@@ -8554,6 +8714,23 @@ static en_MCP_DISPATCH_RESULT _handle_trace_read(const st_JSONL_MESSAGE *req,
         pr.col_mask = trace_columns_mask(kind, NULL, 0, &bad);
     }
 
+    /* Stav registrů cputrack v3: po záznamu (výchozí), nebo před ním. */
+    if (_obj_is_string(d, "regs")) {
+        const char *rv = json_object_get_string_member(d, "regs");
+        if (kind != TRACE_KIND_CPUTRACK) {
+            return _err_response(req_id, "Invalid parameters: regs is only for cputrack",
+                                 MCP_DISPATCH_INVALID_PARAMS, out_response);
+        }
+        if (g_strcmp0(rv, "before") == 0) pr.regs_before = true;
+        else if (g_strcmp0(rv, "after") != 0) {
+            return _err_response(req_id, "Invalid parameters: regs must be after or before",
+                                 MCP_DISPATCH_INVALID_PARAMS, out_response);
+        }
+    } else if (json_object_has_member(d, "regs") && !json_node_is_null(json_object_get_member(d, "regs"))) {
+        return _err_response(req_id, "Invalid parameters: regs must be after or before",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+
     /* Filtr */
     JsonObject *fo = NULL;
     if (json_object_has_member(d, "filter") && !json_node_is_null(json_object_get_member(d, "filter"))) {
@@ -8615,6 +8792,12 @@ static en_MCP_DISPATCH_RESULT _handle_trace_read(const st_JSONL_MESSAGE *req,
     }
     p.from_seq = start;
     p.count = pr.raw ? pr.limit : pr.max_scan;
+    if (kind == TRACE_KIND_CPUTRACK && !pr.raw && start > 0) {
+        /* Stav před prvním řádkem stránky nese předchozí záznam: kopie
+         * z RAM musí začít o záznam dřív (čas čtenář dopočítá). */
+        p.from_seq = start - 1;
+        p.count++;
+    }
     p.max_copy_bytes = TRACE_READ_MAX_RAM_COPY;
     p.want_time = (kind == TRACE_KIND_CPUTRACK);
     if (!_trace_snapshot_kind(kind, &p, &audio_origin)) {
@@ -8647,6 +8830,15 @@ static en_MCP_DISPATCH_RESULT _handle_trace_read(const st_JSONL_MESSAGE *req,
         json_object_set_null_member(resp, "gap");
     }
     uint64_t next = start;
+    if (kind == TRACE_KIND_CPUTRACK && p.out.record_size != 0
+        && p.out.record_size != CPUTRACK_RECORD_SIZE_REGS && !pr.raw
+        && ((pr.col_mask & TRACE_CPUTRACK_REG_COLS_MASK) || pr.filter.n_regs)) {
+        json_object_unref(resp);
+        tlog_read_snapshot_clear(&p.out);
+        return _err_response(req_id, "Invalid parameters: register columns and filters need a cputrack "
+                             "segment recorded with regs (trace_start regs=true, format_version 3)",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
     if (p.out.segment == 0 || p.out.record_size == 0) {
         /* Kanál nic nezaznamenal: prázdná stránka. */
         json_object_set_int_member(resp, "scanned", 0);
@@ -8676,7 +8868,7 @@ static en_MCP_DISPATCH_RESULT _handle_trace_read(const st_JSONL_MESSAGE *req,
                                  MCP_DISPATCH_EMU_ERROR, out_response);
         }
         if (pr.raw) {
-            json_object_set_int_member(resp, "format_version", (gint64)_trace_format_version(ch));
+            json_object_set_int_member(resp, "format_version", (gint64)_trace_format_version(ch, p.out.record_size));
         }
         /* Kontrola segmentu po čtení disku: nový záznam se stejným jménem
          * mohl chunky přepsat. */

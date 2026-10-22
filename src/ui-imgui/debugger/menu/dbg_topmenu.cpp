@@ -539,6 +539,18 @@ static void dbg_menu_settings(void)
                                                &g_cputrack_config.save_on_exit);
 
                 ImGui::Separator();
+                /* Formát v3 s registry: prostý zápis configu jako u filtru PC
+                 * níže, cputrack ho čte až při startu segmentu. */
+                bool regs = (g_cputrack_config.regs != 0);
+                if (ImGui::MenuItem(_L("Record registers"), NULL, regs)) {
+                    g_cputrack_config.regs = regs ? 0u : 1u;
+                }
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("%s", _("Store CPU registers after each instruction "
+                                              "(32 bytes per record instead of 12). Takes "
+                                              "effect when recording (re)starts."));
+
+                ImGui::Separator();
                 /* Range-scope PC filtr. Buffery se inicializují z config při
                  * každém vykreslení (menu je krátkodobé, držet syncované je
                  * levné a vyhne se "stale buffer" stavu). Hex parsing přes

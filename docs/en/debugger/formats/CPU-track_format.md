@@ -18,10 +18,11 @@ cputrack is controlled from the menu `Debugger Settings -> Trace Suite
 The same menu also has `Save on Exit` (finalize the recording when the
 emulator exits), `Max size [MB]` (max recording size per channel,
 0 = unlimited), `Chunk [MB]` (RAM buffer size), `Set directory...` (target
-directory) and a PC range filter (lo/hi). The basename (name) is set via
+directory), `Record registers` (registers with every instruction, format
+v3) and a PC range filter (lo/hi). The basename (name) is set via
 CLI / INI only. All options are persistent in the INI section
 `[TRACE_CPUTRACK]` (keys `mode`, `dir`, `name`, `chunk_mb`, `max_total_mb`,
-`save_on_exit`, `pc_range_lo`, `pc_range_hi`).
+`save_on_exit`, `regs`, `pc_range_lo`, `pc_range_hi`).
 
 Recording runs in the shared slow path with CDL/cpuhist (callback
 swap); the emulator hot path without active diagnostics stays unchanged
@@ -49,7 +50,12 @@ are snapshots of physical memories at the moment recording starts
 (= header). `<name>.NNN.bin` are flat sequences of per-instruction
 events.
 
-## Per-event record (12 B fixed)
+The record size is the same within one recording (segment): 12 B in
+formats v1 and v2, 32 B in format v3 with registers (option `regs`, see
+[Format v3](#format-v3-record-with-registers-32-b)). The manifest values
+`event_record_size` and `event_record_version` apply.
+
+## Per-event record (12 B, formats v1 and v2)
 
 | Offset | Size     | Field                                          |
 |--------|----------|------------------------------------------------|
@@ -164,6 +170,71 @@ An external re-simulator detects a collapsed HALT trivially: opcode =
 `0x76` (HALT) + non-zero `wait_clk`. It detects a collapsed self-loop:
 the instruction changes PC to PC, and `wait_clk` > 0.
 
+## Format v3: record with registers (32 B)
+
+With the option `regs` on (menu `Record registers`, INI `regs = 1`, CLI
+`--cputrack-regs on`, MCP `trace_start` with `regs: true`) a new
+recording writes 32 B per event. The option applies from the next start
+of recording; one recording (segment) always has one record size. Bytes
+0-11 mean the same as in v2, followed by the CPU state **after** the
+event of the record:
+
+| Offset | Size | Field |
+|--------|------|-------|
+| 0-11   | 12 B | as v2 (regPC, insn_length, insn_bytes, wait_clk, t_std) |
+| 12     | 16 B | AF, BC, DE, HL, IX, IY, SP, WZ (uint16 LE, in this order) |
+| 28     | 1 B  | I |
+| 29     | 1 B  | R (full byte including bit 7) |
+| 30     | 1 B  | flags: bit 0 IFF1, bit 1 IFF2, bits 2-3 IM, bit 4 HALT |
+| 31     | 1 B  | record kind (bits 0-3), sync reason (bits 4-6), bit 7 = state before unknown |
+
+Record kind (byte 31, bits 0-3):
+
+| Value | Kind | State in bytes 12-30 |
+|-------|------|----------------------|
+| 0 | instruction | after the instruction |
+| 1 | collapsed loop (HALT, loop on itself; `t_std` 0, time in `wait_clk`) | after the last collapsed iteration |
+| 2 | interrupt acknowledge (`insn_length` 0) | after the acknowledge (PC = handler, SP 2 lower, IFF cleared) |
+| 3 | sync (`insn_length` 0FEh) | current CPU state |
+
+**The state before an event** is the state in the previous record (of
+any kind). When bit 7 of byte 31 is set, the state before the record is
+not known (the PC range filter broke the chain and it could not be
+restored, e.g. an interrupt handled inside the filter range right after
+an instruction outside it). The first record of a recording is always a
+sync, so even the first instruction has a known state before it.
+
+### Sync record
+
+A sync record (`insn_length` 0FEh) belongs to no instruction and takes no
+time (`t_std` 0, the `wait_clk` field does not apply):
+
+- `regPC` = PC of the next instruction,
+- bytes 3-10 = alternate set AF', BC', DE', HL' (uint16 LE),
+- bytes 12-30 = current CPU state,
+- bits 4-6 of byte 31 = reason: 0 start of recording, 1 return into the
+  PC range filter, 2 CPU state changed outside an instruction.
+
+It is written at the start of a recording, when an instruction outside
+the PC range filter leads into it (the first instruction in the range then
+has a known state before it), and when registers change outside an
+instruction: a register write from the debugger or MCP, the breakpoint
+action `set` at an instruction address, reset, snapshot load (also replay
+rewind and seek), a register write played back from an input recording,
+running an MZF by bootstrap. A sync is written only on
+an actual change; a pause alone writes nothing.
+
+Only sync records carry the alternate set. Between syncs a reader derives
+it from the instructions `EXX` and `EX AF,AF'` (they swap it with the main
+set).
+
+### Cost
+
+A record with registers is 2.7 times larger than v2 (at MAX SPEED with
+the programs Gardener and Batman Demo about 1.4-1.8 GB of data per half
+a minute instead of 0.6-0.8 GB) and recording takes about 11-18 % longer
+than v2. Without the option `regs` the v2 recording does not change.
+
 ## Manifest `<name>.json`
 
 ```json
@@ -210,7 +281,8 @@ the instruction changes PC to PC, and `wait_clk` > 0.
 
 The example is a real manifest of a one-frame recording on MZ-800 with
 MemExt connected. A longer recording has more entries of the same shape
-in `chunks[]`.
+in `chunks[]`. A recording with registers has `"event_record_size": 32`
+and `"event_record_version": 3`.
 
 ### Key fields
 
@@ -245,6 +317,7 @@ pxclk_in_screen_at(N) = cumul_pxclk(N) mod pxclk_per_screen
 derived from opcode according to the Z80 ISA table. In v2 the formula is
 exact including interrupts (interrupt acknowledge records carry their
 T-states); in v1 the T-states of each interrupt acknowledge are missing.
+In v3 sync records (`insn_length` 0FEh) do not count in the sum.
 
 ### subsys_header: initial state
 
@@ -309,7 +382,8 @@ RAM disk content is not stored.
 `Debugger Settings -> Trace Suite -> CPU Track`:
 
 1. Select recording mode (Off / Only With Debug Window / Always).
-2. Optionally enable `Save on Exit` (default on).
+2. Optionally enable `Save on Exit` (default on) and `Record registers`
+   (format v3 with registers).
 3. Optionally set `Max size [MB]` (size limit), `Chunk [MB]`, the target
    directory (`Set directory...`) and the PC range filter; the basename
    (name) is set via CLI / INI.
@@ -325,13 +399,14 @@ def load_cputrack(meta_path):
     meta_path = Path(meta_path)
     meta = json.loads(meta_path.read_text())
     base_dir = meta_path.parent
+    rs = meta["subsys_header"].get("event_record_size", 12)   # 12 or 32 (v3)
 
     events = []
     for chunk in meta["chunks"]:
         data = (base_dir / chunk["file"]).read_bytes()
-        n_events = chunk["bytes"] // 12
+        n_events = chunk["bytes"] // rs
         for i in range(n_events):
-            o = i * 12
+            o = i * rs
             pc          = struct.unpack_from("<H", data, o + 0)[0]
             insn_length = data[o + 2]
             insn_bytes  = data[o + 3 : o + 3 + insn_length]

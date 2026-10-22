@@ -84,6 +84,7 @@ jsou odmítnuty s chybou - pro vygenerovaný výpis použijte `--help`.
 | `--cputrack-chunk-mb` | `<N>` | Velikost RAM chunku před disk swap (default 64). |
 | `--cputrack-max-total-mb` | `<N>` | Max celková velikost recordingu v MB, 0 = unlimited (default 2048 = 2 GB). |
 | `--cputrack-save-on-exit` | `<on\|off>` | Auto-finalize cputrack exportu při ukončení emulátoru. |
+| `--cputrack-regs` | `<on\|off>` | Registry CPU u každé instrukce (formát 3, 32 B na záznam místo 12; default off). |
 | `--iorqlog-mode` | `<off\|window\|always>` | Nastavit režim IORQ Log recordingu. |
 | `--iorqlog-dir` | `<dirpath>` | Cílový adresář pro iorqlog export. |
 | `--iorqlog-name` | `<basename>` | Basename pro iorqlog export soubory. |

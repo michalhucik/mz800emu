@@ -59,6 +59,13 @@ Cputrack also has (range-scoped tracking):
   routines. Values accept dec or hex (`0x` prefix) and are masked to 16
   bits. The filter is cputrack-only - the other subsystems always log
   everything.
+- `--cputrack-regs=on|off` (default `off`) - format 3: every instruction
+  also carries the CPU registers after it (32 B per record instead of 12).
+  The state before an instruction is the state in the previous record;
+  sync records keep the chain at the start of the recording, on return
+  into the PC range filter and after a register change outside an
+  instruction. The format is described in
+  [CPU-track_format.md](formats/CPU-track_format.md#format-v3-record-with-registers-32-b).
 
 #### Shorthand `--all-traces-*`
 
@@ -88,7 +95,9 @@ The "All channels" item sets the mode / Save on Exit / Max size / Chunk /
 directory of all 5 channels (cputrack / iorqlog / intlog / hwlog / marklog) at
 once with a single click.
 
-The CPU Track submenu additionally has a "PC range filter [lo,hi]:"
+The CPU Track submenu additionally has a "Record registers" toggle
+(format 3 with registers, like CLI `--cputrack-regs`; applies from the
+next start of recording) and a "PC range filter [lo,hi]:"
 field with two hex inputs (lo, hi) and a "Reset range (whole space)"
 item. It sets the same range-scope filter as the CLI
 `--cputrack-pc-lo` / `--cputrack-pc-hi` (record only for PC in range).

@@ -18,10 +18,11 @@ cputrack se ovládá z menu debug okna v položce
 V témže menu jsou dále volby `Save on Exit` (finalizace záznamu při
 ukončení emulátoru), `Max size [MB]` (limit velikosti záznamu na kanál,
 0 = bez omezení), `Chunk [MB]` (velikost RAM bufferu), `Set directory...`
-(cílový adresář) a PC range filtr (lo/hi). Basename (name) se nastavuje jen
+(cílový adresář), `Record registers` (registry u každé instrukce, formát v3)
+a PC range filtr (lo/hi). Basename (name) se nastavuje jen
 přes CLI / INI. Všechny volby jsou persistentní v ini sekci `[TRACE_CPUTRACK]`
 (klíče `mode`, `dir`, `name`, `chunk_mb`, `max_total_mb`, `save_on_exit`,
-`pc_range_lo`, `pc_range_hi`).
+`regs`, `pc_range_lo`, `pc_range_hi`).
 
 Recording běží ve společné pomalé cestě s CDL/cpuhist (callback swap),
 hot path emulátoru bez aktivních diagnostik zůstává beze změny vůči
@@ -48,7 +49,12 @@ Obsah RAMdisků se do počátečního stavu neukládá.
 jsou snapshoty fyzických pamětí v okamžiku startu recordingu (= header).
 `<name>.NNN.bin` jsou flat sekvence per-instrukčních eventů.
 
-## Per-event záznam (12 B fixed)
+Velikost záznamu je v celém záznamu (segmentu) stejná: 12 B ve formátech v1
+a v2, 32 B ve formátu v3 s registry (volba `regs`, viz
+[Formát v3](#formát-v3-záznam-s-registry-32-b)). Platí hodnoty
+`event_record_size` a `event_record_version` v manifestu.
+
+## Per-event záznam (12 B, formáty v1 a v2)
 
 | Offset | Velikost | Pole                                          |
 |--------|----------|------------------------------------------------|
@@ -157,6 +163,68 @@ Externí re-simulátor pozná collapsed HALT jednoduše: opcode = `0x76`
 (HALT) + nenulové `wait_clk`. Pozná collapsed self-loop: instrukce
 mění PC na PC, a `wait_clk` > 0.
 
+## Formát v3: záznam s registry (32 B)
+
+Se zapnutou volbou `regs` (menu `Record registers`, INI `regs = 1`, CLI
+`--cputrack-regs on`, MCP `trace_start` s `regs: true`) zapisuje nový
+záznam 32 B na událost. Volba platí od dalšího startu záznamu; jeden
+záznam (segment) má vždy jednu velikost. Bajty 0-11 mají stejný význam
+jako ve v2, za nimi je stav CPU **po** události záznamu:
+
+| Offset | Velikost | Pole |
+|--------|----------|------|
+| 0-11   | 12 B     | jako v2 (regPC, insn_length, insn_bytes, wait_clk, t_std) |
+| 12     | 16 B     | AF, BC, DE, HL, IX, IY, SP, WZ (uint16 LE, v tomto pořadí) |
+| 28     | 1 B      | I |
+| 29     | 1 B      | R (celý bajt včetně bitu 7) |
+| 30     | 1 B      | příznaky: bit 0 IFF1, bit 1 IFF2, bity 2-3 IM, bit 4 HALT |
+| 31     | 1 B      | druh záznamu (bity 0-3), důvod synchronizace (bity 4-6), bit 7 = stav před neznámý |
+
+Druh záznamu (bajt 31, bity 0-3):
+
+| Hodnota | Druh | Stav v bajtech 12-30 |
+|---------|------|----------------------|
+| 0 | instrukce | po instrukci |
+| 1 | sbalená smyčka (HALT, smyčka na sebe; `t_std` 0, čas ve `wait_clk`) | po poslední sbalené iteraci |
+| 2 | přijetí přerušení (`insn_length` 0) | po přijetí (PC = obsluha, SP o 2 níž, IFF vynulované) |
+| 3 | synchronizace (`insn_length` 0FEh) | aktuální stav CPU |
+
+**Stav před událostí** je stav v předchozím záznamu (libovolného druhu).
+Pokud má záznam nastavený bit 7 bajtu 31, stav před ním znám není (řetěz
+přerušil filtr PC a nešlo ho obnovit, např. přerušení obsloužené v rozsahu
+filtru hned po instrukci mimo něj). První záznam záznamu je vždy
+synchronizace, takže i první instrukce má stav před známý.
+
+### Synchronizační záznam
+
+Synchronizační záznam (`insn_length` 0FEh) nepatří žádné instrukci a do
+času se nepočítá (`t_std` 0, pole `wait_clk` neplatí):
+
+- `regPC` = PC příští instrukce,
+- bajty 3-10 = alternativní sada AF', BC', DE', HL' (uint16 LE),
+- bajty 12-30 = aktuální stav CPU,
+- bity 4-6 bajtu 31 = důvod: 0 začátek záznamu, 1 návrat do rozsahu
+  filtru PC, 2 změna stavu CPU mimo instrukci.
+
+Zapíše se na začátku záznamu, když instrukce mimo rozsah filtru PC vede
+do něj (první instrukce v rozsahu pak má stav před známý), a když se
+registry změní mimo instrukci: zápis registru z debuggeru nebo přes MCP,
+akce breakpointu `set` na adrese instrukce, reset, načtení snapshotu
+(i při rewind a seek přehrávání), zápis registru přehraný ze záznamu
+vstupů, spuštění MZF bootstrapem. Synchronizace
+se zapíše jen při skutečné změně; pauza sama o sobě nic nezapíše.
+
+Alternativní sadu nese jen synchronizační záznam. Mezi synchronizacemi ji
+čtenář odvodí z instrukcí `EXX` a `EX AF,AF'` (prohazují ji s hlavní
+sadou).
+
+### Cena
+
+Záznam s registry je 2,7krát větší než v2 (na MAX SPEED u programů
+Gardener a Batman Demo asi 1,4-1,8 GB dat za půl minuty místo 0,6-0,8 GB)
+a nahrávání trvá asi o 11-18 % déle než v2. Bez volby `regs` se záznam v2
+nemění.
+
 ## Manifest `<name>.json`
 
 ```json
@@ -203,6 +271,8 @@ mění PC na PC, a `wait_clk` > 0.
 
 Příklad je skutečný manifest záznamu jednoho snímku na MZ-800 s připojeným
 MemExtem. Delší záznam má v `chunks[]` další položky stejného tvaru.
+Záznam s registry má `"event_record_size": 32` a
+`"event_record_version": 3`.
 
 ### Klíčová pole
 
@@ -232,7 +302,7 @@ screens_at(N)   = floor(cumul_pxclk(N) / pxclk_per_screen)
 pxclk_in_screen_at(N) = cumul_pxclk(N) mod pxclk_per_screen
 ```
 
-`insn_T_states[i]` je ve formátu v2 bajt 11 (`t_std`), ve v1 se odvozuje z opcode podle Z80 ISA tabulky. Ve v2 vzorec sedí přesně i s přerušeními (záznamy přijetí přerušení nesou jeho T-stavy); ve v1 chybí T-stavy přijetí každého přerušení.
+`insn_T_states[i]` je ve formátu v2 bajt 11 (`t_std`), ve v1 se odvozuje z opcode podle Z80 ISA tabulky. Ve v2 vzorec sedí přesně i s přerušeními (záznamy přijetí přerušení nesou jeho T-stavy); ve v1 chybí T-stavy přijetí každého přerušení. Ve v3 se synchronizační záznamy (`insn_length` 0FEh) do součtu nepočítají.
 
 ### subsys_header: počáteční stav
 
@@ -296,7 +366,8 @@ RAMdisků se neukládá.
 `Debugger Settings -> Trace Suite -> CPU Track`:
 
 1. Vybrat režim recording (Off / Only With Debug Window / Always).
-2. Volitelně zapnout `Save on Exit` (default zapnuto).
+2. Volitelně zapnout `Save on Exit` (default zapnuto) a `Record registers`
+   (formát v3 s registry).
 3. Volitelně nastavit `Max size [MB]` (limit), `Chunk [MB]`, cílový adresář
    (`Set directory...`) a PC range filtr; basename (name) přes CLI / INI.
 4. Spustit emulovaný program. Recording běží na pozadí.
@@ -311,13 +382,14 @@ def load_cputrack(meta_path):
     meta_path = Path(meta_path)
     meta = json.loads(meta_path.read_text())
     base_dir = meta_path.parent
+    rs = meta["subsys_header"].get("event_record_size", 12)   # 12 nebo 32 (v3)
 
     events = []
     for chunk in meta["chunks"]:
         data = (base_dir / chunk["file"]).read_bytes()
-        n_events = chunk["bytes"] // 12
+        n_events = chunk["bytes"] // rs
         for i in range(n_events):
-            o = i * 12
+            o = i * rs
             pc          = struct.unpack_from("<H", data, o + 0)[0]
             insn_length = data[o + 2]
             insn_bytes  = data[o + 3 : o + 3 + insn_length]

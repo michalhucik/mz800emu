@@ -1188,6 +1188,23 @@ if(Python3_FOUND)
                    "(Python ${Python3_VERSION})")
 
     # -----------------------------------------------------------
+    # Cputrack formát v3: registry po / před instrukcí, synchronizace
+    # po zápisu registru, filtr podle registru, trace_status (pipe)
+    # -----------------------------------------------------------
+    add_test(
+        NAME    mcp_cputrack_regs
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_cputrack_regs.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_cputrack_regs PROPERTIES
+        LABELS  "e2e;mcp;pipe;trace"
+        TIMEOUT 120
+    )
+    message(STATUS "  tests/mcp: registered mcp_cputrack_regs "
+                   "(Python ${Python3_VERSION})")
+
+    # -----------------------------------------------------------
     # Test 7e: port I/O a načtení MZF přes MCP za běhu emulace (pipe)
     # -----------------------------------------------------------
     # Regrese: io_write/io_read za běhu zastavil CPU a další port I/O

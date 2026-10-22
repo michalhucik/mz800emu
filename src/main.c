@@ -150,6 +150,9 @@ static const st_SDLAPP_OPTION_DEF g_known_options[] = {
       "Hard limit on total recording size in MB (0 = unlimited, default 0)." },
     { "--cputrack-save-on-exit", SDLAPP_OPTION_VALUE, SDLAPP_OPTVAL_BOOL_ON_OFF, NULL,        "<on|off>",
       "Flush cputrack buffer when the emulator exits (default on)." },
+    { "--cputrack-regs",         SDLAPP_OPTION_VALUE, SDLAPP_OPTVAL_BOOL_ON_OFF, NULL,        "<on|off>",
+      "Record CPU registers after each instruction (format 3, 32 bytes per record "
+      "instead of 12; default off)." },
     { "--cputrack-pc-lo",        SDLAPP_OPTION_VALUE, SDLAPP_OPTVAL_STRING,      NULL,        "<addr>",
       "Lower PC bound (inclusive) for range-scoped tracking. Dec or 0x hex. "
       "Default 0. Use with --cputrack-pc-hi to record only PC in [lo,hi]." },

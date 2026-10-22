@@ -83,6 +83,13 @@ mz_add_test(bp_integration
     LABELS   "emu;debugger;integration"
 )
 
+# Historie instrukcí (cpuhist): registry před instrukcí zachycené při M1.
+mz_add_test(history_regs
+    TYPE     EMU
+    SOURCES  test_history_regs.c
+    LABELS   "emu;debugger"
+)
+
 mz_add_test(bp_hw_event
     TYPE     EMU
     SOURCES  test_bp_hw_event.c

@@ -10,7 +10,10 @@
  *    z bajtů záznamu,
  *  - čas cputrack: kotva chunku + součet t_std + wait, přes stránky
  *    (cache) i přes hranici chunků,
- *  - iorqlog: dekódování a filtr portu, raw_b64: bajtová shoda.
+ *  - iorqlog: dekódování a filtr portu, raw_b64: bajtová shoda,
+ *  - cputrack v3: druh záznamu, registry po / před (i přes hranici
+ *    disk/RAM), filtr podle registru, synchronizační záznam bez času,
+ *    příznak neznámého stavu před; sloupec kind u v2.
  *
  * Licence: GPLv3
  */
@@ -24,6 +27,7 @@
 
 #include "debugger/trace/tlog_common.h"
 #include "debugger/trace/trace_reader.h"
+#include "debugger/trace/cputrack.h"
 
 static char *s_dir = NULL;
 
@@ -317,6 +321,183 @@ void test_page_cputrack_time ( void )
     tlog_writer_close ( &w, 0, 0, 0 );
 }
 
+/** @brief Počet 32B záznamů (v3) v 1 MB chunku. */
+#define CT3_PER_CHUNK 32768u
+
+/**
+ * @brief Záznam cputrack v3: jako ct_rec, HL po instrukci = i; seq 0 je
+ *        synchronizace START, seq 10 synchronizace WRITE (bez času), seq 20
+ *        má příznak neznámého stavu před.
+ */
+static void ct3_rec ( uint8_t r[ 32 ], uint32_t i )
+{
+    memset ( r, 0, 32 );
+    ct_rec ( r, i );
+    r[ 18 ] = (uint8_t) i;                /* HL (offset 12 + 3 * 2) */
+    r[ 19 ] = (uint8_t) ( i >> 8 );
+    r[ 30 ] = CPUTRACK_REGS_F_IFF1 | ( 1u << CPUTRACK_REGS_F_IM_SHIFT );
+    r[ 31 ] = CPUTRACK_KIND_INSN;
+    if ( i == 0 || i == 10 ) {
+        r[ 2 ] = CPUTRACK_INSN_LEN_SYNC;
+        for ( unsigned k = 3; k <= 10; k++ ) r[ k ] = 0xA0 + k;   /* alternativní sada, ne čas */
+        r[ 11 ] = 0;
+        r[ 31 ] = CPUTRACK_KIND_SYNC | ( ( i == 0 ? CPUTRACK_SYNC_START : CPUTRACK_SYNC_WRITE )
+                                         << CPUTRACK_SYNC_REASON_SHIFT );
+    } else if ( i == 20 ) {
+        r[ 31 ] = CPUTRACK_KIND_INSN | CPUTRACK_FLAG_NO_BEFORE;
+    }
+}
+
+/** @brief T-stavy záznamu ct3_rec(i) (synchronizace 0). */
+static uint64_t ct3_t ( uint32_t i ) { return ( i == 0 || i == 10 ) ? 0 : ct_t ( i ); }
+
+/** @brief Zapsat n záznamů v3. */
+static void ct3_fill ( st_TLOG_WRITER *w, uint32_t n )
+{
+    uint8_t r[ 32 ];
+    for ( uint32_t i = 0; i < n; i++ ) {
+        ct3_rec ( r, i );
+        TEST_ASSERT_EQUAL_INT ( 0, tlog_writer_append ( w, r, 32 ) );
+    }
+}
+
+/** @brief Maska sloupců cputrack podle jmen. */
+static uint32_t ct_cols ( const char *const *names, size_t n )
+{
+    const char *bad = NULL;
+    uint32_t m = trace_columns_mask ( TRACE_KIND_CPUTRACK, names, n, &bad );
+    TEST_ASSERT_NULL ( bad );
+    return m;
+}
+
+/* cputrack v3: druh, registry po / před (i přes hranici disk/RAM), filtr
+ * podle registru, synchronizace bez času, příznak neznámého stavu před. */
+void test_page_cputrack_v3_regs ( void )
+{
+    st_TLOG_WRITER w = { 0 };
+    tlog_writer_open ( &w, "cputrack", s_dir, "ct3", 1, 0, 1000, 0, 0 );
+    tlog_writer_set_record_size ( &w, 32 );
+    ct3_fill ( &w, CT3_PER_CHUNK + 100 );   /* chunk 0 na disku, 100 v RAM */
+
+    /* Výchozí sloupce bez registrů a druhu (jako v2). */
+    st_TRACE_PAGE_REQ r = req_default ( TRACE_KIND_CPUTRACK );
+    TEST_ASSERT_EQUAL_UINT32 ( 0, r.col_mask & TRACE_CPUTRACK_REG_COLS_MASK );
+    TEST_ASSERT_EQUAL_INT ( TRACE_CPUTRACK_REG_HL, trace_cputrack_reg_index ( "hl" ) );
+    TEST_ASSERT_EQUAL_INT ( -1, trace_cputrack_reg_index ( "seq" ) );
+
+    st_TLOG_READ_SNAPSHOT snap;
+    tlog_writer_read_snapshot ( &w, 0, 64, 1u << 20, &snap );
+    const char *names[] = { "seq", "asm", "t_std", "wait", "t", "kind", "hl", "iff1", "im" };
+    r.col_mask = ct_cols ( names, G_N_ELEMENTS ( names ) );
+    r.cputrack_time = true;
+    r.limit = 25;
+    uint64_t next = 0;
+    JsonObject *o = page ( &r, &snap, NULL, &next );
+    JsonArray *rows = json_object_get_array_member ( o, "rows" );
+    TEST_ASSERT_EQUAL_UINT ( 25, json_array_get_length ( rows ) );
+    JsonArray *s0 = json_array_get_array_element ( rows, 0 );
+    TEST_ASSERT_EQUAL_STRING ( "SYNC start", json_array_get_string_element ( s0, 1 ) );
+    TEST_ASSERT_EQUAL_INT64 ( 0, json_array_get_int_element ( s0, 3 ) );
+    TEST_ASSERT_EQUAL_STRING ( "sync", json_array_get_string_element ( s0, 5 ) );
+    JsonArray *s10 = json_array_get_array_element ( rows, 10 );
+    TEST_ASSERT_EQUAL_STRING ( "SYNC write", json_array_get_string_element ( s10, 1 ) );
+    JsonArray *r5 = json_array_get_array_element ( rows, 5 );
+    TEST_ASSERT_EQUAL_STRING ( "insn", json_array_get_string_element ( r5, 5 ) );
+    TEST_ASSERT_EQUAL_STRING ( "0005", json_array_get_string_element ( r5, 6 ) );
+    TEST_ASSERT_EQUAL_INT64 ( 1, json_array_get_int_element ( r5, 7 ) );
+    TEST_ASSERT_EQUAL_INT64 ( 1, json_array_get_int_element ( r5, 8 ) );
+    /* čas: synchronizační záznamy se nezapočítají */
+    for ( guint k = 0; k < 25; k++ ) {
+        uint64_t sum = 0;
+        for ( uint32_t i = 0; i < k; i++ ) sum += ct3_t ( i );
+        JsonArray *rw = json_array_get_array_element ( rows, k );
+        TEST_ASSERT_EQUAL_UINT64 ( 1000 + sum * 5, (uint64_t) json_array_get_int_element ( rw, 4 ) );
+    }
+    json_object_unref ( o );
+
+    /* Stav před: řádek 5 nese HL ze záznamu 4, záznam 0 a 20 nemá stav před. */
+    r.regs_before = true;
+    r.cputrack_time = false;
+    o = page ( &r, &snap, NULL, &next );
+    rows = json_object_get_array_member ( o, "rows" );
+    TEST_ASSERT_TRUE ( JSON_NODE_HOLDS_NULL ( json_array_get_element ( json_array_get_array_element ( rows, 0 ), 6 ) ) );
+    TEST_ASSERT_EQUAL_STRING ( "0004", json_array_get_string_element ( json_array_get_array_element ( rows, 5 ), 6 ) );
+    TEST_ASSERT_TRUE ( JSON_NODE_HOLDS_NULL ( json_array_get_element ( json_array_get_array_element ( rows, 20 ), 6 ) ) );
+    json_object_unref ( o );
+    tlog_read_snapshot_clear ( &snap );
+
+    /* Stav před přes hranici disk/RAM: první řádek v RAM, předchozí na disku. */
+    tlog_writer_read_snapshot ( &w, CT3_PER_CHUNK, 10, 1u << 20, &snap );
+    r.from_seq = CT3_PER_CHUNK;
+    r.limit = 3;
+    o = page ( &r, &snap, NULL, &next );
+    rows = json_object_get_array_member ( o, "rows" );
+    TEST_ASSERT_EQUAL_STRING ( "7FFF", json_array_get_string_element ( json_array_get_array_element ( rows, 0 ), 6 ) );
+    json_object_unref ( o );
+    tlog_read_snapshot_clear ( &snap );
+    /* ... a uvnitř RAM, když kopie začíná o záznam dřív (jako dispatch). */
+    tlog_writer_read_snapshot ( &w, CT3_PER_CHUNK + 4, 10, 1u << 20, &snap );
+    r.from_seq = CT3_PER_CHUNK + 5;
+    o = page ( &r, &snap, NULL, &next );
+    rows = json_object_get_array_member ( o, "rows" );
+    TEST_ASSERT_EQUAL_STRING ( "8004", json_array_get_string_element ( json_array_get_array_element ( rows, 0 ), 6 ) );
+    json_object_unref ( o );
+    tlog_read_snapshot_clear ( &snap );
+
+    /* Filtr podle registru: HL = 0123h po záznamu = seq 123h, před = seq 124h. */
+    tlog_writer_read_snapshot ( &w, 0, 0, 0, &snap );
+    r = req_default ( TRACE_KIND_CPUTRACK );
+    r.filter.n_regs = 1;
+    r.filter.regs[ 0 ].reg = TRACE_CPUTRACK_REG_HL;
+    r.filter.regs[ 0 ].lo = 0x0123;
+    r.filter.regs[ 0 ].hi = 0x0123;
+    o = page ( &r, &snap, NULL, &next );
+    rows = json_object_get_array_member ( o, "rows" );
+    TEST_ASSERT_EQUAL_UINT ( 1, json_array_get_length ( rows ) );
+    TEST_ASSERT_EQUAL_INT64 ( 0x123, json_array_get_int_element ( json_array_get_array_element ( rows, 0 ), 0 ) );
+    json_object_unref ( o );
+    r.regs_before = true;
+    o = page ( &r, &snap, NULL, &next );
+    rows = json_object_get_array_member ( o, "rows" );
+    TEST_ASSERT_EQUAL_UINT ( 1, json_array_get_length ( rows ) );
+    TEST_ASSERT_EQUAL_INT64 ( 0x124, json_array_get_int_element ( json_array_get_array_element ( rows, 0 ), 0 ) );
+    json_object_unref ( o );
+    tlog_read_snapshot_clear ( &snap );
+    tlog_writer_close ( &w, 0, 0, 0 );
+}
+
+/* Sloupec kind u v2: přijetí přerušení (délka 0), sbalená smyčka (t_std 0), instrukce. */
+void test_page_cputrack_v2_kind ( void )
+{
+    st_TLOG_WRITER w = { 0 };
+    tlog_writer_open ( &w, "cputrack", s_dir, "ct", 1, 0, 0, 0, 0 );
+    tlog_writer_set_record_size ( &w, 12 );
+    uint8_t rec[ 12 ];
+    ct_rec ( rec, 0 );
+    tlog_writer_append ( &w, rec, 12 );
+    rec[ 11 ] = 0;                                   /* sbalená smyčka */
+    tlog_writer_append ( &w, rec, 12 );
+    memset ( rec, 0, 12 );
+    rec[ 0 ] = 0x38; rec[ 11 ] = 13;                 /* přijetí přerušení */
+    tlog_writer_append ( &w, rec, 12 );
+    tlog_writer_close ( &w, 0, 0, 0 );
+    st_TLOG_READ_SNAPSHOT snap;
+    tlog_writer_read_snapshot ( &w, 0, 0, 0, &snap );
+    st_TRACE_PAGE_REQ r = req_default ( TRACE_KIND_CPUTRACK );
+    const char *names[] = { "kind", "hl" };
+    r.col_mask = ct_cols ( names, 2 );
+    uint64_t next = 0;
+    JsonObject *o = page ( &r, &snap, NULL, &next );
+    JsonArray *rows = json_object_get_array_member ( o, "rows" );
+    TEST_ASSERT_EQUAL_STRING ( "insn", json_array_get_string_element ( json_array_get_array_element ( rows, 0 ), 0 ) );
+    TEST_ASSERT_EQUAL_STRING ( "loop", json_array_get_string_element ( json_array_get_array_element ( rows, 1 ), 0 ) );
+    TEST_ASSERT_EQUAL_STRING ( "int", json_array_get_string_element ( json_array_get_array_element ( rows, 2 ), 0 ) );
+    TEST_ASSERT_TRUE_MESSAGE ( JSON_NODE_HOLDS_NULL ( json_array_get_element ( json_array_get_array_element ( rows, 0 ), 1 ) ),
+                               "v2 nemá registry" );
+    json_object_unref ( o );
+    tlog_read_snapshot_clear ( &snap );
+}
+
 /** @brief Záznam iorqlog: t = 100 * i, port 10h + (i % 4), OUT pro sudé i. */
 static void io_rec ( uint8_t r[ 24 ], uint32_t i )
 {
@@ -461,6 +642,8 @@ int main ( int argc, char *argv[] )
     RUN_TEST ( test_fetch_across_chunks_and_ram );
     RUN_TEST ( test_page_rows_filter_budget_and_symbols );
     RUN_TEST ( test_page_cputrack_time );
+    RUN_TEST ( test_page_cputrack_v3_regs );
+    RUN_TEST ( test_page_cputrack_v2_kind );
     RUN_TEST ( test_page_iorqlog_and_raw );
     RUN_TEST ( test_page_max_scan );
     RUN_TEST ( test_page_eventlog );

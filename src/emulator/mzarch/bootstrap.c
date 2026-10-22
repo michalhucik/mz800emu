@@ -46,6 +46,7 @@
 #include "hw-generic/cmt/cmthack.h"
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
 #include "debugger/debugger.h"
+#include "debugger/trace/cputrack.h"
 #else
 #include "baseui/baseui.h"
 #include "emulator.h"
@@ -282,6 +283,11 @@ void mzarch_bootstrap_run_mzf(const char *filename)
     mzarch_platform_bootstrap_entry_regs(mzf_header.fexec);
 
     z80_set_reg(g_mzarch_main.cpu, Z80_REG_PC, mzf_header.fexec);
+
+#ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
+    /* cputrack v3: registry nastavené bootstrapem = synchronizační záznam. */
+    cputrack_sync_check();
+#endif
 
     g_print("Bootstrap done.\n");
 }

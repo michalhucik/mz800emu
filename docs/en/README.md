@@ -84,6 +84,7 @@ are rejected with an error - use `--help` for a generated listing.
 | `--cputrack-chunk-mb` | `<N>` | RAM chunk size before disk swap (default 64). |
 | `--cputrack-max-total-mb` | `<N>` | Max total recording size in MB, 0 = unlimited (default 2048 = 2 GB). |
 | `--cputrack-save-on-exit` | `<on\|off>` | Auto-finalize cputrack export when the emulator exits. |
+| `--cputrack-regs` | `<on\|off>` | Record CPU registers with every instruction (format 3, 32 bytes per record instead of 12; default off). |
 | `--iorqlog-mode` | `<off\|window\|always>` | Set the IORQ Log recording mode. |
 | `--iorqlog-dir` | `<dirpath>` | Target directory for iorqlog export. |
 | `--iorqlog-name` | `<basename>` | Basename for iorqlog export files. |
