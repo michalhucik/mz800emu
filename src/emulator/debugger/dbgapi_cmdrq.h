@@ -770,6 +770,11 @@ typedef enum en_DBGAPI_CMD
      * Přidáno na KONEC enumu kvůli stabilitě číselných hodnot. */
     DBGAPI_CMD_BPLOG,                /* Vyčištění a stav ringu bplog - data_ptr: st_DBGAPI_BPLOG_PARAM* */
 
+    /* replay-goto (M17 debug-gaps) - běh do času v taktech GDG se zastavením
+     * v emu vlákně (run_control_stop_at_arm()). Přidáno na KONEC enumu
+     * kvůli stabilitě číselných hodnot. */
+    DBGAPI_CMD_RUN_UNTIL_TICKS,      /* Běh do času - data_ptr: st_DBGAPI_RUN_UNTIL_TICKS_PARAM*, result_ptr: st_DBGAPI_RUN_START_RESULT* nebo NULL */
+
     /* Zarážka: počet příkazů, sama není příkaz. Nové příkazy patří PŘED
      * ni. Test tests/debugger/test_replay_dbg_classify.c prochází celý
      * rozsah 0..DBGAPI_CMD_COUNT-1 a hlídá, že každý příkaz má výslovnou
@@ -3826,6 +3831,24 @@ typedef struct st_DBGAPI_RUN_DEADLINE_PARAM
 
 
 /**
+ * @brief Parametr pro DBGAPI_CMD_RUN_UNTIL_TICKS.
+ *
+ * Emulace v pauze se rozběhne a zastaví na začátku první instrukce, jejíž
+ * čas GDG je >= `target_ticks` (důvod pauzy run_until_ticks). Když už je
+ * čas v pauze >= cíl, běh se nespustí a `reached_now` je true (stav
+ * v pauze je bod na začátku instrukce). Běžící emulaci příkaz jen pozastaví
+ * (result_ptr status DBGAPI_RUN_TO_PAUSED_ONLY), stejně jako DBGAPI_CMD_RUN_TO.
+ * Zastavení platí do nejbližší pauzy (breakpoint nebo uživatel ho zruší).
+ */
+typedef struct st_DBGAPI_RUN_UNTIL_TICKS_PARAM
+{
+    uint64_t target_ticks; /* IN: cílový čas v taktech GDG (gdg_get_total_ticks()). */
+    uint64_t now_ticks;    /* OUT: čas GDG v okamžiku příkazu. */
+    bool reached_now;      /* OUT: true = cíl už dosažen, běh se nespustil. */
+} st_DBGAPI_RUN_UNTIL_TICKS_PARAM;
+
+
+/**
  * @brief Parametr pro DBGAPI_CMD_FRAME_HASH.
  *
  * `image_sha256` je SHA-256 obrazu ze stejného zdroje jako screenshot
@@ -5440,6 +5463,7 @@ typedef struct st_DBGAPI_STATE_OBSERVE_PARAM
     uint64_t run_seq;                     /**< (OUT) Číslo běžícího, v pauze posledního běhu (run_log_current()). */
     uint64_t frame;                       /**< (OUT) Číslo snímku (g_gdg.total_elapsed.screens). */
     uint32_t frame_ticks;                 /**< (OUT) Takty GDG od začátku snímku. */
+    uint64_t ticks;                       /**< (OUT) Čas v taktech GDG od startu emulátoru (gdg_get_total_ticks(), nepřetéká, reset ho nenuluje). */
     uint32_t total_cycles;                /**< (OUT) T-stavy CPU (cpu->total_cycles, přetéká jako v jádře). */
     uint8_t  hash_ok[DBGAPI_OBSERVE_HASH_PARTS];        /**< (OUT) 1 = hash části spočítán. */
     char     hash_hex[DBGAPI_OBSERVE_HASH_PARTS][65];   /**< (OUT) SHA-256 části, 64 hex znaků a nula. */

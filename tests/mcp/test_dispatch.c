@@ -132,8 +132,10 @@
  * a _export (pokrytí kódu, na KONEC cmd_map[]) = 213 + 7 = 220.
  * bp-log-mcp doplnil bplog_clear (vyčištění ringu výstupu akcí BP, na
  * KONEC cmd_map[]) = 220 + 1 = 221.
+ * replay-goto doplnil replay_goto (stav v čase přehrávaného záznamu, na
+ * KONEC cmd_map[]) = 221 + 1 = 222.
  */
-#define MCP_EXPECTED_CMD_COUNT 221
+#define MCP_EXPECTED_CMD_COUNT 222
 
 
 /* ====================================================================== */
@@ -2799,6 +2801,57 @@ void test_run_until_tstate_reached(void) {
     g_object_unref(parser);
     free(resp);
     jsonl_msg_free(req);
+}
+
+
+/**
+ * @brief run_until_tstate s target_ticks: cíl v minulosti nebo teď vrátí
+ *        hned reached a aktuální čas (bez běhu).
+ */
+void test_run_until_tstate_ticks_reached_now(void) {
+    st_JSONL_MESSAGE *req = _make_request(
+        "{\"type\":\"request\",\"req_id\":907,"
+        "\"cmd\":\"run_until_tstate\","
+        "\"data\":{\"target_ticks\":1000}}");
+    char *resp = NULL;
+
+    en_MCP_DISPATCH_RESULT rc = mcp_dispatch_request(req, &resp);
+
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, rc);
+    JsonParser *parser = NULL;
+    JsonObject *obj = _parse_response_object(resp, &parser);
+    JsonObject *data = json_object_get_object_member(obj, "data");
+    TEST_ASSERT_TRUE(json_object_get_boolean_member(data, "reached"));
+    TEST_ASSERT_TRUE(json_object_get_boolean_member(data, "exact"));
+    TEST_ASSERT_EQUAL_INT64(1000, json_object_get_int_member(data, "ticks"));
+    TEST_ASSERT_EQUAL_INT64(0, json_object_get_int_member(data, "delta_ticks"));
+    TEST_ASSERT_EQUAL_STRING("run_until_ticks", json_object_get_string_member(data, "stopped_by"));
+    TEST_ASSERT_FALSE(json_object_get_boolean_member(data, "time_limited"));
+    g_object_unref(parser);
+    free(resp);
+    jsonl_msg_free(req);
+}
+
+
+/**
+ * @brief run_until_tstate: target_ticks a target_total_cycles naráz
+ *        a záporný target_ticks jsou chyba parametrů.
+ */
+void test_run_until_tstate_ticks_invalid(void) {
+    static const char *const reqs[] = {
+        "{\"type\":\"request\",\"req_id\":908,\"cmd\":\"run_until_tstate\","
+        "\"data\":{\"target_ticks\":5000,\"target_total_cycles\":10}}",
+        "{\"type\":\"request\",\"req_id\":909,\"cmd\":\"run_until_tstate\","
+        "\"data\":{\"target_ticks\":-1}}",
+    };
+    for (unsigned i = 0; i < G_N_ELEMENTS(reqs); i++) {
+        st_JSONL_MESSAGE *req = _make_request(reqs[i]);
+        char *resp = NULL;
+        en_MCP_DISPATCH_RESULT rc = mcp_dispatch_request(req, &resp);
+        TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_INVALID_PARAMS, rc);
+        free(resp);
+        jsonl_msg_free(req);
+    }
 }
 
 
@@ -8702,6 +8755,65 @@ void test_replay_rewind_seek_params(void) {
 }
 
 
+/**
+ * @brief replay_goto: adresy a volby se předají požadavku, neplatné
+ *        parametry jsou chyba bez požadavku, chyba emu vlákna s textem.
+ */
+void test_replay_goto_params(void) {
+    dispatch_stub_reset();
+    en_MCP_DISPATCH_RESULT rc;
+    JsonParser *parser = NULL;
+    char *resp = NULL;
+
+    /* t + volby; čekání 0 (stub běh nespouští, cíl se bere jako dosažený). */
+    (void)_rc_call("{\"type\":\"request\",\"req_id\":9140,\"cmd\":\"replay_goto\","
+                   "\"data\":{\"t\":123456789,\"breakpoints\":\"keep\",\"checkpoint\":true,"
+                   "\"timeout_ms\":0}}", &rc, &parser, &resp);
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, rc);
+    TEST_ASSERT_EQUAL_INT(6, g_stub_replay.last_kind);
+    TEST_ASSERT_EQUAL_UINT64(123456789ull, g_stub_replay.last_goto_ticks);
+    TEST_ASSERT_TRUE(g_stub_replay.last_goto_keep);
+    TEST_ASSERT_TRUE(g_stub_replay.last_goto_ckpt);
+    g_object_unref(parser);
+    free(resp);
+
+    /* frame + frame_ticks = frame * takty snímku + frame_ticks. */
+    (void)_rc_call("{\"type\":\"request\",\"req_id\":9141,\"cmd\":\"replay_goto\","
+                   "\"data\":{\"frame\":3,\"frame_ticks\":100}}", &rc, &parser, &resp);
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, rc);
+    TEST_ASSERT_EQUAL_UINT64(3ull * VIDEO_SCREEN_TICKS + 100u, g_stub_replay.last_goto_ticks);
+    TEST_ASSERT_FALSE(g_stub_replay.last_goto_keep);
+    TEST_ASSERT_FALSE(g_stub_replay.last_goto_ckpt);
+    g_object_unref(parser);
+    free(resp);
+
+    /* Neplatné: žádná / dvě adresy, breakpoints, timeout, frame_ticks mimo snímek. */
+    static const char *const bad[] = {
+        "{\"type\":\"request\",\"req_id\":9142,\"cmd\":\"replay_goto\",\"data\":{}}",
+        "{\"type\":\"request\",\"req_id\":9143,\"cmd\":\"replay_goto\",\"data\":{\"t\":1,\"frame\":1}}",
+        "{\"type\":\"request\",\"req_id\":9144,\"cmd\":\"replay_goto\",\"data\":{\"t\":1,\"breakpoints\":\"off\"}}",
+        "{\"type\":\"request\",\"req_id\":9145,\"cmd\":\"replay_goto\",\"data\":{\"t\":1,\"timeout_ms\":30000}}",
+        "{\"type\":\"request\",\"req_id\":9146,\"cmd\":\"replay_goto\",\"data\":{\"frame\":1,\"frame_ticks\":-1}}",
+        "{\"type\":\"request\",\"req_id\":9147,\"cmd\":\"replay_goto\",\"data\":{\"t\":-5}}",
+    };
+    int calls = g_stub_replay.calls;
+    for (unsigned i = 0; i < G_N_ELEMENTS(bad); i++) {
+        (void)_rc_call(bad[i], &rc, &parser, &resp);
+        TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_INVALID_PARAMS, rc);
+        free(resp);
+    }
+    TEST_ASSERT_EQUAL_INT(calls, g_stub_replay.calls);
+
+    /* Chyba emu vlákna. */
+    g_stub_replay.fail = true;
+    (void)_rc_call("{\"type\":\"request\",\"req_id\":9148,\"cmd\":\"replay_goto\","
+                   "\"data\":{\"t\":5}}", &rc, &parser, &resp);
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_EMU_ERROR, rc);
+    TEST_ASSERT_NOT_NULL(strstr(resp, "stub failure"));
+    free(resp);
+}
+
+
 /* ====================================================================== */
 /* state_observe (observe-cas, M10)                                        */
 /* ====================================================================== */
@@ -8738,6 +8850,7 @@ void test_state_observe_windows_and_core(void) {
     JsonObject *tm = json_object_get_object_member(d, "time");
     TEST_ASSERT_EQUAL_INT(42, json_object_get_int_member(tm, "frame"));
     TEST_ASSERT_EQUAL_INT(26, json_object_get_int_member(tm, "frame_ticks"));
+    TEST_ASSERT_EQUAL_INT64(42LL * 354432 + 26, json_object_get_int_member(tm, "ticks"));
     TEST_ASSERT_EQUAL_INT(123456, json_object_get_int_member(tm, "total_cycles"));
     JsonObject *regs = json_object_get_object_member(d, "regs");
     TEST_ASSERT_EQUAL_INT(0x1B00, json_object_get_int_member(regs, "PC"));
@@ -9423,6 +9536,7 @@ int main(void) {
     RUN_TEST(test_replay_play_and_stop_modes);
     RUN_TEST(test_replay_status_fields);
     RUN_TEST(test_replay_rewind_seek_params);
+    RUN_TEST(test_replay_goto_params);
     RUN_TEST(test_snapshot_load_not_paused_reason);
     RUN_TEST(test_cooperation_hint_set_modes);
 
@@ -9446,6 +9560,8 @@ int main(void) {
     RUN_TEST(test_run_until_raster_reached);
     RUN_TEST(test_run_until_tstate_target_in_past);
     RUN_TEST(test_run_until_tstate_reached);
+    RUN_TEST(test_run_until_tstate_ticks_reached_now);
+    RUN_TEST(test_run_until_tstate_ticks_invalid);
     RUN_TEST(test_run_until_event_unsupported_kind);
     RUN_TEST(test_run_until_event_io_write_not_implemented);
     RUN_TEST(test_run_until_event_frame_done);

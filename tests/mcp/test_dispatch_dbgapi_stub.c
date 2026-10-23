@@ -751,6 +751,7 @@ bool dbgapi_ui_submit_cmd_sync_with_origin(st_DBGAPI_CMDRQ_QUEUE *queue,
                 p->run_seq = 7;
                 p->frame = 42;
                 p->frame_ticks = 26;
+                p->ticks = 42ull * 354432u + 26u;
                 p->total_cycles = 123456;
                 for (unsigned part = 0; part < DBGAPI_OBSERVE_HASH_PARTS; part++) {
                     p->hash_ok[part] = 0;
@@ -1094,6 +1095,20 @@ bool dbgapi_ui_submit_cmd_sync_with_origin(st_DBGAPI_CMDRQ_QUEUE *queue,
                     g_stub_state.deadline_clears++;
                 }
                 dp->valid = true;
+            }
+            break;
+
+        case DBGAPI_CMD_RUN_UNTIL_TICKS:
+            /* replay-goto: čas stubu je 1000 taktů; cíl <= 1000 = dosažen
+             * hned (bez běhu), jinak běh spuštěn (run_seq ze stavu stubu). */
+            if (data_ptr) {
+                st_DBGAPI_RUN_UNTIL_TICKS_PARAM *tp = (st_DBGAPI_RUN_UNTIL_TICKS_PARAM *)data_ptr;
+                tp->now_ticks = 1000;
+                tp->reached_now = (tp->target_ticks <= 1000);
+            }
+            if (result_ptr) {
+                ((st_DBGAPI_RUN_START_RESULT *)result_ptr)->status = DBGAPI_RUN_TO_STARTED;
+                ((st_DBGAPI_RUN_START_RESULT *)result_ptr)->run_seq = g_stub_state.run_seq;
             }
             break;
 
@@ -3202,6 +3217,14 @@ uint32_t replay_request_seek(uint32_t frame)
 {
     g_stub_replay.last_frames = frame;
     return stub_replay_request(5, NULL, 0, false);
+}
+
+uint32_t replay_request_goto(uint64_t ticks, bool keep_breakpoints, bool checkpoint_at_target)
+{
+    g_stub_replay.last_goto_ticks = ticks;
+    g_stub_replay.last_goto_keep = keep_breakpoints;
+    g_stub_replay.last_goto_ckpt = checkpoint_at_target;
+    return stub_replay_request(6, NULL, 0, false);
 }
 
 uint32_t replay_request_record(const char *path, uint32_t hash_interval, const char *description)

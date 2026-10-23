@@ -131,6 +131,7 @@ the last 60 of them (5 minutes). A checkpoint takes tens of kB; the
 | Rewind while recording | **Replay -> Rewind**, `Alt + Shift + J` | `emu_replay_rewind` |
 | Rewind while playing back | **Replay -> Rewind**, `Alt + Shift + J` | `emu_replay_rewind` |
 | Jump to a frame while playing back | **Replay -> Seek...** | `emu_replay_seek` |
+| Jump to a time or instruction while playing back | - | `emu_replay_goto` |
 
 **Rewind while recording** returns the machine to the previous
 checkpoint and drops everything recorded after it; choosing Rewind again
@@ -146,6 +147,12 @@ frame. The speed returns to the previous setting afterwards. The hashes
 are checked all the way, breakpoints stay active. While seeking, the
 picture shows **REPLAY SEEK** and the target frame. Rewind while playing
 back jumps to the previous checkpoint.
+
+**Jump to a time** (MCP only, `emu_replay_goto`) reaches exactly the
+start of the instruction at the given time, or a row of a CPU Track trace
+recorded during playback, and returns the machine state at that moment.
+By default breakpoints do not stop it. The recipe is in the MCP document
+`emulator://docs/replay`.
 
 A checkpoint does not hold the contents of the media. When the emulated
 program writes to a floppy disk, Quick Disk or IDE8 disk, records to tape

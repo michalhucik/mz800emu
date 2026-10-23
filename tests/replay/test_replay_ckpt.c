@@ -75,6 +75,67 @@ static void test_ring_replaces_newer(void)
 }
 
 
+/** @test Dotaz na checkpoint konkrétního snímku. */
+static void test_ring_has_frame(void)
+{
+    st_REPLAY_CKPT_RING r;
+    replay_ckpt_ring_init(&r, 10);
+    for (uint32_t f = 1; f <= 3; f++)
+    {
+        st_REPLAY_CKPT c = make(f * 250, 1, 0);
+        replay_ckpt_ring_push(&r, &c);
+    };
+    TEST_ASSERT_TRUE(replay_ckpt_ring_has_frame(&r, 250));
+    TEST_ASSERT_TRUE(replay_ckpt_ring_has_frame(&r, 750));
+    TEST_ASSERT_FALSE(replay_ckpt_ring_has_frame(&r, 500 + 1));
+    TEST_ASSERT_FALSE(replay_ckpt_ring_has_frame(&r, 0));
+    replay_ckpt_ring_clear(&r);
+    TEST_ASSERT_FALSE(replay_ckpt_ring_has_frame(&r, 250));
+    replay_ckpt_ring_free(&r);
+}
+
+
+/** @test Vložení podle snímku: novější zůstanou, týž snímek nahradí, plný buffer. */
+static void test_ring_insert(void)
+{
+    st_REPLAY_CKPT_RING r;
+    replay_ckpt_ring_init(&r, 4);
+    st_REPLAY_CKPT a = make(0, 1, 0), b = make(250, 1, 0), c = make(500, 1, 0);
+    replay_ckpt_ring_push(&r, &a);
+    replay_ckpt_ring_push(&r, &b);
+    replay_ckpt_ring_push(&r, &c);
+    st_REPLAY_CKPT m = make(300, 2, 0);
+    TEST_ASSERT_TRUE(replay_ckpt_ring_insert(&r, &m));
+    TEST_ASSERT_EQUAL_UINT(4, r.count);
+    TEST_ASSERT_EQUAL_UINT32(300, replay_ckpt_ring_get(&r, 2)->frame);
+    TEST_ASSERT_EQUAL_UINT32(500, replay_ckpt_ring_get(&r, 3)->frame);
+    TEST_ASSERT_EQUAL_UINT(1 + 1 + 2 + 1, r.bytes);
+    /* Týž snímek nahradí (velikost se přepočte). */
+    st_REPLAY_CKPT m2 = make(300, 5, 0);
+    TEST_ASSERT_TRUE(replay_ckpt_ring_insert(&r, &m2));
+    TEST_ASSERT_EQUAL_UINT(4, r.count);
+    TEST_ASSERT_EQUAL_UINT(1 + 1 + 5 + 1, r.bytes);
+    /* Plný buffer: nový mezi uloženými vyřadí nejstarší (0). */
+    st_REPLAY_CKPT n = make(400, 1, 0);
+    TEST_ASSERT_TRUE(replay_ckpt_ring_insert(&r, &n));
+    TEST_ASSERT_EQUAL_UINT(4, r.count);
+    TEST_ASSERT_EQUAL_UINT32(250, replay_ckpt_ring_get(&r, 0)->frame);
+    TEST_ASSERT_EQUAL_UINT32(400, replay_ckpt_ring_get(&r, 2)->frame);
+    TEST_ASSERT_EQUAL_UINT32(500, replay_ckpt_ring_get(&r, 3)->frame);
+    /* Plný buffer a nový starší než všechny: zahozen. */
+    st_REPLAY_CKPT o = make(100, 1, 0);
+    TEST_ASSERT_FALSE(replay_ckpt_ring_insert(&r, &o));
+    TEST_ASSERT_EQUAL_UINT32(250, replay_ckpt_ring_get(&r, 0)->frame);
+    TEST_ASSERT_EQUAL_UINT(1 + 5 + 1 + 1, r.bytes);
+    /* Nový za všemi = jako push. */
+    st_REPLAY_CKPT z = make(900, 1, 0);
+    TEST_ASSERT_TRUE(replay_ckpt_ring_insert(&r, &z));
+    TEST_ASSERT_EQUAL_UINT32(900, replay_ckpt_ring_get(&r, 3)->frame);
+    TEST_ASSERT_EQUAL_UINT32(300, replay_ckpt_ring_get(&r, 0)->frame);
+    replay_ckpt_ring_free(&r);
+}
+
+
 /** @test Hledání do snímku a blokace zápisem na médium. */
 static void test_ring_find(void)
 {
@@ -171,6 +232,8 @@ int main(int argc, char **argv)
     UNITY_BEGIN();
     RUN_TEST(test_ring_evicts_oldest);
     RUN_TEST(test_ring_replaces_newer);
+    RUN_TEST(test_ring_has_frame);
+    RUN_TEST(test_ring_insert);
     RUN_TEST(test_ring_find);
     RUN_TEST(test_ring_capacity_clamp);
     RUN_TEST(test_data_truncate);

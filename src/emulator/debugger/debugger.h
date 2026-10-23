@@ -103,6 +103,13 @@ extern "C"
          * (run_frames_active | run_deadline_active). Platí do nejbližší pauzy. */
         unsigned run_deadline_active;             /**< 1 = běh má deadline; emu se pausne, jakmile run_control_mono_ticks() dosáhne run_deadline_ticks. 0 = neaktivní. */
         uint64_t run_deadline_ticks;              /**< Deadline v monotónních taktech GDG (run_control_mono_ticks()). Platné jen pokud run_deadline_active != 0. */
+        /* Zastavení na čase (run_control_stop_at_arm()): kontrola před
+         * instrukcí v breakpoints_enforce_global() přes bránu GLOBAL
+         * breakpointů (bptmap_set_global_hook()). Platí do nejbližší pauzy. */
+        unsigned stop_at_active;                  /**< 1 = běh se zastaví na začátku první instrukce s časem GDG >= stop_at_ticks. 0 = neaktivní. */
+        uint64_t stop_at_ticks;                   /**< Cílový čas v taktech GDG (gdg_get_total_ticks()). Platné jen pokud stop_at_active != 0. */
+        int stop_at_reason;                       /**< Důvod pauzy po dosažení cíle (en_EMU_PAUSE_REASON). Platné jen pokud stop_at_active != 0. */
+        unsigned bp_suppress;                     /**< 1 = uživatelské breakpointy se nevyhodnocují (breakpoints_enforce() vrací hned): goto přehrávání bez volby keep (replay.c). Zastavení na čase a dočasný BP platí dál. */
         unsigned memop_call;                      /**< 1 = právě probíhá debugger-iniciovaný memory write (debugger_memory_write_byte). Sledováno vramctrl handlery pro detekci VRAM touch. */
         unsigned memop_vram_touched;              /**< Per-call signal z vramctrl handlerů: 1 = během aktuálního debugger_memory_write_byte() byl proveden zápis do VRAM/CGRAM (banking-aware). Čte se na konci debugger_memory_write_byte pro screen refresh on edit. Nastavuje se jen pokud memop_call != 0. */
         unsigned run_to_temporary_breakpoint;

@@ -1256,6 +1256,74 @@ if(Python3_FOUND)
                    "(Python ${Python3_VERSION})")
 
     # -----------------------------------------------------------
+    # Cputrack: čas záznamů přes hranice chunků a po skoku času
+    # (načtení snapshotu), formát v2 i v3 (pipe)
+    # -----------------------------------------------------------
+    add_test(
+        NAME    mcp_cputrack_time
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_cputrack_time.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_cputrack_time PROPERTIES
+        LABELS  "e2e;mcp;pipe;trace"
+        TIMEOUT 180
+    )
+    message(STATUS "  tests/mcp: registered mcp_cputrack_time "
+                   "(Python ${Python3_VERSION})")
+
+    # -----------------------------------------------------------
+    # run_until_tstate s target_ticks: zastavení na čase GDG v emu
+    # vlákně, přesný začátek instrukce, breakpoint před cílem (pipe)
+    # -----------------------------------------------------------
+    add_test(
+        NAME    mcp_run_until_ticks
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_run_until_ticks.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_run_until_ticks PROPERTIES
+        LABELS  "e2e;mcp;pipe"
+        TIMEOUT 120
+    )
+    message(STATUS "  tests/mcp: registered mcp_run_until_ticks "
+                   "(Python ${Python3_VERSION})")
+
+    # -----------------------------------------------------------
+    # Pauza a rozběh nemění okamžik přijetí přerušení (zastavení na
+    # HALT po EI při trvalém INT, porovnání s během bez pauzy, pipe)
+    # -----------------------------------------------------------
+    add_test(
+        NAME    mcp_pause_int_timing
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_pause_int_timing.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_pause_int_timing PROPERTIES
+        LABELS  "e2e;mcp;pipe"
+        TIMEOUT 120
+    )
+    message(STATUS "  tests/mcp: registered mcp_pause_int_timing "
+                   "(Python ${Python3_VERSION})")
+
+    # -----------------------------------------------------------
+    # replay_goto: stav v čase přehrávání, křížová kontrola s trace
+    # cputrack v3 (přerušení, LDIR), breakpointy, checkpoint (pipe)
+    # -----------------------------------------------------------
+    add_test(
+        NAME    mcp_replay_goto
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_replay_goto.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_replay_goto PROPERTIES
+        LABELS  "e2e;mcp;pipe;replay"
+        TIMEOUT 240
+    )
+    message(STATUS "  tests/mcp: registered mcp_replay_goto "
+                   "(Python ${Python3_VERSION})")
+
+    # -----------------------------------------------------------
     # Test 7e: port I/O a načtení MZF přes MCP za běhu emulace (pipe)
     # -----------------------------------------------------------
     # Regrese: io_write/io_read za běhu zastavil CPU a další port I/O

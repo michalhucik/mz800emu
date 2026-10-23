@@ -304,6 +304,15 @@ pxclk_in_screen_at(N) = cumul_pxclk(N) mod pxclk_per_screen
 
 `insn_T_states[i]` je ve formátu v2 bajt 11 (`t_std`), ve v1 se odvozuje z opcode podle Z80 ISA tabulky. Ve v2 vzorec sedí přesně i s přerušeními (záznamy přijetí přerušení nesou jeho T-stavy); ve v1 chybí T-stavy přijetí každého přerušení. Ve v3 se synchronizační záznamy (`insn_length` 0FEh) do součtu nepočítají.
 
+`start_pxclk` je čas začátku prvního záznamu chunku, takže čas záznamů
+plynule navazuje přes hranici chunků (kotva chunku = kotva předchozího
+chunku + součet jeho záznamů). Když emulovaný čas během nahrávání skočí
+(načtení snapshotu, seek nebo rewind přehrávání záznamu vstupů, operace
+debuggeru se sběrnicí, která čas posune), začne nový chunk s kotvou ve
+skutečném čase; součet proto vždy počítejte jen v rámci jednoho chunku.
+S filtrem PC (`pc_range_lo` / `pc_range_hi` mimo celý rozsah) záznamy čas
+nenesou a kotvy jsou jen orientační.
+
 ### subsys_header: počáteční stav
 
 `initial_regs` obsahuje kompletní snímek Z80 CPU registrů v okamžiku

@@ -75,7 +75,8 @@ extern "C" {
      *   daného typu není registrovaný (= branch predictor friendly).
      *
      * Invarianty:
-     *   per_type_active[i] == (per_type_lists[i] != NULL && len > 0)
+     *   per_type_active[i] == (per_type_lists[i] != NULL && len > 0),
+     *     u BPTMAP_IDX_GLOBAL navíc || global_hook
      *   bp_id v per_type_lists[i] musí odpovídat existujícímu BP s
      *     správným typem v g_breakpoints.breakpoints (= caller povinen
      *     synchronizovat při add/remove/set_type).
@@ -91,12 +92,28 @@ extern "C" {
         bool   per_type_active [ BPTMAP_IDX_COUNT ];   /**< fast-skip flag per typ */
         bool   any_active;                              /**< OR všech per_type_active (= jen jeden test pro fast-skip) */
         bool   has_enabled_bp;                          /**< true pokud existuje aspoň jeden efektivně povolený BP (jakýkoliv typ, vč. PC_EXEC v bpmap[]). Nastavuje breakpoints_sync_bptmap. Používá TEST_DEBUGGER_CPUHIST_ACTIVE - historie CPU je k dispozici i bez okna, pokud je BP enabled. */
+        bool   global_hook;                             /**< true = bránu GLOBAL drží zapnutou i zastavení na čase (run_control_stop_at_arm()); per_type_active[GLOBAL] == (seznam GLOBAL neprázdný || global_hook). */
     } st_BPTMAP;
 
     extern st_BPTMAP g_bptmap;
 
     extern void bptmap_init ( void );
     extern void bptmap_clear_all ( void );
+
+    /**
+     * @brief Zapne nebo vypne háček brány GLOBAL (zastavení na čase).
+     *
+     * Brána GLOBAL v hlavní smyčce volá breakpoints_enforce_global() před
+     * každou instrukcí, když per_type_active[BPTMAP_IDX_GLOBAL]. Háček ji
+     * drží zapnutou i bez uživatelských GLOBAL breakpointů; odebrání
+     * posledního GLOBAL breakpointu ani bptmap_clear_all() ji pak nevypne.
+     *
+     * @param on true = háček aktivní.
+     * @pre Emu vlákno (run_control_stop_at_arm() / _clear()).
+     * @post per_type_active[GLOBAL] == (seznam GLOBAL neprázdný || on),
+     *       any_active přepočítaný.
+     */
+    extern void bptmap_set_global_hook ( bool on );
     extern int bptmap_event_add ( uint16_t addr, int id );
     extern int bptmap_event_clear ( uint16_t addr, int id );
     extern void bptmap_event_clear_addr ( uint16_t addr );

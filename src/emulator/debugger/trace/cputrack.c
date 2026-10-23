@@ -83,12 +83,81 @@ static st_CPUTRACK_REGS s_initial_regs;
 static uint8_t s_initial_q = 0;
 static int s_initial_valid = 0;
 
+/**
+ * @brief Čas (pxCLK total) začátku příštího zapsaného záznamu.
+ *
+ * Čtenář počítá čas záznamu jako kotvu chunku + součet T-stavů
+ * (`t_std` + `wait_clk`) předchozích záznamů chunku x dělička
+ * (trace_reader.c). Tato hodnota je totéž počítané při zápisu: kotva
+ * nového chunku se bere z ní, ne z aktuálního času GDG, který je
+ * v háčku po instrukci uprostřed instrukce (N80).
+ *
+ * @invariant Bez filtru PC a bez skoku času platí v bodě mezi
+ *            instrukcemi s_time_next_px + s_pending_wait_clk x dělička
+ *            == tlog_common_get_pxclk_total(). Porušení (seek, rewind,
+ *            načtení snapshotu) zjistí cputrack_sync_check() a začne nový
+ *            chunk (N81).
+ */
+static uint64_t s_time_next_px = 0;
+static uint32_t s_cpu_divider = 1;          /**< pxCLK na T-stav (cache při startu segmentu) */
+
 static void cputrack_v2_on_instruction ( uint16_t pc, uint8_t insn_tstates,
                                          uint32_t wait_extra_tstates );
 static void cputrack_v3_on_instruction ( uint16_t pc, uint8_t t_std, uint32_t wait );
 static void cputrack_v3_on_interrupt_accept ( uint16_t isr_pc, uint8_t t );
 static void cputrack_v3_flush_collapse ( void );
 static void cputrack_v3_emit_sync ( const st_CPUTRACK_REGS *cur, unsigned reason );
+
+
+/** @brief Je filtr PC celý adresní prostor (záznamy nesou čas)? */
+static inline int cputrack_time_full ( void )
+{
+    return g_cputrack_config.pc_range_lo == 0 && g_cputrack_config.pc_range_hi >= 0xFFFF;
+}
+
+
+/**
+ * @brief Začít nový chunk s kotvou @p px.
+ *
+ * @param px  pxCLK total začátku příštího záznamu.
+ */
+static void cputrack_rechunk_at ( uint64_t px )
+{
+    uint32_t per_screen = tlog_common_get_pxclk_per_screen ( );
+    tlog_writer_rechunk ( &s_writer, px, px / s_cpu_divider,
+                          (uint32_t) ( per_screen ? px / per_screen : 0 ) );
+}
+
+
+/**
+ * @brief Před zápisem záznamu: přetečení chunku řešit s přesnou kotvou.
+ *
+ * Bez filtru PC flushne plný buffer sám a novému chunku dá kotvu
+ * s_time_next_px (čas začátku záznamu, který se právě zapisuje), takže
+ * tlog_writer_append() už neflushuje s aktuálním časem GDG (N80). S filtrem
+ * PC čas záznamů neexistuje a flush zůstává na tlog_writer_append().
+ *
+ * @param n  Velikost zapisovaného záznamu.
+ */
+static inline void cputrack_chunk_guard ( size_t n )
+{
+    if ( s_writer.buffer_used + n <= s_writer.buffer_size ) return;
+    if ( !cputrack_time_full ( ) ) return;
+    cputrack_rechunk_at ( s_time_next_px );
+}
+
+
+/**
+ * @brief Po zápisu záznamu posunout čas začátku příštího záznamu.
+ *
+ * @param rc        Návrat tlog_writer_append() (posun jen při úspěchu).
+ * @param t_std     Bajt 11 záznamu (0 u sbaleného).
+ * @param wait_clk  Bajty 7-10 záznamu.
+ */
+static inline void cputrack_time_advance ( int rc, uint8_t t_std, uint32_t wait_clk )
+{
+    if ( rc == 0 ) s_time_next_px += ( (uint64_t) t_std + wait_clk ) * s_cpu_divider;
+}
 
 /**
  * @brief Sestavit jeden 12-byte event záznam (formát v2) a appendovat do writeru.
@@ -121,7 +190,10 @@ static int emit_event ( uint16_t pc, uint8_t insn_len, const uint8_t *insn_bytes
     buf[ 10 ] = (uint8_t)( ( wait_clk >> 24 ) & 0xFF );
     buf[ 11 ] = t_std;
 
-    return tlog_writer_append ( &s_writer, buf, sizeof ( buf ) );
+    cputrack_chunk_guard ( sizeof ( buf ) );
+    int rc = tlog_writer_append ( &s_writer, buf, sizeof ( buf ) );
+    cputrack_time_advance ( rc, t_std, wait_clk );
+    return rc;
 }
 
 
@@ -210,7 +282,11 @@ static int emit_event_v3 ( uint16_t pc, uint8_t insn_len, const uint8_t *insn_by
     buf[ CPUTRACK_V3_OFF_FLAGS ] = r->flags;
     buf[ CPUTRACK_V3_OFF_KIND ] = kind;
 
-    return tlog_writer_append ( &s_writer, buf, sizeof ( buf ) );
+    cputrack_chunk_guard ( sizeof ( buf ) );
+    int rc = tlog_writer_append ( &s_writer, buf, sizeof ( buf ) );
+    /* Synchronizační záznam do času nepatří (bajty 7-11 nesou alternativní sadu). */
+    if ( insn_len != CPUTRACK_INSN_LEN_SYNC ) cputrack_time_advance ( rc, t_std, wait_clk );
+    return rc;
 }
 
 
@@ -596,9 +672,58 @@ static void cputrack_v3_on_interrupt_accept ( uint16_t isr_pc, uint8_t t )
 }
 
 
+/**
+ * @brief Zapsat rozpracovaný sbalený záznam formátu v2 (HALT, smyčka na sebe).
+ */
+static void cputrack_v2_flush_collapse ( void )
+{
+    if ( s_pending_wait_clk == 0 ) return;
+    uint32_t w = ( s_pending_wait_clk > 0xFFFFFFFFu ) ?
+                 0xFFFFFFFFu : (uint32_t) s_pending_wait_clk;
+    emit_event ( s_collapse_pc, s_collapse_insn_len, s_collapse_insn_bytes, w, 0 );
+    s_pending_wait_clk = 0;
+}
+
+
+/**
+ * @brief Kontrola skoku emulovaného času (v2 i v3, N81).
+ *
+ * Bez filtru PC porovná očekávaný čas (čas začátku příštího záznamu
+ * + rozpracovaná sbalená smyčka) s časem GDG. Při rozdílu (seek, rewind,
+ * načtení snapshotu, operace dbgapi, která posunula čas mimo instrukci)
+ * zapíše rozpracovaný sbalený záznam (patří ke staré časové ose) a začne
+ * nový chunk s kotvou v aktuálním čase, takže sloupec `t` čtenáře zůstane
+ * pravdivý. S filtrem PC čas záznamů neexistuje: očekávaný čas se jen
+ * srovná s aktuálním (návrat k celému rozsahu pak skok zjistí).
+ *
+ * @pre Emu vlákno, mezi instrukcemi; writer otevřený.
+ */
+static void cputrack_time_check ( void )
+{
+    uint64_t now = tlog_common_get_pxclk_total ( );
+    uint64_t pending = s_pending_wait_clk * s_cpu_divider;
+    if ( s_time_next_px + pending == now ) return;
+    if ( !cputrack_time_full ( ) ) {
+        s_time_next_px = ( now >= pending ) ? now - pending : 0;
+        return;
+    }
+    if ( s_seg_regs ) {
+        cputrack_v3_flush_collapse ( );
+    } else {
+        cputrack_v2_flush_collapse ( );
+    }
+    cputrack_rechunk_at ( now );
+    s_time_next_px = now;
+    /* Další instrukce na stejném PC není pokračováním smyčky před skokem. */
+    s_prev_pc_valid = 0;
+}
+
+
 void cputrack_sync_check ( void )
 {
-    if ( !s_writer_open || !s_seg_regs ) return;
+    if ( !s_writer_open ) return;
+    cputrack_time_check ( );
+    if ( !s_seg_regs ) return;
 
     st_CPUTRACK_REGS cur;
     regs_capture ( &cur );
@@ -852,6 +977,8 @@ int cputrack_start ( void )
         return -1;
     }
     s_writer_open = 1;
+    s_cpu_divider = tlog_common_get_cpu_divider ( );
+    s_time_next_px = init_px;
     /* Formát segmentu se volí jednou při startu (velikost záznamu je
      * v segmentu pevná). */
     s_seg_regs = g_cputrack_config.regs ? 1 : 0;
@@ -888,11 +1015,8 @@ void cputrack_stop ( void )
     /* Flush případný pending collapse před close. */
     if ( s_seg_regs ) {
         cputrack_v3_flush_collapse ( );
-    } else if ( s_pending_wait_clk > 0 ) {
-        uint32_t w = ( s_pending_wait_clk > 0xFFFFFFFFu ) ?
-                     0xFFFFFFFFu : (uint32_t) s_pending_wait_clk;
-        emit_event ( s_collapse_pc, s_collapse_insn_len, s_collapse_insn_bytes, w, 0 );
-        s_pending_wait_clk = 0;
+    } else {
+        cputrack_v2_flush_collapse ( );
     }
 
     uint64_t now_px = tlog_common_get_pxclk_total ( );

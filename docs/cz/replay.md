@@ -123,6 +123,7 @@ jich je a pro které snímky.
 | Návrat při záznamu | **Replay -> Rewind**, `Alt + Shift + J` | `emu_replay_rewind` |
 | Návrat při přehrávání | **Replay -> Rewind**, `Alt + Shift + J` | `emu_replay_rewind` |
 | Skok na snímek při přehrávání | **Replay -> Seek...** | `emu_replay_seek` |
+| Skok na čas nebo instrukci při přehrávání | - | `emu_replay_goto` |
 
 **Návrat při záznamu** vrátí stroj na předchozí checkpoint a zahodí vše,
 co se po něm nahrálo; další volba Rewind jde o checkpoint dál. Emulace
@@ -137,6 +138,12 @@ Rychlost se pak vrátí na předchozí nastavení. Hashe se ověřují celou
 dobu, breakpointy zůstávají aktivní. Během skoku je v obraze **REPLAY
 SEEK** a cílový snímek. Návrat při přehrávání skočí na předchozí
 checkpoint.
+
+**Skok na čas** (jen přes MCP, `emu_replay_goto`) dojede přesně na
+začátek instrukce v zadaném čase, nebo na řádek záznamu trace CPU Track
+pořízeného při přehrávání, a vrátí stav stroje v tom okamžiku. Breakpointy
+při něm ve výchozím stavu nezastavují. Recept je v MCP dokumentu
+`emulator://docs/replay`.
 
 Checkpoint nenese obsah médií. Když emulovaný program zapíše na disketu,
 Quick Disk nebo disk IDE8, nahraje na kazetu nebo se páska vysune,

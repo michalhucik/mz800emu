@@ -144,6 +144,30 @@ extern "C"
                                               uint32_t media_writes, guint *out_index);
 
     /**
+     * @brief Vloží checkpoint podle snímku a novější checkpointy ponechá.
+     *
+     * Na rozdíl od replay_ckpt_ring_push() (záznam, rewind) nic novějšího
+     * nemaže: použití při přehrávání bez odchýlení (deterministické), kdy
+     * vzniká checkpoint snímku mezi uloženými (goto s checkpointem v cíli).
+     * Checkpoint téhož snímku nahradí. Při plném bufferu uvolní nejstarší;
+     * je-li nový starší než všechny uložené v plném bufferu, zahodí nový.
+     *
+     * @param ring Inicializovaný buffer.
+     * @param c    Checkpoint; buffer převezme `c->snap` (i při zahození ho uvolní).
+     * @return true = vložen, false = zahozen (plný buffer, nejstarší snímek).
+     */
+    bool replay_ckpt_ring_insert(st_REPLAY_CKPT_RING *ring, const st_REPLAY_CKPT *c);
+
+    /**
+     * @brief Je v bufferu checkpoint snímku @p frame?
+     *
+     * @param ring  Buffer.
+     * @param frame Snímek.
+     * @return true, když některý checkpoint má přesně snímek @p frame.
+     */
+    bool replay_ckpt_ring_has_frame(const st_REPLAY_CKPT_RING *ring, uint32_t frame);
+
+    /**
      * @brief Uvolní checkpointy novější než pořadí @p i (po rewindu nebo seeku zpět).
      */
     void replay_ckpt_ring_truncate_after(st_REPLAY_CKPT_RING *ring, guint i);

@@ -3345,6 +3345,10 @@ void breakpoints_fill_global_ctx ( bp_expr_ctx_t *ctx ) {
 void breakpoints_enforce ( st_BPT *bpt, struct bp_expr_ctx_s *ctx ) {
     if ( !bpt || !ctx ) return;
 
+    /* 0) Goto přehrávání potlačí uživatelské breakpointy (nezastaví seek,
+     *    akce nepíšou do bplog ani trace); g_debugger.bp_suppress. */
+    if ( g_debugger.bp_suppress ) return;
+
     /* 1) Effective enable check (BP enabled + skupinová cesta enabled). */
     if ( !bpt->enabled ) return;
     if ( !breakpoints_is_group_enabled ( bpt->parent ) ) return;
@@ -4186,6 +4190,10 @@ static bool breakpoints_edge_swap ( int bp_id, bool current ) {
 
 
 void breakpoints_enforce_global ( void ) {
+    /* Zastavení na čase (run_control_stop_at_arm()) sdílí bránu GLOBAL:
+     * cíl dosažený před instrukcí = pauza, instrukce se nevykoná. */
+    if ( g_debugger.stop_at_active && run_control_stop_at_check ( ) ) return;
+
     GArray *list = bptmap_get_list ( BPTMAP_IDX_GLOBAL );
     if ( !list || list->len == 0 ) return;
 

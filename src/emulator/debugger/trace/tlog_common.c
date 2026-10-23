@@ -554,6 +554,19 @@ int tlog_writer_flush_chunk ( st_TLOG_WRITER *w,
 }
 
 
+int tlog_writer_rechunk ( st_TLOG_WRITER *w,
+                          uint64_t pxclk, uint64_t cpuclk, uint32_t screens )
+{
+    if ( !w->buffer ) return -1;
+    if ( w->buffer_used > 0 ) return tlog_writer_flush_chunk ( w, pxclk, cpuclk, screens );
+    /* Prázdný chunk: žádný záznam starou kotvu nepoužil, stačí ji přepsat. */
+    w->current_chunk_start_pxclk = pxclk;
+    w->current_chunk_start_cpuclk = cpuclk;
+    w->current_chunk_start_screens = screens;
+    return 0;
+}
+
+
 void tlog_writer_close ( st_TLOG_WRITER *w,
                          uint64_t now_pxclk, uint64_t now_cpuclk,
                          uint32_t now_screens )

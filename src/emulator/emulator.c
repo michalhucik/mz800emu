@@ -27,6 +27,7 @@
 #include "debugger/debugger.h"
 #include "debugger/bptmap.h"
 #include "debugger/run_control/run_log.h"
+#include "debugger/run_control/run_control.h"
 #endif
 
 #include "generic_driver/memory_driver.h"
@@ -423,6 +424,8 @@ void emulator_pause(bool value)
     if (g_emulator.paused)
     {
         bptmap_reset_temporary_event();
+        /* Zastavení na čase platí také jen do příští pauzy. */
+        run_control_stop_at_clear();
     };
     if (TEST_DEBUGGER_ACTIVE)
     {

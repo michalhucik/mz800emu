@@ -55,7 +55,7 @@ exact moment.
 
 ```json
 {"run_seq": 41, "running": false, "stable": true, "drain": "paused",
- "time": {"frame": 12345, "frame_ticks": 26, "total_cycles": 987654321},
+ "time": {"frame": 12345, "frame_ticks": 26, "ticks": 4375361066, "total_cycles": 987654321},
  "regs": {"AF": 0, "BC": 0, "PC": 8197, "...": 0},
  "flags": {"iff1": false, "im": 1, "halted": false, "...": 0},
  "windows": [
@@ -75,7 +75,7 @@ exact moment.
 | `run_seq` | Number of the running (in pause: the last) run, as in `emu_wait_stop`. If it differs from your previous read, the emulator ran in between (also a single step). |
 | `running`, `stable` | `stable` is `true` only in pause: the state stays as read until something changes it. While running the data are consistent with each other but already old when you get them. |
 | `drain` | Where the read was served: `frame` (frame boundary while running) or `paused`. |
-| `time` | `frame` (frame number), `frame_ticks` (GDG ticks since the start of the frame), `total_cycles` (CPU T-states, a 32-bit counter that wraps). |
+| `time` | `frame` (frame number), `frame_ticks` (GDG ticks since the start of the frame), `ticks` (GDG ticks since the emulator started, 64-bit: the clock of `t` in `emu_trace_read`, `stop_ticks`, `Cycle` in breakpoint conditions, target of `emu_run_until_tstate(target_ticks=...)` and `emu_replay_goto(t=...)`), `total_cycles` (CPU T-states, a 32-bit counter that wraps and that a reset clears). |
 | `regs`, `flags` | Same as `emu_get_cpu_panel_batch`. |
 | window `sha256` | SHA-256 of the window bytes, 64 lowercase hex digits - the same value `emu_mem_read` / `emu_region_read` return for the same range. |
 | window `error` | `region_unavailable`: the region does not exist or is not connected now (MemExt detached, RAM disk bank beyond its size). The window has `length` 0 and no hash; the call still succeeds and `complete` is `false`. |

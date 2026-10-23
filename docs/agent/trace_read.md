@@ -62,6 +62,13 @@ Records still in the RAM buffer are readable too, so even a short run
   (`pc` = handler address, `t_std` = acknowledge T-states).
 - cputrack `t` is missing (`null`, `has_time: false`) when the recording
   uses a PC range filter (`pc_range_lo/hi` in `[TRACE_CPUTRACK]`).
+- cputrack `t` is the start of the record, exact across chunk files and
+  after a time jump during the recording (snapshot load, replay seek or
+  rewind, `emu_replay_goto`): the jump starts a new chunk at the real
+  time. `t` of the next record = end of this one.
+- `emu_replay_goto(trace={"seq": N, "at": "before"})` returns the full
+  machine state (memory too) at any record of a trace recorded during a
+  replay playback, see `emulator://docs/replay`.
 - HALT and a loop on itself (`JR $`) are one collapsed row whose `wait`
   is the whole time spent in the loop.
 - Column `kind` (on request): `insn`, `loop` (collapsed row), `int`

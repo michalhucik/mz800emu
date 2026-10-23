@@ -149,6 +149,46 @@ extern "C" {
     void run_control_deadline_clear(void);
 
     /**
+     * @brief Nastaví zastavení na čase: běh se zastaví na začátku první
+     *        instrukce, jejíž čas GDG je >= @p ticks.
+     *
+     * Kontrolu provádí breakpoints_enforce_global() (run_control_stop_at_check())
+     * před každou instrukcí; bránu GLOBAL breakpointů v hlavní smyčce drží
+     * zapnutou bptmap_set_global_hook(), takže horká cesta nedostane žádnou
+     * novou podmínku. Po přijetí přerušení se zastaví až před první instrukcí
+     * obsluhy (stav po přijetí).
+     *
+     * @param ticks  Cílový čas v taktech GDG (gdg_get_total_ticks()).
+     * @param reason Důvod pauzy po dosažení (en_EMU_PAUSE_REASON, typicky
+     *               EMU_PAUSE_REASON_RUN_UNTIL_TICKS).
+     * @pre Emu vlákno (příkaz fronty dbgapi, replay). Platí do nejbližší
+     *      pauzy: emulator_pause(true) ho zruší (run_control_stop_at_clear()),
+     *      ať pauzu způsobilo dosažení cíle, breakpoint nebo uživatel.
+     * @post g_debugger.stop_at_active == 1.
+     */
+    void run_control_stop_at_arm(uint64_t ticks, int reason);
+
+    /**
+     * @brief Zruší zastavení na čase (no-op, když není nastavené).
+     *
+     * @pre Emu vlákno.
+     * @post g_debugger.stop_at_active == 0, brána GLOBAL odpovídá jen
+     *       uživatelským GLOBAL breakpointům.
+     */
+    void run_control_stop_at_clear(void);
+
+    /**
+     * @brief Kontrola zastavení na čase před instrukcí.
+     *
+     * Při dosaženém cíli zruší zastavení, nastaví důvod pauzy a pozastaví
+     * emulaci (instrukce na aktuálním PC se nevykoná).
+     *
+     * @return true = emulace se právě pozastavila.
+     * @pre Emu vlákno, před vykonáním instrukce (breakpoints_enforce_global()).
+     */
+    bool run_control_stop_at_check(void);
+
+    /**
      * @brief Kontrola frame-bounded runu a deadlinu v per-event bloku hlavní smyčky.
      *
      * Splněná podmínka nastaví důvod pauzy (FRAMES / DEADLINE) a pozastaví

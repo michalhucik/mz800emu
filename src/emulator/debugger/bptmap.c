@@ -77,8 +77,18 @@ void bptmap_clear_all ( void ) {
         };
         g_bptmap.per_type_active[i] = false;
     };
-    g_bptmap.any_active = false;
+    /* Zastavení na čase drží bránu GLOBAL i bez breakpointů. */
+    g_bptmap.per_type_active[BPTMAP_IDX_GLOBAL] = g_bptmap.global_hook;
+    g_bptmap.any_active = g_bptmap.global_hook;
     g_bptmap.has_enabled_bp = false;
+}
+
+
+void bptmap_set_global_hook ( bool on ) {
+    g_bptmap.global_hook = on;
+    GArray *list = g_bptmap.per_type_lists[BPTMAP_IDX_GLOBAL];
+    g_bptmap.per_type_active[BPTMAP_IDX_GLOBAL] = on || ( list && list->len > 0 );
+    bptmap_update_any_active ( );
 }
 
 
@@ -195,7 +205,8 @@ void bptmap_unregister ( int bp_id, en_BPTMAP_TYPE_IDX idx ) {
     };
 
     if ( list->len == 0 ) {
-        g_bptmap.per_type_active[idx] = false;
+        /* Bránu GLOBAL může držet i zastavení na čase (global_hook). */
+        g_bptmap.per_type_active[idx] = ( idx == BPTMAP_IDX_GLOBAL ) && g_bptmap.global_hook;
         bptmap_update_any_active ( );
     };
 }

@@ -1052,6 +1052,7 @@ const char *dbgapi_cmd_to_str(en_DBGAPI_CMD cmd)
         case DBGAPI_CMD_RAMLOG:                    return "ramlog";
         case DBGAPI_CMD_COVERAGE:                  return "coverage";
         case DBGAPI_CMD_BPLOG:                     return "bplog";
+        case DBGAPI_CMD_RUN_UNTIL_TICKS:           return "run_until_ticks";
         case DBGAPI_CMD_MEMSEARCH_SAMPLE:          return "memsearch_sample";
         case DBGAPI_CMD_FREEZE_LIST:               return "freeze_list";
         /* V1.D.1 - Core + CPU extras Resources */
@@ -1993,6 +1994,7 @@ static bool dbgapi_state_observe_fill ( st_DBGAPI_STATE_OBSERVE_PARAM *p )
     p->run_seq = run_log_current ( NULL );
     p->frame = (uint64_t) g_gdg.total_elapsed.screens;
     p->frame_ticks = (uint32_t) g_gdg.total_elapsed.ticks;
+    p->ticks = gdg_get_total_ticks ( );
     p->total_cycles = g_mzarch_main.cpu->total_cycles;
 
     bool regions_fresh = false;
@@ -5366,6 +5368,57 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                 it->offset = e->offset;
                 it->value = e->value;
             };
+            rq->success = true;
+            break;
+        }
+
+        /* --- Běh do času v taktech GDG (replay-goto) ---
+         * Zastavení na začátku první instrukce s časem >= cíl provede
+         * breakpoints_enforce_global() přes bránu GLOBAL (run_control.h). */
+        case DBGAPI_CMD_RUN_UNTIL_TICKS:
+        {
+            st_DBGAPI_RUN_UNTIL_TICKS_PARAM *p = (st_DBGAPI_RUN_UNTIL_TICKS_PARAM *) rq->data_ptr;
+            st_DBGAPI_RUN_START_RESULT *r = (st_DBGAPI_RUN_START_RESULT *) rq->result_ptr;
+            if ( !p )
+            {
+                rq->success = false;
+                break;
+            };
+            p->now_ticks = gdg_get_total_ticks ( );
+            p->reached_now = false;
+            if ( !EMULATOR_TEST_PAUSED )
+            {
+                if ( r )
+                {
+                    r->status = DBGAPI_RUN_TO_PAUSED_ONLY;
+                    r->step = false;
+                    r->run_seq = run_log_current ( NULL );
+                };
+                emulator_pause ( true );
+                rq->success = true;
+                break;
+            };
+            if ( p->now_ticks >= p->target_ticks )
+            {
+                /* V pauze stojí emulace na začátku instrukce: cíl dosažen. */
+                p->reached_now = true;
+                if ( r )
+                {
+                    r->status = DBGAPI_RUN_TO_STARTED;
+                    r->step = false;
+                    r->run_seq = run_log_current ( NULL );
+                };
+                rq->success = true;
+                break;
+            };
+            if ( r )
+            {
+                r->status = DBGAPI_RUN_TO_STARTED;
+                r->step = false;
+                r->run_seq = run_control_seq_for_start ( );
+            };
+            run_control_stop_at_arm ( p->target_ticks, EMU_PAUSE_REASON_RUN_UNTIL_TICKS );
+            emulator_pause ( false );
             rq->success = true;
             break;
         }

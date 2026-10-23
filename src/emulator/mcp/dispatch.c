@@ -422,6 +422,8 @@ static en_MCP_DISPATCH_RESULT _handle_replay_seek(const st_JSONL_MESSAGE *req,
                                                   char **out_response);
 static en_MCP_DISPATCH_RESULT _handle_replay_status(const st_JSONL_MESSAGE *req,
                                                     char **out_response);
+static en_MCP_DISPATCH_RESULT _handle_replay_goto(const st_JSONL_MESSAGE *req,
+                                                  char **out_response);
 /* V0.B.7 - resource backing pro emulator://config/mcp */
 static en_MCP_DISPATCH_RESULT _handle_get_mcp_config(const st_JSONL_MESSAGE *req,
                                                      char **out_response);
@@ -1281,6 +1283,9 @@ static const st_MCP_CMD_MAP_ENTRY g_cmd_map[] = {
      * bplog čte trace_read). Přidáno na KONEC tabulky kvůli stabilitě
      * pozičního indexu v hello supported_commands. */
     { "bplog_clear",              DBGAPI_CMD_BPLOG,                   _handle_bplog_clear              },
+    /* replay-goto (M17 debug-gaps): stav stroje v čase záznamu vstupů přes
+     * přehrání (seek + zastavení na čase v emu vlákně). */
+    { "replay_goto",              DBGAPI_CMD_NONE,                    _handle_replay_goto              },
     /* sentinel */
     { NULL,              DBGAPI_CMD_NONE,              NULL                  },
 };
@@ -2047,6 +2052,8 @@ static en_MCP_DISPATCH_RESULT _handle_run(const st_JSONL_MESSAGE *req,
             /* Byte backstop akcí BP (jméno jako run_control_reason_name()). */
             case EMU_PAUSE_REASON_BP_SATURATION:
                                               stopped_by = "bp_action_saturation"; break;
+            case EMU_PAUSE_REASON_RUN_UNTIL_TICKS:
+                                              stopped_by = "run_until_ticks"; break;
             default:                          stopped_by = "unknown";    break;
         }
         reached = (g_emulator.pause_reason == EMU_PAUSE_REASON_FRAMES);
@@ -6477,6 +6484,98 @@ static en_MCP_DISPATCH_RESULT _handle_run_until_raster(const st_JSONL_MESSAGE *r
 
 
 /**
+ * @brief `run_until_tstate` s `target_ticks`: běh do času GDG (64 bit).
+ *
+ * Emulace v pauze se rozběhne a emu vlákno ji zastaví na začátku první
+ * instrukce s časem GDG >= `target_ticks` (DBGAPI_CMD_RUN_UNTIL_TICKS,
+ * run_control_stop_at_arm()); dispatch čeká na konec běhu (run_log_wait())
+ * nejvýš MCP_STEP_LOOP_TIME_LIMIT_MS, potom emulaci pozastaví
+ * (`time_limited`). Čas GDG reset nenuluje a nepřetéká (na rozdíl od
+ * `total_cycles`, N84). `max_cycles` se v této cestě nepoužívá.
+ *
+ * Response: `ticks` (čas v okamžiku zastavení), `target_ticks`,
+ * `delta_ticks` (od začátku příkazu), `exact` (ticks == target_ticks),
+ * `reached`, `stopped_by` (důvod zastavení, např. "breakpoint", když běh
+ * dřív zastavil uživatelský breakpoint), `time_limited`, `run_seq`.
+ *
+ * @param req_id       ID požadavku.
+ * @param data_obj     Parametry požadavku (obsahují `target_ticks`).
+ * @param out_response Výstupní JSONL řádek (volající `free()`).
+ * @return MCP_DISPATCH_OK nebo chybový kód (neplatný parametr, běžící emulace).
+ */
+static en_MCP_DISPATCH_RESULT _run_until_ticks(int64_t req_id, JsonObject *data_obj,
+                                               char **out_response) {
+    if (json_object_has_member(data_obj, "target_total_cycles")) {
+        return _err_response(req_id, "Use either target_ticks or target_total_cycles, not both",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+    gint64 target = _obj_int_or(data_obj, "target_ticks", -1);
+    if (target < 0) {
+        return _err_response(req_id, "Invalid target_ticks (must be >= 0)",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+#ifndef MZ800EMU_MCP_TEST_BUILD
+    if (!EMULATOR_TEST_PAUSED) {
+        return _err_response(req_id,
+                             "Emulator is running: run_until_tstate needs a "
+                             "paused emulator (pause it first, e.g. emu_pause)",
+                             MCP_DISPATCH_EMU_ERROR, out_response);
+    }
+#endif
+    st_DBGAPI_RUN_UNTIL_TICKS_PARAM p;
+    memset(&p, 0, sizeof(p));
+    p.target_ticks = (uint64_t)target;
+    st_DBGAPI_RUN_START_RESULT r;
+    memset(&r, 0, sizeof(r));
+    if (!_submit_dbgapi(DBGAPI_CMD_RUN_UNTIL_TICKS, &p, &r)) {
+        return _err_response(req_id, "run_until_tstate failed",
+                             MCP_DISPATCH_EMU_ERROR, out_response);
+    }
+    if (r.status == DBGAPI_RUN_TO_PAUSED_ONLY) {
+        return _err_response(req_id,
+                             "Emulator was running: run_until_tstate needs a "
+                             "paused emulator; it has been paused now, call "
+                             "run_until_tstate again",
+                             MCP_DISPATCH_EMU_ERROR, out_response);
+    }
+
+    bool reached = p.reached_now;
+    bool time_limited = false;
+    const char *stopped_by = "run_until_ticks";
+    uint64_t landed = p.now_ticks;
+    if (!p.reached_now) {
+        st_RUN_LOG_RECORD rec;
+        bool found = false;
+        en_RUN_LOG_WAIT w = run_log_wait(r.run_seq, MCP_STEP_LOOP_TIME_LIMIT_MS, &rec, &found);
+        if (w == RUN_LOG_WAIT_TIMEOUT) {
+            /* Cíl je moc daleko: pauza zruší i zastavení na čase. */
+            time_limited = true;
+            _submit_dbgapi(DBGAPI_CMD_PAUSE, NULL, NULL);
+            w = run_log_wait(r.run_seq, MCP_WAIT_STOP_MAX_MS, &rec, &found);
+        }
+        if (w != RUN_LOG_WAIT_DONE || !found) {
+            return _err_response(req_id, "run_until_tstate: the run did not stop",
+                                 MCP_DISPATCH_EMU_ERROR, out_response);
+        }
+        landed = rec.stop_ticks;
+        stopped_by = rec.reason;
+        reached = !time_limited && (strcmp(rec.reason, "run_until_ticks") == 0);
+    }
+
+    JsonObject *resp = json_object_new();
+    json_object_set_int_member(resp, "ticks", (gint64)landed);
+    json_object_set_int_member(resp, "target_ticks", target);
+    json_object_set_int_member(resp, "delta_ticks", (gint64)(landed - p.now_ticks));
+    json_object_set_boolean_member(resp, "exact", (landed == (uint64_t)target) ? TRUE : FALSE);
+    json_object_set_boolean_member(resp, "reached", reached ? TRUE : FALSE);
+    json_object_set_string_member(resp, "stopped_by", stopped_by);
+    json_object_set_boolean_member(resp, "time_limited", time_limited ? TRUE : FALSE);
+    json_object_set_int_member(resp, "run_seq", (gint64)r.run_seq);
+    return _ok_response(req_id, resp, out_response);
+}
+
+
+/**
  * @brief `run_until_tstate` handler - run do absolutního cycle counteru.
  *
  * Parametry v `data`:
@@ -6498,6 +6597,10 @@ static en_MCP_DISPATCH_RESULT _handle_run_until_raster(const st_JSONL_MESSAGE *r
  *  - `target`       (int)  - echo
  *  - `delta_cycles` (int)  - reálně utracené T-states
  *  - `reached`      (bool) - true pokud >= target
+ *
+ * S parametrem `target_ticks` místo `target_total_cycles` běží cesta
+ * _run_until_ticks() (čas v 64bitových taktech GDG, zastavení v emu
+ * vlákně), viz tam.
  */
 static en_MCP_DISPATCH_RESULT _handle_run_until_tstate(const st_JSONL_MESSAGE *req,
                                                         char **out_response) {
@@ -6508,6 +6611,9 @@ static en_MCP_DISPATCH_RESULT _handle_run_until_tstate(const st_JSONL_MESSAGE *r
                              MCP_DISPATCH_INVALID_PARAMS, out_response);
     }
     JsonObject *data_obj = json_node_get_object(data_node);
+    if (json_object_has_member(data_obj, "target_ticks")) {
+        return _run_until_ticks(req_id, data_obj, out_response);
+    }
     gint64 target = _obj_int_or(data_obj, "target_total_cycles", -1);
     if (target < 0 || target > 0xFFFFFFFFLL) {
         return _err_response(req_id,
@@ -8667,27 +8773,26 @@ static en_MCP_DISPATCH_RESULT _trace_err_owned(int64_t req_id, char *msg,
 }
 
 /**
- * @brief `trace_read` handler - stránka záznamů kanálu Trace Suite.
+ * @brief Výkonná část `trace_read` nad objektem parametrů.
  *
- * Parametry a odpověď viz devdoc/trace/stream-read.md (channel, cursor,
- * from, limit, format, columns, filter, max_chars, max_scan). Postup:
- * snímek kanálu v emu vlákně (metadata + kopie RAM), čtení chunků
- * z disku a sestavení stránky v dispatch vlákně (trace_reader_page),
- * symboly a jména značek druhým dotazem v emu vlákně, nakonec kontrola,
- * že se segment mezitím nezměnil (jinak chyba `segment_replaced:`).
+ * Sdílí ji handler `trace_read` a `replay_goto` (převod `seq` záznamu
+ * cputrack na čas a registry záznamu pro `trace_check`).
+ *
+ * @param req_id       ID požadavku (do chybové odpovědi).
+ * @param d            Parametry jako `data` požadavku `trace_read`.
+ * @param[out] out_data Při úspěchu datový objekt odpovědi (vlastní volající).
+ * @param[out] out_response Při chybě chybová odpověď (volající `free()`).
+ * @return MCP_DISPATCH_OK (out_data platný), jinak chybový kód (out_response).
  */
-static en_MCP_DISPATCH_RESULT _handle_trace_read(const st_JSONL_MESSAGE *req,
-                                                 char **out_response) {
-    int64_t req_id = jsonl_msg_get_req_id(req);
+static en_MCP_DISPATCH_RESULT _trace_read_exec(int64_t req_id, JsonObject *d,
+                                               JsonObject **out_data, char **out_response) {
+    *out_data = NULL;
     en_TRACE_KIND ch;
-    JsonNode *dn = (JsonNode *)jsonl_msg_get_data_node(req);
-    if (!dn || json_node_get_node_type(dn) != JSON_NODE_OBJECT
-        || !_obj_is_string(json_node_get_object(dn), "channel")
-        || !_trace_read_parse_channel(json_object_get_string_member(json_node_get_object(dn), "channel"), &ch)) {
+    if (!d || !_obj_is_string(d, "channel")
+        || !_trace_read_parse_channel(json_object_get_string_member(d, "channel"), &ch)) {
         return _err_response(req_id, "Invalid parameters: unknown channel",
                              MCP_DISPATCH_INVALID_PARAMS, out_response);
     }
-    JsonObject *d = json_node_get_object(dn);
     const char *chname = s_trace_read_channels[ch];
     en_TRACE_KIND kind = ch;
 
@@ -8929,7 +9034,29 @@ static en_MCP_DISPATCH_RESULT _handle_trace_read(const st_JSONL_MESSAGE *req,
     json_object_set_string_member(resp, "next_cursor", nc);
     g_free(nc);
     tlog_read_snapshot_clear(&p.out);
-    return _ok_response(req_id, resp, out_response);
+    *out_data = resp;
+    return MCP_DISPATCH_OK;
+}
+
+
+/**
+ * @brief `trace_read` handler - stránka záznamů kanálu Trace Suite.
+ *
+ * Parametry a odpověď viz devdoc/trace/stream-read.md (channel, cursor,
+ * from, limit, format, columns, filter, max_chars, max_scan). Postup:
+ * snímek kanálu v emu vlákně (metadata + kopie RAM), čtení chunků
+ * z disku a sestavení stránky v dispatch vlákně (trace_reader_page),
+ * symboly a jména značek druhým dotazem v emu vlákně, nakonec kontrola,
+ * že se segment mezitím nezměnil (jinak chyba `segment_replaced:`).
+ */
+static en_MCP_DISPATCH_RESULT _handle_trace_read(const st_JSONL_MESSAGE *req,
+                                                 char **out_response) {
+    int64_t req_id = jsonl_msg_get_req_id(req);
+    JsonNode *dn = (JsonNode *)jsonl_msg_get_data_node(req);
+    JsonObject *d = ( dn && json_node_get_node_type(dn) == JSON_NODE_OBJECT ) ? json_node_get_object(dn) : NULL;
+    JsonObject *data = NULL;
+    en_MCP_DISPATCH_RESULT rc = _trace_read_exec(req_id, d, &data, out_response);
+    return data ? _ok_response(req_id, data, out_response) : rc;
 }
 
 
@@ -17938,42 +18065,23 @@ static void _observe_windows_to_json(JsonObject *data, const st_DBGAPI_OBSERVE_W
 }
 
 /**
- * @brief `state_observe` handler - registry, příznaky a okna paměti z jednoho okamžiku.
+ * @brief Výkonná část `state_observe` nad objektem parametrů.
  *
- * Parametry v `data`:
- *  - `windows` (pole 0..16, povinné): okno CPU `{addr, len}` (aktuální
- *    mapování, addr + len <= 10000h) nebo regionu `{region: {kind, sub_id},
- *    offset, length}` (druh jako v `regions_list`, bez `region_id`, takže
- *    okno platí i po změně sestavy HW); volitelně `name` (štítek do
- *    64 znaků, vrací se zpět) a `want_data`. Součet délek nejvýš 65536 B.
- *  - `want_data` (bool, default true): výchozí volba dat pro okna.
- *  - `include` (pole): volitelné sekce `raster`, `im2`, `last_instr`
- *    (schéma `get_cpu_panel_batch`), `memory_map`.
- *  - `hashes` (pole): hashe částí stavu `cpu`, `ram`, `vram`, `memext`,
- *    `pcg` (state_hash.h, stejná definice jako replay a result.json).
+ * Sdílí ji handler `state_observe` a `replay_goto` (výstup `observe`).
  *
- * Vše čte emu vlákno v jednom průchodu fronty (DBGAPI_CMD_STATE_OBSERVE):
- * za běhu na hranici snímku, v pauze okamžitě. Hash oken (SHA-256) počítá
- * dispatch vlákno z kopie dat.
- *
- * Response: `run_seq`, `running`, `stable` (= !running), `drain`
- * (`frame` za běhu, `paused`), `time` {`frame`, `frame_ticks`,
- * `total_cycles`}, `regs`, `flags`, `windows`, `complete` (false =
- * některé okno nedostupné), volitelně `hashes` (nedostupná část = null),
- * `raster`, `im2`, `last_instr`, `memory_map`.
- *
- * Chyby: neplatné parametry a okno regionu přes jeho konec =
- * `Invalid parameters: ...`; nic se nevrací, stav se nemění.
+ * @param req_id       ID požadavku (do chybové odpovědi).
+ * @param obj          Parametry jako `data` požadavku `state_observe`.
+ * @param[out] out_data Při úspěchu datový objekt odpovědi (vlastní volající).
+ * @param[out] out_response Při chybě chybová odpověď (volající `free()`).
+ * @return MCP_DISPATCH_OK (out_data platný), jinak chybový kód (out_response).
  */
-static en_MCP_DISPATCH_RESULT _handle_state_observe(const st_JSONL_MESSAGE *req,
-                                                    char **out_response) {
-    int64_t req_id = jsonl_msg_get_req_id(req);
-    JsonNode *data_node = (JsonNode *)jsonl_msg_get_data_node(req);
-    if (!data_node || json_node_get_node_type(data_node) != JSON_NODE_OBJECT) {
+static en_MCP_DISPATCH_RESULT _state_observe_exec(int64_t req_id, JsonObject *obj,
+                                                  JsonObject **out_data, char **out_response) {
+    *out_data = NULL;
+    if (!obj) {
         return _err_response(req_id, "Invalid parameters: data must be an object",
                              MCP_DISPATCH_INVALID_PARAMS, out_response);
     }
-    JsonObject *obj = json_node_get_object(data_node);
     JsonNode *wn = json_object_get_member(obj, "windows");
     if (!wn || !JSON_NODE_HOLDS_ARRAY(wn)) {
         return _err_response(req_id, "Invalid parameters: windows must be an array",
@@ -18068,6 +18176,7 @@ static en_MCP_DISPATCH_RESULT _handle_state_observe(const st_JSONL_MESSAGE *req,
     JsonObject *tm = json_object_new();
     json_object_set_int_member(tm, "frame", (gint64)p->frame);
     json_object_set_int_member(tm, "frame_ticks", (gint64)p->frame_ticks);
+    json_object_set_int_member(tm, "ticks", (gint64)p->ticks);
     json_object_set_int_member(tm, "total_cycles", (gint64)p->total_cycles);
     json_object_set_object_member(data, "time", tm);
     _cpu_panel_core_to_json(data, &p->panel);
@@ -18087,7 +18196,8 @@ static en_MCP_DISPATCH_RESULT _handle_state_observe(const st_JSONL_MESSAGE *req,
         json_object_set_object_member(data, "hashes", ho);
     }
     if (p->want_memory_map) _observe_memory_map_to_json(data, p);
-    rc = _ok_response(req_id, data, out_response);
+    *out_data = data;
+    rc = MCP_DISPATCH_OK;
 
 out:
     g_free(msg);
@@ -18096,6 +18206,46 @@ out:
     g_free(wins);
     g_free(p);
     return rc;
+}
+
+
+/**
+ * @brief `state_observe` handler - registry, příznaky a okna paměti z jednoho okamžiku.
+ *
+ * Parametry v `data`:
+ *  - `windows` (pole 0..16, povinné): okno CPU `{addr, len}` (aktuální
+ *    mapování, addr + len <= 10000h) nebo regionu `{region: {kind, sub_id},
+ *    offset, length}` (druh jako v `regions_list`, bez `region_id`, takže
+ *    okno platí i po změně sestavy HW); volitelně `name` (štítek do
+ *    64 znaků, vrací se zpět) a `want_data`. Součet délek nejvýš 65536 B.
+ *  - `want_data` (bool, default true): výchozí volba dat pro okna.
+ *  - `include` (pole): volitelné sekce `raster`, `im2`, `last_instr`
+ *    (schéma `get_cpu_panel_batch`), `memory_map`.
+ *  - `hashes` (pole): hashe částí stavu `cpu`, `ram`, `vram`, `memext`,
+ *    `pcg` (state_hash.h, stejná definice jako replay a result.json).
+ *
+ * Vše čte emu vlákno v jednom průchodu fronty (DBGAPI_CMD_STATE_OBSERVE):
+ * za běhu na hranici snímku, v pauze okamžitě. Hash oken (SHA-256) počítá
+ * dispatch vlákno z kopie dat.
+ *
+ * Response: `run_seq`, `running`, `stable` (= !running), `drain`
+ * (`frame` za běhu, `paused`), `time` {`frame`, `frame_ticks`,
+ * `total_cycles`}, `regs`, `flags`, `windows`, `complete` (false =
+ * některé okno nedostupné), volitelně `hashes` (nedostupná část = null),
+ * `raster`, `im2`, `last_instr`, `memory_map`.
+ *
+ * Chyby: neplatné parametry a okno regionu přes jeho konec =
+ * `Invalid parameters: ...`; nic se nevrací, stav se nemění.
+ */
+static en_MCP_DISPATCH_RESULT _handle_state_observe(const st_JSONL_MESSAGE *req,
+                                                    char **out_response) {
+    int64_t req_id = jsonl_msg_get_req_id(req);
+    JsonNode *data_node = (JsonNode *)jsonl_msg_get_data_node(req);
+    JsonObject *obj = (data_node && json_node_get_node_type(data_node) == JSON_NODE_OBJECT)
+                      ? json_node_get_object(data_node) : NULL;
+    JsonObject *data = NULL;
+    en_MCP_DISPATCH_RESULT rc = _state_observe_exec(req_id, obj, &data, out_response);
+    return data ? _ok_response(req_id, data, out_response) : rc;
 }
 
 
@@ -19031,6 +19181,8 @@ static JsonObject *_replay_status_to_json(const st_REPLAY_STATUS *st) {
     json_object_set_int_member(o, "rerecord_count", (gint64)st->rerecord_count);
     json_object_set_boolean_member(o, "seeking", st->seeking ? TRUE : FALSE);
     json_object_set_int_member(o, "seek_target", (gint64)st->seek_target);
+    json_object_set_boolean_member(o, "goto_active", st->goto_active ? TRUE : FALSE);
+    json_object_set_int_member(o, "goto_target_t", (gint64)st->goto_target);
     JsonObject *ck = json_object_new();
     json_object_set_int_member(ck, "interval", (gint64)st->checkpoint_interval);
     json_object_set_int_member(ck, "capacity", (gint64)st->checkpoint_capacity);
@@ -19280,6 +19432,444 @@ static en_MCP_DISPATCH_RESULT _handle_replay_seek(const st_JSONL_MESSAGE *req,
         return _err_response(req_id, "frame must be >= 0", MCP_DISPATCH_INVALID_PARAMS, out_response);
     }
     return _replay_finish_request(req_id, replay_request_seek((uint32_t)frame), out_response);
+}
+
+
+/** @brief Nejdelší čekání `replay_goto` na konec dojetí [ms] (pod 30 s limitem wrapperu MCP). */
+#define MCP_REPLAY_GOTO_WAIT_MAX_MS 25000
+/** @brief Výchozí čekání `replay_goto` na konec dojetí [ms]. */
+#define MCP_REPLAY_GOTO_WAIT_DEFAULT_MS 20000
+
+/** @brief Registry porovnávané `trace_check` (sloupec trace, klíč observe, dělení IR). */
+static const struct {
+    const char *col;   /**< Sloupec cputrack v3. */
+    const char *reg;   /**< Klíč v `regs` observe (NULL = příznak ve `flags`). */
+    int ir_part;       /**< 1 = I (horní bajt IR), 2 = R (dolní bajt IR), 0 = celý registr. */
+} s_goto_check_regs[] = {
+    { "af", "AF", 0 }, { "bc", "BC", 0 }, { "de", "DE", 0 }, { "hl", "HL", 0 },
+    { "ix", "IX", 0 }, { "iy", "IY", 0 }, { "sp", "SP", 0 }, { "wz", "WZ", 0 },
+    { "i", "IR", 1 }, { "r", "IR", 2 },
+};
+
+
+/**
+ * @brief Řádek stránky trace_read podle `seq` jako objekt sloupec -> hodnota.
+ *
+ * @param page Datový objekt `trace_read` (`columns`, `rows`).
+ * @param seq  Hledané pořadí záznamu.
+ * @return Nový objekt (vlastní volající), NULL = řádek ve stránce není.
+ */
+static JsonObject *_goto_trace_row(JsonObject *page, int64_t seq) {
+    JsonArray *cols = json_object_get_array_member(page, "columns");
+    JsonArray *rows = json_object_get_array_member(page, "rows");
+    if (!cols || !rows) return NULL;
+    guint nc = json_array_get_length(cols);
+    for (guint i = 0; i < json_array_get_length(rows); i++) {
+        JsonArray *row = json_array_get_array_element(rows, i);
+        if (!row || json_array_get_length(row) != nc) continue;
+        JsonObject *o = json_object_new();
+        for (guint c = 0; c < nc; c++) {
+            json_object_set_member(o, json_array_get_string_element(cols, c),
+                                   json_node_copy(json_array_get_element(row, c)));
+        }
+        if (json_object_has_member(o, "seq") && json_object_get_int_member(o, "seq") == seq) return o;
+        json_object_unref(o);
+    }
+    return NULL;
+}
+
+
+/**
+ * @brief Celočíselný sloupec řádku, nebo -1 (chybí, null).
+ *
+ * `trace_read` vrací adresy a registry (`pc`, `af` ...) jako hexadecimální
+ * řetězec bez prefixu, čas a délky jako číslo; obojí se převede na číslo.
+ */
+static int64_t _goto_row_int(JsonObject *row, const char *col) {
+    if (!row || !json_object_has_member(row, col)) return -1;
+    JsonNode *n = json_object_get_member(row, col);
+    if (!n || JSON_NODE_TYPE(n) != JSON_NODE_VALUE) return -1;
+    if (json_node_get_value_type(n) == G_TYPE_STRING) {
+        const char *str = json_node_get_string(n);
+        char *end = NULL;
+        gint64 v = str ? g_ascii_strtoll(str, &end, 16) : -1;
+        return (str && end != str && *end == '\0') ? v : -1;
+    }
+    return json_node_get_int(n);
+}
+
+
+/** @brief Druh záznamu (`kind`) řádku, "" = neznámý. */
+static const char *_goto_row_kind(JsonObject *row) {
+    if (!row || !json_object_has_member(row, "kind")) return "";
+    const char *k = json_object_get_string_member(row, "kind");
+    return k ? k : "";
+}
+
+
+/**
+ * @brief Cíl goto z řádků cputrack: čas, očekávaný stav a `after_int_ack`.
+ *
+ * Cílový záznam R = N (`before`) nebo N+1 (`after`); čas cíle t(R). Stav
+ * v cíli = registry po R-1; je-li R přijetí přerušení, zastavení dojede až
+ * za něj (stav po přijetí = registry po R, `after_int_ack`); synchronizační
+ * záznam nese stav sám. Chybí-li N+1 (konec segmentu), čas = t(N) + délka N.
+ *
+ * @param req_id       ID požadavku.
+ * @param tr           Objekt `trace` z parametrů.
+ * @param[out] out_t   Cílový čas v taktech GDG.
+ * @param[out] out_after_int_ack true = cíl je přijetí přerušení.
+ * @param[out] out_expect Očekávaný stav (sloupce řádku) pro trace_check, NULL = bez kontroly (v2).
+ * @param[out] out_expect_pc PC očekávané v cíli, -1 = neznámé.
+ * @param[out] out_response Chybová odpověď.
+ * @return MCP_DISPATCH_OK, jinak chyba (out_response).
+ */
+static en_MCP_DISPATCH_RESULT _goto_trace_target(int64_t req_id, JsonObject *tr, uint64_t *out_t,
+                                                 bool *out_after_int_ack, JsonObject **out_expect,
+                                                 int64_t *out_expect_pc, char **out_response) {
+    *out_expect = NULL;
+    *out_expect_pc = -1;
+    *out_after_int_ack = false;
+    const char *chan = _obj_is_string(tr, "channel") ? json_object_get_string_member(tr, "channel") : "cputrack";
+    if (strcmp(chan, "cputrack") != 0) {
+        return _err_response(req_id, "Invalid parameters: trace.channel must be cputrack",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+    gint64 seq = _obj_int_or(tr, "seq", -1);
+    if (seq < 0) {
+        return _err_response(req_id, "Invalid parameters: trace.seq must be >= 0",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+    bool after = false;
+    if (json_object_has_member(tr, "at")) {
+        const char *at = _obj_is_string(tr, "at") ? json_object_get_string_member(tr, "at") : NULL;
+        if (!at || (strcmp(at, "before") != 0 && strcmp(at, "after") != 0)) {
+            return _err_response(req_id, "Invalid parameters: trace.at must be before or after",
+                                 MCP_DISPATCH_INVALID_PARAMS, out_response);
+        }
+        after = (strcmp(at, "after") == 0);
+    }
+
+    /* Řádky N-1 .. N+1 (s registry, segment v2 bez nich). */
+    gint64 from = seq > 0 ? seq - 1 : 0;
+    JsonObject *page = NULL;
+    for (int with_regs = 1; with_regs >= 0 && !page; with_regs--) {
+        JsonObject *q = json_object_new();
+        json_object_set_string_member(q, "channel", "cputrack");
+        char fs[48];
+        g_snprintf(fs, sizeof(fs), "seq:%" G_GINT64_FORMAT, from);
+        json_object_set_string_member(q, "from", fs);
+        json_object_set_int_member(q, "limit", 3);
+        JsonArray *cols = json_array_new();
+        static const char *const base[] = { "seq", "pc", "t_std", "wait", "t", "kind" };
+        for (unsigned i = 0; i < G_N_ELEMENTS(base); i++) json_array_add_string_element(cols, base[i]);
+        if (with_regs) {
+            for (unsigned i = 0; i < G_N_ELEMENTS(s_goto_check_regs); i++) {
+                json_array_add_string_element(cols, s_goto_check_regs[i].col);
+            }
+            json_object_set_string_member(q, "regs", "after");
+        }
+        json_object_set_array_member(q, "columns", cols);
+        char *err = NULL;
+        en_MCP_DISPATCH_RESULT rc = _trace_read_exec(req_id, q, &page, &err);
+        json_object_unref(q);
+        if (!page && err && strstr(err, "beyond next_seq")) {
+            free(err);
+            return _err_response(req_id, "Invalid parameters: trace.seq is not in the current cputrack segment",
+                                 MCP_DISPATCH_INVALID_PARAMS, out_response);
+        }
+        if (!page && (with_regs == 0 || !err || !strstr(err, "register"))) {
+            /* Chyba nesouvisí s registry (nebo už bez nich): vrátit ji. */
+            *out_response = err;
+            return rc;
+        }
+        free(err);
+    }
+    JsonObject *prev = (seq > 0) ? _goto_trace_row(page, seq - 1) : NULL;
+    JsonObject *rn = _goto_trace_row(page, seq);
+    JsonObject *rn1 = _goto_trace_row(page, seq + 1);
+    en_MCP_DISPATCH_RESULT rc = MCP_DISPATCH_OK;
+    if (!rn) {
+        rc = _err_response(req_id, "Invalid parameters: trace.seq is not in the current cputrack segment",
+                           MCP_DISPATCH_INVALID_PARAMS, out_response);
+        goto out;
+    }
+    if (_goto_row_int(rn, "t") < 0) {
+        rc = _err_response(req_id, "this cputrack segment has no time (PC filter): use t instead",
+                           MCP_DISPATCH_INVALID_PARAMS, out_response);
+        goto out;
+    }
+    bool has_regs = json_object_has_member(rn, "af");
+    JsonObject *r_target = after ? rn1 : rn;      /* R */
+    JsonObject *r_before = after ? rn : prev;     /* R-1 */
+    JsonObject *expect = NULL;
+    if (!r_target) {
+        /* Za koncem segmentu: konec záznamu N. */
+        *out_t = (uint64_t)_goto_row_int(rn, "t")
+                 + ((uint64_t)_goto_row_int(rn, "t_std") + (uint64_t)_goto_row_int(rn, "wait"))
+                   * (uint64_t)GDGCLK2CPU_DIVIDER;
+        expect = rn;
+    } else {
+        *out_t = (uint64_t)_goto_row_int(r_target, "t");
+        const char *k = _goto_row_kind(r_target);
+        if (strcmp(k, "int") == 0) {
+            *out_after_int_ack = true;
+            expect = r_target;
+            /* PC po přijetí = adresa obsluhy (pc záznamu přijetí). */
+            *out_expect_pc = _goto_row_int(r_target, "pc");
+        } else if (strcmp(k, "sync") == 0 || !r_before) {
+            expect = r_target;
+            *out_expect_pc = _goto_row_int(r_target, "pc");
+        } else {
+            expect = r_before;
+            *out_expect_pc = _goto_row_int(r_target, "pc");
+        }
+    }
+    if (has_regs && expect) *out_expect = json_object_ref(expect);
+out:
+    if (prev) json_object_unref(prev);
+    if (rn) json_object_unref(rn);
+    if (rn1) json_object_unref(rn1);
+    json_object_unref(page);
+    return rc;
+}
+
+
+/**
+ * @brief trace_check: registry ze záznamu proti dosaženému stavu (observe).
+ *
+ * @return Objekt {match, mismatch: {reg: [expected, got]}} (vlastní volající).
+ */
+static JsonObject *_goto_trace_check(JsonObject *expect, int64_t expect_pc, JsonObject *observe) {
+    JsonObject *o = json_object_new();
+    JsonObject *mis = json_object_new();
+    JsonObject *regs = json_object_get_object_member(observe, "regs");
+    bool match = true;
+    for (unsigned i = 0; regs && i < G_N_ELEMENTS(s_goto_check_regs); i++) {
+        int64_t want = _goto_row_int(expect, s_goto_check_regs[i].col);
+        int64_t got = json_object_get_int_member(regs, s_goto_check_regs[i].reg);
+        if (s_goto_check_regs[i].ir_part == 1) got = (got >> 8) & 0xFF;
+        else if (s_goto_check_regs[i].ir_part == 2) got &= 0xFF;
+        if (want < 0 || want == got) continue;
+        match = false;
+        JsonArray *pair = json_array_new();
+        json_array_add_int_element(pair, want);
+        json_array_add_int_element(pair, got);
+        json_object_set_array_member(mis, s_goto_check_regs[i].col, pair);
+    }
+    if (regs && expect_pc >= 0 && json_object_get_int_member(regs, "PC") != expect_pc) {
+        match = false;
+        JsonArray *pair = json_array_new();
+        json_array_add_int_element(pair, expect_pc);
+        json_array_add_int_element(pair, json_object_get_int_member(regs, "PC"));
+        json_object_set_array_member(mis, "pc", pair);
+    }
+    json_object_set_boolean_member(o, "match", match ? TRUE : FALSE);
+    json_object_set_object_member(o, "mismatch", mis);
+    return o;
+}
+
+
+/**
+ * @brief `replay_goto` handler - stav stroje v libovolném čase přehrávaného záznamu.
+ *
+ * Parametry v `data` (adresa právě jedna z):
+ *  - `t` (int): čas v taktech GDG (sloupec `t` trace, `time.ticks`
+ *    ze `state_observe`, `stop_ticks`),
+ *  - `frame` + `frame_ticks` (int): absolutní snímek a takt ve snímku
+ *    (`time.frame`, `time.frame_ticks` ze `state_observe`),
+ *  - `trace` {`channel` "cputrack", `seq`, `at` "before" (výchozí) | "after"}:
+ *    záznam aktuálního segmentu cputrack (čas z jeho `t`).
+ * Další: `observe` (objekt parametrů `state_observe`, výchozí bez oken),
+ * `breakpoints` "suppress" (výchozí) | "keep", `checkpoint` (bool, uložit
+ * checkpoint na hranici snímku seeku), `timeout_ms` (0..25000, výchozí
+ * 20000; 0 = nečekat na dojetí).
+ *
+ * Postup: replay_request_goto() (seek a zastavení na čase v emu vlákně),
+ * čekání na vyřízení, pak na konec běhu (run_log_wait()); po zastavení
+ * `state_observe` a u adresy `trace` nad segmentem v3 `trace_check`.
+ *
+ * Response: `done` (false = dojetí ještě běží, `run_seq` pro `wait_stop`),
+ * `reached` (zastaveno na cíli), `stopped_by`, `target_t`, `t` (čas
+ * zastavení), `exact`, `after_int_ack` (jen `trace`), `seek_from`
+ * ("checkpoint" / "restart" / "none") a `seek_from_frame`,
+ * `checkpoint_saved`, `replay_frame`, `run_seq`, `observe`, `trace_check`.
+ */
+static en_MCP_DISPATCH_RESULT _handle_replay_goto(const st_JSONL_MESSAGE *req,
+                                                  char **out_response) {
+    int64_t req_id = jsonl_msg_get_req_id(req);
+    JsonObject *obj = _replay_data_obj(req);
+    if (!obj) {
+        return _err_response(req_id, "Invalid parameters: give t, frame + frame_ticks or trace",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+    int n_addr = (json_object_has_member(obj, "t") ? 1 : 0)
+               + (json_object_has_member(obj, "frame") ? 1 : 0)
+               + (json_object_has_member(obj, "trace") ? 1 : 0);
+    if (n_addr != 1) {
+        return _err_response(req_id, "Invalid parameters: give exactly one of t, frame + frame_ticks, trace",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+    bool keep = false;
+    if (json_object_has_member(obj, "breakpoints")) {
+        const char *b = _obj_is_string(obj, "breakpoints") ? json_object_get_string_member(obj, "breakpoints") : NULL;
+        if (!b || (strcmp(b, "suppress") != 0 && strcmp(b, "keep") != 0)) {
+            return _err_response(req_id, "Invalid parameters: breakpoints must be suppress or keep",
+                                 MCP_DISPATCH_INVALID_PARAMS, out_response);
+        }
+        keep = (strcmp(b, "keep") == 0);
+    }
+    bool ckpt = false;
+    if (json_object_has_member(obj, "checkpoint")) {
+        JsonNode *n = json_object_get_member(obj, "checkpoint");
+        if (!n || json_node_get_value_type(n) != G_TYPE_BOOLEAN) {
+            return _err_response(req_id, "Invalid parameters: checkpoint must be a boolean",
+                                 MCP_DISPATCH_INVALID_PARAMS, out_response);
+        }
+        ckpt = json_node_get_boolean(n) ? true : false;
+    }
+    gint64 timeout_ms = _obj_int_or(obj, "timeout_ms", MCP_REPLAY_GOTO_WAIT_DEFAULT_MS);
+    if (timeout_ms < 0 || timeout_ms > MCP_REPLAY_GOTO_WAIT_MAX_MS) {
+        return _err_response(req_id, "Invalid parameters: timeout_ms must be in range 0..25000",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+    JsonObject *obs_params = NULL;
+    if (json_object_has_member(obj, "observe")) {
+        JsonNode *n = json_object_get_member(obj, "observe");
+        if (!n || !JSON_NODE_HOLDS_OBJECT(n)) {
+            return _err_response(req_id, "Invalid parameters: observe must be an object (state_observe parameters)",
+                                 MCP_DISPATCH_INVALID_PARAMS, out_response);
+        }
+        /* Kopie: doplnění windows nesmí měnit objekt požadavku. */
+        JsonNode *copy = json_node_copy(n);
+        obs_params = json_node_dup_object(copy);
+        json_node_unref(copy);
+    } else {
+        obs_params = json_object_new();
+    }
+    if (!json_object_has_member(obs_params, "windows")) {
+        json_object_set_array_member(obs_params, "windows", json_array_new());
+    }
+
+    uint64_t target = 0;
+    bool from_trace = false, after_int_ack = false;
+    JsonObject *expect = NULL;
+    int64_t expect_pc = -1;
+    en_MCP_DISPATCH_RESULT rc = MCP_DISPATCH_OK;
+    if (json_object_has_member(obj, "t")) {
+        gint64 t = _obj_int_or(obj, "t", -1);
+        if (t < 0) {
+            rc = _err_response(req_id, "Invalid parameters: t must be >= 0",
+                               MCP_DISPATCH_INVALID_PARAMS, out_response);
+            goto out;
+        }
+        target = (uint64_t)t;
+    } else if (json_object_has_member(obj, "frame")) {
+        gint64 f = _obj_int_or(obj, "frame", -1);
+        gint64 ft = _obj_int_or(obj, "frame_ticks", -1);
+        uint32_t per = (uint32_t)VIDEO_SCREEN_TICKS;
+        if (f < 0 || ft < 0 || (uint64_t)ft >= per) {
+            rc = _err_response(req_id, "Invalid parameters: frame >= 0 and frame_ticks in range 0..ticks per frame - 1",
+                               MCP_DISPATCH_INVALID_PARAMS, out_response);
+            goto out;
+        }
+        target = (uint64_t)f * per + (uint64_t)ft;
+    } else {
+        JsonNode *n = json_object_get_member(obj, "trace");
+        if (!n || !JSON_NODE_HOLDS_OBJECT(n)) {
+            rc = _err_response(req_id, "Invalid parameters: trace must be an object {channel, seq, at}",
+                               MCP_DISPATCH_INVALID_PARAMS, out_response);
+            goto out;
+        }
+        rc = _goto_trace_target(req_id, json_node_get_object(n), &target, &after_int_ack,
+                                &expect, &expect_pc, out_response);
+        if (rc != MCP_DISPATCH_OK) goto out;
+        from_trace = true;
+    }
+
+    {
+        uint64_t seq0 = run_log_current(NULL);
+        uint32_t rseq = replay_request_goto(target, keep, ckpt);
+        if (!replay_wait_request(rseq, MCP_REPLAY_REQUEST_TIMEOUT_MS)) {
+            rc = _err_response(req_id, "replay request was not processed in time",
+                               MCP_DISPATCH_EMU_ERROR, out_response);
+            goto out;
+        }
+        st_REPLAY_STATUS st;
+        replay_get_status(&st);
+        if (!st.request_ok) {
+            rc = _err_response(req_id, st.request_message[0] ? st.request_message : "replay_goto failed",
+                               MCP_DISPATCH_EMU_ERROR, out_response);
+            goto out;
+        }
+
+        /* Běh goto: požadavek se vyřizuje v pauze (běžící emulace se pro něj
+         * nejdřív zastaví), takže dojetí je vždy běh seq0 + 1. Vyřízení
+         * požadavku se ohlásí ještě v pauze, před rozběhem: běh se pozná
+         * podle goto_active (goto běží), nebo podle toho, že už začal
+         * (rychlé dojetí mohlo i skončit). Bez běhu goto skončilo hned. */
+        uint64_t goto_run = seq0 + 1;
+        uint64_t cur = run_log_current(NULL);
+        bool ran = st.goto_active || cur >= goto_run;
+        bool done = true;
+        st_RUN_LOG_RECORD rec;
+        run_log_record_clear(&rec);
+        bool have_rec = false;
+        if (ran) {
+            bool found = false;
+            en_RUN_LOG_WAIT w = run_log_wait(goto_run, (int)timeout_ms, &rec, &found);
+            done = (w == RUN_LOG_WAIT_DONE);
+            have_rec = done && found;
+            cur = goto_run;
+        }
+        replay_get_status(&st);
+
+        JsonObject *resp = json_object_new();
+        json_object_set_boolean_member(resp, "done", done ? TRUE : FALSE);
+        json_object_set_int_member(resp, "target_t", (gint64)target);
+        json_object_set_int_member(resp, "run_seq", (gint64)cur);
+        if (st.goto_seek_from >= 0) {
+            json_object_set_string_member(resp, "seek_from", "checkpoint");
+            json_object_set_int_member(resp, "seek_from_frame", (gint64)st.goto_seek_from);
+        } else {
+            json_object_set_string_member(resp, "seek_from",
+                st.goto_seek_from == REPLAY_GOTO_FROM_RESTART ? "restart" : "none");
+        }
+        json_object_set_boolean_member(resp, "checkpoint_saved", st.goto_checkpoint ? TRUE : FALSE);
+        if (from_trace) json_object_set_boolean_member(resp, "after_int_ack", after_int_ack ? TRUE : FALSE);
+        if (!done) {
+            json_object_set_boolean_member(resp, "running", TRUE);
+            rc = _ok_response(req_id, resp, out_response);
+            goto out;
+        }
+        const char *stopped_by = have_rec ? rec.reason : "replay_goto";
+        json_object_set_string_member(resp, "stopped_by", stopped_by);
+        json_object_set_boolean_member(resp, "reached", strcmp(stopped_by, "replay_goto") == 0 ? TRUE : FALSE);
+
+        JsonObject *observe = NULL;
+        char *oerr = NULL;
+        en_MCP_DISPATCH_RESULT orc = _state_observe_exec(req_id, obs_params, &observe, &oerr);
+        if (!observe) {
+            json_object_unref(resp);
+            *out_response = oerr;
+            rc = orc;
+            goto out;
+        }
+        JsonObject *tm = json_object_get_object_member(observe, "time");
+        uint64_t landed = tm ? (uint64_t)json_object_get_int_member(tm, "ticks") : 0;
+        json_object_set_int_member(resp, "t", (gint64)landed);
+        json_object_set_boolean_member(resp, "exact", landed == target ? TRUE : FALSE);
+        json_object_set_int_member(resp, "replay_frame", (gint64)st.frame);
+        if (expect) {
+            json_object_set_object_member(resp, "trace_check", _goto_trace_check(expect, expect_pc, observe));
+        }
+        json_object_set_object_member(resp, "observe", observe);
+        rc = _ok_response(req_id, resp, out_response);
+    }
+out:
+    if (expect) json_object_unref(expect);
+    json_object_unref(obs_params);
+    return rc;
 }
 
 

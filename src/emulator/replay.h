@@ -115,7 +115,23 @@ extern "C"
         uint32_t rerecord_count;     /**< Počet rewindů v probíhajícím nebo posledním záznamu. */
         bool seeking;                /**< Přehrávání právě dohrává na cíl seeku (MAX SPEED). */
         uint32_t seek_target;        /**< Cílový snímek seeku (platí při `seeking`). */
+        bool goto_active;            /**< Goto právě běží (seek a dojetí na čas). */
+        uint64_t goto_target;        /**< Cílový čas posledního goto v taktech GDG. */
+        int32_t goto_seek_from;      /**< Odkud poslední goto vyšlo: snímek checkpointu (>= 0),
+                                          REPLAY_GOTO_FROM_RESTART, REPLAY_GOTO_FROM_NONE. */
+        bool goto_checkpoint;        /**< Poslední goto uložilo checkpoint v cílovém snímku. */
     } st_REPLAY_STATUS;
+
+    /** @brief st_REPLAY_STATUS::goto_seek_from: goto dojelo bez seeku (cíl dopředu ve stejném snímku). */
+#define REPLAY_GOTO_FROM_NONE (-2)
+    /** @brief st_REPLAY_STATUS::goto_seek_from: seek zpět bez checkpointu = přehrávání od začátku. */
+#define REPLAY_GOTO_FROM_RESTART (-1)
+    /**
+     * @brief Hranice snímku B_f přijde až po instrukci, která konec snímku
+     *        přešla (a po přijetí přerušení): takty GDG od začátku snímku,
+     *        do kterých goto začíná o snímek dřív, aby seek nepřejel cíl.
+     */
+#define REPLAY_GOTO_BOUNDARY_MARGIN 4096u
 
     /**
      * @brief Nastavení checkpointů jednoho záznamu nebo přehrávání.
@@ -260,6 +276,30 @@ extern "C"
      * @return Číslo požadavku (jen při přehrávání, jinak se odmítne).
      */
     uint32_t replay_request_seek(uint32_t frame);
+
+    /**
+     * @brief Požádá o skok přehrávání na čas (goto, stav v libovolném bodě záznamu).
+     *
+     * Spočítá snímek cíle (o snímek dřív, je-li cíl v prvních
+     * REPLAY_GOTO_BOUNDARY_MARGIN taktech snímku), přesune se na jeho
+     * hranici jako replay_request_seek() (checkpoint, start od začátku, nebo
+     * bez seeku, je-li cíl dopředu ve stejném snímku) a dojede v MAX SPEED
+     * se zastavením na čase (run_control_stop_at_arm()): pauza s důvodem
+     * EMU_PAUSE_REASON_REPLAY_GOTO na začátku první instrukce s časem
+     * >= @p ticks. Uživatelské breakpointy jsou po dobu goto potlačené
+     * (g_debugger.bp_suppress), pokud @p keep_breakpoints není true.
+     * Goto končí první pauzou (cíl, breakpoint s keep, konec nebo rozjetí
+     * přehrávání, uživatel). Jen při přehrávání a v buildu s debuggerem.
+     *
+     * @param ticks                Cílový čas v taktech GDG (gdg_get_total_ticks()).
+     * @param keep_breakpoints     true = uživatelské breakpointy platí dál.
+     * @param checkpoint_at_target true = na hranici snímku seeku uložit
+     *                             checkpoint (další goto v okolí bez seeku od
+     *                             vzdálenějšího checkpointu); novější zůstanou.
+     * @return Číslo požadavku. Odmítnutí (mimo přehrávání, čas před startem
+     *         nebo za koncem záznamu) je ve stavu (`request_ok` = false).
+     */
+    uint32_t replay_request_goto(uint64_t ticks, bool keep_breakpoints, bool checkpoint_at_target);
 
     /**
      * @brief Požádá o konec: záznam uloží, přehrávání ukončí (výsledek `stopped`).

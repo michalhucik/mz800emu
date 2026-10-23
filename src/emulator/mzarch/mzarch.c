@@ -1059,6 +1059,36 @@ static inline void mzarch_main_process_interrupt(void)
  *
  *
  *******************************************************************************/
+
+/**
+ * @brief Po výstupu z pauzy znovu naplánovat kontrolu čekajícího přerušení.
+ *
+ * Výstup z pauzy přeplánuje další událost (mzarch_main_queue_next_event())
+ * a tím zahodí přerušení zkontrolovat po příští instrukci
+ * (MZEVENT_BREAK_MZARCH_INTERRUPT s takty 0), které při nepřerušeném běhu
+ * drží mzarch_main_process_interrupt(), insideop a změna IFF, dokud INT
+ * čeká. Bez obnovení se přerušení čekající v okamžiku pauzy (typicky
+ * pauza mezi EI a další instrukcí, nebo v HALT při zakázaném přerušení)
+ * přijme až s další skutečnou událostí, tedy později než bez pauzy, a běh
+ * se časově rozejde (N85: goto přehrávání a přehrávání záznamu po pauze).
+ * Kontrola navíc je bez vlivu na čas: blok událostí bez čekající události
+ * nic nezmění a mzarch_main_process_interrupt() při zakázaném přerušení
+ * jen znovu naplánuje kontrolu.
+ *
+ * @pre Emu vlákno, výstup z paused smyčky po mzarch_main_queue_next_event().
+ * @post Čeká-li linka INT, NMI nebo IRQ z injectu, je naplánovaná kontrola
+ *       po příští instrukci; jinak beze změny.
+ */
+static inline void mzarch_main_resume_interrupt_check(void)
+{
+    z80_t *cpu = g_mzarch_main.cpu;
+    if (g_mzarch_main.interrupt || cpu->nmi_pending || cpu->int_pending)
+    {
+        MZ800_MAIN_SET_EVENT(MZEVENT_BREAK_MZARCH_INTERRUPT, 0);
+    };
+}
+
+
 static inline void mzzarch_main_do_emulator_paused(void)
 {
     /* Video záznam: emulace stojí - běh k dočasnému BP (step over / run to cursor)
@@ -1224,6 +1254,7 @@ static inline void mzzarch_main_do_emulator_paused(void)
     else
     {
         mzarch_main_queue_next_event();
+        mzarch_main_resume_interrupt_check();
     };
 
     cmt_update_output();
@@ -1272,6 +1303,7 @@ static inline void mzzarch_main_do_emulator_paused(void)
          * vlastním vlákně, takže pauza zůstává okamžitě zrušitelná (Alt+P). */
         g_usleep(20 * 1000);
     };
+    mzarch_main_resume_interrupt_check();
 #endif
 }
 

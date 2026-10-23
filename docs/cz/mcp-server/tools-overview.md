@@ -46,7 +46,7 @@ dokumentu [Resources overview](resources-overview.md).
 | `emu_bookmark_remove` | ne | Odebere záložku podle ID |
 | `emu_step_out` | ne | Run dokud RET z aktuální subroutine (callstack pop), volitelně deadline |
 | `emu_run_until_raster` | ne | Run do GDG raster pozice (line + optional col) |
-| `emu_run_until_tstate` | ne | Run do absolutního Z80 cycle target |
+| `emu_run_until_tstate` | ne | Běh do času: takty GDG (`target_ticks`, zastaví emulátor sám) nebo 32bitový čítač T-stavů (`target_total_cycles`, krokování) |
 | `emu_run_until_event` | ne | Run dokud event (`frame_done`, `breakpoint_hit`) |
 | `emu_event_subscribe` | ne | Subscribe na seznam topics (`breakpoint_hit`, `paused`, `resumed`, `step_done`, `io_write`) |
 | `emu_event_unsubscribe` | ne | Unsubscribe topics (empty list = vše) |
@@ -92,6 +92,7 @@ dokumentu [Resources overview](resources-overview.md).
 | `emu_replay_play_stop` | ne | Ukončení běžícího přehrávání |
 | `emu_replay_rewind` | ano (nahradí stav emulátoru) | Návrat na checkpoint: při záznamu zahodí vstupy po něm a nahrává dál, při přehrávání skočí zpět |
 | `emu_replay_seek` | ano (nahradí stav emulátoru) | Skok přehrávání na snímek (zpět přes checkpoint nebo od začátku, dopředu v MAX SPEED) |
+| `emu_replay_goto` | ano (nahradí stav emulátoru) | Stav stroje v libovolném čase přehrávaného záznamu (čas, snímek a takt, nebo záznam trace cputrack), výstup jako `emu_state_observe` |
 | `emu_replay_status` | ne | Stav záznamu / přehrávání a výsledek posledního |
 | `emu_screenshot_save_to_file` | ano (vytvoří / přepíše soubor) | PNG obrazovky do souboru: oblast (full / canvas), měřítko (framebuffer / nativní body / okno 1-4), ořez |
 | `emu_screenshot_series_start` | ano (vytváří soubory) | Série snímků: PNG každého změněného emulovaného snímku (oblast, měřítko, ořez, only_changed, frames, max_files) |
@@ -499,7 +500,7 @@ snímky. Argumenty:
 - `want_data` (bool, default true) - false = u oken jen `sha256`
 
 Vrací `run_seq`, `running`, `stable` (true jen v pauze), `drain`
-(`frame` / `paused`), `time` (`frame`, `frame_ticks`, `total_cycles`),
+(`frame` / `paused`), `time` (`frame`, `frame_ticks`, `ticks` = takty GDG od startu emulátoru, `total_cycles`),
 `regs`, `flags`, `windows` (echo, `sha256` - stejná hodnota jako
 `emu_mem_read` / `emu_region_read` rozsahu - a `data_b64`), `complete`
 a vyžádané sekce. Nepřipojený region dá oknu `error:
@@ -854,16 +855,28 @@ skončila na bezpečnostním stropu nebo na časovém limitu.
 
 ### `emu_run_until_tstate`
 
-Spustí polling smyčku dokud absolutní Z80 cycle counter nedosáhne
-target. Cycle counter (`total_cycles` v raster snapshotu) je
-monotonicky rostoucí 32-bit T-state počet od resetu CPU.
+Běh do času. Cíl je právě jeden z:
 
-Argumenty:
+- `target_ticks` (int >= 0, doporučeno) - čas v taktech GDG od startu
+  emulátoru (sloupec `t` v `emu_trace_read`, `time.ticks` ze
+  `emu_state_observe`, `stop_ticks`, `Cycle` v podmínce breakpointu);
+  nepřetéká a reset ho nenuluje. Emulátor (v pauze) se rozběhne a sám se
+  zastaví na začátku první instrukce s časem >= cíl (důvod zastavení
+  `run_until_ticks`); přijetí přerušení mezi tím patří k předchozí
+  instrukci. Breakpoint může běh zastavit dřív. Cíl v minulosti nebo
+  teď vrátí hned `reached: true`. Odpověď: `{"ticks", "target_ticks",
+  "delta_ticks", "exact" (instrukce začala přesně v cíli), "reached",
+  "stopped_by", "time_limited", "run_seq"}`; po 20 s se emulace
+  pozastaví (`time_limited: true`).
+- `target_total_cycles` (int) - absolutní cílový cycle counter
+  (`total_cycles` v raster snapshotu, 32bitový počet T-stavů od resetu
+  CPU). **Musí být větší než aktuální** (server vrací chybu pro past
+  targets). Server krokuje instrukci po instrukci.
 
-- `target_total_cycles` (int) - absolutní cílový cycle counter. **Musí
-  být větší než aktuální** (server vrací chybu pro past targets).
+Argumenty navíc:
+
 - `max_cycles` (int, volitelný, default 10000000) - bezpečnostní cap
-  delta T-states od začátku polling smyčky.
+  delta T-states od začátku polling smyčky (jen s `target_total_cycles`).
 
 Pozn.: `total_cycles` je uint32, přetéká každých ~20 minut při 3.5 MHz.
 Wraparound není ošetřen - typický klient cílí na delta v řádu sekund.
@@ -1503,6 +1516,44 @@ seek zastavit dřív. Odpověď přijde hned po spuštění: `seeking: true` =
 dohrávání na `seek_target` běží, `false` = emulace už stojí na snímku.
 Chyba: `seek works only during playback`. Vrací stav.
 
+### `emu_replay_goto` (sensitive - nahradí stav emulátoru)
+
+Stav stroje v libovolném okamžiku přehrávaného záznamu. Přehrávání skočí
+na nejbližší použitelný checkpoint (nebo začne od začátku), dohraje
+v MAX SPEED a emulátor se sám zastaví na začátku první instrukce s časem
+>= cíl (důvod pauzy `replay_goto`); pak nástroj přečte stav jako
+`emu_state_observe`. Cíl dopředu v aktuálním snímku se dojede bez seeku.
+Jen při přehrávání. Postup s recepty: `emulator://docs/replay`.
+
+Cíl (právě jeden):
+
+- `t` (int) - čas v taktech GDG,
+- `frame` + `frame_ticks` (int) - absolutní snímek a takt ve snímku
+  (`time.frame`, `time.frame_ticks` ze `emu_state_observe`),
+- `trace` (object) - `{"seq": N, "at": "before" | "after", "channel":
+  "cputrack"}`: stav před (výchozí) nebo po záznamu aktuálního segmentu
+  cputrack bez filtru PC.
+
+Další argumenty: `observe` (parametry `emu_state_observe` pro dosažený
+stav, výchozí jen registry a čas), `breakpoints` (`suppress` výchozí =
+uživatelské breakpointy goto nezastaví ani nespustí akce; `keep` =
+platí), `checkpoint` (bool, uložit checkpoint na hranici snímku, odkud
+dojetí začíná; novější zůstanou), `timeout_ms` (0..25000, výchozí
+20000; 0 nebo vypršení = `done: false`, pak `emu_wait_stop` a
+`emu_state_observe`).
+
+Přijetí přerušení není bod zastavení: cíl těsně před ním vrátí stav po
+přijetí (`after_int_ack: true` u `trace`). Nad trace s registry porovná
+`trace_check` registry ze záznamu s dosaženým stavem.
+
+Odpověď: `{"done", "reached", "stopped_by", "target_t", "t", "exact",
+"after_int_ack", "seek_from": "checkpoint" | "restart" | "none",
+"seek_from_frame", "checkpoint_saved", "replay_frame", "run_seq",
+"observe": {...}, "trace_check": {"match", "mismatch"}}`. Chyby: mimo
+přehrávání (`goto works only during playback`), čas před startem nebo za
+koncem záznamu, záznam mimo aktuální segment trace, segment bez času
+(filtr PC).
+
 ### `emu_replay_status`
 
 Bez argumentů. Vrací `{"mode": "off" | "recording" | "playing",
@@ -1510,8 +1561,9 @@ Bez argumentů. Vrací `{"mode": "off" | "recording" | "playing",
 "hash_interval", "warnings", "deviated", "deviation", "path", "outcome":
 "none" | "recorded" | "ended" | "desync" | "stopped" | "error",
 "outcome_frame", "outcome_message", "desync_parts": [...],
-"rerecord_count", "seeking", "seek_target", "checkpoints": {"interval",
-"capacity", "count", "first_frame", "last_frame", "bytes"}}`. Členy
+"rerecord_count", "seeking", "seek_target", "goto_active",
+"goto_target_t", "checkpoints": {"interval", "capacity", "count",
+"first_frame", "last_frame", "bytes"}}`. Členy
 `outcome*` popisují poslední skončený záznam nebo přehrávání;
 `first_frame` a `last_frame` jsou jen při `count` > 0.
 

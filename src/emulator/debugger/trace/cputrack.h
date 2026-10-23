@@ -364,9 +364,17 @@ void cputrack_hot_path_hook ( uint16_t pc,
 void cputrack_on_interrupt_accept ( uint16_t isr_pc, uint32_t ack_tstates );
 
 /**
- * @brief Kontrola řetězu registrů po možné změně CPU mimo instrukci (v3).
+ * @brief Kontrola skoku času a řetězu registrů po zásahu mimo instrukci.
  *
- * Porovná aktuální stav CPU se stavem, který čtenář záznamu odvodí
+ * **Čas (v2 i v3, bez filtru PC):** porovná čas začátku příštího záznamu
+ * (součet T-stavů zapsaných záznamů od kotvy chunku + rozpracovaná
+ * sbalená smyčka) s časem GDG. Při rozdílu (seek nebo rewind přehrávání,
+ * načtení snapshotu, operace dbgapi, která posunula čas) zapíše
+ * rozpracovaný sbalený záznam a začne nový chunk s kotvou v aktuálním
+ * čase (tlog_writer_rechunk()), takže sloupec `t` čtenáře zůstane
+ * pravdivý i po skoku.
+ *
+ * **Registry (v3):** porovná aktuální stav CPU se stavem, který čtenář záznamu odvodí
  * z posledního zapsaného záznamu (u rozpracované sbalené smyčky se stavem
  * po její poslední iteraci). Při rozdílu zapíše rozpracovaný sbalený
  * záznam a za něj synchronizační záznam s důvodem @ref CPUTRACK_SYNC_WRITE.
@@ -381,7 +389,7 @@ void cputrack_on_interrupt_accept ( uint16_t isr_pc, uint32_t ack_tstates );
  * bootstrap MZF a akce breakpointu `set` na hranici instrukce.
  *
  * @pre Emu vlákno, mezi instrukcemi (ne z callbacku paměti uvnitř kroku).
- * @post Bez otevřeného segmentu v3 (writer zavřený nebo segment v2) no-op.
+ * @post Writer zavřený: no-op. Segment v2: jen kontrola času.
  */
 void cputrack_sync_check ( void );
 

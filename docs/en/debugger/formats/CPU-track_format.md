@@ -319,6 +319,15 @@ exact including interrupts (interrupt acknowledge records carry their
 T-states); in v1 the T-states of each interrupt acknowledge are missing.
 In v3 sync records (`insn_length` 0FEh) do not count in the sum.
 
+`start_pxclk` is the start time of the first record of the chunk, so
+record times continue seamlessly across chunk boundaries (chunk anchor =
+anchor of the previous chunk + the sum of its records). When emulated
+time jumps during recording (snapshot load, seek or rewind of an input
+replay, a debugger bus operation that advances time), a new chunk starts
+with an anchor at the real time; therefore always sum within one chunk
+only. With a PC filter (`pc_range_lo` / `pc_range_hi` other than the
+full range) records carry no time and the anchors are approximate.
+
 ### subsys_header: initial state
 
 `initial_regs` contains a complete snapshot of Z80 CPU registers at the

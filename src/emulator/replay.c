@@ -52,6 +52,8 @@
 #include "debugger/dbgapi_cmdrq.h"
 #include "debugger/replay_dbg.h"
 #include "debugger/freeze/freeze.h"
+#include "debugger/debugger.h"
+#include "debugger/run_control/run_control.h"
 #endif
 
 
@@ -73,7 +75,8 @@ typedef enum en_REPLAY_REQ_KIND
     REPLAY_REQ_PLAY,       /**< Start přehrávání. */
     REPLAY_REQ_STOP,       /**< Konec záznamu nebo přehrávání. */
     REPLAY_REQ_REWIND,     /**< Návrat na checkpoint (záznam i přehrávání). */
-    REPLAY_REQ_SEEK        /**< Skok přehrávání na snímek. */
+    REPLAY_REQ_SEEK,       /**< Skok přehrávání na snímek. */
+    REPLAY_REQ_GOTO        /**< Skok přehrávání na čas (goto). */
 } en_REPLAY_REQ_KIND;
 
 /**
@@ -89,6 +92,9 @@ typedef struct st_REPLAY_REQ
     bool pause_after_load;    /**< Přehrání: zůstat po načtení v pauze. */
     uint32_t frames;          /**< Rewind: o kolik snímků (0 = jeden checkpoint); seek: cílový snímek. */
     st_REPLAY_CKPT_CFG ckpt;  /**< Záznam, přehrání: nastavení checkpointů (< 0 = z INI). */
+    uint64_t ticks;           /**< Goto: cílový čas v taktech GDG. */
+    bool keep_bps;            /**< Goto: uživatelské breakpointy platí dál. */
+    bool ckpt_at_target;      /**< Goto: checkpoint na hranici snímku seeku. */
 } st_REPLAY_REQ;
 
 
@@ -151,6 +157,14 @@ static uint32_t s_ckpt_interval = 0;     /**< Interval checkpointů ve snímcíc
 static bool s_seeking = false;           /**< Přehrávání dohrává na cíl seeku. */
 static uint32_t s_seek_target = 0;       /**< Cílový snímek seeku. */
 static bool s_seek_saved_max = false;    /**< MAX SPEED před seekem (po seeku vrátit). */
+static bool s_goto_active = false;       /**< Goto běží (seek nebo dojetí na čas). */
+static uint64_t s_goto_ticks = 0;        /**< Cílový čas goto (takty GDG). */
+static bool s_goto_ckpt = false;         /**< Goto: checkpoint na hranici snímku seeku. */
+static bool s_goto_saved_max = false;    /**< MAX SPEED před goto (po goto vrátit). */
+static int32_t s_goto_seek_from = REPLAY_GOTO_FROM_NONE; /**< Odkud goto vyšlo (st_REPLAY_STATUS). */
+static bool s_goto_ckpt_taken = false;   /**< Goto uložilo checkpoint v cílovém snímku. */
+
+static void replay_goto_finish(void);
 
 /* ---- konfigurace (INI [REPLAY]) ---- */
 static unsigned s_cfg_ckpt_interval = REPLAY_CKPT_DEFAULT_INTERVAL; /**< `checkpoint_interval`. */
@@ -361,6 +375,10 @@ static void replay_publish(void)
     else if (s_play) s_status.rerecord_count = s_play->rerecord_count;
     s_status.seeking = s_seeking;
     s_status.seek_target = s_seeking ? s_seek_target : 0;
+    s_status.goto_active = s_goto_active;
+    s_status.goto_target = s_goto_ticks;
+    s_status.goto_seek_from = s_goto_seek_from;
+    s_status.goto_checkpoint = s_goto_ckpt_taken;
     g_mutex_unlock(&s_lock);
 }
 
@@ -475,6 +493,17 @@ uint32_t replay_request_seek(uint32_t frame)
     st_REPLAY_REQ *r = g_new0(st_REPLAY_REQ, 1);
     r->kind = REPLAY_REQ_SEEK;
     r->frames = frame;
+    return replay_enqueue(r);
+}
+
+
+uint32_t replay_request_goto(uint64_t ticks, bool keep_breakpoints, bool checkpoint_at_target)
+{
+    st_REPLAY_REQ *r = g_new0(st_REPLAY_REQ, 1);
+    r->kind = REPLAY_REQ_GOTO;
+    r->ticks = ticks;
+    r->keep_bps = keep_breakpoints;
+    r->ckpt_at_target = checkpoint_at_target;
     return replay_enqueue(r);
 }
 
@@ -722,13 +751,31 @@ static int replay_tape_block(void)
  *
  * Vynechá ho, když jsou checkpointy vypnuté, běží autotype (jeho průběh
  * snapshot nenese) nebo se nahrává na kazetu (rozpracované nahrávání
- * vrátit nejde). Snapshot je i s RAMdiskem jako start záznamu; za běhu
- * emulace se ukládá v snapshot safe-pointu (emu vlákno mezi instrukcemi).
+ * vrátit nejde). Vynechá ho i při přehrávání bez odchýlení, když checkpoint
+ * téhož snímku už existuje (po seeku zpět): přehrávání je deterministické,
+ * nový by byl shodný a jeho uložení by smazalo novější checkpointy (N82).
+ * Snapshot je i s RAMdiskem jako start záznamu; za běhu emulace se ukládá
+ * v snapshot safe-pointu (emu vlákno mezi instrukcemi).
  */
+static void replay_ckpt_take_ex(bool keep_newer);
+
 static void replay_ckpt_take(void)
+{
+    replay_ckpt_take_ex(false);
+}
+
+
+/**
+ * @brief Uloží checkpoint; @p keep_newer = vložit podle snímku a novější
+ *        ponechat (replay_ckpt_ring_insert(), goto při přehrávání).
+ *
+ * Podmínky vynechání jako replay_ckpt_take().
+ */
+static void replay_ckpt_take_ex(bool keep_newer)
 {
     if (!s_ckpt.capacity || !s_ckpt_interval) return;
     if (g_pio8255.vkbd_autotype || CMT_TEST_RECORD) return;
+    if (s_play && !s_deviated && replay_ckpt_ring_has_frame(&s_ckpt, replay_current_frame())) return;
 
     bool saved_ramdisk = g_snapshot_settings.include_ramdisk;
     bool saved_sp = g_emulator.snapshot_safepoint;
@@ -773,7 +820,8 @@ static void replay_ckpt_take(void)
         memcpy(c.play_joy, s_play_joy, sizeof(c.play_joy));
         c.deviated = s_deviated;
     };
-    replay_ckpt_ring_push(&s_ckpt, &c);
+    if (keep_newer) replay_ckpt_ring_insert(&s_ckpt, &c);
+    else replay_ckpt_ring_push(&s_ckpt, &c);
 }
 
 
@@ -1473,6 +1521,7 @@ static void replay_play_finish(en_REPLAY_OUTCOME outcome, const char *message, c
 {
     uint32_t f = replay_current_frame();
     replay_seek_done(false);
+    replay_goto_finish();
     replay_data_free(s_play);
     s_play = NULL;
     replay_ckpt_end();
@@ -1772,9 +1821,29 @@ static const char *replay_play_restart(char *errbuf, size_t errsize)
  *                 stojí na cíli.
  * @return NULL = v pořádku, jinak chyba anglicky.
  */
+static const char *replay_play_seek_from(uint32_t target, bool *out_run, int32_t *out_from,
+                                         char *errbuf, size_t errsize);
+
 static const char *replay_play_seek(uint32_t target, bool *out_run, char *errbuf, size_t errsize)
 {
+    return replay_play_seek_from(target, out_run, NULL, errbuf, errsize);
+}
+
+
+/**
+ * @brief Seek přehrávání s údajem, odkud vyšel (goto).
+ *
+ * @param[out] out_from Volitelně: snímek načteného checkpointu, nebo
+ *                 REPLAY_GOTO_FROM_RESTART (od začátku), nebo
+ *                 REPLAY_GOTO_FROM_NONE (bez načtení, jen dohrání).
+ *
+ * Ostatní parametry a návrat jako replay_play_seek().
+ */
+static const char *replay_play_seek_from(uint32_t target, bool *out_run, int32_t *out_from,
+                                         char *errbuf, size_t errsize)
+{
     *out_run = false;
+    if (out_from) *out_from = REPLAY_GOTO_FROM_NONE;
     if (target > s_play->frames) target = s_play->frames;
     uint32_t cur = replay_current_frame();
     bool at_boundary = replay_paused_at_boundary();
@@ -1792,10 +1861,12 @@ static const char *replay_play_seek(uint32_t target, bool *out_run, char *errbuf
                 return e;
             };
             replay_play_restore_cursors(c);
+            if (out_from) *out_from = (int32_t)c->frame;
             fprintf(stderr, "[REPLAY] playback back at checkpoint frame %u\n", c->frame);
         }
         else
         {
+            if (out_from) *out_from = REPLAY_GOTO_FROM_RESTART;
             const char *e = replay_play_restart(errbuf, errsize);
             if (e)
             {
@@ -1832,6 +1903,131 @@ static const char *replay_play_rewind(uint32_t frames, bool *out_run, char *errb
     en_REPLAY_CKPT_FIND fr = replay_ckpt_ring_find(&s_ckpt, cur - 1, g_media_writes, &idx);
     uint32_t target = (fr == REPLAY_CKPT_NONE) ? 0 : replay_ckpt_ring_get(&s_ckpt, idx)->frame;
     return replay_play_seek(target, out_run, errbuf, errsize);
+}
+
+
+/* ================================================================
+ * Goto přehrávání (čas v taktech GDG)
+ * ================================================================ */
+
+/**
+ * @brief Konec goto: potlačení breakpointů pryč, rychlost jako před goto.
+ *
+ * Volá ho první průchod paused smyčkou po zastavení (cíl, breakpoint
+ * s keep, konec nebo rozjetí přehrávání, uživatel) a konec přehrávání.
+ * @post s_goto_active == false.
+ */
+static void replay_goto_finish(void)
+{
+    if (!s_goto_active) return;
+    s_goto_active = false;
+#ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
+    run_control_stop_at_clear();
+    g_debugger.bp_suppress = 0;
+#endif
+    if (!s_goto_saved_max) emulator_max_speed(false);
+    /* Hrající páska s cpu_boost si MAX SPEED drží sama. */
+    cmt_cpu_boost_apply();
+    replay_publish();
+}
+
+
+#ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
+/**
+ * @brief Na hranici snímku seeku (nebo hned, bez seeku): zapnout zastavení
+ *        na čase, případně checkpoint.
+ *
+ * @param paused true = emulace stojí v pauze (paused smyčka), false = běží
+ *               (bod B_f dohrávání seeku).
+ * @return true = je potřeba běžet (emulaci rozběhnout), false = cíl už
+ *         dosažen (v pauze goto skončilo, za běhu se emulace zastaví).
+ */
+static bool replay_goto_arm(bool paused)
+{
+    bool at_boundary = paused ? replay_paused_at_boundary() : true;
+    if (s_goto_ckpt && at_boundary && !s_goto_ckpt_taken)
+    {
+        size_t before = s_ckpt.count;
+        bool had = replay_ckpt_ring_has_frame(&s_ckpt, replay_current_frame());
+        replay_ckpt_take_ex(true);
+        s_goto_ckpt_taken = had || s_ckpt.count != before
+                            || replay_ckpt_ring_has_frame(&s_ckpt, replay_current_frame());
+    };
+    if (gdg_get_total_ticks() >= s_goto_ticks)
+    {
+        if (paused)
+        {
+            replay_goto_finish();
+        }
+        else
+        {
+            g_emulator.pause_reason = EMU_PAUSE_REASON_REPLAY_GOTO;
+            emulator_pause(true);
+        };
+        return false;
+    };
+    run_control_stop_at_arm(s_goto_ticks, EMU_PAUSE_REASON_REPLAY_GOTO);
+    if (!g_emulator.max_speed) emulator_max_speed(true);
+    return true;
+}
+#endif
+
+
+/**
+ * @brief Goto při přehrávání (paused smyčka): seek na snímek cíle a dojetí.
+ *
+ * @param r       Požadavek (ticks, keep_bps, ckpt_at_target).
+ * @param[out] out_run true = emulaci rozběhnout (seek nebo dojetí běží).
+ * @return NULL = v pořádku, jinak chyba anglicky (stav beze změny, pokud
+ *         chyba nevznikla až při načtení checkpointu).
+ */
+static const char *replay_play_goto(const st_REPLAY_REQ *r, bool *out_run, char *errbuf, size_t errsize)
+{
+    *out_run = false;
+#ifndef MZ800EMU_CFG_DEBUGGER_ENABLED
+    (void)r;
+    (void)errbuf;
+    (void)errsize;
+    return "goto needs a build with the debugger";
+#else
+    const uint64_t vst = (uint64_t)VIDEO_SCREEN_TICKS;
+    if (r->ticks < s_start_ticks) return "target time is before the start of the replay";
+    uint64_t f_abs = r->ticks / vst;
+    if (f_abs < s_start_screens) return "target time is before the start of the replay";
+    uint64_t f = f_abs - s_start_screens;
+    if (f >= s_play->frames) return "target time is after the end of the replay";
+    uint32_t seek_f = (uint32_t)f;
+    if ((r->ticks % vst) < REPLAY_GOTO_BOUNDARY_MARGIN && seek_f > 0) seek_f--;
+
+    s_goto_saved_max = g_emulator.max_speed;
+    s_goto_active = true;
+    s_goto_ticks = r->ticks;
+    s_goto_ckpt = r->ckpt_at_target;
+    s_goto_ckpt_taken = false;
+    s_goto_seek_from = REPLAY_GOTO_FROM_NONE;
+    g_debugger.bp_suppress = r->keep_bps ? 0 : 1;
+
+    uint64_t now = gdg_get_total_ticks();
+    if (r->ticks >= now && seek_f <= replay_current_frame())
+    {
+        /* Cíl dopředu v běžícím snímku: stačí dojet. */
+        *out_run = replay_goto_arm(true);
+        replay_publish();
+        return NULL;
+    };
+    bool run = false;
+    const char *e = replay_play_seek_from(seek_f, &run, &s_goto_seek_from, errbuf, errsize);
+    if (e || !s_play)
+    {
+        replay_goto_finish();
+        return e;
+    };
+    /* run: dohrávání na hranici seek_f běží, zastavení na čase zapne
+     * replay_on_frame_boundary(); jinak stojí na hranici seek_f. */
+    *out_run = run ? true : replay_goto_arm(true);
+    replay_publish();
+    return NULL;
+#endif
 }
 
 
@@ -1886,7 +2082,18 @@ void replay_on_frame_boundary(void)
         s_boundary_ticks = gdg_get_total_ticks();
         if (s_play && s_seeking && s_frame >= s_seek_target)
         {
-            replay_seek_done(true);
+#ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
+            if (s_goto_active)
+            {
+                /* Goto: místo pauzy seeku dojet na čas (MAX SPEED zůstane). */
+                replay_seek_done(false);
+                (void)replay_goto_arm(false);
+            }
+            else
+#endif
+            {
+                replay_seek_done(true);
+            };
             replay_publish();
         };
     };
@@ -1919,6 +2126,9 @@ void replay_on_drain_point(void)
 
 void replay_on_paused(void)
 {
+    /* Goto končí první pauzou (cíl, breakpoint s keep, konec přehrávání,
+     * uživatel, další požadavek). */
+    if (s_goto_active) replay_goto_finish();
     if (s_rec) replay_rec_paused();
     else if (s_play) replay_play_check_live_reset();
     /* Mimo záznam vstupy a operace kazety z UI hned, při přehrávání je zahodit. */
@@ -1992,6 +2202,15 @@ void replay_on_paused(void)
                 else if (!e) stay_paused = true;
                 break;
             };
+            case REPLAY_REQ_GOTO:
+            {
+                bool run = false;
+                if (!s_play) e = "goto works only during playback";
+                else e = replay_play_goto(r, &run, errbuf, sizeof(errbuf));
+                if (!e && run) start_running = true;
+                else if (!e) stay_paused = true;
+                break;
+            };
         };
         replay_request_done(r->seq, e == NULL, e);
         replay_req_free(r);
@@ -2030,6 +2249,7 @@ void replay_shutdown(void)
     if (s_play)
     {
         replay_seek_done(false);
+        replay_goto_finish();
         replay_data_free(s_play);
         s_play = NULL;
         replay_media_restore();

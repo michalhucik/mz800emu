@@ -50,8 +50,13 @@ typedef enum en_EMU_PAUSE_REASON
     EMU_PAUSE_REASON_REPLAY_END,    /**< Přehrávání záznamu došlo na konec (replay.h). */
     EMU_PAUSE_REASON_REPLAY_DESYNC, /**< Přehrávání záznamu se rozjelo: hash stavu
                                          se liší od záznamu (replay.h). */
-    EMU_PAUSE_REASON_REPLAY_SEEK    /**< Přehrávání došlo na cílový snímek seeku
+    EMU_PAUSE_REASON_REPLAY_SEEK,   /**< Přehrávání došlo na cílový snímek seeku
                                          (replay_request_seek(), replay.h). */
+    EMU_PAUSE_REASON_RUN_UNTIL_TICKS, /**< Běh došel na začátek první instrukce s časem
+                                          GDG >= cíl (run_control_stop_at_arm(), MCP
+                                          run_until_tstate s target_ticks). */
+    EMU_PAUSE_REASON_REPLAY_GOTO     /**< Přehrávání došlo na cílový čas goto
+                                          (replay_request_goto(), replay.h). */
 } en_EMU_PAUSE_REASON;
 
 /**

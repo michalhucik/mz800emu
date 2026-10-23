@@ -11,7 +11,9 @@ ukládá fázi krokování PSG (``hw/audio.xml``).
 Program v RAM nastaví tři tónové kanály PSG (děliče 3FFh, 2A5h, 1F3h a útlum 0;
 ztlumený kanál nekrokuje) a točí se ve smyčce. Záznam 300 snímků s checkpointy po 50 a
 hashi po 10, pak přehrání: seek 280, seek zpět 130 (načte checkpoint 100),
-dohrání do konce. Ověřuje, že se přehrání nikde nerozjede.
+seek 160, dohrání do konce. Ověřuje, že se přehrání nikde nerozjede a že
+opětovný průchod checkpointem 150 nesmaže novější checkpointy 200 a 250
+(dřív je uložení checkpointu staršího snímku smazalo).
 
 Proces běží izolovaně (dočasný ``--cfg-dir``/``--work-dir``, vlastní INI,
 ``--no-save-ini``); zabíjí se jen vlastní PID. Výstup anglicky.
@@ -84,9 +86,19 @@ def run(tmp):
         emu.call("replay_seek", {"frame": 280})
         _wait(emu, "replay_seek")
         _no_desync(emu, "seek forward to 280")
+        ck_before = emu.call("replay_status")["checkpoints"]
         emu.call("replay_seek", {"frame": 130})
         _wait(emu, "replay_seek")
         _no_desync(emu, "seek back to 130 from checkpoint 100")
+        # Opětovný průchod checkpointem 150 nesmí smazat novější 200 a 250
+        # (přehrávání je deterministické).
+        emu.call("replay_seek", {"frame": 160})
+        _wait(emu, "replay_seek")
+        _no_desync(emu, "seek forward to 160 again")
+        ck_after = emu.call("replay_status")["checkpoints"]
+        check(ck_after.get("count") == ck_before.get("count")
+              and ck_after.get("last_frame") == ck_before.get("last_frame"),
+              f"checkpoints kept after passing them again ({ck_before} -> {ck_after})")
 
         emu.call("run")
         _wait(emu, "replay_end")

@@ -17,6 +17,7 @@
 #include "run_log.h"
 #include "emulator.h"
 #include "debugger/debugger.h"
+#include "debugger/bptmap.h"
 #include "debugger/dbgapi_cmdrq.h"
 #include "mzarch/mzarch.h"
 #include "hw-generic/gdg/gdg.h"
@@ -102,6 +103,8 @@ static const char *run_control_reason_name(en_EMU_PAUSE_REASON reason)
         case EMU_PAUSE_REASON_REPLAY_END: return "replay_end";
         case EMU_PAUSE_REASON_REPLAY_DESYNC: return "replay_desync";
         case EMU_PAUSE_REASON_REPLAY_SEEK: return "replay_seek";
+        case EMU_PAUSE_REASON_RUN_UNTIL_TICKS: return "run_until_ticks";
+        case EMU_PAUSE_REASON_REPLAY_GOTO: return "replay_goto";
         case EMU_PAUSE_REASON_NONE:
         default: break;
     };
@@ -337,6 +340,34 @@ bool run_control_deadline_arm(en_RUN_DEADLINE_KIND kind, uint64_t value, uint64_
 void run_control_deadline_clear(void)
 {
     g_debugger.run_deadline_active = 0;
+}
+
+
+void run_control_stop_at_arm(uint64_t ticks, int reason)
+{
+    g_debugger.stop_at_ticks = ticks;
+    g_debugger.stop_at_reason = reason;
+    g_debugger.stop_at_active = 1;
+    bptmap_set_global_hook(true);
+}
+
+
+void run_control_stop_at_clear(void)
+{
+    if (!g_debugger.stop_at_active) return;
+    g_debugger.stop_at_active = 0;
+    bptmap_set_global_hook(false);
+}
+
+
+bool run_control_stop_at_check(void)
+{
+    if (!g_debugger.stop_at_active || gdg_get_total_ticks() < g_debugger.stop_at_ticks) return false;
+    en_EMU_PAUSE_REASON why = (en_EMU_PAUSE_REASON)g_debugger.stop_at_reason;
+    run_control_stop_at_clear();
+    g_emulator.pause_reason = why;
+    emulator_pause(true);
+    return true;
 }
 
 

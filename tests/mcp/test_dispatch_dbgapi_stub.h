@@ -878,6 +878,9 @@ typedef struct st_DISPATCH_STUB_REPLAY {
     uint32_t last_interval;     /**< hash_interval posledního záznamu (0 = výchozí). */
     bool last_pause_after_load; /**< pause_after_load posledního přehrání. */
     uint32_t last_frames;       /**< frames rewindu / frame seeku. */
+    uint64_t last_goto_ticks;   /**< Cílový čas posledního goto. */
+    bool last_goto_keep;        /**< Goto: breakpoints keep. */
+    bool last_goto_ckpt;        /**< Goto: checkpoint v cíli. */
     st_REPLAY_CKPT_CFG last_ckpt; /**< Nastavení checkpointů posledního záznamu / přehrání (-1 = z INI). */
     bool fail;                  /**< true = požadavek skončí chybou "stub failure". */
     st_REPLAY_STATUS status;    /**< Stav vracený replay_get_status(). */

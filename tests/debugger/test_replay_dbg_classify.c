@@ -169,6 +169,7 @@ static const en_DBGAPI_CMD s_allow_reviewed[] = {
     DBGAPI_CMD_SET_SPEED,
     DBGAPI_CMD_RUN_FRAMES,
     DBGAPI_CMD_RUN_DEADLINE,
+    DBGAPI_CMD_RUN_UNTIL_TICKS,
     /* Mění stav jiným, zachyceným kanálem nebo jen zobrazení. */
     DBGAPI_CMD_RESET, /* reset jde přes replay_divert_reset_request(), zaznamená se jako reset */
     DBGAPI_CMD_FREEZE_REMOVE, /* jen odebere položku; záznam s aktivním freeze nejde spustit */

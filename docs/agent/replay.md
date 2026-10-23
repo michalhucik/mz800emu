@@ -109,6 +109,70 @@ Typical use after a desync: the playback ends at the desync frame N;
 play again with `pause_after_load`, `emu_replay_seek(frame=N-50)`, then
 step with trace or ramlog to the difference.
 
+## Recipe: the state at any moment (goto)
+
+`emu_replay_goto` jumps the playing replay to a time and returns the
+state there in the shape of `emu_state_observe`. Record the inputs once,
+then ask about any instruction as often as you like:
+
+```
+emu_replay_play(path="bug.mzr", pause_after_load=true)
+emu_replay_seek(frame=900); emu_wait_stop()
+emu_trace_start("cputrack", regs=True)     # trace of the part you study,
+emu_run(frames=20)                         # recorded during playback
+emu_trace_stop("cputrack")
+rows = emu_trace_read("cputrack", filter={"pc_from": 0xC000, "pc_to": 0xC0FF})
+emu_replay_goto(trace={"seq": 123456, "at": "before"},
+                observe={"windows": [{"addr": 0xD000, "len": 40}]})
+# -> state before record 123456: registers, the screen line, trace_check
+```
+
+- Targets: `t` (GDG ticks: the `t` column of `emu_trace_read`,
+  `time.ticks` of `emu_state_observe`, `stop_ticks`, `Cycle` of
+  breakpoint conditions), `frame` + `frame_ticks` (absolute, as in
+  `emu_state_observe`), or `trace` `{seq, at}` (`before` = state before
+  the record, `after` = after it) on the current cputrack segment without
+  a PC filter. The playback produces the same trace as the original run,
+  so a trace recorded during playback is a valid map of the replay.
+- The stop is the start of the first instruction whose time is >= the
+  target (`exact` = an instruction started exactly there). An interrupt
+  acknowledge is not a stop point: a target right before it returns the
+  state after the acknowledge (`after_int_ack: true`).
+- On a register trace (`regs=True`) the answer has `trace_check`
+  (`match`, `mismatch` `{reg: [expected, got]}`): registers of the trace
+  against the reached state.
+- The jump starts from the nearest usable checkpoint (`seek_from`
+  `checkpoint` with `seek_from_frame`, `restart`, or `none` for a target
+  ahead in the current frame). `checkpoint=true` saves a checkpoint at
+  the frame boundary where the approach starts, so further jumps nearby
+  are fast; newer checkpoints stay.
+- User breakpoints are suppressed during the jump (they neither stop it
+  nor run their actions, no `bplog` lines); `breakpoints="keep"` keeps
+  them (`stopped_by: "breakpoint"`). A running trace keeps recording; the
+  time jump starts a new chunk, so its `t` column stays right.
+- The answer waits up to `timeout_ms` (default 20000). `done: false`
+  means the jump still runs: `emu_wait_stop(run_seq=...)` (reason
+  `replay_goto`), then `emu_state_observe`.
+- Errors: no playback, a target before the start or after the end of
+  the replay, a trace record outside the current segment.
+
+## Recipe: when did a condition first hold
+
+Go to the start of the interval, then run with a condition-only
+breakpoint and a deadline:
+
+```
+emu_replay_goto(t=t_from)
+emu_bp_create_with_init(fields=["type","expr","enabled"],
+                        type="GLOBAL", expr="HL == 0xC000", enabled=True)
+emu_resume(deadline_ticks=t_to - t_from); emu_wait_stop()
+# reason "breakpoint" = first instruction start with HL == C000h;
+# "deadline" = the condition did not hold in the interval
+```
+
+The condition (`expr`, see `emulator://docs/bp_dsl`) may test memory too
+(`[0x2000] == 0`), which a register trace cannot answer.
+
 ## Rules while recording
 
 | Situation | What happens |
@@ -164,5 +228,6 @@ FILE --exit-after-frames N` records a run of the command line. See
 `hashes`, `hash_interval`, `warnings`, `deviated`, `deviation`, `path`,
 `outcome` (`none`, `recorded`, `ended`, `desync`, `stopped`, `error`),
 `outcome_frame`, `outcome_message`, `desync_parts`, `rerecord_count`,
-`seeking`, `seek_target`, `checkpoints` (`interval`, `capacity`,
+`seeking`, `seek_target`, `goto_active`, `goto_target_t` (the running
+or last `emu_replay_goto`), `checkpoints` (`interval`, `capacity`,
 `count`, `first_frame`, `last_frame`, `bytes`).

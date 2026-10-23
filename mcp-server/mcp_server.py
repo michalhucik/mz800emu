@@ -1339,7 +1339,7 @@ async def emu_wait_stop(run_seq: int | None = None,
     (``"run_to"``, ``"breakpoint"``, ``"deadline"``, ``"frames"``,
     ``"step"``, ``"manual"``, ``"exit"``, ``"bp_action_saturation"``,
     ``"event_trigger"``, ``"replay"``, ``"replay_end"``, ``"replay_desync"``,
-    ``"replay_seek"``),
+    ``"replay_seek"``, ``"replay_goto"``, ``"run_until_ticks"``),
     ``pc``, ``bp_id`` (breakpoint), ``started_by`` /
     ``start_cmd`` (who started the run: ``"mcp"`` or ``"user"`` in the
     GUI), ``stopped_by`` (who paused it, for ``"manual"``),
@@ -2930,33 +2930,61 @@ async def emu_run_until_raster(line: int, col: int = -1,
 
 
 @mcp.tool()
-async def emu_run_until_tstate(target_total_cycles: int,
-                                max_cycles: int = 10_000_000) -> str:
-    """Run until the absolute Z80 cycle counter reaches a target.
+async def emu_run_until_tstate(target_total_cycles: int | None = None,
+                                max_cycles: int = 10_000_000,
+                                target_ticks: int | None = None) -> str:
+    """Run until the emulated time reaches a target.
 
-    The cycle counter (``total_cycles`` field in the raster snapshot) is
-    a monotonically increasing 32-bit T-state count since CPU reset. Use
-    ``emu_get_registers`` or the ``emulator://state`` resource to read
-    the current value, add a delta, and call this tool with the sum.
+    Two ways to give the target (exactly one of them):
 
-    Note: ``total_cycles`` is uint32, wrapping every ~20 minutes at
-    3.5 MHz. The target must be greater than the current counter (the
-    server returns an error for past targets); wraparound across the
-    boundary is not handled in V1.A.3.
+    - ``target_ticks`` (recommended): absolute emulated time in GDG ticks
+      (64-bit, the ``t`` column of ``emu_trace_read``, ``Cycle`` in
+      breakpoint conditions, ``stop_ticks`` of stop records, ``time.ticks``
+      from ``emu_state_observe``). It
+      never wraps and a machine reset does not clear it. The emulator
+      stops itself at the start of the first instruction whose time is
+      >= the target (an interrupt acknowledge in between belongs to the
+      instruction before, so the state is the one after acknowledging).
+      The emulator must be paused. A user breakpoint can stop the run
+      earlier (``stopped_by``). A target in the past or now returns at
+      once with ``reached: true`` and the current time.
+    - ``target_total_cycles``: absolute Z80 T-state counter
+      (``total_cycles`` in the raster snapshot), uint32 counted since the
+      CPU reset; it wraps every ~20 minutes at 3.5 MHz and is not the GDG
+      time divided by the CPU divider. Must be greater than the current
+      counter. The server steps instruction by instruction.
 
     Args:
         target_total_cycles: absolute Z80 T-state target (must be greater
             than the current ``total_cycles``).
         max_cycles: safety cap on delta T-states from the start of the
-            polling loop (default 10M).
+            polling loop (default 10M); only with ``target_total_cycles``.
+        target_ticks: absolute GDG tick target (see above).
 
-    Like ``emu_run_until_raster`` the loop ends after at most 20 s of
-    wall-clock time (``time_limited: true``).
+    Both ways end after at most 20 s of wall-clock time
+    (``time_limited: true``; with ``target_ticks`` the emulator is paused
+    then).
 
     Returns:
-        JSON ``{"total_cycles": <int>, "target": <int>, "delta_cycles":
-        <int>, "reached": <bool>, "time_limited": <bool>}``.
+        With ``target_total_cycles``: JSON ``{"total_cycles": <int>,
+        "target": <int>, "delta_cycles": <int>, "reached": <bool>,
+        "time_limited": <bool>}``.
+        With ``target_ticks``: JSON ``{"ticks": <int>, "target_ticks":
+        <int>, "delta_ticks": <int>, "exact": <bool>, "reached": <bool>,
+        "stopped_by": <str>, "time_limited": <bool>, "run_seq": <int>}``;
+        ``exact`` = an instruction started exactly at the target.
     """
+    if (target_total_cycles is None) == (target_ticks is None):
+        return json.dumps(
+            {"error": "give exactly one of target_total_cycles and target_ticks"})
+    if target_ticks is not None:
+        if not isinstance(target_ticks, int) or target_ticks < 0:
+            return json.dumps({"error": "target_ticks must be a non-negative int"})
+        resp = await _send_request("run_until_tstate", {"target_ticks": target_ticks})
+        if not resp.get("success", False):
+            return json.dumps(
+                {"error": resp.get("error", "run_until_tstate failed")})
+        return json.dumps(_data_or_error(resp))
     if not isinstance(target_total_cycles, int) or target_total_cycles < 0:
         return json.dumps(
             {"error": "target_total_cycles must be a non-negative int"})
@@ -6093,7 +6121,8 @@ async def emu_state_observe(windows: list[dict[str, Any]],
     Returns:
         JSON object with ``run_seq``, ``running``, ``stable`` (true only
         in pause), ``drain`` (``frame`` or ``paused``), ``time``
-        (``frame``, ``frame_ticks``, ``total_cycles``), ``regs``,
+        (``frame``, ``frame_ticks``, ``ticks`` = absolute GDG time that
+        never wraps, ``total_cycles``), ``regs``,
         ``flags``, ``windows``, ``complete`` and the requested optional
         sections.
     """
@@ -8392,6 +8421,90 @@ async def emu_replay_seek(frame: int) -> str:
 
 
 @mcp.tool()
+async def emu_replay_goto(t: int | None = None,
+                          frame: int | None = None,
+                          frame_ticks: int | None = None,
+                          trace: dict | None = None,
+                          observe: dict | None = None,
+                          breakpoints: str = "suppress",
+                          checkpoint: bool = False,
+                          timeout_ms: int = 20000) -> str:
+    """Machine state at any moment of the playing replay (time travel).
+
+    The playback jumps to the nearest usable checkpoint (or starts again
+    from the beginning), plays on at MAX SPEED and the emulator stops
+    itself at the start of the first instruction whose time is >= the
+    target. Then the tool reads the state like ``emu_state_observe``.
+    A target ahead in the current frame is reached without a seek. Works
+    only while a replay is playing (``emu_replay_play``).
+
+    Give exactly one target:
+
+    - ``t``: time in GDG ticks (the ``t`` column of ``emu_trace_read``,
+      ``time.ticks`` of ``emu_state_observe``, ``stop_ticks`` of stop
+      records, ``Cycle`` in breakpoint conditions);
+    - ``frame`` + ``frame_ticks``: absolute frame and tick in the frame as
+      ``time.frame`` / ``time.frame_ticks`` of ``emu_state_observe``;
+    - ``trace``: ``{"seq": N, "at": "before" | "after", "channel":
+      "cputrack"}`` - a record of the current cputrack segment (without a
+      PC filter, which removes the time): the state before (default) or
+      after that record. Record a trace of any part of the replay during
+      playback; the playback produces the same trace as the original run.
+
+    The stop is always at an instruction start. An interrupt acknowledge
+    is not a stop point: a target right before it returns the state after
+    the acknowledge (``after_int_ack: true`` for ``trace``). With a
+    ``trace`` target on a register trace (``regs: true``) the answer has
+    ``trace_check``: registers from the trace compared with the reached
+    state (``match``, ``mismatch`` ``{reg: [expected, got]}``).
+
+    Args:
+        t: Target time in GDG ticks.
+        frame: Absolute frame number (with ``frame_ticks``).
+        frame_ticks: GDG ticks from the start of ``frame``.
+        trace: Target record ``{"seq", "at", "channel"}``.
+        observe: ``emu_state_observe`` parameters for the reached state
+            (``windows``, ``want_data``, ``include``, ``hashes``); default
+            registers and time only.
+        breakpoints: ``"suppress"`` (default) = user breakpoints neither
+            stop the seek nor run their actions (no ``bplog`` lines);
+            ``"keep"`` = they stay active and may stop it early
+            (``stopped_by: "breakpoint"``).
+        checkpoint: Save a checkpoint at the frame boundary where the
+            approach starts, so that further jumps nearby are fast
+            (``checkpoint_saved``); newer checkpoints stay.
+        timeout_ms: How long to wait for the stop (0..25000, default
+            20000). ``0`` or a timeout returns ``done: false`` with
+            ``run_seq``; then ``emu_wait_stop`` and ``emu_state_observe``.
+
+    Returns:
+        JSON ``{"done": bool, "reached": bool, "stopped_by": str,
+        "target_t": int, "t": int, "exact": bool, "after_int_ack": bool,
+        "seek_from": "checkpoint" | "restart" | "none", "seek_from_frame":
+        int, "checkpoint_saved": bool, "replay_frame": int, "run_seq": int,
+        "observe": {...}, "trace_check": {...}}`` or an error (no playback,
+        target before the start or after the end of the replay, trace
+        record not in the current segment). ``exact`` = an instruction
+        started exactly at the target. A running trace keeps recording
+        during the jump and starts a new chunk at the time jump.
+    """
+    data: dict[str, Any] = {"breakpoints": breakpoints, "checkpoint": bool(checkpoint),
+                            "timeout_ms": timeout_ms}
+    if t is not None:
+        data["t"] = t
+    if frame is not None:
+        data["frame"] = frame
+        data["frame_ticks"] = 0 if frame_ticks is None else frame_ticks
+    if trace is not None:
+        data["trace"] = trace
+    if observe is not None:
+        data["observe"] = observe
+    resp = await _send_request("replay_goto", data,
+                               timeout_s=_REPLAY_TIMEOUT_S + max(0, timeout_ms) / 1000.0)
+    return json.dumps(_data_or_error(resp))
+
+
+@mcp.tool()
 async def emu_replay_status() -> str:
     """Status of recording and playback.
 
@@ -8403,6 +8516,7 @@ async def emu_replay_status() -> str:
         "none" | "recorded" | "ended" | "desync" | "stopped" | "error",
         "outcome_frame": int, "outcome_message": str, "desync_parts":
         [str], "rerecord_count": int, "seeking": bool, "seek_target": int,
+        "goto_active": bool, "goto_target_t": int (last emu_replay_goto),
         "checkpoints": {"interval": int, "capacity": int, "count": int,
         "first_frame": int, "last_frame": int, "bytes": int}}``.
         ``outcome*`` describe the last finished recording or playback;

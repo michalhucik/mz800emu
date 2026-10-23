@@ -33,6 +33,13 @@
 #include "debugger/bp_zone.h"
 #include "emulator/emulator.h"
 #include "hw-generic/memory/memext.h"
+#include "debugger/run_control/run_control.h"
+#include "mzarch/mzarch_config.h"
+#if MZARCH == 800
+#include "mzarch/mz800/gdg/mz800_gdg.h"
+#elif MZARCH == 1500
+#include "mzarch/mz1500/gdg/mz1500_gdg.h"
+#endif
 
 #include <string.h>
 #include <glib.h>
@@ -563,6 +570,65 @@ void test_global_unconditional ( void ) {
     breakpoints_enforce_global ( );
     TEST_ASSERT_EQUAL_INT32 ( 3, bp_var_get ( "g" ) );
     (void) id;
+}
+
+
+/**
+ * Háček brány GLOBAL (zastavení na čase) drží per_type_active[GLOBAL]
+ * i po odebrání posledního GLOBAL BP a po breakpoints_clear_all().
+ */
+void test_global_hook_keeps_gate ( void ) {
+    bptmap_set_global_hook ( true );
+    TEST_ASSERT_TRUE ( g_bptmap.per_type_active[ BPTMAP_IDX_GLOBAL ] );
+    TEST_ASSERT_TRUE ( g_bptmap.any_active );
+    int id = make_bp ( BPT_TYPE_GLOBAL, 0x0000 );
+    breakpoints_remove ( id );
+    TEST_ASSERT_TRUE_MESSAGE ( g_bptmap.per_type_active[ BPTMAP_IDX_GLOBAL ],
+                               "odebrání posledního GLOBAL BP bránu s háčkem nevypne" );
+    breakpoints_clear_all ( );
+    TEST_ASSERT_TRUE_MESSAGE ( g_bptmap.per_type_active[ BPTMAP_IDX_GLOBAL ],
+                               "clear_all bránu s háčkem nevypne" );
+    bptmap_set_global_hook ( false );
+    TEST_ASSERT_FALSE ( g_bptmap.per_type_active[ BPTMAP_IDX_GLOBAL ] );
+    id = make_bp ( BPT_TYPE_GLOBAL, 0x0000 );
+    bptmap_set_global_hook ( true );
+    bptmap_set_global_hook ( false );
+    TEST_ASSERT_TRUE_MESSAGE ( g_bptmap.per_type_active[ BPTMAP_IDX_GLOBAL ],
+                               "vypnutí háčku nechá bránu uživatelskému GLOBAL BP" );
+    breakpoints_remove ( id );
+    TEST_ASSERT_FALSE ( g_bptmap.per_type_active[ BPTMAP_IDX_GLOBAL ] );
+}
+
+
+/**
+ * Zastavení na čase: před cílem enforce_global nezastaví, na cíli pauza
+ * s důvodem RUN_UNTIL_TICKS a zrušené zastavení i háček brány.
+ */
+void test_stop_at_ticks ( void ) {
+    uint64_t now = gdg_get_total_ticks ( );
+    run_control_stop_at_arm ( now + 100, EMU_PAUSE_REASON_RUN_UNTIL_TICKS );
+    TEST_ASSERT_TRUE ( g_bptmap.per_type_active[ BPTMAP_IDX_GLOBAL ] );
+    breakpoints_enforce_global ( );
+    TEST_ASSERT_FALSE_MESSAGE ( g_emulator.paused, "před cílem běží dál" );
+    g_gdg.total_elapsed.ticks += 100;
+    breakpoints_enforce_global ( );
+    TEST_ASSERT_TRUE_MESSAGE ( g_emulator.paused, "na cíli pauza" );
+    TEST_ASSERT_EQUAL_INT ( EMU_PAUSE_REASON_RUN_UNTIL_TICKS, g_emulator.pause_reason );
+    TEST_ASSERT_EQUAL_UINT ( 0, g_debugger.stop_at_active );
+    TEST_ASSERT_FALSE ( g_bptmap.per_type_active[ BPTMAP_IDX_GLOBAL ] );
+    emulator_pause ( false );
+}
+
+
+/**
+ * Pauza z jiného důvodu (uživatel, breakpoint) zastavení na čase zruší.
+ */
+void test_stop_at_cleared_by_pause ( void ) {
+    run_control_stop_at_arm ( gdg_get_total_ticks ( ) + 1000, EMU_PAUSE_REASON_RUN_UNTIL_TICKS );
+    emulator_pause ( true );
+    TEST_ASSERT_EQUAL_UINT ( 0, g_debugger.stop_at_active );
+    TEST_ASSERT_FALSE ( g_bptmap.per_type_active[ BPTMAP_IDX_GLOBAL ] );
+    emulator_pause ( false );
 }
 
 
@@ -1538,6 +1604,9 @@ int main ( int argc, char *argv[] ) {
     RUN_TEST ( test_drain_handles_pending_pause );
     RUN_TEST ( test_pending_pause_handled_at_bp_action_boundary );
     RUN_TEST ( test_drain_empty_queue_is_noop );
+    RUN_TEST ( test_global_hook_keeps_gate );
+    RUN_TEST ( test_stop_at_ticks );
+    RUN_TEST ( test_stop_at_cleared_by_pause );
 
     int result = UNITY_END ( );
 

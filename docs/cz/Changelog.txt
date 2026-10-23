@@ -1,3 +1,11 @@
+	- MCP - nový nástroj emu_replay_goto: stav stroje (registry, paměť) v libovolném okamžiku přehrávaného záznamu vstupů. Cíl je čas v taktech GDG, snímek a takt, nebo záznam trace cputrack (stav před ním nebo po něm); přehrávání skočí na nejbližší checkpoint, dohraje v MAX SPEED a emulátor se sám zastaví na začátku instrukce v cílovém čase, odpověď nese stav jako emu_state_observe. Trace libovolného úseku jde nahrát až při přehrávání (je shodný s původním během) a ke kterémukoli řádku dopočítat celý stav; nad trace s registry odpověď porovná registry ze záznamu s dosaženým stavem. Breakpointy goto ve výchozím stavu nezastaví, volitelně se uloží checkpoint v cíli pro rychlé další skoky. Viz mcp-server/tools-overview.md a emulator://docs/replay.
+
+	- BUGFIX: Debugger - pauza (breakpoint, krok k adrese, tlačítko Pause) mezi instrukcí EI a další instrukcí nebo v HALT při čekajícím přerušení posunula přijetí přerušení po rozběhu až k další události emulátoru, takže program dál běžel jinak než bez pauzy (a přehrávání záznamu vstupů se mohlo rozejít). Nově je běh po pauze stejný jako bez ní.
+
+	- MCP - emu_run_until_tstate přijímá target_ticks: čas v taktech GDG (stejné hodiny jako sloupec t v trace, stop_ticks a Cycle v podmínkách breakpointů), emulátor se sám zastaví na začátku první instrukce s časem >= cíl, v plné rychlosti a bez přetečení 32bitového čítače total_cycles, který navíc nuluje reset. emu_state_observe vrací v time i tento čas (ticks).
+
+	- BUGFIX: Trace Suite - čas záznamů CPU Track (kotva start_pxclk chunku v manifestu, sloupec t v emu_trace_read) byl v druhém a dalších souborech chunku posunutý o desítky taktů GDG (kotva se brala uprostřed instrukce), a po načtení snapshotu, seeku nebo rewindu přehrávání během nahrávání pokračoval čas od staré hodnoty. Nově kotva chunku navazuje přesně na konec předchozího chunku a skok času začne nový chunk s kotvou ve skutečném čase.
+
 	- Debugger - disassembler ukazuje ignorovaný prefix DD nebo FD (za ním další prefix DD, FD nebo ED) jako DD* / FD* místo NOP*; tooltip upozorní, že ho procesor provede spolu s následující instrukcí, proto ho krok (F7) přeskočí spolu s ní. Nedefinovaná instrukce ED zůstává NOP*.
 
 	- BUGFIX: Virtual CMT - když soubor MZF mezi otevřením a kontrolou velikosti zmizel nebo nešel číst, kontrola četla neotevřený soubor; nově se kontrola přeskočí.

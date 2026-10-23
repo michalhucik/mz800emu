@@ -90,6 +90,48 @@ const st_REPLAY_CKPT *replay_ckpt_ring_get(const st_REPLAY_CKPT_RING *ring, guin
 }
 
 
+bool replay_ckpt_ring_insert(st_REPLAY_CKPT_RING *ring, const st_REPLAY_CKPT *c)
+{
+    /* Pozice: první položka se snímkem >= nový. */
+    guint k = 0;
+    while (k < ring->count && replay_ckpt_at(ring, k)->frame < c->frame) k++;
+    if (k < ring->count && replay_ckpt_at(ring, k)->frame == c->frame)
+    {
+        replay_ckpt_release(ring, replay_ckpt_at(ring, k));
+        *replay_ckpt_at(ring, k) = *c;
+        ring->bytes += c->snap_size;
+        return true;
+    };
+    if (ring->count == ring->capacity)
+    {
+        if (k == 0)
+        {
+            g_free(c->snap);
+            return false;
+        };
+        replay_ckpt_release(ring, replay_ckpt_at(ring, 0));
+        ring->head = (ring->head + 1) % ring->capacity;
+        ring->count--;
+        k--;
+    };
+    for (guint i = ring->count; i > k; i--) *replay_ckpt_at(ring, i) = *replay_ckpt_at(ring, i - 1);
+    *replay_ckpt_at(ring, k) = *c;
+    ring->count++;
+    ring->bytes += c->snap_size;
+    return true;
+}
+
+
+bool replay_ckpt_ring_has_frame(const st_REPLAY_CKPT_RING *ring, uint32_t frame)
+{
+    for (guint k = 0; k < ring->count; k++)
+    {
+        if (replay_ckpt_at(ring, k)->frame == frame) return true;
+    };
+    return false;
+}
+
+
 en_REPLAY_CKPT_FIND replay_ckpt_ring_find(const st_REPLAY_CKPT_RING *ring, uint32_t max_frame,
                                           uint32_t media_writes, guint *out_index)
 {

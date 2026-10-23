@@ -30,7 +30,7 @@ with the same fields:
 | Field | Meaning |
 |-------|---------|
 | `run_seq` | number of the run that stopped |
-| `reason` | `run_to` (target or step over reached), `breakpoint`, `deadline`, `frames` (`emu_run`), `step`, `manual` (pause), `exit` (breakpoint action `exit`), `bp_action_saturation`, `event_trigger`, `replay` (short pause while a replay starts), `replay_end` / `replay_desync` (end of a replay playback, see `emulator://docs/replay`) |
+| `reason` | `run_to` (target or step over reached), `breakpoint`, `deadline`, `frames` (`emu_run`), `step`, `manual` (pause), `exit` (breakpoint action `exit`), `bp_action_saturation`, `event_trigger`, `replay` (short pause while a replay starts), `replay_end` / `replay_desync` (end of a replay playback, see `emulator://docs/replay`), `replay_seek`, `replay_goto` (`emu_replay_seek` / `emu_replay_goto` reached the target), `run_until_ticks` (`emu_run_until_tstate` with `target_ticks`) |
 | `pc` | PC at the stop (next instruction) |
 | `bp_id` | breakpoint that stopped the run (`breakpoint`) |
 | `started_by`, `start_cmd` | who started the run (`mcp` = an agent, `user` = the GUI) and how (`run_to`, `step_into`, `run`, `external` = Pause key) |
@@ -108,6 +108,16 @@ step instruction by instruction inside one request and cannot be
 cancelled. They end after at most 20 s of wall-clock time
 (`time_limited: true`). For long waits prefer `emu_resume` with a
 deadline and `emu_wait_stop`.
+
+Exception: `emu_run_until_tstate(target_ticks=T)` does not step. The
+emulator runs and stops itself at the start of the first instruction
+whose GDG time is >= T (stop reason `run_until_ticks`; `exact` = an
+instruction started exactly at T), at full speed and without the 32-bit
+wrap of `total_cycles`. A breakpoint may stop it earlier
+(`stopped_by`). Take T from `time.ticks` of `emu_state_observe` or the
+`t` column of a trace. A pause and resume never change when the next
+interrupt is accepted, so stopping at a time and going on gives the same
+run as not stopping.
 
 ## Compare instead of download (SHA-256)
 

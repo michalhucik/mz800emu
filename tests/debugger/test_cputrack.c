@@ -36,6 +36,12 @@
 #include "json_test_helpers.h"
 #include "debugger/dbgapi_cmdrq.h"
 #include "debugger/replay_dbg.h"
+#include "mzarch/mzarch_config.h"
+#if MZARCH == 800
+#include "mzarch/mz800/gdg/mz800_gdg.h"
+#elif MZARCH == 1500
+#include "mzarch/mz1500/gdg/mz1500_gdg.h"
+#endif
 
 
 /* ================================================================
@@ -682,17 +688,44 @@ static int activate_cputrack_regs ( void )
 }
 
 
-/** @brief Zastavit a načíst všechny záznamy v3 (volající uvolní). */
+/**
+ * @brief Dokončená instrukce jako v hlavní smyčce: záznam a posun času GDG.
+ *
+ * Kontrola skoku času v cputrack_sync_check() porovnává součet T-stavů
+ * záznamů s časem GDG; testy, které po instrukcích volají kontrolu, musí
+ * čas posouvat stejně jako mzarch.c (jinak by kontrola viděla skok).
+ */
+static void insn_done ( uint16_t pc, uint8_t t_std, uint32_t wait )
+{
+    cputrack_on_instruction_complete ( pc, t_std, wait );
+    g_gdg.total_elapsed.ticks += ( t_std + wait ) * GDGCLK2CPU_DIVIDER;
+}
+
+
+/**
+ * @brief Zastavit a načíst všechny záznamy v3 ze všech chunků (volající uvolní).
+ *
+ * Skok času začíná nový chunk, záznamy se proto skládají z cput.000.bin,
+ * cput.001.bin, ... v pořadí.
+ */
 static uint8_t *stop_and_read ( size_t *n_rec )
 {
     cputrack_stop ( );
     g_cputrack_active = 0;
-    size_t fsize = 0;
-    uint8_t *buf = read_whole_file ( s_test_dir, "cput.000.bin", &fsize );
-    TEST_ASSERT_NOT_NULL_MESSAGE ( buf, "cput.000.bin musí existovat" );
-    TEST_ASSERT_EQUAL_size_t_MESSAGE ( 0, fsize % 32, "záznamy v3 mají 32 B" );
-    *n_rec = fsize / 32;
-    return buf;
+    GByteArray *all = g_byte_array_new ( );
+    for ( unsigned k = 0; ; k++ ) {
+        char name[ 32 ];
+        g_snprintf ( name, sizeof ( name ), "cput.%03u.bin", k );
+        size_t fsize = 0;
+        uint8_t *buf = read_whole_file ( s_test_dir, name, &fsize );
+        if ( !buf ) break;
+        g_byte_array_append ( all, buf, (guint) fsize );
+        g_free ( buf );
+    }
+    TEST_ASSERT_TRUE_MESSAGE ( all->len > 0, "cput.000.bin musí existovat" );
+    TEST_ASSERT_EQUAL_size_t_MESSAGE ( 0, all->len % 32, "záznamy v3 mají 32 B" );
+    *n_rec = all->len / 32;
+    return g_byte_array_free ( all, FALSE );
 }
 
 
@@ -831,7 +864,7 @@ void test_cputrack_v3_sync_after_register_write ( void )
     set_cpu_state ( );
     activate_cputrack_regs ( );
     g_mzarch_main.cpu->pc = 0x1001;
-    cputrack_on_instruction_complete ( 0x1000, 4, 0 );
+    insn_done ( 0x1000, 4, 0 );
     cputrack_sync_check ( );                 /* beze změny: nic */
     g_mzarch_main.cpu->de2.w = 0x9999;       /* zápis z debuggeru (alternativní sada) */
     cputrack_sync_check ( );
@@ -861,12 +894,12 @@ void test_cputrack_v3_sync_with_pending_loop ( void )
     set_cpu_state ( );
     activate_cputrack_regs ( );
     g_mzarch_main.cpu->pc = 0x3000;
-    cputrack_on_instruction_complete ( 0x2FFF, 4, 0 );
+    insn_done ( 0x2FFF, 4, 0 );
     g_mzarch_main.cpu->halted = true;
     for ( int k = 0; k < 5; k++ ) {
         g_mzarch_main.cpu->r = (uint8_t) ( 0x10 + k );
         g_mzarch_main.cpu->pc = 0x3000;
-        cputrack_on_instruction_complete ( 0x3000, 4, 0 );
+        insn_done ( 0x3000, 4, 0 );
     }
     cputrack_sync_check ( );                 /* pauza v HALT beze změny */
     g_mzarch_main.cpu->hl.w = 0x0F0F;        /* zápis z debuggeru v pauze */
@@ -959,11 +992,11 @@ void test_cputrack_v3_reset_collapse_then_sync ( void )
     set_cpu_state ( );
     activate_cputrack_regs ( );
     g_mzarch_main.cpu->pc = 0x4000;
-    cputrack_on_instruction_complete ( 0x3FFD, 10, 0 );
+    insn_done ( 0x3FFD, 10, 0 );
     for ( int k = 0; k < 3; k++ ) {
         g_mzarch_main.cpu->r = (uint8_t) ( 0x20 + k );
         g_mzarch_main.cpu->pc = 0x4000;
-        cputrack_on_instruction_complete ( 0x4000, 4, 0 );
+        insn_done ( 0x4000, 4, 0 );
     }
     cputrack_reset_collapse_state ( );
     cputrack_sync_check ( );
@@ -987,7 +1020,7 @@ void test_cputrack_v3_replay_set_reg_syncs ( void )
     set_cpu_state ( );
     activate_cputrack_regs ( );
     g_mzarch_main.cpu->pc = 0x1001;
-    cputrack_on_instruction_complete ( 0x1000, 4, 0 );
+    insn_done ( 0x1000, 4, 0 );
 
     st_DBGAPI_REG_PARAM rp;
     memset ( &rp, 0, sizeof ( rp ) );
@@ -1018,7 +1051,7 @@ void test_cputrack_v2_sync_check_noop ( void )
     activate_cputrack ( );
     TEST_ASSERT_EQUAL_INT ( 0, cputrack_segment_has_regs ( ) );
     g_mzarch_main.cpu->pc = 0x1001;
-    cputrack_on_instruction_complete ( 0x1000, 4, 0 );
+    insn_done ( 0x1000, 4, 0 );
     g_mzarch_main.cpu->hl.w = 0x1111;
     cputrack_sync_check ( );
     cputrack_stop ( );
@@ -1028,6 +1061,47 @@ void test_cputrack_v2_sync_check_noop ( void )
     TEST_ASSERT_NOT_NULL ( buf );
     TEST_ASSERT_EQUAL_size_t ( 12, fsize );
     g_free ( buf );
+}
+
+
+/**
+ * @brief Skok času (N81): kontrola začne nový chunk s kotvou ve skutečném
+ *        čase; bez skoku chunk nevznikne. Formát v3 i v2.
+ */
+static void check_time_jump ( int regs )
+{
+    set_cpu_state ( );
+    g_cputrack_config.regs = regs;
+    TEST_ASSERT_EQUAL_INT ( 0, activate_cputrack ( ) );
+    const st_TLOG_WRITER *w = cputrack_get_writer ( );
+    g_mzarch_main.cpu->pc = 0x1001;
+    insn_done ( 0x1000, 4, 0 );
+    cputrack_sync_check ( );
+    TEST_ASSERT_EQUAL_UINT_MESSAGE ( 0, w->chunk_index, "bez skoku času žádný nový chunk" );
+    g_gdg.total_elapsed.ticks += 1000;      /* skok času (načtení snapshotu) */
+    uint64_t now = gdg_get_total_ticks ( );
+    cputrack_sync_check ( );
+    TEST_ASSERT_EQUAL_UINT_MESSAGE ( 1, w->chunk_index, "skok času zapíše chunk 0" );
+    TEST_ASSERT_EQUAL_UINT64_MESSAGE ( now, w->current_chunk_start_pxclk, "kotva nového chunku = čas GDG" );
+    cputrack_sync_check ( );
+    TEST_ASSERT_EQUAL_UINT_MESSAGE ( 1, w->chunk_index, "druhá kontrola beze skoku nic" );
+    cputrack_stop ( );
+    g_cputrack_active = 0;
+    g_cputrack_config.regs = 0;
+}
+
+
+/** @brief Skok času ve formátu v3. */
+void test_cputrack_v3_time_jump_new_chunk ( void )
+{
+    check_time_jump ( 1 );
+}
+
+
+/** @brief Skok času ve formátu v2. */
+void test_cputrack_v2_time_jump_new_chunk ( void )
+{
+    check_time_jump ( 0 );
 }
 
 
@@ -1077,6 +1151,8 @@ int main ( int argc, char *argv[] )
     RUN_TEST ( test_cputrack_v3_reset_collapse_then_sync );
     RUN_TEST ( test_cputrack_v3_replay_set_reg_syncs );
     RUN_TEST ( test_cputrack_v2_sync_check_noop );
+    RUN_TEST ( test_cputrack_v3_time_jump_new_chunk );
+    RUN_TEST ( test_cputrack_v2_time_jump_new_chunk );
 
     int result = UNITY_END ( );
 

@@ -251,6 +251,29 @@ int tlog_writer_flush_chunk ( st_TLOG_WRITER *w,
                               uint32_t now_screens );
 
 /**
+ * @brief Začít nový chunk s danou časovou kotvou (nespojitost času).
+ *
+ * Neprázdný buffer zapíše jako chunk (stejně jako
+ * @ref tlog_writer_flush_chunk) a nový chunk dostane předané kotvy.
+ * Prázdný buffer na disk nepíše a jen přepíše kotvy aktuálního chunku
+ * (žádný záznam je ještě nepoužil). Použití: subsystém, jehož čtenář
+ * počítá čas záznamů z kotvy chunku (cputrack), po skoku emulovaného
+ * času (seek, rewind, načtení snapshotu) nebo před přetečením chunku,
+ * když kotvu zná přesněji než aktuální čas.
+ *
+ * @param w           Writer (otevřený).
+ * @param pxclk       Kotva pxCLK total pro příští záznam.
+ * @param cpuclk      Kotva CPU clk total.
+ * @param screens     Kotva screens total.
+ *
+ * @return 0 OK, -1 writer zavřený nebo chyba zápisu chunku.
+ * @post Při úspěchu buffer_used == 0 a current_chunk_start_* = předané
+ *       hodnoty; manifest je přepsaný, pokud vznikl chunk.
+ */
+int tlog_writer_rechunk ( st_TLOG_WRITER *w,
+                          uint64_t pxclk, uint64_t cpuclk, uint32_t screens );
+
+/**
  * @brief Aktualizovat / přepsat manifest <name>.json soubor.
  *
  * Používá GLib JSON serializaci. Soubor: `<dir>/<name>.json`.

@@ -46,7 +46,7 @@ documented separately in [Resources overview](resources-overview.md).
 | `emu_bookmark_remove` | no | Removes a bookmark by ID |
 | `emu_step_out` | no | Runs until RET from the current subroutine (callstack pop), optional deadline |
 | `emu_run_until_raster` | no | Runs until the GDG raster reaches a target line (and optional column) |
-| `emu_run_until_tstate` | no | Runs until the absolute Z80 cycle counter reaches a target |
+| `emu_run_until_tstate` | no | Runs until a time: GDG ticks (`target_ticks`, the emulator stops itself) or the 32-bit T-state counter (`target_total_cycles`, stepping) |
 | `emu_run_until_event` | no | Runs until an event fires (`frame_done`, `breakpoint_hit`) |
 | `emu_event_subscribe` | no | Subscribe to a list of topics (`breakpoint_hit`, `paused`, `resumed`, `step_done`, `io_write`) |
 | `emu_event_unsubscribe` | no | Unsubscribe topics (empty list = all) |
@@ -92,6 +92,7 @@ documented separately in [Resources overview](resources-overview.md).
 | `emu_replay_play_stop` | no | Stop a running playback |
 | `emu_replay_rewind` | yes (replaces the emulator state) | Go back to a checkpoint: while recording drop the inputs after it and record on, while playing jump back |
 | `emu_replay_seek` | yes (replaces the emulator state) | Jump the playback to a frame (back via a checkpoint or from the start, forward at MAX SPEED) |
+| `emu_replay_goto` | yes (replaces the emulator state) | Machine state at any moment of the playing replay (time, frame and tick, or a cputrack trace record), output like `emu_state_observe` |
 | `emu_replay_status` | no | Recording / playback status and the result of the last one |
 | `emu_screenshot_save_to_file` | yes (creates / overwrites a file) | PNG of the screen to a file: area (full / canvas), scale (framebuffer / native dots / window 1-4), crop |
 | `emu_screenshot_series_start` | yes (creates files) | Frame series: a PNG of every changed emulated frame (area, scale, crop, only_changed, frames, max_files) |
@@ -506,7 +507,7 @@ see two different frames while running. Arguments:
 - `want_data` (bool, default true) - false = only `sha256` per window
 
 Returns `run_seq`, `running`, `stable` (true only in pause), `drain`
-(`frame` / `paused`), `time` (`frame`, `frame_ticks`, `total_cycles`),
+(`frame` / `paused`), `time` (`frame`, `frame_ticks`, `ticks` = GDG ticks since the emulator started, `total_cycles`),
 `regs`, `flags`, `windows` (echo, `sha256` - the same value as
 `emu_mem_read` / `emu_region_read` of the range - and `data_b64`),
 `complete` and the requested sections. A region that is not connected
@@ -872,17 +873,31 @@ loop stopped at the safety cap or at the time limit.
 
 ### `emu_run_until_tstate`
 
-Runs a polling loop until the absolute Z80 cycle counter reaches the
-target. The cycle counter (`total_cycles` in the raster snapshot) is
-a monotonically increasing 32-bit T-state count since CPU reset.
+Runs until a time. The target is exactly one of:
 
-Arguments:
+- `target_ticks` (int >= 0, recommended) - time in GDG ticks since the
+  emulator started (the `t` column of `emu_trace_read`, `time.ticks` of
+  `emu_state_observe`, `stop_ticks`, `Cycle` in breakpoint conditions);
+  it never wraps and a reset does not clear it. The (paused) emulator
+  runs and stops itself at the start of the first instruction whose time
+  is >= the target (stop reason `run_until_ticks`); an interrupt
+  acknowledge in between belongs to the instruction before. A breakpoint
+  may stop the run earlier. A target in the past or now returns at once
+  with `reached: true`. Response: `{"ticks", "target_ticks",
+  "delta_ticks", "exact" (an instruction started exactly at the target),
+  "reached", "stopped_by", "time_limited", "run_seq"}`; after 20 s the
+  emulation is paused (`time_limited: true`).
+- `target_total_cycles` (int) - absolute target cycle counter
+  (`total_cycles` in the raster snapshot, a 32-bit T-state count since
+  CPU reset). **Must be greater than the current value** (the server
+  returns an error for past targets). The server steps instruction by
+  instruction.
 
-- `target_total_cycles` (int) - absolute target cycle counter. **Must
-  be greater than the current value** (the server returns an error
-  for past targets).
+More arguments:
+
 - `max_cycles` (int, optional, default 10000000) - safety cap on delta
-  T-states from the start of the polling loop.
+  T-states from the start of the polling loop (only with
+  `target_total_cycles`).
 
 Note: `total_cycles` is a uint32 that wraps roughly every 20 minutes
 at 3.5 MHz. Wraparound across the boundary is not handled - typical
@@ -1546,6 +1561,46 @@ start: `seeking: true` = running to `seek_target`, `false` = already
 standing at the frame. Error: `seek works only during playback`.
 Returns the status.
 
+### `emu_replay_goto` (sensitive - replaces the emulator state)
+
+Machine state at any moment of the playing replay. The playback jumps to
+the nearest usable checkpoint (or starts from the beginning), plays on at
+MAX SPEED and the emulator stops itself at the start of the first
+instruction whose time is >= the target (pause reason `replay_goto`);
+then the tool reads the state like `emu_state_observe`. A target ahead in
+the current frame is reached without a seek. Only while playing.
+Recipes: `emulator://docs/replay`.
+
+Target (exactly one):
+
+- `t` (int) - time in GDG ticks,
+- `frame` + `frame_ticks` (int) - absolute frame and tick in the frame
+  (`time.frame`, `time.frame_ticks` of `emu_state_observe`),
+- `trace` (object) - `{"seq": N, "at": "before" | "after", "channel":
+  "cputrack"}`: the state before (default) or after a record of the
+  current cputrack segment without a PC filter.
+
+More arguments: `observe` (`emu_state_observe` parameters for the
+reached state, default registers and time only), `breakpoints`
+(`suppress` default = user breakpoints neither stop the jump nor run
+their actions; `keep` = they stay active), `checkpoint` (bool, save a
+checkpoint at the frame boundary where the approach starts; newer ones
+stay), `timeout_ms` (0..25000, default 20000; 0 or a timeout = `done:
+false`, then `emu_wait_stop` and `emu_state_observe`).
+
+An interrupt acknowledge is not a stop point: a target right before it
+returns the state after the acknowledge (`after_int_ack: true` for
+`trace`). On a register trace `trace_check` compares the registers of the
+record with the reached state.
+
+Response: `{"done", "reached", "stopped_by", "target_t", "t", "exact",
+"after_int_ack", "seek_from": "checkpoint" | "restart" | "none",
+"seek_from_frame", "checkpoint_saved", "replay_frame", "run_seq",
+"observe": {...}, "trace_check": {"match", "mismatch"}}`. Errors: no
+playback (`goto works only during playback`), a time before the start or
+after the end of the replay, a record outside the current trace segment,
+a segment without time (PC filter).
+
 ### `emu_replay_status`
 
 No arguments. Returns `{"mode": "off" | "recording" | "playing",
@@ -1553,8 +1608,9 @@ No arguments. Returns `{"mode": "off" | "recording" | "playing",
 "hash_interval", "warnings", "deviated", "deviation", "path", "outcome":
 "none" | "recorded" | "ended" | "desync" | "stopped" | "error",
 "outcome_frame", "outcome_message", "desync_parts": [...],
-"rerecord_count", "seeking", "seek_target", "checkpoints": {"interval",
-"capacity", "count", "first_frame", "last_frame", "bytes"}}`. The
+"rerecord_count", "seeking", "seek_target", "goto_active",
+"goto_target_t", "checkpoints": {"interval", "capacity", "count",
+"first_frame", "last_frame", "bytes"}}`. The
 `outcome*` members describe the last finished recording or playback;
 `first_frame` and `last_frame` are present only with `count` > 0.
 
