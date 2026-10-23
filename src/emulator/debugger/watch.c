@@ -326,7 +326,11 @@ const char *watch_get_expr_error ( const st_WATCH_ROW *row ) {
  * (Address/Value/IsRead/...) zůstanou na nule - Watch je čte mimo
  * kontext BP hooku.
  *
- * Side effects: vnitřně `bp_read_byte_no_se` cesta (side_effect=false).
+ * Side effects: žádné. Kontext má `no_side_effects`, takže i `[addr]!`,
+ * `{addr}!` a `port[N]!` čtou bez vedlejších efektů (bez MEM_R BP, port
+ * jen sondou), stejně jako Test Eval breakpointu. Watch je nástroj na
+ * pozorování: okno ho vyhodnocuje každý snímek z UI vlákna a záznam vstupů
+ * počítá `watch_list` / `watch_eval` mezi čtení (N67).
  *
  * @return Hodnota výrazu, nebo 0 pokud AST není parsed.
  */
@@ -340,6 +344,8 @@ static int32_t watch_eval_internal ( const st_WATCH_ROW *row ) {
     breakpoints_fill_global_ctx ( &ctx );
     /* self_id = -1 (= ne BP enforcement kontext, viz bp_expr_ctx_t.self_id). */
     ctx.self_id = -1;
+    /* Znak `!` se ignoruje: Watch stav stroje nemění (N67). */
+    ctx.no_side_effects = true;
     return bp_expr_eval ( row->expr_ast, &ctx );
 }
 

@@ -48,7 +48,7 @@ documented separately in [Resources overview](resources-overview.md).
 | `emu_run_until_raster` | no | Runs until the GDG raster reaches a target line (and optional column) |
 | `emu_run_until_tstate` | no | Runs until a time: GDG ticks (`target_ticks`, the emulator stops itself) or the 32-bit T-state counter (`target_total_cycles`, stepping) |
 | `emu_run_until_event` | no | Runs until an event fires (`frame_done`, `breakpoint_hit`) |
-| `emu_event_subscribe` | no | Subscribe to a list of topics (`breakpoint_hit`, `paused`, `resumed`, `step_done`, `io_write`) |
+| `emu_event_subscribe` | no | Subscribe to a list of topics (`breakpoint_hit`, `paused`, `resumed`, `step_done`, `state_changed`, `io_write`) |
 | `emu_event_unsubscribe` | no | Unsubscribe topics (empty list = all) |
 | `emu_event_poll` | no | Retrieve pending events (timeout 0..60000 ms, max 1..100) |
 | `emu_trap_respond` | no | Respond to a TRAP from a `breakpoint_hit` event (continue/step_into/step_over/abort) |
@@ -271,9 +271,24 @@ The `error` text also tells whether the emulator executed the command:
   before retrying.
 - `Emulator is shutting down ...` - not executed, stop sending requests.
 - `Precondition failed: ...` - a conditional write (`expected_sha256`,
-  `expected`) was checked by the emulator thread and **nothing was
-  written**: the memory or register differs from what you read. The
-  current value is in the text; read again before deciding.
+  `expected`, `expected_state_rev`) was checked by the emulator thread
+  and **nothing was written**: the memory, the register or the machine
+  state differs from what you read. The current value is in the text;
+  read again before deciding.
+
+**State revision.** `emu_status` / `get_state`, `emu_state_observe`, the
+responses of tools that change the machine state and the events
+`paused`, `resumed` and `step_done` carry `state_rev`: in pause an equal
+value means nothing changed the machine state (MCP, GUI, replay,
+devices). Tools that change the machine state accept
+`expected_state_rev` (do it only if the revision still equals the value,
+in pause; otherwise `Precondition failed: state changed (...)` or
+`Precondition failed: emulator running (...)`), `emu_state_observe`
+accepts `if_state_rev_differs` (reply `not_modified` without reading).
+The event `state_changed` (`{state_rev, sources}`) reports changes in
+pause that did not come from an MCP client (GUI, devices, replay),
+merged per pass of the pause loop. Details and known gaps:
+`emulator://docs/state_revision`.
 - any other text (e.g. `bp_remove failed (unknown id?)`) - the command
   was executed and failed (or the parameters were rejected); retrying
   unchanged does not help.
@@ -291,7 +306,9 @@ clients: `emulator://docs/error_handling`.
 ### `emu_status`
 
 Returns emulator state: whether it is running or paused, how many
-frames have elapsed, whether the transport is connected.
+frames have elapsed, whether the transport is connected, the run number
+`run_seq` and the state revision `state_rev` (from the same moment as
+`running`).
 Non-destructive, suitable as the first call after connecting. When
 the emulator ended unexpectedly, the result is
 `{"running": false, "connected": false, "last_exit": "..."}` (see
@@ -437,9 +454,12 @@ Overwrites a single 16-bit Z80 register. Arguments:
   value. Compared and written in one step in the emulator thread;
   otherwise `Precondition failed: register <reg> changed (expected=...,
   current=...)` and nothing is written.
+- `expected_state_rev` (int, optional) - write only if the state
+  revision still equals this value (in pause); see the state revision
+  paragraph above.
 
-Returns `{"reg", "value", "previous"}` - `previous` is the value before
-the write.
+Returns `{"reg", "value", "previous", "state_rev"}` - `previous` is the
+value before the write, `state_rev` the revision after it.
 
 **Destructive operation.** Writing to `PC` changes the execution
 path; writing to `SP` invalidates the current call stack. Save a
@@ -476,10 +496,14 @@ Writes bytes to a Z80 address. **Destructive**. Arguments:
   memory changed (...)` and nothing is written.
 - `want_hashes` (bool, optional) - return `before_sha256` and
   `after_sha256` also without a condition
+- `expected_state_rev` (int, optional) - write only if the state
+  revision still equals this value (in pause); checked before
+  `expected_sha256`
 
 Enforces a region check (= RAM only). If the address is not in RAM,
 the tool fails with `MEM_WRITE region check failed` (the region check
-comes before the condition). Returns `{"addr", "length"}`, with a
+comes before the content condition). Returns `{"addr", "length",
+"state_rev"}`, with a
 condition or `want_hashes` also `before_sha256` and `after_sha256`.
 The address goes through the current memory map; for a write that must
 hit one physical cell use `emu_region_write`. Recipe:
@@ -505,8 +529,12 @@ see two different frames while running. Arguments:
 - `hashes` (list, optional) - SHA-256 of state parts `cpu`, `ram`,
   `vram`, `memext`, `pcg` (same definition as the replay hashes)
 - `want_data` (bool, default true) - false = only `sha256` per window
+- `if_state_rev_differs` (int, optional) - `state_rev` of your previous
+  read; in pause with an equal revision nothing is read and the reply is
+  only `{"not_modified": true, "state_rev", "run_seq", "running": false,
+  "stable": true}`
 
-Returns `run_seq`, `running`, `stable` (true only in pause), `drain`
+Returns `run_seq`, `state_rev`, `running`, `stable` (true only in pause), `drain`
 (`frame` / `paused`), `time` (`frame`, `frame_ticks`, `ticks` = GDG ticks since the emulator started, `total_cycles`),
 `regs`, `flags`, `windows` (echo, `sha256` - the same value as
 `emu_mem_read` / `emu_region_read` of the range - and `data_b64`),

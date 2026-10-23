@@ -22,6 +22,7 @@
 #include "emulator/emulator.h"
 #include "snapshot/snapshot.h"
 #include "snapshot/snapshot_request.h"
+#include "state_rev.h"
 
 
 /** @brief Dočasný snapshot (relativně k pracovnímu adresáři testu). */
@@ -111,6 +112,24 @@ void test_save_then_load_in_order(void)
 
 
 /**
+ * @brief Revize stavu: uložení snapshotu ji nezvedne, načtení ano.
+ */
+void test_load_bumps_state_rev(void)
+{
+    g_emulator.paused = true;
+    snapshot_request_submit(SNAPSHOT_REQ_SAVE, TEST_SNAP_FILE, NULL);
+    uint64_t rev0 = g_state_rev;
+    snapshot_request_poll();
+    TEST_ASSERT_EQUAL_UINT64_MESSAGE(rev0, g_state_rev, "uložení snapshotu stav nemění");
+    snapshot_request_submit(SNAPSHOT_REQ_LOAD, TEST_SNAP_FILE, NULL);
+    snapshot_request_poll();
+    TEST_ASSERT_TRUE_MESSAGE(g_state_rev > rev0, "načtení snapshotu zvedne revizi stavu");
+    st_SNAPSHOT_REQ_RESULT r;
+    while (snapshot_request_take_result(&r)) TEST_ASSERT_EQUAL_INT(SNAPSHOT_OK, r.result);
+}
+
+
+/**
  * @brief Clear zahodí čekající požadavky i nevyzvednuté výsledky.
  */
 void test_clear_drops_everything(void)
@@ -140,6 +159,7 @@ int main(void)
     RUN_TEST(test_submit_requires_path);
     RUN_TEST(test_poll_executes_and_checks_pause);
     RUN_TEST(test_save_then_load_in_order);
+    RUN_TEST(test_load_bumps_state_rev);
     RUN_TEST(test_clear_drops_everything);
 
     int result = UNITY_END();

@@ -48,7 +48,7 @@ dokumentu [Resources overview](resources-overview.md).
 | `emu_run_until_raster` | ne | Run do GDG raster pozice (line + optional col) |
 | `emu_run_until_tstate` | ne | Běh do času: takty GDG (`target_ticks`, zastaví emulátor sám) nebo 32bitový čítač T-stavů (`target_total_cycles`, krokování) |
 | `emu_run_until_event` | ne | Run dokud event (`frame_done`, `breakpoint_hit`) |
-| `emu_event_subscribe` | ne | Subscribe na seznam topics (`breakpoint_hit`, `paused`, `resumed`, `step_done`, `io_write`) |
+| `emu_event_subscribe` | ne | Subscribe na seznam topics (`breakpoint_hit`, `paused`, `resumed`, `step_done`, `state_changed`, `io_write`) |
 | `emu_event_unsubscribe` | ne | Unsubscribe topics (empty list = vše) |
 | `emu_event_poll` | ne | Vyzvedne pending eventy (timeout 0..60000 ms, max 1..100) |
 | `emu_trap_respond` | ne | Odpověz na TRAP z `breakpoint_hit` eventu (continue/step_into/step_over/abort) |
@@ -269,9 +269,24 @@ Text v `error` zároveň říká, zda emulátor příkaz provedl:
 - `Emulator is shutting down ...` - neprovedeno, další požadavky už
   neposílejte.
 - `Precondition failed: ...` - podmíněný zápis (`expected_sha256`,
-  `expected`) emulační vlákno zkontrolovalo a **nic nezapsalo**: paměť
-  nebo registr se liší od toho, co klient přečetl. Aktuální hodnota je
-  v textu; před dalším rozhodnutím je potřeba číst znovu.
+  `expected`, `expected_state_rev`) emulační vlákno zkontrolovalo a **nic
+  nezapsalo**: paměť, registr nebo stav stroje se liší od toho, co klient
+  přečetl. Aktuální hodnota je v textu; před dalším rozhodnutím je
+  potřeba číst znovu.
+
+**Revize stavu.** `emu_status` / `get_state`, `emu_state_observe`,
+odpovědi nástrojů, které mění stav stroje, a události `paused`,
+`resumed` a `step_done` nesou `state_rev`: v pauze stejná hodnota
+znamená, že stav stroje nic nezměnilo (MCP, GUI, záznam vstupů,
+zařízení). Nástroje, které mění stav stroje, přijímají
+`expected_state_rev` (provést jen při stejné revizi, v pauze; jinak
+`Precondition failed: state changed (...)` nebo `Precondition failed:
+emulator running (...)`), `emu_state_observe` přijímá
+`if_state_rev_differs` (odpověď `not_modified` bez čtení). Událost
+`state_changed` (`{state_rev, sources}`) ohlásí změny v pauze, které
+nepocházejí od MCP klienta (GUI, zařízení, záznam vstupů), sloučené za
+průchod smyčkou pauzy. Podrobnosti a známé mezery:
+`emulator://docs/state_revision`.
 - jakýkoliv jiný text (např. `bp_remove failed (unknown id?)`) - příkaz
   se provedl a selhal (nebo byly odmítnuty parametry); opakování beze
   změny nepomůže.
@@ -288,7 +303,8 @@ a vrátí skutečný výsledek. Podrobnosti pro AI klienty:
 ### `emu_status`
 
 Vrátí stav emulátoru: jestli běží nebo je zapauzovaný, kolik framů
-už proběhlo, jestli je transport connected. Nedestruktivní, vhodné
+už proběhlo, jestli je transport connected, číslo běhu `run_seq`
+a revizi stavu `state_rev` (z téhož okamžiku jako `running`). Nedestruktivní, vhodné
 jako první volání po připojení. Pokud emulátor nečekaně skončil,
 výsledek je `{"running": false, "connected": false, "last_exit":
 "..."}` (viz [Python wrapper](python-wrapper.md), sekce *Konec
@@ -429,9 +445,11 @@ Přepíše 16-bitovou hodnotu jednoho Z80 registru. Argumenty:
   hodnotu. Porovnání i zápis proběhnou v emulačním vlákně najednou,
   jinak chyba `Precondition failed: register <reg> changed (expected=...,
   current=...)` a nic se nezapíše.
+- `expected_state_rev` (int, volitelný) - zapíše jen při stejné revizi
+  stavu (v pauze); viz odstavec o revizi stavu výše.
 
-Vrací `{"reg", "value", "previous"}` - `previous` je hodnota před
-zápisem.
+Vrací `{"reg", "value", "previous", "state_rev"}` - `previous` je
+hodnota před zápisem, `state_rev` revize po něm.
 
 **Destruktivní operace.** Zápis do `PC` mění tok provádění, zápis
 do `SP` invaliduje aktuální call stack. Před experimenty doporučeno
@@ -469,10 +487,13 @@ Zapíše bajty na Z80 adresu. **Destruktivní**. Argumenty:
   a nic se nezapíše.
 - `want_hashes` (bool, volitelný) - vrátí `before_sha256`
   a `after_sha256` i bez podmínky
+- `expected_state_rev` (int, volitelný) - zapíše jen při stejné revizi
+  stavu (v pauze); kontroluje se před `expected_sha256`
 
 Aplikuje region check (= jen RAM). Pokud adresa není v RAM,
 tool selže s `MEM_WRITE region check failed` (region check má přednost
-před podmínkou). Vrací `{"addr", "length"}`, s podmínkou nebo
+před podmínkou obsahu). Vrací `{"addr", "length", "state_rev"}`,
+s podmínkou nebo
 `want_hashes` navíc `before_sha256` a `after_sha256`. Adresa jde přes
 aktuální mapování paměti; zápis, který musí trefit jednu fyzickou
 buňku, patří do `emu_region_write`. Recept:
@@ -498,8 +519,12 @@ snímky. Argumenty:
 - `hashes` (seznam, volitelný) - SHA-256 částí stavu `cpu`, `ram`,
   `vram`, `memext`, `pcg` (stejná definice jako hashe záznamu vstupů)
 - `want_data` (bool, default true) - false = u oken jen `sha256`
+- `if_state_rev_differs` (int, volitelný) - `state_rev` předchozího
+  čtení; v pauze při stejné revizi se nic nečte a odpověď je jen
+  `{"not_modified": true, "state_rev", "run_seq", "running": false,
+  "stable": true}`
 
-Vrací `run_seq`, `running`, `stable` (true jen v pauze), `drain`
+Vrací `run_seq`, `state_rev`, `running`, `stable` (true jen v pauze), `drain`
 (`frame` / `paused`), `time` (`frame`, `frame_ticks`, `ticks` = takty GDG od startu emulátoru, `total_cycles`),
 `regs`, `flags`, `windows` (echo, `sha256` - stejná hodnota jako
 `emu_mem_read` / `emu_region_read` rozsahu - a `data_b64`), `complete`

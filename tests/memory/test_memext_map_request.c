@@ -35,6 +35,7 @@
 
 #include "hw-generic/memory/memory.h"
 #include "hw-generic/memory/memext.h"
+#include "state_rev.h"
 
 
 /**
@@ -124,7 +125,9 @@ void test_process_applies_once(void)
     fill_luftner_values(values);
     memext_map_request(values);
 
+    uint64_t rev0 = g_state_rev;
     TEST_ASSERT_TRUE(memext_map_request_process());
+    TEST_ASSERT_EQUAL_UINT64_MESSAGE(rev0 + 1, g_state_rev, "provedená mapa zvedne revizi stavu");
     for (int i = 0; i < MEMEXT_RAW_MAP_SIZE; i++)
         TEST_ASSERT_EQUAL_UINT32((uint32_t)(0x10 + i), g_memext.map[i]);
     TEST_ASSERT_EQUAL_PTR(&g_memext.RAM[0x12 * MEMEXT_RAW_BANK_SIZE], g_memory.memram_read[2]);
@@ -133,6 +136,7 @@ void test_process_applies_once(void)
 
     /* Druhé vyzvednutí nemá co provést. */
     TEST_ASSERT_FALSE(memext_map_request_process());
+    TEST_ASSERT_EQUAL_UINT64(rev0 + 1, g_state_rev);
 }
 
 

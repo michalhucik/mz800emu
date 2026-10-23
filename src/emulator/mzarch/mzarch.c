@@ -76,6 +76,7 @@
 #endif
 
 #include "replay.h"
+#include "state_rev.h"
 #include "snapshot/snapshot_request.h"
 #include "device_request.h"
 #include "replay_cli.h"
@@ -1089,6 +1090,42 @@ static inline void mzarch_main_resume_interrupt_check(void)
 }
 
 
+#ifdef MZ800EMU_CFG_MCP_SERVER_ENABLED
+/**
+ * @brief Pošle MCP událost `state_changed`, pokud v pauze stav stroje změnil
+ *        jiný zdroj než MCP klient.
+ *
+ * Volá se jednou za iteraci paused smyčky, takže změny jedné iterace (např.
+ * editace v Memory Browseru po bajtech) dají nejvýš jednu událost. Payload
+ * `{state_rev, sources}`: revize po změnách a jména zdrojů
+ * (state_rev_src_name()) v pořadí bitů; zdroj `mcp` je v seznamu, jen když
+ * se v téže iteraci sešel s jiným zdrojem. Změny jen od MCP klienta
+ * (odpověď nástroje nese `state_rev`) a z běhu (`paused`, `resumed`) se
+ * neohlašují. Revize se označí za ohlášenou vždy, i bez odběratele.
+ *
+ * @pre Emu vlákno, emulace v pauze.
+ * @post state_rev_take_unannounced() vynulovalo zdroje.
+ */
+static void mzarch_main_emit_state_changed(void)
+{
+    uint64_t rev = 0;
+    uint32_t src = state_rev_take_unannounced(&rev);
+    if (!(src & ~(uint32_t)(STATE_REV_SRC_MCP | STATE_REV_SRC_RUN))) return;
+    if (!event_bus_has_subscriber("state_changed")) return;
+    JsonObject *payload = json_object_new();
+    json_object_set_int_member(payload, "state_rev", (gint64)rev);
+    JsonArray *names = json_array_new();
+    for (int i = 0; i < STATE_REV_SRC_COUNT_BITS; i++)
+    {
+        uint32_t bit = 1u << i;
+        if ((src & bit) && bit != STATE_REV_SRC_RUN) json_array_add_string_element(names, state_rev_src_name(bit));
+    };
+    json_object_set_array_member(payload, "sources", names);
+    event_bus_emit("state_changed", payload);
+}
+#endif
+
+
 static inline void mzzarch_main_do_emulator_paused(void)
 {
     /* Video záznam: emulace stojí - běh k dočasnému BP (step over / run to cursor)
@@ -1131,6 +1168,7 @@ static inline void mzzarch_main_do_emulator_paused(void)
             (gint64) ( g_mzarch_main.cpu ? g_mzarch_main.cpu->total_cycles : 0 ) );
         json_object_set_int_member ( payload, "ticks", (gint64) gdg_get_total_ticks ( ) );
         json_object_set_int_member ( payload, "run_seq", (gint64) run_log_current ( NULL ) );
+        json_object_set_int_member ( payload, "state_rev", (gint64) g_state_rev );
         event_bus_emit ( "step_done", payload );
     }
 #endif
@@ -1209,6 +1247,12 @@ static inline void mzzarch_main_do_emulator_paused(void)
         /* Video záznam: stop požadovaný v pauze se provede hned (jinak až po
          * odpauzování). Bez nahrávání 1 atomické čtení. */
         videorec_on_emulation_paused();
+
+#ifdef MZ800EMU_CFG_MCP_SERVER_ENABLED
+        /* Událost state_changed: změny stavu stroje v této iteraci od jiného
+         * zdroje než MCP klient (sloučené, nejvýš jedna za iteraci). */
+        mzarch_main_emit_state_changed();
+#endif
 
         /* Čekání na další iteraci: nejvýš 20 ms jako dřív (g_usleep), ale
          * příkaz z dbgapi fronty smyčku probudí hned (queue_cond). Bez toho
@@ -1352,6 +1396,10 @@ static void mzarch_main_reset(void)
     printf("\n");
 
     g_mzarch_main.reset_count++;
+    /* Revize stavu (state_rev.h, Z4): reset z GUI, MCP i záznamu vstupů;
+     * reset vyžádaný příkazem MCP klienta se připíše MCP. */
+    STATE_REV_BUMP(g_state_rev_reset_src ? g_state_rev_reset_src : STATE_REV_SRC_RESET);
+    g_state_rev_reset_src = 0;
     videorec_on_reset(); /* událost reset + auto marker (bez nahrávání no-op) */
     cmt_cli_on_reset(); /* --cmt-boot: pustit drženou klávesu C */
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
@@ -1871,6 +1919,9 @@ void mzarch_main(void)
 
 void mzarch_main_init(void)
 {
+    /* Revize stavu stroje: náhodná epocha procesu (state_rev.h). */
+    state_rev_init();
+
     mzarch_main_queue_next_event();
 }
 

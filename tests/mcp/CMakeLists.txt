@@ -69,6 +69,7 @@ mz_add_test(mcp_dispatch
         ${CMAKE_SOURCE_DIR}/src/emulator/debugger/coverage/coverage_export.c
         ${CMAKE_SOURCE_DIR}/src/emulator/debugger/memsearch/memsearch.c
         ${CMAKE_SOURCE_DIR}/src/emulator/debugger/run_control/run_log.c
+        ${CMAKE_SOURCE_DIR}/src/emulator/debugger/dbgapi_cmd_props.c
     LABELS   "standalone;mcp"
 )
 
@@ -1321,6 +1322,39 @@ if(Python3_FOUND)
         TIMEOUT 240
     )
     message(STATUS "  tests/mcp: registered mcp_replay_goto "
+                   "(Python ${Python3_VERSION})")
+
+    # -----------------------------------------------------------
+    # Watch nemění stav stroje ani s `!` (watch_eval, watch_list, pipe)
+    # -----------------------------------------------------------
+    add_test(
+        NAME    mcp_watch_no_side_effects
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_watch_no_side_effects.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_watch_no_side_effects PROPERTIES
+        LABELS  "e2e;mcp;pipe"
+        TIMEOUT 120
+    )
+    message(STATUS "  tests/mcp: registered mcp_watch_no_side_effects "
+                   "(Python ${Python3_VERSION})")
+
+    # -----------------------------------------------------------
+    # Revize stavu state_rev: čtení nemění, zápisy a běh zvednou,
+    # expected_state_rev, if_state_rev_differs, záznam vstupů (pipe)
+    # -----------------------------------------------------------
+    add_test(
+        NAME    mcp_state_rev
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_state_rev.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_state_rev PROPERTIES
+        LABELS  "e2e;mcp;pipe"
+        TIMEOUT 180
+    )
+    message(STATUS "  tests/mcp: registered mcp_state_rev "
                    "(Python ${Python3_VERSION})")
 
     # -----------------------------------------------------------

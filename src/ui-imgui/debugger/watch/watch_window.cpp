@@ -55,7 +55,8 @@
  *
  * Polling: kazdy frame cte hodnoty pres watch_read_int / watch_read_bytes
  * (= memory_read_byte_no_se v UI vlakne). EXPR módy navíc volaji
- * bp_expr_eval (side_effect=false = nepuštíme MEM_R BP).
+ * bp_expr_eval s no_side_effects (`!` se ignoruje, žádné MEM_R BP ani IN
+ * na port).
  *
  * Race s EMU vlaknem akceptovany (stejný kompromis jako io_window).
  *

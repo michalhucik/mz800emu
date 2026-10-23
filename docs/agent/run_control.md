@@ -39,9 +39,10 @@ with the same fields:
 | `elapsed_ticks` | length of the run in GDG ticks |
 | `frame` | completed frames since the emulator started, at the stop |
 | `step` | the run was a single step |
+| `state_rev` | revision of the machine state after the stop (only in the event, not in the stop history; see `emulator://docs/state_revision`) |
 
-The event `resumed` (`run_seq`, `pc`, `started_by`, `start_cmd`,
-`start_ticks`, `deadline`) reports every run start except single steps,
+The event `resumed` (`run_seq`, `state_rev`, `pc`, `started_by`,
+`start_cmd`, `start_ticks`, `deadline`) reports every run start except single steps,
 also when the user resumes in the GUI. Subscribe with
 `emu_event_subscribe(["paused", "resumed"])`.
 
@@ -100,6 +101,8 @@ returns `paused: false`, `skipped: "run_seq_mismatch"`
   `stepped: true` is kept for compatibility and says nothing.
 - `step_done.cycles` is a 32-bit T-state counter that wraps after about
   20 minutes of emulation; use `step_done.ticks` (64-bit GDG ticks).
+  `step_done.state_rev` is the revision of the machine state after the
+  step.
 
 ## Stepping loops
 

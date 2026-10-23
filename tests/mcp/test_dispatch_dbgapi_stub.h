@@ -220,6 +220,7 @@ typedef struct st_DISPATCH_STUB_STATE {
      *   deadline_arms / deadline_clears = počty nastavení / zrušení
      */
     uint64_t             run_seq;
+    uint64_t             state_rev;    /**< Revize stavu stubu (0 = při prvním submitu s volbami 1000). */
     bool                 step_over_runs;
     st_DBGAPI_PAUSE_PARAM pause_last;
     st_DBGAPI_RUN_DEADLINE_PARAM deadline_last;

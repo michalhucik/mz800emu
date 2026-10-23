@@ -160,6 +160,32 @@ en_DBGAPI_SUBMIT_STATUS dbgapi_ui_submit_cmd_sync_watched(st_DBGAPI_CMDRQ_QUEUE 
 
 
 /**
+ * @brief dbgapi_ui_submit_cmd_sync_watched() s volbami revize stavu.
+ *
+ * Stejné chování a návratové hodnoty; navíc @p opts (může být NULL):
+ * podmínka revize stavu (EXPECT_EQUAL, SKIP_IF_EQUAL) vyhodnocená v emu
+ * vlákně před příkazem a výstupy (revize, číslo běhu a běh) z okamžiku po
+ * příkazu. Nesplněná EXPECT_EQUAL = DBGAPI_SUBMIT_FAILED a
+ * @c opts->rev_failed; splněná SKIP_IF_EQUAL = DBGAPI_SUBMIT_OK
+ * a @c opts->rev_skipped (příkaz se neprovedl).
+ *
+ * @param opts Volby a výstupy, vlastní volající, platné do návratu; NULL = bez voleb.
+ * @pre Nevolat z emu vlákna (deadlock).
+ * @post Při stavu OK nebo FAILED jsou výstupní pole @p opts vyplněná.
+ */
+en_DBGAPI_SUBMIT_STATUS dbgapi_ui_submit_cmd_sync_opts(st_DBGAPI_CMDRQ_QUEUE *queue,
+                                                       en_DBGAPI_CMD cmd,
+                                                       en_DBGAPI_CMD_ORIGIN origin,
+                                                       void *data_ptr,
+                                                       void *result_ptr,
+                                                       int timeout_ms,
+                                                       int stall_ms,
+                                                       dbgapi_submit_stall_cb_t stall_cb,
+                                                       void *stall_user_data,
+                                                       st_DBGAPI_SUBMIT_OPTS *opts);
+
+
+/**
  * @brief Testovací háček: jednou pozdrží zpracování zadaného příkazu.
  *
  * Nastaví, že emu vlákno při nejbližším dispatchi příkazu @p cmd od

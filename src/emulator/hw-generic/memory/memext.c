@@ -34,6 +34,7 @@
 #include "baseui/baseui_tools.h"
 #include "fs_layer.h"
 #include "memext.h"
+#include "state_rev.h"
 #include "memory.h"
 
 #include "cfgmain.h"
@@ -269,6 +270,8 @@ bool memext_map_request_process ( void ) {
     for ( i = 0; i < MEMEXT_RAW_MAP_SIZE; i += step ) {
         memext_map_pwrite ( i, values[i] );
     };
+    /* Revize stavu (state_rev.h, Z7): mapa MemExt z okna. */
+    STATE_REV_BUMP ( STATE_REV_SRC_DEVICE );
     return true;
 }
 

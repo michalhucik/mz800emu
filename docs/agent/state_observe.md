@@ -14,7 +14,7 @@ windows come from the same moment.
 | Situation | Separate calls | `emu_state_observe` |
 |-----------|----------------|---------------------|
 | Emulator runs, you need a pointer register and the data it points to | two different frames, inconsistent | one frame, consistent |
-| Emulator paused | consistent, but a person in the GUI may step between your calls | one call; `run_seq` shows whether the emulator ran meanwhile |
+| Emulator paused | consistent, but a person in the GUI may step between your calls | one call; `state_rev` shows whether anything changed the machine meanwhile, `run_seq` whether it ran |
 | You want to write only if nothing changed | - | `sha256` of a window = `expected_sha256` of a conditional write |
 
 While running, the moment is the **start of a video frame** (beam on
@@ -31,7 +31,8 @@ breakpoint) and observe in pause.
     "offset": 0, "length": 256, "want_data": false}],
  "include": ["raster", "memory_map"],
  "hashes": ["cpu", "ram"],
- "want_data": true}
+ "want_data": true,
+ "if_state_rev_differs": 4294967301}
 ```
 
 | Field | Meaning |
@@ -44,6 +45,7 @@ breakpoint) and observe in pause.
 | `want_data` | Default `true`. `false` = only `sha256` per window, no `data_b64`. Use it above a few KiB. |
 | `include` | Optional sections: `raster`, `im2`, `last_instr` (same schema as `emu_get_cpu_panel_batch`) and `memory_map`. |
 | `hashes` | Optional SHA-256 of whole state parts: `cpu` (registers and hidden Z80 state), `ram`, `vram`, `memext`, `pcg`. Same definition as the replay hashes and `result.json`. |
+| `if_state_rev_differs` | Optional `state_rev` of your previous read. In pause with an equal revision nothing is read and the reply is only `{"not_modified": true, "state_rev", "run_seq", "running": false, "stable": true}`; otherwise (different revision, or running) the full answer. See `emulator://docs/state_revision`. |
 
 All reads have no side effects: no MEM_R breakpoint fires, mapped ports
 at 0E000h-0E008h (MZ-700 mode) are read without the chip side effect.
@@ -54,7 +56,7 @@ exact moment.
 ## Response
 
 ```json
-{"run_seq": 41, "running": false, "stable": true, "drain": "paused",
+{"run_seq": 41, "state_rev": 4294967302, "running": false, "stable": true, "drain": "paused",
  "time": {"frame": 12345, "frame_ticks": 26, "ticks": 4375361066, "total_cycles": 987654321},
  "regs": {"AF": 0, "BC": 0, "PC": 8197, "...": 0},
  "flags": {"iff1": false, "im": 1, "halted": false, "...": 0},
@@ -73,6 +75,7 @@ exact moment.
 | Field | Meaning |
 |-------|---------|
 | `run_seq` | Number of the running (in pause: the last) run, as in `emu_wait_stop`. If it differs from your previous read, the emulator ran in between (also a single step). |
+| `state_rev` | Revision of the machine state at the read. In pause an equal value means nothing changed the machine state (MCP, GUI, replay, devices); see `emulator://docs/state_revision`. |
 | `running`, `stable` | `stable` is `true` only in pause: the state stays as read until something changes it. While running the data are consistent with each other but already old when you get them. |
 | `drain` | Where the read was served: `frame` (frame boundary while running) or `paused`. |
 | `time` | `frame` (frame number), `frame_ticks` (GDG ticks since the start of the frame), `ticks` (GDG ticks since the emulator started, 64-bit: the clock of `t` in `emu_trace_read`, `stop_ticks`, `Cycle` in breakpoint conditions, target of `emu_run_until_tstate(target_ticks=...)` and `emu_replay_goto(t=...)`), `total_cycles` (CPU T-states, a 32-bit counter that wraps and that a reset clears). |

@@ -131,8 +131,10 @@ extern "C" {
         int      self_id;
         /* true = znak `!` se ignoruje: `[addr]!` / `{addr}!` čte jako
          * `[addr]` (bez MEM_R BP), `port[N]!` jako sonda `port[N]`. Pro
-         * Test Eval editačního panelu BP (DBGAPI_CMD_BP_TEST_EVAL);
-         * bp_expr_ctx_zero() nastaví false (= `!` platí). */
+         * vyhodnocení, které stav stroje měnit nesmí: Test Eval editačního
+         * panelu BP (DBGAPI_CMD_BP_TEST_EVAL), Watch (okno, watch_list,
+         * watch_eval) a hledání výrazem v Memory Browseru;
+         * bp_expr_ctx_zero() nastaví false (= `!` platí, akce a podmínky BP). */
         bool     no_side_effects;
     } bp_expr_ctx_t;
 

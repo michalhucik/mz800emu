@@ -169,6 +169,17 @@ en_DBGAPI_SUBMIT_STATUS dbgapi_ui_submit_cmd_sync_ex(st_DBGAPI_CMDRQ_QUEUE *queu
                                                      void *result_ptr,
                                                      int timeout_ms);
 typedef void (*dbgapi_submit_stall_cb_t)(void *user_data);
+en_DBGAPI_SUBMIT_STATUS dbgapi_ui_submit_cmd_sync_opts(st_DBGAPI_CMDRQ_QUEUE *queue,
+                                                       en_DBGAPI_CMD cmd,
+                                                       en_DBGAPI_CMD_ORIGIN origin,
+                                                       void *data_ptr,
+                                                       void *result_ptr,
+                                                       int timeout_ms,
+                                                       int stall_ms,
+                                                       dbgapi_submit_stall_cb_t stall_cb,
+                                                       void *stall_user_data,
+                                                       st_DBGAPI_SUBMIT_OPTS *opts);
+bool dbgapi_cmd_mutates(en_DBGAPI_CMD cmd);
 en_DBGAPI_SUBMIT_STATUS dbgapi_ui_submit_cmd_sync_watched(st_DBGAPI_CMDRQ_QUEUE *queue,
                                                           en_DBGAPI_CMD cmd,
                                                           en_DBGAPI_CMD_ORIGIN origin,
@@ -180,6 +191,7 @@ en_DBGAPI_SUBMIT_STATUS dbgapi_ui_submit_cmd_sync_watched(st_DBGAPI_CMDRQ_QUEUE 
                                                           void *stall_user_data);
 #else
 #include "../debugger/dbgapi_ui.h"
+#include "../debugger/dbgapi_cmd_props.h"
 /* V1.E.7 - blokující emu_run potřebuje sledovat inkrement framebuffer
  * counteru (wakeup čekání; HID nástroje od mcp-inbox-fixes čtou čítač
  * snímků emulace g_gdg.total_elapsed.screens). iface_video.h vystavuje
@@ -286,11 +298,32 @@ en_DBGAPI_SUBMIT_STATUS dbgapi_ui_submit_cmd_sync_watched(st_DBGAPI_CMDRQ_QUEUE 
  * Členy:
  *  - last_status: výsledek posledního submitu (OK, pokud žádný nebyl),
  *  - executed:    aspoň jeden submit v tomto požadavku emu provedlo
- *                 (OK nebo FAILED).
+ *                 (OK nebo FAILED),
+ *  - have_rev, state_rev, run_seq, running: výstupy posledního provedeného
+ *                 submitu z jednoho okamžiku (st_DBGAPI_SUBMIT_OPTS),
+ *  - rev_failed / rev_skipped: podmínka revize stavu nesplněna / příkaz
+ *                 přeskočen (if_state_rev_differs),
+ *  - req_cond, req_value, req_cmd, req_pending: jednorázová podmínka
+ *                 revize z požadavku; EXPECT_EQUAL použije první submit
+ *                 příkazu, který mění stav (dbgapi_cmd_mutates(), handler
+ *                 může před ním číst), SKIP_IF_EQUAL první submit příkazu
+ *                 req_cmd,
+ *  - add_state_rev: _ok_response() doplní do odpovědi `state_rev`.
  */
 typedef struct {
     en_DBGAPI_SUBMIT_STATUS last_status;
     bool executed;
+    bool have_rev;
+    uint64_t state_rev;
+    uint64_t run_seq;
+    bool running;
+    bool rev_failed;
+    bool rev_skipped;
+    uint8_t req_cond;
+    uint64_t req_value;
+    en_DBGAPI_CMD req_cmd;
+    bool req_pending;
+    bool add_state_rev;
 } st_MCP_DISPATCH_SUBMIT_TRACK;
 
 static _Thread_local st_MCP_DISPATCH_SUBMIT_TRACK s_submit_track;
@@ -1453,6 +1486,10 @@ static en_MCP_DISPATCH_RESULT _err_response(int64_t req_id,
 /**
  * @brief Helper - sestaví success RESPONSE z předaného JsonObject.
  *
+ * U příkazů, které mění stav stroje (s_submit_track.add_state_rev), doplní
+ * `state_rev` po posledním provedeném submitu, pokud ho data nemají
+ * (při `data_obj` NULL založí nový objekt).
+ *
  * Vlastnictví: funkce zabalí `data_obj` do nového `JsonNode`, předá ho
  * `jsonl_build_response` (která dělá deep-copy), a poté vlastní node i
  * obj uvolní. Caller už nesmí `data_obj` použít po návratu.
@@ -1466,6 +1503,13 @@ static en_MCP_DISPATCH_RESULT _ok_response(int64_t req_id,
                                            JsonObject *data_obj,
                                            char **out_response) {
     char *line = NULL;
+    /* Revize stavu po příkazu u vybraných nástrojů (zápisy, podmínka). */
+    if (s_submit_track.add_state_rev && s_submit_track.have_rev) {
+        if (!data_obj) data_obj = json_object_new();
+        if (!json_object_has_member(data_obj, "state_rev")) {
+            json_object_set_int_member(data_obj, "state_rev", (gint64)s_submit_track.state_rev);
+        }
+    }
     if (data_obj) {
         JsonNode *node = json_node_new(JSON_NODE_OBJECT);
         json_node_take_object(node, data_obj);
@@ -1486,9 +1530,12 @@ static en_MCP_DISPATCH_RESULT _ok_response(int64_t req_id,
 /**
  * @brief Volá dbgapi submit s origin=MCP a MCP timeoutem.
  *
- * Zkratka pro `dbgapi_ui_submit_cmd_sync_watched(&g_dbgapi_cmdrq_queue,
+ * Zkratka pro `dbgapi_ui_submit_cmd_sync_opts(&g_dbgapi_cmdrq_queue,
  *   cmd, DBGAPI_CMD_ORIGIN_MCP, data, result, MCP_DISPATCH_DBGAPI_TIMEOUT_MS,
- *   mcp_dispatch_stall_limit_ms(cmd), ...)`. Je-li pro vlákno registrované
+ *   mcp_dispatch_stall_limit_ms(cmd), ..., &opts)`. Volby revize stavu:
+ * čekající jednorázovou podmínku požadavku (s_submit_track.req_*) předá
+ * prvnímu vhodnému submitu, výstupy (`state_rev`, `run_seq`, `running`,
+ * `rev_failed`, `rev_skipped`) zapíše do s_submit_track. Je-li pro vlákno registrované
  * hlídání zaseknutí (s_stall_watch), předá jeho `on_stall`; je-li
  * požadavek už opuštěný, příkaz neodešle a vrátí ho jako neprovedený
  * (DBGAPI_SUBMIT_TIMEOUT). Bez registrace se zaseknutí nehlásí a
@@ -1511,15 +1558,37 @@ static bool _submit_dbgapi(en_DBGAPI_CMD cmd, void *data, void *result) {
          * odpovědi neobjevily opožděné vedlejší efekty. */
         st = DBGAPI_SUBMIT_TIMEOUT;
     } else {
-        st = dbgapi_ui_submit_cmd_sync_watched(&g_dbgapi_cmdrq_queue,
-                                               cmd,
-                                               DBGAPI_CMD_ORIGIN_MCP,
-                                               data,
-                                               result,
-                                               MCP_DISPATCH_DBGAPI_TIMEOUT_MS,
-                                               mcp_dispatch_stall_limit_ms((int)cmd),
-                                               (w && w->on_stall) ? w->on_stall : NULL,
-                                               w ? w->user_data : NULL);
+        /* Volby revize stavu: jednorázová podmínka z požadavku (viz
+         * st_MCP_DISPATCH_SUBMIT_TRACK), výstupy revize a běhu vždy. */
+        st_DBGAPI_SUBMIT_OPTS opts;
+        memset(&opts, 0, sizeof(opts));
+        en_DBGAPI_CMD masked = (en_DBGAPI_CMD)(cmd & DBGAPI_CMD_MASK);
+        if (s_submit_track.req_pending
+            && (masked == s_submit_track.req_cmd
+                || (s_submit_track.req_cond == DBGAPI_REV_COND_EXPECT_EQUAL
+                    && dbgapi_cmd_mutates(masked)))) {
+            opts.rev_cond = s_submit_track.req_cond;
+            opts.rev_value = s_submit_track.req_value;
+            s_submit_track.req_pending = false;
+        }
+        st = dbgapi_ui_submit_cmd_sync_opts(&g_dbgapi_cmdrq_queue,
+                                            cmd,
+                                            DBGAPI_CMD_ORIGIN_MCP,
+                                            data,
+                                            result,
+                                            MCP_DISPATCH_DBGAPI_TIMEOUT_MS,
+                                            mcp_dispatch_stall_limit_ms((int)cmd),
+                                            (w && w->on_stall) ? w->on_stall : NULL,
+                                            w ? w->user_data : NULL,
+                                            &opts);
+        if (st == DBGAPI_SUBMIT_OK || st == DBGAPI_SUBMIT_FAILED) {
+            s_submit_track.have_rev = true;
+            s_submit_track.state_rev = opts.state_rev_after;
+            s_submit_track.run_seq = opts.run_seq_after;
+            s_submit_track.running = opts.running_after;
+            if (opts.rev_failed) s_submit_track.rev_failed = true;
+            if (opts.rev_skipped) s_submit_track.rev_skipped = true;
+        }
     }
     s_submit_track.last_status = st;
     if (st == DBGAPI_SUBMIT_OK || st == DBGAPI_SUBMIT_FAILED)
@@ -1551,8 +1620,10 @@ static en_MCP_DISPATCH_RESULT _handle_ping(const st_JSONL_MESSAGE *req,
  * @brief `get_state` handler - vrací stav emulace.
  *
  * Volá `DBGAPI_CMD_IS_RUNNING` (result: bool*). Sestaví response s
- * polem `paused` (= `!is_running`) a `run_seq` (číslo běžícího, v pauze
- * posledního běhu, run_log.h). Frame counter / cycles by mělo přidat V0.B
+ * polem `paused` (= `!is_running`), `run_seq` (číslo běžícího, v pauze
+ * posledního běhu, run_log.h) a `state_rev` (revize stavu, state_rev.h);
+ * `running`, `run_seq` a `state_rev` jsou z jednoho okamžiku (výstupy
+ * slotu IS_RUNNING, N69). Frame counter / cycles by mělo přidat V0.B
  * (vyžaduje GET_RASTER_POS nebo equivalentní dbgapi call).
  *
  * Při selhání dbgapi sestaví error response.
@@ -1568,8 +1639,15 @@ static en_MCP_DISPATCH_RESULT _handle_get_state(const st_JSONL_MESSAGE *req,
     JsonObject *data = json_object_new();
     json_object_set_boolean_member(data, "running", is_running);
     json_object_set_boolean_member(data, "paused", !is_running);
-    /* run-control: číslo běžícího (v pauze posledního) běhu, viz wait_stop. */
-    json_object_set_int_member(data, "run_seq", (gint64)run_log_current(NULL));
+    /* run-control: číslo běžícího (v pauze posledního) běhu, viz wait_stop.
+     * Z téhož okamžiku jako `running` (výstup slotu IS_RUNNING, N69), spolu
+     * s revizí stavu stroje (state_rev.h). */
+    json_object_set_int_member(data, "run_seq",
+                               (gint64)(s_submit_track.have_rev ? s_submit_track.run_seq
+                                                                : run_log_current(NULL)));
+    if (s_submit_track.have_rev) {
+        json_object_set_int_member(data, "state_rev", (gint64)s_submit_track.state_rev);
+    }
 
     /* V1.D.1 - last_user_action field. Pokud žádná USER akce nebyla,
      * vystavíme JSON null (= AI vidí "user nic neudělal od startu emu"). */
@@ -15212,8 +15290,8 @@ en_MCP_DISPATCH_RESULT mcp_dispatch_request(const st_JSONL_MESSAGE *req,
     *out_response = NULL;
 
     /* Nový požadavek - vynulovat sledování submitů (viz s_submit_track). */
+    memset(&s_submit_track, 0, sizeof(s_submit_track));
     s_submit_track.last_status = DBGAPI_SUBMIT_OK;
-    s_submit_track.executed = false;
 
     if (jsonl_msg_get_type(req) != JSONL_MSG_REQUEST) {
         return MCP_DISPATCH_NOT_A_REQUEST;
@@ -15231,7 +15309,51 @@ en_MCP_DISPATCH_RESULT mcp_dispatch_request(const st_JSONL_MESSAGE *req,
 #ifndef MZ800EMU_MCP_TEST_BUILD
             _test_hook_maybe_arm_stall(&g_cmd_map[i]);
 #endif
-            return g_cmd_map[i].handler(req, out_response);
+            /* Revize stavu (state_rev.h): nástroje, které mění stav stroje
+             * (cílový dbgapi příkaz druhu MUTATES), vracejí `state_rev`
+             * a přijímají podmínku `expected_state_rev`. */
+            bool mutating = g_cmd_map[i].dbgapi_cmd != DBGAPI_CMD_NONE
+                            && dbgapi_cmd_mutates(g_cmd_map[i].dbgapi_cmd);
+            s_submit_track.add_state_rev = mutating;
+            JsonNode *dn = (JsonNode *)jsonl_msg_get_data_node(req);
+            JsonObject *dobj = (dn && json_node_get_node_type(dn) == JSON_NODE_OBJECT)
+                               ? json_node_get_object(dn) : NULL;
+            uint64_t expected_rev = 0;
+            if (dobj && json_object_has_member(dobj, "expected_state_rev")) {
+                if (!mutating) {
+                    return _err_response(req_id, "Invalid parameters: expected_state_rev is "
+                                         "accepted only by commands that change the machine state",
+                                         MCP_DISPATCH_INVALID_PARAMS, out_response);
+                }
+                gint64 v = _obj_int_or(dobj, "expected_state_rev", -1);
+                if (v < 1) {
+                    return _err_response(req_id, "Invalid parameters: expected_state_rev must be "
+                                         "a state_rev value (> 0)",
+                                         MCP_DISPATCH_INVALID_PARAMS, out_response);
+                }
+                expected_rev = (uint64_t)v;
+                s_submit_track.req_cond = DBGAPI_REV_COND_EXPECT_EQUAL;
+                s_submit_track.req_value = expected_rev;
+                s_submit_track.req_cmd = g_cmd_map[i].dbgapi_cmd;
+                s_submit_track.req_pending = true;
+            }
+            en_MCP_DISPATCH_RESULT rc = g_cmd_map[i].handler(req, out_response);
+            if (s_submit_track.rev_failed) {
+                /* Podmínka revize nesplněna: nic se neprovedlo; jednotná
+                 * chyba místo chyby handleru. */
+                free(*out_response);
+                *out_response = NULL;
+                gchar *msg = s_submit_track.running
+                    ? g_strdup_printf(MCP_PRECONDITION_PREFIX "emulator running "
+                                      "(expected_state_rev=%" G_GUINT64_FORMAT ")", expected_rev)
+                    : g_strdup_printf(MCP_PRECONDITION_PREFIX "state changed "
+                                      "(expected_state_rev=%" G_GUINT64_FORMAT
+                                      ", current_state_rev=%" G_GUINT64_FORMAT ")",
+                                      expected_rev, s_submit_track.state_rev);
+                rc = _err_response(req_id, msg, MCP_DISPATCH_EMU_ERROR, out_response);
+                g_free(msg);
+            }
+            return rc;
         }
     }
 
@@ -18172,6 +18294,10 @@ static en_MCP_DISPATCH_RESULT _state_observe_exec(int64_t req_id, JsonObject *ob
     json_object_set_int_member(data, "run_seq", (gint64)p->run_seq);
     json_object_set_boolean_member(data, "running", p->running ? TRUE : FALSE);
     json_object_set_boolean_member(data, "stable", p->running ? FALSE : TRUE);
+    /* Revize stavu z okamžiku čtení (výstup slotu, state_rev.h). */
+    if (s_submit_track.have_rev) {
+        json_object_set_int_member(data, "state_rev", (gint64)s_submit_track.state_rev);
+    }
     json_object_set_string_member(data, "drain", p->running ? "frame" : "paused");
     JsonObject *tm = json_object_new();
     json_object_set_int_member(tm, "frame", (gint64)p->frame);
@@ -18228,11 +18354,15 @@ out:
  * za běhu na hranici snímku, v pauze okamžitě. Hash oken (SHA-256) počítá
  * dispatch vlákno z kopie dat.
  *
- * Response: `run_seq`, `running`, `stable` (= !running), `drain`
- * (`frame` za běhu, `paused`), `time` {`frame`, `frame_ticks`,
- * `total_cycles`}, `regs`, `flags`, `windows`, `complete` (false =
- * některé okno nedostupné), volitelně `hashes` (nedostupná část = null),
+ * Response: `run_seq`, `state_rev`, `running`, `stable` (= !running),
+ * `drain` (`frame` za běhu, `paused`), `time` {`frame`, `frame_ticks`,
+ * `ticks`, `total_cycles`}, `regs`, `flags`, `windows`, `complete` (false
+ * = některé okno nedostupné), volitelně `hashes` (nedostupná část = null),
  * `raster`, `im2`, `last_instr`, `memory_map`.
+ *
+ * `if_state_rev_differs` (revize > 0): v pauze při shodné revizi stavu
+ * slot příkaz přeskočí (SKIP_IF_EQUAL) a odpověď je jen `not_modified`,
+ * `state_rev`, `run_seq`, `running` (false), `stable` (true).
  *
  * Chyby: neplatné parametry a okno regionu přes jeho konec =
  * `Invalid parameters: ...`; nic se nevrací, stav se nemění.
@@ -18243,9 +18373,33 @@ static en_MCP_DISPATCH_RESULT _handle_state_observe(const st_JSONL_MESSAGE *req,
     JsonNode *data_node = (JsonNode *)jsonl_msg_get_data_node(req);
     JsonObject *obj = (data_node && json_node_get_node_type(data_node) == JSON_NODE_OBJECT)
                       ? json_node_get_object(data_node) : NULL;
+    /* if_state_rev_differs: v pauze při shodné revizi nic nečíst, jen
+     * `not_modified` (vzor HTTP 304); za běhu vždy plná odpověď. */
+    if (obj && json_object_has_member(obj, "if_state_rev_differs")) {
+        gint64 v = _obj_int_or(obj, "if_state_rev_differs", -1);
+        if (v < 1) {
+            return _err_response(req_id, "Invalid parameters: if_state_rev_differs must be "
+                                 "a state_rev value (> 0)",
+                                 MCP_DISPATCH_INVALID_PARAMS, out_response);
+        }
+        s_submit_track.req_cond = DBGAPI_REV_COND_SKIP_IF_EQUAL;
+        s_submit_track.req_value = (uint64_t)v;
+        s_submit_track.req_cmd = DBGAPI_CMD_STATE_OBSERVE;
+        s_submit_track.req_pending = true;
+    }
     JsonObject *data = NULL;
     en_MCP_DISPATCH_RESULT rc = _state_observe_exec(req_id, obj, &data, out_response);
-    return data ? _ok_response(req_id, data, out_response) : rc;
+    if (!data) return rc;
+    if (s_submit_track.rev_skipped) {
+        json_object_unref(data);
+        data = json_object_new();
+        json_object_set_boolean_member(data, "not_modified", TRUE);
+        json_object_set_int_member(data, "state_rev", (gint64)s_submit_track.state_rev);
+        json_object_set_int_member(data, "run_seq", (gint64)s_submit_track.run_seq);
+        json_object_set_boolean_member(data, "running", FALSE);
+        json_object_set_boolean_member(data, "stable", TRUE);
+    }
+    return _ok_response(req_id, data, out_response);
 }
 
 

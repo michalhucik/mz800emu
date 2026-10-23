@@ -23,6 +23,7 @@
 
 #include "device_request.h"
 #include "replay.h"
+#include "state_rev.h"
 
 
 /** @brief Počet volání testovací funkce zásahu. */
@@ -92,7 +93,9 @@ void test_poll_executes_in_order(void)
     a.i[0] = 22; a.i[1] = -5;
     uint32_t s2 = device_request_submit("second", test_fn, &a);
 
+    uint64_t rev0 = g_state_rev;
     device_request_poll();
+    TEST_ASSERT_EQUAL_UINT64_MESSAGE(rev0 + 2, g_state_rev, "každý provedený zásah zvedne revizi stavu");
     TEST_ASSERT_EQUAL_INT(2, s_calls);
     TEST_ASSERT_EQUAL_INT(11, s_order[0]);
     TEST_ASSERT_EQUAL_INT(22, s_order[1]);
@@ -137,6 +140,7 @@ void test_args_are_copied(void)
  */
 void test_rejected_while_replay_active(void)
 {
+    uint64_t rev0 = g_state_rev;
     g_replay_mode = REPLAY_MODE_RECORDING;
     device_request_submit("rec", test_fn, NULL);
     device_request_poll();
@@ -144,6 +148,7 @@ void test_rejected_while_replay_active(void)
     device_request_submit("play", test_fn, NULL);
     device_request_poll();
 
+    TEST_ASSERT_EQUAL_UINT64_MESSAGE(rev0, g_state_rev, "odmítnutý zásah revizi nezvedne");
     TEST_ASSERT_EQUAL_INT(0, s_calls);
     TEST_ASSERT_EQUAL_INT(0, device_request_pending());
 

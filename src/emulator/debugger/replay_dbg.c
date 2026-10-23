@@ -12,6 +12,7 @@
 #include <json-glib/json-glib.h>
 
 #include "replay_dbg.h"
+#include "dbgapi_cmd_props.h"
 #include "dbgapi_emu.h"
 #include "dbgapi_regions.h"
 #include "replay.h"
@@ -20,57 +21,8 @@
 
 en_REPLAY_DBG_CLASS replay_dbg_classify(en_DBGAPI_CMD cmd)
 {
-    switch (cmd)
-    {
-        case DBGAPI_CMD_MEM_WRITE:
-        case DBGAPI_CMD_MEM_WRITE_CHECKED:
-        case DBGAPI_CMD_MEM_WRITE_FORCE:
-        case DBGAPI_CMD_REGIONS_WRITE:
-        case DBGAPI_CMD_SET_REG:
-        case DBGAPI_CMD_SET_CPU_FLAGS:
-        case DBGAPI_CMD_IO_WRITE:
-        case DBGAPI_CMD_IRQ_INJECT:
-        case DBGAPI_CMD_NMI_INJECT:
-        /* Kazeta: zapíše se jako událost `cmt` (replay_dbg_cmt_op()). */
-        case DBGAPI_CMD_CMT_TRANSPORT:
-        case DBGAPI_CMD_CMT_RECORD:
-        case DBGAPI_CMD_CMT_TAPE_SEEK:
-            return REPLAY_DBG_RECORD;
-
-        case DBGAPI_CMD_INPUT_PRESS_KEY:
-        case DBGAPI_CMD_INPUT_RELEASE_KEY:
-        case DBGAPI_CMD_INPUT_RELEASE_ALL:
-        case DBGAPI_CMD_INPUT_JOY_SET:
-        case DBGAPI_CMD_INPUT_JOY_CLEAR:
-        case DBGAPI_CMD_HID_SCRIPT_START:
-        case DBGAPI_CMD_HID_SCRIPT_CANCEL:
-            return REPLAY_DBG_INPUT;
-
-        case DBGAPI_CMD_SNAPSHOT_LOAD_FILE:
-        case DBGAPI_CMD_SNAPSHOT_LOAD_BUFFER:
-        case DBGAPI_CMD_MEDIA_LOAD_MZF:
-        case DBGAPI_CMD_MEDIA_LOAD_BINARY:
-        case DBGAPI_CMD_MEDIA_INSERT:
-        case DBGAPI_CMD_MEDIA_EJECT:
-        case DBGAPI_CMD_MEDIA_RUN_MZF:
-        case DBGAPI_CMD_SETTINGS_SET:
-        case DBGAPI_CMD_PLATFORM_SET:
-        case DBGAPI_CMD_PERIPH_ATTACH:
-        case DBGAPI_CMD_PERIPH_DETACH:
-        case DBGAPI_CMD_SET_PIOZ80_INTERRUPT_VECTOR:
-        case DBGAPI_CMD_IO_READ:
-        case DBGAPI_CMD_CMT_HACK_SET:
-        case DBGAPI_CMD_CMT_SET_PROPERTY:
-        case DBGAPI_CMD_CMT_OPEN:
-        case DBGAPI_CMD_CMT_TAPE_BLOCK_SPEED:
-        case DBGAPI_CMD_MEMMAP_SET:
-        case DBGAPI_CMD_FREEZE_ADD:
-            return REPLAY_DBG_FORBIDDEN;
-
-        default:
-            break;
-    };
-    return REPLAY_DBG_ALLOW;
+    /* Třída je sloupec tabulky vlastností příkazů (dbgapi_cmd_props.c). */
+    return (en_REPLAY_DBG_CLASS)dbgapi_cmd_props(cmd)->replay;
 }
 
 

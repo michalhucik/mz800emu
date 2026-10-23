@@ -63,6 +63,8 @@
 #include "run_control/run_control.h"
 #include "../replay.h"
 #include "run_control/run_log.h"
+#include "dbgapi_cmd_props.h"
+#include "state_rev.h"
 #include "state_hash.h"
 #include "png_encode.h"
 #include "screenshot/screenshot_capture.h"
@@ -2326,10 +2328,38 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
     const bool rc_was_paused = EMULATOR_TEST_PAUSED ? true : false;
     const bool rc_was_step = TEST_DEBUGGER_STEP_CALL ? true : false;
 
+    /* Podmínka revize stavu (st_DBGAPI_SUBMIT_OPTS, state_rev.h): před
+     * bránou záznamu vstupů, aby nesplněná podmínka nic nezaznamenala.
+     * EXPECT_EQUAL za běhu nikdy neplatí (stav se mění bez zvednutí). */
+    st_DBGAPI_SUBMIT_OPTS *opts = rq->opts;
+    bool rev_failed = false;
+    bool rev_skipped = false;
+    if (opts)
+    {
+        opts->rev_failed = false;
+        opts->rev_skipped = false;
+        if (opts->rev_cond == DBGAPI_REV_COND_EXPECT_EQUAL)
+        {
+            rev_failed = !EMULATOR_TEST_PAUSED || g_state_rev != opts->rev_value;
+        }
+        else if (opts->rev_cond == DBGAPI_REV_COND_SKIP_IF_EQUAL)
+        {
+            rev_skipped = EMULATOR_TEST_PAUSED && g_state_rev == opts->rev_value;
+        };
+        opts->rev_failed = rev_failed;
+        opts->rev_skipped = rev_skipped;
+    };
+    const bool rev_stop = rev_failed || rev_skipped;
+
+    /* Zdroj zvednutí revize: vše uvnitř příkazu MCP klienta (i reset,
+     * snapshot) je MCP (událost state_changed ho neohlašuje). */
+    const uint32_t rev_src_prev = g_state_rev_src_override;
+    if (rq->cmd_origin == DBGAPI_CMD_ORIGIN_MCP) g_state_rev_src_override = STATE_REV_SRC_MCP;
+
     /* Záznam vstupů (replay.h): při záznamu odmítne zásah, který záznam
      * neumí zopakovat, a zásah v pauze mimo hranici snímku. Bez záznamu
      * jedno čtení. */
-    const bool rp_refused = (g_replay_mode != REPLAY_MODE_OFF) && !replay_dbg_before(rq);
+    const bool rp_refused = !rev_stop && (g_replay_mode != REPLAY_MODE_OFF) && !replay_dbg_before(rq);
 
     /*
      * Dispatch příkazů — zatím základní implementace.
@@ -2339,10 +2369,15 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
      * TODO: doplnit handlery pro jednotlivé příkazy
      */
     /* Příkazy kazety pod zámkem stavu zařízení (dbgapi_cmd_needs_device_lock()). */
-    const bool dev_locked = !rp_refused && dbgapi_cmd_needs_device_lock(cmd);
+    const bool dev_locked = !rev_stop && !rp_refused && dbgapi_cmd_needs_device_lock(cmd);
     if (dev_locked) device_state_lock();
 
-    if (rp_refused)
+    if (rev_stop)
+    {
+        /* Podmínka revize: nesplněná = chyba, přeskočení = úspěch bez práce. */
+        rq->success = rev_skipped;
+    }
+    else if (rp_refused)
     {
         rq->success = false;
     }
@@ -2652,8 +2687,23 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
              * reset_request_mutex + flag). Side effecty: gdg_reset,
              * memory_reset, z80_reset, periferie reset, debugger
              * update. Z paused stavu je reset detekován v pause
-             * loop (mzarch.c:594) okamžitě a zachová pause. */
-            mzarch_platform_fn_reset_request ( );
+             * loop okamžitě a zachová pause.
+             *
+             * V pauze bez záznamu vstupů se reset provede hned v příkazu
+             * (emu vlákno, totéž co paused smyčka): výstup slotu i odpověď
+             * MCP pak nesou revizi stavu po resetu (state_rev.h). Jinak
+             * (za běhu, při záznamu, který reset odkládá na hranici
+             * snímku) jen požadavek; zdroj pro revizi převezme
+             * mzarch_main_reset(). */
+            if ( EMULATOR_TEST_PAUSED && ( g_replay_mode == REPLAY_MODE_OFF ) )
+            {
+                mzarch_main_reset_now ( );
+            }
+            else
+            {
+                g_state_rev_reset_src = g_state_rev_src_override;
+                mzarch_platform_fn_reset_request ( );
+            };
             rq->success = true;
             break;
 
@@ -4886,6 +4936,8 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                 bp_expr_ctx_t ctx;
                 bp_expr_ctx_zero ( &ctx );
                 ctx.cpu = g_mzarch_main.cpu;
+                /* Znak `!` se ignoruje jako u uloženého watche (N67). */
+                ctx.no_side_effects = true;
                 int32_t v = bp_expr_eval ( ast, &ctx );
                 bp_expr_free ( ast );
                 p->out_value_int = v;
@@ -9163,11 +9215,21 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
 
     if (dev_locked) device_state_unlock();
 
+    /* Revize stavu (state_rev.h, Z3): příkaz, který při vyřízení mohl
+     * změnit stav stroje (tabulka vlastností, nezařazený také). Ne při
+     * odmítnutí branou záznamu vstupů a ne při nesplněné podmínce zápisu
+     * (nic se neprovedlo); jiný neúspěch zvedne (mohl provést část). */
+    if (!rev_stop && !rp_refused && dbgapi_cmd_mutates(cmd) && !dbgapi_cmd_precondition_failed(rq))
+    {
+        STATE_REV_BUMP(STATE_REV_SRC_DEBUGGER);
+    };
+    g_state_rev_src_override = rev_src_prev;
+
     run_control_after_cmd ( (unsigned) cmd, (int) rq->cmd_origin, rc_was_paused, rc_was_step );
 
     /* Záznam vstupů: uložit zásah (`d` za běhu, `p` v pauze) nebo nový
      * vzorek vstupů; při přehrávání označit odchýlení. */
-    if ((g_replay_mode != REPLAY_MODE_OFF) && !rp_refused)
+    if ((g_replay_mode != REPLAY_MODE_OFF) && !rp_refused && !rev_stop)
     {
         replay_dbg_after(rq, rc_was_paused);
     };
@@ -9184,10 +9246,19 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
         {
             dbgapi_emit_mcp_action(rq, false);
         }
-        else if (!rp_refused && dbgapi_cmd_precondition_failed(rq))
+        else if (rev_failed || (!rp_refused && dbgapi_cmd_precondition_failed(rq)))
         {
             dbgapi_emit_mcp_action(rq, true);
         };
+    };
+
+    /* Výstupy pro volajícího z okamžiku po příkazu (revize, běh): MCP je
+     * vrací spolu s výsledkem příkazu (N69: get_state z jednoho okamžiku). */
+    if (opts)
+    {
+        opts->state_rev_after = g_state_rev;
+        opts->running_after = !EMULATOR_TEST_PAUSED;
+        opts->run_seq_after = run_log_current(NULL);
     };
 }
 
@@ -9311,7 +9382,8 @@ static en_DBGAPI_SUBMIT_STATUS dbgapi_ui_submit_impl(st_DBGAPI_CMDRQ_QUEUE *queu
                                                      int timeout_ms,
                                                      int stall_ms,
                                                      dbgapi_submit_stall_cb_t stall_cb,
-                                                     void *stall_user_data)
+                                                     void *stall_user_data,
+                                                     st_DBGAPI_SUBMIT_OPTS *opts)
 {
     /* Kontrola: emulátor se neukončuje? */
     APP_MUTEX_LOCK(queue->queue_mutex);
@@ -9364,6 +9436,7 @@ static en_DBGAPI_SUBMIT_STATUS dbgapi_ui_submit_impl(st_DBGAPI_CMDRQ_QUEUE *queu
     slot->success = false;
     slot->dequeued = false;
     slot->done_early = false;
+    slot->opts = opts;
 
     /* V1.D.1 - track last user action pro emulator://state Resource.
      * Zaznamenáváme jen origin == USER (= GUI klik / hotkey / menu).
@@ -9416,6 +9489,7 @@ static en_DBGAPI_SUBMIT_STATUS dbgapi_ui_submit_impl(st_DBGAPI_CMDRQ_QUEUE *queu
             slot->cmd_origin = DBGAPI_CMD_ORIGIN_USER;
             slot->data_ptr = NULL;
             slot->result_ptr = NULL;
+            slot->opts = NULL;
             APP_MUTEX_UNLOCK(slot->mutex);
             APP_MUTEX_UNLOCK(queue->queue_mutex);
             return DBGAPI_SUBMIT_TIMEOUT;
@@ -9467,6 +9541,7 @@ static en_DBGAPI_SUBMIT_STATUS dbgapi_ui_submit_impl(st_DBGAPI_CMDRQ_QUEUE *queu
     slot->cmd_origin = DBGAPI_CMD_ORIGIN_USER;
     slot->data_ptr = NULL;
     slot->result_ptr = NULL;
+    slot->opts = NULL;
 
     APP_MUTEX_UNLOCK(slot->mutex);
 
@@ -9482,7 +9557,7 @@ en_DBGAPI_SUBMIT_STATUS dbgapi_ui_submit_cmd_sync_ex(st_DBGAPI_CMDRQ_QUEUE *queu
                                                      int timeout_ms)
 {
     return dbgapi_ui_submit_impl(queue, cmd, origin, data_ptr, result_ptr,
-                                 timeout_ms, 0, NULL, NULL);
+                                 timeout_ms, 0, NULL, NULL, NULL);
 }
 
 
@@ -9498,7 +9573,24 @@ en_DBGAPI_SUBMIT_STATUS dbgapi_ui_submit_cmd_sync_watched(st_DBGAPI_CMDRQ_QUEUE 
 {
     return dbgapi_ui_submit_impl(queue, cmd, origin, data_ptr, result_ptr,
                                  timeout_ms, stall_ms, stall_cb,
-                                 stall_user_data);
+                                 stall_user_data, NULL);
+}
+
+
+en_DBGAPI_SUBMIT_STATUS dbgapi_ui_submit_cmd_sync_opts(st_DBGAPI_CMDRQ_QUEUE *queue,
+                                                       en_DBGAPI_CMD cmd,
+                                                       en_DBGAPI_CMD_ORIGIN origin,
+                                                       void *data_ptr,
+                                                       void *result_ptr,
+                                                       int timeout_ms,
+                                                       int stall_ms,
+                                                       dbgapi_submit_stall_cb_t stall_cb,
+                                                       void *stall_user_data,
+                                                       st_DBGAPI_SUBMIT_OPTS *opts)
+{
+    return dbgapi_ui_submit_impl(queue, cmd, origin, data_ptr, result_ptr,
+                                 timeout_ms, stall_ms, stall_cb,
+                                 stall_user_data, opts);
 }
 
 

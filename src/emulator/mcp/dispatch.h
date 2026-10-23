@@ -100,6 +100,14 @@ extern "C" {
      *  4. Pokud existuje, zavolá příslušný handler. Handler je
      *     odpovědný za sestavení odpovědi (success i error case).
      *
+     * Revize stavu (state_rev.h): má-li příkaz cílový dbgapi příkaz,
+     * který mění stav stroje (dbgapi_cmd_mutates()), úspěšná odpověď nese
+     * `state_rev` a přijímá se `expected_state_rev` (jinde
+     * `Invalid parameters`). Nesplněná podmínka nahradí odpověď handleru
+     * chybou `Precondition failed: state changed (...)` nebo
+     * `Precondition failed: emulator running (...)` s kódem
+     * MCP_DISPATCH_EMU_ERROR; v emulátoru se nic neprovede.
+     *
      * Wire protocol error texty jsou anglicky (per CLAUDE.md i18n -
      * jádro emulátoru nepoužívá `_()`/`_L()` a klient může být ne-CZ).
      *

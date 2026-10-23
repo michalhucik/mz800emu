@@ -2828,6 +2828,56 @@ en_DBGAPI_SUBMIT_STATUS dbgapi_ui_submit_cmd_sync_watched(st_DBGAPI_CMDRQ_QUEUE 
 }
 
 
+/* Tabulka vlastností příkazů (dbgapi_cmd_props.c je v testu přilinkovaná;
+ * hlavičku test nevkládá kvůli main.h). */
+bool dbgapi_cmd_mutates(en_DBGAPI_CMD cmd);
+
+/**
+ * @brief Mock `dbgapi_ui_submit_cmd_sync_opts` - submit s volbami revize.
+ *
+ * Revize stavu stubu je g_stub_state.state_rev (v pauze podle
+ * g_stub_state.is_running): EXPECT_EQUAL s jinou hodnotou nebo za běhu =
+ * FAILED a rev_failed, SKIP_IF_EQUAL při shodě v pauze = OK a rev_skipped
+ * (příkaz se nevolá), jinak deleguje na mock _ex. Výstupy vyplní ze stavu
+ * stubu; úspěšný příkaz, který mění stav, revizi stubu zvedne.
+ */
+en_DBGAPI_SUBMIT_STATUS dbgapi_ui_submit_cmd_sync_opts(st_DBGAPI_CMDRQ_QUEUE *queue,
+                                                       en_DBGAPI_CMD cmd,
+                                                       en_DBGAPI_CMD_ORIGIN origin,
+                                                       void *data_ptr,
+                                                       void *result_ptr,
+                                                       int timeout_ms,
+                                                       int stall_ms,
+                                                       dbgapi_submit_stall_cb_t stall_cb,
+                                                       void *stall_user_data,
+                                                       st_DBGAPI_SUBMIT_OPTS *opts) {
+    if (!g_stub_state.state_rev) g_stub_state.state_rev = 1000;
+    en_DBGAPI_SUBMIT_STATUS st;
+    bool paused = !g_stub_state.is_running;
+    if (opts && opts->rev_cond == DBGAPI_REV_COND_EXPECT_EQUAL
+        && (!paused || opts->rev_value != g_stub_state.state_rev)) {
+        opts->rev_failed = true;
+        st = DBGAPI_SUBMIT_FAILED;
+    } else if (opts && opts->rev_cond == DBGAPI_REV_COND_SKIP_IF_EQUAL
+               && paused && opts->rev_value == g_stub_state.state_rev) {
+        opts->rev_skipped = true;
+        st = DBGAPI_SUBMIT_OK;
+    } else {
+        st = dbgapi_ui_submit_cmd_sync_watched(queue, cmd, origin, data_ptr, result_ptr,
+                                               timeout_ms, stall_ms, stall_cb, stall_user_data);
+        if (st == DBGAPI_SUBMIT_OK && dbgapi_cmd_mutates((en_DBGAPI_CMD)(cmd & DBGAPI_CMD_MASK))) {
+            g_stub_state.state_rev++;
+        }
+    }
+    if (opts) {
+        opts->state_rev_after = g_stub_state.state_rev;
+        opts->run_seq_after = g_stub_state.run_seq;
+        opts->running_after = g_stub_state.is_running;
+    }
+    return st;
+}
+
+
 /* V1.D.1 - last user action tracker shim pro test build.
  *
  * Reálná implementace v dbgapi.c drží statický buffer s mutex zámkem;

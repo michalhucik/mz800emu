@@ -10,6 +10,7 @@ Read individual topics on demand via `resources/read`.
 | `emulator://docs/error_handling` | How to read a failed tool response: which errors mean "not executed, safe to retry" (`Emulator busy: ...`), "partially executed" or a real failure; request timing, the 10 s queue timeout and the ~20 s limit for a started command. |
 | `emulator://docs/run_control` | Run control: start a run and wait until it stops (`emu_wait_stop`, `run_seq`, events `paused` / `resumed` with reason, PC, who started the run), deadlines in emulated time (`deadline_frames` / `deadline_ms`), `emu_pause(if_run_seq)` so as not to stop the user's run, `completed` of steps, 20 s limit of stepping loops, SHA-256 of memory and of the screen (`want_data=false`, `emu_frame_hash`). |
 | `emulator://docs/state_observe` | Registers, flags, run number, emulated time and up to 16 memory windows (CPU addresses or physical regions by kind and `sub_id`) from **one moment**, with SHA-256 per window (`emu_state_observe`); optional raster, memory map and state part hashes. Use instead of separate register and memory reads while the emulator runs. |
+| `emulator://docs/state_revision` | One number that changes whenever the machine state may have changed (MCP, GUI, replay, devices, runs): `state_rev` in `emu_get_state`, `emu_state_observe`, write responses and events; `expected_state_rev` refuses a write after any change since your read; `if_state_rev_differs` answers `not_modified` without reading; known gaps. |
 | `emulator://docs/conditional_writes` | Write only if the memory or register still holds what you read: `expected_sha256` on `emu_mem_write` / `emu_mem_write_force` / `emu_region_write`, `expected` on `emu_set_register` / `emu_set_cpu_flags`; `Precondition failed:` errors, order of checks, banking weakness of CPU addresses. |
 | `emulator://docs/replay` | Record a run once and repeat it exactly: `emu_replay_record_start` / `_stop`, `emu_replay_play` (also in a new process, any speed), `emu_replay_status`; what is recorded, writes only at frame boundaries, refused tools, `deviated`, first differing frame (`replay_desync`, `desync_parts`), `inputs.jsonl` format, CI check `--replay-verify` (exit code 4). |
 | `emulator://docs/memory_layout` | Z80 64 KB address space layout per platform (MZ-700 / MZ-800 native / MZ-800 700-compat / MZ-1500). Banking ports `0xE0..0xE6`. Memory expansion (Memext) replacing the RAM, memory files inside a `.mzs` snapshot. Key ROM entry points, IRQ vectors, text/color VRAM regions. |
@@ -40,6 +41,8 @@ Read individual topics on demand via `resources/read`.
   its data) while the emulator runs -> `state_observe`.
 - Writing memory or a register only if nobody changed it since you read
   it (a person in the GUI, the running program) -> `conditional_writes`.
+- Checking cheaply whether anything changed the paused machine since your
+  last read, or writing only if nothing at all changed -> `state_revision`.
 - Repeating a run exactly (a bug with other breakpoints, trace, ramlog),
   finding the first frame where two runs differ, CI check of a recorded
   run -> `replay`.

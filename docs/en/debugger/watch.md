@@ -112,9 +112,9 @@ A subset most commonly used in Watch:
 | `NN` | Decimal literal |
 | `[addr]` | Byte from memory (no side-effect) |
 | `{addr}` | Word LE from memory (no side-effect) |
-| `[addr]!` | Byte with side-effect (simulates a CPU read) |
+| `[addr]!` | In Watch the same as `[addr]` (`!` is ignored) |
 | `port[N]` | I/O port byte (no side-effect) |
-| `port[N]!` | I/O port byte with side-effect |
+| `port[N]!` | In Watch the same as `port[N]` (`!` is ignored) |
 | `A` `B` `C` `D` `E` `H` `L` `F` | Z80 8-bit registers |
 | `BC` `DE` `HL` `AF` `IX` `IY` `SP` `PC` | 16-bit registers |
 | `I` `R` `IM` `IFF1` `IFF2` | Special registers |
@@ -130,11 +130,13 @@ A subset most commonly used in Watch:
 | `~ !` | Unary |
 | `min max abs if bit s8 s16 s32` | Built-in functions |
 
-**Side-effect critical:** Watch evaluates expressions with
-`side_effect=false`. For `[addr]` / `port[N]` (without the `!`
-suffix) a no-side-effect read is used, so Watch **does not trigger
-MEM R / IORQ breakpoints**. If you want to simulate a side-effect
-(e.g. ack interrupt), use the explicit `!` suffix.
+**No side effects:** Watch never changes the machine state. `[addr]`,
+`{addr}` and `port[N]` are read without side effects, so Watch **does
+not trigger MEM R or IORQ breakpoints** and does not read a port with a
+real IN. The `!` suffix (a read with a side effect in breakpoint
+conditions and actions) is ignored in Watch, as in the breakpoint Test
+Eval and in the expression search of the Memory Browser. Read a port
+with its side effect through a breakpoint action or MCP `emu_io_read`.
 
 ## Parse error display
 
@@ -226,8 +228,7 @@ actions.
 
 Mode `Expression (scalar)`, expr `port[0xCE]`, type `u8`, fmt `bin`.
 We see the port's bit field without a side-effect (it does not
-simulate an IORQ read). For the side-effect version use
-`port[0xCE]!`.
+simulate an IORQ read).
 
 ## Coupling to other panels
 

@@ -33,6 +33,7 @@
 
 #include "emulator/replay.h"
 #include "emulator/replay_format.h"
+#include "emulator/state_rev.h"
 #include "emulator/emulator.h"
 #include "hw-generic/pio8255/pio8255.h"
 #include "hw-generic/gdg/gdg.h"
@@ -393,7 +394,12 @@ void test_off_mode_autotype_via_emu_thread(void)
 
     replay_host_autotype(text, 33.0, 44.0);
     TEST_ASSERT_NULL(g_pio8255.vkbd_autotype);
+    uint64_t rev0 = g_state_rev;
     replay_on_paused();
+    TEST_ASSERT_TRUE_MESSAGE(g_state_rev > rev0, "autotype z UI mimo záznam zvedne revizi stavu");
+    rev0 = g_state_rev;
+    replay_on_paused();
+    TEST_ASSERT_EQUAL_UINT64_MESSAGE(rev0, g_state_rev, "pauza bez vstupu z UI revizi nezvedne");
     TEST_ASSERT_NOT_NULL(g_pio8255.vkbd_autotype);
     TEST_ASSERT_TRUE(g_pio8255.vkbd_autotype != text);
     TEST_ASSERT_EQUAL_DOUBLE(33.0, g_pio8255.vkbd_autotype_kd_ms);

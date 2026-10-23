@@ -4,6 +4,7 @@
  */
 
 #include "snapshot_mgr.h"
+#include "state_rev.h"
 #include "snapshot_io.h"
 #include "snapshot_xml.h"
 #include "snapshot_screenshot.h"
@@ -536,6 +537,10 @@ en_SNAPSHOT_RESULT snapshot_save_to_buffer(const char *description,
  */
 static en_SNAPSHOT_RESULT snapshot_load_through_io(snapshot_io_t *io)
 {
+    /* Revize stavu (state_rev.h, Z5): i načtení, které selže uprostřed,
+     * stav mohlo změnit. */
+    STATE_REV_BUMP(STATE_REV_SRC_SNAPSHOT);
+
     /* 1. Načíst a ověřit manifest */
     st_SNAPSHOT_METADATA metadata;
     memset(&metadata, 0, sizeof(metadata));

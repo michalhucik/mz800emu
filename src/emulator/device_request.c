@@ -8,6 +8,7 @@
  */
 
 #include "device_request.h"
+#include "state_rev.h"
 #include "replay.h"
 
 #include <glib.h>
@@ -93,6 +94,8 @@ void device_request_poll(void)
         } else {
             res->status = DEVICE_REQ_DONE;
             res->rc = r->fn(&r->args);
+            /* Revize stavu (state_rev.h, Z6): provedený zásah zařízení. */
+            STATE_REV_BUMP(STATE_REV_SRC_DEVICE);
         }
         g_free(r);
 

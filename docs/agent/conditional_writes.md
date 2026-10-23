@@ -18,6 +18,7 @@ frame boundary).
 | `emu_region_write` | `expected_sha256`: SHA-256 of the bytes the write overwrites in the region (after clipping at the region end) | `before_sha256`, `after_sha256` |
 | `emu_set_register` | `expected`: the current 16-bit value | `previous` (always) |
 | `emu_set_cpu_flags` | `expected`: object with the current values of the fields this call writes, e.g. `{"iff1": 1}` | `previous` (always) |
+| all of the above and other tools that change the machine state | `expected_state_rev`: the `state_rev` of your read (only in pause) - refused after **any** change of the machine, see `emulator://docs/state_revision` | `state_rev` (always) |
 
 `want_hashes=True` returns `before_sha256` and `after_sha256` without a
 condition (a cheap confirmation of what the write did). Without the new
@@ -69,9 +70,13 @@ emu_set_cpu_flags(iff1=0, expected={"iff1": 1})
   cell. For a write that must hit one physical cell, use
   `emu_region_write` (physical region, no banking), or check the
   `memory_map` section of `emu_state_observe` together with the hash.
-- **ABA.** The condition compares content. If the program changed the
-  bytes and changed them back, the write is accepted - there is no
-  global state revision yet.
+- **ABA.** `expected_sha256` and `expected` compare content. If the
+  program changed the bytes and changed them back, the write is accepted.
+  If that matters, pause and use `expected_state_rev`
+  (`emulator://docs/state_revision`): it refuses after any change of the
+  machine, also one that was undone or one elsewhere, and also catches a
+  banking change. Both conditions can be used in one call; the revision
+  is checked first.
 - **Replay.** A refused write is not executed and is not recorded in an
   input recording; an accepted one is recorded as a plain write and
   replays exactly.

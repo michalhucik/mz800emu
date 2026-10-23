@@ -41,6 +41,7 @@ paragraph is the description.
 | `emulator://docs/replay` | `replay.md` |
 | `emulator://docs/state_observe` | `state_observe.md` |
 | `emulator://docs/conditional_writes` | `conditional_writes.md` |
+| `emulator://docs/state_revision` | `state_revision.md` |
 | `emulator://docs/coverage` | `coverage.md` |
 
 This table is informative only - the actual resource list is built by

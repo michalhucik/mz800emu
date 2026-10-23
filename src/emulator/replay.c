@@ -32,6 +32,7 @@
 #include "replay_media.h"
 #include "replay_ckpt.h"
 #include "media_writes.h"
+#include "state_rev.h"
 #include "state_hash.h"
 #include "emulator.h"
 #include "cfgmain.h"
@@ -638,9 +639,15 @@ bool replay_autotype_peek_rest(char *buf, size_t size)
  * rozjel na snímku pauzy a na závěrečném hashi (změřeno). Vynechané
  * komponenty: `ide8` (cesta k obrazu, při přehrání dočasná kopie, načtení ji
  * neobnoví), `unicard` (pracovní adresář hostitele), `cmt` (jméno souboru
- * pásky), paměti a CPU (mají vlastní části) a zvuk, video a obraz (stav
- * výstupu hostitele, ne stroje). `fdc` a `qdisk` cestu k obrazu zapisují,
- * načtení snapshotu ji ale obnoví, takže se při přehrání shoduje.
+ * pásky), paměti a CPU a zvuk, video a obraz (stav výstupu hostitele, ne
+ * stroje). `fdc` a `qdisk` cestu k obrazu zapisují, načtení snapshotu ji
+ * ale obnoví, takže se při přehrání shoduje.
+ *
+ * Známá mezera (N68): části `ram` a `memext` (state_hash.h) hashují jen
+ * obsah RAM, ne mapování. Komponenty `memory` (mapa `g_memory.map`),
+ * `memext` (mapa a konfigurace MemExt), `ramdisk` a `hwconfig` nepokrývá
+ * žádná část, takže rozjetí jen v bankování se pozná až podle dalšího
+ * průběhu. Seznam se kvůli ověření starších záznamů `.mzr` nemění.
  */
 static const char *const s_periph_components[] = {
     "mzarch", "ctc8253", "pio8255", "pioz80", "psg", "gdg", "vramctrl", "fdc", "qdisk",
@@ -987,6 +994,8 @@ static void replay_rec_autotype(char *text, uint32_t kd_ms, uint32_t ku_ms, en_R
 static void replay_cmt_run(en_REPLAY_CMT_OP op, int32_t arg, const char *path, en_REPLAY_EV_AT at)
 {
     (void)replay_media_cmt_execute(op, arg, path);
+    /* Revize stavu (state_rev.h, Z9): operace kazety z UI nebo záznamu. */
+    STATE_REV_BUMP(STATE_REV_SRC_TAPE);
     if (!s_rec) return;
     st_REPLAY_EVENT ev;
     memset(&ev, 0, sizeof(ev));
@@ -1058,6 +1067,11 @@ static void replay_ui_off_drain(bool apply)
 
     if (apply)
     {
+        /* Revize stavu (state_rev.h, Z9): vstupy z UI mimo záznam, jen při
+         * skutečné změně (autotype, prodlevy, VKBD). */
+        bool changed = do_at || do_delays;
+        for (int i = 0; i < REPLAY_KBD_COLS && !changed; i++) changed = (press[i] | release[i]) != 0;
+        if (changed) STATE_REV_BUMP(STATE_REV_SRC_INPUT);
         if (do_at) replay_apply_autotype(at_text, kd, ku);
         if (do_delays)
         {
@@ -1159,7 +1173,12 @@ static void replay_rec_paused(void)
         replay_rec_reset(REPLAY_AT_PAUSE);
         replay_rec_sample(REPLAY_AT_PAUSE, false);
     };
-    if (do_at) replay_rec_autotype(at_text, kd, ku, REPLAY_AT_PAUSE);
+    if (do_at)
+    {
+        /* Revize stavu (state_rev.h, Z8): autotype při záznamu v pauze. */
+        STATE_REV_BUMP(STATE_REV_SRC_INPUT);
+        replay_rec_autotype(at_text, kd, ku, REPLAY_AT_PAUSE);
+    };
     if (replay_ui_cmt_pending()) replay_ui_cmt_drain(REPLAY_AT_PAUSE);
 }
 
@@ -2147,6 +2166,10 @@ void replay_on_paused(void)
     {
         char errbuf[REPLAY_STATUS_TEXT_MAX];
         const char *e = NULL;
+        /* Revize stavu (state_rev.h, Z8): každý vyřízený požadavek (start,
+         * stop, rewind, seek, goto) může stav změnit; i odmítnutý (bezpečný
+         * směr). */
+        STATE_REV_BUMP(STATE_REV_SRC_REPLAY);
         switch (r->kind)
         {
             case REPLAY_REQ_RECORD:

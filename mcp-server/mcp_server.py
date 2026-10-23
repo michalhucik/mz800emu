@@ -969,6 +969,21 @@ async def _read_hello_with_filter(timeout_sec: float) -> dict[str, Any]:
     return msg
 
 
+def _with_rev(data: dict, expected_state_rev: int | None) -> dict:
+    """Doplní do parametrů podmínku revize stavu ``expected_state_rev``.
+
+    Args:
+        data: parametry požadavku (změní se a vrátí).
+        expected_state_rev: revize stavu, ``None`` = bez podmínky.
+
+    Returns:
+        ``data`` s klíčem ``expected_state_rev``, je-li zadaný.
+    """
+    if expected_state_rev is not None:
+        data["expected_state_rev"] = expected_state_rev
+    return data
+
+
 async def _send_request(cmd: str,
                         data: Optional[dict] = None,
                         timeout_s: Optional[float] = None) -> dict[str, Any]:
@@ -1202,9 +1217,10 @@ async def _shutdown_emu() -> None:
 async def emu_status() -> str:
     """Get emulator backend status.
 
-    Returns JSON with fields ``running`` (bool), ``paused`` (bool) and
-    optionally other state fields (frame counter, total cycles) when
-    emulator is alive. If the transport has not been connected yet or
+    Returns JSON with fields ``running`` (bool), ``paused`` (bool),
+    ``run_seq``, ``state_rev`` (revision of the machine state, from the
+    same moment as ``running``; see ``emulator://docs/state_revision``)
+    and optionally other state fields when emulator is alive. If the transport has not been connected yet or
     has been closed, returns ``{"running": false, "connected": false}``;
     when the backend ended unexpectedly (emulator process crashed or
     exited, TCP connection dropped), the field ``last_exit`` describes it
@@ -1401,7 +1417,8 @@ async def emu_get_registers() -> str:
 
 @mcp.tool()
 async def emu_set_register(reg: str, value: int,
-                           expected: Optional[int] = None) -> str:
+                           expected: Optional[int] = None,
+                           expected_state_rev: int | None = None) -> str:
     """Write a 16-bit value to a Z80 register.
 
     Accepts the same case-insensitive register names returned by
@@ -1427,6 +1444,12 @@ async def emu_set_register(reg: str, value: int,
             one step in the emulator thread. On a mismatch nothing is
             written and the error is ``Precondition failed: register <reg>
             changed (expected=0x...., current=0x....)``.
+        expected_state_rev: perform the command only if the state
+            revision still equals this value (``state_rev`` from
+            ``emu_get_state`` / ``emu_state_observe``, only while paused);
+            otherwise nothing changes and the error starts with
+            ``Precondition failed: state changed``. See
+            ``emulator://docs/state_revision``.
 
     Returns:
         JSON ``{"reg", "value", "previous"}`` - ``previous`` is the value
@@ -1439,7 +1462,7 @@ async def emu_set_register(reg: str, value: int,
         if not (0 <= expected <= 0xFFFF):
             return json.dumps({"error": "expected must be in range 0..65535"})
         payload["expected"] = expected
-    resp = await _send_request("set_register", payload)
+    resp = await _send_request("set_register", _with_rev(payload, expected_state_rev))
     return json.dumps(_data_or_error(resp))
 
 
@@ -1524,7 +1547,8 @@ async def emu_mem_read(addr: int, length: int = 16, want_data: bool = True) -> s
 @mcp.tool()
 async def emu_mem_write(addr: int, data_hex: str,
                         expected_sha256: Optional[str] = None,
-                        want_hashes: bool = False) -> str:
+                        want_hashes: bool = False,
+                        expected_state_rev: int | None = None) -> str:
     """Write bytes to Z80 memory at a given address.
 
     WARNING: This is a destructive operation. Writes to ROM, CG-ROM,
@@ -1561,6 +1585,12 @@ async def emu_mem_write(addr: int, data_hex: str,
             lands elsewhere - use ``emu_region_write`` for a physical cell.
         want_hashes: also return ``before_sha256`` and ``after_sha256``
             without a condition.
+        expected_state_rev: perform the command only if the state
+            revision still equals this value (``state_rev`` from
+            ``emu_get_state`` / ``emu_state_observe``, only while paused);
+            otherwise nothing changes and the error starts with
+            ``Precondition failed: state changed``. See
+            ``emulator://docs/state_revision``.
 
     Returns:
         On success: JSON ``{"addr": <int>, "length": <int>}``, with a
@@ -1585,7 +1615,7 @@ async def emu_mem_write(addr: int, data_hex: str,
     err = _write_cond_payload(payload, expected_sha256, want_hashes)
     if err:
         return json.dumps({"error": err})
-    resp = await _send_request("mem_write", payload)
+    resp = await _send_request("mem_write", _with_rev(payload, expected_state_rev))
     if not resp.get("success", False):
         return json.dumps({"error": resp.get("error", "mem_write failed")})
     return json.dumps(_data_or_error(resp))
@@ -1995,7 +2025,8 @@ async def emu_snapshot_save_buffer(description: str = "") -> str:
 
 
 @mcp.tool()
-async def emu_snapshot_load(path: str) -> str:
+async def emu_snapshot_load(path: str,
+                            expected_state_rev: int | None = None) -> str:
     """Restore emulator state from a .mzs snapshot file on disk.
 
     The emulator must be paused (call ``emu_pause`` first; a freshly
@@ -2010,13 +2041,19 @@ async def emu_snapshot_load(path: str) -> str:
 
     Args:
         path: filesystem path to the .mzs file.
+        expected_state_rev: perform the command only if the state
+            revision still equals this value (``state_rev`` from
+            ``emu_get_state`` / ``emu_state_observe``, only while paused);
+            otherwise nothing changes and the error starts with
+            ``Precondition failed: state changed``. See
+            ``emulator://docs/state_revision``.
 
     Returns:
         JSON ``{"path": <str>, "ok": true, "result_code": 0}`` on success.
     """
     if not isinstance(path, str) or path == "":
         return json.dumps({"error": "path must be a non-empty string"})
-    resp = await _send_request("snapshot_load", {"path": path})
+    resp = await _send_request("snapshot_load", _with_rev({"path": path}, expected_state_rev))
     if not resp.get("success", False):
         return json.dumps(
             {"error": resp.get("error", "snapshot_load failed")})
@@ -2024,7 +2061,8 @@ async def emu_snapshot_load(path: str) -> str:
 
 
 @mcp.tool()
-async def emu_snapshot_load_buffer(bytes_b64: str) -> str:
+async def emu_snapshot_load_buffer(bytes_b64: str,
+                                   expected_state_rev: int | None = None) -> str:
     """Restore emulator state from an inline base64-encoded buffer.
 
     The buffer is typically produced by ``emu_snapshot_save_buffer`` in
@@ -2036,6 +2074,12 @@ async def emu_snapshot_load_buffer(bytes_b64: str) -> str:
 
     Args:
         bytes_b64: base64-encoded .mzs ZIP content.
+        expected_state_rev: perform the command only if the state
+            revision still equals this value (``state_rev`` from
+            ``emu_get_state`` / ``emu_state_observe``, only while paused);
+            otherwise nothing changes and the error starts with
+            ``Precondition failed: state changed``. See
+            ``emulator://docs/state_revision``.
 
     Returns:
         JSON ``{"size": <int>, "ok": true, "result_code": 0}`` on success
@@ -2044,8 +2088,7 @@ async def emu_snapshot_load_buffer(bytes_b64: str) -> str:
     """
     if not isinstance(bytes_b64, str) or bytes_b64 == "":
         return json.dumps({"error": "bytes_b64 must be a non-empty string"})
-    resp = await _send_request(
-        "snapshot_load_buffer", {"bytes_b64": bytes_b64})
+    resp = await _send_request("snapshot_load_buffer", _with_rev({"bytes_b64": bytes_b64}, expected_state_rev))
     if not resp.get("success", False):
         return json.dumps(
             {"error": resp.get("error", "snapshot_load_buffer failed")})
@@ -3075,18 +3118,25 @@ async def emu_event_subscribe(topics: list[str]) -> str:
     * ``paused`` - exactly one event for every stop of the emulator
       (breakpoint, temporary breakpoint, step, ``emu_run`` frames,
       deadline, manual pause, exit). Payload: ``{reason, pc, run_seq,
-      step, start_ticks, stop_ticks, elapsed_ticks, frame, started_by,
-      start_cmd, stopped_by}`` plus ``bp_id`` (breakpoint), ``exit_code`` /
+      state_rev, step, start_ticks, stop_ticks, elapsed_ticks, frame,
+      started_by, start_cmd, stopped_by}`` plus ``bp_id`` (breakpoint), ``exit_code`` /
       ``exit_reason`` / ``message`` (exit), ``bytes`` / ``detail``
       (``bp_action_saturation``). Same fields as the record of
       ``emu_wait_stop``.
     * ``resumed`` - the emulator left a pause into a run (not for a single
       step), also when the user resumed it in the GUI. Payload:
-      ``{run_seq, pc, started_by, start_cmd, start_ticks, deadline}``.
+      ``{run_seq, state_rev, pc, started_by, start_cmd, start_ticks,
+      deadline}``.
     * ``step_done`` - a single step finished. Payload: ``{pc, cycles,
-      ticks, run_seq}`` (``cycles`` is a 32-bit T-state counter that wraps
-      after about 20 minutes of emulation, ``ticks`` are 64-bit GDG ticks
-      since the emulator started).
+      ticks, run_seq, state_rev}`` (``cycles`` is a 32-bit T-state counter
+      that wraps after about 20 minutes of emulation, ``ticks`` are 64-bit
+      GDG ticks since the emulator started).
+    * ``state_changed`` - the machine state changed in pause by something
+      other than an MCP client (GUI debugger windows, menus, device
+      windows, replay requests), merged per pass of the pause loop.
+      Payload: ``{state_rev, sources}`` (``debugger``, ``reset``,
+      ``snapshot``, ``device``, ``replay``, ``input``, ``tape``). See
+      ``emulator://docs/state_revision``.
     * ``io_write`` - declared topic, emit hook scheduled for V1.A.5+
       (requires Z80 OUT hot-path hook).
 
@@ -3221,7 +3271,8 @@ async def emu_trap_respond(trap_id: int, action: str) -> str:
 
 
 @mcp.tool()
-async def emu_io_read(port: int) -> str:
+async def emu_io_read(port: int,
+                      expected_state_rev: int | None = None) -> str:
     """Read from a Z80 I/O port (full Z80 IN semantics including side effects).
 
     Some peripherals have read-side effects (e.g. PSG status flag reset,
@@ -3234,6 +3285,12 @@ async def emu_io_read(port: int) -> str:
     Args:
         port: 16-bit I/O port (0-65535; the Z80 uses the low 8 bits for
               most chips, the high byte is on the bus).
+        expected_state_rev: perform the command only if the state
+            revision still equals this value (``state_rev`` from
+            ``emu_get_state`` / ``emu_state_observe``, only while paused);
+            otherwise nothing changes and the error starts with
+            ``Precondition failed: state changed``. See
+            ``emulator://docs/state_revision``.
 
     Returns:
         JSON ``{"port": <int>, "value": <0..255>}`` on success or
@@ -3241,14 +3298,15 @@ async def emu_io_read(port: int) -> str:
     """
     if not isinstance(port, int) or port < 0 or port > 65535:
         return json.dumps({"error": "port must be 0..65535"})
-    resp = await _send_request("io_read", {"port": port})
+    resp = await _send_request("io_read", _with_rev({"port": port}, expected_state_rev))
     if not resp.get("success", False):
         return json.dumps({"error": resp.get("error", "io_read failed")})
     return json.dumps(_data_or_error(resp))
 
 
 @mcp.tool()
-async def emu_io_write(port: int, value: int) -> str:
+async def emu_io_write(port: int, value: int,
+                       expected_state_rev: int | None = None) -> str:
     """Write to a Z80 I/O port (full Z80 OUT semantics with side effects).
 
     The chip on the addressed port reacts exactly as if a Z80 OUT
@@ -3261,6 +3319,12 @@ async def emu_io_write(port: int, value: int) -> str:
     Args:
         port: 16-bit I/O port (0-65535).
         value: 8-bit value (0-255).
+        expected_state_rev: perform the command only if the state
+            revision still equals this value (``state_rev`` from
+            ``emu_get_state`` / ``emu_state_observe``, only while paused);
+            otherwise nothing changes and the error starts with
+            ``Precondition failed: state changed``. See
+            ``emulator://docs/state_revision``.
 
     Returns:
         JSON ``{"port": <int>, "value": <int>}`` echo on success or
@@ -3270,14 +3334,15 @@ async def emu_io_write(port: int, value: int) -> str:
         return json.dumps({"error": "port must be 0..65535"})
     if not isinstance(value, int) or value < 0 or value > 255:
         return json.dumps({"error": "value must be 0..255"})
-    resp = await _send_request("io_write", {"port": port, "value": value})
+    resp = await _send_request("io_write", _with_rev({"port": port, "value": value}, expected_state_rev))
     if not resp.get("success", False):
         return json.dumps({"error": resp.get("error", "io_write failed")})
     return json.dumps(_data_or_error(resp))
 
 
 @mcp.tool()
-async def emu_irq_inject(source: str = "manual", vector: int = -1) -> str:
+async def emu_irq_inject(source: str = "manual", vector: int = -1,
+                         expected_state_rev: int | None = None) -> str:
     """Force a Z80 maskable IRQ from a synthetic source.
 
     The Z80 INT line is asserted as if a hardware device requested an
@@ -3292,6 +3357,12 @@ async def emu_irq_inject(source: str = "manual", vector: int = -1) -> str:
         source: short label for audit logs (default ``"manual"``).
         vector: IM2 vector byte (0-255); ``-1`` = use default
                 ``intread_cb`` (typical for IM1 / unconnected).
+        expected_state_rev: perform the command only if the state
+            revision still equals this value (``state_rev`` from
+            ``emu_get_state`` / ``emu_state_observe``, only while paused);
+            otherwise nothing changes and the error starts with
+            ``Precondition failed: state changed``. See
+            ``emulator://docs/state_revision``.
 
     Returns:
         JSON ``{"injected": true, "source": "...", "vector_used": <int|null>}``
@@ -3302,14 +3373,15 @@ async def emu_irq_inject(source: str = "manual", vector: int = -1) -> str:
     if not isinstance(vector, int) or vector < -1 or vector > 255:
         return json.dumps({"error": "vector must be -1 or 0..255"})
     resp = await _send_request(
-        "irq_inject", {"source": source, "vector": vector})
+        "irq_inject", _with_rev({"source": source, "vector": vector},
+                                expected_state_rev))
     if not resp.get("success", False):
         return json.dumps({"error": resp.get("error", "irq_inject failed")})
     return json.dumps(_data_or_error(resp))
 
 
 @mcp.tool()
-async def emu_nmi_inject() -> str:
+async def emu_nmi_inject(expected_state_rev: int | None = None) -> str:
     """Force a Z80 NMI (non-maskable interrupt).
 
     NMI is non-maskable: after the current instruction completes the
@@ -3319,10 +3391,18 @@ async def emu_nmi_inject() -> str:
     WARNING: Very destructive. NMI cannot be vetoed by software. Pause
     the emulator before injecting.
 
+    Args:
+        expected_state_rev: perform the command only if the state
+            revision still equals this value (``state_rev`` from
+            ``emu_get_state`` / ``emu_state_observe``, only while paused);
+            otherwise nothing changes and the error starts with
+            ``Precondition failed: state changed``. See
+            ``emulator://docs/state_revision``.
+
     Returns:
         JSON ``{"injected": true}`` on success or ``{"error": "..."}``.
     """
-    resp = await _send_request("nmi_inject")
+    resp = await _send_request("nmi_inject", _with_rev({}, expected_state_rev))
     if not resp.get("success", False):
         return json.dumps({"error": resp.get("error", "nmi_inject failed")})
     return json.dumps(_data_or_error(resp))
@@ -3331,7 +3411,8 @@ async def emu_nmi_inject() -> str:
 @mcp.tool()
 async def emu_mem_write_force(addr: int, data_hex: str,
                               expected_sha256: Optional[str] = None,
-                              want_hashes: bool = False) -> str:
+                              want_hashes: bool = False,
+                              expected_state_rev: int | None = None) -> str:
     """Write bytes to Z80 memory without region-write checks.
 
     Unlike ``emu_mem_write`` (which refuses to write into ROM, CG-ROM,
@@ -3350,6 +3431,12 @@ async def emu_mem_write_force(addr: int, data_hex: str,
             (all 64 KiB in one call only from address 0).
         expected_sha256: conditional write, same as ``emu_mem_write``.
         want_hashes: also return ``before_sha256`` and ``after_sha256``.
+        expected_state_rev: perform the command only if the state
+            revision still equals this value (``state_rev`` from
+            ``emu_get_state`` / ``emu_state_observe``, only while paused);
+            otherwise nothing changes and the error starts with
+            ``Precondition failed: state changed``. See
+            ``emulator://docs/state_revision``.
 
     Returns:
         JSON ``{"addr": <int>, "length": <int>}`` (plus the hashes with a
@@ -3366,7 +3453,7 @@ async def emu_mem_write_force(addr: int, data_hex: str,
     err = _write_cond_payload(payload, expected_sha256, want_hashes)
     if err:
         return json.dumps({"error": err})
-    resp = await _send_request("mem_write_force", payload)
+    resp = await _send_request("mem_write_force", _with_rev(payload, expected_state_rev))
     if not resp.get("success", False):
         return json.dumps(
             {"error": resp.get("error", "mem_write_force failed")})
@@ -3493,6 +3580,9 @@ async def emu_watch_eval(name: str = "", index: int = -1,
         checks without polluting the watch list.
 
     If ``expr`` is provided, it takes precedence over ``name`` / ``index``.
+    A watch never changes the machine state: ``[addr]!`` and ``port[N]!``
+    are read like ``[addr]`` / ``port[N]`` (no MEM_R breakpoint, no real
+    IN); use ``emu_io_read`` for a port read with its side effect.
 
     See ``emulator://docs/watch_dsl`` for watch modes and
     ``emulator://docs/bp_dsl`` for the full ``expr`` syntax.
@@ -4971,6 +5061,7 @@ async def emu_media_insert(
     path: str = "",
     bytes_b64: str = "",
     ro: bool = False,
+    expected_state_rev: int | None = None,
 ) -> str:
     """Insert a media image into a peripheral slot. WARNING: if the slot
     already has a mounted image, it is automatically unmounted before
@@ -4995,6 +5086,12 @@ async def emu_media_insert(
         path: Filesystem path.
         bytes_b64: Inline base64-encoded image (decoded to tmp file).
         ro: Read-only mount (informational, honored where supported).
+        expected_state_rev: perform the command only if the state
+            revision still equals this value (``state_rev`` from
+            ``emu_get_state`` / ``emu_state_observe``, only while paused);
+            otherwise nothing changes and the error starts with
+            ``Precondition failed: state changed``. See
+            ``emulator://docs/state_revision``.
 
     Returns:
         JSON ``{"ok": true, "slot": str, "result_code": int}`` on
@@ -5019,7 +5116,7 @@ async def emu_media_insert(
         args["path"] = path
     else:
         args["bytes_b64"] = bytes_b64
-    resp = await _send_request("media_insert", args)
+    resp = await _send_request("media_insert", _with_rev(args, expected_state_rev))
     if not resp.get("success", False):
         return json.dumps(
             {"error": resp.get("error", "media_insert failed")})
@@ -5027,13 +5124,20 @@ async def emu_media_insert(
 
 
 @mcp.tool()
-async def emu_media_eject(slot: str) -> str:
+async def emu_media_eject(slot: str,
+                          expected_state_rev: int | None = None) -> str:
     """Eject a media image from the given slot. No-op if the slot is
     empty.
 
     Args:
         slot: One of 'cmt' | 'fdc0_fd0'..'fdc0_fd3' |
             'fdc1_fd0'..'fdc1_fd3' | 'qd' | 'ide8'.
+        expected_state_rev: perform the command only if the state
+            revision still equals this value (``state_rev`` from
+            ``emu_get_state`` / ``emu_state_observe``, only while paused);
+            otherwise nothing changes and the error starts with
+            ``Precondition failed: state changed``. See
+            ``emulator://docs/state_revision``.
 
     Returns:
         JSON ``{"ok": true, "slot": str}`` on success or
@@ -5048,7 +5152,8 @@ async def emu_media_eject(slot: str) -> str:
     if slot not in valid_slots:
         return json.dumps(
             {"error": f"Invalid slot (allowed: {', '.join(valid_slots)})"})
-    resp = await _send_request("media_eject", {"slot": slot})
+    resp = await _send_request("media_eject",
+                               _with_rev({"slot": slot}, expected_state_rev))
     if not resp.get("success", False):
         return json.dumps(
             {"error": resp.get("error", "media_eject failed")})
@@ -5942,7 +6047,8 @@ async def emu_get_cpu_flags() -> str:
 async def emu_set_cpu_flags(iff1: int = -1, iff2: int = -1,
                             im: int = -1, i: int = -1,
                             r: int = -1,
-                            expected: Optional[dict[str, int]] = None) -> str:
+                            expected: Optional[dict[str, int]] = None,
+                            expected_state_rev: int | None = None) -> str:
     """Selectively update Z80 interrupt-related state (IFF1/IFF2/IM/I/R).
 
     WARNING: This is a destructive operation. Each argument is optional
@@ -5968,6 +6074,12 @@ async def emu_set_cpu_flags(iff1: int = -1, iff2: int = -1,
             ``iff1=0`` (only fields this call writes; ``r`` compares the
             whole byte). On a mismatch nothing is written and the error
             starts with ``Precondition failed: cpu flags changed``.
+        expected_state_rev: perform the command only if the state
+            revision still equals this value (``state_rev`` from
+            ``emu_get_state`` / ``emu_state_observe``, only while paused);
+            otherwise nothing changes and the error starts with
+            ``Precondition failed: state changed``. See
+            ``emulator://docs/state_revision``.
 
     Returns:
         JSON ``{"updated": ["iff1", "im", ...], "values": {...},
@@ -6004,7 +6116,7 @@ async def emu_set_cpu_flags(iff1: int = -1, iff2: int = -1,
                        "iff1/iff2/im/i/r"})
     if expected:
         payload["expected"] = dict(expected)
-    resp = await _send_request("set_cpu_flags", payload)
+    resp = await _send_request("set_cpu_flags", _with_rev(payload, expected_state_rev))
     return json.dumps(_data_or_error(resp))
 
 
@@ -6079,7 +6191,8 @@ async def emu_get_cpu_panel_batch(want_im2: bool = False,
 async def emu_state_observe(windows: list[dict[str, Any]],
                             include: list[str] | None = None,
                             hashes: list[str] | None = None,
-                            want_data: bool = True) -> str:
+                            want_data: bool = True,
+                            if_state_rev_differs: int | None = None) -> str:
     """Read registers, flags and several memory windows from ONE moment.
 
     Use this instead of ``emu_get_cpu_panel_batch`` + ``emu_mem_read``
@@ -6117,9 +6230,17 @@ async def emu_state_observe(windows: list[dict[str, Any]],
             ``vram``, ``memext``, ``pcg`` (same definition as replay and
             ``result.json``; a part that does not exist is ``null``).
         want_data: default for windows without their own ``want_data``.
+        if_state_rev_differs: ``state_rev`` of your previous read; in
+            pause, when the state revision still equals it, nothing is
+            read and the reply is only ``{"not_modified": true,
+            "state_rev", "run_seq", "running": false, "stable": true}``.
+            While running the full answer always comes.
 
     Returns:
-        JSON object with ``run_seq``, ``running``, ``stable`` (true only
+        JSON object with ``run_seq``, ``state_rev`` (revision of the
+        machine state at the read; while paused equal revisions mean the
+        state did not change, see ``emulator://docs/state_revision``),
+        ``running``, ``stable`` (true only
         in pause), ``drain`` (``frame`` or ``paused``), ``time``
         (``frame``, ``frame_ticks``, ``ticks`` = absolute GDG time that
         never wraps, ``total_cycles``), ``regs``,
@@ -6131,6 +6252,8 @@ async def emu_state_observe(windows: list[dict[str, Any]],
         payload["include"] = include
     if hashes:
         payload["hashes"] = hashes
+    if if_state_rev_differs is not None:
+        payload["if_state_rev_differs"] = if_state_rev_differs
     resp = await _send_request("state_observe", payload)
     return json.dumps(_data_or_error(resp))
 
@@ -6680,7 +6803,8 @@ async def emu_region_read(region_id: int, offset: int = 0,
 async def emu_region_write(region_id: int, offset: int,
                            data_b64: str, layout_gen: int = 0,
                            expected_sha256: Optional[str] = None,
-                           want_hashes: bool = False) -> str:
+                           want_hashes: bool = False,
+                           expected_state_rev: int | None = None) -> str:
     """Write raw bytes into a physical memory region (bypass Z80
     banking).
 
@@ -6711,6 +6835,12 @@ async def emu_region_write(region_id: int, offset: int,
             write. Errors of the id, ``layout_gen`` and read-only regions
             come first.
         want_hashes: also return ``before_sha256`` and ``after_sha256``.
+        expected_state_rev: perform the command only if the state
+            revision still equals this value (``state_rev`` from
+            ``emu_get_state`` / ``emu_state_observe``, only while paused);
+            otherwise nothing changes and the error starts with
+            ``Precondition failed: state changed``. See
+            ``emulator://docs/state_revision``.
 
     Returns:
         JSON ``{"region_id", "offset", "length", "written"}`` (plus
@@ -6732,7 +6862,7 @@ async def emu_region_write(region_id: int, offset: int,
     err = _write_cond_payload(params, expected_sha256, want_hashes)
     if err:
         return json.dumps({"error": err})
-    resp = await _send_request("region_write", params)
+    resp = await _send_request("region_write", _with_rev(params, expected_state_rev))
     return json.dumps(_data_or_error(resp))
 
 

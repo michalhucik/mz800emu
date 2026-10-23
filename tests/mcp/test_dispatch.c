@@ -8814,6 +8814,77 @@ void test_replay_goto_params(void) {
 }
 
 
+/**
+ * @brief Revize stavu (state-rev M18): get_state a zápis vracejí state_rev,
+ *        zápis se starou expected_state_rev je Precondition failed a nic
+ *        neprovede, čtecí nástroj podmínku odmítne, state_observe
+ *        s if_state_rev_differs při shodě vrátí not_modified.
+ */
+void test_state_rev_fields_and_conditions(void) {
+    dispatch_stub_reset();
+    g_stub_state.state_rev = 5000;
+    g_stub_state.is_running = false;
+    en_MCP_DISPATCH_RESULT rc;
+    JsonParser *parser = NULL;
+    char *resp = NULL;
+
+    JsonObject *d = _rc_call("{\"type\":\"request\",\"req_id\":9300,\"cmd\":\"get_state\"}",
+                             &rc, &parser, &resp);
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, rc);
+    TEST_ASSERT_EQUAL_INT64(5000, json_object_get_int_member(d, "state_rev"));
+    g_object_unref(parser);
+    free(resp);
+
+    d = _rc_call("{\"type\":\"request\",\"req_id\":9301,\"cmd\":\"mem_write\","
+                 "\"data\":{\"addr\":16384,\"data_hex\":\"AA\",\"expected_state_rev\":5000}}",
+                 &rc, &parser, &resp);
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, rc);
+    TEST_ASSERT_EQUAL_INT64(5001, json_object_get_int_member(d, "state_rev"));
+    g_object_unref(parser);
+    free(resp);
+
+    int calls = g_stub_state.call_count;
+    (void)_rc_call("{\"type\":\"request\",\"req_id\":9302,\"cmd\":\"mem_write\","
+                   "\"data\":{\"addr\":16384,\"data_hex\":\"BB\",\"expected_state_rev\":5000}}",
+                   &rc, &parser, &resp);
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_EMU_ERROR, rc);
+    TEST_ASSERT_NOT_NULL(strstr(resp, "Precondition failed: state changed (expected_state_rev=5000, current_state_rev=5001)"));
+    TEST_ASSERT_EQUAL_INT(calls, g_stub_state.call_count);
+    free(resp);
+
+    g_stub_state.is_running = true;
+    (void)_rc_call("{\"type\":\"request\",\"req_id\":9303,\"cmd\":\"mem_write\","
+                   "\"data\":{\"addr\":16384,\"data_hex\":\"BB\",\"expected_state_rev\":5001}}",
+                   &rc, &parser, &resp);
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_EMU_ERROR, rc);
+    TEST_ASSERT_NOT_NULL(strstr(resp, "Precondition failed: emulator running"));
+    free(resp);
+    g_stub_state.is_running = false;
+
+    (void)_rc_call("{\"type\":\"request\",\"req_id\":9304,\"cmd\":\"get_registers\","
+                   "\"data\":{\"expected_state_rev\":5001}}", &rc, &parser, &resp);
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_INVALID_PARAMS, rc);
+    free(resp);
+
+    d = _rc_call("{\"type\":\"request\",\"req_id\":9305,\"cmd\":\"state_observe\","
+                 "\"data\":{\"windows\":[],\"if_state_rev_differs\":5001}}", &rc, &parser, &resp);
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, rc);
+    TEST_ASSERT_TRUE(json_object_get_boolean_member(d, "not_modified"));
+    TEST_ASSERT_EQUAL_INT64(5001, json_object_get_int_member(d, "state_rev"));
+    g_object_unref(parser);
+    free(resp);
+
+    d = _rc_call("{\"type\":\"request\",\"req_id\":9306,\"cmd\":\"state_observe\","
+                 "\"data\":{\"windows\":[],\"if_state_rev_differs\":4000}}", &rc, &parser, &resp);
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, rc);
+    TEST_ASSERT_FALSE(json_object_has_member(d, "not_modified"));
+    TEST_ASSERT_EQUAL_INT64(5001, json_object_get_int_member(d, "state_rev"));
+    TEST_ASSERT_TRUE(json_object_has_member(d, "regs"));
+    g_object_unref(parser);
+    free(resp);
+}
+
+
 /* ====================================================================== */
 /* state_observe (observe-cas, M10)                                        */
 /* ====================================================================== */
@@ -9537,6 +9608,7 @@ int main(void) {
     RUN_TEST(test_replay_status_fields);
     RUN_TEST(test_replay_rewind_seek_params);
     RUN_TEST(test_replay_goto_params);
+    RUN_TEST(test_state_rev_fields_and_conditions);
     RUN_TEST(test_snapshot_load_not_paused_reason);
     RUN_TEST(test_cooperation_hint_set_modes);
 

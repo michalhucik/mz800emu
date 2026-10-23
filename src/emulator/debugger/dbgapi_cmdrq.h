@@ -776,9 +776,10 @@ typedef enum en_DBGAPI_CMD
     DBGAPI_CMD_RUN_UNTIL_TICKS,      /* Běh do času - data_ptr: st_DBGAPI_RUN_UNTIL_TICKS_PARAM*, result_ptr: st_DBGAPI_RUN_START_RESULT* nebo NULL */
 
     /* Zarážka: počet příkazů, sama není příkaz. Nové příkazy patří PŘED
-     * ni. Test tests/debugger/test_replay_dbg_classify.c prochází celý
-     * rozsah 0..DBGAPI_CMD_COUNT-1 a hlídá, že každý příkaz má výslovnou
-     * třídu záznamu vstupů (replay_dbg_classify()). */
+     * ni. Každý příkaz musí mít řádek v tabulce vlastností
+     * (dbgapi_cmd_props.c: druh pro revizi stavu, třída záznamu vstupů);
+     * test tests/debugger/test_replay_dbg_classify.c prochází celý rozsah
+     * 0..DBGAPI_CMD_COUNT-1 a nezařazený příkaz neprojde. */
     DBGAPI_CMD_COUNT
 
 } en_DBGAPI_CMD;
@@ -917,6 +918,40 @@ typedef enum en_DBGAPI_CMD_ORIGIN
  *    návratu submitu.
  * ============================================================================ */
 
+/**
+ * @brief Podmínka revize stavu stroje u příkazu (st_DBGAPI_SUBMIT_OPTS).
+ */
+typedef enum en_DBGAPI_REV_COND
+{
+    DBGAPI_REV_COND_NONE = 0,     /**< Bez podmínky. */
+    DBGAPI_REV_COND_EXPECT_EQUAL, /**< Provést jen v pauze a při revizi rovné rev_value (MCP `expected_state_rev`). */
+    DBGAPI_REV_COND_SKIP_IF_EQUAL /**< V pauze při revizi rovné rev_value příkaz přeskočit (MCP `if_state_rev_differs`). */
+} en_DBGAPI_REV_COND;
+
+/**
+ * @brief Volby a doplňkové výstupy jednoho příkazu fronty (revize stavu).
+ *
+ * Volající (MCP) ji předá přes dbgapi_ui_submit_cmd_sync_opts(); emu vlákno
+ * vyhodnotí podmínku před bránou záznamu vstupů a před obsluhou příkazu
+ * a výstupy vyplní na konci dbgapi_emu_dispatch(), takže pocházejí z téhož
+ * okamžiku jako výsledek příkazu.
+ *
+ * Vlastnictví: patří volajícímu (typicky na jeho zásobníku), platí do
+ * návratu submitu jako data_ptr. GUI a ostatní volající předávají NULL.
+ *
+ * @invariant rev_failed a rev_skipped nejsou současně true.
+ */
+typedef struct st_DBGAPI_SUBMIT_OPTS
+{
+    uint8_t rev_cond;         /**< IN: en_DBGAPI_REV_COND. */
+    uint64_t rev_value;       /**< IN: revize pro podmínku. */
+    bool rev_failed;          /**< OUT: EXPECT_EQUAL nesplněna (emulace běží nebo jiná revize); příkaz se neprovedl, success false. */
+    bool rev_skipped;         /**< OUT: SKIP_IF_EQUAL splněna; příkaz se neprovedl, success true. */
+    uint64_t state_rev_after; /**< OUT: revize po příkazu (g_state_rev). */
+    uint64_t run_seq_after;   /**< OUT: číslo běhu po příkazu (run_log_current()). */
+    bool running_after;       /**< OUT: emulace po příkazu běží (stejný okamžik jako state_rev_after a run_seq_after). */
+} st_DBGAPI_SUBMIT_OPTS;
+
 typedef struct st_DBGAPI_CMDRQ
 {
     en_DBGAPI_CMDSTATE cmd_state;     /* Stav zpracování příkazu */
@@ -927,6 +962,7 @@ typedef struct st_DBGAPI_CMDRQ
     bool success;                     /* Výsledek: true = úspěch, false = chyba */
     bool dequeued;                    /* EMU slot vyzvedlo (chráněno queue_mutex) */
     bool done_early;                  /* EMU slot vyzvedlo mimo pořadí, head ho přeskočí (chráněno queue_mutex) */
+    st_DBGAPI_SUBMIT_OPTS *opts;      /* Volby a výstupy revize stavu (vlastní klient) nebo NULL */
     app_mutex_t *mutex;               /* Per-slot mutex */
     app_cond_t *cond;                 /* Per-slot condition variable */
 } st_DBGAPI_CMDRQ;

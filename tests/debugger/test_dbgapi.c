@@ -25,6 +25,7 @@
 #include "debugger/coverage/coverage_hook.h"
 #include "debugger/trace/ramlog.h"
 #include "state_hash.h"
+#include "state_rev.h"
 #include "debugger/breakpoints.h"
 #include "debugger/bptmap.h"
 #include "debugger/debugger.h"
@@ -1804,6 +1805,134 @@ void test_cond_set_reg ( void ) {
 
 
 /**
+ * @brief Revize stavu (Z3): zápis ji zvedne, čtení a pauza v pauze ne,
+ *        nesplněná podmínka zápisu ne.
+ */
+void test_state_rev_bumped_by_mutating_commands ( void ) {
+    g_emulator.paused = true;
+    uint8_t buf[ 2 ] = { 0 };
+    st_DBGAPI_MEM_PARAM rp = { 0xC000, 2, buf };
+    uint64_t r0 = g_state_rev;
+    TEST_ASSERT_TRUE ( call_dispatch ( DBGAPI_CMD_MEM_READ, &rp, NULL ) );
+    TEST_ASSERT_TRUE ( call_dispatch ( DBGAPI_CMD_PAUSE, NULL, NULL ) );
+    TEST_ASSERT_EQUAL_UINT64_MESSAGE ( r0, g_state_rev, "čtení a pauza v pauze revizi nezvednou" );
+
+    uint8_t data[ 2 ] = { 0x12, 0x34 };
+    st_DBGAPI_MEM_PARAM wp = { 0xC000, 2, data };
+    TEST_ASSERT_TRUE ( call_dispatch ( DBGAPI_CMD_MEM_WRITE, &wp, NULL ) );
+    TEST_ASSERT_EQUAL_UINT64_MESSAGE ( r0 + 1, g_state_rev, "zápis paměti zvedne revizi" );
+
+    z80_set_reg ( g_mzarch_main.cpu, Z80_REG_HL, 0x1234 );
+    st_DBGAPI_REG_PARAM p = { (uint8_t) Z80_REG_HL, 0x5678, 1, 0x1111, 0, 0 };
+    TEST_ASSERT_FALSE ( call_dispatch ( DBGAPI_CMD_SET_REG, &p, NULL ) );
+    TEST_ASSERT_EQUAL_UINT64_MESSAGE ( r0 + 1, g_state_rev, "nesplněná podmínka revizi nezvedne" );
+    g_emulator.paused = false;
+}
+
+
+/** @brief Jako call_dispatch(), s volbami revize stavu ve slotu. */
+/**
+ * @brief Zdroje zvednutí revize: příkaz MCP klienta = `mcp`, jiný původ =
+ *        `debugger`; ohlášení zdroje vynuluje, nahrazení zdroje po příkazu
+ *        zmizí.
+ */
+void test_state_rev_sources ( void ) {
+    g_emulator.paused = true;
+    uint8_t data[ 1 ] = { 0x55 };
+    st_DBGAPI_MEM_PARAM wp = { 0xC000, 1, data };
+    state_rev_mark_announced ( );
+    TEST_ASSERT_EQUAL_UINT32 ( 0, state_rev_take_unannounced ( NULL ) );
+
+    st_DBGAPI_CMDRQ rq;
+    memset ( &rq, 0, sizeof (rq) );
+    rq.cmd = DBGAPI_CMD_MEM_WRITE;
+    rq.cmd_state = DBGAPI_CMDSTATE_PENDING;
+    rq.cmd_origin = DBGAPI_CMD_ORIGIN_MCP;
+    rq.data_ptr = &wp;
+    dbgapi_emu_dispatch ( &rq );
+    TEST_ASSERT_TRUE ( rq.success );
+    uint64_t rev = 0;
+    TEST_ASSERT_EQUAL_UINT32 ( STATE_REV_SRC_MCP, state_rev_take_unannounced ( &rev ) );
+    TEST_ASSERT_EQUAL_UINT64 ( g_state_rev, rev );
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE ( 0, state_rev_take_unannounced ( NULL ), "ohlášená revize nemá zdroje" );
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE ( 0, g_state_rev_src_override, "nahrazení zdroje platí jen během příkazu" );
+
+    TEST_ASSERT_TRUE ( call_dispatch ( DBGAPI_CMD_MEM_WRITE, &wp, NULL ) );
+    TEST_ASSERT_EQUAL_UINT32 ( STATE_REV_SRC_DEBUGGER, state_rev_take_unannounced ( NULL ) );
+    TEST_ASSERT_EQUAL_STRING ( "device", state_rev_src_name ( STATE_REV_SRC_DEVICE ) );
+    TEST_ASSERT_EQUAL_STRING ( "unknown", state_rev_src_name ( 1u << STATE_REV_SRC_COUNT_BITS ) );
+    g_emulator.paused = false;
+}
+
+
+static bool call_dispatch_opts ( en_DBGAPI_CMD cmd, void *data_ptr, st_DBGAPI_SUBMIT_OPTS *opts ) {
+    st_DBGAPI_CMDRQ rq;
+    memset ( &rq, 0, sizeof (rq) );
+    rq.cmd = cmd;
+    rq.cmd_state = DBGAPI_CMDSTATE_PENDING;
+    rq.data_ptr = data_ptr;
+    rq.opts = opts;
+    dbgapi_emu_dispatch ( &rq );
+    return rq.success;
+}
+
+
+/**
+ * @brief Podmínky revize stavu ve slotu: EXPECT_EQUAL zapíše jen při
+ *        shodné revizi v pauze, SKIP_IF_EQUAL při shodě příkaz přeskočí;
+ *        výstupy revize a běhu jsou vyplněné.
+ */
+void test_state_rev_conditions ( void ) {
+    g_emulator.paused = true;
+    uint8_t data[ 1 ] = { 0x5A };
+    st_DBGAPI_MEM_PARAM wp = { 0xC100, 1, data };
+    uint8_t back[ 1 ] = { 0 };
+    st_DBGAPI_MEM_PARAM rp = { 0xC100, 1, back };
+
+    st_DBGAPI_SUBMIT_OPTS o;
+    memset ( &o, 0, sizeof ( o ) );
+    o.rev_cond = DBGAPI_REV_COND_EXPECT_EQUAL;
+    o.rev_value = g_state_rev;
+    uint64_t r0 = g_state_rev;
+    TEST_ASSERT_TRUE ( call_dispatch_opts ( DBGAPI_CMD_MEM_WRITE, &wp, &o ) );
+    TEST_ASSERT_FALSE ( o.rev_failed );
+    TEST_ASSERT_EQUAL_UINT64 ( r0 + 1, o.state_rev_after );
+    TEST_ASSERT_FALSE ( o.running_after );
+
+    /* Stará revize: nic se nezapíše, revize beze změny. */
+    data[ 0 ] = 0xA5;
+    o.rev_value = r0;
+    TEST_ASSERT_FALSE ( call_dispatch_opts ( DBGAPI_CMD_MEM_WRITE, &wp, &o ) );
+    TEST_ASSERT_TRUE ( o.rev_failed );
+    TEST_ASSERT_EQUAL_UINT64 ( r0 + 1, g_state_rev );
+    TEST_ASSERT_TRUE ( call_dispatch ( DBGAPI_CMD_MEM_READ, &rp, NULL ) );
+    TEST_ASSERT_EQUAL_HEX8 ( 0x5A, back[ 0 ] );
+
+    /* Za běhu EXPECT_EQUAL nikdy neplatí. */
+    g_emulator.paused = false;
+    o.rev_value = g_state_rev;
+    TEST_ASSERT_FALSE ( call_dispatch_opts ( DBGAPI_CMD_MEM_WRITE, &wp, &o ) );
+    TEST_ASSERT_TRUE ( o.rev_failed );
+    TEST_ASSERT_TRUE ( o.running_after );
+    g_emulator.paused = true;
+
+    /* SKIP_IF_EQUAL: shoda = přeskočit (buffer nezměněn), rozdíl = provést. */
+    memset ( &o, 0, sizeof ( o ) );
+    o.rev_cond = DBGAPI_REV_COND_SKIP_IF_EQUAL;
+    o.rev_value = g_state_rev;
+    back[ 0 ] = 0;
+    TEST_ASSERT_TRUE ( call_dispatch_opts ( DBGAPI_CMD_MEM_READ, &rp, &o ) );
+    TEST_ASSERT_TRUE ( o.rev_skipped );
+    TEST_ASSERT_EQUAL_HEX8 ( 0x00, back[ 0 ] );
+    o.rev_value = g_state_rev - 1;
+    TEST_ASSERT_TRUE ( call_dispatch_opts ( DBGAPI_CMD_MEM_READ, &rp, &o ) );
+    TEST_ASSERT_FALSE ( o.rev_skipped );
+    TEST_ASSERT_EQUAL_HEX8 ( 0x5A, back[ 0 ] );
+    g_emulator.paused = false;
+}
+
+
+/**
  * @brief SET_CPU_FLAGS s expect_mask: při neshodě nic nezapsat, prev_* vždy.
  */
 void test_cond_set_cpu_flags ( void ) {
@@ -1958,6 +2087,9 @@ int main ( int argc, char *argv[] ) {
     RUN_TEST ( test_cond_regions_write );
     RUN_TEST ( test_cond_set_reg );
     RUN_TEST ( test_cond_set_cpu_flags );
+    RUN_TEST ( test_state_rev_bumped_by_mutating_commands );
+    RUN_TEST ( test_state_rev_sources );
+    RUN_TEST ( test_state_rev_conditions );
 
     int result = UNITY_END ( );
 

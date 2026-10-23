@@ -18,6 +18,7 @@
 #include "emulator.h"
 #include "debugger/debugger.h"
 #include "debugger/bptmap.h"
+#include "state_rev.h"
 #include "debugger/dbgapi_cmdrq.h"
 #include "mzarch/mzarch.h"
 #include "hw-generic/gdg/gdg.h"
@@ -149,6 +150,7 @@ static void run_control_emit_paused(const st_RUN_LOG_RECORD *rec)
     json_object_set_string_member(p, "reason", rec->reason);
     json_object_set_int_member(p, "pc", rec->pc);
     json_object_set_int_member(p, "run_seq", (gint64)rec->run_seq);
+    json_object_set_int_member(p, "state_rev", (gint64)g_state_rev);
     json_object_set_boolean_member(p, "step", rec->step ? TRUE : FALSE);
     json_object_set_int_member(p, "stop_ticks", (gint64)rec->stop_ticks);
     json_object_set_int_member(p, "start_ticks", (gint64)rec->start_ticks);
@@ -183,6 +185,7 @@ static void run_control_emit_resumed(uint64_t run_seq)
     if (!event_bus_has_subscriber("resumed")) return;
     JsonObject *p = json_object_new();
     json_object_set_int_member(p, "run_seq", (gint64)run_seq);
+    json_object_set_int_member(p, "state_rev", (gint64)g_state_rev);
     json_object_set_int_member(p, "pc", g_mzarch_main.cpu ? g_mzarch_main.cpu->pc : 0);
     json_object_set_string_member(p, "started_by", s_rc.started_by);
     json_object_set_string_member(p, "start_cmd", s_rc.start_cmd);
@@ -206,6 +209,12 @@ void run_control_on_stop(void)
      * zastavil na starém cíli. */
     g_debugger.run_deadline_active = 0;
     g_debugger.run_frames_active = 0;
+
+    /* Revize stavu (state_rev.h, Z2): revize přečtená za běhu se nesmí
+     * rovnat revizi zastaveného stavu. Stav po běhu ohlásí událost
+     * paused, změny během běhu state_changed neohlašuje. */
+    STATE_REV_BUMP(STATE_REV_SRC_RUN);
+    state_rev_mark_announced();
 
     st_RUN_LOG_RECORD rec;
     run_log_record_clear(&rec);
@@ -243,6 +252,8 @@ void run_control_on_stop(void)
 
 void run_control_on_resume(void)
 {
+    /* Revize stavu (state_rev.h, Z1): rozběh i krok stav změní. */
+    STATE_REV_BUMP(STATE_REV_SRC_RUN);
     uint64_t seq = run_log_begin();
     g_emulator.pause_reason = EMU_PAUSE_REASON_NONE;
     /* Rozběh mimo frontu dbgapi (klávesa Pause v GUI) jde jen z UI vlákna. */

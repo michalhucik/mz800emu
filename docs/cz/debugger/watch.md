@@ -110,9 +110,9 @@ Subset nejčastěji použitelný ve Watch:
 | `NN` | Decimal literál |
 | `[addr]` | Byte z paměti (no side-effect) |
 | `{addr}` | Word LE z paměti (no side-effect) |
-| `[addr]!` | Byte s side-effect (simuluje CPU read) |
+| `[addr]!` | Ve Watch stejné jako `[addr]` (`!` se ignoruje) |
 | `port[N]` | I/O port byte (no side-effect) |
-| `port[N]!` | I/O port byte se side-effect |
+| `port[N]!` | Ve Watch stejné jako `port[N]` (`!` se ignoruje) |
 | `A` `B` `C` `D` `E` `H` `L` `F` | Z80 8-bit registry |
 | `BC` `DE` `HL` `AF` `IX` `IY` `SP` `PC` | 16-bit registry |
 | `I` `R` `IM` `IFF1` `IFF2` | Special registry |
@@ -128,11 +128,13 @@ Subset nejčastěji použitelný ve Watch:
 | `~ !` | Unární |
 | `min max abs if bit s8 s16 s32` | Built-in funkce |
 
-**Side-effect kritické:** Watch vyhodnocuje výrazy s `side_effect=false`.
-Pro `[addr]` / `port[N]` (bez suffixu `!`) se používá no-side-effect read,
-takže Watch **netriggruje MEM R / IORQ breakpointy**. Pokud chcete
-simulovat side-effect (např. ack interrupt), použijte explicitní `!`
-suffix.
+**Bez vedlejších efektů:** Watch stav stroje nikdy nemění. `[addr]`,
+`{addr}` i `port[N]` čte bez vedlejších efektů, takže Watch **nespouští
+MEM R ani IORQ breakpointy** a port nečte skutečným IN. Suffix `!`
+(čtení s vedlejším efektem v podmínkách a akcích breakpointů) se ve Watch
+ignoruje, stejně jako v Test Eval breakpointu a v hledání výrazem
+v Memory Browseru. Čtení portu s vedlejším efektem jde přes akci
+breakpointu nebo MCP `emu_io_read`.
 
 ## Parse error display
 
@@ -221,7 +223,6 @@ panelu, vhodné pro počítadla nastavená smart BP akcemi.
 
 Mode `Expression (scalar)`, expr `port[0xCE]`, type `u8`, fmt `bin`.
 Vidíme bitové pole portu bez side-efektu (nesimuluje IORQ read).
-Pro side-effect verze použijte `port[0xCE]!`.
 
 ## Vazba na další panely
 

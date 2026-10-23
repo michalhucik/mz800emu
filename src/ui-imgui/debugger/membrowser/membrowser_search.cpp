@@ -549,6 +549,8 @@ extern "C" bool membrowser_search_match_at ( const st_MB_SEARCH_COMPILED *c,
         if ( !c->expr_handle || avail == 0 ) return false;
         bp_expr_ctx_t ctx;
         bp_expr_ctx_zero ( &ctx );
+        /* Hledání stav stroje nemění: `!` se ignoruje (N67). */
+        ctx.no_side_effects = true;
         ctx.Value = ( int32_t ) buffer[0];
         ctx.Address = ( int32_t ) ( abs_addr & 0x7FFFFFFF );
         ctx.IsRead = true;

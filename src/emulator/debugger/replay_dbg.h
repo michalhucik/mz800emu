@@ -47,8 +47,10 @@ extern "C"
     } en_REPLAY_DBG_CLASS;
 
     /**
-     * @brief Skupina příkazu.
+     * @brief Skupina příkazu (sloupec tabulky vlastností, dbgapi_cmd_props.h).
      * @param cmd Příkaz bez příznaku BLOCKING.
+     * @return Třída záznamu vstupů; nezařazený příkaz ALLOW (test
+     *         `replay_dbg_classify` hlídá, že žádný nezařazený není).
      */
     en_REPLAY_DBG_CLASS replay_dbg_classify(en_DBGAPI_CMD cmd);
 
