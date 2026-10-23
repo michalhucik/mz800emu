@@ -73,6 +73,10 @@
 #include "ramdisk.h"
 #include "cfgmain.h"
 #include "baseui/baseui.h"
+#include "main.h"   /* g_sdlapp */
+#include "libs/sdlapp/sdlapp_paths.h"
+
+#include <glib.h>
 
 //#define DBGLEVEL        ( DBGNON /* | DBGERR | DBGWAR | DBGINF */ )
 //#define DBGLEVEL        ( DBGNON | DBGERR | DBGWAR | DBGINF )
@@ -87,38 +91,71 @@
 st_RAMDISK g_ramdisk;
 
 
+/**
+ * @brief Načte záložní soubor RAM disku do paměti disku.
+ *
+ * Relativní @p filepath (výchozí `rd-<platforma>.dat`, `pezik_e8.dat`,
+ * `pezik_68.dat`) se převádí vůči konfiguračnímu adresáři (`--cfg-dir`,
+ * výchozí adresář binárky), stejně jako breakpointy nebo obrazy IDE8;
+ * absolutní cesta (z dialogu) se použije beze změny. Na aktuálním adresáři
+ * procesu tedy nezáleží.
+ *
+ * @param memory Buffer RAM disku, aspoň @p ramdisk_size bajtů.
+ * @param filepath Cesta k souboru (relativní vůči cfg_dir nebo absolutní).
+ * @param ramdisk_size Počet bajtů k načtení.
+ *
+ * Neexistující soubor není chyba (buffer zůstane beze změny). Kratší soubor
+ * načte jen svou délku a ohlásí varování; soubor, který nejde otevřít,
+ * ohlásí chybu přes baseui_error().
+ */
 void ramdisk_load_backup_file ( uint8_t *memory, char *filepath, unsigned ramdisk_size ) {
 
     FILE *fp;
+    char *resolved = sdlapp_paths_resolve_cfg ( g_sdlapp->paths, filepath );
 
-    if ( baseui_tools_file_access ( filepath, F_OK ) != -1 ) {
-        if ( ( fp = baseui_tools_file_open ( filepath, "rb" ) ) ) {
+    if ( baseui_tools_file_access ( resolved, F_OK ) != -1 ) {
+        if ( ( fp = baseui_tools_file_open ( resolved, "rb" ) ) ) {
             unsigned filesize = baseui_tools_file_read ( memory, 1, ramdisk_size, fp );
             if ( filesize != ramdisk_size ) {
                 baseui_show_message (0, "Your RD file has only %d bytes of requested %d bytes. Relax, this is not problem ... this is only warning :)", filesize, ramdisk_size );
             };
+            fclose ( fp );
         } else {
-            baseui_error ( "Can't open file '%s': %s", filepath, strerror ( errno ) );
+            baseui_error ( "Can't open file '%s': %s", resolved, strerror ( errno ) );
         };
-        fclose ( fp );
     };
+    g_free ( resolved );
 }
 
 
+/**
+ * @brief Uloží paměť RAM disku do záložního souboru.
+ *
+ * Cestu převádí stejně jako ramdisk_load_backup_file(): relativní vůči
+ * konfiguračnímu adresáři, absolutní beze změny. Soubor se přepíše celý.
+ *
+ * @param memory Buffer RAM disku, aspoň @p ramdisk_size bajtů.
+ * @param filepath Cesta k souboru (relativní vůči cfg_dir nebo absolutní).
+ * @param ramdisk_size Počet bajtů k zápisu.
+ *
+ * Selhání otevření nebo neúplný zápis ohlásí přes baseui_error().
+ */
 void ramdisk_save_backup_file ( uint8_t *memory, char *filepath, unsigned ramdisk_size ) {
 
     FILE *fp;
+    char *resolved = sdlapp_paths_resolve_cfg ( g_sdlapp->paths, filepath );
 
-    if ( ( fp = baseui_tools_file_open ( filepath, "wb" ) ) ) {
+    if ( ( fp = baseui_tools_file_open ( resolved, "wb" ) ) ) {
         unsigned filesize = baseui_tools_file_write ( memory, 1, ramdisk_size, fp );
         if ( filesize != ramdisk_size ) {
-            baseui_error ( "Saved only %d bytes of %d - file '%s': %s", filesize, ramdisk_size, filepath, strerror ( errno ) );
+            baseui_error ( "Saved only %d bytes of %d - file '%s': %s", filesize, ramdisk_size, resolved, strerror ( errno ) );
         };
         fclose ( fp );
 
     } else {
-        baseui_error ( "Can't open file '%s': %s", filepath, strerror ( errno ) );
+        baseui_error ( "Can't open file '%s': %s", resolved, strerror ( errno ) );
     };
+    g_free ( resolved );
 }
 
 

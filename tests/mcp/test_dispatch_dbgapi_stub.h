@@ -95,6 +95,8 @@ typedef struct st_DISPATCH_STUB_STATE {
     int                  obs_calls;                 /**< Počet DBGAPI_CMD_STATE_OBSERVE. */
     st_DBGAPI_STATE_OBSERVE_PARAM obs_last;         /**< Kopie posledního STATE_OBSERVE po vyplnění (windows neplatné po návratu). */
     st_DBGAPI_OBSERVE_WINDOW obs_last_win[ 16 ];    /**< Kopie oken posledního STATE_OBSERVE (buf neplatný po návratu). */
+    int                  mh_calls;                  /**< Počet DBGAPI_CMD_MACHINE_HASH. */
+    st_DBGAPI_MACHINE_HASH_PARAM mh_last;           /**< Kopie posledního MACHINE_HASH po vyplnění. */
     void                *last_result;  /**< result_ptr poslední call. */
     int                  call_count;   /**< Počet volání mocku. */
     bool                 fail_next;    /**< Pokud true, příští call vrátí false. */

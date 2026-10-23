@@ -25,8 +25,10 @@
  *     pollovat.
  *
  * Fast-forward: homing/selftest trvá ~2,15 mil. cyklů (~5,4 s realtime).
- * Aby uživatel po (re)aktivaci/resetu nečekal, doženeme homing jednorázově
- * (mz1p16_emu_fast_forward) - odkrokujeme velký budget v jednom kroku.
+ * Aby uživatel po (re)aktivaci/resetu nečekal, doženeme homing zrychleně
+ * (mz1p16_emu_schedule_catchup): per-frame krok odkrokuje místo běžného
+ * rozpočtu až MZ1P16_EMU_CATCHUP_CHUNK_CYCLES, dokud dluh nesplatí. Stejně
+ * self-test. Dřív se doháněl najednou a emulace stroje i zvuk stály.
  */
 
 #include <stdint.h>
@@ -124,7 +126,8 @@ static app_mutex_t *s_mz1p16_lock = NULL;
  *
  * Homing + náběh kreslicího selftestu trvá ~2,15 mil. cyklů. Dáváme rezervu
  * 3 mil., aby plotter spolehlivě doběhl do ustáleného poll stavu (případně
- * rozkreslil začátek selftestu) bez čekání v realtime.
+ * rozkreslil začátek selftestu) bez čekání v realtime. Dohání se po snímcích
+ * (MZ1P16_EMU_CATCHUP_CHUNK_CYCLES), ne najednou.
  */
 #define MZ1P16_EMU_FASTFWD_CYCLES (3 * 1000 * 1000)
 
@@ -134,9 +137,38 @@ static app_mutex_t *s_mz1p16_lock = NULL;
  * Homing (~2,15 mil. cyklů) + vykreslení několika řádků znakového generátoru.
  * Self-test kreslí ~1 textový řádek za ~18 mil. cyklů MCU. 60 mil. cyklů dá
  * homing + ~3 řádky charsetu - dost na vizuální potvrzení bez nepřiměřeného
- * čekání (fast-forward proběhne v rámci jednoho UI clicku).
+ * čekání (po MZ1P16_EMU_CATCHUP_CHUNK_CYCLES za snímek asi 120 snímků).
  */
 #define MZ1P16_EMU_SELFTEST_CYCLES (60 * 1000 * 1000)
+
+/**
+ * @brief Nejvýš cyklů jádra 8050 za jeden snímek při dohánění.
+ *
+ * Dohánění homingu (aktivace, reset) a self-testu se rozloží do snímků:
+ * mz1p16_emu_on_screen_done() místo MZ1P16_FRAME_CYCLES odkrokuje až tolik
+ * cyklů, dokud dluh neklesne na nulu. Dřív proběhlo najednou a emulace
+ * stroje (i zvuk) stála: self-test 60 mil. cyklů asi 0,9 s v debug buildu,
+ * homing 3 mil. cyklů přes dva snímky (lupnutí ve zvuku). 500 tisíc cyklů je
+ * v debug buildu asi 7 ms z 20 ms snímku [odhad z doby self-testu].
+ */
+#define MZ1P16_EMU_CATCHUP_CHUNK_CYCLES (500 * 1000)
+
+/**
+ * @brief Zbývající cykly dohánění (dluh), pod serializačním zámkem.
+ *
+ * Nastaví ho aktivace, reset a self-test (mz1p16_emu_schedule_catchup()),
+ * splácí mz1p16_emu_on_screen_done(). 0 = plotter běží jen per-frame
+ * rozpočtem MZ1P16_FRAME_CYCLES.
+ */
+static long s_catchup_cycles = 0;
+
+/**
+ * @brief Po splacení dluhu uvolnit PAPER FEED (T1=1) - konec self-testu.
+ *
+ * Self-test drží T1 v nule po celé dohánění; bez uvolnění by firmware kreslil
+ * znakovou sadu donekonečna.
+ */
+static bool s_catchup_release_feed = false;
 
 /**
  * @brief Rozpočet cyklů pro reakci na momentální stisk PEN CHANGE.
@@ -155,20 +187,20 @@ static app_mutex_t *s_mz1p16_lock = NULL;
 #define MZ1P16_EMU_PENCHANGE_RELEASE_CYCLES (200 * 1000)
 
 /**
- * @brief Doběhne homing/selftest jádra fast-forwardem.
+ * @brief Naplánuje dohánění jádra 8050 po snímcích (rozložený fast-forward).
  *
- * Odkrokuje MZ1P16_EMU_FASTFWD_CYCLES strojových cyklů v jednom volání.
- * Volá se po resetu / aktivaci, aby se plotter rychle ustálil. Bez ohledu na
- * @ref g_mz1p16.active (volající rozhoduje, kdy to dává smysl).
+ * Nic neodkrokuje: nastaví dluh, který splácí mz1p16_emu_on_screen_done()
+ * po nejvýš MZ1P16_EMU_CATCHUP_CHUNK_CYCLES za snímek, takže emulace stroje
+ * nestojí. Volá se po resetu a aktivaci (homing) a ze self-testu.
+ *
+ * @param cycles        Kolik cyklů dohnat (nahradí dosavadní dluh).
+ * @param release_feed  true = po splacení uvolnit PAPER FEED (konec
+ *                      self-testu); false = zrušit čekající uvolnění.
+ * @pre Volající drží serializační zámek (mz1p16_emu_lock()).
  */
-static void mz1p16_emu_fast_forward ( void ) {
-    long remaining = MZ1P16_EMU_FASTFWD_CYCLES;
-    while ( remaining > 0 ) {
-        remaining -= mcs48_step ( &g_mz1p16_cpu );
-    };
-    DBGPRINTF ( DBGINF, "mz1p16: fast-forward done (cycles=%llu, xpos=%ld, color=%d)\n",
-                ( unsigned long long ) g_mz1p16_cpu.cycles,
-                ( long ) g_mz1p16.sx.pos, ( int ) g_mz1p16.color );
+static void mz1p16_emu_schedule_catchup ( long cycles, bool release_feed ) {
+    s_catchup_cycles = cycles;
+    s_catchup_release_feed = release_feed;
 }
 
 void mz1p16_emu_drive_poll ( void ) {
@@ -318,11 +350,10 @@ void mz1p16_emu_reset ( void ) {
      * nesmaže papír (jako reálný HW). Smazání papíru je samostatná akce
      * (mz1p16_emu_clear_paper / tlačítko Clear paper). */
 
-    /* Pokud je plotter aktivní, dožeň homing fast-forwardem, ať se rychle
-     * ustálí (jinak by uživatel viděl ~5 s "mrtvý" plotter po resetu). */
-    if ( g_mz1p16.active ) {
-        mz1p16_emu_fast_forward ( );
-    };
+    /* Pokud je plotter aktivní, dožeň homing po snímcích, ať se rychle
+     * ustálí (jinak by uživatel viděl ~5 s "mrtvý" plotter po resetu). Reset
+     * jádra ruší i rozběhnutý self-test (T1 je zase 1). */
+    mz1p16_emu_schedule_catchup ( g_mz1p16.active ? MZ1P16_EMU_FASTFWD_CYCLES : 0, false );
     mz1p16_emu_unlock ( );
 }
 
@@ -339,10 +370,19 @@ void mz1p16_emu_set_active ( bool active ) {
     g_mz1p16.active = active;
     DBGPRINTF ( DBGINF, "mz1p16: active = %d\n", ( int ) active );
 
-    /* Přechod neaktivní -> aktivní: dožeň homing/selftest fast-forwardem,
-     * aby plotter naběhl bez realtime čekání. */
+    /* Vypnutí: dohánění zahodit; rozběhnutý self-test pustí PAPER FEED. */
+    if ( !active ) {
+        if ( s_catchup_release_feed ) {
+            g_mz1p16_cpu.T1 = 1;
+            g_mz1p16_cpu.T1_prev = 1;
+        };
+        mz1p16_emu_schedule_catchup ( 0, false );
+    };
+
+    /* Přechod neaktivní -> aktivní: dožeň homing po snímcích, aby plotter
+     * naběhl bez realtime čekání a bez zastavení emulace. */
     if ( active && !was_active ) {
-        mz1p16_emu_fast_forward ( );
+        mz1p16_emu_schedule_catchup ( MZ1P16_EMU_FASTFWD_CYCLES, false );
 
         /* MZ-1P16 je MZ printer: při otevření/připojení plotteru automaticky
          * přepni standard tiskárny (zadní DIP SW2/SW3) na MZ, aby polarita
@@ -365,11 +405,31 @@ void mz1p16_emu_on_screen_done ( void ) {
      * odkrokuj rozpočet MZ1P16_FRAME_CYCLES: rozdělaný znak/příkaz doběhne, a
      * když je firmware v klidu, jen protočí poll smyčku (neškodné). NEpodmiňovat
      * BUSY/P1.4 - ten během kreslení toggluje (FC<->EC), smyčka by skončila
-     * předčasně. Bere serializační zámek (běží z emu vlákna, race s UI). */
+     * předčasně. Bere serializační zámek (běží z emu vlákna, race s UI).
+     * Při dohánění (aktivace, reset, self-test) odkrokuje víc, nejvýš
+     * MZ1P16_EMU_CATCHUP_CHUNK_CYCLES, a sníží o to dluh. */
     mz1p16_emu_lock ( );
     long budget = MZ1P16_FRAME_CYCLES;
-    while ( budget > 0 ) {
-        budget -= mcs48_step ( &g_mz1p16_cpu );
+    if ( s_catchup_cycles > 0 ) {
+        long chunk = ( s_catchup_cycles < MZ1P16_EMU_CATCHUP_CHUNK_CYCLES )
+                     ? s_catchup_cycles : MZ1P16_EMU_CATCHUP_CHUNK_CYCLES;
+        if ( chunk > budget ) budget = chunk;
+    };
+    long done = 0;
+    while ( done < budget ) {
+        done += mcs48_step ( &g_mz1p16_cpu );
+    };
+    if ( s_catchup_cycles > 0 ) {
+        s_catchup_cycles = ( done >= s_catchup_cycles ) ? 0 : s_catchup_cycles - done;
+        if ( s_catchup_cycles == 0 && s_catchup_release_feed ) {
+            /* Konec self-testu: uvolnit PAPER FEED, firmware dokreslí a přejde
+             * do klidu (kresba zůstane). */
+            g_mz1p16_cpu.T1 = 1;
+            g_mz1p16_cpu.T1_prev = 1;
+            s_catchup_release_feed = false;
+            DBGPRINTF ( DBGINF, "mz1p16: drawing self-test done (strokes=%u, dropped=%u)\n",
+                        ( unsigned ) g_mz1p16.n_strokes, ( unsigned ) g_mz1p16.dropped );
+        };
     };
     mz1p16_emu_unlock ( );
 }
@@ -449,20 +509,20 @@ void mz1p16_emu_run_drawing_selftest ( void ) {
     g_mz1p16.host_data = 0xFFu;
     mz1p16_clear_drawing ( &g_mz1p16 );
 
-    /* Fast-forward: homing + vykreslení několika řádků znakového generátoru. */
-    long remaining = MZ1P16_EMU_SELFTEST_CYCLES;
-    while ( remaining > 0 ) {
-        remaining -= mcs48_step ( &g_mz1p16_cpu );
-    };
-
-    /* DŮLEŽITÉ: uvolnit PAPER FEED (T1=1), jinak by průběžné per-frame
-     * clockování pokračovalo v self-testu donekonečna (firmware by pořád
-     * kreslil charset) -> přetečení bufferu + chaotická rostoucí kresba.
-     * Po uvolnění firmware self-test dokončí a přejde do klidu; kresba zůstane. */
-    g_mz1p16_cpu.T1      = 1;
-    g_mz1p16_cpu.T1_prev = 1;
-
-    DBGPRINTF ( DBGINF, "mz1p16: drawing self-test done (strokes=%u, dropped=%u)\n",
-                ( unsigned ) g_mz1p16.n_strokes, ( unsigned ) g_mz1p16.dropped );
+    /* Homing + vykreslení několika řádků znakového generátoru po snímcích
+     * (mz1p16_emu_on_screen_done()). Po splacení se uvolní PAPER FEED (T1=1),
+     * jinak by průběžné per-frame clockování pokračovalo v self-testu
+     * donekonečna (firmware by pořád kreslil charset) -> přetečení bufferu
+     * + chaotická rostoucí kresba. Po uvolnění firmware self-test dokončí
+     * a přejde do klidu; kresba zůstane. */
+    mz1p16_emu_schedule_catchup ( MZ1P16_EMU_SELFTEST_CYCLES, true );
     mz1p16_emu_unlock ( );
+}
+
+
+long mz1p16_emu_catchup_pending ( void ) {
+    mz1p16_emu_lock ( );
+    long v = s_catchup_cycles;
+    mz1p16_emu_unlock ( );
+    return v;
 }

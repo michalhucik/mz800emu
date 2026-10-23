@@ -557,6 +557,7 @@ void iface_keyboard_full_scan(const bool *state, SDL_Keymod kmod, int numkeys)
     iface_keyboard_scan_col9(kbd_state);
 
     /* Celá matice (a joystick z numerické klávesnice) najednou: mimo
-     * záznam vstupů se zapíše hned, při záznamu až na hranici snímku. */
+     * záznam vstupů ji zapíše emu vlákno na hranici snímku nebo v pauze,
+     * při záznamu ji převezme záznam na hranici snímku. */
     replay_host_keyboard_submit(s_iface_scan_matrix, joy_dev, joy_state);
 }

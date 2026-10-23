@@ -134,6 +134,9 @@ def main():
     # v kořeni repa.
     work_dir = tempfile.mkdtemp(prefix="mz_mcp_stdio_e2e_")
     env["MZ800EMU_WORK_DIR"] = work_dir
+    # Dočasný cfg_dir: INI a breakpointy testu nesmí přepsat konfiguraci
+    # v kořeni repa (GUI by si breakpointy z testu načetlo).
+    env["MZ800EMU_CFG_DIR"] = work_dir
 
     print(f"Python:     {py}")
     print(f"Server:     {_MCP_SERVER_PY}")

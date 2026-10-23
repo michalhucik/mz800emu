@@ -55,9 +55,6 @@ typedef struct st_REPLAY_MEDIA_CMT_ORIG
 
 static st_REPLAY_MEDIA_CMT_ORIG s_orig_cmt;
 
-static char *replay_media_cmt_state_json(void);
-
-
 /** @brief Jméno slotu mechaniky FDC. */
 static void replay_media_fdc_slot(char *out, int fdc, int drive)
 {
@@ -277,11 +274,7 @@ static gint64 replay_media_json_int(JsonObject *o, const char *name, gint64 def)
 }
 
 
-/**
- * @brief Stav kazety pro manifest: CMT hack, nastavení, blok a rychlosti bloků.
- * @return JSON objekt jako text (g_free).
- */
-static char *replay_media_cmt_state_json(void)
+char *replay_media_cmt_state_json(void)
 {
     JsonBuilder *b = json_builder_new();
     json_builder_begin_object(b);

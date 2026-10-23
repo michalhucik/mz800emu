@@ -122,6 +122,10 @@ static uint32_t s_pending_delay_kd_ms = 0;     /**< Jejich doba stisku. */
 static uint32_t s_pending_delay_ku_ms = 0;     /**< Jejich doba uvolnění. */
 static uint8_t s_off_vkbd_press[REPLAY_KBD_COLS];   /**< Mimo záznam: bity okna VKBD ke stisku (1 = stisknout). */
 static uint8_t s_off_vkbd_release[REPLAY_KBD_COLS]; /**< Mimo záznam: bity okna VKBD k uvolnění (1 = uvolnit). */
+static bool s_off_host_pending = false;             /**< Mimo záznam: sken klávesnice hostitele čeká na emu vlákno. */
+static uint8_t s_off_host_kbd[REPLAY_KBD_COLS];     /**< Jeho matice (poslední sken). */
+static int s_off_host_joy_dev = -1;                 /**< Jeho joystick z numerické klávesnice (-1 = žádný). */
+static uint8_t s_off_host_joy_state = 0xFF;         /**< Stav toho joysticku. */
 
 /** @brief Operace kazety z UI čekající na emu vlákno. */
 typedef struct st_REPLAY_UI_CMT
@@ -647,11 +651,20 @@ bool replay_autotype_peek_rest(char *buf, size_t size)
  * obsah RAM, ne mapování. Komponenty `memory` (mapa `g_memory.map`),
  * `memext` (mapa a konfigurace MemExt), `ramdisk` a `hwconfig` nepokrývá
  * žádná část, takže rozjetí jen v bankování se pozná až podle dalšího
- * průběhu. Seznam se kvůli ověření starších záznamů `.mzr` nemění.
+ * průběhu. Seznam se kvůli ověření starších záznamů `.mzr` nemění; otisk
+ * stroje (machine_hash.h) ho sdílí a mapování pokrývá vlastní částí
+ * `memmap`.
  */
 static const char *const s_periph_components[] = {
     "mzarch", "ctc8253", "pio8255", "pioz80", "psg", "gdg", "vramctrl", "fdc", "qdisk",
 };
+
+
+const char *const *replay_periph_components(size_t *out_count)
+{
+    *out_count = G_N_ELEMENTS(s_periph_components);
+    return s_periph_components;
+}
 
 
 /** @brief Hash všech částí do řádku (chybějící část = ""). */
@@ -1010,15 +1023,15 @@ static void replay_cmt_run(en_REPLAY_CMT_OP op, int32_t arg, const char *path, e
 /**
  * @brief Nastaví nebo shodí bit REPLAY_HOOK_UI podle čekajících vstupů z UI.
  *
- * Bit drží, dokud čeká operace kazety, autotype, nové prodlevy autotype
- * nebo změna okna VKBD mimo záznam; hlavní smyčka pak volá
- * replay_on_frame_boundary() i bez záznamu.
+ * Bit drží, dokud čeká operace kazety, autotype, nové prodlevy autotype,
+ * změna okna VKBD nebo sken klávesnice hostitele mimo záznam; hlavní
+ * smyčka pak volá replay_on_frame_boundary() i bez záznamu.
  *
  * @pre Volající drží s_lock.
  */
 static void replay_ui_hook_refresh_locked(void)
 {
-    bool any = !g_queue_is_empty(&s_ui_cmt) || s_pending_autotype || s_pending_delays;
+    bool any = !g_queue_is_empty(&s_ui_cmt) || s_pending_autotype || s_pending_delays || s_off_host_pending;
     for (int i = 0; i < REPLAY_KBD_COLS && !any; i++)
     {
         any = (s_off_vkbd_press[i] | s_off_vkbd_release[i]) != 0;
@@ -1028,10 +1041,11 @@ static void replay_ui_hook_refresh_locked(void)
 }
 
 
-/** @brief Zahodí čekající prodlevy autotype a změny VKBD mimo záznam. @pre Drží s_lock. */
+/** @brief Zahodí čekající prodlevy autotype, změny VKBD a sken klávesnice hostitele mimo záznam. @pre Drží s_lock. */
 static void replay_ui_off_clear_locked(void)
 {
     s_pending_delays = false;
+    s_off_host_pending = false;
     memset(s_off_vkbd_press, 0, sizeof(s_off_vkbd_press));
     memset(s_off_vkbd_release, 0, sizeof(s_off_vkbd_release));
 }
@@ -1040,10 +1054,13 @@ static void replay_ui_off_clear_locked(void)
 /**
  * @brief Provede (nebo zahodí) vstupy z UI čekající mimo záznam.
  *
- * Autotype, nové prodlevy autotype a změny okna VKBD, které UI zařadilo
- * mimo záznam (replay_host_autotype(), replay_host_autotype_delays(),
- * replay_host_vkbd_set()). Emu vlákno je tak mění samo: UI vlákno dřív
- * zapisovalo ukazatel autotype a matici VKBD souběžně s jejich čtením.
+ * Autotype, nové prodlevy autotype, změny okna VKBD a sken klávesnice
+ * hostitele, které UI zařadilo mimo záznam (replay_host_autotype(),
+ * replay_host_autotype_delays(), replay_host_vkbd_set(),
+ * replay_host_keyboard_submit()). Emu vlákno je tak mění samo: UI vlákno
+ * dřív zapisovalo ukazatel autotype, matici VKBD a matici klávesnice
+ * souběžně s jejich čtením. Revizi stavu zvedne jen skutečná změna (sken
+ * klávesnice se stejnou maticí a stejným joystickem nic nemění).
  *
  * @param apply true = provést; false = zahodit (přehrávání).
  * @pre Emu vlákno, neběží záznam.
@@ -1051,7 +1068,12 @@ static void replay_ui_off_clear_locked(void)
 static void replay_ui_off_drain(bool apply)
 {
     uint8_t press[REPLAY_KBD_COLS], release[REPLAY_KBD_COLS];
+    uint8_t host[REPLAY_KBD_COLS];
     g_mutex_lock(&s_lock);
+    bool do_host = s_off_host_pending;
+    memcpy(host, s_off_host_kbd, sizeof(host));
+    int host_joy_dev = s_off_host_joy_dev;
+    uint8_t host_joy_state = s_off_host_joy_state;
     bool do_at = s_pending_autotype;
     char *at_text = s_pending_autotype_text;
     uint32_t kd = s_pending_kd_ms, ku = s_pending_ku_ms;
@@ -1068,9 +1090,27 @@ static void replay_ui_off_drain(bool apply)
     if (apply)
     {
         /* Revize stavu (state_rev.h, Z9): vstupy z UI mimo záznam, jen při
-         * skutečné změně (autotype, prodlevy, VKBD). */
+         * skutečné změně (autotype, prodlevy, VKBD, klávesnice hostitele). */
         bool changed = do_at || do_delays;
         for (int i = 0; i < REPLAY_KBD_COLS && !changed; i++) changed = (press[i] | release[i]) != 0;
+        if (do_host)
+        {
+            if (memcmp(g_pio8255.keyboard_matrix, host, sizeof(host)) != 0)
+            {
+                memcpy(g_pio8255.keyboard_matrix, host, sizeof(host));
+                changed = true;
+            };
+#ifdef HAVE_JOY
+            if (host_joy_dev >= 0 && host_joy_dev < JOY_DEVID_COUNT && g_joy.dev[host_joy_dev].state != host_joy_state)
+            {
+                g_joy.dev[host_joy_dev].state = host_joy_state;
+                changed = true;
+            };
+#else
+            (void)host_joy_dev;
+            (void)host_joy_state;
+#endif
+        };
         if (changed) STATE_REV_BUMP(STATE_REV_SRC_INPUT);
         if (do_at) replay_apply_autotype(at_text, kd, ku);
         if (do_delays)
@@ -1122,6 +1162,18 @@ static bool replay_ui_cmt_pending(void)
 static void replay_rec_boundary(void)
 {
     g_mutex_lock(&s_lock);
+    /* Sken klávesnice hostitele zařazený mimo záznam těsně kolem startu
+     * záznamu (UI četlo režim před startem): je novější než s_host_kbd,
+     * převezme se tady, jinak by čekal do konce záznamu a pak se zapsal
+     * zastaralý. */
+    if (s_off_host_pending)
+    {
+        memcpy(s_host_kbd, s_off_host_kbd, sizeof(s_host_kbd));
+        s_host_joy_dev = s_off_host_joy_dev;
+        s_host_joy_state = s_off_host_joy_state;
+        s_off_host_pending = false;
+        replay_ui_hook_refresh_locked();
+    };
     bool do_reset = s_pending_reset;
     s_pending_reset = false;
     uint8_t host[REPLAY_KBD_COLS];
@@ -1246,6 +1298,14 @@ static const char *replay_rec_start(const st_REPLAY_REQ *r, char *errbuf, size_t
 
     g_mutex_lock(&s_lock);
     memcpy(s_host_kbd, g_pio8255.keyboard_matrix, sizeof(s_host_kbd));
+    /* Sken klávesnice hostitele, který ještě čeká mimo záznam, je
+     * novější než matice: záznam ho převezme v prvním bodě B_f. */
+    if (s_off_host_pending)
+    {
+        memcpy(s_host_kbd, s_off_host_kbd, sizeof(s_host_kbd));
+        s_host_joy_dev = s_off_host_joy_dev;
+        s_host_joy_state = s_off_host_joy_state;
+    };
     memset(s_ui_vkbd, 0xFF, sizeof(s_ui_vkbd));
     s_pending_reset = false;
     s_pending_autotype = false;
@@ -2316,13 +2376,15 @@ void replay_host_keyboard_submit(const uint8_t *matrix, int joy_dev, uint8_t joy
         g_mutex_unlock(&s_lock);
         return;
     };
-    memcpy(g_pio8255.keyboard_matrix, matrix, sizeof(g_pio8255.keyboard_matrix));
-#ifdef HAVE_JOY
-    if (joy_dev >= 0 && joy_dev < JOY_DEVID_COUNT) g_joy.dev[joy_dev].state = joy_state;
-#else
-    (void)joy_dev;
-    (void)joy_state;
-#endif
+    /* Mimo záznam matici zapíše emu vlákno (replay_ui_off_drain()) na
+     * hranici snímku nebo v paused smyčce; platí poslední sken. */
+    g_mutex_lock(&s_lock);
+    memcpy(s_off_host_kbd, matrix, sizeof(s_off_host_kbd));
+    s_off_host_joy_dev = joy_dev;
+    s_off_host_joy_state = joy_state;
+    s_off_host_pending = true;
+    replay_ui_hook_refresh_locked();
+    g_mutex_unlock(&s_lock);
 }
 
 

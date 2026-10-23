@@ -334,9 +334,14 @@ extern "C"
      * @param joy_dev   Index zařízení joysticku z numerické klávesnice, -1 = žádné.
      * @param joy_state Stav toho joysticku (platí jen při @p joy_dev >= 0).
      *
-     * Mimo záznam zapíše `g_pio8255.keyboard_matrix` (a `g_joy`) hned, při
+     * Mimo záznam uloží sken jako čekající a `g_pio8255.keyboard_matrix`
+     * (a `g_joy`) zapíše emu vlákno v replay_ui_off_drain() na hranici
+     * snímku nebo v paused smyčce (stisk se projeví nejvýš o snímek
+     * později); revizi stavu zvedne jen změna matice nebo joysticku. Při
      * záznamu uloží jako čekající (převezme se v bodě B_f), při přehrávání
-     * zahodí.
+     * zahodí. Platí vždy poslední sken.
+     *
+     * @note UI vlákno; matici stroje samo nezapisuje.
      */
     void replay_host_keyboard_submit(const uint8_t *matrix, int joy_dev, uint8_t joy_state);
 
@@ -398,6 +403,19 @@ extern "C"
      * @note Libovolné vlákno.
      */
     bool replay_autotype_peek_rest(char *buf, size_t size);
+
+    /**
+     * @brief Komponenty snapshotu části `periph` (hash záznamu vstupů).
+     *
+     * Jediný seznam pro hash `periph` záznamu vstupů i stejnojmennou část
+     * otisku stroje (machine_hash.h). Seznam se nemění: nová komponenta
+     * by změnila hashe a starší záznamy `.mzr` by se při ověření rozjely.
+     *
+     * @param[out] out_count Počet jmen (nesmí být NULL).
+     * @return Statické pole jmen komponent (snapshot_hash_components()).
+     * @note Libovolné vlákno.
+     */
+    const char *const *replay_periph_components(size_t *out_count);
 
     /**
      * @brief Přesměrování žádosti o reset (volá mzarch_platform_fn_reset_request()).

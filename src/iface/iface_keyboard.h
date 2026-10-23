@@ -27,8 +27,9 @@ extern "C"
      *
      * Spočítá celou matici (a stav joysticku z numerické klávesnice, je-li
      * tak joystick nastaven) a předá ji najednou přes
-     * replay_host_keyboard_submit(): mimo záznam vstupů se zapíše hned, při
-     * záznamu se převezme na hranici snímku, při přehrávání se zahodí.
+     * replay_host_keyboard_submit(): mimo záznam vstupů ji emu vlákno zapíše
+     * na hranici snímku nebo v pauze, při záznamu se převezme na hranici
+     * snímku, při přehrávání se zahodí.
      * Se stisknutým Alt nedělá nic (klávesové zkratky emulátoru).
      *
      * Je-li některý port joysticku typu JOY_TYPE_NUM_KEYPAD, klávesy KP_0 až

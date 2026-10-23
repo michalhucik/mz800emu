@@ -134,8 +134,10 @@
  * KONEC cmd_map[]) = 220 + 1 = 221.
  * replay-goto doplnil replay_goto (stav v čase přehrávaného záznamu, na
  * KONEC cmd_map[]) = 221 + 1 = 222.
+ * machine-hash doplnil machine_hash (obsahový otisk stroje po částech, na
+ * KONEC cmd_map[]) = 222 + 1 = 223.
  */
-#define MCP_EXPECTED_CMD_COUNT 222
+#define MCP_EXPECTED_CMD_COUNT 223
 
 
 /* ====================================================================== */
@@ -9103,6 +9105,87 @@ void test_state_observe_invalid_params(void) {
 }
 
 
+/**
+ * @brief machine_hash: výběr částí, include_media, tvar odpovědi
+ *        (chybějící část = null, covered, not_covered, revize z okamžiku výpočtu).
+ */
+void test_machine_hash_parts_and_response(void) {
+    dispatch_stub_reset();
+    g_stub_state.state_rev = 4242;
+    en_MCP_DISPATCH_RESULT rc;
+    JsonParser *parser = NULL;
+    char *resp = NULL;
+    JsonObject *d = _rc_call("{\"type\":\"request\",\"req_id\":9300,\"cmd\":\"machine_hash\","
+                             "\"data\":{\"parts\":[\"cpu\",\"memext\",\"cmt\"]}}",
+                             &rc, &parser, &resp);
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, rc);
+    TEST_ASSERT_EQUAL_INT(1, g_stub_state.mh_calls);
+    TEST_ASSERT_EQUAL_UINT32((1u << MACHINE_HASH_CPU) | (1u << MACHINE_HASH_MEMEXT)
+                             | (1u << MACHINE_HASH_CMT), g_stub_state.mh_last.mask);
+    TEST_ASSERT_EQUAL_UINT32(0, g_stub_state.mh_last.flags);
+    TEST_ASSERT_EQUAL_INT(64, (int)strlen(json_object_get_string_member(d, "sha256")));
+    JsonObject *parts = json_object_get_object_member(d, "parts");
+    TEST_ASSERT_EQUAL_UINT(3, json_object_get_size(parts));
+    TEST_ASSERT_EQUAL_INT(64, (int)strlen(json_object_get_string_member(parts, "cpu")));
+    TEST_ASSERT_TRUE(JSON_NODE_HOLDS_NULL(json_object_get_member(parts, "memext")));
+    TEST_ASSERT_FALSE(json_object_has_member(parts, "ram"));
+    JsonArray *cov = json_object_get_array_member(d, "covered");
+    TEST_ASSERT_EQUAL_UINT(2, json_array_get_length(cov));
+    TEST_ASSERT_EQUAL_STRING("cpu", json_array_get_string_element(cov, 0));
+    TEST_ASSERT_EQUAL_STRING("cmt", json_array_get_string_element(cov, 1));
+    TEST_ASSERT_NOT_NULL(strstr(resp, "\"media_content\""));
+    TEST_ASSERT_NOT_NULL(strstr(resp, "\"screen\""));
+    TEST_ASSERT_FALSE(json_object_get_boolean_member(d, "include_media"));
+    TEST_ASSERT_EQUAL_INT(4242, json_object_get_int_member(d, "state_rev"));
+    TEST_ASSERT_TRUE(json_object_get_boolean_member(d, "stable"));
+    TEST_ASSERT_EQUAL_INT(123, json_object_get_int_member(d, "elapsed_us"));
+    g_object_unref(parser);
+    free(resp);
+
+    /* Bez parts = všechny části; include_media přejde do příznaků. */
+    dispatch_stub_reset();
+    d = _rc_call("{\"type\":\"request\",\"req_id\":9301,\"cmd\":\"machine_hash\","
+                 "\"data\":{\"include_media\":true}}", &rc, &parser, &resp);
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, rc);
+    TEST_ASSERT_EQUAL_UINT32(MACHINE_HASH_ALL_PARTS, g_stub_state.mh_last.mask);
+    TEST_ASSERT_EQUAL_UINT32(MACHINE_HASH_FLAG_INCLUDE_MEDIA, g_stub_state.mh_last.flags);
+    TEST_ASSERT_EQUAL_UINT(MACHINE_HASH_PART_COUNT,
+                           json_object_get_size(json_object_get_object_member(d, "parts")));
+    TEST_ASSERT_NULL(strstr(resp, "\"media_content\""));
+    TEST_ASSERT_TRUE(json_object_get_boolean_member(d, "include_media"));
+    g_object_unref(parser);
+    free(resp);
+}
+
+
+/**
+ * @brief machine_hash: neplatné parametry se odmítnou bez volání emu vlákna.
+ */
+void test_machine_hash_invalid_params(void) {
+    static const char *const bad[] = {
+        "{\"parts\":\"cpu\"}",
+        "{\"parts\":[\"screen\"]}",
+        "{\"parts\":[1]}",
+        "{\"include_media\":1}",
+    };
+    for (size_t i = 0; i < G_N_ELEMENTS(bad); i++) {
+        dispatch_stub_reset();
+        gchar *line = g_strdup_printf("{\"type\":\"request\",\"req_id\":%d,"
+                                      "\"cmd\":\"machine_hash\",\"data\":%s}",
+                                      9310 + (int)i, bad[i]);
+        en_MCP_DISPATCH_RESULT rc;
+        JsonParser *parser = NULL;
+        char *resp = NULL;
+        (void)_rc_call(line, &rc, &parser, &resp);
+        TEST_ASSERT_EQUAL_INT_MESSAGE(MCP_DISPATCH_INVALID_PARAMS, rc, bad[i]);
+        TEST_ASSERT_NOT_NULL_MESSAGE(strstr(resp, "Invalid parameters"), bad[i]);
+        TEST_ASSERT_EQUAL_INT_MESSAGE(0, g_stub_state.mh_calls, bad[i]);
+        free(resp);
+        g_free(line);
+    }
+}
+
+
 /* ====================================================================== */
 /* Podmíněné zápisy (observe-cas M10, V1)                                  */
 /* ====================================================================== */
@@ -9856,6 +9939,8 @@ int main(void) {
     RUN_TEST(test_state_observe_windows_and_core);
     RUN_TEST(test_state_observe_sections_hashes_unavailable);
     RUN_TEST(test_state_observe_invalid_params);
+    RUN_TEST(test_machine_hash_parts_and_response);
+    RUN_TEST(test_machine_hash_invalid_params);
 
     /* observe-cas (M10) - podmíněné zápisy (3 testy) */
     RUN_TEST(test_cond_memory_writes);

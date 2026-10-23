@@ -45,3 +45,37 @@ uint32_t mz1p16_request_reset(bool clear_paper)
     a.i[0] = clear_paper ? 1 : 0;
     return device_request_submit("mz1p16_reset", mz1p16_request_exec_reset, &a);
 }
+
+
+/** @brief Zásah: tlačítko Paper feed (i[0] 1 = drženo). */
+static int mz1p16_request_exec_paper_feed(const st_DEVICE_REQ_ARGS *a)
+{
+    mz1p16_emu_button_paper_feed(a->i[0] ? true : false);
+    return 0;
+}
+
+
+uint32_t mz1p16_request_paper_feed(bool pressed)
+{
+    st_DEVICE_REQ_ARGS a;
+    device_request_args_set_str(&a, NULL);
+    a.i[0] = pressed ? 1 : 0;
+    return device_request_submit("mz1p16_paper_feed", mz1p16_request_exec_paper_feed, &a);
+}
+
+
+/** @brief Zásah: kreslicí self-test (bez argumentů). */
+static int mz1p16_request_exec_selftest(const st_DEVICE_REQ_ARGS *a)
+{
+    (void)a;
+    mz1p16_emu_run_drawing_selftest();
+    return 0;
+}
+
+
+uint32_t mz1p16_request_selftest(void)
+{
+    st_DEVICE_REQ_ARGS a;
+    device_request_args_set_str(&a, NULL);
+    return device_request_submit("mz1p16_selftest", mz1p16_request_exec_selftest, &a);
+}

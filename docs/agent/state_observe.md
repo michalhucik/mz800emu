@@ -126,3 +126,7 @@ same part hashes as a replay checkpoint or `result.json`. Hashing whole
 parts holds the emulator thread (about 2 ms for `cpu`, `ram`, `vram` and
 a 512 KB MemExt together in one measurement, about a tenth of a frame),
 so request them only when needed.
+
+**Whole machine.** `emu_machine_hash` fingerprints every part of the
+machine (also memory mapping, ROM, chips, media, inputs and tape) in one
+call; see `emulator://docs/state_revision`.

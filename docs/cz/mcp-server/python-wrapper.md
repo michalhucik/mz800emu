@@ -203,6 +203,7 @@ Wrapper čte transport z env proměnných:
 | `MZ800EMU_TRANSPORT` | `pipe` | `pipe`, `tcp` |
 | `MZ800EMU_EXE` | `../mz800emu.exe` | cesta k binárce (pouze pipe) |
 | `MZ800EMU_WORK_DIR` | (prázdné) | pracovní adresář spawnutého emulátoru, předá se jako `--work-dir` (pouze pipe); tam jdou relativní výstupy, např. CDL export při ukončení |
+| `MZ800EMU_CFG_DIR` | (prázdné) | konfigurační adresář spawnutého emulátoru, předá se jako `--cfg-dir` (pouze pipe); odtud se čte a sem se ukládá INI, breakpointy, symboly, watch, záložky a záložní soubory RAM disků. Prázdné = výchozí adresář emulátoru (vaše konfigurace) |
 | `MZ800EMU_TCP_HOST` | `127.0.0.1` | hostname (pouze tcp) |
 | `MZ800EMU_TCP_PORT` | `23800` | port number (pouze tcp) |
 

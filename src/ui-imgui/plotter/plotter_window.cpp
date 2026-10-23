@@ -28,8 +28,9 @@
  * (zavřené okno = plotter odpojený). Při přechodu zavřeno->otevřeno se zařadí
  * mz1p16_request_set_active(true), při zavření false.
  *
- * Aktivaci a reset plotteru provede emu vlákno (mz1p16_request.h): obě akce
- * mění i stav tiskárny, který vlastní zámek plotteru nechrání.
+ * Aktivaci, reset, tlačítko Paper feed a kreslicí self-test provede emu
+ * vlákno (mz1p16_request.h): aktivace a reset mění i stav tiskárny, který
+ * vlastní zámek plotteru nechrání, a provedený zásah zvedne revizi stavu.
  */
 
 #include "main.h"
@@ -440,7 +441,8 @@ void imgui_plotter_window(bool *p_open)
         if (feed_held != s_paper_feed_held)
         {
             s_paper_feed_held = feed_held;
-            mz1p16_emu_button_paper_feed(feed_held);
+            /* Přes emu vlákno (mz1p16_request.h), při replay odmítnuto. */
+            mz1p16_request_paper_feed(feed_held);
         }
     }
     if (ImGui::IsItemHovered())
@@ -449,11 +451,10 @@ void imgui_plotter_window(bool *p_open)
 
     if (ImGui::Button(_L("Run drawing self-test")))
     {
-        /* HW postup: PAPER FEED držet + RESET -> charset 4 barvy. */
-        mz1p16_emu_run_drawing_selftest();
-        /* Po self-testu uvolníme PAPER FEED, ať se další reset chová normálně. */
+        /* HW postup: PAPER FEED držet + RESET -> charset 4 barvy. Přes emu
+         * vlákno (mz1p16_request.h); self-test PAPER FEED na konci uvolní. */
+        mz1p16_request_selftest();
         s_paper_feed_held = false;
-        mz1p16_emu_button_paper_feed(false);
     }
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("%s", _("Reset with PAPER FEED held -> writes the character set in 4 colors"));

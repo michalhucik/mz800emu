@@ -39,6 +39,7 @@
 #include "debugger/trace/tlog_common.h"
 #include "debugger/trace/ramlog.h"
 #include "debugger/trace/bplog.h"
+#include "machine_hash.h"
 #include "debugger/trace/cputrack.h"
 #include "debugger/coverage/coverage.h"
 
@@ -774,6 +775,11 @@ typedef enum en_DBGAPI_CMD
      * v emu vlákně (run_control_stop_at_arm()). Přidáno na KONEC enumu
      * kvůli stabilitě číselných hodnot. */
     DBGAPI_CMD_RUN_UNTIL_TICKS,      /* Běh do času - data_ptr: st_DBGAPI_RUN_UNTIL_TICKS_PARAM*, result_ptr: st_DBGAPI_RUN_START_RESULT* nebo NULL */
+
+    /* machine-hash (M19 debug-gaps) - obsahový otisk stroje po částech
+     * (machine_hash.h), čte stav bez zámku, proto v emu vlákně. Přidáno na
+     * KONEC enumu kvůli stabilitě číselných hodnot. */
+    DBGAPI_CMD_MACHINE_HASH,         /* Otisk stroje po částech - data_ptr: st_DBGAPI_MACHINE_HASH_PARAM* */
 
     /* Zarážka: počet příkazů, sama není příkaz. Nové příkazy patří PŘED
      * ni. Každý příkaz musí mít řádek v tabulce vlastností
@@ -5506,6 +5512,23 @@ typedef struct st_DBGAPI_STATE_OBSERVE_PARAM
     st_DBGAPI_MEMORY_MAP_PARAM memory_map;              /**< (OUT) Jako DBGAPI_CMD_GET_MEMORY_MAP (want_memory_map). */
     uint8_t  page_kind[16];               /**< (OUT) en_MEMMAP_REGION_KIND stránek 4 KiB (want_memory_map). */
 } st_DBGAPI_STATE_OBSERVE_PARAM;
+
+
+/**
+ * @brief Parametr DBGAPI_CMD_MACHINE_HASH (čtení bez vedlejších efektů).
+ *
+ * Emu vlákno spočítá machine_hash_compute() v jednom průchodu fronty: za
+ * běhu na hranici snímku, v pauze okamžitě.
+ *
+ * @note Strukturu alokuje odesílatel (synchronní submit).
+ */
+typedef struct st_DBGAPI_MACHINE_HASH_PARAM
+{
+    uint32_t mask;            /**< (IN) Vyžádané části (bity 1u << en_MACHINE_HASH_PART). */
+    uint32_t flags;           /**< (IN) MACHINE_HASH_FLAG_*. */
+    st_MACHINE_HASH result;   /**< (OUT) Otisk částí a celkový otisk. */
+    uint64_t elapsed_us;      /**< (OUT) Doba výpočtu v emu vlákně [us] (g_get_monotonic_time()). */
+} st_DBGAPI_MACHINE_HASH_PARAM;
 
 
 #ifdef __cplusplus

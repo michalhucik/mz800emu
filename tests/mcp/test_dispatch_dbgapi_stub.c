@@ -1098,6 +1098,25 @@ bool dbgapi_ui_submit_cmd_sync_with_origin(st_DBGAPI_CMDRQ_QUEUE *queue,
             }
             break;
 
+        case DBGAPI_CMD_MACHINE_HASH:
+            /* machine-hash: vyžádané části mají hash "cd" * 32, kromě
+             * memext (odpojený = chybí); celkový otisk "ef" * 32. */
+            if (data_ptr) {
+                st_DBGAPI_MACHINE_HASH_PARAM *mp = (st_DBGAPI_MACHINE_HASH_PARAM *)data_ptr;
+                memset(&mp->result, 0, sizeof(mp->result));
+                mp->result.requested = mp->mask & MACHINE_HASH_ALL_PARTS;
+                mp->result.present = mp->result.requested & ~(1u << MACHINE_HASH_MEMEXT);
+                for (int i = 0; i < MACHINE_HASH_PART_COUNT; i++) {
+                    if (!(mp->result.present & (1u << i))) continue;
+                    for (int c = 0; c < 64; c += 2) memcpy(&mp->result.part[i][c], "cd", 2);
+                }
+                for (int c = 0; c < 64; c += 2) memcpy(&mp->result.total[c], "ef", 2);
+                mp->elapsed_us = 123;
+                g_stub_state.mh_calls++;
+                g_stub_state.mh_last = *mp;
+            }
+            break;
+
         case DBGAPI_CMD_RUN_UNTIL_TICKS:
             /* replay-goto: čas stubu je 1000 taktů; cíl <= 1000 = dosažen
              * hned (bez běhu), jinak běh spuštěn (run_seq ze stavu stubu). */

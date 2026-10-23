@@ -22,6 +22,7 @@ Výběr transportu je řízený env proměnnou ``MZ800EMU_TRANSPORT``:
     MZ800EMU_TCP_PORT=23800 (pouze tcp)
     MZ800EMU_EXE=./mz800emu.exe (pouze pipe)
     MZ800EMU_WORK_DIR=<adresář> (pouze pipe, předá se jako --work-dir)
+    MZ800EMU_CFG_DIR=<adresář> (pouze pipe, předá se jako --cfg-dir)
 
 Architektura:
 
@@ -101,6 +102,13 @@ EMU_EXE: str = os.environ.get(
 # work_dir emulátoru. Relevantní pouze pro pipe transport; používají ho
 # testy, aby výstupy nevznikaly v kořeni repa.
 EMU_WORK_DIR: str = os.environ.get("MZ800EMU_WORK_DIR", "").strip()
+
+# Konfigurační adresář spawnutého emulátoru (--cfg-dir) - INI, breakpointy,
+# symboly, watch, bookmarky. Prázdné = výchozí (adresář binárky, tedy
+# konfigurace uživatele). Relevantní pouze pro pipe transport; používají ho
+# testy, aby neměnily konfiguraci uživatele (breakpointy z testu by si jinak
+# načetlo GUI spuštěné z kořene repa).
+EMU_CFG_DIR: str = os.environ.get("MZ800EMU_CFG_DIR", "").strip()
 
 # Výběr transportu: pipe (default) nebo tcp.
 TRANSPORT_KIND: str = os.environ.get("MZ800EMU_TRANSPORT", "pipe").lower()
@@ -538,6 +546,8 @@ class _PipeTransport(_Transport):
         args = [str(exe), "--mcp-pipe", "--headless", "--no-first-run-windows"]
         if EMU_WORK_DIR:
             args.append(f"--work-dir={EMU_WORK_DIR}")
+        if EMU_CFG_DIR:
+            args.append(f"--cfg-dir={EMU_CFG_DIR}")
         log.info("spawning emu: %s", " ".join(args))
         self.process = subprocess.Popen(
             args,
@@ -8631,6 +8641,47 @@ async def emu_replay_goto(t: int | None = None,
         data["observe"] = observe
     resp = await _send_request("replay_goto", data,
                                timeout_s=_REPLAY_TIMEOUT_S + max(0, timeout_ms) / 1000.0)
+    return json.dumps(_data_or_error(resp))
+
+
+@mcp.tool()
+async def emu_machine_hash(parts: list[str] | None = None,
+                           include_media: bool = False) -> str:
+    """Content fingerprint of the whole machine, part by part (SHA-256).
+
+    Answers "is the machine in the same state as before?" - compare two
+    fingerprints taken in pause (``stable: true``) with the same
+    parameters. Unlike ``state_rev`` it sees only content: a change undone
+    gives the same fingerprint (ABA), so for conditional writes use
+    ``expected_state_rev``. Details: ``emulator://docs/state_revision``.
+
+    Parts: ``cpu`` (registers and hidden Z80 state), ``ram``, ``memext``
+    (MemExt RAM, only when connected), ``vram``, ``pcg`` (MZ-1500),
+    ``periph`` (chips and controllers), ``memmap`` (memory mapping, mode
+    switch, MemExt map and configuration), ``rom`` (sees the CMT hack
+    patch), ``media`` (inserted media identity and the media write
+    counter), ``inputs`` (effective keyboard matrix, joysticks, running
+    autotype), ``ramdisk`` (RAM disk state), ``cmt`` (tape transport,
+    position, settings).
+
+    Args:
+        parts: Part names to compute; default all.
+        include_media: Also hash the content of disk, Quick Disk, IDE8 and
+            tape images, MemExt FLASH and RAM disks (parts ``media`` and
+            ``ramdisk``). Can be slow with big IDE8 images.
+
+    Returns:
+        JSON ``{"sha256": str, "parts": {name: hex | null}, "covered":
+        [names], "not_covered": [names], "include_media": bool,
+        "state_rev": int, "run_seq": int, "running": bool, "stable": bool,
+        "elapsed_us": int}``. ``null`` = the part does not exist in this
+        build or configuration. ``not_covered`` lists what the fingerprint
+        never sees (screen, audio, plotter, ...).
+    """
+    data: dict[str, Any] = {"include_media": bool(include_media)}
+    if parts is not None:
+        data["parts"] = list(parts)
+    resp = await _send_request("machine_hash", data)
     return json.dumps(_data_or_error(resp))
 
 

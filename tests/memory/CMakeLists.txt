@@ -39,3 +39,11 @@ mz_add_test(state_hash
     SOURCES  test_state_hash.c
     LABELS   "emu;memory"
 )
+
+# Obsahový otisk stroje po částech (machine_hash.c): skladba celkového
+# otisku a co vidí části memmap, rom, inputs, cmt, media a ramdisk.
+mz_add_test(machine_hash
+    TYPE     EMU
+    SOURCES  test_machine_hash.c
+    LABELS   "emu;memory"
+)

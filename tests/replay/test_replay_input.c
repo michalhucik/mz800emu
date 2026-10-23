@@ -7,9 +7,10 @@
  * replay_on_frame_boundary(), paused smyčku volání replay_on_paused().
  *
  * Pokrývá:
- *   - mimo záznam zapisuje sken klávesnice hned (jako dřív), okno VKBD,
- *     autotype a jeho prodlevy provede až emu vlákno (replay_on_paused() /
- *     hranice snímku) z vlastní kopie textu; průběh autotype jde číst
+ *   - mimo záznam sken klávesnice hostitele (i joystick z numerické
+ *     klávesnice), okno VKBD, autotype a jeho prodlevy provede až emu
+ *     vlákno (replay_on_paused() / hranice snímku), autotype z vlastní kopie
+ *     textu; revizi stavu zvedne jen změna; průběh autotype jde číst
  *     pio8255_autotype_progress() a replay_autotype_peek_rest(),
  *   - při záznamu čeká matice z UI ("čekající matice") a reset na hranici
  *     snímku a teprve tam se převezme a zapíše do záznamu,
@@ -78,14 +79,46 @@ static void idle_matrix(uint8_t *m, int col, uint8_t value)
 }
 
 
-/* Mimo záznam: sken klávesnice zapisuje hned, VKBD až emu vlákno. */
-void test_off_mode_writes_immediately(void)
+/* Mimo záznam: sken klávesnice hostitele i VKBD zapíše až emu vlákno. */
+void test_off_mode_inputs_via_emu_thread(void)
 {
     uint8_t m[10];
     idle_matrix(m, 3, 0xF7);
+    uint64_t rev0 = g_state_rev;
     replay_host_keyboard_submit(m, -1, 0xFF);
+    TEST_ASSERT_EQUAL_HEX8_MESSAGE(0xFF, g_pio8255.keyboard_matrix[3], "UI vlákno matici samo nezapíše");
+    TEST_ASSERT_EQUAL_UINT64(rev0, g_state_rev);
+    replay_on_paused();
     TEST_ASSERT_EQUAL_HEX8(0xF7, g_pio8255.keyboard_matrix[3]);
     TEST_ASSERT_EQUAL_HEX8(0xFF, g_pio8255.keyboard_matrix[4]);
+    TEST_ASSERT_TRUE_MESSAGE(g_state_rev > rev0, "změna matice zvedne revizi stavu");
+
+    /* Stejný sken znovu: nic se nemění, revize zůstane. */
+    rev0 = g_state_rev;
+    replay_host_keyboard_submit(m, -1, 0xFF);
+    replay_on_paused();
+    TEST_ASSERT_EQUAL_UINT64(rev0, g_state_rev);
+
+    /* Dva skeny před provedením: platí poslední, na hranici snímku. */
+    idle_matrix(m, 3, 0xFE);
+    replay_host_keyboard_submit(m, -1, 0xFF);
+    idle_matrix(m, 8, 0xBF);
+    replay_host_keyboard_submit(m, -1, 0xFF);
+    next_frame();
+    TEST_ASSERT_EQUAL_HEX8(0xFF, g_pio8255.keyboard_matrix[3]);
+    TEST_ASSERT_EQUAL_HEX8(0xBF, g_pio8255.keyboard_matrix[8]);
+
+    /* Joystick z numerické klávesnice jde stejnou cestou. */
+    uint8_t js = g_joy.dev[0].state;
+    rev0 = g_state_rev;
+    replay_host_keyboard_submit(m, 0, (uint8_t)(js ^ 0x01));
+    TEST_ASSERT_EQUAL_HEX8(js, g_joy.dev[0].state);
+    replay_on_paused();
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)(js ^ 0x01), g_joy.dev[0].state);
+    TEST_ASSERT_TRUE(g_state_rev > rev0);
+    replay_host_keyboard_submit(m, 0, js);
+    replay_on_paused();
+    TEST_ASSERT_EQUAL_HEX8(js, g_joy.dev[0].state);
 
     pio8255_vkbd_matrix_reset();
     replay_host_vkbd_set(2, 1, true);
@@ -109,6 +142,8 @@ void test_off_mode_writes_immediately(void)
 
     idle_matrix(m, -1, 0);
     replay_host_keyboard_submit(m, -1, 0xFF);
+    replay_on_paused();
+    TEST_ASSERT_EQUAL_HEX8(0xFF, g_pio8255.keyboard_matrix[8]);
 }
 
 
@@ -179,9 +214,10 @@ void test_recording_takes_inputs_at_frame_boundary(void)
     replay_data_free(d);
     g_free(err);
 
-    /* Po konci záznamu jde vstup zase rovnou. */
+    /* Po konci záznamu jde vstup zase přes emu vlákno mimo záznam. */
     idle_matrix(m, -1, 0);
     replay_host_keyboard_submit(m, -1, 0xFF);
+    replay_on_paused();
     TEST_ASSERT_EQUAL_HEX8(0xFF, g_pio8255.keyboard_matrix[4]);
     g_free(path);
 }
@@ -463,7 +499,7 @@ int main(int argc, char **argv)
     replay_init();
 
     UNITY_BEGIN();
-    RUN_TEST(test_off_mode_writes_immediately);
+    RUN_TEST(test_off_mode_inputs_via_emu_thread);
     RUN_TEST(test_off_mode_autotype_via_emu_thread);
     RUN_TEST(test_recording_takes_inputs_at_frame_boundary);
     RUN_TEST(test_playback_ignores_live_input_and_ends);

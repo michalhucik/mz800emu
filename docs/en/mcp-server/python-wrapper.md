@@ -205,6 +205,7 @@ The wrapper reads transport from env variables:
 | `MZ800EMU_TRANSPORT` | `pipe` | `pipe`, `tcp` |
 | `MZ800EMU_EXE` | `../mz800emu.exe` | path to binary (pipe only) |
 | `MZ800EMU_WORK_DIR` | (empty) | work directory of the spawned emulator, passed as `--work-dir` (pipe only); relative outputs such as the CDL export on exit go there |
+| `MZ800EMU_CFG_DIR` | (empty) | configuration directory of the spawned emulator, passed as `--cfg-dir` (pipe only); the INI file, breakpoints, symbols, watches, bookmarks and RAM disk backup files are read from and saved there. Empty = the emulator default (your own configuration) |
 | `MZ800EMU_TCP_HOST` | `127.0.0.1` | hostname (tcp only) |
 | `MZ800EMU_TCP_PORT` | `23800` | port number (tcp only) |
 

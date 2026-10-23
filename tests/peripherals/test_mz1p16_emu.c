@@ -10,7 +10,13 @@
  *      data PB -> P2, STROBE PA7 -> /INT INVERTOVANĚ (PA7=0 -> INT=1 idle,
  *      PA7=1 -> INT=0 assert), BUSY plotter (P1.4) -> PA0, STA (P1.7) -> PA1;
  *    firmware v klidu = ready (PA0=0), po přijetí bajtu krátce busy a zpět;
- *    host poll smyčka čtoucí BUSY krokuje firmware (drive_poll) a SKONČÍ.
+ *    host poll smyčka čtoucí BUSY krokuje firmware (drive_poll) a SKONČÍ,
+ *  - tlačítka okna Paper feed a self-test jdou přes frontu zásahů zařízení
+ *    (mz1p16_request.h): provede je až emu vlákno v device_request_poll()
+ *    a provedený zásah zvedne revizi stavu,
+ *  - dohánění homingu (aktivace, reset) a self-testu se rozloží do snímků:
+ *    jeden per-frame krok odkrokuje nejvýš omezený rozpočet a emulace
+ *    stroje nestojí.
  *
  * Test obchází mz1p16_emu_init (ten registruje INI/CLI) a inicializuje jádro
  * + mechaniku přímo, aby byl self-contained bez cfgmain/sdlapp.
@@ -29,6 +35,9 @@
 #include "hw-generic/mz1p16/mz1p16_rom.h"
 #include "hw-generic/pioz80/pioz80.h"
 #include "hw-generic/gdg/gdg.h"
+#include "hw-generic/mz1p16/mz1p16_request.h"
+#include "device_request.h"
+#include "state_rev.h"
 
 /* ----------------------------------------------------------------------------
  * Pomocné funkce
@@ -69,7 +78,28 @@ void setUp(void)
 
 void tearDown(void)
 {
+    /* Přes set_active(false): zahodí i naplánované dohánění. */
+    mz1p16_emu_set_active(false);
     g_mz1p16.active = false;
+}
+
+/**
+ * @brief Dožene naplánované dohánění (homing, self-test) per-frame kroky.
+ *
+ * Simuluje konce snímků emulace (mz1p16_emu_on_screen_done()), dokud
+ * mz1p16_emu_catchup_pending() neklesne na 0.
+ *
+ * @return Počet potřebných snímků (strop 1000 = selhání testu).
+ */
+static int catch_up(void)
+{
+    int frames = 0;
+    while (mz1p16_emu_catchup_pending() > 0 && frames < 1000) {
+        mz1p16_emu_on_screen_done();
+        frames++;
+    }
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, (int)mz1p16_emu_catchup_pending(), "dohánění nedoběhlo");
+    return frames;
 }
 
 /* ================================================================
@@ -93,6 +123,10 @@ void test_activation_runs_selftest(void)
 {
     mz1p16_emu_set_active(true);
     TEST_ASSERT_TRUE(mz1p16_emu_get_active());
+    /* Aktivace sama nekrokuje, homing se dožene po snímcích. */
+    TEST_ASSERT_TRUE(mz1p16_emu_catchup_pending() > 0);
+    TEST_ASSERT_EQUAL_UINT64(0, g_mz1p16_cpu.cycles);
+    catch_up();
 
     /* Po fast-forwardu firmware odhomoval vozík k levému dorazu a opakovaným
      * vjezdem do pen-change zóny prorotoval barvy. */
@@ -115,6 +149,7 @@ void test_pulse_pen_change_rotates_color(void)
         "pen change u neaktivniho plotteru nesmi krokovat jadro");
 
     mz1p16_emu_set_active(true);
+    catch_up();
     uint64_t changes_before = g_mz1p16.color_changes;
 
     mz1p16_emu_pulse_pen_change();
@@ -149,6 +184,7 @@ void test_active_per_frame_steps(void)
 void test_status_bits_map_to_pa(void)
 {
     mz1p16_emu_set_active(true);
+    catch_up();
 
     /* Po set_active proběhl fast-forward (firmware nastavil P1). Vynutíme
      * známé úrovně P1 přímo a ověříme přímou polaritu na PA0/PA1.
@@ -187,6 +223,7 @@ void test_inactive_does_not_drive_status(void)
 void test_int_polarity_mz(void)
 {
     mz1p16_emu_set_active(true);   /* aktivace vynutí standard MZ */
+    catch_up();
 
     /* Klid: PA7=0 -> INT=1 (ready). */
     pioz80_write_byte(PIOZ80_ADDR_DATA_A, 0x00);   /* PA7=0 */
@@ -265,6 +302,7 @@ static long host_send_byte_pio(uint8_t byte, long max_iters, bool *saw_ready)
 void test_handshake_pio_path_completes(void)
 {
     mz1p16_emu_set_active(true);
+    catch_up();
     mz1p16_clear_drawing(&g_mz1p16);
 
     uint64_t x_before = g_mz1p16.x_steps_fwd + g_mz1p16.x_steps_rev;
@@ -321,6 +359,75 @@ void test_handshake_pio_path_completes(void)
  * Runner
  * ================================================================ */
 
+/* Tlačítka okna Paper feed a self-test: zařadí se, provede je až
+ * device_request_poll() (emu vlákno) a zvednou revizi stavu. */
+void test_buttons_go_through_device_request(void)
+{
+    device_request_clear();
+    mz1p16_emu_set_active(true);
+    catch_up();
+    TEST_ASSERT_EQUAL_UINT8(1, g_mz1p16_cpu.T1);
+
+    uint64_t rev0 = g_state_rev;
+    TEST_ASSERT_NOT_EQUAL_UINT32(0, mz1p16_request_paper_feed(true));
+    TEST_ASSERT_EQUAL_UINT8_MESSAGE(1, g_mz1p16_cpu.T1, "UI vlákno T1 samo nemění");
+    device_request_poll();
+    TEST_ASSERT_EQUAL_UINT8(0, g_mz1p16_cpu.T1);
+    TEST_ASSERT_TRUE(g_state_rev > rev0);
+
+    rev0 = g_state_rev;
+    uint64_t cycles = g_mz1p16_cpu.cycles;
+    TEST_ASSERT_NOT_EQUAL_UINT32(0, mz1p16_request_selftest());
+    TEST_ASSERT_EQUAL_UINT64(cycles, g_mz1p16_cpu.cycles);
+    device_request_poll();
+    TEST_ASSERT_TRUE(g_state_rev > rev0);
+    TEST_ASSERT_TRUE_MESSAGE(mz1p16_emu_catchup_pending() > 0, "self-test se má dohánět po snímcích");
+    TEST_ASSERT_EQUAL_UINT8_MESSAGE(0, g_mz1p16_cpu.T1, "během self-testu je PAPER FEED držen");
+    catch_up();
+    TEST_ASSERT_TRUE_MESSAGE(g_mz1p16_cpu.cycles > cycles, "self-test neodkrokoval firmware");
+    TEST_ASSERT_EQUAL_UINT8_MESSAGE(1, g_mz1p16_cpu.T1, "self-test uvolní PAPER FEED");
+    TEST_ASSERT_TRUE_MESSAGE(g_mz1p16.n_strokes > 0, "self-test nic nenakreslil");
+    device_request_clear();
+}
+
+
+/* Dohánění self-testu je rozložené do snímků: jeden per-frame krok
+ * odkrokuje nejvýš omezený rozpočet (emulace stroje nestojí), celý self-test
+ * přesto doběhne a nakreslí znakovou sadu. Reset ho zruší. */
+void test_selftest_catchup_bounded_per_frame(void)
+{
+    mz1p16_emu_set_active(true);
+    catch_up();
+
+    mz1p16_emu_run_drawing_selftest();
+    long pending0 = mz1p16_emu_catchup_pending();
+    TEST_ASSERT_TRUE(pending0 > 10L * 1000 * 1000);
+    uint64_t c0 = g_mz1p16_cpu.cycles;
+    mz1p16_emu_on_screen_done();
+    uint64_t step = g_mz1p16_cpu.cycles - c0;
+    /* Strop 500 tisíc cyklů + přesah poslední instrukce. */
+    TEST_ASSERT_TRUE_MESSAGE(step <= 500u * 1000u + 16u, "per-frame krok přesáhl rozpočet dohánění");
+    TEST_ASSERT_TRUE(step >= 40u * 1000u);
+    TEST_ASSERT_TRUE(mz1p16_emu_catchup_pending() < pending0);
+
+    int frames = catch_up();
+    TEST_ASSERT_TRUE_MESSAGE(frames >= 100, "self-test se dohnal příliš rychle (rozpočet za snímek?)");
+    TEST_ASSERT_EQUAL_UINT8(1, g_mz1p16_cpu.T1);
+    TEST_ASSERT_TRUE(g_mz1p16.n_strokes > 0);
+
+    /* Reset během self-testu: dohánění homingu místo self-testu, PAPER FEED
+     * uvolněný, emulace nestojí (reset sám nekrokuje). */
+    mz1p16_emu_run_drawing_selftest();
+    mz1p16_emu_on_screen_done();
+    mz1p16_emu_reset();
+    TEST_ASSERT_EQUAL_UINT8(1, g_mz1p16_cpu.T1);
+    TEST_ASSERT_TRUE(mz1p16_emu_catchup_pending() > 0);
+    TEST_ASSERT_TRUE(mz1p16_emu_catchup_pending() <= 3L * 1000 * 1000);
+    TEST_ASSERT_TRUE(catch_up() <= 7);
+    TEST_ASSERT_EQUAL_UINT8(1, g_mz1p16_cpu.T1);
+}
+
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -332,5 +439,7 @@ int main(void)
     RUN_TEST(test_inactive_does_not_drive_status);
     RUN_TEST(test_int_polarity_mz);
     RUN_TEST(test_handshake_pio_path_completes);
+    RUN_TEST(test_buttons_go_through_device_request);
+    RUN_TEST(test_selftest_catchup_bounded_per_frame);
     return UNITY_END();
 }

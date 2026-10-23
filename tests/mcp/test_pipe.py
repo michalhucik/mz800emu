@@ -99,11 +99,13 @@ def main():
     exe = _find_exe()
     print(f"Using binary: {exe}")
 
-    # Dočasný work_dir: relativní výstupy (CDL export on exit) nesmí
-    # vzniknout v kořeni repa.
+    # Dočasný work_dir a cfg_dir: relativní výstupy (CDL export on exit)
+    # nesmí vzniknout v kořeni repa a INI ani breakpointy testu (bp_add
+    # na E800h) nesmí přepsat konfiguraci v kořeni repa - GUI spuštěné
+    # odtud by si je načetlo a každý běh by přidal další breakpoint.
     work_dir = tempfile.mkdtemp(prefix="mz_mcp_pipe_e2e_")
     proc = subprocess.Popen(
-        [str(exe), "--mcp-pipe", f"--work-dir={work_dir}"],
+        [str(exe), "--mcp-pipe", f"--work-dir={work_dir}", f"--cfg-dir={work_dir}"],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,

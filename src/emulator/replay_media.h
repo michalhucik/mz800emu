@@ -103,6 +103,18 @@ extern "C"
      */
     char *replay_media_tmp_file(const char *name);
 
+    /**
+     * @brief Stav kazety jako JSON: CMT hack, výchozí rychlost a pulzy,
+     *        polarita, přehrávaný blok, rychlosti a pulzy bloků pásky.
+     *
+     * Stejný text jako člen `cmt` manifestu záznamu; používá ho i otisk
+     * stroje (machine_hash.h, část `cmt`).
+     *
+     * @return JSON objekt jako text (vlastní volající, g_free).
+     * @pre Emu vlákno nebo stojící emu vlákno.
+     */
+    char *replay_media_cmt_state_json(void);
+
 #ifdef __cplusplus
 }
 #endif

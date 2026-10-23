@@ -81,9 +81,10 @@ void mz1p16_emu_init ( void );
  * @brief Reakce na reset stroje.
  *
  * Resetuje jádro 8050 (mcs48_reset) i mechaniku (pozice, kresbu) a znovu
- * navže klidové úrovně vstupů. Pokud je plotter aktivní, doběhne se homing
- * fast-forwardem (viz @ref mz1p16_emu_on_screen_done), aby se plotter rychle
- * ustálil. Volá se z mzarch.c (vedle printer_reset).
+ * navže klidové úrovně vstupů. Pokud je plotter aktivní, naplánuje dohánění
+ * homingu po snímcích (viz @ref mz1p16_emu_on_screen_done), aby se plotter
+ * rychle ustálil bez zastavení emulace; rozběhnutý self-test zruší. Volá se
+ * z mzarch.c (vedle printer_reset).
  */
 void mz1p16_emu_reset ( void );
 
@@ -99,9 +100,11 @@ void mz1p16_emu_shutdown ( void );
  * @brief Zapne/vypne plotter.
  *
  * Při zapnutí se začne krokovat jádro 8050 (per-frame) a plotter reaguje na
- * Centronics handshake. Při (re)aktivaci se nejprve doběhne homing/selftest
- * fast-forwardem, aby uživatel nečekal na realtime homing (~5 s). Při vypnutí
- * se plotter chová jako odpojený (žádné krokování, BUSY se nehlásí).
+ * Centronics handshake. Při (re)aktivaci se naplánuje dohánění homingu po
+ * snímcích (@ref mz1p16_emu_on_screen_done), aby uživatel nečekal na realtime
+ * homing (~5 s) a emulace přitom nestála. Při vypnutí se plotter chová jako
+ * odpojený (žádné krokování, BUSY se nehlásí), dohánění se zahodí a
+ * rozběhnutý self-test pustí PAPER FEED.
  *
  * @param active true = zapnout, false = vypnout
  */
@@ -123,10 +126,22 @@ bool mz1p16_emu_get_active ( void );
  * když host po posledním bajtu přestane pollovat BUSY; v klidu firmware jen
  * protočí poll smyčku.
  *
- * Fast-forward homing se NEdělá tady - ten se vyřeší jednorázově při
- * (re)aktivaci/resetu (mz1p16_emu_set_active / mz1p16_emu_reset).
+ * Dohánění: po (re)aktivaci, resetu a spuštění self-testu odkrokuje místo
+ * MZ1P16_FRAME_CYCLES až MZ1P16_EMU_CATCHUP_CHUNK_CYCLES cyklů za snímek,
+ * dokud nedožene naplánovaný počet (@ref mz1p16_emu_catchup_pending); po
+ * dohnání self-testu uvolní PAPER FEED (T1=1). Emulace stroje tak nestojí.
  */
 void mz1p16_emu_on_screen_done ( void );
+
+/**
+ * @brief Zbývající cykly jádra 8050 k dohnání po snímcích.
+ *
+ * @return 0 = nic se nedohání; jinak počet cyklů, které ještě odkrokuje
+ *         @ref mz1p16_emu_on_screen_done (po nejvýš
+ *         MZ1P16_EMU_CATCHUP_CHUNK_CYCLES za snímek).
+ * @note Bere serializační zámek; libovolné vlákno (testy, okno plotteru).
+ */
+long mz1p16_emu_catchup_pending ( void );
 
 /**
  * @brief Deterministicky posune jádro 8050 o pevný počet cyklů (event-driven).
@@ -208,10 +223,12 @@ void mz1p16_emu_button_paper_feed ( bool pressed );
  * @brief Spustí vestavěný kreslicí self-test (znakový generátor 4 barvy).
  *
  * HW postup: podržet PAPER FEED a stisknout RESET. Model: resetuje jádro s
- * T1 drženým v nule (PAPER FEED), vynuluje kresbu a fast-forwardem doběhne
- * homing + začátek kreslení znakového generátoru, aby uživatel nečekal
- * realtime (~5 s homing). Po návratu zůstává T1 ve stavu zadaném tlačítkem
- * (volající ho může uvolnit). Pokud plotter není aktivní, je no-op.
+ * T1 drženým v nule (PAPER FEED), vynuluje kresbu a naplánuje dohánění
+ * homingu a začátku kreslení znakového generátoru po snímcích
+ * (@ref mz1p16_emu_on_screen_done, asi 120 snímků), aby uživatel nečekal
+ * realtime a emulace přitom nestála. Po dohnání se PAPER FEED uvolní (T1=1,
+ * jinak by firmware kreslil znakovou sadu donekonečna). Pokud plotter není
+ * aktivní, je no-op.
  */
 void mz1p16_emu_run_drawing_selftest ( void );
 

@@ -1,6 +1,6 @@
 ---
 title: State revision (state_rev, expected_state_rev, if_state_rev_differs)
-description: One number that changes whenever the machine state may have changed (MCP, GUI, replay, devices) - state_rev in emu_get_state, emu_state_observe, write responses and paused / resumed / step_done events; expected_state_rev refuses a write if anything changed since your read; if_state_rev_differs answers not_modified without reading.
+description: One number that changes whenever the machine state may have changed (MCP, GUI, replay, devices) - state_rev in emu_get_state, emu_state_observe, write responses and paused / resumed / step_done events; expected_state_rev refuses a write if anything changed since your read; if_state_rev_differs answers not_modified without reading; emu_machine_hash gives a content fingerprint of the whole machine by parts.
 ---
 # State revision: "has anything changed since I looked?"
 
@@ -143,21 +143,61 @@ Rules:
 - **GUI.** The MCP Activity window shows a refused call as a row with
   "rejected: state changed since it was read".
 
-## Known gaps
+Keys typed on the host keyboard into the emulator window (and the
+joystick on the numeric keypad) reach the machine at the next frame
+boundary, or right away in pause, and move the revision only when the key
+matrix changes. The MZ-1P16 plotter buttons go the same way as the other
+device windows.
 
-These changes do not move the revision yet:
+## Content fingerprint: `emu_machine_hash`
 
-- keys typed on the host keyboard into the emulator window, and the
-  joystick on the numeric keypad, while no input recording runs,
-- the MZ-1P16 plotter buttons Paper feed and Run drawing self-test.
+`emu_machine_hash` answers a different question: "is the machine in the
+same state as at some earlier moment?". It returns a SHA-256 for each part
+of the machine and one `sha256` over all requested parts:
 
-If a person may type into the emulator window during your work, do not
-rely on an equal revision alone for keyboard state.
+| Part | What it covers |
+|------|----------------|
+| `cpu` | registers and hidden Z80 state (WZ, Q, interrupt flags, halt) |
+| `ram` | internal RAM 64 KB |
+| `memext` | MemExt RAM (`null` when MemExt is not connected) |
+| `vram` | video RAM |
+| `pcg` | PCG (MZ-1500 only, else `null`) |
+| `periph` | chips and controllers (8253, 8255, Z80 PIO, PSG, GDG, VRAM controller, FDC, Quick Disk) |
+| `memmap` | memory mapping, mode switch, second PSG option, MemExt map and configuration |
+| `rom` | ROM content (a CMT hack patch changes it) |
+| `media` | inserted media: paths, write protection, connection, the counter of writes to media |
+| `inputs` | effective keyboard matrix (host and virtual keyboard), joysticks, running autotype |
+| `ramdisk` | RAM disk state (bank, latch, connection) |
+| `cmt` | tape: transport, block and position, speed, polarity, CMT hack |
+
+With `include_media: true` the parts `media` and `ramdisk` also hash the
+content of disk, Quick Disk, IDE8 and tape images, MemExt FLASH and RAM
+disks (slow with a big IDE8 image). `parts: [...]` computes only the
+listed parts. Compare two fingerprints only when both were taken in pause
+(`stable: true`) with the same parameters.
+
+The answer lists `covered` parts and `not_covered` areas the fingerprint
+never sees: the screen (an output, see `emu_frame_hash`), sound, the
+plotter, the live host joystick (read at each IN), the content of the
+Unicard directory and of a Quick Disk in directory mode, and without
+`include_media` the media and RAM disk content. `elapsed_us` is the time
+the emulator spent computing it.
+
+Fingerprint versus revision:
+
+- The revision sees every change, also one that was undone (ABA) or one
+  in an area the fingerprint does not cover. Use `expected_state_rev` for
+  conditional writes.
+- The fingerprint is built from content only (media count by their path),
+  so it can also be compared with one taken in another emulator process;
+  the revision is meaningful only inside one process.
+- Rule that the emulator keeps: in pause, a changed fingerprint always
+  comes with a changed revision.
 
 ## See also
 
 - `emulator://docs/state_observe` - reading registers and memory from one
-  moment.
+  moment, hashes of single parts (`hashes`).
 - `emulator://docs/conditional_writes` - content conditions
   `expected_sha256` and `expected`.
 - `emulator://docs/run_control` - `run_seq`, events `paused` / `resumed`,

@@ -166,6 +166,7 @@ documented separately in [Resources overview](resources-overview.md).
 | `emu_get_last_instr` | no | Most recently completed Z80 instruction from the history ring (addr + bytes + length) |
 | `emu_get_cpu_panel_batch` | no | Atomic batch: regs + flags + raster + IM2 + last_instr in one round-trip |
 | `emu_state_observe` | no | Registers, flags, run number, time and up to 16 memory windows (CPU or region) from one moment, SHA-256 per window |
+| `emu_machine_hash` | no | Content fingerprint of the whole machine (SHA-256 per part: CPU, memory, mapping, ROM, chips, media, inputs, tape, RAM disk) and one total |
 | `emu_debugger_activate` | **YES** | Programmatically activate the debugger (side effect: cpuhist + mhmap recording in WITH_WINDOW preset) |
 | `emu_debugger_deactivate` | **YES** | Programmatically deactivate the debugger (recording off) |
 | `emu_is_debugger_active` | no | Read-only probe for `TEST_DEBUGGER_ACTIVE` |
@@ -287,8 +288,9 @@ in pause; otherwise `Precondition failed: state changed (...)` or
 accepts `if_state_rev_differs` (reply `not_modified` without reading).
 The event `state_changed` (`{state_rev, sources}`) reports changes in
 pause that did not come from an MCP client (GUI, devices, replay),
-merged per pass of the pause loop. Details and known gaps:
-`emulator://docs/state_revision`.
+merged per pass of the pause loop. `emu_machine_hash` gives a content
+fingerprint of the whole machine by parts ("same state as before?").
+Details: `emulator://docs/state_revision`.
 - any other text (e.g. `bp_remove failed (unknown id?)`) - the command
   was executed and failed (or the parameters were rejected); retrying
   unchanged does not help.
@@ -543,6 +545,26 @@ gives the window `error: "region_unavailable"` and `complete: false`; the
 call still succeeds. Invalid windows (too many, too long, past the end of
 the address space or region, unknown kind) are `Invalid parameters`.
 Reads have no side effects. Details: `emulator://docs/state_observe`.
+
+### `emu_machine_hash`
+
+Content fingerprint of the whole machine, computed by the emulator thread
+in one pass (in pause right away, while running at a frame boundary).
+Arguments:
+
+- `parts` (list, optional) - part names `cpu`, `ram`, `memext`, `vram`,
+  `pcg`, `periph`, `memmap`, `rom`, `media`, `inputs`, `ramdisk`, `cmt`;
+  default all
+- `include_media` (bool, default false) - also hash the content of disk,
+  Quick Disk, IDE8 and tape images, MemExt FLASH and RAM disks
+
+Returns `sha256` (over the requested parts), `parts` (`{name: hex}`,
+`null` = the part does not exist in this build or configuration),
+`covered`, `not_covered` (areas never covered: screen, sound, plotter,
+...), `include_media`, `state_rev`, `run_seq`, `running`, `stable` and
+`elapsed_us`. Compare two fingerprints taken in pause with the same
+arguments. An unknown part name is `Invalid parameters`. Reads have no
+side effects. Details: `emulator://docs/state_revision`.
 
 ### `emu_bp_add`
 

@@ -166,6 +166,7 @@ dokumentu [Resources overview](resources-overview.md).
 | `emu_get_last_instr` | ne | Poslední dokončená Z80 instrukce z history ringu (addr + bytes + length) |
 | `emu_get_cpu_panel_batch` | ne | Atomic batch: regs + flags + raster + IM2 + last_instr v 1 round-tripu |
 | `emu_state_observe` | ne | Registry, příznaky, číslo běhu, čas a až 16 oken paměti (CPU nebo region) z jednoho okamžiku, SHA-256 u každého okna |
+| `emu_machine_hash` | ne | Obsahový otisk celého stroje (SHA-256 po částech: CPU, paměť, mapování, ROM, čipy, média, vstupy, kazeta, RAM disk) a jeden celkový |
 | `emu_debugger_activate` | **ANO** | Programaticky zapne debugger (= side effect: cpuhist + mhmap recording v WITH_WINDOW režimu) |
 | `emu_debugger_deactivate` | **ANO** | Programaticky vypne debugger (= recording off) |
 | `emu_is_debugger_active` | ne | Read-only probe `TEST_DEBUGGER_ACTIVE` |
@@ -285,7 +286,8 @@ emulator running (...)`), `emu_state_observe` přijímá
 `if_state_rev_differs` (odpověď `not_modified` bez čtení). Událost
 `state_changed` (`{state_rev, sources}`) ohlásí změny v pauze, které
 nepocházejí od MCP klienta (GUI, zařízení, záznam vstupů), sloučené za
-průchod smyčkou pauzy. Podrobnosti a známé mezery:
+průchod smyčkou pauzy. `emu_machine_hash` vrátí obsahový otisk celého
+stroje po částech ("je stav stejný jako tehdy?"). Podrobnosti:
 `emulator://docs/state_revision`.
 - jakýkoliv jiný text (např. `bp_remove failed (unknown id?)`) - příkaz
   se provedl a selhal (nebo byly odmítnuty parametry); opakování beze
@@ -533,6 +535,25 @@ a vyžádané sekce. Nepřipojený region dá oknu `error:
 okna (moc oken, moc bajtů, přes konec adresního prostoru nebo regionu,
 neznámý druh) jsou `Invalid parameters`. Čtení je bez vedlejších efektů.
 Podrobně: `emulator://docs/state_observe`.
+
+### `emu_machine_hash`
+
+Obsahový otisk celého stroje, spočítaný emu vláknem v jednom průchodu
+(v pauze hned, za běhu na hranici snímku). Argumenty:
+
+- `parts` (pole, volitelné) - jména částí `cpu`, `ram`, `memext`, `vram`,
+  `pcg`, `periph`, `memmap`, `rom`, `media`, `inputs`, `ramdisk`, `cmt`;
+  výchozí všechny
+- `include_media` (bool, výchozí false) - hashovat i obsah obrazů disket,
+  Quick Disku, IDE8 a pásky, FLASH MemExt a RAM disků
+
+Vrací `sha256` (přes vyžádané části), `parts` (`{jméno: hex}`, `null` =
+část v této sestavě nebo konfiguraci není), `covered`, `not_covered`
+(oblasti, které otisk nevidí nikdy: obraz, zvuk, plotter, ...),
+`include_media`, `state_rev`, `run_seq`, `running`, `stable`
+a `elapsed_us`. Porovnávat jde dva otisky z pauzy se stejnými argumenty.
+Neznámé jméno části = `Invalid parameters`. Čtení nemá vedlejší efekty.
+Podrobně: `emulator://docs/state_revision`.
 
 ### `emu_bp_add`
 

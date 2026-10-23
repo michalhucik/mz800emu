@@ -36,7 +36,12 @@ extern "C" {
 
 /* Default jmeno ramdisk image obsahuje arch suffix - kazda platforma
  * pouziva vlastni soubor (drive sdileny "rd.dat" pro vsechny archy
- * davaly zmateny vysledek pri prepinani targetu). */
+ * davaly zmateny vysledek pri prepinani targetu).
+ *
+ * Výchozí jména záložních souborů STD RAM disku a PEZIKů jsou relativní;
+ * ramdisk_load_backup_file() a ramdisk_save_backup_file() je převádějí
+ * vůči konfiguračnímu adresáři (--cfg-dir), ne vůči aktuálnímu adresáři
+ * procesu. */
 #define RAMDISK_DEFAULT_FILENAME          "rd-" MZ_PLATFORM_SUFFIX ".dat"
 #define RAMDISK_PEZIK_E8_DEFAULT_FILENAME "pezik_e8.dat"
 #define RAMDISK_PEZIK_68_DEFAULT_FILENAME "pezik_68.dat"
@@ -107,6 +112,28 @@ extern "C" {
     extern void ramdisk_std_init ( int connect, en_RAMDISK_TYPE type, en_RAMDISK_BANKMASK size, char *filepath );
     extern void ramdisk_std_disconnect ( void );
     extern void ramdisk_std_save ( void );
+
+    /**
+     * @brief Načte záložní soubor RAM disku (relativní cesta vůči cfg_dir).
+     *
+     * Podrobný kontrakt u definice v ramdisk.c.
+     *
+     * @param memory Buffer RAM disku, aspoň @p ramdisk_size bajtů.
+     * @param filepath Cesta relativní vůči konfiguračnímu adresáři nebo absolutní.
+     * @param ramdisk_size Počet bajtů k načtení.
+     */
+    extern void ramdisk_load_backup_file ( uint8_t *memory, char *filepath, unsigned ramdisk_size );
+
+    /**
+     * @brief Uloží RAM disk do záložního souboru (relativní cesta vůči cfg_dir).
+     *
+     * Podrobný kontrakt u definice v ramdisk.c.
+     *
+     * @param memory Buffer RAM disku, aspoň @p ramdisk_size bajtů.
+     * @param filepath Cesta relativní vůči konfiguračnímu adresáři nebo absolutní.
+     * @param ramdisk_size Počet bajtů k zápisu.
+     */
+    extern void ramdisk_save_backup_file ( uint8_t *memory, char *filepath, unsigned ramdisk_size );
 
     /**
      * @brief Přizpůsobí buffery RAMdisků stavu převzatému ze snapshotu.

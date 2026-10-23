@@ -18,6 +18,7 @@
 #include "hw-generic/pio8255/pio8255.h"
 #include "hw-generic/joy/joy.h"
 #include "iface/iface_keyboard.h"
+#include "replay.h"
 
 /** @brief Podvržený stav kláves SDL (jako SDL_GetKeyboardState()). */
 static bool s_keys[SDL_SCANCODE_COUNT];
@@ -46,10 +47,16 @@ void tearDown(void)
     memset(g_pio8255.keyboard_matrix, 0xFF, sizeof(g_pio8255.keyboard_matrix));
 }
 
-/** @brief Sken s podvrženým stavem (mimo záznam vstupů se zapíše hned). */
+/**
+ * @brief Sken s podvrženým stavem a jeho zápis do stroje.
+ *
+ * Mimo záznam vstupů sken matici jen předá (replay_host_keyboard_submit());
+ * zapíše ji emu vlákno, tady replay_on_paused() jako v paused smyčce.
+ */
 static void scan(SDL_Keymod kmod)
 {
     iface_keyboard_full_scan(s_keys, kmod, SDL_SCANCODE_COUNT);
+    replay_on_paused();
 }
 
 /* Bez joysticku: KP_8 je při NumLock číslice 8, bez NumLock kurzor nahoru. */

@@ -80,7 +80,8 @@ typedef uint8_t (*joy_host_read_fn)(en_JOY_DEVID joy_devid);
  *
  * @invariant `host_read` a `host_scan` nejsou NULL (nastaví je joy_init()).
  * @note Přístup z emu vlákna (IN, bod hranice snímku replay); UI vlákno
- *       zapisuje jen `dev[].state` u numerické klávesnice.
+ *       nezapisuje nic: stav joysticku z numerické klávesnice předává přes
+ *       replay_host_keyboard_submit() a zapíše ho emu vlákno.
  */
 typedef struct st_JOY
 {

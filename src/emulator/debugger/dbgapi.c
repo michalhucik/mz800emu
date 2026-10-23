@@ -1055,6 +1055,7 @@ const char *dbgapi_cmd_to_str(en_DBGAPI_CMD cmd)
         case DBGAPI_CMD_COVERAGE:                  return "coverage";
         case DBGAPI_CMD_BPLOG:                     return "bplog";
         case DBGAPI_CMD_RUN_UNTIL_TICKS:           return "run_until_ticks";
+        case DBGAPI_CMD_MACHINE_HASH:              return "machine_hash";
         case DBGAPI_CMD_MEMSEARCH_SAMPLE:          return "memsearch_sample";
         case DBGAPI_CMD_FREEZE_LIST:               return "freeze_list";
         /* V1.D.1 - Core + CPU extras Resources */
@@ -5553,6 +5554,23 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
         {
             st_DBGAPI_STATE_OBSERVE_PARAM *p = (st_DBGAPI_STATE_OBSERVE_PARAM *) rq->data_ptr;
             rq->success = ( p != NULL ) && dbgapi_state_observe_fill ( p );
+            break;
+        }
+
+        /* --- Otisk stroje po částech (machine-hash M19) ---
+         * Čte stav emulátoru bez zámku, proto v emu vlákně; stav nemění. */
+        case DBGAPI_CMD_MACHINE_HASH:
+        {
+            st_DBGAPI_MACHINE_HASH_PARAM *p = (st_DBGAPI_MACHINE_HASH_PARAM *) rq->data_ptr;
+            if ( !p )
+            {
+                rq->success = false;
+                break;
+            };
+            gint64 t0 = g_get_monotonic_time ( );
+            machine_hash_compute ( p->mask, p->flags, &p->result );
+            p->elapsed_us = (uint64_t) ( g_get_monotonic_time ( ) - t0 );
+            rq->success = true;
             break;
         }
 

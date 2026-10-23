@@ -124,6 +124,14 @@ mz_add_test(ramdisk-request
     LABELS   "emu;peripherals"
 )
 
+# Záložní soubory RAM disků: relativní cesta (výchozí rd-<platforma>.dat)
+# se převádí vůči cfg_dir, ne vůči aktuálnímu adresáři procesu.
+mz_add_test(ramdisk-backup-path
+    TYPE     EMU
+    SOURCES  test_ramdisk_backup_path.c
+    LABELS   "emu;peripherals"
+)
+
 # Zásahy GUI do MemExt (memext_request.h): připojení a načtení souboru
 # až v device_request_poll(), při replay se zásah neprovede.
 mz_add_test(memext-request

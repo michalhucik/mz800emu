@@ -1358,6 +1358,24 @@ if(Python3_FOUND)
                    "(Python ${Python3_VERSION})")
 
     # -----------------------------------------------------------
+    # Otisk stroje machine_hash a úplnost revize stavu (pipe): u všech
+    # nástrojů druhu MUTATES "změnil se otisk => změnila se state_rev",
+    # čtecí nástroje nemění otisk ani revizi, ABA.
+    # -----------------------------------------------------------
+    add_test(
+        NAME    mcp_machine_hash
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_machine_hash.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_machine_hash PROPERTIES
+        LABELS  "e2e;mcp;pipe"
+        TIMEOUT 200
+    )
+    message(STATUS "  tests/mcp: registered mcp_machine_hash "
+                   "(Python ${Python3_VERSION})")
+
+    # -----------------------------------------------------------
     # Test 7e: port I/O a načtení MZF přes MCP za běhu emulace (pipe)
     # -----------------------------------------------------------
     # Regrese: io_write/io_read za běhu zastavil CPU a další port I/O

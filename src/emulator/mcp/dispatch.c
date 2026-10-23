@@ -457,6 +457,9 @@ static en_MCP_DISPATCH_RESULT _handle_replay_status(const st_JSONL_MESSAGE *req,
                                                     char **out_response);
 static en_MCP_DISPATCH_RESULT _handle_replay_goto(const st_JSONL_MESSAGE *req,
                                                   char **out_response);
+/* machine-hash (M19) - obsahový otisk stroje po částech */
+static en_MCP_DISPATCH_RESULT _handle_machine_hash(const st_JSONL_MESSAGE *req,
+                                                   char **out_response);
 /* V0.B.7 - resource backing pro emulator://config/mcp */
 static en_MCP_DISPATCH_RESULT _handle_get_mcp_config(const st_JSONL_MESSAGE *req,
                                                      char **out_response);
@@ -1319,6 +1322,9 @@ static const st_MCP_CMD_MAP_ENTRY g_cmd_map[] = {
     /* replay-goto (M17 debug-gaps): stav stroje v čase záznamu vstupů přes
      * přehrání (seek + zastavení na čase v emu vlákně). */
     { "replay_goto",              DBGAPI_CMD_NONE,                    _handle_replay_goto              },
+    /* machine-hash (M19 debug-gaps): obsahový otisk stroje po částech
+     * (test úplnosti revize stavu, "je stav stejný jako tehdy?"). */
+    { "machine_hash",             DBGAPI_CMD_MACHINE_HASH,            _handle_machine_hash             },
     /* sentinel */
     { NULL,              DBGAPI_CMD_NONE,              NULL                  },
 };
@@ -20024,6 +20030,122 @@ out:
     if (expect) json_object_unref(expect);
     json_object_unref(obs_params);
     return rc;
+}
+
+
+/**
+ * @brief Co otisk stroje nevidí nikdy (machine_hash.h), jména pro `not_covered`.
+ */
+static const char *const s_machine_hash_never[] = {
+    "screen", "audio", "plotter", "host_joystick_live", "unicard_directory", "qd_virtual_directory",
+};
+
+
+/**
+ * @brief `machine_hash` handler - obsahový otisk stroje po částech.
+ *
+ * Parametry:
+ *  - `parts` (pole jmen, volitelné): `cpu`, `ram`, `memext`, `vram`,
+ *    `pcg`, `periph`, `memmap`, `rom`, `media`, `inputs`, `ramdisk`, `cmt`;
+ *    chybí = všechny.
+ *  - `include_media` (bool, default false): do částí `media` a `ramdisk`
+ *    i obsah obrazů médií, FLASH MemExt a RAM disků (může být drahé).
+ *
+ * Emu vlákno spočítá otisk v jednom průchodu fronty
+ * (DBGAPI_CMD_MACHINE_HASH): za běhu na hranici snímku, v pauze okamžitě.
+ * Otisk má smysl porovnávat jen v pauze (`stable: true`) se stejnými
+ * parametry.
+ *
+ * Response: `sha256` (celkový otisk vyžádaných částí), `parts` {jméno:
+ * hex, null = část v sestavě není}, `covered` (jména částí s hashem),
+ * `not_covered` (co otisk nevidí; bez `include_media` i `media_content`
+ * a `ramdisk_content`), `include_media`, `state_rev`, `run_seq`,
+ * `running`, `stable`, `elapsed_us` (doba výpočtu v emu vlákně).
+ *
+ * Chyby: neznámé jméno části nebo špatný typ parametru =
+ * `Invalid parameters: ...`.
+ */
+static en_MCP_DISPATCH_RESULT _handle_machine_hash(const st_JSONL_MESSAGE *req,
+                                                   char **out_response) {
+    int64_t req_id = jsonl_msg_get_req_id(req);
+    JsonNode *data_node = (JsonNode *)jsonl_msg_get_data_node(req);
+    JsonObject *obj = (data_node && json_node_get_node_type(data_node) == JSON_NODE_OBJECT)
+                      ? json_node_get_object(data_node) : NULL;
+
+    uint32_t mask = MACHINE_HASH_ALL_PARTS;
+    if (obj && json_object_has_member(obj, "parts")
+        && !json_node_is_null(json_object_get_member(obj, "parts"))) {
+        JsonNode *pn = json_object_get_member(obj, "parts");
+        if (json_node_get_node_type(pn) != JSON_NODE_ARRAY) {
+            return _err_response(req_id, "Invalid parameters: parts must be an array of part names",
+                                 MCP_DISPATCH_INVALID_PARAMS, out_response);
+        }
+        JsonArray *a = json_node_get_array(pn);
+        mask = 0;
+        for (guint i = 0; i < json_array_get_length(a); i++) {
+            JsonNode *e = json_array_get_element(a, i);
+            int part = -1;
+            if (e && JSON_NODE_HOLDS_VALUE(e) && json_node_get_value_type(e) == G_TYPE_STRING) {
+                part = machine_hash_part_from_name(json_node_get_string(e));
+            }
+            if (part < 0) {
+                return _err_response(req_id, "Invalid parameters: unknown part in parts (allowed: cpu, ram, "
+                                     "memext, vram, pcg, periph, memmap, rom, media, inputs, ramdisk, cmt)",
+                                     MCP_DISPATCH_INVALID_PARAMS, out_response);
+            }
+            mask |= 1u << (unsigned)part;
+        }
+    }
+    bool include_media = false;
+    if (!_replay_obj_bool(obj, "include_media", false, &include_media)) {
+        return _err_response(req_id, "Invalid parameters: include_media must be a boolean",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+
+    st_DBGAPI_MACHINE_HASH_PARAM *p = g_new0(st_DBGAPI_MACHINE_HASH_PARAM, 1);
+    p->mask = mask;
+    p->flags = include_media ? MACHINE_HASH_FLAG_INCLUDE_MEDIA : 0;
+    if (!_submit_dbgapi(DBGAPI_CMD_MACHINE_HASH, p, NULL)) {
+        g_free(p);
+        return _err_response(req_id, "MACHINE_HASH failed", MCP_DISPATCH_EMU_ERROR, out_response);
+    }
+
+    JsonObject *data = json_object_new();
+    json_object_set_string_member(data, "sha256", p->result.total);
+    JsonObject *parts = json_object_new();
+    JsonArray *covered = json_array_new();
+    for (int i = 0; i < MACHINE_HASH_PART_COUNT; i++) {
+        if (!(p->result.requested & (1u << i))) continue;
+        const char *name = machine_hash_part_name((en_MACHINE_HASH_PART)i);
+        if (p->result.present & (1u << i)) {
+            json_object_set_string_member(parts, name, p->result.part[i]);
+            json_array_add_string_element(covered, name);
+        } else {
+            json_object_set_null_member(parts, name);
+        }
+    }
+    json_object_set_object_member(data, "parts", parts);
+    json_object_set_array_member(data, "covered", covered);
+    JsonArray *never = json_array_new();
+    for (guint i = 0; i < G_N_ELEMENTS(s_machine_hash_never); i++) {
+        json_array_add_string_element(never, s_machine_hash_never[i]);
+    }
+    if (!include_media) {
+        json_array_add_string_element(never, "media_content");
+        json_array_add_string_element(never, "ramdisk_content");
+    }
+    json_object_set_array_member(data, "not_covered", never);
+    json_object_set_boolean_member(data, "include_media", include_media ? TRUE : FALSE);
+    /* Revize a běh z okamžiku výpočtu (výstupy slotu, state_rev.h). */
+    if (s_submit_track.have_rev) {
+        json_object_set_int_member(data, "state_rev", (gint64)s_submit_track.state_rev);
+        json_object_set_int_member(data, "run_seq", (gint64)s_submit_track.run_seq);
+        json_object_set_boolean_member(data, "running", s_submit_track.running ? TRUE : FALSE);
+        json_object_set_boolean_member(data, "stable", s_submit_track.running ? FALSE : TRUE);
+    }
+    json_object_set_int_member(data, "elapsed_us", (gint64)p->elapsed_us);
+    g_free(p);
+    return _ok_response(req_id, data, out_response);
 }
 
 
