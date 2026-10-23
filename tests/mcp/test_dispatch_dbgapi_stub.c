@@ -462,6 +462,7 @@ bool dbgapi_ui_submit_cmd_sync_with_origin(st_DBGAPI_CMDRQ_QUEUE *queue,
                 if (g_stub_state.tr_bump_on_call > 0 &&
                     g_stub_state.tr_snap_calls >= g_stub_state.tr_bump_on_call) seg++;
                 size_t rs = (p->channel == DBGAPI_TRACE_CHANNEL_CPUTRACK) ? 12
+                          : (p->channel == DBGAPI_TRACE_CHANNEL_BPLOG) ? sizeof(st_BPLOG_REC)
                           : (p->channel == DBGAPI_TRACE_CHANNEL_EVENTLOG
                              || p->channel == DBGAPI_TRACE_CHANNEL_RAMLOG) ? 32 : 24;
                 p->out.segment = seg;
@@ -480,6 +481,25 @@ bool dbgapi_ui_submit_cmd_sync_with_origin(st_DBGAPI_CMDRQ_QUEUE *queue,
                         uint8_t *r = p->out.ram_copy + (i - lo) * rs;
                         if (rs == 12) {
                             r[0] = (uint8_t)i; r[1] = 0x10; r[2] = 1; r[11] = 4;
+                        } else if (p->channel == DBGAPI_TRACE_CHANNEL_BPLOG) {
+                            /* bplog: insn_pc 3000h + i, pc 3003h + i, sudé i BP 1
+                             * "even", liché BP 2 "odd"; poslední záznam druh stop;
+                             * i == 2 text s neplatným UTF-8 a příznakem ořezu. */
+                            st_BPLOG_REC *br = (st_BPLOG_REC *)r;
+                            br->t = 100u * i;
+                            br->frame = (uint32_t)i;
+                            br->insn_pc = (uint16_t)(0x3000 + i);
+                            br->pc = (uint16_t)(0x3003 + i);
+                            br->bp_id = (i & 1) ? 2 : 1;
+                            br->kind = (i + 1 == g_stub_state.tr_records) ? BPLOG_KIND_STOP : BPLOG_KIND_LOG;
+                            g_strlcpy(br->name, (i & 1) ? "odd" : "even", sizeof(br->name));
+                            if (i == 2) {
+                                memcpy(br->text, "x\xC3", 3);
+                                br->flags = BPLOG_FLAG_TEXT_TRUNCATED;
+                            } else {
+                                g_snprintf(br->text, sizeof(br->text), "v=%u", (unsigned)i);
+                            }
+                            br->text_len = (uint16_t)strlen(br->text);
                         } else if (p->channel == DBGAPI_TRACE_CHANNEL_RAMLOG) {
                             /* ramlog: insn_pc 3000h + i, CPU adresa 4000h + i, RAM,
                              * old AA, new i; liché i nezměněné (skryté bez all). */
@@ -587,6 +607,19 @@ bool dbgapi_ui_submit_cmd_sync_with_origin(st_DBGAPI_CMDRQ_QUEUE *queue,
                         }
                     }
                 }
+            }
+            break;
+
+        case DBGAPI_CMD_BPLOG:
+            /* bplog: zapamatuje vstup; stav po vyčištění = segment 4, prázdný. */
+            if (data_ptr) {
+                st_DBGAPI_BPLOG_PARAM *p = (st_DBGAPI_BPLOG_PARAM *)data_ptr;
+                g_stub_state.bpl_calls++;
+                g_stub_state.bpl_last = *p;
+                memset(&p->out_status, 0, sizeof(p->out_status));
+                p->out_status.allocated = true;
+                p->out_status.segment = 4;
+                p->out_status.capacity = BPLOG_CAPACITY;
             }
             break;
 

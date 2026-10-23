@@ -16,6 +16,7 @@
 #include "../../audio_analysis.h"
 #include "../../audio_capture.h"
 #include "ramlog.h"
+#include "bplog.h"
 #include "cputrack.h"
 
 #include <math.h>
@@ -56,6 +57,19 @@ G_STATIC_ASSERT ( offsetof ( st_RAMLOG_REC, flags ) == 25 );
 G_STATIC_ASSERT ( offsetof ( st_RAMLOG_REC, plane ) == 26 );
 G_STATIC_ASSERT ( offsetof ( st_RAMLOG_REC, count ) == 28 );
 
+/* Dekodér bplog čte st_BPLOG_REC po bajtech. */
+G_STATIC_ASSERT ( offsetof ( st_BPLOG_REC, frame ) == 8 );
+G_STATIC_ASSERT ( offsetof ( st_BPLOG_REC, insn_pc ) == 12 );
+G_STATIC_ASSERT ( offsetof ( st_BPLOG_REC, pc ) == 14 );
+G_STATIC_ASSERT ( offsetof ( st_BPLOG_REC, bp_id ) == 16 );
+G_STATIC_ASSERT ( offsetof ( st_BPLOG_REC, kind ) == 20 );
+G_STATIC_ASSERT ( offsetof ( st_BPLOG_REC, flags ) == 21 );
+G_STATIC_ASSERT ( offsetof ( st_BPLOG_REC, text_len ) == 22 );
+G_STATIC_ASSERT ( offsetof ( st_BPLOG_REC, name ) == 24 );
+G_STATIC_ASSERT ( offsetof ( st_BPLOG_REC, text ) == 56 );
+G_STATIC_ASSERT ( sizeof ( st_BPLOG_REC ) == 296 );
+G_STATIC_ASSERT ( BPLOG_NAME_SIZE == sizeof ( ( (st_TRACE_FILTER *) 0 )->bp_name ) );
+
 
 /* ===========================================================================
  *  Druhy kanálů a sloupce
@@ -64,7 +78,7 @@ G_STATIC_ASSERT ( offsetof ( st_RAMLOG_REC, count ) == 28 );
 /** @brief Jména kanálů podle en_TRACE_KIND. */
 static const char *const s_kind_names[ TRACE_KIND_COUNT ] = {
     "cputrack", "iorqlog", "intlog", "hwlog", "marklog", "eventlog",
-    "audio_psg_writes", "audio_levels", "audio_frames", "ramlog"
+    "audio_psg_writes", "audio_levels", "audio_frames", "ramlog", "bplog"
 };
 
 /** @brief Sloupce cputrack (pořadí = bity masky). Za `sym` druh záznamu
@@ -98,6 +112,15 @@ static const char *const s_cols_ramlog[] = { "seq", "t", "frame", "pc", "sym", "
 
 /** @brief Index sloupce `sym` u ramlog. */
 #define TRACE_COL_RAMLOG_SYM 4
+
+/** @brief Sloupce bplog (výstup akcí BP). `t`, `frame`, `insn_pc` a `pc`
+ *  odpovídají `Cycle`, `Frame`, `InsnPC` a `PC` ve výrazu BP v okamžiku
+ *  akce, `sym` je symbol `insn_pc`. */
+static const char *const s_cols_bplog[] = { "seq", "t", "frame", "insn_pc", "sym", "pc", "bp", "name",
+                                            "kind", "text", "flags" };
+
+/** @brief Index sloupce `sym` u bplog. */
+#define TRACE_COL_BPLOG_SYM 4
 /** @brief Index sloupce `t` u cputrack (vynechá se bez času). */
 #define TRACE_COL_CPUTRACK_T   6
 /** @brief Index sloupce `sym` u cputrack. */
@@ -115,8 +138,8 @@ G_STATIC_ASSERT ( G_N_ELEMENTS ( s_cols_cputrack ) == TRACE_COL_CPUTRACK_REG0 + 
 #define TRACE_COL_EVENTLOG_TEXT 7
 /** @brief Velikost záznamu ringu Event Vieweru (st_EVENTLOG_EVENT). */
 #define TRACE_EVENTLOG_RECORD_SIZE 32u
-/** @brief Největší velikost záznamu čitelného kanálu (souhrn zvukového snímku). */
-#define TRACE_MAX_RECORD_SIZE 192u
+/** @brief Největší velikost záznamu čitelného kanálu (výstup akce BP, st_BPLOG_REC). */
+#define TRACE_MAX_RECORD_SIZE 296u
 
 
 const char *trace_kind_name ( en_TRACE_KIND kind )
@@ -139,6 +162,7 @@ const char *const *trace_columns ( en_TRACE_KIND kind, size_t *n )
         case TRACE_KIND_AUDIO_LEVELS: *n = G_N_ELEMENTS ( s_cols_audio_levels ); return s_cols_audio_levels;
         case TRACE_KIND_AUDIO_FRAMES: *n = G_N_ELEMENTS ( s_cols_audio_frames ); return s_cols_audio_frames;
         case TRACE_KIND_RAMLOG: *n = G_N_ELEMENTS ( s_cols_ramlog ); return s_cols_ramlog;
+        case TRACE_KIND_BPLOG: *n = G_N_ELEMENTS ( s_cols_bplog ); return s_cols_bplog;
         default: *n = 0; return NULL;
     }
 }
@@ -516,6 +540,8 @@ void trace_filter_init ( st_TRACE_FILTER *f )
     f->reg = -1;
     f->space = -1;
     f->src = -1;
+    f->bp = -1;
+    f->bplog_kind = -1;
 }
 
 
@@ -578,6 +604,12 @@ static bool trace_match ( en_TRACE_KIND kind, const uint8_t *r, bool has_t, uint
             }
             if ( f->space >= 0 && r[ 20 ] != f->space ) return false;
             if ( f->src >= 0 && r[ 23 ] != f->src ) return false;
+            return true;
+        case TRACE_KIND_BPLOG:
+            if ( f->has_pc && ( rd16 ( r + 12 ) < f->pc_from || rd16 ( r + 12 ) > f->pc_to ) ) return false;
+            if ( f->bp >= 0 && (int32_t) rd32 ( r + 16 ) != f->bp ) return false;
+            if ( f->bplog_kind >= 0 && r[ 20 ] != f->bplog_kind ) return false;
+            if ( f->bp_name[ 0 ] && strncmp ( (const char *) r + 24, f->bp_name, BPLOG_NAME_SIZE ) != 0 ) return false;
             return true;
         case TRACE_KIND_AUDIO_PSG_WRITES:
             if ( f->reg >= 0 && r[ 17 ] != f->reg ) return false;
@@ -965,12 +997,59 @@ static JsonArray *trace_row_ramlog ( const st_TRACE_PAGE_REQ *req, const st_TRAC
 }
 
 
+/**
+ * @brief Přidá do řádku řetězec z pole záznamu pevné délky jako platné UTF-8.
+ *
+ * Text akce BP může obsahovat libovolné bajty (`%c`, ořez uprostřed
+ * vícebajtového znaku); neplatné sekvence nahradí U+FFFD.
+ */
+static void add_fixed_str ( JsonArray *a, const uint8_t *p, size_t size )
+{
+    size_t n = 0;
+    while ( n < size && p[ n ] ) n++;
+    char *v = g_utf8_make_valid ( (const char *) p, (gssize) n );
+    json_array_add_string_element ( a, v );
+    g_free ( v );
+}
+
+
+/** @brief Řádek kanálu bplog (rozložení st_BPLOG_REC, viz bplog.h). */
+static JsonArray *trace_row_bplog ( const st_TRACE_PAGE_REQ *req, const st_TRACE_HIT *h,
+                                    const char *extra )
+{
+    JsonArray *a = json_array_new ( );
+    const uint8_t *r = h->rec;
+    uint32_t mask = req->col_mask;
+    uint8_t flags = r[ 21 ];
+#define COL(i) ( mask & ( 1u << ( i ) ) )
+    if ( COL ( 0 ) ) json_array_add_int_element ( a, (gint64) h->seq );
+    if ( COL ( 1 ) ) json_array_add_int_element ( a, (gint64) rd64 ( r ) );
+    if ( COL ( 2 ) ) json_array_add_int_element ( a, rd32 ( r + 8 ) );
+    if ( COL ( 3 ) ) add_hex16 ( a, rd16 ( r + 12 ) );
+    if ( COL ( TRACE_COL_BPLOG_SYM ) ) json_array_add_string_element ( a, extra ? extra : "" );
+    if ( COL ( 5 ) ) add_hex16 ( a, rd16 ( r + 14 ) );
+    if ( COL ( 6 ) ) json_array_add_int_element ( a, (int32_t) rd32 ( r + 16 ) );
+    if ( COL ( 7 ) ) add_fixed_str ( a, r + 24, BPLOG_NAME_SIZE );
+    if ( COL ( 8 ) ) json_array_add_string_element ( a, bplog_kind_name ( r[ 20 ] ) );
+    if ( COL ( 9 ) ) add_fixed_str ( a, r + 56, BPLOG_TEXT_SIZE );
+    if ( COL ( 10 ) ) {
+        const char *fl = ( flags & BPLOG_FLAG_TEXT_TRUNCATED )
+                         ? ( ( flags & BPLOG_FLAG_NAME_TRUNCATED ) ? "text_truncated|name_truncated" : "text_truncated" )
+                         : ( ( flags & BPLOG_FLAG_NAME_TRUNCATED ) ? "name_truncated" : "" );
+        json_array_add_string_element ( a, fl );
+    }
+#undef COL
+    return a;
+}
+
+
 static JsonArray *trace_row ( const st_TRACE_PAGE_REQ *req, const st_TRACE_HIT *h,
                               const char *extra )
 {
     en_TRACE_KIND kind = req->kind;
     uint32_t mask = req->col_mask;
     if ( kind == TRACE_KIND_RAMLOG ) return trace_row_ramlog ( req, h, extra );
+    if ( kind == TRACE_KIND_BPLOG ) return trace_row_bplog ( req, h, extra );
     if ( kind >= TRACE_KIND_AUDIO_PSG_WRITES ) return trace_row_audio ( req, h );
     JsonArray *a = json_array_new ( );
     const uint8_t *r = h->rec;
@@ -1237,9 +1316,10 @@ int trace_reader_page ( const st_TRACE_PAGE_REQ *req,
     /* Symboly (cputrack), jména značek (marklog) a texty událostí
      * (eventlog) - smí je číst jen emu vlákno, doplní je resolver. */
     bool want_sym = ( ( req->kind == TRACE_KIND_CPUTRACK ) && ( req->col_mask & ( 1u << TRACE_COL_CPUTRACK_SYM ) ) )
-                    || ( ( req->kind == TRACE_KIND_RAMLOG ) && ( req->col_mask & ( 1u << TRACE_COL_RAMLOG_SYM ) ) );
-    /* Offset adresy pro symbol: cputrack PC na 0, ramlog insn_pc na 12. */
-    size_t sym_off = ( req->kind == TRACE_KIND_RAMLOG ) ? 12u : 0u;
+                    || ( ( req->kind == TRACE_KIND_RAMLOG ) && ( req->col_mask & ( 1u << TRACE_COL_RAMLOG_SYM ) ) )
+                    || ( ( req->kind == TRACE_KIND_BPLOG ) && ( req->col_mask & ( 1u << TRACE_COL_BPLOG_SYM ) ) );
+    /* Offset adresy pro symbol: cputrack PC na 0, ramlog a bplog insn_pc na 12. */
+    size_t sym_off = ( req->kind == TRACE_KIND_RAMLOG || req->kind == TRACE_KIND_BPLOG ) ? 12u : 0u;
     bool want_mark = ( req->kind == TRACE_KIND_MARKLOG ) && ( req->col_mask & ( 1u << TRACE_COL_MARKLOG_NAME ) );
     bool want_text = ( req->kind == TRACE_KIND_EVENTLOG ) && ( req->col_mask & ( 1u << TRACE_COL_EVENTLOG_TEXT ) );
     uint16_t *keys = NULL;

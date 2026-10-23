@@ -265,6 +265,7 @@ static void dbgapi_cmt_pulses_to_us ( const st_MZTAPE_PULSES_LENGTH *pulses, dou
 #include "libs/cfgfile/cfgelement.h"
 #include "libs/cfgfile/cfgcommon.h"
 #include "debugger/trace/ramlog_hook.h"
+#include "debugger/trace/bplog.h"
 #include "debugger/coverage/coverage_hook.h"
 
 
@@ -1040,6 +1041,7 @@ const char *dbgapi_cmd_to_str(en_DBGAPI_CMD cmd)
         case DBGAPI_CMD_TRACE_RESOLVE:             return "trace_resolve";
         case DBGAPI_CMD_RAMLOG:                    return "ramlog";
         case DBGAPI_CMD_COVERAGE:                  return "coverage";
+        case DBGAPI_CMD_BPLOG:                     return "bplog";
         case DBGAPI_CMD_MEMSEARCH_SAMPLE:          return "memsearch_sample";
         case DBGAPI_CMD_FREEZE_LIST:               return "freeze_list";
         /* V1.D.1 - Core + CPU extras Resources */
@@ -6611,6 +6613,44 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                 rq->success = true;
                 break;
             };
+            if ( p->channel == DBGAPI_TRACE_CHANNEL_BPLOG )
+            {
+                /* Ring výstupu akcí BP: vše "v RAM" (bplog_copy), kanál je
+                 * vždy aktivní (live, segment >= 1, i před alokací ringu),
+                 * first_seq roste po přetečení. */
+                memset ( &p->out, 0, sizeof ( p->out ) );
+                st_BPLOG_STATUS bs;
+                bplog_get_status ( &bs );
+                p->out.segment = bs.segment;
+                p->out.live = 1;
+                p->out.record_size = sizeof ( st_BPLOG_REC );
+                p->out.next_seq = bs.next_seq;
+                p->out.first_seq = bs.first_seq;
+                p->out.ram_first_seq = bs.first_seq;
+                p->out.chunks = g_array_new ( FALSE, FALSE, sizeof ( st_TLOG_CHUNK_META ) );
+                uint64_t lo = ( p->from_seq > bs.first_seq ) ? p->from_seq : bs.first_seq;
+                uint64_t want = ( lo < bs.next_seq ) ? bs.next_seq - lo : 0;
+                if ( want > p->count ) want = p->count;
+                uint64_t max_rec = p->max_copy_bytes / sizeof ( st_BPLOG_REC );
+                if ( want > max_rec ) want = max_rec;
+                if ( want > 0 )
+                {
+                    p->out.ram_copy = (uint8_t *) g_try_malloc ( (size_t) want * sizeof ( st_BPLOG_REC ) );
+                    if ( !p->out.ram_copy )
+                    {
+                        tlog_read_snapshot_clear ( &p->out );
+                        rq->success = false;
+                        break;
+                    };
+                    uint64_t first = 0;
+                    p->out.ram_copy_count = bplog_copy ( lo, want, (st_BPLOG_REC *) p->out.ram_copy, &first );
+                    p->out.ram_copy_seq = first;
+                };
+                p->out_ok = true;
+                p->out_pc_range_full = true;
+                rq->success = true;
+                break;
+            };
             if ( p->channel == DBGAPI_TRACE_CHANNEL_EVENTLOG )
             {
                 /* Ring Event Vieweru: vše "v RAM", nejstarší čitelný záznam
@@ -6778,6 +6818,22 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
             };
             coverage_get_status ( &p->out_status );
             rq->success = ( p->out_error[ 0 ] == 0 );
+            break;
+        }
+
+        case DBGAPI_CMD_BPLOG:
+        {
+            /* Ring výstupu akcí BP: zapisuje ho jen emu vlákno (akce BP),
+             * proto i vyčištění běží tady (drain). */
+            st_DBGAPI_BPLOG_PARAM *p = (st_DBGAPI_BPLOG_PARAM *) rq->data_ptr;
+            if ( !p )
+            {
+                rq->success = false;
+                break;
+            };
+            if ( p->op == DBGAPI_BPLOG_OP_CLEAR ) bplog_clear ( );
+            bplog_get_status ( &p->out_status );
+            rq->success = true;
             break;
         }
 

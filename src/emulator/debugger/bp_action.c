@@ -52,6 +52,7 @@
 #include "emulator.h"              /* snapshot gating: g_emulator.paused (safe-point) */
 #include "dbgapi_cmdrq.h"          /* trace: dbgapi_trace_lifecycle + en_DBGAPI_TRACE_* */
 #include "debugger/trace/ramlog.h"
+#include "debugger/trace/bplog.h"     /* log / stop: text i do kanálu bplog (MCP) */
 #include "debugger/trace/ramlog_hook.h"   /* ramlog_start/stop: ramlog_hook_start/stop */
 #include "debugger/coverage/coverage_hook.h" /* coverage_start/stop/mark */
 #include "debugger/trace/cputrack.h"   /* set na hranici instrukce: cputrack_sync_check */
@@ -1685,10 +1686,45 @@ char* bp_action_render_fmt ( const char *fmt,
 
 
 /**
+ * @brief Zapíše text akce do kanálu bplog (čtení přes MCP trace_read).
+ *
+ * Čas, snímek a `InsnPC` bere z kontextu akce (stejné hodnoty jako `Cycle`,
+ * `Frame` a `InsnPC` ve výrazu), PC z CPU kontextu (bez CPU 0), id z
+ * `self_id` a jméno breakpointu z g_breakpoints (bez jména "").
+ *
+ * @param kind  Druh záznamu (log / stop).
+ * @param ctx   Kontext akce (NULL = nuly, id -1).
+ * @param text  Vyrenderovaný text (vlastní volající).
+ * @note Emu vlákno (provedení akce BP); bplog nemá zámky.
+ */
+static void bplog_record_ctx ( en_BPLOG_KIND kind, const struct bp_expr_ctx_s *ctx,
+                               const char *text ) {
+    int id = ctx ? ctx->self_id : -1;
+    const char *name = NULL;
+    if ( id >= 0 && g_breakpoints.breakpoints ) {
+        unsigned i;
+        for ( i = 0; i < g_breakpoints.breakpoints->len; i++ ) {
+            const st_BPT *bpt = &g_array_index ( g_breakpoints.breakpoints, st_BPT, i );
+            if ( bpt->id == id ) {
+                name = bpt->name;
+                break;
+            };
+        };
+    };
+    bplog_record ( kind, id, name,
+                   ctx ? (uint64_t) ctx->Cycle : 0,
+                   ctx ? (uint32_t) ctx->Frame : 0,
+                   ctx ? (uint16_t) ctx->InsnPC : 0,
+                   ( ctx && ctx->cpu ) ? (uint16_t) ctx->cpu->pc : 0,
+                   text );
+}
+
+
+/**
  * @brief Provede log statement - format string + N expr args.
  *
- * Renderuje přes sdílený bp_action_render_fmt() a výsledek vypíše do
- * stdout (V1.5+: trace-suite + UI debug konzole).
+ * Renderuje přes sdílený bp_action_render_fmt(), výsledek vypíše do
+ * stdout (`[BP-LOG] ...`) a zapíše do kanálu bplog (bplog_record_ctx()).
  *
  * Specifikátory: %X %x %d %u %b %c %s %%. Detail viz Doxygen u
  * bp_action_render_fmt() v bp_action.h.
@@ -1698,9 +1734,9 @@ static void execute_log ( const bp_action_stmt_t *s,
     char *rendered = bp_action_render_fmt ( s->log.fmt, s->log.args,
                                             s->log.n_args, ctx );
 
-    /* V1: log do stdout. V1.5+: trace-suite + UI debug konzole. */
     fprintf ( stdout, "[BP-LOG] %s\n", rendered );
     fflush ( stdout );
+    bplog_record_ctx ( BPLOG_KIND_LOG, ctx, rendered );
     g_free ( rendered );
 }
 
@@ -2309,7 +2345,8 @@ static bp_halt_state_t s_halt_last = { BP_ACTION_HALT_NONE, 0, NULL };
  * @brief Vykoná STOP / EXIT: vyhodnotí kód a hlášku a zapíše je do s_halt_cur.
  *
  * Akce pak skončí (smyčka v bp_action_execute() další příkazy nevykoná).
- * Hlášku `stop` vypíše na stdout jako `log`; konec `exit` vypisuje
+ * Hlášku `stop` vypíše na stdout jako `log` a zapíše do kanálu bplog;
+ * konec `exit` vypisuje
  * automatizace (automation_request_exit()).
  */
 static void execute_halt ( const bp_action_stmt_t *s,
@@ -2328,6 +2365,7 @@ static void execute_halt ( const bp_action_stmt_t *s,
     } else if ( msg ) {
         fprintf ( stdout, "[BP-STOP] %s\n", msg );
         fflush ( stdout );
+        bplog_record_ctx ( BPLOG_KIND_STOP, ctx, msg );
     };
     if ( !s_halt_cur ) {
         g_free ( msg );

@@ -63,6 +63,7 @@ mz_add_test(mcp_dispatch
         ${CMAKE_SOURCE_DIR}/src/emulator/debugger/trace/trace_reader.c
         ${CMAKE_SOURCE_DIR}/src/emulator/audio_analysis.c
         ${CMAKE_SOURCE_DIR}/src/emulator/debugger/trace/ramlog.c
+        ${CMAKE_SOURCE_DIR}/src/emulator/debugger/trace/bplog.c
         ${CMAKE_SOURCE_DIR}/src/emulator/debugger/coverage/coverage.c
         ${CMAKE_SOURCE_DIR}/src/emulator/debugger/coverage/coverage_decode.c
         ${CMAKE_SOURCE_DIR}/src/emulator/debugger/coverage/coverage_export.c
@@ -1131,6 +1132,24 @@ if(Python3_FOUND)
         TIMEOUT 120
     )
     message(STATUS "  tests/mcp: registered mcp_bp_expr_insnpc "
+                   "(Python ${Python3_VERSION})")
+
+    # -----------------------------------------------------------
+    # Výstup akcí BP log a stop přes MCP (kanál bplog, pipe)
+    # -----------------------------------------------------------
+    # MEM_W BP s log ve smyčce, PC_EXEC BP se stop, filtry, přetečení
+    # ringu (gap, lost) a bplog_clear (nový segment).
+    add_test(
+        NAME    mcp_bplog
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_bplog.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_bplog PROPERTIES
+        LABELS  "e2e;mcp;pipe;breakpoints"
+        TIMEOUT 120
+    )
+    message(STATUS "  tests/mcp: registered mcp_bplog "
                    "(Python ${Python3_VERSION})")
 
     # -----------------------------------------------------------

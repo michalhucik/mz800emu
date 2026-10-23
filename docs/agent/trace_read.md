@@ -1,8 +1,9 @@
 # Reading trace records page by page (emu_trace_read)
 
 Recipe for an AI client that needs the instruction trace, I/O accesses,
-interrupt events, chip events, breakpoint markers or Event Viewer events
-of a program run - without parsing the binary chunk files. Use
+interrupt events, chip events, breakpoint markers, breakpoint `log`
+output or Event Viewer events of a program run - without parsing the
+binary chunk files. Use
 `emu_trace_status` and `emu_trace_read`.
 
 ## Channels
@@ -16,6 +17,7 @@ of a program run - without parsing the binary chunk files. Use
 | `marklog` | breakpoint action `mark "name"` | same |
 | `eventlog` | Event Viewer ring entry | `emu_eventlog_start` / `_stop` / `_clear`, `emu_eventlog_set_mask` |
 | `ramlog` | write into memory (RAM write log) | `emu_ramlog_start` / `_stop` / `_clear` - see `emulator://docs/ramlog` |
+| `bplog` | breakpoint action `log "..."` or `stop "..."` (the text) | always on; `emu_bplog_clear` empties it |
 | `audio_psg_writes`, `audio_levels`, `audio_frames` | audio capture memory: PSG write, level change, frame summary | `emu_audio_capture_start` / `_stop` - see `emulator://docs/audio_capture_read` |
 
 ## Recipe
@@ -64,6 +66,38 @@ Records still in the RAM buffer are readable too, so even a short run
   is the whole time spent in the loop.
 - Column `kind` (on request): `insn`, `loop` (collapsed row), `int`
   (interrupt acknowledge), `sync` (format 3 only, see below).
+
+## Breakpoint action output (`bplog`)
+
+For planned questions ("SP at every entry into the routine at 8000h",
+"HL at every write to 4000h") a breakpoint with a `log` action is
+cheaper than a full trace: it costs time only when the breakpoint fires.
+The emulator prints the text as `[BP-LOG]` on stdout, which an MCP
+client does not see; the same text goes into the channel `bplog`.
+
+1. Create the breakpoint with the action, e.g. `emu_bp_create_with_init`
+   with `type` `PC_EXEC`, `addr` 0x8000 and `action`
+   `log "SP=%X HL=%X", SP, HL` (see `emulator://docs/action_dsl`). To
+   filter by name later, set `name` together with `auto_name: false`.
+2. Run the program.
+3. `emu_trace_read(channel="bplog")`. Columns: `seq`, `t`, `frame`,
+   `insn_pc`, `sym`, `pc`, `bp`, `name`, `kind`, `text`, `flags`.
+
+- No start is needed: the channel is always live, empty
+  (`next_seq` 0) until an action runs; a cursor taken while it is empty
+  stays valid. The ring keeps the last 4096 records; older ones are lost
+  (`lost`, `gap`).
+- `t`, `frame`, `insn_pc` and `pc` are `Cycle`, `Frame`, `InsnPC` and
+  `PC` of the breakpoint expression at that moment. In MEM_R / MEM_W /
+  IORQ breakpoints `insn_pc` is the accessing instruction and `pc` is
+  already behind it; `sym` is the symbol of `insn_pc`.
+- `kind` is `log` or `stop` (the message of `stop "..."`, the action that
+  paused the emulation). `bp` is the breakpoint id, `name` its name.
+- Text longer than 239 bytes is cut (`flags` `text_truncated`).
+- Filters: `{"bp": 3}` or `{"bp": "entry"}` (id or exact name),
+  `{"kind": "stop"}`, `pc_from`/`pc_to` (`insn_pc`), `t_from`/`t_to`.
+- `emu_bplog_clear` empties the ring (new segment, old cursors return
+  `segment_replaced`). Reset and snapshot load do not empty it.
 
 ## Registers in the instruction trace
 

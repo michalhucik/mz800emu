@@ -78,6 +78,7 @@ dokumentu [Resources overview](resources-overview.md).
 | `emu_ramlog_status` | ne | Stav záznamu zápisů |
 | `emu_ramlog_who_wrote` | ne | Poslední zapisovatel a historie zápisů buňky paměti |
 | `emu_ramlog_writers` | ne | Instrukce, které zapisovaly do rozsahu |
+| `emu_bplog_clear` | ne | Vyprázdní kanál `bplog` (výstup akcí BP `log` a `stop`) |
 | `emu_videorec_start` | ano (vytvoří / přepíše soubor) | Spustí bezeztrátové nahrávání videa (volitelná cesta, automatický stop po N snímcích) |
 | `emu_videorec_stop` | ne | Ukončí nahrávání videa, standardně počká na uložení souborů |
 | `emu_videorec_pause` | ne | Pauza nahrávání (emulace běží dál): pauza / pokračování / přepnutí |
@@ -1138,7 +1139,7 @@ segmentu, celá čísla jako v manifestu; před prvním záznamem null).
 ### `emu_trace_read`
 
 Stránka záznamů kanálu (`cputrack`, `iorqlog`, `intlog`, `hwlog`,
-`marklog`, `eventlog`, `ramlog` (záznam zápisů do paměti) a z paměti zachycení zvuku `audio_psg_writes`,
+`marklog`, `eventlog`, `ramlog` (záznam zápisů do paměti), `bplog` (výstup akcí BP `log` a `stop`) a z paměti zachycení zvuku `audio_psg_writes`,
 `audio_levels`, `audio_frames`), i za běhu záznamu - čitelná jsou i data, která
 jsou zatím jen v RAM bufferu. Po `emu_trace_stop` zůstane poslední
 segment čitelný až do dalšího startu. Argumenty:
@@ -1166,7 +1167,9 @@ segment čitelný až do dalšího startu. Argumenty:
   `tone`, `volume`, `noise`; audio_psg_writes), `t_from`/`t_to` (kanály se
   sloupcem `t`); ramlog: `pc_from`/`pc_to` (zapisující instrukce),
   `addr_from`/`addr_to` (CPU adresa), `space`, `src`, `all` (i zápisy,
-  které buňku nezměnily, a zápisy pod ROM - ve výchozím stavu skryté).
+  které buňku nezměnily, a zápisy pod ROM - ve výchozím stavu skryté);
+  bplog: `pc_from`/`pc_to` (`insn_pc`), `bp` (číslo breakpointu, nebo
+  jeho přesné jméno jako řetězec), `kind` (`log` nebo `stop`).
 - `max_chars` (int, výchozí 20000, 1000-45000) - rozpočet znaků celé
   odpovědi `rows`.
 - `max_scan` (int, výchozí 2000000) - nejvýš prohledaných záznamů na
@@ -1186,6 +1189,7 @@ Sloupce (vždy v tomto pořadí, `columns` v odpovědi):
 | `audio_levels` | `seq`, `t`, `time_us`, `frame`, `channel`, `level` |
 | `audio_frames` | `seq`, `t`, `time_us`, `len_ticks`, `edges`, `on_pct`, `rms_level`, `max_level`, `ref_rms`, `ref_peak`, `sdl_rms`, `sdl_peak`, `sdl_blocks` |
 | `ramlog` | `seq`, `t`, `frame`, `pc`, `sym`, `addr`, `space`, `offset`, `plane`, `old`, `new`, `src`, `flags`, `count`, `tin` |
+| `bplog` | `seq`, `t`, `frame`, `insn_pc`, `sym`, `pc`, `bp`, `name`, `kind`, `text`, `flags` |
 
 `t` je v taktech GDG od startu emulace (cputrack: začátek instrukce,
 jen s `has_time`); `asm` u cputrack je disassembly z bajtů záznamu,
@@ -1208,6 +1212,24 @@ ukazuje před `first_seq`), `scanned`, `matched`, `scan_exhausted`
 a `next_cursor`. Kurzor ze staršího segmentu (kanál se znovu spustil,
 ring Event Vieweru se vymazal) vrátí chybu začínající
 `segment_replaced:`.
+
+### `emu_bplog_clear`
+
+Kanál `bplog` drží text akcí breakpointů `log "..."` a `stop "..."`
+(tentýž, který emulátor vypisuje jako `[BP-LOG]` a `[BP-STOP]`), aby ho
+MCP klient přečetl přes `emu_trace_read(channel="bplog")`. Běží vždy,
+nic se nezapíná; dokud žádná akce nic nevypsala, je prázdný (`next_seq`
+0) a kurzor vzatý v tu chvíli platí i pro pozdější řádky.
+`t`, `frame`, `insn_pc` a `pc` jsou hodnoty `Cycle`, `Frame`, `InsnPC`
+a `PC` ve výrazu breakpointu v okamžiku akce, `sym` je symbol `insn_pc`,
+`bp` číslo a `name` jméno breakpointu, `kind` `log` nebo `stop`. Text
+delší než 239 bajtů se ořízne (`flags` `text_truncated`). Kanál drží
+posledních 4096 řádků (starší `lost`, `gap`); reset ani načtení
+snapshotu ho nevyprázdní.
+
+`emu_bplog_clear` (bez argumentů) kanál vyprázdní a založí nový segment
+(starý kurzor vrátí `segment_replaced:`). Vrací `segment`, `allocated`
+(`false` = ještě nic zapsáno), `capacity`, `first_seq`, `next_seq`.
 
 ## Nástroje záznamu zápisů do paměti
 

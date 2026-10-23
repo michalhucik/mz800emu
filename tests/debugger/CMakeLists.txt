@@ -459,6 +459,18 @@ if(TARGET test_ramlog)
     target_include_directories(test_ramlog PRIVATE ${CMAKE_SOURCE_DIR}/src/emulator/debugger/trace)
 endif()
 
+# Ring výstupu akcí BP (bplog): líná alokace, segment, ořez, přetečení -
+# bez emulátoru.
+mz_add_test(bplog
+    TYPE     STANDALONE
+    SOURCES  test_bplog.c
+             ${CMAKE_SOURCE_DIR}/src/emulator/debugger/trace/bplog.c
+    LABELS   "standalone;debugger"
+)
+if(TARGET test_bplog)
+    target_include_directories(test_bplog PRIVATE ${CMAKE_SOURCE_DIR}/src/emulator/debugger/trace)
+endif()
+
 # Čísla běhů a kruh záznamů zastavení (run_log, run-control): číslování,
 # čekání s timeoutem a probuzením, přepsání kruhu, ukončení - bez emulátoru.
 mz_add_test(run_log

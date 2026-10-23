@@ -156,6 +156,7 @@ static const en_DBGAPI_CMD s_allow_reviewed[] = {
     DBGAPI_CMD_AUDIO_CAPTURE,
     DBGAPI_CMD_RAMLOG,
     DBGAPI_CMD_COVERAGE,
+    DBGAPI_CMD_BPLOG,
     /* Řízení běhu (běh, kroky, pauza, rychlost hostitele). */
     DBGAPI_CMD_NONE,
     DBGAPI_CMD_PAUSE,

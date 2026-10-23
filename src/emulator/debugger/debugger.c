@@ -67,6 +67,7 @@
 #include "trace/marklog.h"
 #include "trace/ramlog.h"
 #include "trace/ramlog_hook.h"
+#include "trace/bplog.h"
 #include "coverage/coverage_hook.h"
 #include "trace/eventlog.h"
 #include "trace/eventlog_trigger.h"
@@ -242,6 +243,8 @@ void debugger_exit ( void ) {
     hwlog_finalize ( );
     /* Záznam zápisů do paměti - jen paměť, nic se neukládá. */
     ramlog_free ( );
+    /* Výstup akcí BP (bplog) - jen paměť. */
+    bplog_free ( );
     /* Pokrytí kódu - jen paměť, nic se neukládá. */
     coverage_on_exit ( );
     coverage_free ( );

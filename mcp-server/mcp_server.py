@@ -3645,10 +3645,12 @@ _TRACE_CHANNELS = ("cputrack", "iorqlog", "intlog", "hwlog", "marklog")
 
 # Channels readable with emu_trace_status / emu_trace_read: the trace-suite
 # channels plus the Event Viewer ring (``eventlog``, controlled by
-# emu_eventlog_start/stop/clear, not by emu_trace_start).
+# emu_eventlog_start/stop/clear, not by emu_trace_start), the audio capture
+# memory, the RAM write log and the breakpoint action output (``bplog``,
+# always on, emptied by emu_bplog_clear).
 _TRACE_READ_CHANNELS = _TRACE_CHANNELS + ("eventlog", "audio_psg_writes",
                                           "audio_levels", "audio_frames",
-                                          "ramlog")
+                                          "ramlog", "bplog")
 
 
 def _trace_read_validate_channel(channel: str) -> "str | None":
@@ -3863,6 +3865,24 @@ async def emu_ramlog_clear() -> str:
 
 
 @mcp.tool()
+async def emu_bplog_clear() -> str:
+    """Empty the breakpoint action output ring (channel ``bplog``).
+
+    The ring collects the text of every breakpoint action ``log`` and
+    ``stop "..."`` (read it with ``emu_trace_read(channel="bplog")``); it
+    is always on. Clearing starts a new segment, so old cursors return
+    ``segment_replaced``.
+
+    Returns:
+        JSON ``{segment, allocated, capacity, first_seq, next_seq}`` after
+        clearing (``allocated: false`` = no action has written anything
+        yet, nothing to clear), or ``{"error": ...}``.
+    """
+    resp = await _send_request("bplog_clear", {})
+    return json.dumps(_data_or_error(resp))
+
+
+@mcp.tool()
 async def emu_ramlog_status() -> str:
     """State of the RAM write log.
 
@@ -3950,7 +3970,8 @@ async def emu_trace_status(channel: str = "") -> str:
         channel: One of ``cputrack``, ``iorqlog``, ``intlog``, ``hwlog``,
             ``marklog``, ``eventlog`` (Event Viewer ring),
             ``audio_psg_writes``, ``audio_levels``, ``audio_frames``
-            (audio capture memory); empty = all.
+            (audio capture memory), ``ramlog`` (RAM write log),
+            ``bplog`` (breakpoint ``log`` / ``stop`` output); empty = all.
 
     Returns:
         JSON ``{"channels": [{channel, segment, live, truncated,
@@ -4177,6 +4198,7 @@ async def emu_trace_read(channel: str, cursor: str = "", start: str = "oldest",
                 max_level, ref_rms, ref_peak, sdl_rms, sdl_peak, sdl_blocks
       ramlog:   seq, t, frame, pc, sym, addr, space, offset, plane, old, new,
                 src, flags, count, tin
+      bplog:    seq, t, frame, insn_pc, sym, pc, bp, name, kind, text, flags
     ``t`` is in GDG ticks since emulation start (cputrack: start of the
     instruction, only with ``has_time``, i.e. no PC range record filter).
     cputrack ``asm`` is decoded from the recorded bytes (not current
@@ -4209,11 +4231,25 @@ async def emu_trace_read(channel: str, cursor: str = "", start: str = "oldest",
     when full (``gap``); the next capture start replaces them
     (``segment_replaced``).
 
+    ``bplog`` holds the text of breakpoint actions ``log "..."`` and
+    ``stop "..."`` (the same text the emulator prints as ``[BP-LOG]`` /
+    ``[BP-STOP]`` on stdout, which an MCP client does not see). It is
+    always on - no start needed, a cursor taken while it is still empty
+    stays valid - and costs nothing until an action runs. ``t``, ``frame``, ``insn_pc`` and ``pc`` are the values of
+    ``Cycle``, ``Frame``, ``InsnPC`` and ``PC`` in the breakpoint
+    expression at that moment (``insn_pc`` = the accessing instruction
+    in MEM_R/MEM_W/IORQ breakpoints, ``sym`` is its symbol); ``bp`` is
+    the breakpoint id, ``name`` its name, ``kind`` ``log`` or ``stop``.
+    Text over 239 bytes is cut (``flags`` ``text_truncated``). The ring
+    keeps the last 4096 records (``gap`` / ``lost`` after that); empty it
+    with ``emu_bplog_clear``.
+
     Args:
         channel: ``cputrack``, ``iorqlog``, ``intlog``, ``hwlog``,
             ``marklog``, ``eventlog``, ``audio_psg_writes``,
-            ``audio_levels``, ``audio_frames`` or ``ramlog`` (RAM write
-            log, see ``emu_ramlog_start``).
+            ``audio_levels``, ``audio_frames``, ``ramlog`` (RAM write
+            log, see ``emu_ramlog_start``) or ``bplog`` (breakpoint
+            action output).
         cursor: ``next_cursor`` of the previous page (takes precedence over
             ``start``).
         start: ``"oldest"``, ``"newest"`` (last ``limit`` records) or
@@ -4231,6 +4267,9 @@ async def emu_trace_read(channel: str, cursor: str = "", start: str = "oldest",
             ``addr_from``/``addr_to`` (CPU address), ``space``, ``src``,
             ``all`` (also writes that did not change the cell or were
             dropped under ROM - hidden by default),
+            bplog: ``pc_from``/``pc_to`` (``insn_pc``), ``bp`` (breakpoint
+            id, or its exact name as a string), ``kind`` (``log`` or
+            ``stop``),
             ``channels`` (list of channel names such as ``"ctc0"``,
             ``"psg0_1"``; audio_levels, audio_psg_writes), ``reg``
             (``tone_lo``, ``tone``, ``volume``, ``noise``; audio_psg_writes),

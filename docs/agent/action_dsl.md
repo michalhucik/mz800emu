@@ -50,7 +50,7 @@ For the authoritative document with all corner cases see
 | `$name = <expr>` (+ compound ops) | Assign to user variable | `$hits += 1` |
 | `clear_vars` | Reset all `$name` values to 0 (entries preserved) | `clear_vars` |
 | `if <expr> then <stmt> [else <stmt>]` | Single-line conditional | `if $hits >= 5 then disable_self` |
-| `stop ["fmt"[, expr...]]` | Stop the emulator (optional message `[BP-STOP] ...`), ends the action | `stop "HL=%X", HL` |
+| `stop ["fmt"[, expr...]]` | Stop the emulator (optional message `[BP-STOP] ...`, also in the `bplog` channel), ends the action | `stop "HL=%X", HL` |
 | `exit <expr>[, "fmt"[, expr...]]` | End the run with exit code 0-255 (headless without MCP; elsewhere only pause), ends the action | `exit Value` |
 | `cdl_start` / `cdl_stop` / `cdl_reset` | CDL (Memory Heatmap) lifecycle | `cdl_start` |
 | `cdl_export "fmt"[, expr...]` | Export CDL data to file (templated name) | `cdl_export "dump-%d.cdl", $id` |
@@ -85,10 +85,13 @@ reads a single character spec. If you need zero-padded hex emit it
 via multiple `log` calls or fixed-width construction externally.
 
 Max 8 expression arguments per `log` call. Output goes to stdout as
-`[BP-LOG] <formatted>\n`. Under `--mcp-pipe` stdout carries MCP JSONL,
-so the text goes to stderr and is **not readable through MCP**; count hits
-via `bp_list` or stop the BP instead. In MEM_R / MEM_W / IORQ BPs log
-`InsnPC`, not `PC` (the live PC is behind the accessing instruction).
+`[BP-LOG] <formatted>\n` (under `--mcp-pipe` to stderr, since stdout
+carries MCP JSONL) and into the channel `bplog`: read it with
+`emu_trace_read(channel="bplog")` - one row per `log` with the text, time,
+`insn_pc`, `pc` and the breakpoint id and name (see
+`emulator://docs/trace_read`, section "Breakpoint action output"). The
+ring keeps the last 4096 rows. In MEM_R / MEM_W / IORQ BPs log `InsnPC`,
+not `PC` (the live PC is behind the accessing instruction).
 
 ```
 log "PC=%X A=%X HL=%X", PC, A, HL

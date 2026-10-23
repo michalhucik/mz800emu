@@ -130,8 +130,10 @@
  * okamžiku, na KONEC cmd_map[]) = 212 + 1 = 213.
  * coverage doplnil coverage_start, _stop, _reset, _status, _mark, _read
  * a _export (pokrytí kódu, na KONEC cmd_map[]) = 213 + 7 = 220.
+ * bp-log-mcp doplnil bplog_clear (vyčištění ringu výstupu akcí BP, na
+ * KONEC cmd_map[]) = 220 + 1 = 221.
  */
-#define MCP_EXPECTED_CMD_COUNT 220
+#define MCP_EXPECTED_CMD_COUNT 221
 
 
 /* ====================================================================== */
@@ -7021,7 +7023,7 @@ static JsonObject *_tr_data(const char *resp, JsonParser **parser) {
     return json_object_get_object_member(obj, "data");
 }
 
-/** @brief trace_status bez kanálu vypíše všech 10 kanálů, nezaznamenaný = segment 0. */
+/** @brief trace_status bez kanálu vypíše všech 11 kanálů, nezaznamenaný = segment 0. */
 void test_trace_status_all_channels(void) {
     dispatch_stub_reset();
     char *resp = NULL;
@@ -7029,7 +7031,8 @@ void test_trace_status_all_channels(void) {
     JsonParser *parser = NULL;
     JsonObject *data = _tr_data(resp, &parser);
     JsonArray *ch = json_object_get_array_member(data, "channels");
-    TEST_ASSERT_EQUAL_UINT(10, json_array_get_length(ch));
+    TEST_ASSERT_EQUAL_UINT(11, json_array_get_length(ch));
+    TEST_ASSERT_EQUAL_STRING("bplog", json_object_get_string_member(json_array_get_object_element(ch, 10), "channel"));
     JsonObject *c0 = json_array_get_object_element(ch, 0);
     TEST_ASSERT_EQUAL_STRING("cputrack", json_object_get_string_member(c0, "channel"));
     TEST_ASSERT_EQUAL_INT64(0, json_object_get_int_member(c0, "segment"));
@@ -7422,6 +7425,83 @@ void test_trace_read_ramlog(void) {
         TEST_ASSERT_EQUAL_INT_MESSAGE(MCP_DISPATCH_INVALID_PARAMS, _ss_request("trace_read", bad[i], NULL), bad[i]);
     }
     TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_INVALID_PARAMS, _ss_request("trace_start", "{\"channel\":\"ramlog\"}", NULL));
+}
+
+/** @brief trace_read bplog: sloupce, symbol insn_pc, UTF-8, filtry bp/kind/pc; bplog_clear. */
+void test_trace_read_bplog(void) {
+    dispatch_stub_reset();
+    g_stub_state.tr_segment = 4;
+    g_stub_state.tr_records = 5;
+    char *resp = NULL;
+    JsonParser *parser = NULL;
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, _ss_request("trace_read", "{\"channel\":\"bplog\"}", &resp));
+    JsonObject *data = _tr_data(resp, &parser);
+    JsonArray *cols = json_object_get_array_member(data, "columns");
+    TEST_ASSERT_EQUAL_UINT(11, json_array_get_length(cols));
+    TEST_ASSERT_EQUAL_STRING("insn_pc", json_array_get_string_element(cols, 3));
+    TEST_ASSERT_EQUAL_STRING("text", json_array_get_string_element(cols, 9));
+    JsonArray *rows = json_object_get_array_member(data, "rows");
+    TEST_ASSERT_EQUAL_UINT(5, json_array_get_length(rows));
+    JsonArray *r1 = json_array_get_array_element(rows, 1);
+    TEST_ASSERT_EQUAL_INT64(100, json_array_get_int_element(r1, 1));     /* t */
+    TEST_ASSERT_EQUAL_INT64(1, json_array_get_int_element(r1, 2));       /* frame */
+    TEST_ASSERT_EQUAL_STRING("3001", json_array_get_string_element(r1, 3));
+    TEST_ASSERT_EQUAL_STRING("S3001", json_array_get_string_element(r1, 4));
+    TEST_ASSERT_EQUAL_STRING("3004", json_array_get_string_element(r1, 5));
+    TEST_ASSERT_EQUAL_INT64(2, json_array_get_int_element(r1, 6));       /* bp */
+    TEST_ASSERT_EQUAL_STRING("odd", json_array_get_string_element(r1, 7));
+    TEST_ASSERT_EQUAL_STRING("log", json_array_get_string_element(r1, 8));
+    TEST_ASSERT_EQUAL_STRING("v=1", json_array_get_string_element(r1, 9));
+    TEST_ASSERT_EQUAL_STRING("", json_array_get_string_element(r1, 10));
+    /* neplatné UTF-8 nahrazené U+FFFD, příznak ořezu */
+    JsonArray *r2 = json_array_get_array_element(rows, 2);
+    TEST_ASSERT_EQUAL_STRING("x\xEF\xBF\xBD", json_array_get_string_element(r2, 9));
+    TEST_ASSERT_EQUAL_STRING("text_truncated", json_array_get_string_element(r2, 10));
+    TEST_ASSERT_EQUAL_STRING("stop", json_array_get_string_element(json_array_get_array_element(rows, 4), 8));
+    g_object_unref(parser);
+    free(resp);
+
+    /* filtr podle id, jména, druhu a insn_pc */
+    const struct { const char *req; guint n; } cases[] = {
+        { "{\"channel\":\"bplog\",\"filter\":{\"bp\":2}}", 2 },
+        { "{\"channel\":\"bplog\",\"filter\":{\"bp\":\"even\"}}", 3 },
+        { "{\"channel\":\"bplog\",\"filter\":{\"kind\":\"stop\"}}", 1 },
+        { "{\"channel\":\"bplog\",\"filter\":{\"bp\":\"even\",\"kind\":\"log\"}}", 2 },
+        { "{\"channel\":\"bplog\",\"filter\":{\"pc_from\":12289,\"pc_to\":12290}}", 2 },
+    };
+    for (size_t i = 0; i < G_N_ELEMENTS(cases); i++) {
+        TEST_ASSERT_EQUAL_INT_MESSAGE(MCP_DISPATCH_OK, _ss_request("trace_read", cases[i].req, &resp), cases[i].req);
+        data = _tr_data(resp, &parser);
+        TEST_ASSERT_EQUAL_UINT_MESSAGE(cases[i].n, json_array_get_length(json_object_get_array_member(data, "rows")), cases[i].req);
+        g_object_unref(parser);
+        free(resp);
+    }
+
+    const char *bad[] = {
+        "{\"channel\":\"bplog\",\"filter\":{\"kind\":\"mark\"}}",
+        "{\"channel\":\"bplog\",\"filter\":{\"bp\":-1}}",
+        "{\"channel\":\"bplog\",\"filter\":{\"bp\":\"\"}}",
+        "{\"channel\":\"bplog\",\"filter\":{\"bp\":\"0123456789012345678901234567890123\"}}",
+        "{\"channel\":\"bplog\",\"filter\":{\"bp\":true}}",
+        "{\"channel\":\"iorqlog\",\"filter\":{\"bp\":1}}",
+        "{\"channel\":\"iorqlog\",\"filter\":{\"kind\":\"log\"}}",
+    };
+    for (size_t i = 0; i < G_N_ELEMENTS(bad); i++) {
+        TEST_ASSERT_EQUAL_INT_MESSAGE(MCP_DISPATCH_INVALID_PARAMS, _ss_request("trace_read", bad[i], NULL), bad[i]);
+    }
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_INVALID_PARAMS, _ss_request("trace_start", "{\"channel\":\"bplog\"}", NULL));
+
+    /* bplog_clear: příkaz CLEAR, odpověď se stavem */
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, _ss_request("bplog_clear", "{}", &resp));
+    TEST_ASSERT_EQUAL_INT(1, g_stub_state.bpl_calls);
+    TEST_ASSERT_EQUAL_INT(DBGAPI_BPLOG_OP_CLEAR, g_stub_state.bpl_last.op);
+    data = _tr_data(resp, &parser);
+    TEST_ASSERT_EQUAL_INT64(4, json_object_get_int_member(data, "segment"));
+    TEST_ASSERT_EQUAL_INT64(BPLOG_CAPACITY, json_object_get_int_member(data, "capacity"));
+    TEST_ASSERT_EQUAL_INT64(0, json_object_get_int_member(data, "next_seq"));
+    TEST_ASSERT_TRUE(json_object_get_boolean_member(data, "allocated"));
+    g_object_unref(parser);
+    free(resp);
 }
 
 /** @brief trace_read: validace parametrů. */
@@ -9569,6 +9649,7 @@ int main(void) {
     RUN_TEST(test_memsearch_mcp_pehu_hint);
     RUN_TEST(test_memsearch_mcp_errors);
     RUN_TEST(test_trace_read_ramlog);
+    RUN_TEST(test_trace_read_bplog);
     RUN_TEST(test_trace_read_eventlog);
     RUN_TEST(test_audio_capture_start_params);
     RUN_TEST(test_audio_capture_errors);

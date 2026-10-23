@@ -93,7 +93,12 @@ Bank-specific lookup není v action DSL exposed.
 
 Výstup jde na stdout. V režimu `--mcp-pipe` nese stdout zprávy MCP,
 emulátor proto svůj textový výstup (včetně řádků `[BP-LOG]`) přesměruje
-na stderr; MCP klient ho přes MCP nepřečte.
+na stderr. Tentýž text se zároveň ukládá do kanálu `bplog`, který MCP
+klient přečte přes `emu_trace_read(channel="bplog")`: řádek za každý
+`log` s textem, časem, adresou instrukce, PC a číslem a jménem
+breakpointu. Kanál drží posledních 4096 řádků, delší text než 239 bajtů
+se ořízne; vyprázdní ho `emu_bplog_clear` (viz
+[tools-overview.md](../../mcp-server/tools-overview.md#emu_bplog_clear)).
 
 V MEM_R / MEM_W / IORQ breakpointech je `PC` už za instrukcí, která
 přístup dělá; adresu instrukce vypíše `InsnPC` (viz
@@ -308,7 +313,8 @@ if $state == 1 then enable trace_bp else disable trace_bp
 ### `stop ["fmt"[, args...]]`
 
 Zastaví emulátor stejně jako BP s prázdnou akcí. Volitelná hláška je
-formátovací řetězec jako u `log` a vypíše se jako `[BP-STOP] ...`.
+formátovací řetězec jako u `log`, vypíše se jako `[BP-STOP] ...` a zapíše
+se do kanálu `bplog` (druh `stop`).
 Příkazy za `stop` se nevykonají.
 
 ```

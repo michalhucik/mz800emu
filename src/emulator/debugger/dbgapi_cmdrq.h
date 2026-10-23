@@ -38,6 +38,7 @@
 #include "audio_capture.h"
 #include "debugger/trace/tlog_common.h"
 #include "debugger/trace/ramlog.h"
+#include "debugger/trace/bplog.h"
 #include "debugger/trace/cputrack.h"
 #include "debugger/coverage/coverage.h"
 
@@ -763,6 +764,11 @@ typedef enum en_DBGAPI_CMD
      * callbacky CPU a masku háčků po instrukci, proto jen v emu vlákně.
      * Přidáno na KONEC enumu kvůli stabilitě číselných hodnot. */
     DBGAPI_CMD_COVERAGE,             /* Start/stop/reset/značka/stav/snímek pokrytí - data_ptr: st_DBGAPI_COVERAGE_PARAM* */
+
+    /* bp-log-mcp (M15 debug-gaps) - ring výstupu akcí BP `log` / `stop`
+     * (trace/bplog.h). Zapisuje ho jen emu vlákno, proto vyčištění také.
+     * Přidáno na KONEC enumu kvůli stabilitě číselných hodnot. */
+    DBGAPI_CMD_BPLOG,                /* Vyčištění a stav ringu bplog - data_ptr: st_DBGAPI_BPLOG_PARAM* */
 
     /* Zarážka: počet příkazů, sama není příkaz. Nové příkazy patří PŘED
      * ni. Test tests/debugger/test_replay_dbg_classify.c prochází celý
@@ -2933,6 +2939,9 @@ typedef enum en_DBGAPI_TRACE_CHANNEL
     /** Ring záznamu zápisů do paměti (ramlog) - jen čtení (DBGAPI_CMD_TRACE_SNAPSHOT);
      *  ovládá ho DBGAPI_CMD_RAMLOG. */
     DBGAPI_TRACE_CHANNEL_RAMLOG,
+    /** Ring výstupu akcí BP (bplog) - jen čtení (DBGAPI_CMD_TRACE_SNAPSHOT);
+     *  vyčištění DBGAPI_CMD_BPLOG. */
+    DBGAPI_TRACE_CHANNEL_BPLOG,
 } en_DBGAPI_TRACE_CHANNEL;
 
 
@@ -3123,6 +3132,25 @@ typedef struct st_DBGAPI_RAMLOG_PARAM
     st_RAMLOG_STATUS out_status;  /**< OUT: stav po operaci. */
     char out_error[ 128 ];        /**< OUT: anglický text chyby, "" = OK. */
 } st_DBGAPI_RAMLOG_PARAM;
+
+
+/** @brief Operace příkazu DBGAPI_CMD_BPLOG. */
+typedef enum en_DBGAPI_BPLOG_OP
+{
+    DBGAPI_BPLOG_OP_CLEAR = 0,   /**< bplog_clear(): vyprázdnit ring, nový segment. */
+    DBGAPI_BPLOG_OP_STATUS,      /**< Jen stav. */
+} en_DBGAPI_BPLOG_OP;
+
+/**
+ * @brief Parametr pro DBGAPI_CMD_BPLOG.
+ *
+ * Handler vždy vyplní out_status (stav po provedení operace).
+ */
+typedef struct st_DBGAPI_BPLOG_PARAM
+{
+    en_DBGAPI_BPLOG_OP op;        /**< IN: operace. */
+    st_BPLOG_STATUS out_status;   /**< OUT: stav ringu. */
+} st_DBGAPI_BPLOG_PARAM;
 
 
 /** @brief Operace příkazu DBGAPI_CMD_COVERAGE. */

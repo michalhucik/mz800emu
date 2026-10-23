@@ -63,6 +63,7 @@
 #include "../audio_capture.h"
 #include "../audio_analysis.h"
 #include "../debugger/trace/ramlog_hook.h"
+#include "../debugger/trace/bplog.h"
 #include "../debugger/coverage/coverage.h"
 #include "../debugger/coverage/coverage_export.h"
 #include "../debugger/memsearch/memsearch.h"
@@ -517,6 +518,7 @@ static en_MCP_DISPATCH_RESULT _handle_ramlog_clear(const st_JSONL_MESSAGE *req, 
 static en_MCP_DISPATCH_RESULT _handle_ramlog_status(const st_JSONL_MESSAGE *req, char **out_response);
 static en_MCP_DISPATCH_RESULT _handle_ramlog_who_wrote(const st_JSONL_MESSAGE *req, char **out_response);
 static en_MCP_DISPATCH_RESULT _handle_ramlog_writers(const st_JSONL_MESSAGE *req, char **out_response);
+static en_MCP_DISPATCH_RESULT _handle_bplog_clear(const st_JSONL_MESSAGE *req, char **out_response);
 
 /* memsearch (M3 debug-gaps) - Freeze Bytes a Memory Search fwd decls */
 static en_MCP_DISPATCH_RESULT _handle_freeze_add(const st_JSONL_MESSAGE *req, char **out_response);
@@ -1275,6 +1277,10 @@ static const st_MCP_CMD_MAP_ENTRY g_cmd_map[] = {
     { "coverage_mark",            DBGAPI_CMD_COVERAGE,                _handle_coverage_mark            },
     { "coverage_read",            DBGAPI_CMD_COVERAGE,                _handle_coverage_read            },
     { "coverage_export",          DBGAPI_CMD_COVERAGE,                _handle_coverage_export          },
+    /* bp-log-mcp (M15 debug-gaps) - vyčištění ringu výstupu akcí BP (kanál
+     * bplog čte trace_read). Přidáno na KONEC tabulky kvůli stabilitě
+     * pozičního indexu v hello supported_commands. */
+    { "bplog_clear",              DBGAPI_CMD_BPLOG,                   _handle_bplog_clear              },
     /* sentinel */
     { NULL,              DBGAPI_CMD_NONE,              NULL                  },
 };
@@ -8197,7 +8203,7 @@ static en_MCP_DISPATCH_RESULT _handle_trace_save(const st_JSONL_MESSAGE *req,
 /** @brief Čitelné kanály v pořadí výpisu trace_status (= en_DBGAPI_TRACE_CHANNEL = en_TRACE_KIND). */
 static const char *const s_trace_read_channels[] = {
     "cputrack", "iorqlog", "intlog", "hwlog", "marklog", "eventlog",
-    "audio_psg_writes", "audio_levels", "audio_frames", "ramlog"
+    "audio_psg_writes", "audio_levels", "audio_frames", "ramlog", "bplog"
 };
 
 G_STATIC_ASSERT(G_N_ELEMENTS(s_trace_read_channels) == TRACE_KIND_COUNT);
@@ -8314,6 +8320,10 @@ static bool _trace_snapshot_kind(en_TRACE_KIND kind, st_DBGAPI_TRACE_SNAPSHOT_PA
     if (origin) *origin = 0;
     if (kind == TRACE_KIND_RAMLOG) {
         p->channel = DBGAPI_TRACE_CHANNEL_RAMLOG;
+        return _trace_snapshot(p);
+    }
+    if (kind == TRACE_KIND_BPLOG) {
+        p->channel = DBGAPI_TRACE_CHANNEL_BPLOG;
         return _trace_snapshot(p);
     }
     if (!_trace_kind_is_audio(kind)) {
@@ -8499,7 +8509,9 @@ static const char *_trace_parse_filter(JsonObject *f, en_TRACE_KIND kind, st_TRA
     trace_filter_init(out);
     if (!f) return NULL;
     if (json_object_has_member(f, "pc_from") || json_object_has_member(f, "pc_to")) {
-        if (kind != TRACE_KIND_CPUTRACK && kind != TRACE_KIND_RAMLOG) return "filter pc_from/pc_to is only for cputrack and ramlog";
+        if (kind != TRACE_KIND_CPUTRACK && kind != TRACE_KIND_RAMLOG && kind != TRACE_KIND_BPLOG) {
+            return "filter pc_from/pc_to is only for cputrack, ramlog and bplog";
+        }
         out->has_pc = true;
         out->pc_from = (uint16_t)_obj_int_or(f, "pc_from", 0);
         out->pc_to = (uint16_t)_obj_int_or(f, "pc_to", 0xFFFF);
@@ -8560,6 +8572,30 @@ static const char *_trace_parse_filter(JsonObject *f, en_TRACE_KIND kind, st_TRA
     if (json_object_has_member(f, "all")) {
         if (kind != TRACE_KIND_RAMLOG) return "filter all is only for ramlog";
         out->all = json_object_get_boolean_member(f, "all");
+    }
+    if (json_object_has_member(f, "bp")) {
+        /* bplog: id breakpointu (číslo), nebo přesné jméno (řetězec). */
+        if (kind != TRACE_KIND_BPLOG) return "filter bp is only for bplog";
+        if (_obj_is_string(f, "bp")) {
+            const char *nm = json_object_get_string_member(f, "bp");
+            if (!nm || !nm[0] || strlen(nm) >= sizeof(out->bp_name)) {
+                return "filter bp must be a breakpoint id or a name of 1-31 characters (bplog)";
+            }
+            g_strlcpy(out->bp_name, nm, sizeof(out->bp_name));
+        } else {
+            JsonNode *bn = json_object_get_member(f, "bp");
+            if (!JSON_NODE_HOLDS_VALUE(bn) || json_node_get_value_type(bn) != G_TYPE_INT64
+                || json_node_get_int(bn) < 0 || json_node_get_int(bn) > G_MAXINT32) {
+                return "filter bp must be a breakpoint id or a name of 1-31 characters (bplog)";
+            }
+            out->bp = (int)json_node_get_int(bn);
+        }
+    }
+    if (json_object_has_member(f, "kind")) {
+        int k = (kind == TRACE_KIND_BPLOG && _obj_is_string(f, "kind"))
+                ? bplog_kind_from_name(json_object_get_string_member(f, "kind")) : -1;
+        if (k < 0) return "filter kind must be log or stop (bplog)";
+        out->bplog_kind = k;
     }
     if (json_object_has_member(f, "channels")) {
         if (kind != TRACE_KIND_AUDIO_LEVELS && kind != TRACE_KIND_AUDIO_PSG_WRITES) {
@@ -17371,6 +17407,30 @@ static en_MCP_DISPATCH_RESULT _handle_ramlog_status(const st_JSONL_MESSAGE *req,
     memset(&p, 0, sizeof(p));
     p.op = DBGAPI_RAMLOG_OP_STATUS;
     return _ramlog_status_response(jsonl_msg_get_req_id(req), &p, out_response);
+}
+
+/**
+ * @brief `bplog_clear` handler - vyprázdní ring výstupu akcí BP (nový segment).
+ *
+ * Parametry: žádné. Response: `{segment, allocated, capacity, first_seq,
+ * next_seq}` po vyčištění. Nad ještě nealokovaným ringem (žádná akce
+ * `log` / `stop` nezapsala) nic nemění.
+ */
+static en_MCP_DISPATCH_RESULT _handle_bplog_clear(const st_JSONL_MESSAGE *req, char **out_response) {
+    int64_t req_id = jsonl_msg_get_req_id(req);
+    st_DBGAPI_BPLOG_PARAM p;
+    memset(&p, 0, sizeof(p));
+    p.op = DBGAPI_BPLOG_OP_CLEAR;
+    if (!_submit_dbgapi(DBGAPI_CMD_BPLOG, &p, NULL)) {
+        return _err_response(req_id, "bplog_clear failed", MCP_DISPATCH_EMU_ERROR, out_response);
+    }
+    JsonObject *o = json_object_new();
+    json_object_set_int_member(o, "segment", (gint64)p.out_status.segment);
+    json_object_set_boolean_member(o, "allocated", p.out_status.allocated ? TRUE : FALSE);
+    json_object_set_int_member(o, "capacity", (gint64)p.out_status.capacity);
+    json_object_set_int_member(o, "first_seq", (gint64)p.out_status.first_seq);
+    json_object_set_int_member(o, "next_seq", (gint64)p.out_status.next_seq);
+    return _ok_response(req_id, o, out_response);
 }
 
 /** @brief Záznam ramlogu jako JSON objekt. */

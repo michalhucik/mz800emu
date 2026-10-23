@@ -26,6 +26,7 @@
 #include "debugger/symbols/sym_db.h"
 #include "emulator/emulator.h"     /* g_emulator.paused - gating snapshotu */
 #include "debugger/trace/ramlog.h" /* ramlog_start/stop: stav záznamu zápisů */
+#include "debugger/trace/bplog.h"  /* log / stop: zápis do kanálu bplog */
 #include "debugger/coverage/coverage_hook.h" /* coverage_start/stop/mark: stav pokrytí */
 #include "hw-generic/memory/memory.h" /* memory_write_byte_no_bp - zápis přes debugger cestu */
 #include "libs/cpu-z80/z80.h"
@@ -946,6 +947,44 @@ static void test_halt_stop_execute ( void ) {
     TEST_ASSERT_EQUAL_STRING ( "msg 1", h.message );
 }
 
+/* --- log a stop zapíšou text i do bplog (kontext: čas, snímek, InsnPC, PC) --- */
+static void test_bplog_from_actions ( void ) {
+    bplog_free ( );
+    char err[160] = {0};
+    bp_action_t *act = bp_action_parse ( "log \"A=%X\", 0x2A\nstop \"done %d\", 3",
+                                         err, sizeof ( err ) );
+    TEST_ASSERT_NOT_NULL_MESSAGE ( act, err );
+    bp_expr_ctx_t ctx;
+    make_ctx ( &ctx );
+    ctx.Cycle = 777;
+    ctx.Frame = 5;
+    ctx.InsnPC = 0x3003;
+    ctx.self_id = -1;
+    g_test_cpu.pc = 0x3006;
+    TEST_ASSERT_FALSE ( bp_action_execute ( act, &ctx ) );
+    bp_action_free ( act );
+
+    st_BPLOG_REC r[ 2 ];
+    uint64_t seq = 0;
+    TEST_ASSERT_EQUAL_UINT64 ( 2, bplog_copy ( 0, 2, r, &seq ) );
+    TEST_ASSERT_EQUAL_UINT8 ( BPLOG_KIND_LOG, r[ 0 ].kind );
+    TEST_ASSERT_EQUAL_STRING ( "A=2A", r[ 0 ].text );
+    TEST_ASSERT_EQUAL_UINT64 ( 777, r[ 0 ].t );
+    TEST_ASSERT_EQUAL_UINT32 ( 5, r[ 0 ].frame );
+    TEST_ASSERT_EQUAL_HEX16 ( 0x3003, r[ 0 ].insn_pc );
+    TEST_ASSERT_EQUAL_HEX16 ( 0x3006, r[ 0 ].pc );
+    TEST_ASSERT_EQUAL_INT32 ( -1, r[ 0 ].bp_id );
+    TEST_ASSERT_EQUAL_STRING ( "", r[ 0 ].name );
+    TEST_ASSERT_EQUAL_UINT8 ( BPLOG_KIND_STOP, r[ 1 ].kind );
+    TEST_ASSERT_EQUAL_STRING ( "done 3", r[ 1 ].text );
+    /* stop bez hlášky do bplog nic nezapíše */
+    TEST_ASSERT_FALSE ( exec_action ( "stop" ) );
+    st_BPLOG_STATUS st;
+    bplog_get_status ( &st );
+    TEST_ASSERT_EQUAL_UINT64 ( 2, st.next_seq );
+    bplog_free ( );
+}
+
 /* --- exit: kód z výrazu, dolních 8 bitů, hláška; uvnitř if --- */
 static void test_halt_exit_execute ( void ) {
     st_BP_ACTION_HALT h;
@@ -1277,6 +1316,7 @@ int main ( int argc, char *argv[] ) {
     RUN_TEST ( test_halt_stop_execute );
     RUN_TEST ( test_halt_exit_execute );
     RUN_TEST ( test_halt_classify );
+    RUN_TEST ( test_bplog_from_actions );
 
     int result = UNITY_END ( );
 

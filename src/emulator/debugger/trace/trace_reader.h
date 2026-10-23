@@ -48,6 +48,7 @@ typedef enum en_TRACE_KIND
     TRACE_KIND_AUDIO_LEVELS,     /**< 16B změna úrovně kanálu (st_AUDIO_CAPTURE_LEVEL_REC). */
     TRACE_KIND_AUDIO_FRAMES,     /**< 192B souhrn zvukového snímku (st_AUDIO_CAPTURE_FRAME_REC). */
     TRACE_KIND_RAMLOG,           /**< 32B zápis do paměti (st_RAMLOG_REC, ring ramlog). */
+    TRACE_KIND_BPLOG,            /**< 296B výstup akce BP `log` / `stop` (st_BPLOG_REC, ring bplog). */
     TRACE_KIND_COUNT         /**< Počet druhů (není platná hodnota). */
 } en_TRACE_KIND;
 
@@ -113,7 +114,7 @@ int trace_reader_fetch ( const st_TLOG_READ_SNAPSHOT *snap,
  */
 typedef struct st_TRACE_FILTER
 {
-    bool     has_pc;     /**< cputrack: pc v [pc_from, pc_to]. */
+    bool     has_pc;     /**< cputrack: pc v [pc_from, pc_to]; ramlog a bplog: insn_pc. */
     uint16_t pc_from;
     uint16_t pc_to;
     bool     has_port;   /**< iorqlog: port (<= FFh porovná dolní bajt, jinak 16 bitů). */
@@ -131,6 +132,9 @@ typedef struct st_TRACE_FILTER
     int      space;      /**< ramlog: -1 = nefiltrovat, jinak en_RAMLOG_SPACE. */
     int      src;        /**< ramlog: -1 = nefiltrovat, jinak en_RAMLOG_SRC. */
     bool     all;        /**< ramlog: i záznamy nezměněné a potlačené (výchozí skryté). */
+    int      bp;         /**< bplog: -1 = nefiltrovat, jinak id breakpointu. */
+    char     bp_name[ 32 ]; /**< bplog: "" = nefiltrovat, jinak přesné jméno breakpointu (= BPLOG_NAME_SIZE). */
+    int      bplog_kind; /**< bplog: -1 = nefiltrovat, jinak en_BPLOG_KIND. */
     bool     has_t;      /**< t v [t_from, t_to] (jen řádky s časem). */
     uint64_t t_from;
     uint64_t t_to;

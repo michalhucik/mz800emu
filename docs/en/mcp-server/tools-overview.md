@@ -78,6 +78,7 @@ documented separately in [Resources overview](resources-overview.md).
 | `emu_ramlog_status` | no | State of the RAM write log |
 | `emu_ramlog_who_wrote` | no | Last writer and write history of a memory cell |
 | `emu_ramlog_writers` | no | Instructions that wrote into a range |
+| `emu_bplog_clear` | no | Empty the `bplog` channel (output of BP actions `log` and `stop`) |
 | `emu_videorec_start` | yes (creates / overwrites a file) | Start lossless video recording (optional path, auto-stop after N frames) |
 | `emu_videorec_stop` | no | Stop video recording, by default wait until the files are saved |
 | `emu_videorec_pause` | no | Recording pause (emulation keeps running): pause / resume / toggle |
@@ -1167,7 +1168,7 @@ first recording).
 ### `emu_trace_read`
 
 One page of records of a channel (`cputrack`, `iorqlog`, `intlog`,
-`hwlog`, `marklog`, `eventlog`, `ramlog` (RAM write log), and from the audio capture memory
+`hwlog`, `marklog`, `eventlog`, `ramlog` (RAM write log), `bplog` (output of BP actions `log` and `stop`), and from the audio capture memory
 `audio_psg_writes`, `audio_levels`, `audio_frames`), also while recording runs - the data
 still in the RAM buffer is readable too. After `emu_trace_stop` the
 last segment stays readable until the next start. Arguments:
@@ -1195,7 +1196,9 @@ last segment stays readable until the next start. Arguments:
   `tone`, `volume`, `noise`; audio_psg_writes), `t_from`/`t_to` (channels
   with `t`); ramlog: `pc_from`/`pc_to` (writing instruction),
   `addr_from`/`addr_to` (CPU address), `space`, `src`, `all` (also writes
-  that did not change the cell and writes under ROM - hidden by default).
+  that did not change the cell and writes under ROM - hidden by default);
+  bplog: `pc_from`/`pc_to` (`insn_pc`), `bp` (breakpoint number, or its
+  exact name as a string), `kind` (`log` or `stop`).
 - `max_chars` (int, default 20000, 1000-45000) - character budget of
   the whole `rows` response.
 - `max_scan` (int, default 2000000) - max records examined per call.
@@ -1214,6 +1217,7 @@ Columns (always in this order, `columns` in the response):
 | `audio_levels` | `seq`, `t`, `time_us`, `frame`, `channel`, `level` |
 | `audio_frames` | `seq`, `t`, `time_us`, `len_ticks`, `edges`, `on_pct`, `rms_level`, `max_level`, `ref_rms`, `ref_peak`, `sdl_rms`, `sdl_peak`, `sdl_blocks` |
 | `ramlog` | `seq`, `t`, `frame`, `pc`, `sym`, `addr`, `space`, `offset`, `plane`, `old`, `new`, `src`, `flags`, `count`, `tin` |
+| `bplog` | `seq`, `t`, `frame`, `insn_pc`, `sym`, `pc`, `bp`, `name`, `kind`, `text`, `flags` |
 
 `t` is in GDG ticks since emulation start (cputrack: start of the
 instruction, only with `has_time`); cputrack `asm` is decoded from the
@@ -1238,6 +1242,26 @@ cursor), `page_full`, `end_of_data` (the page reached `next_seq`),
 `count`, `data_b64`) and `next_cursor`. A cursor from an older segment
 (the channel was restarted, the Event Viewer ring was cleared) returns
 an error starting with `segment_replaced:`.
+
+### `emu_bplog_clear`
+
+The channel `bplog` holds the text of the breakpoint actions `log "..."`
+and `stop "..."` (the same text the emulator prints as `[BP-LOG]` and
+`[BP-STOP]`), so that an MCP client can read it with
+`emu_trace_read(channel="bplog")`. It is always on, nothing needs to be
+started; until an action has printed something it is empty (`next_seq`
+0) and a cursor taken at that moment stays valid for later rows.
+`t`, `frame`, `insn_pc` and `pc` are the values of `Cycle`, `Frame`,
+`InsnPC` and `PC` in the breakpoint expression at the moment of the
+action, `sym` is the symbol of `insn_pc`, `bp` the breakpoint number and
+`name` its name, `kind` `log` or `stop`. Text longer than 239 bytes is
+cut (`flags` `text_truncated`). The channel keeps the last 4096 rows
+(older ones `lost`, `gap`); reset and snapshot load do not empty it.
+
+`emu_bplog_clear` (no arguments) empties the channel and starts a new
+segment (an old cursor returns `segment_replaced:`). It returns
+`segment`, `allocated` (`false` = nothing written yet), `capacity`,
+`first_seq`, `next_seq`.
 
 ## RAM write log tools
 

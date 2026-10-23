@@ -98,7 +98,12 @@ A bank-specific lookup is not exposed in the action DSL.
 
 The output goes to stdout. In the `--mcp-pipe` mode stdout carries the
 MCP messages, so the emulator redirects its text output (including
-`[BP-LOG]` lines) to stderr; an MCP client cannot read it through MCP.
+`[BP-LOG]` lines) to stderr. The same text also goes into the channel
+`bplog`, which an MCP client reads with `emu_trace_read(channel="bplog")`:
+one row per `log` with the text, time, instruction address, PC and the
+breakpoint number and name. The channel keeps the last 4096 rows, text
+longer than 239 bytes is cut; `emu_bplog_clear` empties it (see
+[tools-overview.md](../../mcp-server/tools-overview.md#emu_bplog_clear)).
 
 In MEM_R / MEM_W / IORQ breakpoints `PC` is already behind the accessing
 instruction; log `InsnPC` for the instruction address (see
@@ -319,7 +324,8 @@ if $state == 1 then enable trace_bp else disable trace_bp
 ### `stop ["fmt"[, args...]]`
 
 Stops the emulator like a BP with an empty action. The optional message
-is a format string as in `log` and is printed as `[BP-STOP] ...`. The
+is a format string as in `log`, is printed as `[BP-STOP] ...` and goes
+into the channel `bplog` (kind `stop`). The
 commands after `stop` do not run.
 
 ```
