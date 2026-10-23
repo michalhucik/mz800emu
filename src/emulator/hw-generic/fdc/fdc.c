@@ -59,6 +59,8 @@
 #include <glib.h>
 #include <glib/gstdio.h>
 
+#include "fdc_cli.h"
+
 #include "fdc.h"
 #include "fdc_request.h"
 #include "wd279x.h"
@@ -488,9 +490,38 @@ static void fdc_init_instance(st_FDC *fdc, unsigned default_connected)
     /* Auto-mount z cfgfile: pro každou mechaniku vytáhni `<prefix>_fddX_dskpath`
      * TEXT klíč a pokud není prázdný, otevři DSK obraz. Mount je nezávislý
      * na connect stavu (obrazy jsou připravené, jakmile user řadič připojí).
-     * Při neúspěchu open zůstane drive umounted a chyba se vypíše na stderr. */
+     * Při neúspěchu open zůstane drive umounted a chyba se vypíše na stderr.
+     *
+     * CLI --fdd / --fdd<N> (fdc_cli.h) má přednost: místo cesty z INI se
+     * vloží obraz z příkazové řádky (a jeho cesta se zapíše do INI jako
+     * z menu). CLI disk do odpojeného řadiče nebo obraz, který nejde
+     * otevřít, = chyba, kterou ohlásí fdc_cli_report(). */
     for (unsigned i = 0; i < FDC_NUM_DRIVES && i < 4; i++)
     {
+        const char *cli_path = fdc_cli_dsk_path(fdc->index, i);
+        if (cli_path)
+        {
+            unsigned cli_drive = fdc->index * FDC_NUM_DRIVES + i;
+            if (!fdc->connected)
+            {
+                const char *sec = fdc_cfg_section_name(fdc);
+                char *msg = g_strdup_printf("--fdd: floppy drive %u belongs to the FD controller %s, "
+                                            "which is not connected (connect it in the menu or set "
+                                            "[%s] connected = 1 in the INI)", cli_drive, sec, sec);
+                fdc_cli_note_failure(msg);
+                g_free(msg);
+                continue;
+            }
+            fdc_mount_dskfile(fdc, i, (char *)cli_path);
+            if (!fdc->drive[i].mounted)
+            {
+                char *msg = g_strdup_printf("--fdd: cannot open DSK image in floppy drive %u: %s",
+                                            cli_drive, cli_path);
+                fdc_cli_note_failure(msg);
+                g_free(msg);
+            }
+            continue;
+        }
         char *path = cfgmodule_get_element_text_value_by_name(cmod, (char *)fdc_dskpath_keyname(fdc, i));
         if (path && path[0] != 0x00)
         {
@@ -981,7 +1012,9 @@ void fdc_mount_dskfile(st_FDC *fdc, unsigned drive_id, char *filename)
     else
         drv->storage_mode = FDC_STORAGE_CACHED;
 
-    drv->user_readonly = fdc_cfg_get_readonly(fdc, drive_id) ? 1 : 0;
+    /* --fdd-readonly (fdc_cli.h) chrání mechaniku jen pro tento běh, do INI
+     * se nezapisuje. */
+    drv->user_readonly = (fdc_cfg_get_readonly(fdc, drive_id) || fdc_cli_readonly(fdc->index, drive_id)) ? 1 : 0;
     drv->fs_readonly = (g_access(drv->filename, W_OK) == 0) ? 0 : 1;
     drv->readonly = (drv->user_readonly || drv->fs_readonly) ? 1 : 0;
 

@@ -22,6 +22,7 @@
 #include "emulator/customspeed.h"
 #include "emulator/mzarch/mzarch.h"
 #include "emulator/hw-generic/cmt/cmt_cli.h"
+#include "emulator/hw-generic/fdc/fdc_cli.h"
 #include "emulator/automation.h"
 #include "emulator/replay_cli.h"
 #include "version_info.h"
@@ -412,6 +413,32 @@ static const st_SDLAPP_OPTION_DEF g_known_options[] = {
       "no-inversion mode for future 'true bus' ROMs." },
     { "--fdc-hd-patch",     SDLAPP_OPTION_VALUE, SDLAPP_OPTVAL_BOOL_ON_OFF, NULL,        "<on|off>",
       "Enable/disable the HD Patch circuit (port 0xDF EINT logic) on the FDC." },
+    { "--fdd",              SDLAPP_OPTION_VALUE, SDLAPP_OPTVAL_STRING,      NULL,        "<N>=<filepath>",
+      "Insert a DSK image into floppy drive N at startup (repeatable). "
+      "N 0-3 = drives 0-3 of the FD controller, 4-7 = drives 0-3 of the "
+      "secondary FD controller (FDC1, must be connected). Replaces the disk "
+      "from the INI; the path is saved to the INI like a disk inserted from "
+      "the menu (unless --no-save-ini). Missing file or a duplicate drive = "
+      "error and exit; an image that cannot be opened = error." },
+    { "--fdd0",            SDLAPP_OPTION_VALUE, SDLAPP_OPTVAL_STRING,      NULL,        "<filepath>",
+      "Same as --fdd 0=<filepath> (FDC0 drive 0)." },
+    { "--fdd1",            SDLAPP_OPTION_VALUE, SDLAPP_OPTVAL_STRING,      NULL,        "<filepath>",
+      "Same as --fdd 1=<filepath> (FDC0 drive 1)." },
+    { "--fdd2",            SDLAPP_OPTION_VALUE, SDLAPP_OPTVAL_STRING,      NULL,        "<filepath>",
+      "Same as --fdd 2=<filepath> (FDC0 drive 2)." },
+    { "--fdd3",            SDLAPP_OPTION_VALUE, SDLAPP_OPTVAL_STRING,      NULL,        "<filepath>",
+      "Same as --fdd 3=<filepath> (FDC0 drive 3)." },
+    { "--fdd4",            SDLAPP_OPTION_VALUE, SDLAPP_OPTVAL_STRING,      NULL,        "<filepath>",
+      "Same as --fdd 4=<filepath> (FDC1 drive 0)." },
+    { "--fdd5",            SDLAPP_OPTION_VALUE, SDLAPP_OPTVAL_STRING,      NULL,        "<filepath>",
+      "Same as --fdd 5=<filepath> (FDC1 drive 1)." },
+    { "--fdd6",            SDLAPP_OPTION_VALUE, SDLAPP_OPTVAL_STRING,      NULL,        "<filepath>",
+      "Same as --fdd 6=<filepath> (FDC1 drive 2)." },
+    { "--fdd7",            SDLAPP_OPTION_VALUE, SDLAPP_OPTVAL_STRING,      NULL,        "<filepath>",
+      "Same as --fdd 7=<filepath> (FDC1 drive 3)." },
+    { "--fdd-readonly",     SDLAPP_OPTION_VALUE, SDLAPP_OPTVAL_STRING,      NULL,        "<N>",
+      "Write-protect floppy drive N (0-7) for this session only (repeatable); "
+      "the INI setting is kept." },
     { NULL, SDLAPP_OPTION_FLAG, SDLAPP_OPTVAL_NONE, NULL, NULL, NULL }   /* sentinel */
 };
 
@@ -482,6 +509,14 @@ int main(int argc, char *argv[])
     if (!cmt_cli_validate())
     {
         return automation_cli_error(EXIT_FAILURE, "invalid tape options");
+    };
+
+    /* --fdd, --fdd<N>, --fdd-readonly: čísla mechanik a soubory se ověří
+     * hned (chyba = konec), disky vloží fdc_init() při inicializaci
+     * emulátoru; chyby zjištěné až tam ohlásí emu vlákno (fdc_cli_report). */
+    if (!fdc_cli_validate())
+    {
+        return automation_cli_error(EXIT_FAILURE, "invalid floppy disk options");
     };
 
     /* Automatizace (--exit-*, --timeout-*, --result-json, --bpt, ...):

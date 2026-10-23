@@ -44,6 +44,32 @@ V menu se název mechaniky zobrazí jako "FDD 0 (Empty)" / "FDD 0", při
 namountovaném obrazu se v rozbaleném podmenu zobrazí basename souboru
 (zkrácený na 20 znaků + "..." pokud je delší).
 
+## Disky z příkazové řádky
+
+Disk jde vložit už při startu emulátoru:
+
+```
+mz800emu --fdd 0=boot.dsk --fdd 1=data.dsk
+mz800emu --fdd0 boot.dsk --fdd-readonly 0
+```
+
+Mechaniky se číslují přes oba řadiče: 0-3 = FDD0-FDD3 řadiče FDC (porty
+0xD8 - 0xDF), 4-7 = FDD0-FDD3 sekundárního řadiče FDC1 (porty 0x58 -
+0x5F). `--fdd <N>=<soubor>` jde opakovat, `--fdd0` až `--fdd7` jsou
+zkrácené tvary téhož. Disk se vloží stejně jako z menu: nahradí disk
+z INI ve stejné mechanice a jeho cesta se při ukončení uloží do INI
+(`--no-save-ini` uložení vypne). Storage mode mechaniky platí z INI.
+
+`--fdd-readonly <N>` chrání mechaniku N proti zápisu jen pro toto
+spuštění (jako user_readonly, viz "Read-Only 3-state model", ale bez
+zápisu do INI); platí i pro disky vložené do mechaniky později z menu.
+
+Chybějící soubor, číslo mechaniky mimo 0-7 nebo mechanika zadaná dvakrát
+ukončí emulátor s chybou ještě před startem. Disk pro odpojený řadič
+(FDC1 je ve výchozím stavu odpojený) nebo obraz, který nejde otevřít,
+je chyba: v `--headless` emulátor skončí s kódem 3, v okně zůstane
+emulace v pauze a chyba se vypíše na chybový výstup (stderr).
+
 ## Storage mode (per drive)
 
 Volba se persistuje per mechanika v INI klíči

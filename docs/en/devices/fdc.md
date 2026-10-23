@@ -82,6 +82,35 @@ When switching between CACHED and DIRECT without uncommitted RAM
 changes, or to DISCARD, the popup is not shown - the switch happens
 immediately.
 
+## Disks from the command line
+
+A disk can be inserted already when the emulator starts:
+
+```
+mz800emu --fdd 0=boot.dsk --fdd 1=data.dsk
+mz800emu --fdd0 boot.dsk --fdd-readonly 0
+```
+
+The drives are numbered across both controllers: 0-3 = FDD0-FDD3 of the
+FDC controller (ports 0xD8 - 0xDF), 4-7 = FDD0-FDD3 of the secondary
+FDC1 controller (ports 0x58 - 0x5F). `--fdd <N>=<file>` can be repeated,
+`--fdd0` to `--fdd7` are short forms of the same. The disk is inserted
+the same way as from the menu: it replaces the disk from the INI in the
+same drive and its path is saved to the INI at exit (`--no-save-ini`
+turns saving off). The storage mode of the drive comes from the INI.
+
+`--fdd-readonly <N>` write-protects drive N for this run only (like
+user_readonly, see "Read-only 3-state model", but without writing to the
+INI); it also applies to disks inserted into the drive later from the
+menu.
+
+A missing file, a drive number outside 0-7 or a drive given twice ends
+the emulator with an error before it starts. A disk for a disconnected
+controller (FDC1 is disconnected by default) or an image that cannot be
+opened is an error: in `--headless` the emulator exits with code 3, in
+the window the emulation stays paused and the error goes to the error
+output (stderr).
+
 ## Read-only 3-state model
 
 Effective R/O = `user_readonly || fs_readonly`.

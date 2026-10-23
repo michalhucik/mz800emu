@@ -406,6 +406,8 @@ static gpointer _stdin_reader_thread(gpointer data)
  *  - --no-save-ini / --no-first-run-windows (= chování v CI)
  *  - --cmt, --cmt-play, --cmt-play-pause, --cmt-boot (= páska ve
  *    virtuálním CMT od startu, pro AI klienty i testy; viz cmt_cli.h)
+ *  - --fdd, --fdd0 .. --fdd7, --fdd-readonly (= DSK obrazy v disketových
+ *    mechanikách od startu; viz fdc_cli.h)
  *
  * Ostatní vyhradíme pro standardní `mz800emu.exe`.
  */
@@ -441,6 +443,27 @@ static const st_SDLAPP_OPTION_DEF g_pipe_known_options[] = {
       "With --cmt: PLAY + PAUSE; the tape moves when the ROM starts the motor." },
     { "--cmt-boot",             SDLAPP_OPTION_FLAG,  SDLAPP_OPTVAL_NONE,   NULL, NULL,
       "With --cmt (MZ-800): hold C until the ROM starts the motor (boot from tape)." },
+    { "--fdd",                  SDLAPP_OPTION_VALUE, SDLAPP_OPTVAL_STRING, NULL, "<N>=<filepath>",
+      "Insert a DSK image into floppy drive N (0-3 FDC0, 4-7 FDC1) at startup "
+      "(repeatable; the path is saved to the INI unless --no-save-ini)." },
+    { "--fdd0",                 SDLAPP_OPTION_VALUE, SDLAPP_OPTVAL_STRING, NULL, "<filepath>",
+      "Same as --fdd 0=<filepath>." },
+    { "--fdd1",                 SDLAPP_OPTION_VALUE, SDLAPP_OPTVAL_STRING, NULL, "<filepath>",
+      "Same as --fdd 1=<filepath>." },
+    { "--fdd2",                 SDLAPP_OPTION_VALUE, SDLAPP_OPTVAL_STRING, NULL, "<filepath>",
+      "Same as --fdd 2=<filepath>." },
+    { "--fdd3",                 SDLAPP_OPTION_VALUE, SDLAPP_OPTVAL_STRING, NULL, "<filepath>",
+      "Same as --fdd 3=<filepath>." },
+    { "--fdd4",                 SDLAPP_OPTION_VALUE, SDLAPP_OPTVAL_STRING, NULL, "<filepath>",
+      "Same as --fdd 4=<filepath>." },
+    { "--fdd5",                 SDLAPP_OPTION_VALUE, SDLAPP_OPTVAL_STRING, NULL, "<filepath>",
+      "Same as --fdd 5=<filepath>." },
+    { "--fdd6",                 SDLAPP_OPTION_VALUE, SDLAPP_OPTVAL_STRING, NULL, "<filepath>",
+      "Same as --fdd 6=<filepath>." },
+    { "--fdd7",                 SDLAPP_OPTION_VALUE, SDLAPP_OPTVAL_STRING, NULL, "<filepath>",
+      "Same as --fdd 7=<filepath>." },
+    { "--fdd-readonly",         SDLAPP_OPTION_VALUE, SDLAPP_OPTVAL_STRING, NULL, "<N>",
+      "Write-protect floppy drive N (0-7) for this session only (repeatable)." },
     { NULL, SDLAPP_OPTION_FLAG, SDLAPP_OPTVAL_NONE, NULL, NULL, NULL }
 };
 

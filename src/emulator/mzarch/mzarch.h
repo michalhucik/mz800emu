@@ -219,6 +219,24 @@ extern "C"
     extern char *mzarch_cli_option_value_utf8(const char *name);
 
     /**
+     * @brief Hodnota n-tého výskytu opakovatelné CLI volby převedená do UTF-8.
+     *
+     * Jako mzarch_cli_option_value_utf8(), jen pro výskyt @p n v pořadí
+     * příkazové řádky (obě formy zápisu, `name hodnota` i `name=hodnota`,
+     * jako sdlapp_option_value_nth()). Na Windows se hodnota vezme z UTF-16
+     * příkazové řádky, jinde (a když se tam výskyt nenajde) kopie
+     * sdlapp_option_value_nth().
+     *
+     * @param name Jméno volby včetně `--` (např. "--fdd").
+     * @param n Pořadí výskytu od 0.
+     * @return Nově alokovaná hodnota v UTF-8 (uvolnit g_free), nebo NULL,
+     *         pokud výskyt neexistuje nebo nemá hodnotu.
+     * @pre sdlapp_options_init() už proběhlo.
+     * @note Bez vedlejších efektů, volatelné z libovolného vlákna.
+     */
+    extern char *mzarch_cli_option_value_utf8_nth(const char *name, int n);
+
+    /**
      * @brief Vynutí kompletní překreslení obrazovky emulátoru z aktuálního
      *        stavu VRAM/GDG (border i screen), nezávisle na debuggeru.
      *

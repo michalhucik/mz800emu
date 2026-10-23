@@ -25,6 +25,7 @@
 #include "hw-generic/cmt/cmt.h"
 #include "hw-generic/cmt/cmthack.h"
 #include "hw-generic/cmt/cmt_cli.h"
+#include "hw-generic/fdc/fdc_cli.h"
 #include "hw-generic/pioz80/pioz80.h"
 #include "hw-generic/printer/printer.h"
 #include "hw-generic/mz1p16/mz1p16_emu.h"
@@ -1476,6 +1477,33 @@ char *mzarch_cli_option_value_utf8(const char *name)
     return g_strdup(raw);
 }
 
+char *mzarch_cli_option_value_utf8_nth(const char *name, int n)
+{
+    const char *raw = sdlapp_option_value_nth(name, n);
+    if (!raw) return NULL;
+#ifdef G_OS_WIN32
+    gchar **wargv = g_win32_get_command_line();
+    gchar *res = NULL;
+    size_t nlen = strlen(name);
+    int k = 0;
+    for (int i = 1; wargv && wargv[i] && !res; i++) {
+        bool spaced = (strcmp(wargv[i], name) == 0);
+        bool joined = !spaced && strncmp(wargv[i], name, nlen) == 0 && wargv[i][nlen] == '=';
+        if (!spaced && !joined) continue;
+        if (k++ != n) continue;
+        if (joined) {
+            res = g_strdup(wargv[i] + nlen + 1);
+        } else if (wargv[i + 1]) {
+            res = g_strdup(wargv[i + 1]);
+        }
+        break;
+    }
+    g_strfreev(wargv);
+    if (res) return res;
+#endif
+    return g_strdup(raw);
+}
+
 void mzarch_main_reset_and_run_mzf(const char *filename)
 {
     /* Stejná sekvence jako start s CLI --run-mzf v mzarch_main(). */
@@ -1501,6 +1529,13 @@ void mzarch_main(void)
             mzarch_bootstrap_run_mzf(mzf_path);
         };
     }
+
+#if CFG_HWEXT_HAVE_FDC
+    /* CLI volby --fdd, --fdd<N>: disky vložila už fdc_init(); chyba, kterou
+     * šlo poznat až tam (odpojený FDC1, obraz nejde otevřít), = konec
+     * s chybou (v GUI pauza se zprávou). */
+    (void) fdc_cli_report();
+#endif
 
     /* CLI volby --cmt, --cmt-play, --cmt-play-pause, --cmt-boot: vložení
      * pásky do virtuálního CMT (po --run-mzf, aby program spuštěný z CLI

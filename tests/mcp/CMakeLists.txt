@@ -462,6 +462,23 @@ if(Python3_FOUND)
     message(STATUS "  tests/mcp: registered mcp_cli_cmt "
                    "(Python ${Python3_VERSION})")
 
+    # CLI volby disketových mechanik --fdd, --fdd<N>, --fdd-readonly:
+    # vložení do FDC0 i FDC1, nahrazení disku z INI, zápis cesty do INI,
+    # read-only jen pro běh; chyby voleb (kód 1) a chyby při inicializaci
+    # (odpojený FDC1, vadný obraz: headless kód 3). Pipe a headless.
+    add_test(
+        NAME    mcp_cli_fdd
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_cli_fdd.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_cli_fdd PROPERTIES
+        LABELS  "e2e;mcp;pipe;fdc"
+        TIMEOUT 300
+    )
+    message(STATUS "  tests/mcp: registered mcp_cli_fdd "
+                   "(Python ${Python3_VERSION})")
+
     # Snapshot obnoví i čekající GDG událost (GitHub issue #6): stav po
     # snapshot_load přes "špinavý" stroj + run se shoduje s během bez
     # loadu (všechny 4 binárky, fáze s každou čekající GDG událostí);
