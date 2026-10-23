@@ -5,6 +5,8 @@
  * Argumenty zásahu (st_DEVICE_REQ_ARGS): i[0] = hodnota volby.
  */
 
+#include <stddef.h>
+
 #include "mz1p16_emu.h"
 #include "mz1p16_request.h"
 #include "device_request.h"
