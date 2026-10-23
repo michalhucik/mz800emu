@@ -314,9 +314,16 @@ void imgui_main_window(GLuint texture)
     if (g_gui->showAudioWindow)
         imgui_audio(&g_gui->showAudioWindow);
 
+    /* Okna kazety čtou pásku (jméno, kontejner, bloky), kterou otevření
+     * a vysunutí v emu vlákně uvolňuje; zásah mezitím neprovede. */
+    device_state_lock();
+    imgui_cmt_tape_filelist_refresh();
     if (g_gui->showVirtualCmtWindow)
         imgui_cmt(&g_gui->showVirtualCmtWindow);
+    device_state_unlock();
 
+    /* Popup kontroly velikosti MZF má vlastní zámek (aktivuje ho i CMT
+     * hack uvnitř instrukce, bez zámku stavu zařízení). */
     if (g_gui->showCmtFixMzfsizeWindow)
         imgui_cmt_fix_mzfsize_popup(&g_gui->showCmtFixMzfsizeWindow);
 
@@ -382,7 +389,12 @@ void imgui_main_window(GLuint texture)
 #endif
 
     if (g_gui->showVirtualCmtTapeIndexWindow)
+    {
+        /* Seznam bloků čte kontejner pásky (viz okna kazety výše). */
+        device_state_lock();
         imgui_cmt_tape_index_window(&g_gui->showVirtualCmtTapeIndexWindow);
+        device_state_unlock();
+    }
 
     if (g_gui->showVirtualKeyboardWindow)
         imgui_vkbd(&g_gui->showVirtualKeyboardWindow);
@@ -481,7 +493,13 @@ void imgui_main_window(GLuint texture)
 
     /* ROM nastavení */
     if (g_gui->showRomSettingsWindow)
+    {
+        /* Okno čte cesty uživatelské ROM v g_rom; zásah mezitím neprovede
+         * emu vlákno. */
+        device_state_lock();
         imgui_rom_settings_window(&g_gui->showRomSettingsWindow);
+        device_state_unlock();
+    }
 
     /* Autotype buffer */
     if (g_gui->showAutotypeWindow)

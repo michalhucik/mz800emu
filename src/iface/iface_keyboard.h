@@ -22,8 +22,6 @@ extern iface_keyboard_state_t g_iface_kbdstate;
 extern "C"
 {
 #endif
-    extern void iface_keyboard_event_keydown(SDL_Keycode scancode);
-    extern void iface_keyboard_event_keyup(SDL_Keycode scancode);
     /**
      * @brief Sken celé klávesnice hostitele do klávesnicové matice MZ.
      *

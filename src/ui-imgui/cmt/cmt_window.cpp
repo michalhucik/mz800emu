@@ -13,6 +13,7 @@
 #include "ui-imgui/filechooser/res/CustomFont.h"
 #include "emulator/hw-generic/cmt/cmt.h"
 #include "emulator/hw-generic/cmt/cmthack.h"
+#include "emulator/hw-generic/cmt/cmt_request.h"
 #include "hw-generic/cmt/cmtext.h"
 #include "hw-generic/cmt/cmtext_block.h"
 #include "hw-generic/cmt/cmtext_container.h"
@@ -80,7 +81,7 @@ void imgui_cmt_row0_time_label_and_boost_switch(void)
         ImGui::BeginDisabled(!CMT_TEST_STOP || imgui_cmt_replay_recording());
         if (ImGui::Checkbox(_L("CMT Hack"), &ui_cmt_hack))
         {
-            cmthack_load_rom_patch(!CMTHACK_TEST_IS_INSTALLED);
+            cmt_request_set_hack(!CMTHACK_TEST_IS_INSTALLED);
         };
         ImGui::EndDisabled();
 
@@ -463,7 +464,7 @@ void imgui_cmt_row4_combo_mzspeed(void)
                 else
                 {
                     ui_speed_id = n;
-                    cmt_change_speed(speed_list[n].cmtspeed);
+                    cmt_request_set_speed(speed_list[n].cmtspeed);
                 };
             };
 
@@ -482,7 +483,7 @@ void imgui_cmt_row4_combo_mzspeed(void)
     st_MZTAPE_PULSES_LENGTH pulses;
     if (ImGuiCmt::drawPulsesEditor("cmt_default_speed", &owner, &pulses))
     {
-        cmt_change_custom_pulses(&pulses);
+        cmt_request_set_custom_pulses(&pulses);
     };
 }
 
@@ -788,7 +789,7 @@ void imgui_cmt(bool *p_open)
             bool ui_cmt_hack = CMTHACK_TEST_IS_INSTALLED;
             if (ImGui::Checkbox(_L("CMT Hack"), &ui_cmt_hack))
             {
-                cmthack_load_rom_patch(!CMTHACK_TEST_IS_INSTALLED);
+                cmt_request_set_hack(!CMTHACK_TEST_IS_INSTALLED);
             };
             ImGui::EndTable();
         };

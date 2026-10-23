@@ -10,7 +10,9 @@
 
 #include "ui-imgui/topmenu/topmenu.h"
 #include "emulator/mzarch/mzarch.h"
+#include "emulator/mzarch/mzarch_request.h"
 #include "emulator/hw-generic/cmt/cmt.h"
+#include "emulator/hw-generic/cmt/cmt_request.h"
 #if (MZARCH == 800) || (MZARCH == 1500)
 #include "emulator/hw-generic/pioz80/pioz80.h"
 #include "emulator/hw-generic/printer/printer_request.h"
@@ -39,7 +41,7 @@ void imgui_menu_mz800_dip_switch(void)
 
         if (ImGui::MenuItem(str0->str, NULL, !MZARCH_TEST_MODE_SW_MZ800))
         {
-            mzarch_mode_sw_set(MZARCH_TEST_MODE_SW_MZ800 ? MZ800_MODE_SW_MZ700 : MZ800_MODE_SW_MZ800);
+            mzarch_request_mode_sw_set(MZARCH_TEST_MODE_SW_MZ800 ? MZ800_MODE_SW_MZ700 : MZ800_MODE_SW_MZ800);
         };
         g_string_free(str0, TRUE);
 #endif /* MZARCH != 700 */
@@ -56,7 +58,7 @@ void imgui_menu_mz800_dip_switch(void)
 
         if (ImGui::MenuItem(str1->str, NULL, CMT_TEST_POLARITY_INVERTED, CMT_TEST_STOP))
         {
-            cmt_rear_dip_switch_cmt_inverted_polarity(!CMT_TEST_POLARITY_INVERTED);
+            cmt_request_set_polarity(!CMT_TEST_POLARITY_INVERTED);
         };
 
 #if (MZARCH == 800) || (MZARCH == 1500)

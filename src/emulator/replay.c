@@ -110,6 +110,11 @@ static char *s_pending_autotype_text = NULL;   /**< Jeho text ("" = zastavit). *
 static uint32_t s_pending_kd_ms = 0;           /**< Jeho doba stisku. */
 static uint32_t s_pending_ku_ms = 0;           /**< Jeho doba uvolnění. */
 static GQueue s_ui_cmt = G_QUEUE_INIT;          /**< Operace kazety z UI (st_REPLAY_UI_CMT *). */
+static bool s_pending_delays = false;          /**< Mimo záznam: nové prodlevy autotype čekají na emu vlákno. */
+static uint32_t s_pending_delay_kd_ms = 0;     /**< Jejich doba stisku. */
+static uint32_t s_pending_delay_ku_ms = 0;     /**< Jejich doba uvolnění. */
+static uint8_t s_off_vkbd_press[REPLAY_KBD_COLS];   /**< Mimo záznam: bity okna VKBD ke stisku (1 = stisknout). */
+static uint8_t s_off_vkbd_release[REPLAY_KBD_COLS]; /**< Mimo záznam: bity okna VKBD k uvolnění (1 = uvolnit). */
 
 /** @brief Operace kazety z UI čekající na emu vlákno. */
 typedef struct st_REPLAY_UI_CMT
@@ -545,6 +550,14 @@ static bool replay_head_is_stop(void)
  * Společné operace se stavem stroje (emu vlákno)
  * ================================================================ */
 
+/**
+ * @brief Zámek životnosti s_autotype_buf vůči čtení z UI (replay_autotype_peek_rest()).
+ *
+ * Emu vlákno ho drží jen při výměně textu, UI při kopii zbytku.
+ */
+static GMutex s_autotype_lock;
+
+
 /** @brief Spustí (text neprázdný) nebo zastaví ("" / NULL) autotype s kopií textu. */
 static void replay_apply_autotype(const char *text, uint32_t kd_ms, uint32_t ku_ms)
 {
@@ -554,12 +567,35 @@ static void replay_apply_autotype(const char *text, uint32_t kd_ms, uint32_t ku_
         return;
     };
     /* Předchozí text může autotype ještě číst - nahradit až po přepnutí. */
+    char *copy = g_strdup(text);
+    g_mutex_lock(&s_autotype_lock);
     char *old = s_autotype_buf;
-    s_autotype_buf = g_strdup(text);
+    s_autotype_buf = copy;
     pio8255_autotype_set_key_down_ms((double)kd_ms);
     pio8255_autotype_set_key_up_ms((double)ku_ms);
     pio8255_set_autotype(s_autotype_buf);
+    g_mutex_unlock(&s_autotype_lock);
     g_free(old);
+}
+
+
+bool replay_autotype_peek_rest(char *buf, size_t size)
+{
+    if (!buf || size == 0) return false;
+    buf[0] = '\0';
+    int gen, done_gen, typed;
+    g_mutex_lock(&s_autotype_lock);
+    pio8255_autotype_progress(&gen, &done_gen, &typed);
+    bool running = (gen != done_gen) && (s_autotype_buf != NULL);
+    if (running)
+    {
+        size_t len = strlen(s_autotype_buf);
+        size_t off = (typed < 0) ? 0 : (size_t)typed;
+        if (off > len) off = len;
+        g_strlcpy(buf, s_autotype_buf + off, size);
+    };
+    g_mutex_unlock(&s_autotype_lock);
+    return running;
 }
 
 
@@ -915,6 +951,81 @@ static void replay_cmt_run(en_REPLAY_CMT_OP op, int32_t arg, const char *path, e
 
 
 /**
+ * @brief Nastaví nebo shodí bit REPLAY_HOOK_UI podle čekajících vstupů z UI.
+ *
+ * Bit drží, dokud čeká operace kazety, autotype, nové prodlevy autotype
+ * nebo změna okna VKBD mimo záznam; hlavní smyčka pak volá
+ * replay_on_frame_boundary() i bez záznamu.
+ *
+ * @pre Volající drží s_lock.
+ */
+static void replay_ui_hook_refresh_locked(void)
+{
+    bool any = !g_queue_is_empty(&s_ui_cmt) || s_pending_autotype || s_pending_delays;
+    for (int i = 0; i < REPLAY_KBD_COLS && !any; i++)
+    {
+        any = (s_off_vkbd_press[i] | s_off_vkbd_release[i]) != 0;
+    };
+    if (any) g_atomic_int_or((guint *)&g_replay_frame_hook, REPLAY_HOOK_UI);
+    else g_atomic_int_and((guint *)&g_replay_frame_hook, ~(guint)REPLAY_HOOK_UI);
+}
+
+
+/** @brief Zahodí čekající prodlevy autotype a změny VKBD mimo záznam. @pre Drží s_lock. */
+static void replay_ui_off_clear_locked(void)
+{
+    s_pending_delays = false;
+    memset(s_off_vkbd_press, 0, sizeof(s_off_vkbd_press));
+    memset(s_off_vkbd_release, 0, sizeof(s_off_vkbd_release));
+}
+
+
+/**
+ * @brief Provede (nebo zahodí) vstupy z UI čekající mimo záznam.
+ *
+ * Autotype, nové prodlevy autotype a změny okna VKBD, které UI zařadilo
+ * mimo záznam (replay_host_autotype(), replay_host_autotype_delays(),
+ * replay_host_vkbd_set()). Emu vlákno je tak mění samo: UI vlákno dřív
+ * zapisovalo ukazatel autotype a matici VKBD souběžně s jejich čtením.
+ *
+ * @param apply true = provést; false = zahodit (přehrávání).
+ * @pre Emu vlákno, neběží záznam.
+ */
+static void replay_ui_off_drain(bool apply)
+{
+    uint8_t press[REPLAY_KBD_COLS], release[REPLAY_KBD_COLS];
+    g_mutex_lock(&s_lock);
+    bool do_at = s_pending_autotype;
+    char *at_text = s_pending_autotype_text;
+    uint32_t kd = s_pending_kd_ms, ku = s_pending_ku_ms;
+    s_pending_autotype = false;
+    s_pending_autotype_text = NULL;
+    bool do_delays = s_pending_delays;
+    uint32_t dkd = s_pending_delay_kd_ms, dku = s_pending_delay_ku_ms;
+    memcpy(press, s_off_vkbd_press, sizeof(press));
+    memcpy(release, s_off_vkbd_release, sizeof(release));
+    replay_ui_off_clear_locked();
+    replay_ui_hook_refresh_locked();
+    g_mutex_unlock(&s_lock);
+
+    if (apply)
+    {
+        if (do_at) replay_apply_autotype(at_text, kd, ku);
+        if (do_delays)
+        {
+            pio8255_autotype_set_key_down_ms((double)dkd);
+            pio8255_autotype_set_key_up_ms((double)dku);
+        };
+        for (int i = 0; i < REPLAY_KBD_COLS; i++)
+        {
+            g_pio8255.vkbd_matrix[i] = (uint8_t)((g_pio8255.vkbd_matrix[i] & ~press[i]) | release[i]);
+        };
+    };
+    g_free(at_text);
+}
+
+
+/**
  * @brief Vyřídí operace kazety z UI.
  *
  * Mimo záznam je hned provede (tak jako dřív UI vlákno), při záznamu je
@@ -928,7 +1039,7 @@ static void replay_ui_cmt_drain(en_REPLAY_EV_AT at)
     {
         g_mutex_lock(&s_lock);
         st_REPLAY_UI_CMT *u = (st_REPLAY_UI_CMT *)g_queue_pop_head(&s_ui_cmt);
-        if (g_queue_is_empty(&s_ui_cmt)) g_atomic_int_and((guint *)&g_replay_frame_hook, ~(guint)REPLAY_HOOK_UI);
+        replay_ui_hook_refresh_locked();
         g_mutex_unlock(&s_lock);
         if (!u) break;
         if (!s_play) replay_cmt_run(u->op, u->arg, u->path, at);
@@ -938,7 +1049,7 @@ static void replay_ui_cmt_drain(en_REPLAY_EV_AT at)
 }
 
 
-/** @brief true = z UI čeká operace kazety. */
+/** @brief true = z UI čeká operace kazety, nebo vstup mimo záznam (bit REPLAY_HOOK_UI). */
 static bool replay_ui_cmt_pending(void)
 {
     return (g_atomic_int_get(&g_replay_frame_hook) & REPLAY_HOOK_UI) != 0;
@@ -1073,6 +1184,9 @@ static const char *replay_rec_start(const st_REPLAY_REQ *r, char *errbuf, size_t
     s_pending_autotype = false;
     g_free(s_pending_autotype_text);
     s_pending_autotype_text = NULL;
+    /* Vstupy z UI čekající mimo záznam do záznamu nepatří. */
+    replay_ui_off_clear_locked();
+    replay_ui_hook_refresh_locked();
     s_status.outcome = REPLAY_OUTCOME_NONE;
     s_status.outcome_message[0] = '\0';
     s_status.desync_parts[0] = '\0';
@@ -1748,8 +1862,13 @@ static void replay_pause_for_request(void)
 
 void replay_on_frame_boundary(void)
 {
-    /* Operace kazety z UI mimo záznam: provést hned na hranici snímku. */
-    if (!s_rec && !s_play && replay_ui_cmt_pending()) replay_ui_cmt_drain(REPLAY_AT_BOUNDARY);
+    /* Vstupy a operace kazety z UI mimo záznam: provést hned na hranici
+     * snímku, při přehrávání zahodit. */
+    if (!s_rec && replay_ui_cmt_pending())
+    {
+        replay_ui_off_drain(!s_play);
+        replay_ui_cmt_drain(REPLAY_AT_BOUNDARY);
+    };
     if (s_rec)
     {
         s_frame = replay_current_frame();
@@ -1802,8 +1921,12 @@ void replay_on_paused(void)
 {
     if (s_rec) replay_rec_paused();
     else if (s_play) replay_play_check_live_reset();
-    /* Mimo záznam operace kazety z UI hned, při přehrávání je zahodit. */
-    if (!s_rec && replay_ui_cmt_pending()) replay_ui_cmt_drain(REPLAY_AT_PAUSE);
+    /* Mimo záznam vstupy a operace kazety z UI hned, při přehrávání je zahodit. */
+    if (!s_rec && replay_ui_cmt_pending())
+    {
+        replay_ui_off_drain(!s_play);
+        replay_ui_cmt_drain(REPLAY_AT_PAUSE);
+    };
 
     if (!replay_have_request()) return;
 
@@ -1921,6 +2044,7 @@ void replay_shutdown(void)
         g_free(u->path);
         g_free(u);
     };
+    replay_ui_off_clear_locked();
     g_atomic_int_and((guint *)&g_replay_frame_hook, ~(guint)REPLAY_HOOK_UI);
     g_mutex_unlock(&s_lock);
     st_REPLAY_REQ *r;
@@ -1972,8 +2096,22 @@ void replay_host_vkbd_set(int col, int bit, bool pressed)
         g_mutex_unlock(&s_lock);
         return;
     };
-    if (pressed) g_pio8255.vkbd_matrix[col] &= (uint8_t)~(1u << bit);
-    else g_pio8255.vkbd_matrix[col] |= (uint8_t)(1u << bit);
+    /* Mimo záznam matici změní emu vlákno (replay_ui_off_drain()); platí
+     * poslední změna bitu. */
+    const uint8_t m = (uint8_t)(1u << bit);
+    g_mutex_lock(&s_lock);
+    if (pressed)
+    {
+        s_off_vkbd_press[col] |= m;
+        s_off_vkbd_release[col] &= (uint8_t)~m;
+    }
+    else
+    {
+        s_off_vkbd_release[col] |= m;
+        s_off_vkbd_press[col] &= (uint8_t)~m;
+    };
+    replay_ui_hook_refresh_locked();
+    g_mutex_unlock(&s_lock);
 }
 
 
@@ -1981,20 +2119,28 @@ void replay_host_autotype(const char *text, double kd_ms, double ku_ms)
 {
     int mode = g_atomic_int_get(&g_replay_mode);
     if (mode == REPLAY_MODE_PLAYING) return;
-    if (mode == REPLAY_MODE_RECORDING)
-    {
-        g_mutex_lock(&s_lock);
-        g_free(s_pending_autotype_text);
-        s_pending_autotype_text = g_strdup(text ? text : "");
-        s_pending_kd_ms = (uint32_t)kd_ms;
-        s_pending_ku_ms = (uint32_t)ku_ms;
-        s_pending_autotype = true;
-        g_mutex_unlock(&s_lock);
-        return;
-    };
-    pio8255_autotype_set_key_down_ms(kd_ms);
-    pio8255_autotype_set_key_up_ms(ku_ms);
-    pio8255_set_autotype((char *)text);
+    /* Při záznamu ho převezme bod B_f (zapíše ho), mimo záznam
+     * replay_ui_off_drain(); emu vlákno vždy dostane vlastní kopii textu. */
+    g_mutex_lock(&s_lock);
+    g_free(s_pending_autotype_text);
+    s_pending_autotype_text = g_strdup(text ? text : "");
+    s_pending_kd_ms = (uint32_t)kd_ms;
+    s_pending_ku_ms = (uint32_t)ku_ms;
+    s_pending_autotype = true;
+    replay_ui_hook_refresh_locked();
+    g_mutex_unlock(&s_lock);
+}
+
+
+void replay_host_autotype_delays(double kd_ms, double ku_ms)
+{
+    if (g_atomic_int_get(&g_replay_mode) != REPLAY_MODE_OFF) return;
+    g_mutex_lock(&s_lock);
+    s_pending_delay_kd_ms = (uint32_t)kd_ms;
+    s_pending_delay_ku_ms = (uint32_t)ku_ms;
+    s_pending_delays = true;
+    replay_ui_hook_refresh_locked();
+    g_mutex_unlock(&s_lock);
 }
 
 

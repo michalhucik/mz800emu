@@ -30,17 +30,32 @@ typedef struct ui_cmt_mzfsize_t
 
 ui_cmt_mzfsize_t g_ui_cmt_mzfsize = {NULL, 0, 0};
 
+/**
+ * @brief Zámek g_ui_cmt_mzfsize.
+ *
+ * Popup aktivuje jádro kazety z emu vlákna (otevření pásky, načtení
+ * souboru CMT hackem uvnitř instrukce), kreslí ho UI vlákno z kopie.
+ */
+static GMutex s_mzfsize_lock;
+
+/**
+ * @brief Otevře popup s varováním o větším souboru MZF (hook jádra kazety).
+ *
+ * @param filename Cesta k souboru (zkopíruje se).
+ * @param valid_size Velikost podle hlavičky MZF.
+ * @param file_size Skutečná velikost souboru.
+ * @note Libovolné vlákno (typicky emu vlákno); údaje chrání s_mzfsize_lock.
+ */
 void imgui_cmt_fix_mzfsize_popup_activate(const char *filename, int valid_size, int file_size)
 {
     g_print("MZF file size check: %s (%d) > %d\n", filename, file_size, valid_size);
 
-    if (g_ui_cmt_mzfsize.filename != NULL)
-    {
-        g_free((gpointer)g_ui_cmt_mzfsize.filename);
-    };
+    g_mutex_lock(&s_mzfsize_lock);
+    g_free((gpointer)g_ui_cmt_mzfsize.filename);
     g_ui_cmt_mzfsize.filename = g_strdup(filename);
     g_ui_cmt_mzfsize.valid_size = valid_size;
     g_ui_cmt_mzfsize.file_size = file_size;
+    g_mutex_unlock(&s_mzfsize_lock);
     g_gui->showCmtFixMzfsizeWindow = true;
 }
 
@@ -153,6 +168,12 @@ void imgui_cmt_fix_mzfsize_saveas_cb(baseui_fchooser_t *fch)
 
 void imgui_cmt_fix_mzfsize_popup(bool *p_open)
 {
+    /* Kopie údajů: activate je smí z emu vlákna kdykoli přepsat. */
+    g_mutex_lock(&s_mzfsize_lock);
+    ui_cmt_mzfsize_t cur = g_ui_cmt_mzfsize;
+    cur.filename = g_strdup(g_ui_cmt_mzfsize.filename ? g_ui_cmt_mzfsize.filename : "");
+    g_mutex_unlock(&s_mzfsize_lock);
+
     ImGui::OpenPopup(_L("MZF Size Warning"));
 
     if (ImGui::BeginPopupModal(_L("MZF Size Warning"), NULL, ImGuiWindowFlags_AlwaysAutoResize))
@@ -168,7 +189,7 @@ void imgui_cmt_fix_mzfsize_popup(bool *p_open)
         ImGui::TableSetColumnIndex(1);
         ImGui::Text(":");
         ImGui::TableSetColumnIndex(2);
-        ImGui::Text("%s", g_ui_cmt_mzfsize.filename);
+        ImGui::Text("%s", cur.filename);
 
         ImGui::TableNextRow();
         ImGui::TableSetColumnIndex(0);
@@ -176,7 +197,7 @@ void imgui_cmt_fix_mzfsize_popup(bool *p_open)
         ImGui::TableSetColumnIndex(1);
         ImGui::Text(":");
         ImGui::TableSetColumnIndex(2);
-        ImGui::Text("%d", g_ui_cmt_mzfsize.file_size - g_ui_cmt_mzfsize.valid_size);
+        ImGui::Text("%d", cur.file_size - cur.valid_size);
 
         ImGui::EndTable();
 
@@ -224,7 +245,7 @@ void imgui_cmt_fix_mzfsize_popup(bool *p_open)
             *p_open = false;
             ImGui::CloseCurrentPopup();
 
-            if (0 != baseui_tools_file_truncate(g_ui_cmt_mzfsize.filename, g_ui_cmt_mzfsize.valid_size))
+            if (0 != baseui_tools_file_truncate(cur.filename, cur.valid_size))
             {
                 fprintf(stderr, "%s(%d) - Error: %s\n", __func__, __LINE__, baseui_tools_strerror());
             }
@@ -243,10 +264,9 @@ void imgui_cmt_fix_mzfsize_popup(bool *p_open)
             ImGui::CloseCurrentPopup();
 
             ui_cmt_mzfsize_t *srcFile = g_new0(ui_cmt_mzfsize_t, 1);
-            srcFile->filename = g_ui_cmt_mzfsize.filename;
-            srcFile->valid_size = g_ui_cmt_mzfsize.valid_size;
-            srcFile->file_size = g_ui_cmt_mzfsize.file_size;
-            g_ui_cmt_mzfsize.filename = NULL;
+            srcFile->filename = g_strdup(cur.filename);
+            srcFile->valid_size = cur.valid_size;
+            srcFile->file_size = cur.file_size;
 
             const char *title = _("Save MZF file as");
             baseui_fchooser_t *fch = baseui_filechooser_open_rw_file(BASEUI_FCHOOSER_CAT_MZF, title, ".mzf, .m12, .mzt", NULL, NULL, "newfile.mzf", imgui_cmt_fix_mzfsize_saveas_cb, srcFile);
@@ -258,4 +278,5 @@ void imgui_cmt_fix_mzfsize_popup(bool *p_open)
 
         ImGui::EndPopup();
     };
+    g_free(cur.filename);
 }

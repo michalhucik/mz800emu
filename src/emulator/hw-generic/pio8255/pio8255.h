@@ -119,9 +119,48 @@ extern "C" {
      * stisknutá; bit aktivní = 0). Použití: light input-reset pro
      * vyčištění přiklepeného vkbd bitu. Definice v pio8255.c. */
     extern void pio8255_vkbd_matrix_reset ( void );
+    /**
+     * @brief Nastaví dobu stisku klávesy autotype.
+     * @param ms Doba v ms.
+     * @pre Emu vlákno (GUI ji mění přes replay_host_autotype_delays()) nebo
+     *      inicializace.
+     */
     extern void pio8255_autotype_set_key_down_ms ( double ms );
+
+    /**
+     * @brief Nastaví dobu uvolnění klávesy autotype.
+     * @param ms Doba v ms.
+     * @pre Emu vlákno (GUI ji mění přes replay_host_autotype_delays()) nebo
+     *      inicializace.
+     */
     extern void pio8255_autotype_set_key_up_ms ( double ms );
+
+    /**
+     * @brief Spustí autotype textu, nebo ho zastaví.
+     *
+     * Spuštění zvýší generaci autotype a vynuluje počet napsaných bajtů,
+     * zastavení i přirozený konec textu ji označí jako dokončenou (viz
+     * pio8255_autotype_progress()).
+     *
+     * @param txt Text (ukončený nulou) nebo NULL = zastavit. Text musí žít,
+     *        dokud autotype neskončí nebo ho nenahradí další volání; vlastní
+     *        ho volající (replay.c).
+     * @pre Emu vlákno (GUI autotype spouští přes replay_host_autotype()).
+     */
     extern void pio8255_set_autotype ( char *txt );
+
+    /**
+     * @brief Průběh autotype pro GUI (atomická čtení, libovolné vlákno).
+     *
+     * @param[out] gen Generace posledního spuštění (roste s každým
+     *        spuštěním, smí být NULL).
+     * @param[out] done_gen Generace posledního dokončeného nebo zastaveného
+     *        autotype (== gen: nic neběží; smí být NULL).
+     * @param[out] typed Počet zpracovaných bajtů textu poslední generace
+     *        (po přirozeném konci délka textu; smí být NULL).
+     * @note Tři hodnoty se čtou každá zvlášť; mezi nimi se smí změnit.
+     */
+    extern void pio8255_autotype_progress ( int *gen, int *done_gen, int *typed );
     extern int pio8255_autotype_get_matrix ( char c, uint8_t *ret, bool *ret_shift );
     extern uint8_t pio8255_read ( int addr );
 

@@ -3,9 +3,11 @@
  * @brief Fronta zásahů GUI do zařízení, provádí je emu vlákno.
  *
  * Menu a okna zařízení (FDC, QDisk, RAM disk, MemExt, IDE8, Unicard,
- * tiskárna) dřív měnila stav stroje přímo z UI vlákna souběžně s emulací:
+ * tiskárna, plotter, ROM, zadní DIP přepínač, Allow PSG1, joystick,
+ * kazeta) dřív měnila stav stroje přímo z UI vlákna souběžně s emulací:
  * uvolňovala a realokovala buffery, zavírala soubory, četla data do paměti
- * rozšíření. Emu vlákno přitom mohlo stejná data právě používat.
+ * rozšíření, přepisovala ROM. Emu vlákno přitom mohlo stejná data právě
+ * používat.
  *
  * Nově UI zásah jen zařadí (device_request_submit(): funkce a kopie
  * argumentů) a provede ho emu vlákno v device_request_poll(): v per-event

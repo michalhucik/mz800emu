@@ -90,6 +90,16 @@ extern "C"
 #endif
 
     void rom_init(void);
+    /**
+     * @brief Nainstaluje ROM podle řádku konfigurace a znovu použije patch CMT hacku.
+     *
+     * Přepíše g_memory.ROM (včetně CG-ROM) a g_rom.rom_cfg; uživatelskou ROM
+     * načte ze souborů, pokud ještě není načtená. Při chybě uživatelské ROM
+     * nainstaluje výchozí ROM.
+     *
+     * @param row Řádek g_rom_config->roms; NULL = výchozí ROM.
+     * @pre Emu vlákno (zásah z GUI přes rom_request.h) nebo inicializace.
+     */
     void rom_reinstall(st_ROM_CONFIG_ROW *row);
     int rom_user_defined_check_filepath(char **filepath, en_ROM_BOOL clear);
     int rom_user_defined_check_size(char **filepath, uint32_t size, en_ROM_BOOL clear);

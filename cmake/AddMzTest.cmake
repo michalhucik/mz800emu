@@ -139,7 +139,6 @@ list(APPEND _test_emu_sources
     ${CMAKE_SOURCE_DIR}/src/iface/iface_audio.c
     ${CMAKE_SOURCE_DIR}/src/iface/iface_audio_resampler.c
     ${CMAKE_SOURCE_DIR}/src/iface/iface_keyboard.c
-    ${CMAKE_SOURCE_DIR}/src/iface/iface_keyboard_event.c
     ${CMAKE_SOURCE_DIR}/src/iface/iface_video.c
 )
 

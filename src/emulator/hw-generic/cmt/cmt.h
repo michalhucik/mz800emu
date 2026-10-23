@@ -220,7 +220,7 @@ extern "C" {
      *
      * Obdoba cmt_tape_set_block_cmt_speed(): blok dostane pevnou rychlost
      * (CMTEXT_BLOCK_SPEED_SET) CMTSPEED_CUSTOM s danými délkami. Projeví se
-     * při příštím otevření bloku.
+     * při příštím otevření bloku; seznam bloků v GUI se označí k obnovení.
      *
      * @param block_id Index bloku v páskovém kontejneru.
      * @param pulses Délky pulzů (nesmí být NULL).
@@ -229,6 +229,27 @@ extern "C" {
      * @pre Voláno z emulátorového vlákna.
      */
     int cmt_tape_set_block_pulses ( int block_id, const st_MZTAPE_PULSES_LENGTH *pulses );
+
+    /**
+     * @brief Změní rychlost bloku pásky z výběru v seznamu bloků (GUI).
+     *
+     * Právě přehrávaný blok se nemění (EXIT_SUCCESS bez změny). Blok MZ
+     * formátu dostane rychlost CMTEXT_BLOCK_SPEED_DEFAULT (pro
+     * CMTSPEED_NONE), jinak CMTEXT_BLOCK_SPEED_SET; blok jiného formátu jen
+     * rychlost. Je-li blok připravený (aktuální), otevře se znovu, aby se
+     * stream přegeneroval. Nakonec obnoví seznam bloků v GUI.
+     *
+     * @param block_id Index bloku v páskovém kontejneru.
+     * @param cmtspeed CMTSPEED_NONE = výchozí rychlost Virtual CMT, poměr,
+     *        nebo CMTSPEED_CUSTOM (pak je @p pulses povinné).
+     * @param is_mz true = blok MZ formátu.
+     * @param pulses Vlastní délky pulzů pro CMTSPEED_CUSTOM, jinak NULL.
+     * @return EXIT_SUCCESS; EXIT_FAILURE bez pásky, u pásky bez indexu
+     *         bloků, mimo rozsah, bez pulzů u CMTSPEED_CUSTOM nebo když se
+     *         blok nepodařilo nastavit či znovu otevřít.
+     * @pre Emu vlákno (zásah z GUI přes cmt_request_set_block_speed()).
+     */
+    int cmt_tape_change_block_speed ( int block_id, en_CMTSPEED cmtspeed, bool is_mz, const st_MZTAPE_PULSES_LENGTH *pulses );
 
     /**
      * @brief Vrátí délky pulzů, se kterými Virtual CMT přehrává danou rychlost.

@@ -7,7 +7,10 @@
  * replay_on_frame_boundary(), paused smyčku volání replay_on_paused().
  *
  * Pokrývá:
- *   - mimo záznam zapisuje sken klávesnice a okno VKBD hned (jako dřív),
+ *   - mimo záznam zapisuje sken klávesnice hned (jako dřív), okno VKBD,
+ *     autotype a jeho prodlevy provede až emu vlákno (replay_on_paused() /
+ *     hranice snímku) z vlastní kopie textu; průběh autotype jde číst
+ *     pio8255_autotype_progress() a replay_autotype_peek_rest(),
  *   - při záznamu čeká matice z UI ("čekající matice") a reset na hranici
  *     snímku a teprve tam se převezme a zapíše do záznamu,
  *   - uložený soubor obsahuje události ve správných snímcích a polohách,
@@ -74,7 +77,7 @@ static void idle_matrix(uint8_t *m, int col, uint8_t value)
 }
 
 
-/* Mimo záznam: sken klávesnice a VKBD zapisují hned. */
+/* Mimo záznam: sken klávesnice zapisuje hned, VKBD až emu vlákno. */
 void test_off_mode_writes_immediately(void)
 {
     uint8_t m[10];
@@ -85,9 +88,21 @@ void test_off_mode_writes_immediately(void)
 
     pio8255_vkbd_matrix_reset();
     replay_host_vkbd_set(2, 1, true);
+    TEST_ASSERT_EQUAL_HEX8(0xFF, g_pio8255.vkbd_matrix[2]);
+    replay_on_paused();
     TEST_ASSERT_EQUAL_HEX8(0xFD, g_pio8255.vkbd_matrix[2]);
     replay_host_vkbd_set(2, 1, false);
+    next_frame();
     TEST_ASSERT_EQUAL_HEX8(0xFF, g_pio8255.vkbd_matrix[2]);
+
+    /* Stisk a uvolnění před provedením: platí poslední změna bitu. */
+    replay_host_vkbd_set(5, 7, true);
+    replay_host_vkbd_set(5, 7, false);
+    replay_host_vkbd_set(6, 0, true);
+    replay_on_paused();
+    TEST_ASSERT_EQUAL_HEX8(0xFF, g_pio8255.vkbd_matrix[5]);
+    TEST_ASSERT_EQUAL_HEX8(0xFE, g_pio8255.vkbd_matrix[6]);
+    pio8255_vkbd_matrix_reset();
 
     TEST_ASSERT_FALSE(replay_divert_reset_request());
 
@@ -367,6 +382,54 @@ void test_rtc_follows_emulated_time(void)
 }
 
 
+/* Mimo záznam: autotype a prodlevy spustí emu vlákno z vlastní kopie textu. */
+void test_off_mode_autotype_via_emu_thread(void)
+{
+    char text[8] = "AB";
+    int gen0, gen, done_gen, typed;
+    pio8255_autotype_progress(&gen0, NULL, NULL);
+    pio8255_autotype_set_key_down_ms(20);
+    pio8255_autotype_set_key_up_ms(20);
+
+    replay_host_autotype(text, 33.0, 44.0);
+    TEST_ASSERT_NULL(g_pio8255.vkbd_autotype);
+    replay_on_paused();
+    TEST_ASSERT_NOT_NULL(g_pio8255.vkbd_autotype);
+    TEST_ASSERT_TRUE(g_pio8255.vkbd_autotype != text);
+    TEST_ASSERT_EQUAL_DOUBLE(33.0, g_pio8255.vkbd_autotype_kd_ms);
+    TEST_ASSERT_EQUAL_DOUBLE(44.0, g_pio8255.vkbd_autotype_ku_ms);
+    pio8255_autotype_progress(&gen, &done_gen, &typed);
+    TEST_ASSERT_EQUAL_INT(gen0 + 1, gen);
+    TEST_ASSERT_NOT_EQUAL(gen, done_gen);
+    TEST_ASSERT_EQUAL_INT(0, typed);
+
+    /* Buffer volajícího se smí hned změnit. */
+    g_strlcpy(text, "XY", sizeof(text));
+    char rest[16];
+    TEST_ASSERT_TRUE(replay_autotype_peek_rest(rest, sizeof(rest)));
+    TEST_ASSERT_EQUAL_STRING("AB", rest);
+
+    /* Prodlevy za běhu nastaví až emu vlákno. */
+    replay_host_autotype_delays(55.0, 66.0);
+    TEST_ASSERT_EQUAL_DOUBLE(33.0, g_pio8255.vkbd_autotype_kd_ms);
+    next_frame();
+    TEST_ASSERT_EQUAL_DOUBLE(55.0, g_pio8255.vkbd_autotype_kd_ms);
+    TEST_ASSERT_EQUAL_DOUBLE(66.0, g_pio8255.vkbd_autotype_ku_ms);
+
+    /* Zastavení: generace dokončená, zbytek prázdný. */
+    replay_host_autotype(NULL, 20.0, 20.0);
+    replay_on_paused();
+    TEST_ASSERT_NULL(g_pio8255.vkbd_autotype);
+    pio8255_autotype_progress(&gen, &done_gen, NULL);
+    TEST_ASSERT_EQUAL_INT(gen, done_gen);
+    TEST_ASSERT_FALSE(replay_autotype_peek_rest(rest, sizeof(rest)));
+    TEST_ASSERT_EQUAL_STRING("", rest);
+
+    pio8255_autotype_set_key_down_ms(20);
+    pio8255_autotype_set_key_up_ms(20);
+}
+
+
 /* Start záznamu při běžícím autotype se odmítne. */
 void test_record_refused_while_autotype_runs(void)
 {
@@ -395,6 +458,7 @@ int main(int argc, char **argv)
 
     UNITY_BEGIN();
     RUN_TEST(test_off_mode_writes_immediately);
+    RUN_TEST(test_off_mode_autotype_via_emu_thread);
     RUN_TEST(test_recording_takes_inputs_at_frame_boundary);
     RUN_TEST(test_playback_ignores_live_input_and_ends);
     RUN_TEST(test_record_refused_while_autotype_runs);

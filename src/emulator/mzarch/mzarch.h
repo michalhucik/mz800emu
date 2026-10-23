@@ -185,8 +185,8 @@ extern "C"
      * @param mode Nová poloha přepínače.
      *
      * @note Na MZ-700 (MZARCH == 700) nic nedělá.
-     * @note Volá se z UI vlákna bez zámku (dosavadní praxe, zápis jedné
-     *       proměnné čtené emulačním vláknem).
+     * @pre Emu vlákno (menu zásah zařadí přes mzarch_request_mode_sw_set())
+     *      nebo inicializace před startem emulace (--mode-switch).
      */
     extern void mzarch_mode_sw_set(en_MZ800_MODE_SW mode);
 

@@ -95,11 +95,40 @@ extern "C"
     extern void iface_joy_subsystem_shutdown(void);
     extern int iface_joy_available_realdev_count(void);
     extern int iface_joy_get_realdev_info(int idx, st_IFACE_JOY_SYSDEVICE *joy_sysdevice);
+    /**
+     * @brief Otevře systémové zařízení pro port joysticku (předchozí zavře).
+     * @param joy_devid Port joysticku.
+     * @param joy_sysdevice Zařízení ze seznamu dostupných (kopíruje se).
+     * @return EXIT_SUCCESS; EXIT_FAILURE (port mimo rozsah, SDL zařízení
+     *         neotevřelo - port pak zůstane bez zařízení).
+     * @note UI vlákno; bere zámek zařízení modulu (blokující), iface_joy_scan()
+     *       mezitím vrací poslední stav.
+     */
     extern int iface_joy_open_sysdevice(en_JOY_DEVID joy_devid, st_IFACE_JOY_SYSDEVICE *joy_sysdevice);
+
+    /**
+     * @brief Zavře zařízení portu joysticku (handle SDL uvolní).
+     * @param joy_devid Port joysticku.
+     * @note UI vlákno nebo ukončení; bere zámek zařízení modulu (blokující).
+     */
     extern void iface_joy_close_device(en_JOY_DEVID joy_devid);
+
+    /**
+     * @brief Nastaví mapování os a tlačítek portu joysticku.
+     * @param joy_devid Port joysticku (mimo rozsah = nic).
+     * @param params Parametry (kopírují se).
+     * @note UI vlákno; bere zámek zařízení modulu (blokující).
+     */
     extern void iface_joy_set_params(en_JOY_DEVID joy_devid, st_IFACE_JOY_PARAMS *params);
     extern void iface_joy_set_default_params(st_IFACE_JOY_PARAMS *params);
     extern int iface_joy_open_configured_joyid(en_JOY_DEVID joy_devid);
+    /**
+     * @brief Přečte stav joysticku portu jako bajt (aktivní v 0, bity en_JOY_STATEBIT).
+     * @param joy_devid Port joysticku.
+     * @return Stav; 0FFh bez zařízení nebo mimo rozsah. Když zámek zařízení
+     *         právě drží UI (otevírá nebo zavírá zařízení), poslední stav.
+     * @note Emu vlákno i UI; zámek zařízení jen zkouší (nikdy nečeká).
+     */
     extern uint8_t iface_joy_scan(en_JOY_DEVID joy_devid);
 
 #ifdef __cplusplus

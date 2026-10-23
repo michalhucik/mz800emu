@@ -26,6 +26,8 @@
 #if HAVE_JOY
 #include "iface/iface_joy.h"
 #include "hw-generic/joy/joy.h"
+#include "hw-generic/joy/joy_request.h"
+#include "emulator/replay.h"
 #endif
 
 extern "C"
@@ -123,7 +125,15 @@ static void init_state_from_current(void)
     s_state.initialized = true;
 }
 
-/* Aplikovani zmen z UI do emulatoroveho stavu */
+/*
+ * Aplikovani zmen z UI do emulatoroveho stavu.
+ *
+ * Typ zařízení změní emu vlákno (joy_request_set_type()). Zařízení SDL
+ * otevírá a zavírá UI vlákno pod zámkem iface_joy. Při záznamu nebo
+ * přehrávání vstupů změnu typu emu vlákno odmítne (s hlášením), proto se
+ * pak zařízení toho portu nemění; výběr zařízení a mapování při stejném
+ * typu se použije (stav joysticku záznam vzorkuje sám).
+ */
 static void apply_changes(void)
 {
     g_iface_joy.startup_joy_subsystem = s_state.startup_joy_subsystem;
@@ -135,7 +145,14 @@ static void apply_changes(void)
         en_JOY_TYPE old_type = g_joy.dev[i].type;
 
         /* Zmena typu */
-        g_joy.dev[i].type = new_type;
+        if (new_type != old_type)
+        {
+            joy_request_set_type(devid, new_type);
+        }
+        if ((new_type != old_type) && replay_is_active())
+        {
+            continue;
+        }
 
         if (new_type == JOY_TYPE_JOYSTICK)
         {

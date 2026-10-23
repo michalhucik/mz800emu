@@ -25,6 +25,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <glib.h>
 
 #include "pio8255.h"
 #include "mzarch/mzarch.h"
@@ -106,10 +107,38 @@ void pio8255_autotype_set_key_up_ms(double ms)
     g_pio8255.vkbd_autotype_ku_ticks = ms * (GDGCLK_BASE / 1000);
 }
 
+/** @brief Začátek textu autotype poslední generace (emu vlákno). */
+static const char *s_autotype_start = NULL;
+/** @brief Generace posledního spuštění autotype (atomicky). */
+static gint s_autotype_gen = 0;
+/** @brief Generace posledního dokončeného / zastaveného autotype (atomicky). */
+static gint s_autotype_done_gen = 0;
+/** @brief Zpracované bajty textu poslední generace (atomicky). */
+static gint s_autotype_typed = 0;
+
+
 void pio8255_set_autotype(char *txt)
 {
+    if (txt)
+    {
+        s_autotype_start = txt;
+        g_atomic_int_set(&s_autotype_typed, 0);
+        g_atomic_int_inc(&s_autotype_gen);
+    }
+    else
+    {
+        g_atomic_int_set(&s_autotype_done_gen, g_atomic_int_get(&s_autotype_gen));
+    };
     g_pio8255.vkbd_autotype = txt;
     g_pio8255.vkbd_autotype_col = -1;
+}
+
+
+void pio8255_autotype_progress(int *gen, int *done_gen, int *typed)
+{
+    if (gen) *gen = g_atomic_int_get(&s_autotype_gen);
+    if (done_gen) *done_gen = g_atomic_int_get(&s_autotype_done_gen);
+    if (typed) *typed = g_atomic_int_get(&s_autotype_typed);
 }
 
 void pio8255_init(void)
@@ -672,12 +701,14 @@ uint8_t pio8255_read(int addr)
                 };
                 g_pio8255.vkbd_autotype_start_ticks = gdg_get_total_ticks();
                 g_pio8255.vkbd_autotype_keydown = (g_pio8255.vkbd_autotype_ret_shift) ? 0 : 1;
+                /* Průběh pro GUI (pio8255_autotype_progress()). */
+                g_atomic_int_set(&s_autotype_typed, (gint)(g_pio8255.vkbd_autotype - s_autotype_start));
                 /* Konec textu: autotype skončil. Ukončí ho emu vlákno (dřív to
                  * dělalo jen otevřené okno autotype z UI vlákna, se zavřeným
                  * oknem zůstal "běžící" napořád). */
                 if ((g_pio8255.vkbd_autotype_col == -1) && (g_pio8255.vkbd_autotype[0] == 0x00))
                 {
-                    g_pio8255.vkbd_autotype = NULL;
+                    pio8255_set_autotype(NULL);
                 };
             };
 

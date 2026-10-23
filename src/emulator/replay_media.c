@@ -18,6 +18,7 @@
 #include "hw-generic/cmt/cmtext_block.h"
 #include "hw-generic/cmt/cmtext_container.h"
 #include "hw-generic/cmt/cmthack.h"
+#include "device_request.h"
 #include <json-glib/json-glib.h>
 
 
@@ -491,7 +492,8 @@ static void replay_media_restore_cmt(void)
 }
 
 
-bool replay_media_cmt_execute(en_REPLAY_CMT_OP op, int32_t arg, const char *path)
+/** @brief Provede operaci kazety (tělo replay_media_cmt_execute(), bez zámku). */
+static bool replay_media_cmt_execute_unlocked(en_REPLAY_CMT_OP op, int32_t arg, const char *path)
 {
     switch (op)
     {
@@ -512,6 +514,17 @@ bool replay_media_cmt_execute(en_REPLAY_CMT_OP op, int32_t arg, const char *path
         default: break;
     };
     return false;
+}
+
+
+bool replay_media_cmt_execute(en_REPLAY_CMT_OP op, int32_t arg, const char *path)
+{
+    /* Okna kazety čtou pásku pod zámkem stavu zařízení (vysunutí uvolňuje
+     * kontejner); UI pod zámkem na emu vlákno nečeká. */
+    device_state_lock();
+    bool ok = replay_media_cmt_execute_unlocked(op, arg, path);
+    device_state_unlock();
+    return ok;
 }
 
 

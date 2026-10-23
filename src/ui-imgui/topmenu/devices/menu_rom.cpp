@@ -13,6 +13,7 @@
 #include "ui-imgui/mywidgets/mywidgets.h"
 #include "emulator/emulator.h"
 #include "emulator/hw-generic/memory/rom.h"
+#include "emulator/hw-generic/memory/rom_request.h"
 
 extern "C"
 {
@@ -44,7 +45,7 @@ void imgui_menu_rom(void)
             {
                 if (MenuRadioItem(_(row->description), ROM_TEST_CURRENT(row)))
                 {
-                    rom_reinstall(row);
+                    rom_request_select(row);
                 }
             }
         }

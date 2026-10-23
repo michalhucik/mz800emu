@@ -29,6 +29,7 @@
 
 #include "mzarch/mzarch_config.h"
 #include "hw-generic/pio8255/pio8255.h"
+#include "emulator/replay.h"
 
 #include "ui-imgui/debugger/chip_window_helpers.h"
 #include "ui-imgui/debugger/ppi_window.h"
@@ -395,13 +396,15 @@ void imgui_ppi_state_window(bool *p_open)
             ImGui::TableSetupColumn("value");
             ImGui::TableSetupColumn("extra");
 
-            /* vkbd_autotype - string pointer (může být NULL). */
+            /* vkbd_autotype - zbytek textu. Text vlastní emu vlákno a
+             * nahrazuje ho; kopie pod zámkem jeho životnosti. */
+            static char s_autotype_rest[256];
             ImGui::TableNextRow();
             ImGui::TableSetColumnIndex(0);
             ImGui::TextUnformatted("vkbd_autotype");
             ImGui::TableSetColumnIndex(1);
-            if (g_pio8255.vkbd_autotype != NULL)
-                ImGui::Text("\"%s\"", g_pio8255.vkbd_autotype);
+            if (replay_autotype_peek_rest(s_autotype_rest, sizeof(s_autotype_rest)))
+                ImGui::Text("\"%s\"", s_autotype_rest);
             else
                 ImGui::TextDisabled("%s", _("(none)"));
             ImGui::TableSetColumnIndex(2);

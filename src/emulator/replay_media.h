@@ -87,7 +87,9 @@ extern "C"
      * @param path Cesta u REPLAY_CMT_RECORD (při přehrání dočasná).
      * @return true = operace se provedla (u složených i "nic nedělat" je
      *         úspěch); false = selhala (bez pásky, neplatný blok, cesta).
-     * @pre Emu vlákno nebo pozastavená emulace.
+     * @pre Emu vlákno; volající nedrží zámek stavu zařízení.
+     * @note Operaci provede pod device_state_lock(): okna kazety čtou pásku
+     *       pod tímtéž zámkem.
      */
     bool replay_media_cmt_execute(en_REPLAY_CMT_OP op, int32_t arg, const char *path);
 

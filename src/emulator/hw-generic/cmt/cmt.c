@@ -57,6 +57,7 @@
 #include "cfgmain.h"
 
 #include "cmthack.h"
+#include "cmt_request.h"
 #include "libs/cmtspeed/cmtspeed.h"
 #include "cmtext.h"
 #include "cmtext_block.h"
@@ -783,7 +784,7 @@ int cmt_record_to_file(const char *path)
  * @param cmtspeed Poměr nebo CMTSPEED_CUSTOM.
  * @return EXIT_SUCCESS; EXIT_FAILURE, pokud se blok nepodařilo přegenerovat
  *         (výchozí rychlost se pak nemění).
- * @pre Voláno z emulátorového vlákna nebo z UI vlákna při zastaveném transportu.
+ * @pre Voláno z emulátorového vlákna (zásah z GUI přes cmt_request_set_speed()).
  */
 int cmt_change_speed(en_CMTSPEED cmtspeed)
 {
@@ -835,7 +836,8 @@ int cmt_change_speed(en_CMTSPEED cmtspeed)
  *
  * @pre Voláno z emulátorového vlákna.
  * @post Při úspěchu cmtext_container_get_block_speed() == SET a
- *       cmtext_container_get_block_cmt_speed() == cmtspeed pro block_id.
+ *       cmtext_container_get_block_cmt_speed() == cmtspeed pro block_id;
+ *       seznam bloků v GUI je označený k obnovení.
  */
 int cmt_tape_set_block_cmt_speed(int block_id, en_CMTSPEED cmtspeed)
 {
@@ -855,6 +857,7 @@ int cmt_tape_set_block_cmt_speed(int block_id, en_CMTSPEED cmtspeed)
         return -1;
     cmtext_container_set_block_speed(container, block_id, CMTEXT_BLOCK_SPEED_SET);
     cmtext_container_set_block_cmt_speed(container, block_id, cmtspeed);
+    ui_cmt_window_update();
     return 0;
 }
 
@@ -889,7 +892,51 @@ int cmt_tape_set_block_pulses(int block_id, const st_MZTAPE_PULSES_LENGTH *pulse
         return -1;
     cmtext_container_set_block_speed(container, block_id, CMTEXT_BLOCK_SPEED_SET);
     cmtext_container_set_block_cmt_speed(container, block_id, CMTSPEED_CUSTOM);
+    ui_cmt_window_update();
     return 0;
+}
+
+int cmt_tape_change_block_speed(int block_id, en_CMTSPEED cmtspeed, bool is_mz, const st_MZTAPE_PULSES_LENGTH *pulses)
+{
+    if ((!CMT_TEST_FILLED) || (!g_cmt.ext))
+        return EXIT_FAILURE;
+    st_CMTEXT_CONTAINER *container = cmtext_get_container(g_cmt.ext);
+    /* stejné meze jako cmt_tape_set_block_cmt_speed() */
+    if ((!container)
+        || (cmtext_container_get_type(container) != CMTEXT_CONTAINER_TYPE_SIMPLE_TAPE)
+        || (block_id < 0)
+        || (block_id >= cmtext_container_get_count_blocks(container)))
+        return EXIT_FAILURE;
+
+    bool is_ready = (block_id == cmtext_block_get_block_id(g_cmt.ext->block));
+
+    /* právě přehrávaný blok se nemění */
+    if (is_ready && CMT_TEST_PLAY)
+        return EXIT_SUCCESS;
+
+    if (cmtspeed_is_custom(cmtspeed))
+    {
+        if ((!pulses) || (EXIT_SUCCESS != cmtext_container_set_block_pulses(container, block_id, pulses)))
+            return EXIT_FAILURE;
+    };
+
+    if (is_mz)
+    {
+        en_CMTEXT_BLOCK_SPEED blspeed = (cmtspeed == CMTSPEED_NONE) ? CMTEXT_BLOCK_SPEED_DEFAULT : CMTEXT_BLOCK_SPEED_SET;
+        cmtext_container_set_block_speed(container, block_id, blspeed);
+    };
+
+    cmtext_container_set_block_cmt_speed(container, block_id, cmtspeed);
+
+    int ret = EXIT_SUCCESS;
+    if (is_ready)
+    {
+        if (EXIT_SUCCESS != g_cmt.ext->container->cb_open_block(block_id))
+            ret = EXIT_FAILURE;
+    };
+
+    ui_cmt_window_update();
+    return ret;
 }
 
 int cmt_get_speed_pulses(en_CMTSPEED cmtspeed, const st_MZTAPE_PULSES_LENGTH *custom, st_MZTAPE_PULSES_LENGTH *pulses)
@@ -1201,15 +1248,15 @@ static void cmt_ui_open_cb(baseui_fchooser_t *fch)
         return;
     };
 
-    char *filename = fch->selected_filePathName;
-    cmt_open_file_by_extension(filename);
-    baseui_filechooser_destroy(fch);
-
+    /* Pásku otevře emu vlákno (cmt_request.h); callback běží v UI vlákně
+     * při vykreslení dialogu. */
     bool play_immediately = GPOINTER_TO_INT(fch->user_data);
-    if (play_immediately)
+    const char *filename = fch->selected_filePathName;
+    if ((filename) && (filename[0]) && (0 == cmt_request_open(filename, play_immediately)))
     {
-        cmt_play();
+        baseui_error("Sorry, filepath is too big '%s'\n", fch->selected_filePathName);
     };
+    baseui_filechooser_destroy(fch);
 }
 
 void cmt_ui_open(bool play_immediately)

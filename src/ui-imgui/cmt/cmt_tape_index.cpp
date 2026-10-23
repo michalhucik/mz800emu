@@ -14,6 +14,8 @@
 #include "ui-imgui/filechooser/res/CustomFont.h"
 #include "emulator/hw-generic/cmt/cmt.h"
 #include "emulator/hw-generic/cmt/cmthack.h"
+#include "emulator/hw-generic/cmt/cmt_request.h"
+#include "emulator/device_request.h"
 #include "hw-generic/cmt/cmtext.h"
 #include "hw-generic/cmt/cmtext_block.h"
 #include "hw-generic/cmt/cmtext_container.h"
@@ -35,10 +37,54 @@ extern "C"
 {
     void imgui_cmt_tape_index_window(bool *p_open);
     void imgui_cmt_tape_update_filelist(void);
+    void imgui_cmt_tape_filelist_refresh(void);
 };
 
+/**
+ * @brief Příznak "seznam bloků pásky je zastaralý" (atomický, libovolné vlákno).
+ *
+ * Jádro kazety hlásí změnu pásky z emu vlákna; seznam bloků
+ * (g_tapeFileList) ale smí měnit jen UI vlákno, které ho při kreslení
+ * prochází. Výchozí 1: seznam se sestaví při prvním snímku.
+ */
+static gint s_filelist_dirty = 1;
+
+/**
+ * @brief Označí seznam bloků pásky jako zastaralý (ui_cmt_window_update() jádra).
+ *
+ * Seznam sám nepřestavuje, jen nastaví příznak; přestaví ho UI vlákno
+ * v imgui_cmt_tape_filelist_refresh().
+ *
+ * @note Libovolné vlákno (typicky emu vlákno ze zásahu do kazety).
+ */
 void imgui_cmt_tape_update_filelist(void)
 {
+    g_atomic_int_set(&s_filelist_dirty, 1);
+}
+
+/**
+ * @brief Přestaví seznam bloků pásky, když ho jádro označilo jako zastaralý.
+ *
+ * @pre UI vlákno, drží zámek stavu zařízení (device_state_lock()): čte
+ *      kontejner pásky, který emu vlákno mění při otevření a vysunutí.
+ * @post Při změně (příznak nebo právě otevřené okno Virtual CMT)
+ *       g_tapeFileList odpovídá vložené pásce; bez pásky, se zavřeným oknem
+ *       Virtual CMT nebo u pásky bez indexu bloků je prázdný a okno Tape
+ *       Filelist zavřené.
+ */
+void imgui_cmt_tape_filelist_refresh(void)
+{
+    /* Seznam se sestavuje jen při otevřeném okně Virtual CMT; po jeho
+     * otevření ho sestavit znovu. */
+    static bool s_last_show = false;
+    bool show_opened = (g_gui->showVirtualCmtWindow && !s_last_show);
+    s_last_show = g_gui->showVirtualCmtWindow;
+
+    if (!g_atomic_int_compare_and_exchange(&s_filelist_dirty, 1, 0) && !show_opened)
+    {
+        return;
+    };
+
     g_tapeFileList.clear();
 
     if ((!CMT_TEST_FILLED) || (!g_gui->showVirtualCmtWindow))
@@ -82,39 +128,9 @@ void imgui_cmt_tape_set_block(int block_id, bool forced)
  */
 void imgui_cmt_tape_speed_changed(const TapeFileEntry_t &entry, en_CMTSPEED cmtspeed, const st_MZTAPE_PULSES_LENGTH *pulses = nullptr)
 {
-    // TODO: prozatim nic nezamykame, takze tady se radeji pokusime alespon zjistit aktualni stav prehravani
-    bool is_ready = (entry.id == cmtext_block_get_block_id(g_cmt.ext->block)) ? true : false;
-
-    if (!(is_ready && CMT_TEST_PLAY))
-    {
-        st_CMTEXT_CONTAINER *container = cmtext_get_container(g_cmt.ext);
-
-        if (cmtspeed_is_custom(cmtspeed))
-        {
-            if ((!pulses) || (EXIT_SUCCESS != cmtext_container_set_block_pulses(container, entry.id, pulses)))
-            {
-                return;
-            };
-        };
-
-        if (entry.cmtspeed_type == CMT_SPEED_TYPE_MZ)
-        {
-            en_CMTEXT_BLOCK_SPEED blspeed = (cmtspeed == CMTSPEED_NONE) ? CMTEXT_BLOCK_SPEED_DEFAULT : CMTEXT_BLOCK_SPEED_SET;
-            cmtext_container_set_block_speed(container, entry.id, blspeed);
-        };
-
-        cmtext_container_set_block_cmt_speed(container, entry.id, cmtspeed);
-
-        if (is_ready)
-        {
-            if (EXIT_SUCCESS != g_cmt.ext->container->cb_open_block(entry.id))
-            {
-                return;
-            };
-        };
-    };
-
-    imgui_cmt_tape_update_filelist();
+    /* Blok změní emu vlákno (cmt_tape_change_block_speed()), seznam bloků
+     * pak označí jako zastaralý. */
+    cmt_request_set_block_speed(entry.id, cmtspeed, entry.cmtspeed_type == CMT_SPEED_TYPE_MZ, pulses);
 }
 
 void imgui_cmt_tape_create_speed_combo(const TapeFileEntry_t &entry)

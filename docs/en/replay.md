@@ -67,8 +67,9 @@ While recording:
   replay could not repeat them. Over MCP the tools that change the
   machine this way (snapshot load, media, settings) are refused with an
   explanation. A device change that does not come from the menu (the
-  Alt+1..4 shortcut, a file dialog or a device window opened before the
-  recording started) is refused with a message as well.
+  Alt+1..4 shortcut, a file dialog, a device window opened before the
+  recording started or a changed joystick type in Joystick Setup) is
+  refused with a message as well.
 - **The tape** can be controlled as usual (Virtual CMT and Tape Filelist
   windows, MCP `emu_cmt_*` transport, block seek and recording to tape).
   Inserting another tape, the tape speed, custom pulses, polarity and the

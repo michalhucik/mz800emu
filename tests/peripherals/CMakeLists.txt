@@ -147,3 +147,36 @@ mz_add_test(printer-request
     SOURCES  test_printer_request.c
     LABELS   "emu;peripherals"
 )
+
+# Zásahy GUI do přepínačů stroje (mzarch_request.h): SW1 a PSG1 až
+# v device_request_poll(), při replay neprovedeno.
+mz_add_test(mzarch-request
+    TYPE     EMU
+    SOURCES  test_mzarch_request.c
+    LABELS   "emu;peripherals"
+)
+
+# Zásahy GUI do ROM (rom_request.h): výběr ROM a nastavení uživatelské
+# ROM až v device_request_poll(), při replay neprovedeno.
+mz_add_test(rom-request
+    TYPE     EMU
+    SOURCES  test_rom_request.c
+    LABELS   "emu;peripherals"
+)
+
+# Zásahy GUI do kazety (cmt_request.h): otevření, rychlost, pulzy, rychlost
+# bloku, CMT hack, Fix FNAME a polarita až v device_request_poll(), při
+# replay neprovedeno.
+mz_add_test(cmt-request
+    TYPE     EMU
+    SOURCES  test_cmt_request.c
+    LABELS   "emu;peripherals"
+)
+
+# Zásahy GUI do joysticků (joy_request.h): typ zařízení až
+# v device_request_poll(), při replay neprovedeno.
+mz_add_test(joy-request
+    TYPE     EMU
+    SOURCES  test_joy_request.c
+    LABELS   "emu;peripherals"
+)

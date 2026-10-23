@@ -19,6 +19,22 @@
 
 st_IFACE_JOY g_iface_joy = {0};
 
+/**
+ * @brief Zámek handlů a parametrů otevřených zařízení (g_iface_joy.dev[]).
+ *
+ * UI vlákno zařízení otevírá a zavírá (okno Joystick Setup), emu vlákno
+ * je čte v iface_joy_scan(). Zavření uvolní handle SDL, který by scan
+ * jinak mohl ještě použít. UI ho bere blokujícím voláním, scan jen
+ * zkouší (g_mutex_trylock): emu vlákno na UI nikdy nečeká.
+ */
+static GMutex s_dev_lock;
+
+/** @brief Poslední stav z iface_joy_scan() (vrací se, když zámek drží UI; atomicky). */
+static gint s_last_scan[JOY_DEVID_COUNT] = {0xff, 0xff};
+
+/** @brief Zavře zařízení (tělo iface_joy_close_device()), volající drží s_dev_lock. */
+static void iface_joy_close_device_unlocked(en_JOY_DEVID joy_devid);
+
 bool iface_joy_init(void)
 {
     return iface_joy_lowlevel_init();
@@ -155,12 +171,21 @@ void iface_joy_set_params(en_JOY_DEVID joy_devid, st_IFACE_JOY_PARAMS *params)
 {
     if (joy_devid < JOY_DEVID_COUNT)
     {
+        g_mutex_lock(&s_dev_lock);
         g_iface_joy.dev[joy_devid].params = *params;
+        g_mutex_unlock(&s_dev_lock);
     }
 }
 
 /* Zavreni zarizeni */
 void iface_joy_close_device(en_JOY_DEVID joy_devid)
+{
+    g_mutex_lock(&s_dev_lock);
+    iface_joy_close_device_unlocked(joy_devid);
+    g_mutex_unlock(&s_dev_lock);
+}
+
+static void iface_joy_close_device_unlocked(en_JOY_DEVID joy_devid)
 {
     st_IFACE_JOY_DEVICE *dev = &g_iface_joy.dev[joy_devid];
 
@@ -183,8 +208,10 @@ int iface_joy_open_sysdevice(en_JOY_DEVID joy_devid, st_IFACE_JOY_SYSDEVICE *sys
     if (joy_devid >= JOY_DEVID_COUNT)
         return EXIT_FAILURE;
 
+    g_mutex_lock(&s_dev_lock);
+
     /* Zavrit pripadne predchozi zarizeni */
-    iface_joy_close_device(joy_devid);
+    iface_joy_close_device_unlocked(joy_devid);
 
     st_IFACE_JOY_DEVICE *dev = &g_iface_joy.dev[joy_devid];
     dev->sysdevice = *sysdev;
@@ -195,6 +222,7 @@ int iface_joy_open_sysdevice(en_JOY_DEVID joy_devid, st_IFACE_JOY_SYSDEVICE *sys
         dev->gamepad = SDL_OpenGamepad(sysdev->instance_id);
         if (!dev->gamepad)
         {
+            g_mutex_unlock(&s_dev_lock);
             g_warning("Cannot open gamepad: %s", SDL_GetError());
             return EXIT_FAILURE;
         }
@@ -207,6 +235,7 @@ int iface_joy_open_sysdevice(en_JOY_DEVID joy_devid, st_IFACE_JOY_SYSDEVICE *sys
         dev->joystick = SDL_OpenJoystick(sysdev->instance_id);
         if (!dev->joystick)
         {
+            g_mutex_unlock(&s_dev_lock);
             g_warning("Cannot open joystick: %s", SDL_GetError());
             return EXIT_FAILURE;
         }
@@ -218,6 +247,8 @@ int iface_joy_open_sysdevice(en_JOY_DEVID joy_devid, st_IFACE_JOY_SYSDEVICE *sys
         dev->sysdevice.axes = SDL_GetNumJoystickAxes(dev->joystick);
         dev->sysdevice.buttons = SDL_GetNumJoystickButtons(dev->joystick);
     }
+
+    g_mutex_unlock(&s_dev_lock);
 
     g_print("Joystick JOY%d: opened '%s' (axes=%d, buttons=%d, gamepad=%d)\n",
             joy_devid, dev->sysdevice.name,
@@ -254,13 +285,22 @@ int iface_joy_open_configured_joyid(en_JOY_DEVID joy_devid)
     return EXIT_FAILURE;
 }
 
-/* Polling stavu joysticku — konverze na 8-bit (active-low) */
+/*
+ * Polling stavu joysticku — konverze na 8-bit (active-low).
+ *
+ * Volá ho emu vlákno (čtení portu joysticku) i okno Joystick Setup. Když
+ * zámek zařízení právě drží UI (otevírá nebo zavírá zařízení), vrátí
+ * poslední přečtený stav a na UI nečeká.
+ */
 uint8_t iface_joy_scan(en_JOY_DEVID joy_devid)
 {
     uint8_t state = 0xff; /* vychozi: nic nestisknuto */
 
     if (joy_devid >= JOY_DEVID_COUNT)
         return state;
+
+    if (!g_mutex_trylock(&s_dev_lock))
+        return (uint8_t)g_atomic_int_get(&s_last_scan[joy_devid]);
 
     st_IFACE_JOY_DEVICE *dev = &g_iface_joy.dev[joy_devid];
     st_IFACE_JOY_PARAMS *p = &dev->params;
@@ -318,6 +358,8 @@ uint8_t iface_joy_scan(en_JOY_DEVID joy_devid)
             JOY_STATEBIT_RESET(state, JOY_STATEBIT_TRIG2);
     }
 
+    g_atomic_int_set(&s_last_scan[joy_devid], (gint)state);
+    g_mutex_unlock(&s_dev_lock);
     return state;
 }
 

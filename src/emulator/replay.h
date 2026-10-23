@@ -303,8 +303,15 @@ extern "C"
     /**
      * @brief Stisk nebo uvolnění klávesy okna virtuální klávesnice.
      *
-     * Mimo záznam změní bit `g_pio8255.vkbd_matrix` hned, při záznamu
+     * Mimo záznam zařadí změnu bitu `g_pio8255.vkbd_matrix` pro emu vlákno
+     * (provede ji nejbližší replay_on_frame_boundary() nebo
+     * replay_on_paused(); platí poslední změna bitu), při záznamu změní
      * čekající matici okna, při přehrávání nic.
+     *
+     * @param col Sloupec matice (mimo rozsah = nic).
+     * @param bit Bit sloupce 0-7 (mimo rozsah = nic).
+     * @param pressed true = stisk.
+     * @note UI vlákno.
      */
     void replay_host_vkbd_set(int col, int bit, bool pressed);
 
@@ -315,11 +322,42 @@ extern "C"
      * @param kd_ms Doba stisku v ms.
      * @param ku_ms Doba uvolnění v ms.
      *
-     * Mimo záznam nastaví časy a pio8255_set_autotype(text) hned (text
-     * musí žít, dokud autotype běží - jako dřív); při záznamu se převezme
-     * v bodě B_f (kopie), při přehrávání se zahodí.
+     * Text se zkopíruje. Mimo záznam ho spustí emu vlákno v nejbližším
+     * replay_on_frame_boundary() nebo replay_on_paused() (vlastní kopie,
+     * UI buffer může volající hned měnit); při záznamu se převezme v bodě
+     * B_f a zapíše; při přehrávání se zahodí. Průběh ukáže
+     * pio8255_autotype_progress().
+     *
+     * @note UI vlákno.
      */
     void replay_host_autotype(const char *text, double kd_ms, double ku_ms);
+
+    /**
+     * @brief Změna dob stisku a uvolnění běžícího autotype z okna.
+     *
+     * Mimo záznam je nastaví emu vlákno (jako replay_host_autotype());
+     * při záznamu a přehrávání se změna neuplatní (záznam by ji
+     * nezopakoval).
+     *
+     * @param kd_ms Doba stisku v ms.
+     * @param ku_ms Doba uvolnění v ms.
+     * @note UI vlákno.
+     */
+    void replay_host_autotype_delays(double kd_ms, double ku_ms);
+
+    /**
+     * @brief Zkopíruje zbytek textu běžícího autotype (pro okna GUI).
+     *
+     * Text autotype vlastní emu vlákno a nahrazuje ho; kopie běží pod
+     * zámkem jeho životnosti, takže se nečte uvolněná paměť.
+     *
+     * @param buf  Cílový buffer (nesmí být NULL).
+     * @param size Jeho velikost (0 = nic); delší zbytek se ořízne.
+     * @return true = autotype běží (buf = zbytek textu); false = neběží
+     *         (buf = "").
+     * @note Libovolné vlákno.
+     */
+    bool replay_autotype_peek_rest(char *buf, size_t size);
 
     /**
      * @brief Přesměrování žádosti o reset (volá mzarch_platform_fn_reset_request()).
@@ -336,7 +374,13 @@ extern "C"
 
     /**
      * @brief Bod B_f (viz tabulka v hlavičce souboru).
-     * @pre Emu vlákno, per-event blok, mezi instrukcemi, záznam nebo přehrávání běží.
+     *
+     * Bez záznamu a přehrávání vyřídí vstupy a operace kazety z UI
+     * (replay_host_cmt(), replay_host_autotype(),
+     * replay_host_autotype_delays(), replay_host_vkbd_set()).
+     *
+     * @pre Emu vlákno, per-event blok, mezi instrukcemi; záznam nebo
+     *      přehrávání běží, nebo čekají vstupy z UI (bit háčku).
      */
     void replay_on_frame_boundary(void);
 

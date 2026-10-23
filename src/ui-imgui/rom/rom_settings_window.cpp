@@ -24,6 +24,7 @@
 extern "C"
 {
 #include "emulator/hw-generic/memory/rom.h"
+#include "emulator/hw-generic/memory/rom_request.h"
 #include "emulator/hw-generic/cmt/cmthack.h"
 }
 
@@ -220,18 +221,6 @@ static void DrawRomPanel(const char *title, RomPanelUI *panel, bool enabled, con
     ImGui::PopID();
 }
 
-/* Najde USER_DEFINED řádek v ROM konfiguraci */
-static st_ROM_CONFIG_ROW *find_user_defined_row(void) {
-    st_ROM_CONFIG_ROW *row;
-    for (row = g_rom_config->roms; row->type != ROM_CONFIG_TYPE_NONE; row++) {
-        if ((row->type == ROM_CONFIG_TYPE_ROM) &&
-            (row->flags & ROM_CONFIG_FLAG_USER_DEFINED)) {
-            return row;
-        }
-    }
-    return NULL;
-}
-
 extern "C" void imgui_rom_settings_window(bool *p_open) {
     if (!*p_open)
         return;
@@ -291,28 +280,21 @@ extern "C" void imgui_rom_settings_window(bool *p_open) {
             ImGui::SetCursorPosX(ImGui::GetCursorPosX() + offset);
 
         if (ImGui::Button("OK", ImVec2(120, 0))) {
-            /* Aplikovat nastavení do g_rom */
-            g_rom.user_defined_allinone = s_state.main.allinone ? ROM_BOOL_YES : ROM_BOOL_NO;
-            rom_set_user_defined_filepath(&g_rom.user_defined_allinone_fp, s_state.main.allinone_fp);
-            rom_set_user_defined_filepath(&g_rom.user_defined_mz700_fp, s_state.main.mz700_fp);
-            rom_set_user_defined_filepath(&g_rom.user_defined_cgrom_fp, s_state.main.cgrom_fp);
-            rom_set_user_defined_filepath(&g_rom.user_defined_mz800_fp, s_state.main.mz800_fp);
-
-            g_rom.user_defined_cmthack_type = (en_ROM_CMTHACK)s_state.cmthack_idx;
-            g_rom.user_defined_cmthack_allinone = s_state.cmthack.allinone ? ROM_BOOL_YES : ROM_BOOL_NO;
-            rom_set_user_defined_filepath(&g_rom.user_defined_cmthack_allinone_fp, s_state.cmthack.allinone_fp);
-            rom_set_user_defined_filepath(&g_rom.user_defined_cmthack_mz700_fp, s_state.cmthack.mz700_fp);
-            rom_set_user_defined_filepath(&g_rom.user_defined_cmthack_cgrom_fp, s_state.cmthack.cgrom_fp);
-            rom_set_user_defined_filepath(&g_rom.user_defined_cmthack_mz800_fp, s_state.cmthack.mz800_fp);
-
-            /* Vynutit znovunačtení ROM ze souborů */
-            g_rom.user_defined_rom_loaded = ROM_BOOL_NO;
-
-            /* Přeinstalovat ROM pokud je aktuálně vybraný User Defined */
-            st_ROM_CONFIG_ROW *ud_row = find_user_defined_row();
-            if (ud_row && ROM_TEST_CURRENT(ud_row)) {
-                rom_reinstall(ud_row);
-            }
+            /* Nastavení použije emu vlákno (přepis cest v g_rom, nové
+             * načtení souborů a přeinstalace vybrané uživatelské ROM). */
+            st_ROM_USER_DEFINED_SETTINGS s;
+            s.allinone = s_state.main.allinone ? ROM_BOOL_YES : ROM_BOOL_NO;
+            s.allinone_fp = s_state.main.allinone_fp;
+            s.mz700_fp = s_state.main.mz700_fp;
+            s.cgrom_fp = s_state.main.cgrom_fp;
+            s.mz800_fp = s_state.main.mz800_fp;
+            s.cmthack_type = (en_ROM_CMTHACK)s_state.cmthack_idx;
+            s.cmthack_allinone = s_state.cmthack.allinone ? ROM_BOOL_YES : ROM_BOOL_NO;
+            s.cmthack_allinone_fp = s_state.cmthack.allinone_fp;
+            s.cmthack_mz700_fp = s_state.cmthack.mz700_fp;
+            s.cmthack_cgrom_fp = s_state.cmthack.cgrom_fp;
+            s.cmthack_mz800_fp = s_state.cmthack.mz800_fp;
+            rom_request_set_user_defined(&s);
 
             s_initialized = false;
             *p_open = false;

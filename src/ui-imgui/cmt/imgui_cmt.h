@@ -10,7 +10,18 @@ extern "C"
     void imgui_cmt_fix_mzfsize_popup(bool *p_open);
     void imgui_cmt_fix_mzfsize_popup_activate(const char *filename, int valid_size, int file_size);
     void imgui_cmt_tape_index_window(bool *p_open);
+
+    /**
+     * @brief Označí seznam bloků pásky jako zastaralý (hook jádra kazety).
+     * @note Libovolné vlákno; seznam přestaví imgui_cmt_tape_filelist_refresh().
+     */
     void imgui_cmt_tape_update_filelist(void);
+
+    /**
+     * @brief Přestaví seznam bloků pásky, je-li označený jako zastaralý.
+     * @pre UI vlákno, drží zámek stavu zařízení (device_state_lock()).
+     */
+    void imgui_cmt_tape_filelist_refresh(void);
 
     /**
      * @brief Začátek zákazu ovládání kazety během přehrávání vstupů.

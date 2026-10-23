@@ -2267,6 +2267,35 @@ static bool dbgapi_cpu_flags_cond_check ( st_DBGAPI_CPU_FLAGS *p, const z80_t *c
 }
 
 
+/**
+ * @brief true = příkaz mění pásku kazety nebo ROM a GUI ji čte pod zámkem
+ *        stavu zařízení.
+ *
+ * Otevření a vysunutí pásky uvolňuje kontejner a bloky, které okna kazety
+ * v UI vlákně čtou pod zámkem stavu zařízení (device_request.h); stejně
+ * transport, výběr bloku, rychlost a CMT hack (přepis ROM, stav pásky).
+ *
+ * @param cmd Příkaz bez příznaku BLOCKING.
+ * @return true = dispatch ho provede pod device_state_lock().
+ */
+static bool dbgapi_cmd_needs_device_lock(en_DBGAPI_CMD cmd)
+{
+    switch (cmd)
+    {
+        case DBGAPI_CMD_CMT_TRANSPORT:
+        case DBGAPI_CMD_CMT_RECORD:
+        case DBGAPI_CMD_CMT_HACK_SET:
+        case DBGAPI_CMD_CMT_SET_PROPERTY:
+        case DBGAPI_CMD_CMT_OPEN:
+        case DBGAPI_CMD_CMT_TAPE_SEEK:
+        case DBGAPI_CMD_CMT_TAPE_BLOCK_SPEED:
+            return true;
+        default:
+            return false;
+    };
+}
+
+
 void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
 {
     if (!rq)
@@ -2295,6 +2324,10 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
      *
      * TODO: doplnit handlery pro jednotlivé příkazy
      */
+    /* Příkazy kazety pod zámkem stavu zařízení (dbgapi_cmd_needs_device_lock()). */
+    const bool dev_locked = !rp_refused && dbgapi_cmd_needs_device_lock(cmd);
+    if (dev_locked) device_state_lock();
+
     if (rp_refused)
     {
         rq->success = false;
@@ -9008,6 +9041,8 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
             rq->success = false;
             break;
     };
+
+    if (dev_locked) device_state_unlock();
 
     run_control_after_cmd ( (unsigned) cmd, (int) rq->cmd_origin, rc_was_paused, rc_was_step );
 

@@ -62,9 +62,9 @@ Během záznamu:
   paměti, ROM) a **načtení snapshotu** nejsou k dispozici: záznam by je
   nezopakoval. Přes MCP se nástroje, které stroj takto mění (načtení
   snapshotu, média, nastavení), odmítnou s vysvětlením. Změna zařízení,
-  která nepřijde z menu (zkratka Alt+1..4, dialog výběru souboru nebo
-  okno zařízení otevřené před začátkem záznamu), se odmítne s hlášením
-  také.
+  která nepřijde z menu (zkratka Alt+1..4, dialog výběru souboru, okno
+  zařízení otevřené před začátkem záznamu nebo změna typu joysticku
+  v okně Joystick Setup), se odmítne s hlášením také.
 - **Kazetu** jde ovládat jako obvykle (okna Virtual CMT a Tape Filelist,
   MCP `emu_cmt_*` pro transport, přesun na blok a nahrávání na kazetu).
   Vložení jiné pásky, rychlost pásky, vlastní pulzy, polarita a přepínač

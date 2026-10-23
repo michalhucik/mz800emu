@@ -40,6 +40,16 @@ extern "C"
     void mzarch_run_to_temporary_breakpoint(void);
 #endif
 
+    /**
+     * @brief Povolí nebo zakáže druhý PSG (HW experiment Allow PSG1, stereo).
+     *
+     * Při povolení inicializuje PSG1 a přepne zvukový modul na stereo.
+     *
+     * @param value 1 = povolit, 0 = zakázat (vyšší bity se ignorují).
+     * @pre Emu vlákno (menu zásah zařadí přes mzarch_request_allow_psg1());
+     *      emu vlákno do PSG1 zapisuje.
+     * @post g_mzarch_main.mz800_hwcompat_allow_psg1 odpovídá @p value.
+     */
     void mz800_mz800_hwcompat_allow_psg1(unsigned value);
 
 #ifdef __cplusplus

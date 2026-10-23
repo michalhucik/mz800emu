@@ -33,7 +33,7 @@ static int s_ku_ms = 20;       /* Key up prodleva v ms */
 static bool s_autotype_active = false;
 static char s_error_msg[256] = "";
 static int s_typed_bytes = 0;   /* Počet již zpracovaných bajtů */
-static bool s_seen_running = false; /* Autotype po aktivaci už opravdu běžel (záznam vstupů ho spouští až na hranici snímku) */
+static int s_gen_before = 0;    /* Generace autotype před aktivací (pio8255_autotype_progress()); emu vlákno ho spustí až na hranici snímku */
 
 /* Validace textu — kontrola, zda všechny znaky mají mapování v matici */
 static bool validate_text(const char *text) {
@@ -68,9 +68,9 @@ static void activate_autotype(void) {
      * se zahodí - viz replay_host_autotype()). Změna prodlev za běhu
      * autotype se při záznamu / přehrávání neuplatní (byla by mimo
      * záznam). */
+    pio8255_autotype_progress(&s_gen_before, NULL, NULL);
     replay_host_autotype(s_text_buffer, (double)s_kd_ms, (double)s_ku_ms);
     s_autotype_active = true;
-    s_seen_running = false;
     s_typed_bytes = 0;
     s_error_msg[0] = '\0';
 }
@@ -138,24 +138,19 @@ extern "C" void imgui_autotype_window(bool *p_open) {
         return;
     }
 
-    /* Průběh autotypu. Konec (vkbd_autotype = NULL) nastaví emulace sama
-     * na konci textu. Napsané bajty = délka textu - zbývající text: ukazatel
-     * nemusí mířit do s_text_buffer (záznam vstupů píše z vlastní kopie). */
+    /* Průběh autotypu z atomických čítačů emulace (text vlastní emu vlákno,
+     * okno ho nečte). Konec nastaví emulace sama na konci textu nebo při
+     * zastavení. Dokud se generace nezměnila, autotype ještě čeká na
+     * spuštění v emu vlákně. */
     if (s_autotype_active) {
-        const char *rest = g_pio8255.vkbd_autotype;
+        int gen, done_gen, typed;
+        pio8255_autotype_progress(&gen, &done_gen, &typed);
         int total = (int)strlen(s_text_buffer);
-        if (rest == NULL) {
-            /* Dopsáno, nebo zastaveno. Před prvním během ještě čeká na
-             * spuštění (záznam vstupů ho převezme na hranici snímku). */
-            if (s_seen_running) {
-                if (g_pio8255.vkbd_autotype_col == -1) s_typed_bytes = total;
-                s_autotype_active = false;
-            }
-        } else {
-            s_seen_running = true;
-            s_typed_bytes = total - (int)strlen(rest);
+        if (gen != s_gen_before) {
+            s_typed_bytes = typed;
             if (s_typed_bytes < 0) s_typed_bytes = 0;
             if (s_typed_bytes > total) s_typed_bytes = total;
+            if (done_gen == gen) s_autotype_active = false;
         }
     }
 
@@ -221,8 +216,8 @@ extern "C" void imgui_autotype_window(bool *p_open) {
         if (ImGui::InputInt("##kd", &s_kd_ms, 1, 10, ImGuiInputTextFlags_CharsDecimal)) {
             if (s_kd_ms < 0) s_kd_ms = 0;
             if (s_kd_ms > 100) s_kd_ms = 100;
-            if (s_autotype_active && !replay_is_active()) {
-                pio8255_autotype_set_key_down_ms((double)s_kd_ms);
+            if (s_autotype_active) {
+                replay_host_autotype_delays((double)s_kd_ms, (double)s_ku_ms);
             }
         }
         ImGui::SameLine();
@@ -240,8 +235,8 @@ extern "C" void imgui_autotype_window(bool *p_open) {
         if (ImGui::InputInt("##ku", &s_ku_ms, 1, 10, ImGuiInputTextFlags_CharsDecimal)) {
             if (s_ku_ms < 0) s_ku_ms = 0;
             if (s_ku_ms > 100) s_ku_ms = 100;
-            if (s_autotype_active && !replay_is_active()) {
-                pio8255_autotype_set_key_up_ms((double)s_ku_ms);
+            if (s_autotype_active) {
+                replay_host_autotype_delays((double)s_kd_ms, (double)s_ku_ms);
             }
         }
         ImGui::SameLine();
