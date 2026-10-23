@@ -384,15 +384,17 @@ int z80_dasm(z80_dasm_inst_t *inst,
         next = read_fn(addr++, user_data);
         inst->bytes[bytes++] = next;
 
-        /* Neplatne sekvence: DD DD, DD FD, FD DD, FD FD, DD ED, FD ED */
+        /* Ignorovany prefix: DD DD, DD FD, FD DD, FD FD, DD ED, FD ED.
+         * CPU prefix vykona (4 T, R + 1) a dalsi bajt zpracuje jako
+         * novou instrukci; jadro emulatoru je provede v jednom kroku.
+         * Vrat prefix jako 1bajtovou instrukci "DD*" / "FD*". */
         if ((next | 0x20) == 0xFD || next == 0xED) {
-            /* Vrat prefix jako 1bajtovou NOP* instrukci */
             inst->length = 1;
             inst->t_states = 4;
             inst->t_states2 = 0;
             inst->flow = Z80_FLOW_NORMAL;
             inst->cls = Z80_CLASS_INVALID;
-            strcpy(inst->mnemonic, "NOP*");
+            strcpy(inst->mnemonic, (opc == 0xDD) ? "DD*" : "FD*");
             inst->op1.type = Z80_OP_NONE;
             inst->op2.type = Z80_OP_NONE;
             return 1;

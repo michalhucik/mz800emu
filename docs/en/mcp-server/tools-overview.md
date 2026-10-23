@@ -2593,7 +2593,10 @@ Args:
   `"fwd_min_interval_ms"`, `"fwd_max_fires"`.
 - `values` (dict) - map of field name to value. Only fields listed
   in `fields` are read. String fields (`name`, `expr`, `action`,
-  `event_name`) accept `None` to clear.
+  `event_name`) accept `None` to clear. `name` without `auto_name`
+  in `fields` turns the automatic name off (`Addr: 0x....`, renamed on
+  every address change); `auto_name: true` brings it back. The same
+  applies to `emu_bp_update`.
 
 Returns: JSON `{"id": int, "created": bool}`. `id` is `-1` on
 failure. If `addr_end` is set to a value different from `addr` but

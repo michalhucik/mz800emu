@@ -6244,7 +6244,10 @@ async def emu_bp_create_with_init(addr: int,
         values: Map of field name to value. Only fields listed in
             ``fields`` are read from this map; surplus keys are
             ignored. ``name`` / ``expr`` / ``action`` / ``event_name``
-            accept ``None`` to clear the value.
+            accept ``None`` to clear the value. ``name`` without
+            ``auto_name`` in ``fields`` turns the automatic name
+            (``Addr: 0x....``, renamed on every address change) off;
+            ``auto_name: true`` brings it back.
             ``bp_addr_space`` (``"cpu_view"`` default / ``"bank_offset"``)
             controls how ``addr`` is interpreted for a MEM_R / MEM_W
             breakpoint in the ``MMEXT_BANK`` zone (PEHU only):

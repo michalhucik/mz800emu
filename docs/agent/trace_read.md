@@ -78,7 +78,7 @@ client does not see; the same text goes into the channel `bplog`.
 1. Create the breakpoint with the action, e.g. `emu_bp_create_with_init`
    with `type` `PC_EXEC`, `addr` 0x8000 and `action`
    `log "SP=%X HL=%X", SP, HL` (see `emulator://docs/action_dsl`). To
-   filter by name later, set `name` together with `auto_name: false`.
+   filter by name later, give it a `name`.
 2. Run the program.
 3. `emu_trace_read(channel="bplog")`. Columns: `seq`, `t`, `frame`,
    `insn_pc`, `sym`, `pc`, `bp`, `name`, `kind`, `text`, `flags`.

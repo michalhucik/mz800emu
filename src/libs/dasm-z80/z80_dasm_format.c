@@ -616,7 +616,8 @@ int z80_dasm_to_str(char *buf, int buf_size,
         buf[0] = '\0';
     }
 
-    /* Neplatna instrukce (NOP*) - zjednoduseny vystup */
+    /* Neplatna sekvence (NOP*) nebo ignorovany prefix (DD*, FD*) -
+     * zjednoduseny vystup: jen mnemonika z dekoderu */
     if (inst->cls == Z80_CLASS_INVALID) {
         /* Adresa */
         if (fmt->show_addr) {
@@ -629,7 +630,7 @@ int z80_dasm_to_str(char *buf, int buf_size,
         }
 
         /* Mnemonika */
-        buf_puts_case(&ctx, "NOP*", fmt->uppercase);
+        buf_puts_case(&ctx, inst->mnemonic, fmt->uppercase);
 
         /* Vyhodnoceni navratove hodnoty */
         if (ctx.pos >= buf_size) {

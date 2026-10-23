@@ -13,6 +13,19 @@ void baseui_show_error_message(char *format, ...);
 #define baseui_error(format, ...) \
     baseui_show_error_message("%s():%d ERROR - " format, __func__, __LINE__, ##__VA_ARGS__)
 
+/**
+ * @brief Kontrola velikosti souboru MZF proti délce z hlavičky.
+ *
+ * Když je soubor větší, než udává hlavička (hlavička + tělo), otevře
+ * popup MZF Size Warning (imgui_cmt_fix_mzfsize_popup_activate()).
+ * Soubor, který nejde otevřít nebo změřit, kontrolu přeskočí (výpis na
+ * stderr), popup se neotevře.
+ *
+ * @param filename Cesta k souboru MZF (UTF-8).
+ * @param valid_size Očekávaná velikost souboru podle hlavičky [B].
+ * @note Volá ji jádro kazety (otevření pásky, CMT hack), i z emu vlákna;
+ *       popup má vlastní zámek (cmt_fix_mzfsize.cpp).
+ */
 void baseui_cmt_check_mzf_filesize(const char *filename, int valid_size);
 
 //char *baseui_filechhoser_open_file(char *last_file, const char *filter);

@@ -1,3 +1,9 @@
+	- Debugger - disassembler ukazuje ignorovaný prefix DD nebo FD (za ním další prefix DD, FD nebo ED) jako DD* / FD* místo NOP*; tooltip upozorní, že ho procesor provede spolu s následující instrukcí, proto ho krok (F7) přeskočí spolu s ní. Nedefinovaná instrukce ED zůstává NOP*.
+
+	- BUGFIX: Virtual CMT - když soubor MZF mezi otevřením a kontrolou velikosti zmizel nebo nešel číst, kontrola četla neotevřený soubor; nově se kontrola přeskočí.
+
+	- BUGFIX: MCP - jméno breakpointu zadané v emu_bp_create_with_init nebo emu_bp_update bez pole auto_name se nezachovalo: breakpoint dostal automatické jméno Addr: 0x.... Nově vlastní jméno automatické jméno vypne a vydrží i změnu adresy; auto_name: true ho vrátí.
+
 	- Příkazová řádka: --fdd <N>=<soubor> (lze opakovat) a --fdd0 až --fdd7 <soubor> vloží při startu DSK obraz do disketové mechaniky N (0-3 řadič FDC, 4-7 sekundární řadič FDC1). Disk z .ini ve stejné mechanice nahradí a cesta se uloží do .ini jako při vložení z menu (pokud není --no-save-ini). --fdd-readonly <N> chrání mechaniku proti zápisu jen pro toto spuštění. Chybějící soubor, špatné číslo mechaniky nebo mechanika zadaná dvakrát = chyba a konec; odpojený FDC1 nebo obraz, který nejde otevřít, = chyba (v --headless konec s kódem 3). Funguje ve všech binárkách i s --mcp-pipe. Viz devices/fdc.md.
 
 	- MCP - text akcí breakpointů log a stop s hláškou je nově čitelný přes MCP: emu_trace_read s kanálem bplog vrátí řádek za každý výpis s textem, časem, snímkem, adresou instrukce (InsnPC), PC a číslem a jménem breakpointu, s filtrem podle breakpointu (číslo nebo jméno), druhu (log nebo stop) a adresy. Dřív šel text jen na standardní výstup emulátoru ([BP-LOG], [BP-STOP]), který MCP klient nevidí. Kanál běží vždy, drží posledních 4096 řádků a vyprázdní ho nový nástroj emu_bplog_clear. Viz mcp-server/tools-overview.md a emulator://docs/trace_read.

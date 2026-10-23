@@ -1819,6 +1819,7 @@ typedef struct st_DBGAPI_BP_UPDATE_PARAM
 /* Identifikace */
 #define DBGAPI_BP_UM_ENABLED            (UINT64_C(1) << 0)
 #define DBGAPI_BP_UM_AUTO_NAME          (UINT64_C(1) << 1)
+/** Jméno BP; bez DBGAPI_BP_UM_AUTO_NAME v téže masce vypne automatické jméno (auto_name = false). */
 #define DBGAPI_BP_UM_NAME               (UINT64_C(1) << 2)
 #define DBGAPI_BP_UM_COLORS             (UINT64_C(1) << 3)  /**< bg_rgb + fg_rgb */
 #define DBGAPI_BP_UM_PARENT             (UINT64_C(1) << 4)

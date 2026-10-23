@@ -715,6 +715,12 @@ static uint8_t dbgapi_last_instr_read_cb(uint16_t addr, void *user_data)
  *    breakpoints_find_by_id(p->id) == NULL, vrátí false a žádnou změnu
  *    neaplikuje (= pre-check před iterací maskou).
  *
+ * Jméno: `UM_NAME` bez `UM_AUTO_NAME` znamená vlastní jméno a vypne
+ * automatické jméno (`auto_name = false`), jinak by ho setter adresy
+ * (breakpoints_set_addr()) při zapnutém `auto_name` přepsal na
+ * `Addr: 0x....`. Kdo pošle obě pole (GUI, automatizace), řídí
+ * `auto_name` sám.
+ *
  * Apply best-effort: pokud některý setter vrátí false (= např. nečekané),
  * helper pokračuje v zápisu ostatních polí a vrátí AND všech výsledků
  * (= konzistentní s dnešním working_copy_apply, který výsledky setterů
@@ -761,6 +767,10 @@ static bool dbgapi_emu_bp_apply_update ( st_DBGAPI_BP_UPDATE_PARAM *p, bool allo
         ok &= breakpoints_set_enabled ( target_id, p->enabled );
     if ( mask & DBGAPI_BP_UM_AUTO_NAME )
         ok &= breakpoints_set_auto_name ( target_id, p->auto_name );
+    else if ( mask & DBGAPI_BP_UM_NAME )
+        /* Vlastní jméno bez auto_name: vypnout automatické jméno, aby ho
+         * setter adresy níže nepřepsal (MCP bp_create_with_init / bp_update). */
+        ok &= breakpoints_set_auto_name ( target_id, false );
     if ( mask & DBGAPI_BP_UM_NAME )
         ok &= breakpoints_set_name ( target_id, p->name );
     if ( mask & DBGAPI_BP_UM_COLORS )

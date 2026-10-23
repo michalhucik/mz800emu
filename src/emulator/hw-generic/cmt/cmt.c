@@ -597,37 +597,6 @@ void cmt_ui_record(void)
     };
 }
 
-/**
- * @brief Non-UI vstupní bod pro zahájení nahrávání do WAV souboru.
- *
- * Spustí RECORD bez file dialogu (= ekvivalent cmt_ui_record minus
- * baseui_filechooser). Určeno pro programové ovládání (MCP server,
- * testy). Output formát je WAV (= recording extension vrácená
- * cmtext_get_recording_extension).
- *
- * Sekvence zrcadlí cmt_ui_record + cmt_ui_record_cb:
- *   1. Pokud CMT není ve STOP, nahrávání nelze zahájit (= EXIT_FAILURE).
- *   2. Pokud je nahrán nerecordable obraz, je vysunut (cmt_eject).
- *   3. Pokud po kroku 2 zůstává nahrán recordable obraz, nahrává se do
- *      něj (cmt_record bez nového cb_open).
- *   4. Jinak se otevře recording extension nad zadanou cestou a spustí
- *      se cmt_record.
- *
- * Nahrávání startuje v pauze (= cmt_record nastaví g_cmt.paused = 1),
- * shodně s UI variantou. Pro reálný zápis dat musí klient následně
- * zrušit pauzu (cmt_pause(0)).
- *
- * @param path Cesta k cílovému WAV souboru. Nesmí být NULL/prázdná.
- *             Funkce parametr nemodifikuje (cast na char* kvůli legacy
- *             signatuře cb_open).
- * @return EXIT_SUCCESS při úspěšném zahájení nahrávání, jinak
- *         EXIT_FAILURE (= špatný stav, neplatná cesta nebo selhání
- *         otevření souboru).
- *
- * @pre Musí být voláno z emulátorového vlákna (manipuluje g_cmt a
- *      volá cmtext cb_open, stejně jako ostatní cmt_* funkce).
- * @post Při úspěchu je g_cmt.state == CMT_STATE_RECORD a g_cmt.paused == 1.
- */
 void cmt_stop_button(void)
 {
     if (!CMT_TEST_RECORD)
@@ -719,6 +688,37 @@ int cmt_tape_select_block(int block_id, int forced)
     return EXIT_SUCCESS;
 }
 
+/**
+ * @brief Non-UI vstupní bod pro zahájení nahrávání do WAV souboru.
+ *
+ * Spustí RECORD bez file dialogu (= ekvivalent cmt_ui_record minus
+ * baseui_filechooser). Určeno pro programové ovládání (MCP server,
+ * testy). Output formát je WAV (= recording extension vrácená
+ * cmtext_get_recording_extension).
+ *
+ * Sekvence zrcadlí cmt_ui_record + cmt_ui_record_cb:
+ *   1. Pokud CMT není ve STOP, nahrávání nelze zahájit (= EXIT_FAILURE).
+ *   2. Pokud je nahrán nerecordable obraz, je vysunut (cmt_eject).
+ *   3. Pokud po kroku 2 zůstává nahrán recordable obraz, nahrává se do
+ *      něj (cmt_record bez nového cb_open).
+ *   4. Jinak se otevře recording extension nad zadanou cestou a spustí
+ *      se cmt_record.
+ *
+ * Nahrávání startuje v pauze (= cmt_record nastaví g_cmt.paused = 1),
+ * shodně s UI variantou. Pro reálný zápis dat musí klient následně
+ * zrušit pauzu (cmt_pause(0)).
+ *
+ * @param path Cesta k cílovému WAV souboru. Nesmí být NULL/prázdná.
+ *             Funkce parametr nemodifikuje (cast na char* kvůli legacy
+ *             signatuře cb_open).
+ * @return EXIT_SUCCESS při úspěšném zahájení nahrávání, jinak
+ *         EXIT_FAILURE (= špatný stav, neplatná cesta nebo selhání
+ *         otevření souboru).
+ *
+ * @pre Musí být voláno z emulátorového vlákna (manipuluje g_cmt a
+ *      volá cmtext cb_open, stejně jako ostatní cmt_* funkce).
+ * @post Při úspěchu je g_cmt.state == CMT_STATE_RECORD a g_cmt.paused == 1.
+ */
 int cmt_record_to_file(const char *path)
 {
     if (!path || path[0] == '\0')

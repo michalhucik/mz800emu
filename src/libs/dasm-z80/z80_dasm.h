@@ -230,8 +230,11 @@ typedef enum {
     Z80_CLASS_UNDOCUMENTED,  /**< Nedokumentovana ale funkcni na realnem HW.
                                   Priklady: SLL, IXH/IXL operace,
                                   DD CB d op s kopirovani do registru. */
-    Z80_CLASS_INVALID,       /**< Neplatna sekvence (zobrazena jako NOP*).
-                                  Priklady: DD DD, DD FD, DD ED. */
+    Z80_CLASS_INVALID,       /**< Neplatna nebo ignorovana sekvence:
+                                  nedefinovana ED xx (NOP*, 2 bajty, 8 T)
+                                  a ignorovany prefix DD/FD pred DD, FD
+                                  nebo ED (DD*, FD*, 1 bajt, 4 T; CPU ho
+                                  vykona spolu s nasledujici instrukci). */
 } z80_inst_class_t;
 
 /* ======================================================================
@@ -303,7 +306,8 @@ typedef struct {
                                   Embedded null-terminovany buffer (per-instance
                                   storage) - bezpecne pro kopirovani struktury
                                   a pouziti napric vlakny. Pro neplatne sekvence
-                                  obsahuje "NOP*". */
+                                  obsahuje "NOP*", pro ignorovany prefix
+                                  "DD*" / "FD*". */
     uint8_t  flags_affected;      /**< Bitova maska flagu, ktere instrukce modifikuje.
                                   Pouziva Z80_FLAG_* konstanty. */
     uint16_t regs_read;           /**< Bitova maska registru, ktere instrukce cte.
@@ -348,7 +352,8 @@ typedef uint8_t (*z80_dasm_read_fn)(uint16_t addr, void *user_data);
  * - DD/FD prefix (IX/IY operace)
  * - DD CB / FD CB (indexovane bitove operace)
  * - Nedokumentovane: SLL, IXH/IXL/IYH/IYL, DD CB kopie do registru
- * - Neplatne sekvence (DD DD, DD FD, DD ED -> NOP*)
+ * - Ignorovany prefix (DD DD, DD FD, DD ED -> DD*, FD obdobne FD*),
+ *   neplatne ED xx -> NOP*
  *
  * @param[out] inst      Struktura pro ulozeni vysledku. Nesmi byt NULL.
  * @param[in]  read_fn   Callback pro cteni bajtu z pameti. Nesmi byt NULL.

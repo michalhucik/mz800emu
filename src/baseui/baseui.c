@@ -45,12 +45,25 @@ void baseui_show_error_message(char *format, ...)
 void baseui_cmt_check_mzf_filesize(const char *filename, int valid_size)
 {
     FILE *fh = baseui_tools_file_open(filename, "rb");
-    fseek(fh, 0, SEEK_END);
-    int file_size = ftell(fh);
+    if (!fh)
+    {
+        /* Soubor mezitím zmizel nebo nejde číst: kontrola se přeskočí,
+         * chybu otevření ohlásí volající při vlastním čtení. */
+        fprintf(stderr, "MZF file size check: cannot open '%s'\n", filename ? filename : "");
+        return;
+    };
+    if (0 != fseek(fh, 0, SEEK_END))
+    {
+        fclose(fh);
+        return;
+    };
+    long file_size = ftell(fh);
     fclose(fh);
+    if (file_size < 0)
+        return;
     if (file_size > valid_size)
     {
-        imgui_cmt_fix_mzfsize_popup_activate(filename, valid_size, file_size);
+        imgui_cmt_fix_mzfsize_popup_activate(filename, valid_size, (int)file_size);
     };
     return;
 }

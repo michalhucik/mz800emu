@@ -1169,6 +1169,21 @@ if(Python3_FOUND)
     message(STATUS "  tests/mcp: registered mcp_bplog "
                    "(Python ${Python3_VERSION})")
 
+    # Jméno breakpointu přes MCP vydrží bez auto_name (N66): vytvoření,
+    # změna adresy, bp_update jména, auto_name true; čte se z bplog (pipe).
+    add_test(
+        NAME    mcp_bp_name
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_bp_name.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_bp_name PROPERTIES
+        LABELS  "e2e;mcp;pipe;breakpoints"
+        TIMEOUT 120
+    )
+    message(STATUS "  tests/mcp: registered mcp_bp_name "
+                   "(Python ${Python3_VERSION})")
+
     # -----------------------------------------------------------
     # Zápis paměti debuggerem nespouští MEM_W breakpoint (pipe)
     # -----------------------------------------------------------

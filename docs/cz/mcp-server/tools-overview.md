@@ -2531,6 +2531,9 @@ Args:
 - `values` (dict) - map field name -> value. Hodnoty se použijí
   pouze pro pole zmíněná ve `fields`. String fieldy (`name`,
   `expr`, `action`, `event_name`) přijímají `None` jako clear.
+  `name` bez `auto_name` ve `fields` vypne automatické jméno
+  (`Addr: 0x....`, které se přejmenovává při každé změně adresy);
+  `auto_name: true` ho vrátí. Platí i pro `emu_bp_update`.
 
 Returns: JSON `{"id": int, "created": bool}`. `id` = -1 při
 selhání. Pokud je `addr_end` nastaveno na jinou hodnotu než `addr`, ale
