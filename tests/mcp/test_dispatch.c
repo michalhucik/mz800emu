@@ -4509,6 +4509,28 @@ void test_settings_set_boot_only_rejected(void) {
 }
 
 
+void test_settings_set_qdisk_keys_rejected(void) {
+    /* QDISK/filename a QDISK/write_protected v whitelistu byly, ale
+     * prvek INI takového jména neexistuje (N86); QD se připojuje přes
+     * media_insert. Očekáváme INVALID_PARAMS bez volání dbgapi. */
+    static const char *const keys[] = { "QDISK/filename", "QDISK/write_protected" };
+    for (size_t i = 0; i < sizeof(keys) / sizeof(keys[0]); i++) {
+        dispatch_stub_reset();
+        char *json = g_strdup_printf(
+            "{\"type\":\"request\",\"id\":1203,\"cmd\":\"settings_set\","
+            "\"data\":{\"key\":\"%s\",\"value\":\"1\"}}", keys[i]);
+        st_JSONL_MESSAGE *req = _make_request(json);
+        char *resp = NULL;
+        en_MCP_DISPATCH_RESULT rc = mcp_dispatch_request(req, &resp);
+        TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_INVALID_PARAMS, rc);
+        TEST_ASSERT_EQUAL_INT(0, g_stub_state.settings_last_cmd);
+        free(resp);
+        jsonl_msg_free(req);
+        g_free(json);
+    }
+}
+
+
 void test_settings_set_invalid_key_format_rejected(void) {
     /* "audio_volume" bez slash separátoru = INVALID_PARAMS. */
     dispatch_stub_reset();
@@ -9798,6 +9820,7 @@ int main(void) {
     /* V1.B.2 - Platform + Config Tools (10 testů) */
     RUN_TEST(test_settings_set_live_key_happy);
     RUN_TEST(test_settings_set_boot_only_rejected);
+    RUN_TEST(test_settings_set_qdisk_keys_rejected);
     RUN_TEST(test_settings_set_invalid_key_format_rejected);
     RUN_TEST(test_settings_get_returns_value_and_type);
     RUN_TEST(test_settings_get_module_not_found);

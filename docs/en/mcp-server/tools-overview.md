@@ -2283,9 +2283,19 @@ auto-eject happens (= equivalent of eject + insert in one step).
 emu_media_insert(slot="fdc0_fd0", path="/disks/cpm.dsk")
 emu_media_insert(slot="fdc1_fd0", path="/disks/data.dsk")
 emu_media_insert(slot="cmt", bytes_b64="...", ro=True)
+emu_media_insert(slot="qd", path="/disks/game.mzq", ro=True)
 ```
 
 Returns `{"ok": true, "slot": "fdc0_fd0", "result_code": 0}`.
+
+Slot `qd` mounts an MZ-1F11 Quick Disk image (`.mzq`). The file must
+exist (the Quick Disk dialog in the GUI creates a new blank image).
+If the drive is not connected as MZ-1F11 (the default is the Unicard
+boot loader), it is switched the same way as the MZ-1F11 menu choice,
+which disconnects the Unicard boot loader from the QD; the response
+reports this with `"switched_to_mz1f11": true`. `ro` sets write
+protection the same way as the menu toggle (the choice is saved to
+the configuration).
 
 ### `emu_media_eject`
 
@@ -2355,9 +2365,10 @@ Whitelist:
 - `DISPLAY/forced_full_screen_redrawing` (bool)
 - `DISPLAY/locked_window_aspect_ratio` (bool)
 - `DISPLAY/custom_fps` (unsigned)
-- `QDISK/filename` (text)
-- `QDISK/write_protected` (bool)
 - `TRACE_CPUTRACK/pc_range_lo` .. `TRACE_CPUTRACK/pc_range_hi` (unsigned, 0..65535; runtime PC trace filter)
+
+The Quick Disk image and its write protection are set with
+`emu_media_insert(slot="qd", ...)`.
 
 ### `emu_settings_get`
 
@@ -2424,14 +2435,11 @@ emu_periph_detach(kind="fdc")
 ### Example workflow - mounting a Quick Disk image
 
 ```
-# 1. Set the image path
-emu_settings_set(key="QDISK/filename", value="/disks/cpm.qd")
+# Mount the image writable (switches the drive to MZ-1F11 if needed)
+emu_media_insert(slot="qd", path="/disks/cpm.mzq", ro=False)
 
-# 2. Set R/W mode
-emu_settings_set(key="QDISK/write_protected", value="false")
-
-# 3. Perform insert
-emu_media_insert(slot="qd", path="/disks/cpm.qd")
+# Check the slot state
+emu_media_state()
 ```
 
 ## Hot-swap tools

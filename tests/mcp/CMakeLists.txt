@@ -1376,6 +1376,23 @@ if(Python3_FOUND)
                    "(Python ${Python3_VERSION})")
 
     # -----------------------------------------------------------
+    # Quick Disk přes media_insert (pipe): neexistující obraz beze změny,
+    # přepnutí na MZ-1F11 se ohlásí, ro, eject.
+    # -----------------------------------------------------------
+    add_test(
+        NAME    mcp_media_qd
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_media_qd.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_media_qd PROPERTIES
+        LABELS  "e2e;mcp;pipe"
+        TIMEOUT 120
+    )
+    message(STATUS "  tests/mcp: registered mcp_media_qd "
+                   "(Python ${Python3_VERSION})")
+
+    # -----------------------------------------------------------
     # Test 7e: port I/O a načtení MZF přes MCP za běhu emulace (pipe)
     # -----------------------------------------------------------
     # Regrese: io_write/io_read za běhu zastavil CPU a další port I/O

@@ -372,8 +372,9 @@ static const st_SDLAPP_OPTION_DEF g_known_options[] = {
       "location." },
     { "--cfg-dir",          SDLAPP_OPTION_VALUE, SDLAPP_OPTVAL_STRING,      NULL,        "<dirpath>",
       "Override the config directory (where mz<arch>emu.ini, "
-      "mz<arch>emu-imgui.ini, breakpoints.ini and persistent ramdisk images "
-      "are stored). Default: same as home-dir." },
+      "mz<arch>emu-imgui.ini, breakpoints.ini, persistent ramdisk images, "
+      "the Unicard SD card root and the MemExt FLASH file are stored when "
+      "given as relative paths). Default: same as home-dir." },
     { "--work-dir",         SDLAPP_OPTION_VALUE, SDLAPP_OPTVAL_STRING,      NULL,        "<dirpath>",
       "Override the work directory (default open location for file dialogs). "
       "Default: current working directory at startup." },

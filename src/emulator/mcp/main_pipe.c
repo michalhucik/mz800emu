@@ -425,7 +425,7 @@ static const st_SDLAPP_OPTION_DEF g_pipe_known_options[] = {
     { "--home-dir",             SDLAPP_OPTION_VALUE, SDLAPP_OPTVAL_STRING, NULL, "<dirpath>",
       "Override the home directory (where the binary's assets live)." },
     { "--cfg-dir",              SDLAPP_OPTION_VALUE, SDLAPP_OPTVAL_STRING, NULL, "<dirpath>",
-      "Override the config directory (.ini files, breakpoints, ramdisks)." },
+      "Override the config directory (.ini files, breakpoints, ramdisks, Unicard SD root, MemExt FLASH)." },
     { "--work-dir",             SDLAPP_OPTION_VALUE, SDLAPP_OPTVAL_STRING, NULL, "<dirpath>",
       "Override the work directory (default open path for file dialogs)." },
     { "--config",               SDLAPP_OPTION_VALUE, SDLAPP_OPTVAL_STRING, NULL, "<filepath>",

@@ -57,6 +57,8 @@
 #include "baseui/baseui.h"
 #include "baseui/baseui_filechooser.h"
 #include "unicard_request.h"
+#include "main.h"   /* g_sdlapp */
+#include "libs/sdlapp/sdlapp_paths.h"
 
 st_UNICARD g_unicard;
 
@@ -66,6 +68,45 @@ static CFGELM *g_elm_readonly;
 static CFGELM *g_elm_fw_version;
 static CFGELM *g_elm_runtime_check_on_connect;
 static CFGELM *g_elm_managed_fdc;
+
+/**
+ * @brief Kořen SD karty převedený vůči cfg_dir (vrací ho
+ *        unicard_get_sd_root_dirpath()).
+ *
+ * Prvek INI `sd_root` drží hodnotu tak, jak ji zadal uživatel (výchozí
+ * relativní `SD-<platforma>`); relativní cesta se převádí vůči
+ * konfiguračnímu adresáři (sdlapp_paths_resolve_cfg(), jako záloha RAM
+ * disku a obrazy IDE8), absolutní zůstává. Přepočítá se jen
+ * v unicard_sd_root_update() (inicializace a změna kořene), takže
+ * ukazatel vrácený getterem platí do další změny kořene.
+ *
+ * Vlastnictví: modul (g_free v unicard_sd_root_update() a unicard_exit()).
+ * Invariant po unicard_init(): ne NULL, ne prázdný.
+ */
+static char *s_sd_root_resolved = NULL;
+
+
+/**
+ * @brief Přepočítá s_sd_root_resolved z prvku INI `sd_root`.
+ *
+ * Prázdnou hodnotu nejdřív nahradí výchozím UNICARD_DEFAULT_SD_ROOT
+ * (prázdná cesta by se převedla na samotný cfg_dir).
+ *
+ * @pre Prvek g_elm_sd_root je zaregistrovaný; emu vlákno nebo
+ *      inicializace (UI vlákno getter jen čte).
+ * @post s_sd_root_resolved je nově alokovaná neprázdná cesta; předchozí
+ *       hodnota je uvolněná.
+ */
+static void unicard_sd_root_update ( void ) {
+    const char *sd_root = cfgelement_get_text_value ( g_elm_sd_root );
+    if ( ( !sd_root ) || ( sd_root[0] == 0x00 ) ) {
+        cfgelement_set_text_value ( g_elm_sd_root, UNICARD_DEFAULT_SD_ROOT );
+        sd_root = cfgelement_get_text_value ( g_elm_sd_root );
+    };
+    char *resolved = sdlapp_paths_resolve_cfg ( g_sdlapp->paths, sd_root );
+    g_free ( s_sd_root_resolved );
+    s_sd_root_resolved = resolved;
+}
 
 /**
  * @brief Vrátí instanci FDC, kterou Unicard API spravuje, nebo NULL.
@@ -105,14 +146,16 @@ static void unicard_time_to_fat ( time_t t, uint16_t *fdate, uint16_t *ftime );
 
 
 char* unicard_get_sd_root_dirpath ( void ) {
-    return cfgelement_get_text_value ( g_elm_sd_root );
+    if ( !s_sd_root_resolved ) unicard_sd_root_update ( );
+    return s_sd_root_resolved;
 }
 
 
 void unicard_set_sd_root_dirpath ( char *sd_root ) {
     if ( ( !sd_root ) || ( sd_root[0] == 0x00 ) ) return;
     cfgelement_set_text_value ( g_elm_sd_root, sd_root );
-    char *sd_root_locale = baseui_tools_file_name_locale_from_utf8 ( sd_root );
+    unicard_sd_root_update ( );
+    char *sd_root_locale = baseui_tools_file_name_locale_from_utf8 ( s_sd_root_resolved );
     printf ( "Unicard: new SD root is '%s'\n", sd_root_locale );
     g_free ( sd_root_locale );
 }
@@ -726,12 +769,6 @@ char* unicard_get_mzfloader_image_filepath ( void ) {
 
 void unicard_set_connected ( en_UNICARD_CONNECTION conn ) {
 
-    if ( strlen ( unicard_get_sd_root_dirpath ( ) ) == 0 ) {
-        char *sd_root = (char*) baseui_tools_mem_alloc0 ( strlen ( UNICARD_DEFAULT_SD_ROOT ) + 1 );
-        unicard_set_sd_root_dirpath ( sd_root );
-        baseui_tools_mem_free ( sd_root );
-    };
-
     if ( g_unicard.connected == conn ) return;
 
     if ( conn == UNICARD_CONNECTION_CONNECTED ) {
@@ -867,6 +904,8 @@ void unicard_init ( void ) {
      * standardní cfgmodule_propagate (= projde všechny elementy s
      * propagate_value_handler). */
     cfgmodule_propagate ( cmod );
+    /* Kořen SD vůči cfg_dir; prázdný sd_root z INI nahradí výchozím. */
+    unicard_sd_root_update ( );
 
     /* Sanity: uc1 firmware existuje jen pro MZ-800. Pokud má INI soubor
      * z předchozího běhu nastavené UC1 na jiné platformě (např. uživatel
@@ -885,6 +924,8 @@ void unicard_init ( void ) {
 void unicard_exit ( void ) {
     unimgr_exit ( );
     baseui_tools_mem_free ( g_unicard.work_dir );
+    g_free ( s_sd_root_resolved );
+    s_sd_root_resolved = NULL;
 }
 
 

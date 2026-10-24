@@ -241,7 +241,28 @@ extern "C" {
      */
     extern void unicard_set_managed_fdc ( en_UNICARD_MANAGED_FDC managed_fdc );
 
+    /**
+     * @brief Kořen SD karty na hostiteli.
+     *
+     * Relativní hodnota prvku INI `sd_root` (výchozí UNICARD_DEFAULT_SD_ROOT)
+     * se převádí vůči konfiguračnímu adresáři (`--cfg-dir`, jinak adresář
+     * programu), ne vůči aktuálnímu adresáři procesu; absolutní cesta
+     * platí beze změny.
+     *
+     * @return Neprázdná cesta; vlastní ji modul, NEUVOLŇOVAT. Platí do
+     *         další změny kořene (unicard_set_sd_root_dirpath()).
+     */
     extern char* unicard_get_sd_root_dirpath ( void );
+
+    /**
+     * @brief Nastaví kořen SD karty (uloží se do INI tak, jak je zadaný).
+     *
+     * @param dirpath Cesta (relativní vůči cfg_dir, nebo absolutní);
+     *                NULL nebo "" = beze změny.
+     * @post unicard_get_sd_root_dirpath() vrací převedenou cestu; dřívější
+     *       ukazatel z getteru je neplatný.
+     * @pre Emu vlákno (zásah unicard_request) nebo inicializace.
+     */
     extern void unicard_set_sd_root_dirpath ( char *dirpath );
 
     /**
@@ -738,9 +759,10 @@ extern "C" {
 
 #define UNICARD_TEST_IS_CONNECTED ( g_unicard.connected == UNICARD_CONNECTION_CONNECTED )
 
-/* Default Unicard SD root obsahuje arch suffix - kazda platforma ma
- * vlastni adresar (drive sdilene "SD" davaly zmatecny obsah pri
- * prepinani targetu mezi MZ-700/800/1500). */
+/** @brief Výchozí kořen SD karty, relativní vůči konfiguračnímu adresáři
+ * (unicard_get_sd_root_dirpath()). Obsahuje příponu platformy - každá
+ * platforma má vlastní adresář (dřív sdílené "SD" dávalo zmatečný obsah
+ * při přepínání mezi MZ-700/800/1500). */
 #define UNICARD_DEFAULT_SD_ROOT     "SD-" MZ_PLATFORM_SUFFIX
 #define UNICARD_DEFAULT_DIR_MODE     0775
 

@@ -132,6 +132,14 @@ mz_add_test(ramdisk-backup-path
     LABELS   "emu;peripherals"
 )
 
+# Kořen SD karty Unicard a FLASH MemExt Luftner s relativní cestou vůči
+# cfg_dir, ne vůči aktuálnímu adresáři procesu.
+mz_add_test(cfg-dir-media-paths
+    TYPE     EMU
+    SOURCES  test_cfg_dir_media_paths.c
+    LABELS   "emu;peripherals"
+)
+
 # Zásahy GUI do MemExt (memext_request.h): připojení a načtení souboru
 # až v device_request_poll(), při replay se zásah neprovede.
 mz_add_test(memext-request

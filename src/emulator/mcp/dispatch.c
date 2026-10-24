@@ -10123,7 +10123,12 @@ static en_MCP_DISPATCH_RESULT _handle_media_load_binary(const st_JSONL_MESSAGE *
  *   - `slot` (string, povinný) - "cmt" | "fdc0_fd0".."fdc0_fd3" |
  *     "fdc1_fd0".."fdc1_fd3" | "qd" | "ide8"
  *   - `path` (string) NEBO `bytes_b64` (string) - právě jeden
- *   - `ro` (bool, optional) - R/O mount (informativní, závislé na slotu)
+ *   - `ro` (bool, optional) - R/O mount (informativní, závislé na slotu;
+ *     u `qd` nastaví ochranu proti zápisu jako přepínač v menu)
+ *
+ * Slot `qd`: obraz MZ-1F11; když mechanika není připojená jako MZ-1F11,
+ * přepne ji (odpojí zavaděč Unicard) a odpověď nese
+ * `"switched_to_mz1f11": true`. Neexistující soubor = chyba beze změny.
  *
  * Volá `DBGAPI_CMD_MEDIA_INSERT`. Slot whitelist validace probíhá zde
  * v dispatch vrstvě před vložením do dbgapi fronty.
@@ -10179,6 +10184,7 @@ static en_MCP_DISPATCH_RESULT _handle_media_insert(const st_JSONL_MESSAGE *req,
         .load_addr  = 0,
         .read_only  = (uint8_t)(ro ? 1 : 0),
         .out_size   = 0,
+        .out_qd_switched = 0,
         .out_result = 0,
     };
     bool ok = _submit_dbgapi(DBGAPI_CMD_MEDIA_INSERT, &param, NULL);
@@ -10195,9 +10201,11 @@ static en_MCP_DISPATCH_RESULT _handle_media_insert(const st_JSONL_MESSAGE *req,
         g_free(path); g_free(b64);
         const char *msg = (rc == -10)
             ? "Slot not available in this architecture build"
-            : (rc == -11)
-                ? "QD insert via path not yet supported (use settings_set in V1.B.2)"
-                : "media_insert failed";
+            : (rc == -12)
+                ? "File not found"
+                : (slot == DBGAPI_MEDIA_SLOT_QD && param.out_qd_switched)
+                    ? "media_insert failed (Quick Disk drive was switched to MZ-1F11)"
+                    : "media_insert failed";
         return _err_response(req_id, msg,
                              MCP_DISPATCH_EMU_ERROR, out_response);
     }
@@ -10205,6 +10213,10 @@ static en_MCP_DISPATCH_RESULT _handle_media_insert(const st_JSONL_MESSAGE *req,
     json_object_set_boolean_member(resp, "ok", TRUE);
     json_object_set_string_member(resp, "slot", _media_slot_str(slot));
     json_object_set_int_member(resp, "result_code", rc);
+    if (slot == DBGAPI_MEDIA_SLOT_QD) {
+        json_object_set_boolean_member(resp, "switched_to_mz1f11",
+                                       param.out_qd_switched ? TRUE : FALSE);
+    }
     g_free(path); g_free(b64);
     return _ok_response(req_id, resp, out_response);
 }
@@ -10326,9 +10338,8 @@ static const char *const g_settings_live_keys[] = {
     "DISPLAY/forced_full_screen_redrawing",
     "DISPLAY/locked_window_aspect_ratio",
     "DISPLAY/custom_fps",
-    /* QDISK - path setting (V1.B.1 blocker pro QD insert) */
-    "QDISK/filename",
-    "QDISK/write_protected",
+    /* QDISK tu není: obraz a ochranu proti zápisu nastavuje media_insert
+     * se slotem qd (prvky INI mz1f11_* nemění živou mechaniku). */
     /* TRACE_CPUTRACK - range-scope filtr PC (live-apply do g_cputrack_config
      * v dbgapi SETTINGS_SET handleru; hot-path čte nové meze bez restartu). */
     "TRACE_CPUTRACK/pc_range_lo",

@@ -146,10 +146,12 @@ def scenario_2(emu, tmp, mzf, snap):
     step(emu, "cmt_transport stop after record", "cmt_transport", {"action": "stop"})
     step(emu, "media_insert cmt", "media_insert", {"slot": "cmt", "path": str(mzf), "ro": True}, ["media"])
     step(emu, "media_eject cmt", "media_eject", {"slot": "cmt"}, ["media"])
+    qd = tmp / "mh.mzq"
+    qd.write_bytes(bytes(82958))  # prázdný obraz QDISK_FORMAT_SIZE
+    step(emu, "media_insert qd", "media_insert", {"slot": "qd", "path": str(qd), "ro": True}, ["media"])
+    step(emu, "media_eject qd", "media_eject", {"slot": "qd"}, ["media"])
     step(emu, "media_load_mzf", "media_load_mzf", {"path": str(mzf)}, [MEM])
     step(emu, "media_load_binary", "media_load_binary", {"path": str(binf), "addr": 0x5000}, [MEM])
-    step(emu, "settings_set QDISK/write_protected", "settings_set",
-         {"key": "QDISK/write_protected", "value": "1"})
     step(emu, "periph_attach memext", "periph_attach", {"kind": "memext"})
     step(emu, "periph_detach memext", "periph_detach", {"kind": "memext"})
     step(emu, "platform_set", "platform_set", {"kind": "mz800"})

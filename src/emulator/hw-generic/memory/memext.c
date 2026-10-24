@@ -38,6 +38,8 @@
 #include "memory.h"
 
 #include "cfgmain.h"
+#include "main.h"   /* g_sdlapp */
+#include "libs/sdlapp/sdlapp_paths.h"
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
 #include "debugger/trace/hwlog.h"
@@ -54,21 +56,37 @@ void memext_reset ( void ) {
 }
 
 
+/**
+ * @brief Načte obsah FLASH Luftner ze souboru `g_memext.flash_filepath`.
+ *
+ * Relativní cesta (výchozí MEMEXT_DEFAULT_FLASH_FNAME) se převádí vůči
+ * konfiguračnímu adresáři (sdlapp_paths_resolve_cfg(), jako záloha RAM
+ * disku), absolutní platí beze změny. Soubor se jen čte; chybějící soubor
+ * nechá FLASH beze změny, kratší soubor přepíše jen začátek.
+ *
+ * @pre Emu vlákno nebo inicializace; MemExt připojený jako Luftner
+ *      (jinak nic nedělá).
+ * @post g_memext.FLASH obsahuje začátek souboru, pokud šel otevřít;
+ *       chyba otevření existujícího souboru se vypíše na stderr.
+ */
 void memext_flash_reload ( void ) {
     if ( !MEMEXT_TEST_CONNECTED_LUFTNER ) return;
-    if ( ( g_memext.flash_filepath ) && ( baseui_tools_file_access ( g_memext.flash_filepath, F_OK ) != -1 ) ) {
+    if ( !g_memext.flash_filepath ) return;
+    char *resolved = sdlapp_paths_resolve_cfg ( g_sdlapp->paths, g_memext.flash_filepath );
+    if ( baseui_tools_file_access ( resolved, F_OK ) != -1 ) {
         FILE *fh;
-        FS_LAYER_FOPEN ( fh, g_memext.flash_filepath, FS_LAYER_FMODE_RO );
+        FS_LAYER_FOPEN ( fh, resolved, FS_LAYER_FMODE_RO );
         if ( fh ) {
             uint32_t readlen = 0;
             FS_LAYER_FREAD ( fh, g_memext.FLASH, sizeof (g_memext.FLASH ), &readlen );
             FS_LAYER_FCLOSE ( fh );
         } else {
-            char *filepath_locale = baseui_tools_file_name_locale_from_utf8 ( g_memext.flash_filepath );
+            char *filepath_locale = baseui_tools_file_name_locale_from_utf8 ( resolved );
             fprintf ( stderr, "%s():%d - Can't open file '%s'\n", __func__, __LINE__, filepath_locale );
             baseui_tools_mem_free ( filepath_locale );
         };
     };
+    g_free ( resolved );
 }
 
 

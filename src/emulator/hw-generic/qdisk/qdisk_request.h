@@ -7,8 +7,10 @@
  * a zápisů do `g_qdisk`. Každá funkce jen zařadí zásah; provede ho emu
  * vlákno v device_request_poll() (při aktivním replay ho odmítne).
  *
- * Všechny funkce: libovolné vlákno (typicky UI), nečekají na provedení,
- * vrací pořadové číslo zásahu (device_request_submit()), 0 = nezařazeno.
+ * Funkce `qdisk_request_*`: libovolné vlákno (typicky UI), nečekají na
+ * provedení, vrací pořadové číslo zásahu (device_request_submit()),
+ * 0 = nezařazeno. Výjimkou je qdisk_apply_connection(), která změnu
+ * provede hned a volá se jen z emu vlákna.
  */
 
 #ifndef QDISK_REQUEST_H
@@ -37,6 +39,24 @@ typedef enum en_QDISK_REQ_CONNECTION {
  * @return Pořadové číslo zásahu (od 1); 0 = nezařazeno (neplatný argument).
  */
 uint32_t qdisk_request_set_connection(en_QDISK_REQ_CONNECTION conn);
+
+/**
+ * @brief Provede změnu způsobu připojení hned (posloupnost volby v menu).
+ *
+ * Tělo zásahu qdisk_request_set_connection(); sdílí ho i MCP
+ * `media_insert` se slotem `qd`, které běží v emu vlákně. MZ-1F11
+ * a VIRTUAL odpojí zavaděč Unicard; MZ-1F11 a UNICARD po přepnutí
+ * otevřou obraz z INI (qdisk_open()).
+ *
+ * @param conn Způsob připojení.
+ * @return 0 = provedeno; -1 = neplatná hodnota, nebo UNICARD bez
+ *         připojeného Unicardu (pak beze změny).
+ * @pre Emu vlákno (nebo zastavená emulace) a zámek device_state_lock(),
+ *      pokud UI vlákno může současně číst stav mechaniky.
+ * @post Při 0 platí `g_qdisk.connected` a `g_qdisk.type` podle @p conn
+ *       (DISCONNECTED: jen odpojeno).
+ */
+int qdisk_apply_connection(en_QDISK_REQ_CONNECTION conn);
 
 /**
  * @brief Zařadí mount image nebo adresáře (qdisk_mount_path()).

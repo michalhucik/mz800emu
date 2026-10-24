@@ -15,10 +15,9 @@
 #include "unicard/unicard.h"
 
 
-/** @brief Zásah: způsob připojení (i[0] en_QDISK_REQ_CONNECTION). */
-static int qdisk_request_exec_set_connection(const st_DEVICE_REQ_ARGS *a)
+int qdisk_apply_connection(en_QDISK_REQ_CONNECTION conn)
 {
-    switch ((en_QDISK_REQ_CONNECTION)a->i[0]) {
+    switch (conn) {
         case QDISK_REQ_DISCONNECTED:
             qdisk_close();
             QDISK_SET_DISCONNECTED();
@@ -47,6 +46,13 @@ static int qdisk_request_exec_set_connection(const st_DEVICE_REQ_ARGS *a)
             return 0;
     }
     return -1;
+}
+
+
+/** @brief Zásah: způsob připojení (i[0] en_QDISK_REQ_CONNECTION). */
+static int qdisk_request_exec_set_connection(const st_DEVICE_REQ_ARGS *a)
+{
+    return qdisk_apply_connection((en_QDISK_REQ_CONNECTION)a->i[0]);
 }
 
 

@@ -3544,6 +3544,10 @@ typedef enum en_DBGAPI_MEDIA_SLOT
  * @field out_exec_addr OUT: pro LOAD_MZF = fexec z MZF hlavičky (= adresa
  *                     spuštění, informativní pro caller / composite run).
  *                     Nedefinováno pro ostatní CMD.
+ * @field out_qd_switched OUT: INSERT se slotem QD: 1 = mechanika nebyla
+ *                     připojená jako MZ-1F11 a insert ji přepnul
+ *                     (qdisk_apply_connection(), odpojí zavaděč Unicard
+ *                     v QD), jinak 0. Caller nuluje.
  * @field out_result   OUT: 0 = OK, jinak hw-subsystem specifický kód.
  *                     Caller ho použije pro error detail v response.
  *                     Pro LOAD_MZF: -1 = neplatný parametr, -2 = fáze 1
@@ -3552,6 +3556,10 @@ typedef enum en_DBGAPI_MEDIA_SLOT
  *                     Pro RUN_MZF navíc -4 = soubor je kratší než
  *                     128 + fsize (zjištěno před resetem, stroj se
  *                     nezresetoval); -2 také znamená, že reset neproběhl.
+ *                     Pro INSERT: -10 = slot v této sestavě není;
+ *                     u QD -12 = soubor neexistuje nebo není běžný soubor (beze změny stavu),
+ *                     -3 = obraz se nepodařilo otevřít (mechanika už
+ *                     může být přepnutá, viz out_qd_switched).
  */
 typedef struct st_DBGAPI_MEDIA_PARAM
 {
@@ -3562,6 +3570,7 @@ typedef struct st_DBGAPI_MEDIA_PARAM
     uint32_t             out_size;
     uint16_t             out_load_addr;
     uint16_t             out_exec_addr;
+    uint8_t              out_qd_switched;
     int                  out_result;
 } st_DBGAPI_MEDIA_PARAM;
 

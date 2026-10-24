@@ -134,6 +134,7 @@
 #endif
 #if CFG_HWEXT_HAVE_QDISK
 #include "hw-generic/qdisk/qdisk.h"
+#include "hw-generic/qdisk/qdisk_request.h"
 #endif
 #if CFG_HWEXT_HAVE_IDE8
 #include "hw-generic/ide8/ide8.h"
@@ -5970,13 +5971,27 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
 #if CFG_HWEXT_HAVE_QDISK
                 case DBGAPI_MEDIA_SLOT_QD:
                 {
-                    /* qdisk_open čte cestu z CFGELM (g_elm_qd_path) -
-                     * V1.B.1 podporujeme jen runtime ekvivalent insert
-                     * skrz cfgelement API. Pro V1.B.1 vrátíme -11
-                     * (= "není implementováno", path setting jde přes
-                     * V1.B.2 settings_set). */
-                    (void) p;
-                    rc = -11;
+                    /* Obraz QD připojí jen MZ-1F11 (typ IMAGE). Neexistující
+                     * soubor odmítneme dřív, než se cokoliv změní: dialog
+                     * v GUI nový obraz vytváří (qdisk_mount_path()), MCP
+                     * má překlep v cestě hlásit. Jinak připojenou mechaniku
+                     * přepneme stejnou posloupností jako volba MZ-1F11
+                     * v menu (odpojí zavaděč Unicard v QD). */
+                    if ( !g_file_test ( p->filepath, G_FILE_TEST_IS_REGULAR ) )
+                    {
+                        rc = -12;
+                        break;
+                    };
+                    if ( !QDISK_TEST_CONNECTED || !QDISK_TEST_TYPE_IMAGE )
+                    {
+                        qdisk_apply_connection ( QDISK_REQ_MZ1F11 );
+                        p->out_qd_switched = 1;
+                    };
+                    /* Ochrana jako přepínač v menu (uloží se do INI);
+                     * otevření obrazu ji z INI převezme. */
+                    qdisk_set_write_protected ( p->read_only ? 1 : 0 );
+                    rc = qdisk_mount_path ( p->filepath, 0 );
+                    if ( rc == 0 && g_qdisk.filename[ 0 ] == '\0' ) rc = -3;
                     break;
                 };
 #else

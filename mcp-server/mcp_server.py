@@ -5081,9 +5081,12 @@ async def emu_media_insert(
         cmt          - CMT cassette tape (.mzf, .mzt, ...)
         fdc0_fd0..3  - WD279x FDC0 (standard, ports 0xD8-0xDF) drive 0..3 (.dsk)
         fdc1_fd0..3  - WD279x FDC1 (secondary, ports 0x58-0x5F) drive 0..3 (.dsk)
-        qd           - Quick Disk (.qd) - NOTE: insert via path is not
-                       implemented in V1.B.1, will be added in V1.B.2 via
-                       settings_set.
+        qd           - MZ-1F11 Quick Disk image (.mzq); the file must
+                       exist. If the drive is not connected as MZ-1F11
+                       (default: Unicard boot loader), it is switched like
+                       the MZ-1F11 menu choice (Unicard boot loader is
+                       disconnected from the QD) and the response has
+                       ``"switched_to_mz1f11": true``.
         ide8         - IDE8 master HDD image (.img)
 
     Provide exactly one of ``path`` or ``bytes_b64``. The slot must be
@@ -5095,7 +5098,9 @@ async def emu_media_insert(
             'fdc1_fd0'..'fdc1_fd3' | 'qd' | 'ide8'.
         path: Filesystem path.
         bytes_b64: Inline base64-encoded image (decoded to tmp file).
-        ro: Read-only mount (informational, honored where supported).
+        ro: Read-only mount (informational, honored where supported;
+            for 'qd' it sets write protection like the menu toggle,
+            saved to the configuration).
         expected_state_rev: perform the command only if the state
             revision still equals this value (``state_rev`` from
             ``emu_get_state`` / ``emu_state_observe``, only while paused);
@@ -5105,7 +5110,8 @@ async def emu_media_insert(
 
     Returns:
         JSON ``{"ok": true, "slot": str, "result_code": int}`` on
-        success or ``{"error": "..."}`` on failure.
+        success (slot 'qd' adds ``"switched_to_mz1f11": bool``) or
+        ``{"error": "..."}`` on failure.
     """
     valid_slots = (
         "cmt",
@@ -5210,8 +5216,6 @@ _VALID_SETTINGS_KEYS = (
     "DISPLAY/forced_full_screen_redrawing",
     "DISPLAY/locked_window_aspect_ratio",
     "DISPLAY/custom_fps",
-    "QDISK/filename",
-    "QDISK/write_protected",
     "TRACE_CPUTRACK/pc_range_lo",
     "TRACE_CPUTRACK/pc_range_hi",
 )
@@ -5236,8 +5240,6 @@ async def emu_settings_set(key: str, value: str) -> str:
         DISPLAY/forced_full_screen_redrawing - bool
         DISPLAY/locked_window_aspect_ratio   - bool
         DISPLAY/custom_fps                   - unsigned
-        QDISK/filename             - Quick Disk image path (text)
-        QDISK/write_protected      - bool
         TRACE_CPUTRACK/pc_range_lo - cputrack PC-range filter low bound (0..65535)
         TRACE_CPUTRACK/pc_range_hi - cputrack PC-range filter high bound (0..65535)
 

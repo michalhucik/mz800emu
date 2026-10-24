@@ -55,6 +55,8 @@
 #define MEMEXT_RAW_MAP_SIZE 0x10
 #define MEMEXT_RAW_BANK_SIZE 0x1000
 
+/** @brief Výchozí soubor FLASH Luftner (prvek INI `flash_filepath`),
+ *         relativní vůči konfiguračnímu adresáři (memext_flash_reload()). */
 #define MEMEXT_DEFAULT_FLASH_FNAME "flash.dat"
 
 typedef enum en_MEMEXT_CONNECTION
@@ -127,6 +129,10 @@ extern "C"
     void memext_connect(en_MEMEXT_TYPE type);
     void memext_disconnect(void);
 
+    /**
+     * @brief Načte FLASH Luftner ze souboru; relativní cesta vůči
+     *        konfiguračnímu adresáři (podrobnosti u definice v memext.c).
+     */
     void memext_flash_reload(void);
 
     void memext_map_pwrite(int addr_point, uint8_t value);

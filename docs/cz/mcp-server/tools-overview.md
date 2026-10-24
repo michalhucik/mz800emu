@@ -2217,9 +2217,18 @@ auto-eject (= ekvivalent eject + insert v jednom kroku).
 emu_media_insert(slot="fdc0_fd0", path="/disks/cpm.dsk")
 emu_media_insert(slot="fdc1_fd0", path="/disks/data.dsk")
 emu_media_insert(slot="cmt", bytes_b64="...", ro=True)
+emu_media_insert(slot="qd", path="/disks/hra.mzq", ro=True)
 ```
 
 Vrací `{"ok": true, "slot": "fdc0_fd0", "result_code": 0}`.
+
+Slot `qd` připojí obraz Quick Disku MZ-1F11 (`.mzq`). Soubor musí
+existovat (nový prázdný obraz vytvoří dialog Quick Disku v GUI).
+Pokud mechanika není připojená jako MZ-1F11 (výchozí je zavaděč
+Unicard), přepne ji stejně jako volba MZ-1F11 v menu, tedy odpojí
+zavaděč Unicard v QD; odpověď to oznámí položkou
+`"switched_to_mz1f11": true`. `ro` nastaví ochranu proti zápisu stejně
+jako přepínač v menu (volba se uloží do konfigurace).
 
 ### `emu_media_eject`
 
@@ -2289,9 +2298,10 @@ Whitelist:
 - `DISPLAY/forced_full_screen_redrawing` (bool)
 - `DISPLAY/locked_window_aspect_ratio` (bool)
 - `DISPLAY/custom_fps` (unsigned)
-- `QDISK/filename` (text)
-- `QDISK/write_protected` (bool)
 - `TRACE_CPUTRACK/pc_range_lo` .. `TRACE_CPUTRACK/pc_range_hi` (unsigned, 0..65535; PC filtr trasování za běhu)
+
+Obraz Quick Disku a jeho ochranu proti zápisu nastavuje
+`emu_media_insert(slot="qd", ...)`.
 
 ### `emu_settings_get`
 
@@ -2356,14 +2366,11 @@ emu_periph_detach(kind="fdc")
 ### Příklad workflow - vložení Quick Disk obrazu
 
 ```
-# 1. Nastavit cestu obrazu
-emu_settings_set(key="QDISK/filename", value="/disks/cpm.qd")
+# Připojit obraz pro zápis (přepne mechaniku na MZ-1F11, pokud je třeba)
+emu_media_insert(slot="qd", path="/disks/cpm.mzq", ro=False)
 
-# 2. Nastavit R/W mód
-emu_settings_set(key="QDISK/write_protected", value="false")
-
-# 3. Provést insert
-emu_media_insert(slot="qd", path="/disks/cpm.qd")
+# Ověřit stav slotu
+emu_media_state()
 ```
 
 ## Hot-swap tools
