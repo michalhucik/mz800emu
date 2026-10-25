@@ -42,6 +42,19 @@ uint32_t mzarch_request_mode_sw_set(int mode);
 uint32_t mzarch_request_allow_psg1(bool allow);
 #endif
 
+/**
+ * @brief Reset vyžádaný uživatelem v GUI (F12, menu Reset, F11 pod
+ *        debuggerem Windows).
+ *
+ * Zaznamená akci uživatele "reset" (dbgapi_note_user_action(), jen build
+ * s debuggerem; last_user_action) a zavolá
+ * mzarch_platform_fn_reset_request(). Reset přes MCP a frontu dbgapi
+ * tudy nejde, eviduje ho fronta sama.
+ *
+ * @note Volá UI vlákno.
+ */
+void mzarch_request_user_reset(void);
+
 #ifdef __cplusplus
 }
 #endif

@@ -9,6 +9,10 @@
 
 #include "device_request.h"
 #include "state_rev.h"
+#include "mzarch/mzarch_config.h"
+#ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
+#include "debugger/dbgapi_cmdrq.h"
+#endif
 #include "replay.h"
 
 #include <glib.h>
@@ -68,6 +72,11 @@ uint32_t device_request_submit(const char *name, device_request_fn_t fn,
     g_queue_push_tail(&s_pending, r);
     g_atomic_int_inc(&s_pending_count);
     g_mutex_unlock(&s_lock);
+#ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
+    /* Zásahy zařazuje jen GUI (menu a okna zařízení): akce uživatele pro
+     * last_user_action, jméno = název zásahu. */
+    dbgapi_note_user_action(r->name);
+#endif
     return seq;
 }
 

@@ -1410,6 +1410,22 @@ if(Python3_FOUND)
                    "(Python ${Python3_VERSION})")
 
     # -----------------------------------------------------------
+    # get_memory_map a memory_map ve state_observe podle mapování (N94)
+    # -----------------------------------------------------------
+    add_test(
+        NAME    mcp_memory_map_kind
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_memory_map_kind.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_memory_map_kind PROPERTIES
+        LABELS  "e2e;mcp;pipe"
+        TIMEOUT 90
+    )
+    message(STATUS "  tests/mcp: registered mcp_memory_map_kind "
+                   "(Python ${Python3_VERSION})")
+
+    # -----------------------------------------------------------
     # Test 7e: port I/O a načtení MZF přes MCP za běhu emulace (pipe)
     # -----------------------------------------------------------
     # Regrese: io_write/io_read za běhu zastavil CPU a další port I/O

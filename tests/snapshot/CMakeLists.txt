@@ -30,6 +30,14 @@ mz_add_test(snapshot-request
     LABELS   "emu;snapshot"
 )
 
+# Quick Save a Quick Load: prázdný default_directory = pracovní adresář,
+# relativní vůči němu, absolutní beze změny (N96).
+mz_add_test(snapshot-quicksave-dir
+    TYPE     EMU
+    SOURCES  test_snapshot_quicksave_dir.c
+    LABELS   "emu;snapshot"
+)
+
 # INI sekce [SNAPSHOT] se načte a propaguje do g_snapshot_settings.
 mz_add_test(snapshot-config
     TYPE     EMU

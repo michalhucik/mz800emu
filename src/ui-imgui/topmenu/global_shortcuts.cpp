@@ -14,6 +14,7 @@
 #include "emulator_measuring.h"
 #include "mzarch/mzarch_config.h"
 #include "mzarch/mzarch_platform_functions.h"
+#include "mzarch/mzarch_request.h"
 #include "iface/iface_video.h"
 
 #if HAVE_JOY
@@ -57,7 +58,7 @@ void imgui_global_shortcuts(void)
 
     if (ImGui::IsKeyPressed(ImGuiKey_F12, false))
     {
-        mzarch_platform_fn_reset_request();
+        mzarch_request_user_reset();
     };
 
     /*
@@ -70,7 +71,7 @@ void imgui_global_shortcuts(void)
         if (IsDebuggerPresent())
         {
             printf("Debugger is present! F11 - is now remapped as RESET.\n");
-            mzarch_platform_fn_reset_request();
+            mzarch_request_user_reset();
         }
         else
         {

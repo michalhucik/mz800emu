@@ -1658,13 +1658,12 @@ static en_MCP_DISPATCH_RESULT _handle_get_state(const st_JSONL_MESSAGE *req,
 
     /* V1.D.1 - last_user_action field. Pokud žádná USER akce nebyla,
      * vystavíme JSON null (= AI vidí "user nic neudělal od startu emu"). */
-    en_DBGAPI_CMD last_cmd = DBGAPI_CMD_NONE;
-    uint64_t      last_ts  = 0;
-    bool          have_lua = dbgapi_get_last_user_action(&last_cmd, &last_ts);
+    char     last_kind[DBGAPI_USER_ACTION_KIND_MAX];
+    uint64_t last_ts  = 0;
+    bool     have_lua = dbgapi_get_last_user_action_kind(last_kind, sizeof(last_kind), &last_ts);
     if (have_lua) {
         JsonObject *lua = json_object_new();
-        json_object_set_string_member(lua, "kind",
-                                       dbgapi_cmd_to_str(last_cmd));
+        json_object_set_string_member(lua, "kind", last_kind);
         json_object_set_int_member(lua, "timestamp_us", (gint64)last_ts);
         json_object_set_object_member(data, "last_user_action", lua);
     } else {
@@ -11764,13 +11763,38 @@ static const char *_memory_source_str(uint8_t s) {
     switch (s) {
         case 1: return "rom";
         case 2: return "cgrom";
-        case 3: return "sram";
+        case 3: return "ram";
         case 4: return "vram";
         case 5: return "memext_ram";
         case 6: return "memext_flash";
         default: return "unknown";
     }
 }
+/**
+ * @brief Jména druhů stránek (`kind`) pro `get_memory_map` a `memory_map`
+ *        v `state_observe`.
+ *
+ * Index = hodnota en_MEMMAP_REGION_KIND (hw-generic/memory/memory.h),
+ * pořadí musí sedět s enumem. Počet hlídá DBGAPI_OBSERVE_PAGE_KINDS
+ * (kontrola v dbgapi.c proti enumu, tady proti tabulce).
+ */
+static const char *const s_memmap_kind_names[] = {
+    "ram", "rom_low", "rom_high", "cgrom", "vram_i", "vram_ii",
+    "vram_text", "cgram", "pcg_1", "pcg_2", "pcg_3", "mapped_ports",
+    "prohibited", "unmapped",
+};
+G_STATIC_ASSERT(G_N_ELEMENTS(s_memmap_kind_names) == DBGAPI_OBSERVE_PAGE_KINDS);
+
+
+/**
+ * @brief Vrátí jméno druhu stránky (en_MEMMAP_REGION_KIND).
+ * @param k Hodnota druhu.
+ * @return Statický řetězec; pro hodnotu mimo enum "unknown".
+ */
+static const char *_memmap_kind_str(uint8_t k) {
+    return (k < G_N_ELEMENTS(s_memmap_kind_names)) ? s_memmap_kind_names[k] : "unknown";
+}
+
 
 
 /**
@@ -12110,7 +12134,9 @@ static en_MCP_DISPATCH_RESULT _handle_get_security_profile(
  *
  * Forwarduje na DBGAPI_CMD_GET_MEMORY_MAP a serializuje 16 × 4 KB slotů.
  *
- * Response: `{"platform": "mz800|...", "mode_note": "...", "slots": [...]}`.
+ * Response: `{"platform": "mz800|...", "mode_note": "...", "slots": [...]}`,
+ * slot `{addr_start, addr_end, kind, source, ro_rw, slot_offset}`; `kind`
+ * je druh stránky podle aktuálního mapování (jména jako `state_observe`).
  */
 static en_MCP_DISPATCH_RESULT _handle_get_memory_map(
     const st_JSONL_MESSAGE *req, char **out_response) {
@@ -12130,6 +12156,7 @@ static en_MCP_DISPATCH_RESULT _handle_get_memory_map(
         JsonObject *item = json_object_new();
         json_object_set_int_member(item, "addr_start",  (gint64)s->addr_start);
         json_object_set_int_member(item, "addr_end",    (gint64)s->addr_end);
+        json_object_set_string_member(item, "kind", _memmap_kind_str(s->kind));
         json_object_set_string_member(item, "source",
                                        _memory_source_str(s->source));
         json_object_set_string_member(item, "ro_rw",
@@ -18005,20 +18032,6 @@ static const st_REGION_DESC *_ms_find_region(const st_REGION_DESC *regs, int cou
 #define MCP_OBSERVE_NAME_MAX 64
 
 /**
- * @brief Jména druhů stránek pro `memory_map` v `state_observe`.
- *
- * Index = hodnota en_MEMMAP_REGION_KIND (hw-generic/memory/memory.h),
- * pořadí musí sedět s enumem. Počet hlídá DBGAPI_OBSERVE_PAGE_KINDS
- * (kontrola v dbgapi.c proti enumu, tady proti tabulce).
- */
-static const char *const s_observe_page_kind_names[] = {
-    "ram", "rom_low", "rom_high", "cgrom", "vram_i", "vram_ii",
-    "vram_text", "cgram", "pcg_1", "pcg_2", "pcg_3", "mapped_ports",
-    "prohibited", "unmapped",
-};
-G_STATIC_ASSERT(G_N_ELEMENTS(s_observe_page_kind_names) == DBGAPI_OBSERVE_PAGE_KINDS);
-
-/**
  * @brief Části stavu přijímané v parametru `hashes` (bez `screen`, ten má `frame_hash`).
  */
 static const struct {
@@ -18194,10 +18207,7 @@ static void _observe_memory_map_to_json(JsonObject *data,
         JsonObject *so = json_object_new();
         json_object_set_int_member(so, "addr_start", (gint64)sl->addr_start);
         json_object_set_int_member(so, "addr_end", (gint64)sl->addr_end);
-        uint8_t k = p->page_kind[i];
-        json_object_set_string_member(so, "kind",
-            (k < G_N_ELEMENTS(s_observe_page_kind_names)) ? s_observe_page_kind_names[k]
-                                                          : "unknown");
+        json_object_set_string_member(so, "kind", _memmap_kind_str(p->page_kind[i]));
         json_object_set_string_member(so, "source", _memory_source_str(sl->source));
         json_object_set_string_member(so, "ro_rw", sl->ro_rw ? "rw" : "r");
         json_object_set_int_member(so, "slot_offset", (gint64)sl->slot_offset);

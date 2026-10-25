@@ -57,6 +57,8 @@ import emu_test_proc  # noqa: E402 - úklid spuštěných procesů
 from test_snapshot_gdg_event import (  # noqa: E402
     PipeEmu, TestFailure, _find_exe, check)
 from test_cli_speed import TcpEmu  # noqa: E402 - headless TCP s vlastními volbami
+# TcpEmu vyhazuje vlastní třídu TestFailure (jiná než u PipeEmu).
+from test_cli_speed import TestFailure as TcpTestFailure  # noqa: E402
 
 PROG = 0x1200
 PROG_BIN = bytes.fromhex(
@@ -298,8 +300,26 @@ def case_platforms(tmp):
 
 
 def _load_prog(emu):
+    """Pauzne emulátor po startu, zapíše program na PROG a nastaví na něj PC.
+
+    Program v ROM při startu na chvíli připojí CG-ROM na 1000h-1FFFh
+    (změřeno: asi 886 000 až 1 041 000 taktů po resetu, PC kolem E8B0h).
+    Když pauza padne do tohoto okna, zápis odmítne kontrola regionu
+    ("region check failed") a program by se stejně provedl z CG-ROM.
+    Proto se při odmítnutí nechá doběhnout pár snímků a zápis se zkusí
+    znovu; program sám mapu paměti nemění, takže pak běží z RAM.
+    """
     emu.call("pause")
-    emu.call("mem_write", {"addr": PROG, "data_hex": PROG_BIN.hex()})
+    for _ in range(10):
+        try:
+            emu.call("mem_write", {"addr": PROG, "data_hex": PROG_BIN.hex()})
+            break
+        except (TestFailure, TcpTestFailure) as e:
+            if "region check failed" not in str(e):
+                raise
+            emu.call("run", {"frames": 5})
+    else:
+        raise TestFailure(f"memory at {PROG:04X}h stays mapped to ROM after start")
     emu.call("set_register", {"reg": "PC", "value": PROG})
 
 

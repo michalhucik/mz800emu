@@ -9,7 +9,10 @@
  *  - u příkazu s operací v parametru (COVERAGE, PROFILER_PC, RAMLOG)
  *    čtecí operace záznam nemění, měnicí ho přepíše,
  *  - řízení běhu a změna stavu s původem USER ho přepíší,
- *  - příkaz s původem MCP ho nemění.
+ *  - příkaz s původem MCP ho nemění,
+ *  - akce GUI mimo frontu (dbgapi_note_user_action(), zásah zařízení
+ *    device_request_submit(), načtení snímku snapshot_request_submit())
+ *    ho přepíše jménem akce; uložení snímku ne (N95).
  *
  * Příkazy se zařazují přes dbgapi_ui_submit_cmd_sync_ex() s krátkým
  * timeoutem bez emu vlákna: záznam vzniká při zařazení, výsledek čekání
@@ -23,6 +26,8 @@
 #include "debugger/dbgapi_cmdrq.h"
 #include "debugger/dbgapi_emu.h"
 #include "debugger/dbgapi_ui.h"
+#include "device_request.h"
+#include "snapshot/snapshot_request.h"
 
 #include <glib.h>
 #include <string.h>
@@ -40,6 +45,8 @@ void setUp(void)
 
 void tearDown(void)
 {
+    device_request_clear();
+    snapshot_request_clear();
     dbgapi_destroy(&s_queue);
 }
 
@@ -142,6 +149,66 @@ void test_config_operation_overwrites_last_action(void)
 }
 
 
+/**
+ * @brief Vrátí jméno zaznamenané akce (selže test, když záznam chybí).
+ * @return Statický buffer se jménem.
+ */
+static const char *last_kind(void)
+{
+    static char kind[DBGAPI_USER_ACTION_KIND_MAX];
+    uint64_t ts = 0;
+    TEST_ASSERT_TRUE(dbgapi_get_last_user_action_kind(kind, sizeof(kind), &ts));
+    TEST_ASSERT_TRUE(ts > 0);
+    return kind;
+}
+
+
+/**
+ * @brief Zásah zařízení pro test (nikdy se neprovede, fronta se vyprázdní v tearDown).
+ * @param args Nepoužito.
+ * @return 0.
+ */
+static int dummy_device_fn(const st_DEVICE_REQ_ARGS *args)
+{
+    (void) args;
+    return 0;
+}
+
+
+void test_queue_command_kind_is_command_name(void)
+{
+    submit(DBGAPI_CMD_PAUSE, DBGAPI_CMD_ORIGIN_USER);
+    TEST_ASSERT_EQUAL_STRING("pause", last_kind());
+}
+
+
+void test_gui_actions_outside_queue_overwrite_last_action(void)
+{
+    submit(DBGAPI_CMD_PAUSE, DBGAPI_CMD_ORIGIN_USER);
+
+    /* Reset z GUI (mzarch_request_user_reset()) volá tohle. */
+    dbgapi_note_user_action("reset");
+    TEST_ASSERT_EQUAL_STRING("reset", last_kind());
+    TEST_ASSERT_EQUAL_INT(DBGAPI_CMD_NONE, last_cmd());
+
+    /* Menu Devices: zásah zařízení přes frontu device_request. */
+    TEST_ASSERT_TRUE(device_request_submit("memext_set_connection", dummy_device_fn, NULL) != 0);
+    TEST_ASSERT_EQUAL_STRING("memext_set_connection", last_kind());
+
+    /* Quick Load z GUI. */
+    TEST_ASSERT_TRUE(snapshot_request_submit(SNAPSHOT_REQ_QUICKLOAD, NULL, NULL) != 0);
+    TEST_ASSERT_EQUAL_STRING("snapshot_quickload", last_kind());
+
+    /* Quick Save stav stroje nemění: záznam zůstane. */
+    TEST_ASSERT_TRUE(snapshot_request_submit(SNAPSHOT_REQ_QUICKSAVE, NULL, NULL) != 0);
+    TEST_ASSERT_EQUAL_STRING("snapshot_quickload", last_kind());
+
+    /* Prázdné jméno se ignoruje. */
+    dbgapi_note_user_action("");
+    TEST_ASSERT_EQUAL_STRING("snapshot_quickload", last_kind());
+}
+
+
 void test_mcp_origin_is_ignored(void)
 {
     submit(DBGAPI_CMD_STEP_INTO, DBGAPI_CMD_ORIGIN_USER);
@@ -163,6 +230,8 @@ int main(int argc, char *argv[])
     RUN_TEST(test_read_operations_do_not_overwrite_last_action);
     RUN_TEST(test_config_operation_overwrites_last_action);
     RUN_TEST(test_mcp_origin_is_ignored);
+    RUN_TEST(test_queue_command_kind_is_command_name);
+    RUN_TEST(test_gui_actions_outside_queue_overwrite_last_action);
     int result = UNITY_END();
 
     mztest_teardown();

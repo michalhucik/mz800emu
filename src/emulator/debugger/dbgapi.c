@@ -350,23 +350,29 @@ static void *s_msg_dispatcher_user_data = NULL;
  * udělal - umožní AI lépe spolupracovat s uživatelem (= "user právě klikl
  * Run, počkám než se zastaví").
  *
+ * Akce GUI mimo frontu (reset z GUI, načtení snímku, zásahy menu a oken
+ * zařízení) zaznamená dbgapi_note_user_action() ze svého vstupního bodu.
+ *
  * Thread-safety: nastavuje se z UI vlákna v dbgapi_ui_submit_cmd_sync_with_origin
- * po vložení slotu (= mimo emu thread). Čte se z emu vlákna v handleru
+ * po vložení slotu a v dbgapi_note_user_action() (= mimo emu thread). Čte se z emu vlákna v handleru
  * get_state. Pro V1.D.1 použijeme jednoduchý GLib mutex - příště lze
  * převést na atomic load/store struct (= per-field race-free, ale není
  * to kritické, last action je informativní).
  * ============================================================================ */
 
+/** @brief Poslední akce uživatele (pod s_last_user_action_mutex). */
 typedef struct st_DBGAPI_LAST_USER_ACTION
 {
     bool          valid;        /**< false = ještě žádná USER akce nebyla. */
-    en_DBGAPI_CMD cmd;          /**< Poslední USER CMD. */
+    en_DBGAPI_CMD cmd;          /**< Poslední USER CMD; DBGAPI_CMD_NONE u akce mimo frontu (dbgapi_note_user_action()). */
+    char          kind[ DBGAPI_USER_ACTION_KIND_MAX ]; /**< Jméno akce: dbgapi_cmd_to_str(cmd) nebo jméno z dbgapi_note_user_action(). */
     uint64_t      timestamp_us; /**< g_get_monotonic_time() v okamžiku submit. */
 } st_DBGAPI_LAST_USER_ACTION;
 
 static st_DBGAPI_LAST_USER_ACTION s_last_user_action = {
     .valid = false,
     .cmd = DBGAPI_CMD_NONE,
+    .kind = "",
     .timestamp_us = 0,
 };
 static GMutex s_last_user_action_mutex;
@@ -405,8 +411,43 @@ static void dbgapi_track_last_user_action ( en_DBGAPI_CMD cmd )
     g_mutex_lock ( &s_last_user_action_mutex );
     s_last_user_action.valid        = true;
     s_last_user_action.cmd          = cmd;
+    g_strlcpy ( s_last_user_action.kind, dbgapi_cmd_to_str ( cmd ),
+                sizeof ( s_last_user_action.kind ) );
     s_last_user_action.timestamp_us = (uint64_t) g_get_monotonic_time ( );
     g_mutex_unlock ( &s_last_user_action_mutex );
+}
+
+
+void dbgapi_note_user_action ( const char *kind )
+{
+    if ( !s_last_user_action_mutex_inited || kind == NULL || kind[ 0 ] == '\0' )
+    {
+        return;
+    };
+    g_mutex_lock ( &s_last_user_action_mutex );
+    s_last_user_action.valid        = true;
+    s_last_user_action.cmd          = DBGAPI_CMD_NONE;
+    g_strlcpy ( s_last_user_action.kind, kind, sizeof ( s_last_user_action.kind ) );
+    s_last_user_action.timestamp_us = (uint64_t) g_get_monotonic_time ( );
+    g_mutex_unlock ( &s_last_user_action_mutex );
+}
+
+
+bool dbgapi_get_last_user_action_kind ( char *out_kind, size_t out_size,
+                                         uint64_t *out_timestamp_us )
+{
+    if ( out_kind && out_size ) out_kind[ 0 ] = '\0';
+    if ( out_timestamp_us ) *out_timestamp_us = 0;
+    if ( !s_last_user_action_mutex_inited ) return false;
+    g_mutex_lock ( &s_last_user_action_mutex );
+    bool valid = s_last_user_action.valid;
+    if ( valid )
+    {
+        if ( out_kind && out_size ) g_strlcpy ( out_kind, s_last_user_action.kind, out_size );
+        if ( out_timestamp_us ) *out_timestamp_us = s_last_user_action.timestamp_us;
+    };
+    g_mutex_unlock ( &s_last_user_action_mutex );
+    return valid;
 }
 
 
@@ -1672,8 +1713,16 @@ static void dbgapi_frame_hash_fill ( st_DBGAPI_FRAME_HASH_PARAM *out, const uint
  * @brief Naplní snímek mapování 16 stránek 4 KiB (DBGAPI_CMD_GET_MEMORY_MAP).
  *
  * Sdílené plnění pro DBGAPI_CMD_GET_MEMORY_MAP a DBGAPI_CMD_STATE_OBSERVE.
- * Rozliší jen stránky MemExt (zdroj MEMEXT_RAM / MEMEXT_FLASH a offset
- * v bance); ostatní stránky mají zdroj 0 (unknown).
+ * Druh stránky (`kind`) určí memmap_query() podle aktuálního mapování
+ * (stejně jako kontrola regionu u zápisů), zdroj a příznak zápisu se od
+ * druhu odvodí:
+ *  - RAM: zdroj RAM s offsetem stránky v RAM; s připojeným MemExtem
+ *    MEMEXT_RAM / MEMEXT_FLASH a offset v bance MemExtu,
+ *  - ROM (dolní, horní): ROM, jen čtení,
+ *  - CG-ROM: CGROM, jen čtení,
+ *  - VRAM, CG-RAM, PCG: VRAM, čtení i zápis,
+ *  - mapované porty, Prohibited, nepřipojeno: zdroj 0 (unknown), jen
+ *    čtení; podrobnost nese `kind`.
  *
  * @param[out] p Výstup; přepíše se celý.
  * @pre Emu vlákno (drain fronty).
@@ -1692,52 +1741,77 @@ static void dbgapi_memory_map_fill ( st_DBGAPI_MEMORY_MAP_PARAM *p )
     };
     g_strlcpy ( p->platform, plat, sizeof ( p->platform ) );
     g_strlcpy ( p->mode_note,
-        "16 slotov 4KB; banking + memext aware (V1.D.1 minimal).",
+        "16 slots of 4 KB; kind from current banking, memext aware.",
         sizeof ( p->mode_note ) );
 
     for ( int i = 0; i < 16; i++ )
     {
-        p->slots[ i ].addr_start  = (uint16_t) ( i * 0x1000 );
-        p->slots[ i ].addr_end    =
-            (uint16_t) ( i * 0x1000 + 0x0FFF );
-        p->slots[ i ].source      = 0; /* unknown */
-        p->slots[ i ].ro_rw       = 0;
-        p->slots[ i ].slot_offset = 0;
+        st_DBGAPI_MEMORY_MAP_SLOT *sl = &p->slots[ i ];
+        sl->addr_start  = (uint16_t) ( i * 0x1000 );
+        sl->addr_end    = (uint16_t) ( i * 0x1000 + 0x0FFF );
+        sl->kind        = (uint8_t) memmap_query ( (uint8_t) i );
+        sl->source      = 0; /* unknown */
+        sl->ro_rw       = 0;
+        sl->slot_offset = 0;
 
-        /* MEMEXT detekce - vyžaduje connected memext, jinak skip. */
-        if ( MEMEXT_TEST_CONNECTED )
+        switch ( (en_MEMMAP_REGION_KIND) sl->kind )
         {
-            /* g_memext.map[i] = raw bank index. Pro Luftner:
-             * 0..0x7F = RAM, 0x80..0xFF = FLASH. Pro PEHU jen
-             * 0..0x3F (RAM only). */
-            uint32_t rb = g_memext.map[ i ];
-            if ( MEMEXT_TEST_TYPE_LUFTNER )
+            case MEMMAP_KIND_RAM:
+                sl->source      = 3; /* RAM */
+                sl->ro_rw       = 1;
+                sl->slot_offset = (uint32_t) i * 0x1000;
+                break;
+            case MEMMAP_KIND_ROM_LOW:
+            case MEMMAP_KIND_ROM_HIGH:
+                sl->source = 1; /* ROM */
+                break;
+            case MEMMAP_KIND_CGROM:
+                sl->source = 2; /* CGROM */
+                break;
+            case MEMMAP_KIND_VRAM_I:
+            case MEMMAP_KIND_VRAM_II:
+            case MEMMAP_KIND_VRAM_TEXT:
+            case MEMMAP_KIND_CGRAM:
+            case MEMMAP_KIND_PCG_1:
+            case MEMMAP_KIND_PCG_2:
+            case MEMMAP_KIND_PCG_3:
+                sl->source = 4; /* VRAM */
+                sl->ro_rw  = 1;
+                break;
+            default:
+                break;
+        };
+
+        /* MemExt nahrazuje jen RAM; ROM, CG-ROM a VRAM mají přednost
+         * (memmap_query je hlásí podle mapování bez ohledu na MemExt). */
+        if ( sl->kind != MEMMAP_KIND_RAM || !MEMEXT_TEST_CONNECTED ) continue;
+
+        /* g_memext.map[i] = raw bank index. Pro Luftner:
+         * 0..0x7F = RAM, 0x80..0xFF = FLASH. Pro PEHU jen
+         * 0..0x3F (RAM only). */
+        uint32_t rb = g_memext.map[ i ];
+        if ( MEMEXT_TEST_TYPE_LUFTNER )
+        {
+            if ( rb < MEMEXT_LUFTNER_BANKS )
             {
-                if ( rb < MEMEXT_LUFTNER_BANKS )
-                {
-                    p->slots[ i ].source = 5; /* MEMEXT_RAM */
-                    p->slots[ i ].ro_rw  = 1;
-                    p->slots[ i ].slot_offset =
-                        rb * MEMEXT_RAW_BANK_SIZE;
-                }
-                else
-                {
-                    p->slots[ i ].source = 6; /* MEMEXT_FLASH */
-                    p->slots[ i ].ro_rw  = 0;
-                    p->slots[ i ].slot_offset =
-                        ( rb - MEMEXT_LUFTNER_BANKS )
-                        * MEMEXT_RAW_BANK_SIZE;
-                };
+                sl->source = 5; /* MEMEXT_RAM */
+                sl->ro_rw  = 1;
+                sl->slot_offset = rb * MEMEXT_RAW_BANK_SIZE;
             }
-            else if ( MEMEXT_TEST_TYPE_PEHU )
+            else
             {
-                if ( rb < MEMEXT_PEHU_BANKS * 2 )
-                {
-                    p->slots[ i ].source = 5; /* MEMEXT_RAM */
-                    p->slots[ i ].ro_rw  = 1;
-                    p->slots[ i ].slot_offset =
-                        rb * MEMEXT_RAW_BANK_SIZE;
-                };
+                sl->source = 6; /* MEMEXT_FLASH */
+                sl->ro_rw  = 0;
+                sl->slot_offset = ( rb - MEMEXT_LUFTNER_BANKS ) * MEMEXT_RAW_BANK_SIZE;
+            };
+        }
+        else if ( MEMEXT_TEST_TYPE_PEHU )
+        {
+            if ( rb < MEMEXT_PEHU_BANKS * 2 )
+            {
+                sl->source = 5; /* MEMEXT_RAM */
+                sl->ro_rw  = 1;
+                sl->slot_offset = rb * MEMEXT_RAW_BANK_SIZE;
             };
         };
     };

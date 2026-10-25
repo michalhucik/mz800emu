@@ -1,3 +1,11 @@
+	- BUGFIX: Okno FDC v debuggeru zobrazovalo v anglickém rozhraní tři tooltipy česky (registry STATUS a COMMAND, položka data_counter). Nově jsou anglicky a v ostatních jazycích přeložené jako dřív.
+
+	- BUGFIX: Quick Save a Quick Load s prázdným adresářem snapshotů v nastavení používaly aktuální adresář procesu a nerespektovaly --work-dir. Nově je prázdný adresář pracovní adresář (--work-dir, výchozí aktuální adresář při startu) a relativní adresář se bere vůči němu.
+
+	- BUGFIX: MCP - last_user_action v emu_get_state a emulator://state nezaznamenal reset z GUI (F12, menu Reset), načtení snímku (Load, Quick Load) ani zásahy do zařízení z menu a oken zařízení. Nově je zaznamená jménem akce (reset, snapshot_load, snapshot_quickload, jméno zásahu zařízení).
+
+	- BUGFIX: MCP - emulator://memory/map a memory_map v emu_state_observe hlásily s připojeným rozšířením paměti u každého slotu RAM rozšíření, i když byla na adrese připojená ROM, CG-ROM nebo VRAM; bez rozšíření hlásily u všech slotů unknown. Nově slot nese kind podle aktuálního mapování (stejně jako kontrola regionu u zápisu) a source se od něj odvodí.
+
 	- BUGFIX: MCP - last_user_action v emu_get_state a emulator://state zaznamenával každý příkaz z GUI včetně periodického čtení otevřených oken debuggeru (registry, paměť, disassembler, pokrytí kódu, profiler, RAM Write Log), takže se s otevřeným debuggerem měnil pořád. Nově zaznamená jen akce, které nejsou čtením (řízení běhu, breakpointy, zápisy, zařízení).
 
 	- BUGFIX: MCP - emu_settings_set neměl u hlasitostí a nastavení zobrazení žádný účinek: změnil jen hodnotu v konfiguraci, kterou emulátor čte jen při startu, a při ukončení ji přepsal původní hodnotou, takže se neuložila ani do INI. Nově se hodnota projeví hned a uloží se. DISPLAY/custom_fps přijímá jen rozsah 50 až 1000 jako posuvník v menu.

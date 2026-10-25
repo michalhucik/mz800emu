@@ -13,12 +13,12 @@ mají oproti Tools dvě výhody:
 
 | URI | Obsah |
 |-----|-------|
-| `emulator://state` | Lightweight stav (running/paused + last_user_action = poslední akce uživatele v GUI; čtení oken debuggeru se nepočítá) |
+| `emulator://state` | Lightweight stav (running/paused + last_user_action = poslední akce uživatele v GUI včetně resetu, načtení snímku a zásahů do zařízení z menu; čtení oken debuggeru se nepočítá) |
 | `emulator://cpu/registers` | Plný Z80 register snapshot |
 | `emulator://cpu/im2_vector` | IM2 vector snapshot |
 | `emulator://cpu/interrupt_bus` | IRQ subsystem snapshot |
 | `emulator://memory/{addr_hex}/{length}` | Template - čtení paměti |
-| `emulator://memory/map` | Per-platform banking (16 x 4 KB slotů) |
+| `emulator://memory/map` | Mapování paměti po 16 slotech 4 KB podle aktuálního stavu: `kind` (`rom_low`, `rom_high`, `cgrom`, `ram`, `vram_i`, ...), `source` (`rom`, `cgrom`, `ram`, `vram`, `memext_ram`, `memext_flash`, `unknown`), `ro_rw` |
 
 ### Debugger
 

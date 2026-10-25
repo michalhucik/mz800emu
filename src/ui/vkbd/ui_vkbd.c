@@ -5,6 +5,7 @@
 #include "i18n.h"
 
 #include "mzarch/mzarch_platform_functions.h"
+#include "mzarch/mzarch_request.h"
 
 /*
  * Spravny pomer velikosti a rozlozeni klaves:
@@ -173,7 +174,7 @@ static void ui_vkbd_F11_reset_request(void)
     if (IsDebuggerPresent())
     {
         printf("Debugger is present! F11 - is now remapped as RESET.\n");
-        mzarch_platform_fn_reset_request();
+        mzarch_request_user_reset();
     };
 }
 #endif
@@ -182,7 +183,7 @@ const st_VKBD_OPTFUNC vk_optfunc[] = {
 #ifdef WINDOWS
     {SDL_SCANCODE_F11, ui_vkbd_F11_reset_request},
 #endif
-    {SDL_SCANCODE_F12, mzarch_platform_fn_reset_request},
+    {SDL_SCANCODE_F12, mzarch_request_user_reset},
     {0, NULL}};
 
 

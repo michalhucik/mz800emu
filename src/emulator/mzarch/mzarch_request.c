@@ -8,6 +8,10 @@
 #include "mzarch_request.h"
 #include "mzarch.h"
 #include "device_request.h"
+#include "mzarch_platform_functions.h"
+#ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
+#include "../debugger/dbgapi_cmdrq.h"
+#endif
 
 #if MZARCH == 800
 #include "mz800/mz800_main.h"
@@ -49,3 +53,12 @@ uint32_t mzarch_request_allow_psg1(bool allow)
     return device_request_submit("allow_psg1", mzarch_request_exec_allow_psg1, &a);
 }
 #endif /* MZARCH == 800 */
+
+
+void mzarch_request_user_reset(void)
+{
+#ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
+    dbgapi_note_user_action("reset");
+#endif
+    mzarch_platform_fn_reset_request();
+}

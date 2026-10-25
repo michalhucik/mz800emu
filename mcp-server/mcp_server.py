@@ -7490,12 +7490,16 @@ async def resource_memory_map() -> str:
     """Current 16 x 4 KB banking snapshot for the active platform.
 
     Returns ``{"platform": "mz700|mz800|mz1500", "mode_note": str,
-    "slots": [{addr_start, addr_end, source, ro_rw, slot_offset}, ...]}``.
+    "slots": [{addr_start, addr_end, kind, source, ro_rw, slot_offset}, ...]}``.
 
-    ``source`` is one of ``unknown / rom / cgrom / sram / vram /
-    memext_ram / memext_flash``; ``ro_rw`` is ``"r"`` or ``"rw"``. V1.D.1
-    populates MEMEXT slots fully (Luftner / PEHU); other slots are marked
-    as ``unknown`` until V1.D.2 wires up per-platform banking detection.
+    ``kind`` is the page kind by the current banking (the same as the
+    write region check and ``memory_map`` in ``emu_state_observe``):
+    ``ram / rom_low / rom_high / cgrom / vram_i / vram_ii / vram_text /
+    cgram / pcg_1 / pcg_2 / pcg_3 / mapped_ports / prohibited / unmapped``.
+    ``source`` follows from it: ``rom``, ``cgrom``, ``vram`` (also CG-RAM
+    and PCG), ``ram``, for RAM with a connected memory expansion
+    ``memext_ram`` / ``memext_flash`` (``slot_offset`` = offset in its
+    bank), otherwise ``unknown``. ``ro_rw`` is ``"r"`` or ``"rw"``.
     """
     if _transport is None or not _transport.is_alive():
         return json.dumps({"connected": False})

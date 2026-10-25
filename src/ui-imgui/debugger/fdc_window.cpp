@@ -50,9 +50,9 @@ static void render_new_chip_state(st_FDC *fdc)
             ImGui::TableHeadersRow();
 
             render_hex8_row("STATUS",   c->regSTATUS,
-                            _("Status registr (per type I/II/III sémantika)"));
+                            _("Status register (semantics per type I/II/III)"));
             render_hex8_row("COMMAND",  c->regCOMMAND,
-                            _("Poslední přijatý příkaz (true-bus opcode)"));
+                            _("Last received command (true-bus opcode)"));
             render_hex8_row("TRACK",    c->regTRACK);
             render_hex8_row("SECTOR",   c->regSECTOR);
             render_hex8_row("DATA",     c->regDATA);
@@ -77,7 +77,7 @@ static void render_new_chip_state(st_FDC *fdc)
             ImGui::TableHeadersRow();
 
             render_dec_row("data_counter",        c->data_counter,
-                           _("Zbývajících bytů pro R/W transfer (0 = idle)"));
+                           _("Bytes remaining in R/W transfer (0 = idle)"));
             render_dec_row("buffer_pos",          c->buffer_pos);
             render_dec_row("current_sector_size", c->current_sector_size);
             render_dec_row("status_mode", (unsigned)c->status_mode,

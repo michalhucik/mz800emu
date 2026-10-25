@@ -3667,11 +3667,11 @@ msgid "Hex"
 msgstr "Hex"
 
 #: src/ui-imgui/debugger/fdc_window.cpp:53
-msgid "Status registr (per type I/II/III sémantika)"
+msgid "Status register (semantics per type I/II/III)"
 msgstr "Statusregister (Typ I/II/III-Semantik)"
 
 #: src/ui-imgui/debugger/fdc_window.cpp:55
-msgid "Poslední přijatý příkaz (true-bus opcode)"
+msgid "Last received command (true-bus opcode)"
 msgstr "Zuletzt empfangener Befehl (True-Bus Opcode)"
 
 #: src/ui-imgui/debugger/fdc_window.cpp:60
@@ -3687,7 +3687,7 @@ msgid "Transfer state"
 msgstr "Transfer-Status"
 
 #: src/ui-imgui/debugger/fdc_window.cpp:80
-msgid "Zbývajících bytů pro R/W transfer (0 = idle)"
+msgid "Bytes remaining in R/W transfer (0 = idle)"
 msgstr "Verbleibende Bytes für R/W-Transfer (0 = idle)"
 
 #: src/ui-imgui/debugger/fdc_window.cpp:84

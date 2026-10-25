@@ -1,3 +1,11 @@
+	- BUGFIX: The FDC debugger window showed three tooltips in Czech in the English interface (registers STATUS and COMMAND, the data_counter item). They are now in English and translated in the other languages as before.
+
+	- BUGFIX: Quick Save and Quick Load with an empty snapshot directory in the settings used the current directory of the process and ignored --work-dir. An empty directory now means the work directory (--work-dir, by default the current directory at startup) and a relative directory is taken relative to it.
+
+	- BUGFIX: MCP - last_user_action in emu_get_state and emulator://state did not record a reset from the GUI (F12, menu Reset), a snapshot load (Load, Quick Load) or device changes from the menu and device windows. Now they are recorded with the action name (reset, snapshot_load, snapshot_quickload, the device change name).
+
+	- BUGFIX: MCP - emulator://memory/map and memory_map in emu_state_observe reported, with a memory expansion connected, the expansion RAM for every slot even where ROM, CG-ROM or VRAM was mapped; without an expansion they reported unknown for all slots. Each slot now carries kind by the current banking (the same as the write region check) and source follows from it.
+
 	- BUGFIX: MCP - last_user_action in emu_get_state and emulator://state recorded every command from the GUI including the periodic reads of open debugger windows (registers, memory, disassembler, code coverage, profiler, RAM Write Log), so with the debugger open it changed all the time. Now it records only actions that are not reads (run control, breakpoints, writes, devices).
 
 	- BUGFIX: MCP - emu_settings_set had no effect for volumes and display settings: it changed only the configuration value, which the emulator reads only at startup, and on exit overwrote it with the original value, so it was not saved to the INI file either. Now the value applies immediately and is saved. DISPLAY/custom_fps accepts only the range 50 to 1000, like the menu slider.

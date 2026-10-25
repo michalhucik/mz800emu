@@ -11,6 +11,8 @@
 #include "snapshot_quicksave.h"
 #include "snapshot_xml.h"
 #include "mzarch/mzarch_config.h"
+#include "main.h"   /* g_sdlapp pro sdlapp_paths_resolve_work() */
+#include "libs/sdlapp/sdlapp.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -177,19 +179,40 @@ void snapshot_quicksave_cleanup_oldest(const char *dir, const char *basename,
 }
 
 
-en_SNAPSHOT_RESULT snapshot_quicksave(void)
+/**
+ * @brief Adresář pro Quick Save a Quick Load.
+ *
+ * `[SNAPSHOT] default_directory`; prázdný = pracovní adresář (--work-dir,
+ * výchozí aktuální adresář při startu), relativní se bere vůči němu
+ * (stejně jako ostatní výstupy: export CDL, záznamy trace). Bez
+ * inicializované aplikace (testy bez SdlApp) zůstává dřívější chování:
+ * prázdný = ".", relativní vůči aktuálnímu adresáři.
+ *
+ * @param[out] out  Buffer na cestu.
+ * @param      size Velikost bufferu; delší cesta se zkrátí.
+ */
+static void quicksave_dir(char *out, size_t size)
 {
     const char *dir = g_snapshot_settings.default_directory;
+    if (g_sdlapp && g_sdlapp->paths) {
+        char *resolved = sdlapp_paths_resolve_work(g_sdlapp->paths, dir[0] ? dir : NULL);
+        g_strlcpy(out, resolved ? resolved : ".", size);
+        g_free(resolved);
+        return;
+    }
+    g_strlcpy(out, dir[0] ? dir : ".", size);
+}
+
+
+en_SNAPSHOT_RESULT snapshot_quicksave(void)
+{
+    char dir[1024];
+    quicksave_dir(dir, sizeof(dir));
     const char *basename = g_snapshot_settings.quicksave_filename;
     int mode = g_snapshot_settings.quicksave_mode;
 
-    /* Fallback na aktuální adresář pokud default_directory není nastaveno */
-    if (dir[0] == '\0') {
-        dir = ".";
-    } else {
-        /* Vytvořit adresář pokud neexistuje */
-        g_mkdir_with_parents(dir, 0755);
-    }
+    /* Vytvořit adresář, pokud neexistuje */
+    g_mkdir_with_parents(dir, 0755);
 
     char path[1024];
     en_SNAPSHOT_RESULT result;
@@ -236,8 +259,8 @@ en_SNAPSHOT_RESULT snapshot_quicksave(void)
 
 en_SNAPSHOT_RESULT snapshot_quickload(void)
 {
-    const char *dir = g_snapshot_settings.default_directory;
-    if (dir[0] == '\0') dir = ".";
+    char dir[1024];
+    quicksave_dir(dir, sizeof(dir));
     const char *basename = g_snapshot_settings.quicksave_filename;
     int mode = g_snapshot_settings.quicksave_mode;
 
@@ -247,6 +270,6 @@ en_SNAPSHOT_RESULT snapshot_quickload(void)
         return SNAPSHOT_ERR_MISSING_FILE;
     }
 
-    fprintf(stderr, "Snapshot: Quick Load z '%s'\n", path);
+    fprintf(stderr, "Snapshot: Quick Load from '%s'\n", path);
     return snapshot_load(path);
 }

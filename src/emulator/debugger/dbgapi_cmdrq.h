@@ -4032,6 +4032,49 @@ bool dbgapi_get_last_user_action ( en_DBGAPI_CMD *out_cmd,
                                     uint64_t *out_timestamp_us );
 
 
+/** @brief Velikost jména poslední akce uživatele včetně nuly (dbgapi_get_last_user_action_kind()). */
+#define DBGAPI_USER_ACTION_KIND_MAX 48
+
+
+/**
+ * @brief Zaznamená akci uživatele v GUI, která nejde přes frontu dbgapi.
+ *
+ * Reset z GUI (mzarch_user_reset_request()), načtení snímku z GUI
+ * (snapshot_request_submit()) a zásahy menu a oken zařízení
+ * (device_request_submit()) mění stav mimo frontu dbgapi; bez tohoto
+ * volání by je last_user_action neviděla. Přepíše poslední akci
+ * (cmd = DBGAPI_CMD_NONE, jméno = @p kind, čas teď).
+ *
+ * @param kind Jméno akce (anglicky, snake_case, např. "reset",
+ *             "snapshot_quickload", jméno zásahu zařízení); zkopíruje se,
+ *             delší se zkrátí na DBGAPI_USER_ACTION_KIND_MAX - 1 znaků.
+ *             NULL nebo "" = nic.
+ *
+ * @note Thread-safe (interní mutex), volá se z UI vlákna. Před
+ *       dbgapi_init() nic neudělá.
+ */
+void dbgapi_note_user_action ( const char *kind );
+
+
+/**
+ * @brief Vrátí jméno a čas poslední akce uživatele.
+ *
+ * Jméno je dbgapi_cmd_to_str() příkazu fronty s původem USER, který není
+ * čtením, nebo jméno z dbgapi_note_user_action() (akce GUI mimo frontu).
+ *
+ * @param[out] out_kind         Buffer na jméno (smí být NULL); bez akce "".
+ * @param      out_size         Velikost bufferu (doporučeno
+ *                              DBGAPI_USER_ACTION_KIND_MAX).
+ * @param[out] out_timestamp_us Monotonic čas akce v mikrosekundách (smí být
+ *                              NULL); bez akce 0.
+ * @return true, pokud nějaká akce byla zaznamenána.
+ *
+ * @note Thread-safe (interní mutex).
+ */
+bool dbgapi_get_last_user_action_kind ( char *out_kind, size_t out_size,
+                                         uint64_t *out_timestamp_us );
+
+
 /**
  * @brief Vrátí lidsky čitelný název DBGAPI_CMD (statický řetězec).
  *
@@ -4115,38 +4158,46 @@ typedef struct st_DBGAPI_CPU_IRQ_BUS_PARAM
 
 
 /**
- * @brief Parametr pro DBGAPI_CMD_GET_MEMORY_MAP (read-only).
+ * @brief Jeden slot 4 KiB v DBGAPI_CMD_GET_MEMORY_MAP (read-only).
  *
- * Per-platform snapshot 16 KB / 4 KB / 8 KB slotů Z80 address space podle
- * aktuálního banking stavu. V1.D.1 implementuje 16 slotů × 4 KB granulárně
- * (= odpovídá memext map granularitě i Sharp ROM/VRAM banking pravidlům
- * jsou ve většině případů zarovnaná na 4 KB).
+ * Snímek 16 slotů × 4 KB adresního prostoru Z80 podle aktuálního
+ * mapování. Druh slotu (`kind`) určí memmap_query(), stejně jako kontrola
+ * regionu u zápisů; zdroj se od něj odvodí (dbgapi_memory_map_fill()).
  *
  * Source kódy:
- *   0 = unknown / unmapped
- *   1 = ROM (mz800 / mz700 monitor)
- *   2 = CGROM (character ROM, jen MZ-700/MZ-1500)
- *   3 = SRAM (work / video RAM)
- *   4 = VRAM (graphics, MZ-800)
+ *   0 = unknown (mapované porty, Prohibited, nepřipojeno; detail v kind)
+ *   1 = ROM (monitor, dolní i horní)
+ *   2 = CGROM (character ROM)
+ *   3 = RAM (hlavní DRAM bez MemExtu)
+ *   4 = VRAM (grafická VRAM MZ-800, znaková VRAM a CG-RAM MZ-700, PCG MZ-1500)
  *   5 = MEMEXT_RAM
  *   6 = MEMEXT_FLASH (Luftner only)
  *
- * `slot_offset` = offset v source bance (= byte offset uvnitř RAM/ROM
- * pole). Pro MEMEXT je to absolutní offset v g_memext.RAM nebo .FLASH.
+ * `slot_offset` = offset v source bance: u RAM adresa začátku slotu,
+ * u MEMEXT absolutní offset v g_memext.RAM nebo .FLASH, jinde 0.
  *
- * ro_rw: 0 = read-only (ROM, FLASH read-only), 1 = read-write (RAM,
- * VRAM, MEMEXT_RAM).
+ * ro_rw: 0 = read-only (ROM, CG-ROM, FLASH, unknown), 1 = read-write
+ * (RAM, VRAM, MEMEXT_RAM).
+ *
+ * @invariant kind == MEMMAP_KIND_RAM <=> source je 3, 5 nebo 6.
  */
 typedef struct st_DBGAPI_MEMORY_MAP_SLOT
 {
     uint16_t addr_start;    /**< Z80 adresa začátku slotu (0x0000, 0x1000, ...). */
     uint16_t addr_end;      /**< Z80 adresa konce slotu (inclusive, 0x0FFF, 0x1FFF, ...). */
+    uint8_t  kind;          /**< en_MEMMAP_REGION_KIND z memmap_query(). */
     uint8_t  source;        /**< 0..6 source kód viz výše. */
     uint8_t  ro_rw;         /**< 0 = read-only, 1 = read-write. */
     uint32_t slot_offset;   /**< Offset v source bance (informativní). */
 } st_DBGAPI_MEMORY_MAP_SLOT;
 
 
+/**
+ * @brief Parametr pro DBGAPI_CMD_GET_MEMORY_MAP (read-only), plní
+ *        dbgapi_memory_map_fill().
+ *
+ * @invariant slot_count == 16, slots[i] pokrývá 0x1000*i .. 0x1000*i+0x0FFF.
+ */
 typedef struct st_DBGAPI_MEMORY_MAP_PARAM
 {
     char    platform[32];                     /**< OUT: "mz800" / "mz700" / "mz1500". */

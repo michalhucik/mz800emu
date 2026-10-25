@@ -15,12 +15,12 @@ two advantages over Tools:
 
 | URI | Content |
 |-----|---------|
-| `emulator://state` | Lightweight state (running/paused + last_user_action = the user's last action in the GUI; reads by debugger windows do not count) |
+| `emulator://state` | Lightweight state (running/paused + last_user_action = the user's last action in the GUI, including reset, snapshot load and device changes from the menu; reads by debugger windows do not count) |
 | `emulator://cpu/registers` | Full Z80 register snapshot |
 | `emulator://cpu/im2_vector` | IM2 vector snapshot |
 | `emulator://cpu/interrupt_bus` | IRQ subsystem snapshot |
 | `emulator://memory/{addr_hex}/{length}` | Template - read memory bytes |
-| `emulator://memory/map` | Per-platform banking (16 x 4 KB slots) |
+| `emulator://memory/map` | Memory map in 16 slots of 4 KB by the current banking: `kind` (`rom_low`, `rom_high`, `cgrom`, `ram`, `vram_i`, ...), `source` (`rom`, `cgrom`, `ram`, `vram`, `memext_ram`, `memext_flash`, `unknown`), `ro_rw` |
 
 ### Debugger
 

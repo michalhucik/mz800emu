@@ -9,6 +9,10 @@
 
 #include "snapshot_request.h"
 #include "snapshot_quicksave.h"
+#include "mzarch/mzarch_config.h"
+#ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
+#include "debugger/dbgapi_cmdrq.h"
+#endif
 #include "replay.h"
 
 #include <glib.h>
@@ -59,6 +63,12 @@ uint32_t snapshot_request_submit(en_SNAPSHOT_REQ_KIND kind, const char *path,
     g_queue_push_tail(&s_pending, r);
     g_atomic_int_inc(&s_pending_count);
     g_mutex_unlock(&s_lock);
+#ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
+    /* Fronta je jen pro GUI: načtení snímku je akce uživatele (last_user_action);
+     * uložení stav stroje nemění, stejně jako čtení se nezaznamená. */
+    if (kind == SNAPSHOT_REQ_LOAD) dbgapi_note_user_action("snapshot_load");
+    else if (kind == SNAPSHOT_REQ_QUICKLOAD) dbgapi_note_user_action("snapshot_quickload");
+#endif
     return seq;
 }
 

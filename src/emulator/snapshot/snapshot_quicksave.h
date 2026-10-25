@@ -17,12 +17,17 @@ extern "C" {
 /**
  * Provede Quick Save dle aktuálního nastaveného módu
  *
+ * Adresář: `[SNAPSHOT] default_directory`, prázdný = pracovní adresář
+ * (--work-dir), relativní vůči němu; chybějící adresář se vytvoří.
+ *
  * @return SNAPSHOT_OK při úspěchu
  */
 en_SNAPSHOT_RESULT snapshot_quicksave(void);
 
 /**
  * Provede Quick Load — načte nejnovější quicksave snapshot
+ *
+ * Hledá ve stejném adresáři jako snapshot_quicksave().
  *
  * @return SNAPSHOT_OK při úspěchu
  */

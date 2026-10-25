@@ -2926,6 +2926,23 @@ bool dbgapi_get_last_user_action ( en_DBGAPI_CMD *out_cmd,
 
 
 /**
+ * @brief Stub dbgapi_get_last_user_action_kind(): jméno ze stavu stubu
+ *        přes dbgapi_cmd_to_str().
+ */
+bool dbgapi_get_last_user_action_kind ( char *out_kind, size_t out_size,
+                                         uint64_t *out_timestamp_us )
+{
+    if ( out_kind && out_size )
+    {
+        g_strlcpy ( out_kind, s_stub_lua_valid ? dbgapi_cmd_to_str ( s_stub_lua_cmd ) : "",
+                    out_size );
+    };
+    if ( out_timestamp_us ) *out_timestamp_us = s_stub_lua_valid ? s_stub_lua_timestamp : 0;
+    return s_stub_lua_valid;
+}
+
+
+/**
  * @brief Stub setter - test si nastaví fake last user action.
  *
  * Definováno mimo standardní reset cesty (= test si zavolá explicitně).

@@ -12,6 +12,7 @@
 #include "emulator/replay.h"
 #include "emulator/device_request.h"
 #include "mzarch/mzarch_platform_functions.h"
+#include "mzarch/mzarch_request.h"
 // #include "iface/iface_video.h"
 #include "topmenu.h"
 #include "ui-imgui/debugger/dbgapi_helpers.h"
@@ -57,7 +58,7 @@ void imgui_topmenu_body(void)
 
     if ((ImGui::MenuItem(_L("Reset"), "F12")) || ImGui::Shortcut(ImGuiKey_F12))
     {
-        mzarch_platform_fn_reset_request();
+        mzarch_request_user_reset();
     }
 
     ImGui::Separator();

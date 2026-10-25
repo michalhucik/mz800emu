@@ -63,7 +63,7 @@ typedef struct st_SNAPSHOT_SETTINGS {
     bool include_ramdisk;         /* Uložit obsah volatile ramdisku (default: false) */
     bool include_memext;          /* Uložit obsah MEMEXT RAM/FLASH (default: true) */
     int compression_level;        /* ZIP kompresní úroveň 0-9 (default: 6) */
-    char default_directory[1024]; /* Implicitní adresář pro snapshoty */
+    char default_directory[1024]; /* Implicitní adresář pro snapshoty; prázdný = pracovní adresář (--work-dir), relativní vůči němu (Quick Save, Quick Load) */
     char quicksave_filename[256]; /* Název souboru pro quicksave (default: "quicksave") */
     int quicksave_mode;           /* 0=Basic, 1=Incremental, 2=Rotational */
     int quicksave_max_slots;      /* Max. počet slotů pro rotational mód (default: 5) */
