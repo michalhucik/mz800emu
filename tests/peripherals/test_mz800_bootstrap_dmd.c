@@ -4,7 +4,7 @@
  *
  * ]GOPGM v ROM (ED02h) dělá skutečný OUT (0CEh),0. Bootstrap ho dřív
  * nahrazoval přímým zápisem g_gdg.regDMD = 0, takže po --run-mzf v 800
- * módu zůstal GATE0 CTC0 = 0 (gdg_reset ho v 700 módu nastaví podle
+ * módu zůstal GATE0 CTC0 = 0 (krok IPL E816h ho v 700 módu nastaví podle
  * regct53g7 = 0) a latch zápisu MZ-700 nebyl vynulován. Nově jde DMD přes
  * gdg_write_byte(0x00CE, ...) jako paleta a border v téže funkci.
  *
@@ -37,13 +37,15 @@ static en_MZ800_MODE_SW s_saved_mode_sw;
 
 
 /**
- * @brief Stav jako po resetu v 700 módu: DMD 08h, regct53g7 = 0,
- *        GATE0 CTC0 = 0.
+ * @brief Stav jako po kroku IPL E816h (mzarch_platform_bootstrap_init())
+ *        v 700 módu: DMD 08h, regct53g7 = 0, GATE0 CTC0 = 0. Samotný
+ *        reset dává DMD 0 (800 mód jako na HW).
  */
 void setUp(void)
 {
     s_saved_mode_sw = g_mzarch_main.mode_sw;
     gdg_reset();
+    gdg_debug_set_regDMD(0x08);
     g_gdg.regct53g7 = 0;
     g_ctc8253[0].gate = 0;
 }

@@ -16,6 +16,9 @@
 #include "hw-generic/memory/memext.h"
 #include "hw-generic/cmt/cmthack.h"
 #include "emulator/emulator.h"
+#if MZARCH == 800
+#include "mzarch/mz800/gdg/mz800_gdg.h"
+#endif
 
 /* Memory testy ověřují čistou MZ-800 paměť (g_memory.RAM, ROM overlay,
  * memory mapping). Memext (PEHU/LUFTNER) přesměrovává bus pointery
@@ -266,6 +269,39 @@ void test_memory_ram_under_rom_preserved(void)
     memory_reset(); /* úklid */
 }
 
+/* Reset (gdg_reset + memory_reset) - režim GDG a mapa paměti jako na HW:
+ * DMD = 0 (režim MZ-800, 320x200), 0000h ROM, 1000h CG-ROM, 8000h-9FFFh
+ * VRAM, E000h-FFFFh ROM, jinde DRAM. Zdroj: Service Manual MZ-800 str. 6
+ * (obr. a "Power on (reset)") a str. 7 (OUT E4h = "Power on or RESET
+ * input"); simulace netlistu GDG (stejná mapa po studeném i teplém
+ * resetu). Režim MZ-700 zapíná až IPL zápisem 08h na port CEh. */
+void test_memory_reset_map_matches_hw(void)
+{
+    MZTEST_REQUIRE_LEVEL(MZTEST_LEVEL_UNIT);
+
+    static const en_MEMMAP_REGION_KIND expected[16] = {
+        MEMMAP_KIND_ROM_LOW, MEMMAP_KIND_CGROM, MEMMAP_KIND_RAM, MEMMAP_KIND_RAM,
+        MEMMAP_KIND_RAM, MEMMAP_KIND_RAM, MEMMAP_KIND_RAM, MEMMAP_KIND_RAM,
+        MEMMAP_KIND_VRAM_I, MEMMAP_KIND_VRAM_I, MEMMAP_KIND_RAM, MEMMAP_KIND_RAM,
+        MEMMAP_KIND_RAM, MEMMAP_KIND_RAM, MEMMAP_KIND_ROM_HIGH, MEMMAP_KIND_ROM_HIGH
+    };
+
+    /* stav jako po běhu programu: režim 700, ROM odpojené */
+    gdg_debug_set_regDMD(REGISTER_DMD_FLAG_MZ700);
+    memory_map_pwrite(MMAP_MZ800_PWRITE_E0, 0x00);
+    memory_map_pwrite(MMAP_MZ800_PWRITE_E1, 0x00);
+
+    gdg_reset();
+    memory_reset();
+
+    TEST_ASSERT_EQUAL_HEX8_MESSAGE(0x00, g_gdg.regDMD, "DMD po resetu");
+    for (int page = 0; page < 16; page++) {
+        char msg[32];
+        g_snprintf(msg, sizeof (msg), "stránka %Xxxxh", page);
+        TEST_ASSERT_EQUAL_INT_MESSAGE(expected[page], memmap_query((uint8_t) page), msg);
+    }
+}
+
 #endif /* MZARCH == 800 */
 
 /* ================================================================
@@ -454,6 +490,7 @@ int main(int argc, char *argv[])
     RUN_TEST(test_memory_mapping_remap_rom_0000);
     RUN_TEST(test_memory_mapping_e4_maps_both_roms);
     RUN_TEST(test_memory_ram_under_rom_preserved);
+    RUN_TEST(test_memory_reset_map_matches_hw);
 #endif
 
     /* unit — ROM integrita */

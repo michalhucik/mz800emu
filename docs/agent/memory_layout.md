@@ -244,7 +244,12 @@ This means:
   `vram_i` 4, `vram_ii` 5, `vram_text` 6, `cgram` 7, `pcg_1`..`pcg_3`
   8..10, `mapped_ports` 11, `prohibited` 12, `unmapped` 13.
 - The map can change between your read and your write: the program
-  switches banking while it runs. Right after a reset the MZ-800 ROM
+  switches banking while it runs. Paused right after a reset (before
+  the first instruction) the MZ-800 is in MZ-800 mode with the same map
+  as after `OUT (0xE4)`: ROM `0x0000`, CG-ROM `0x1000`, VRAM
+  `0x8000..0x9FFF`, ROM `0xE000`, RAM elsewhere; the ROM switches to
+  MZ-700 mode and remaps memory in its first instructions. Shortly
+  after start the MZ-800 ROM
   maps CG-ROM at `0x1000..0x1FFF` for a while to copy the character set
   to CG-RAM, so a write of a program to that range shortly after start
   can be refused. Pause, check `emulator://memory/map` (or read it with

@@ -1,3 +1,5 @@
+	- BUGFIX: After a reset the MZ-800 was in MZ-700 mode and had no VRAM at 8000h-9FFFh. On the hardware, after power on and after RESET the machine is in MZ-800 mode (320x200) and the memory map is the same as after OUT E4h: ROM at 0000h, CG-ROM at 1000h, VRAM at 8000h-9FFFh, ROM at E000h, RAM elsewhere; MZ-700 mode is switched on later by the ROM. This did not change how the ROM runs (it sets the state in its first instructions), but it showed when paused right after a reset (memory map in the debugger and over MCP, reads from 8000h and D000h).
+
 	- BUGFIX: The FDC debugger window showed three tooltips in Czech in the English interface (registers STATUS and COMMAND, the data_counter item). They are now in English and translated in the other languages as before.
 
 	- BUGFIX: Quick Save and Quick Load with an empty snapshot directory in the settings used the current directory of the process and ignored --work-dir. An empty directory now means the work directory (--work-dir, by default the current directory at startup) and a relative directory is taken relative to it.

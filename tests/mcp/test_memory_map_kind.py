@@ -6,7 +6,9 @@ Ověřuje přes MCP:
   1  po resetu v pauze (MZ-800: dolní ROM, CG-ROM na 1000h, horní ROM) hlásí
      get_memory_map slot 0000h ``rom_low`` / ``rom``, 1000h ``cgrom`` /
      ``cgrom``, F000h ``rom_high`` / ``rom``, vše jen pro čtení; dřív
-     s MemExtem hlásil všude ``memext_ram``,
+     s MemExtem hlásil všude ``memext_ram``; 8000h ``vram_i`` / ``vram``
+     a C000h, D000h ``ram`` (režim MZ-800 jako na HW, dřív emulátor po
+     resetu zapínal režim 700 a VRAM nepřipojil),
   2  po prvních instrukcích ROM (CG-ROM odpojena) je na 1000h ``ram``
      se zdrojem ``ram`` nebo ``memext_ram`` (podle MemExtu), zápis povolen,
   3  u každého slotu platí: kind ``ram`` právě když zdroj je ``ram``,
@@ -78,6 +80,11 @@ def main():
                   f"after reset 1000h is CG-ROM ({s1})")
             check((sf["kind"], sf["source"], sf["ro_rw"]) == ("rom_high", "rom", "r"),
                   f"after reset F000h is ROM ({sf})")
+            s8, sc, sd = slot(mm, 0x8000), slot(mm, 0xC000), slot(mm, 0xD000)
+            check((s8["kind"], s8["source"]) == ("vram_i", "vram"),
+                  f"after reset 8000h is VRAM ({s8})")
+            check(sc["kind"] == "ram" and sd["kind"] == "ram",
+                  f"after reset C000h and D000h are RAM ({sc}, {sd})")
             check_consistent(mm, "after reset")
             check_observe_same(emu, mm, "after reset")
 

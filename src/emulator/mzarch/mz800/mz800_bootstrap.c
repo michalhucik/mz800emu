@@ -43,6 +43,13 @@ void mzarch_platform_bootstrap_apply_load_map(void)
 
 void mzarch_platform_bootstrap_init(void)
 {
+    /* E816h: OUT (0CEh),08h - DMD = 08h, MZ-700 mód. Po resetu je DMD = 0
+     * (MZ-800 mód jako na HW) a IPL do 700 módu přepíná jako první krok;
+     * hlavička i tělo MZF se tak nahrávají v 700 módu jako z ROM. Zápis
+     * jde cestou OUT CEh (GATE0 CTC0 podle latche, framebuffer). Na HW
+     * předchází @INI55 a Z80 PIO ze společné části, s nimi nesouvisí. */
+    gdg_write_byte ( 0x00ce, 0x08 );
+
     mzarch_platform_bootstrap_apply_load_map ();
 
     /* E82Ch: TIMST s A = 0, DE = 0 (RTC = půlnoc). */
@@ -116,9 +123,10 @@ void mzarch_platform_bootstrap_post_header(uint16_t fstrt)
         printf ( "Bootstrap: mode switch = MZ-700 mode\n" );
         /* SW1 = MZ-700 mód: ]GOPGM (ECFCh) při DMD status
          * bit 1 = 0 mód nemění; DMD zůstává 08h z IPL (E816h). Po
-         * resetu (gdg_reset) už DMD = 08h, zápis přes gdg_write_byte()
-         * (cesta OUT CEh) je pak bez účinku; jinak proběhne se všemi
-         * vedlejšími efekty GDG (CTC0 GATE0, framebuffer). */
+         * mzarch_platform_bootstrap_init() (krok E816h) už DMD = 08h,
+         * zápis přes gdg_write_byte() (cesta OUT CEh) je pak bez účinku;
+         * jinak proběhne se všemi vedlejšími efekty GDG (CTC0 GATE0,
+         * framebuffer). */
         gdg_write_byte ( 0x00ce, 0x08 );
     }
     else
@@ -151,7 +159,8 @@ void mzarch_platform_bootstrap_post_header(uint16_t fstrt)
     mz800_ram_fastpath_rebuild ();
 #endif
     /* SW1 = MZ-700 mód: ponechat default z _init.
-     *   - DMD zůstává v MZ-700 mode (= bit 3 = 1, default po gdg_init).
+     *   - DMD zůstává v MZ-700 mode (= bit 3 = 1, krok E816h
+     *     v mzarch_platform_bootstrap_init()).
      *   - VRAM se v MZ-700 mode připojuje automaticky s horní ROM
      *     (= ROM E000 implikuje VRAM D000-DFFF mapping, viz
      *     MEMORY_MZ700_MAP_TEST_VRAM_D000 makro). CGRAM_VRAM flag tu

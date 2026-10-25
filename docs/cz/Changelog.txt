@@ -1,3 +1,5 @@
+	- BUGFIX: MZ-800 byl po resetu v režimu MZ-700 a bez VRAM na 8000h-9FFFh. Na HW je po zapnutí i po RESET režim MZ-800 (320x200) a mapa jako po OUT E4h: ROM 0000h, CG-ROM 1000h, VRAM 8000h-9FFFh, ROM E000h, jinde RAM; režim MZ-700 zapíná až ROM. Běh ROM to neměnilo (stav nastaví v prvních instrukcích), rozdíl byl vidět v pauze hned po resetu (mapa paměti v debuggeru a přes MCP, čtení z 8000h a D000h).
+
 	- BUGFIX: Okno FDC v debuggeru zobrazovalo v anglickém rozhraní tři tooltipy česky (registry STATUS a COMMAND, položka data_counter). Nově jsou anglicky a v ostatních jazycích přeložené jako dřív.
 
 	- BUGFIX: Quick Save a Quick Load s prázdným adresářem snapshotů v nastavení používaly aktuální adresář procesu a nerespektovaly --work-dir. Nově je prázdný adresář pracovní adresář (--work-dir, výchozí aktuální adresář při startu) a relativní adresář se bere vůči němu.

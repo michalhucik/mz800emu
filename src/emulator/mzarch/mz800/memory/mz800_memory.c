@@ -453,8 +453,24 @@ void memory_write_vram ( void ) {
 #endif
 
 
+/**
+ * @brief Teplá inicializace paměti MZ-800 (reset stroje).
+ *
+ * Nastaví mapu jako na HW po zapnutí i po RESET: dolní ROM na 0000h,
+ * CG-ROM na 1000h, VRAM na 8000h (při DMD = 0 jen 8000h-9FFFh) a horní
+ * ROM na E000h, jinde DRAM; tedy stejný stav jako po OUT E4h v režimu
+ * MZ-800 (Service Manual MZ-800 str. 6 obr. a "Power on (reset)", str. 7
+ * "Power on or RESET input"; shodně simulace netlistu GDG). Prohibited
+ * se ruší. Obsah RAM a VRAM zůstává.
+ *
+ * Zresetuje MemExt a znovu připojí ukazatele RAM (včetně rychlé cesty).
+ *
+ * @pre Volá se po gdg_reset(): na DMD (režim 700/800, SCRW640) závisí,
+ *      co příznak VRAM připojí.
+ * @pre Emu vlákno (nebo neběžící emu vlákno).
+ */
 void memory_reset ( void ) {
-    g_memory.map = MEMORY_MZ800_MAP_FLAG_ROM_0000 | MEMORY_MZ800_MAP_FLAG_ROM_1000 | MEMORY_MZ800_MAP_FLAG_ROM_E000;
+    g_memory.map = MEMORY_MZ800_MAP_FLAG_ROM_0000 | MEMORY_MZ800_MAP_FLAG_ROM_1000 | MEMORY_MZ800_MAP_FLAG_CGRAM_VRAM | MEMORY_MZ800_MAP_FLAG_ROM_E000;
 
     memext_reset ( );
     memory_reconnect_ram ( );

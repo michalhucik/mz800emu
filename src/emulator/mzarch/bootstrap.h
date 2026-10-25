@@ -84,7 +84,8 @@ extern void mzarch_bootstrap_rom_monitor_init(uint8_t *text_vram, uint16_t beep_
  *
  * Volá se po společných krocích (IM 1, @INI55, Z80 PIO), před nahráním
  * MZF hlavičky a těla. Nastaví load-time mapování paměti a v pořadí podle
- * ROM provede platformní kroky (MZ-800/MZ-1500: TIMST, ztišení PSG,
+ * ROM provede platformní kroky (MZ-800: DMD = 08h, MZ-700 mód jako IPL
+ * E816h - po resetu je DMD = 0; MZ-800/MZ-1500: TIMST, ztišení PSG,
  * PC0 = 1; MZ-800: kopie CG-ROM do CG-RAM; MZ-1500: paleta a priorita)
  * a pracovní oblast monitoru přes mzarch_bootstrap_rom_monitor_init().
  *
