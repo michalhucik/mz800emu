@@ -147,6 +147,13 @@ mz_add_test(dbgapi_dequeue_matching
     LABELS   "emu;debugger"
 )
 
+# last_user_action: čtení z GUI (okna debuggeru) záznam nepřepisují (N49).
+mz_add_test(dbgapi_last_user_action
+    TYPE     EMU
+    SOURCES  test_dbgapi_last_user_action.c
+    LABELS   "emu;debugger"
+)
+
 # Zápis Memory Browseru přes CMDRQ frontu (ne přímo z UI vlákna).
 # Linkuje skutečný backend membrowser_io.cpp (bez ImGui závislostí).
 mz_add_test(membrowser_io_queue

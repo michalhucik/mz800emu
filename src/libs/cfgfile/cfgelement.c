@@ -288,6 +288,24 @@ char* cfgelement_get_keyword_by_value ( st_CFGELEMENT *e ) {
 
 
 /**
+ * @brief Vrátí textový keyword pro zadanou číselnou hodnotu.
+ *
+ * Na rozdíl od cfgelement_get_keyword_by_value() nečte hodnotu elementu,
+ * takže poslouží i pro hodnotu navázané proměnné.
+ *
+ * @param e Ukazatel na element typu KEYWORD
+ * @param value Číselná hodnota keyword
+ * @return Textový keyword (patří elementu, neuvolňovat), nebo NULL, pokud
+ *         hodnota nemá přiřazený keyword
+ */
+char* cfgelement_get_keyword_by_int ( st_CFGELEMENT *e, int value ) {
+    assert ( e != NULL );
+    assert ( e->type == CFGENTYPE_KEYWORD );
+    return cfgelement_property_get_keyword_by_value ( e->pkw, value );
+}
+
+
+/**
  * @brief Vrati textovy keyword odpovidajici vychozi hodnote
  * @param e Ukazatel na element typu KEYWORD
  * @return Textovy keyword, nebo NULL pokud hodnota nema prirazeny keyword

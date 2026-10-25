@@ -509,6 +509,8 @@ typedef struct st_DISPATCH_STUB_STATE {
      *   settings_fake_value   - hodnota co stub vrátí v out_value
      *                           (g_strdup, stub uvolní; default NULL).
      *   settings_fake_type    - hodnota co stub vrátí v out_type.
+     *   settings_fake_live    - hodnota co stub vrátí v out_live u GET
+     *                           (g_strdup, stub uvolní; default NULL).
      *   settings_fake_result  - hodnota co stub zapíše do out_result
      *                           (default 0; -2/-3/-4 podle scénáře).
      *
@@ -525,12 +527,15 @@ typedef struct st_DISPATCH_STUB_STATE {
      *   periph_fake_result     - hodnota do out_result (default 0).
      *   periph_fake_requires_restart - hodnota do
      *                                  out_requires_restart (default 1).
+     *   Při periph_fake_result == 0 stub vrátí out_changed = 1
+     *   a out_type "stub".
      */
     int                  settings_last_cmd;
     char                *settings_last_module;
     char                *settings_last_element;
     char                *settings_last_new_value;
     char                *settings_fake_value;
+    char                *settings_fake_live;
     int                  settings_fake_type;
     int                  settings_fake_result;
     int                  platform_last_target_kind;

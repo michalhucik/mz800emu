@@ -219,4 +219,42 @@ bool dbgapi_cmd_mutates(en_DBGAPI_CMD cmd)
     return k == DBGAPI_CMD_KIND_MUTATES || k == DBGAPI_CMD_KIND_UNSET;
 }
 
+
+bool dbgapi_cmd_is_read(en_DBGAPI_CMD cmd, const void *data_ptr)
+{
+    if (dbgapi_cmd_props(cmd)->kind == DBGAPI_CMD_KIND_READ) return true;
+    if (data_ptr == NULL) return false;
+
+    switch (cmd)
+    {
+        case DBGAPI_CMD_COVERAGE:
+        {
+            en_DBGAPI_COVERAGE_OP op = ((const st_DBGAPI_COVERAGE_PARAM *)data_ptr)->op;
+            return op == DBGAPI_COVERAGE_OP_STATUS || op == DBGAPI_COVERAGE_OP_SNAPSHOT;
+        }
+        case DBGAPI_CMD_PROFILER_PC:
+        {
+            en_DBGAPI_PROFILER_PC_OP op = ((const st_DBGAPI_PROFILER_PC_PARAM *)data_ptr)->op;
+            return op == DBGAPI_PROFILER_PC_OP_GET || op == DBGAPI_PROFILER_PC_OP_EXPORT
+                || op == DBGAPI_PROFILER_PC_OP_BITMAP;
+        }
+        case DBGAPI_CMD_RAMLOG:
+        {
+            en_DBGAPI_RAMLOG_OP op = ((const st_DBGAPI_RAMLOG_PARAM *)data_ptr)->op;
+            return op == DBGAPI_RAMLOG_OP_STATUS || op == DBGAPI_RAMLOG_OP_WHO_WROTE
+                || op == DBGAPI_RAMLOG_OP_WRITERS || op == DBGAPI_RAMLOG_OP_RECENT;
+        }
+        case DBGAPI_CMD_BPLOG:
+            return ((const st_DBGAPI_BPLOG_PARAM *)data_ptr)->op == DBGAPI_BPLOG_OP_STATUS;
+        case DBGAPI_CMD_VIDEOREC:
+            return ((const st_DBGAPI_VIDEOREC_PARAM *)data_ptr)->op == DBGAPI_VIDEOREC_OP_STATUS;
+        case DBGAPI_CMD_SCREENSHOT_SERIES:
+            return ((const st_DBGAPI_SCREENSHOT_SERIES_PARAM *)data_ptr)->op == DBGAPI_SCREENSHOT_SERIES_OP_STATUS;
+        case DBGAPI_CMD_AUDIO_CAPTURE:
+            return ((const st_DBGAPI_AUDIO_CAPTURE_PARAM *)data_ptr)->op == DBGAPI_AUDIO_CAPTURE_OP_STATUS;
+        default:
+            return false;
+    }
+}
+
 #endif /* MZ800EMU_CFG_DEBUGGER_ENABLED */

@@ -144,10 +144,10 @@ documented separately in [Resources overview](resources-overview.md).
 | `emu_set_speed` | no | Emulation speed: 100 %, custom percent or MAX SPEED |
 | `emu_speed_step` | no | Change the custom emulation speed by a relative percentage |
 | `emu_settings_set` | **YES** | Live INI write (whitelist); **mutates global state** |
-| `emu_settings_get` | no | Read INI key + type (open read, no whitelist) |
+| `emu_settings_get` | no | Read INI key + type + live value (open read, no whitelist) |
 | `emu_platform_set` | **YES** | Platform switch attempt - returns error (compile-time MZARCH) |
-| `emu_periph_attach` | **YES** | Activates a peripheral module (`requires_restart`) |
-| `emu_periph_detach` | **YES** | Deactivates a peripheral module (`requires_restart`) |
+| `emu_periph_attach` | **YES** | Attaches a peripheral at runtime (like the Devices menu) |
+| `emu_periph_detach` | **YES** | Detaches a peripheral at runtime (like the Devices menu) |
 | `emu_stop` | **YES** | Hot-swap stop (pipe-only); terminates emu, Python wrapper keeps running |
 | `emu_start` | **YES** | Hot-swap start (pipe-only); spawns fresh mz800emu.exe child |
 | `emu_input_send_key` | **YES** | Press key + hold N frames + release |
@@ -2336,6 +2336,10 @@ Returns:
 }
 ```
 
+`ro` is the effective write protection of the inserted medium (user
+choice, a file without write permission, the Unicard boot loader in the
+Quick Disk); `false` with no medium.
+
 ## Platform + Config tools
 
 Key design decision: **runtime platform switch DOES NOT exist** -
@@ -2345,9 +2349,11 @@ the user must launch instead of the current one.
 
 ### `emu_settings_set` (sensitive)
 
-Writes a live-settable INI key. The whitelist contains keys with
-immediate application (audio volume, video tweaks, QDISK path).
-Boot-time keys (emulator paths, snapshot defaults) are rejected.
+Writes a live-settable INI key. The value applies immediately (like a
+change in the menu) and is saved to the INI file on exit. The whitelist
+contains keys with immediate application (volume, display settings,
+trace PC filter). Boot-time keys (emulator paths, snapshot defaults) are
+rejected.
 
 ```
 emu_settings_set(key="AUDIO/volume_8253", value="60")
@@ -2364,7 +2370,7 @@ Whitelist:
 - `AUDIO/volume_psg1_0` .. `AUDIO/volume_psg1_3` (MZ-1500, unsigned)
 - `DISPLAY/forced_full_screen_redrawing` (bool)
 - `DISPLAY/locked_window_aspect_ratio` (bool)
-- `DISPLAY/custom_fps` (unsigned)
+- `DISPLAY/custom_fps` (unsigned, 50..1000; used in the Custom frame rate mode)
 - `TRACE_CPUTRACK/pc_range_lo` .. `TRACE_CPUTRACK/pc_range_hi` (unsigned, 0..65535; runtime PC trace filter)
 
 The Quick Disk image and its write protection are set with
@@ -2372,13 +2378,24 @@ The Quick Disk image and its write protection are set with
 
 ### `emu_settings_get`
 
-Reads the current value of any configuration key (= read whitelist is
-open). Returns the string representation plus the type code.
+Reads the value of any configuration key (= read whitelist is open).
+Returns the string representation plus the type code.
 
 ```
 emu_settings_get(key="AUDIO/volume_8253")
 -> {"key": "AUDIO/volume_8253", "value": "60", "type": "unsigned"}
+emu_settings_get(key="QDISK/mz1f11_type")
+-> {"key": "QDISK/mz1f11_type", "value": "UNICARD", "type": "keyword",
+    "live": "STANDARD"}
 ```
+
+`value` is the configured value: loaded at startup or written with
+`emu_settings_set`. Changes made in the menu or by other tools (e.g.
+`emu_periph_attach`, `emu_media_insert`) reach it only when the INI file
+is saved. `live` is the value the emulator is working with right now;
+it is present only for keys bound directly to a numeric variable
+(device connections and types, display settings), otherwise it is
+missing.
 
 For INI keys of type `keyword` the textual keyword variant is
 returned.
@@ -2408,28 +2425,37 @@ ignored.
 
 ### `emu_periph_attach` (sensitive)
 
-Writes `active=true` in the configuration for the given peripheral
-module (= `MEMEXT`, `FDC`, `QDISK`, `IDE8`, `GAL5`). For full
-application a restart of the emulator is required (= response carries
-`requires_restart=true`).
+Attaches a peripheral at runtime, the same way as the Devices menu;
+the choice is saved to the INI file on exit. Refused while a replay is
+being recorded or played back.
+
+| `kind` | `options.type` (first = default) |
+|--------|----------------------------------|
+| `memext` | `pehu`, `luftner` (default = the current type); attaching resets the bank map |
+| `fdc` | `fdc0` (ports 0D8h-0DFh), `fdc1` (secondary, ports 58h-5Fh) |
+| `qd` | `mz1f11` (.MZQ image), `virtual`, `unicard` (Unicard boot loader, needs a connected Unicard) |
+| `ide8` | `master`, `slave`; opens the configured disk image (`IDE8/hdd0_filepath`, `hdd1_filepath`) and creates it when missing |
+| `gal5` | not emulated, always an error (kept for compatibility) |
 
 ```
-emu_periph_attach(kind="memext", options={"type": "luftner4k"})
-emu_periph_attach(kind="fdc")
+emu_periph_attach(kind="memext", options={"type": "luftner"})
+emu_periph_attach(kind="fdc", options={"type": "fdc1"})
 ```
 
-For `memext` the `options.type` can carry a variant (string).
-
-Returns `{"ok": true, "kind": "memext", "requires_restart": true,
-"result_code": 0}`. If the module does not exist (= the peripheral is
-not in this architecture build), an error with detail is returned.
+Returns `{"ok": true, "kind": "memext", "type": "luftner",
+"changed": true, "requires_restart": false, "result_code": 0}`. A state
+that already holds is not applied again (`changed: false`). An unknown
+variant returns an error listing the allowed values.
 
 ### `emu_periph_detach` (sensitive)
 
-Analogously `active=false`. Also requires a restart.
+Detaches a peripheral at runtime. For `fdc` and `ide8` the
+`options.type` selects the unit (default `fdc0`, `master`); for
+`memext` and `qd` it is ignored.
 
 ```
 emu_periph_detach(kind="fdc")
+emu_periph_detach(kind="ide8", options={"type": "slave"})
 ```
 
 ### Example workflow - mounting a Quick Disk image

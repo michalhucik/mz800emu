@@ -144,10 +144,10 @@ dokumentu [Resources overview](resources-overview.md).
 | `emu_set_speed` | ne | Rychlost emulace: 100 %, vlastní procenta nebo MAX SPEED |
 | `emu_speed_step` | ne | Změní vlastní rychlost emulace o relativní počet procent |
 | `emu_settings_set` | **ANO** | Live INI write (whitelist), **mutuje globální stav** |
-| `emu_settings_get` | ne | Read INI klíče + typ (open read, žádný whitelist) |
+| `emu_settings_get` | ne | Read INI klíče + typ + živá hodnota (open read, žádný whitelist) |
 | `emu_platform_set` | **ANO** | Pokus o platform switch - vrací error (compile-time MZARCH) |
-| `emu_periph_attach` | **ANO** | Aktivuje periferní modul (`requires_restart`) |
-| `emu_periph_detach` | **ANO** | Deaktivuje periferní modul (`requires_restart`) |
+| `emu_periph_attach` | **ANO** | Připojí periferii za běhu (jako menu Devices) |
+| `emu_periph_detach` | **ANO** | Odpojí periferii za běhu (jako menu Devices) |
 | `emu_stop` | **ANO** | Hot-swap stop (pipe-only); ukončí emu, Python wrapper běží dál |
 | `emu_start` | **ANO** | Hot-swap start (pipe-only); spawne nový mz800emu.exe child |
 | `emu_input_send_key` | **ANO** | Press klávesy + N framů hold + release |
@@ -2269,6 +2269,10 @@ Vrací:
 }
 ```
 
+`ro` je skutečná ochrana vloženého média proti zápisu (volba uživatele,
+soubor bez práva zápisu, zavaděč Unicard v Quick Disku); bez média
+`false`.
+
 ## Platform + Config tools
 
 Klíčové designové rozhodnutí: **runtime platform switch NEEXISTUJE**
@@ -2278,9 +2282,11 @@ binární soubor uživatel musí spustit místo aktuálního.
 
 ### `emu_settings_set` (sensitive)
 
-Zapíše live-settable INI klíč. Whitelist obsahuje klíče s okamžitou
-aplikací (audio volume, video tweaks, QDISK path). Boot-time klíče
-(paths emulátoru, snapshot defaults) jsou odmítnuty.
+Zapíše live-settable INI klíč. Hodnota se projeví hned (stejně jako
+změna v menu) a při ukončení se uloží do INI. Whitelist obsahuje klíče
+s okamžitou aplikací (hlasitost, nastavení zobrazení, filtr PC
+trasování). Boot-time klíče (paths emulátoru, snapshot defaults) jsou
+odmítnuty.
 
 ```
 emu_settings_set(key="AUDIO/volume_8253", value="60")
@@ -2297,7 +2303,7 @@ Whitelist:
 - `AUDIO/volume_psg1_0` .. `AUDIO/volume_psg1_3` (MZ-1500, unsigned)
 - `DISPLAY/forced_full_screen_redrawing` (bool)
 - `DISPLAY/locked_window_aspect_ratio` (bool)
-- `DISPLAY/custom_fps` (unsigned)
+- `DISPLAY/custom_fps` (unsigned, 50..1000; platí v režimu snímkové frekvence Custom)
 - `TRACE_CPUTRACK/pc_range_lo` .. `TRACE_CPUTRACK/pc_range_hi` (unsigned, 0..65535; PC filtr trasování za běhu)
 
 Obraz Quick Disku a jeho ochranu proti zápisu nastavuje
@@ -2305,13 +2311,23 @@ Obraz Quick Disku a jeho ochranu proti zápisu nastavuje
 
 ### `emu_settings_get`
 
-Přečte aktuální hodnotu kteréhokoliv konfiguračního klíče (= read
-whitelist je open). Vrací string reprezentaci + typový kód.
+Přečte hodnotu kteréhokoliv konfiguračního klíče (= read whitelist je
+open). Vrací string reprezentaci + typový kód.
 
 ```
 emu_settings_get(key="AUDIO/volume_8253")
 -> {"key": "AUDIO/volume_8253", "value": "60", "type": "unsigned"}
+emu_settings_get(key="QDISK/mz1f11_type")
+-> {"key": "QDISK/mz1f11_type", "value": "UNICARD", "type": "keyword",
+    "live": "STANDARD"}
 ```
+
+`value` je hodnota v konfiguraci: načtená při startu nebo zapsaná přes
+`emu_settings_set`. Změny z menu nebo z jiných nástrojů (např.
+`emu_periph_attach`, `emu_media_insert`) se do ní promítnou až při
+ukládání INI. `live` je hodnota, se kterou emulátor právě pracuje; je
+jen u klíčů přímo navázaných na číselnou proměnnou (připojení a typy
+zařízení, nastavení zobrazení), jinak chybí.
 
 Pro INI klíče s typem `keyword` se vrací textová varianta keyword.
 
@@ -2339,28 +2355,36 @@ Parametry `mode` (`native` / `compat`) a `save_snapshot` (path k
 
 ### `emu_periph_attach` (sensitive)
 
-Zapíše do konfigurace `active=true` pro daný periferní modul
-(= `MEMEXT`, `FDC`, `QDISK`, `IDE8`, `GAL5`). Pro plnou aplikaci
-vyžaduje restart emulátoru (= response carry
-`requires_restart=true`).
+Připojí periferii za běhu, stejně jako volba v menu Devices; volba se
+při ukončení uloží do INI. Během záznamu nebo přehrávání vstupů je
+odmítnut.
+
+| `kind` | `options.type` (první = výchozí) |
+|--------|----------------------------------|
+| `memext` | `pehu`, `luftner` (výchozí = současný typ); připojení vynuluje mapu bank |
+| `fdc` | `fdc0` (porty 0D8h-0DFh), `fdc1` (sekundární, porty 58h-5Fh) |
+| `qd` | `mz1f11` (obraz .MZQ), `virtual`, `unicard` (zavaděč Unicard, jen s připojeným Unicardem) |
+| `ide8` | `master`, `slave`; otevře obraz disku z konfigurace (`IDE8/hdd0_filepath`, `hdd1_filepath`), chybějící vytvoří |
+| `gal5` | v emulátoru není, vždy chyba (zůstává kvůli zpětné kompatibilitě) |
 
 ```
-emu_periph_attach(kind="memext", options={"type": "luftner4k"})
-emu_periph_attach(kind="fdc")
+emu_periph_attach(kind="memext", options={"type": "luftner"})
+emu_periph_attach(kind="fdc", options={"type": "fdc1"})
 ```
 
-Pro `memext` lze v `options.type` předat variantu (string).
-
-Vrátí `{"ok": true, "kind": "memext", "requires_restart": true,
-"result_code": 0}`. Pokud modul neexistuje (= periferie není
-v této arch sestavě), vrátí error s detail.
+Vrátí `{"ok": true, "kind": "memext", "type": "luftner",
+"changed": true, "requires_restart": false, "result_code": 0}`. Stav,
+který už platí, se znovu neaplikuje (`changed: false`). Neznámá
+varianta vrátí chybu se seznamem povolených hodnot.
 
 ### `emu_periph_detach` (sensitive)
 
-Analogicky `active=false`. Také vyžaduje restart.
+Odpojí periferii za běhu. U `fdc` a `ide8` vybírá `options.type`
+jednotku (výchozí `fdc0`, `master`), u `memext` a `qd` se ignoruje.
 
 ```
 emu_periph_detach(kind="fdc")
+emu_periph_detach(kind="ide8", options={"type": "slave"})
 ```
 
 ### Příklad workflow - vložení Quick Disk obrazu

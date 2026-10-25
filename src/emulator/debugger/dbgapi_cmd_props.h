@@ -11,6 +11,9 @@
  *  - **revize stavu** (state_rev.h, dbgapi_cmd_mutates()): mohl příkaz
  *    v okamžiku vyřízení změnit stav stroje?
  *
+ * Z druhu vychází i dbgapi_cmd_is_read() (poslední akce uživatele), která
+ * u příkazů s operací v parametru upřesní druh podle operace.
+ *
  * Invariant (hlídá test `replay_dbg_classify`): každý příkaz enumu má druh
  * (ne DBGAPI_CMD_KIND_UNSET) a třída záznamu jiná než ALLOW znamená druh
  * DBGAPI_CMD_KIND_MUTATES. Opačně to neplatí (RESET jde v záznamu vlastním
@@ -74,6 +77,25 @@ extern "C"
      * @return true pro druh MUTATES a pro nezařazený příkaz (fail-safe).
      */
     bool dbgapi_cmd_mutates(en_DBGAPI_CMD cmd);
+
+    /**
+     * @brief Jen čte příkaz s daným parametrem stav (pro last_user_action)?
+     *
+     * Druh v tabulce platí pro celý příkaz. Příkazy s operací v parametru
+     * (COVERAGE, PROFILER_PC, RAMLOG, BPLOG, VIDEOREC, SCREENSHOT_SERIES,
+     * AUDIO_CAPTURE) mají v tabulce druh DEBUG_CONFIG, ale část operací
+     * jen čte (stav, snímek dat, dotazy, export); u nich rozhoduje
+     * operace. Okna GUI takové operace volají periodicky.
+     *
+     * @param cmd      Příkaz bez příznaku BLOCKING.
+     * @param data_ptr Parametr příkazu (typ podle cmd), smí být NULL.
+     * @return true pro druh READ a pro čtecí operaci příkazu s operací;
+     *         false jinak, i pro příkaz s operací bez parametru.
+     *
+     * @pre data_ptr, pokud není NULL, ukazuje na parametr typu daného cmd
+     *      (čte se jen člen op).
+     */
+    bool dbgapi_cmd_is_read(en_DBGAPI_CMD cmd, const void *data_ptr);
 
 #ifdef __cplusplus
 }

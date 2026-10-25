@@ -5228,9 +5228,11 @@ _VALID_PERIPH_KINDS = ("memext", "fdc", "qd", "ide8", "gal5")
 @mcp.tool()
 async def emu_settings_set(key: str, value: str) -> str:
     """Set a live-settable emulator configuration value. WARNING: this
-    mutates global emulator state and may change audio/video behaviour
-    immediately. Boot-time keys (paths, toolchain) are rejected -
-    those require restarting the emulator with a different .ini file.
+    mutates global emulator state and changes audio/video behaviour
+    immediately, like the same change in the menu; the value is saved
+    to the INI file on exit. Boot-time keys (paths, toolchain) are
+    rejected - those require restarting the emulator with a different
+    .ini file.
 
     Live-settable keys (no restart required):
 
@@ -5239,7 +5241,8 @@ async def emu_settings_set(key: str, value: str) -> str:
         AUDIO/volume_psg1_0..psg1_3 - MZ-1500 second PSG channels
         DISPLAY/forced_full_screen_redrawing - bool
         DISPLAY/locked_window_aspect_ratio   - bool
-        DISPLAY/custom_fps                   - unsigned
+        DISPLAY/custom_fps                   - unsigned, 50..1000 (Custom
+                                               frame rate mode)
         TRACE_CPUTRACK/pc_range_lo - cputrack PC-range filter low bound (0..65535)
         TRACE_CPUTRACK/pc_range_hi - cputrack PC-range filter high bound (0..65535)
 
@@ -5273,20 +5276,30 @@ async def emu_settings_set(key: str, value: str) -> str:
 
 @mcp.tool()
 async def emu_settings_get(key: str) -> str:
-    """Get the current value of a configuration key from cfgmain INI.
+    """Get the value of a configuration key from cfgmain INI.
 
     Any key registered by the emulator is readable (no whitelist for
     read access). Returns the string representation plus the element
     type (unsigned / bool / text / keyword / float). Use this before
     ``emu_settings_set`` to discover current value and type.
 
+    ``value`` is the configured value (loaded at startup or written with
+    ``emu_settings_set``); changes from the menu or other tools reach it
+    only when the INI file is saved. ``live`` is the value the emulator
+    is working with right now, present only for keys bound directly to
+    a numeric variable (device connections and types, display
+    settings). Example: after switching the Quick Disk drive,
+    'QDISK/mz1f11_type' keeps ``value`` 'UNICARD' while ``live`` is
+    'STANDARD'.
+
     Args:
         key: INI key in 'MODULE/element' format (case sensitive).
               Example: 'AUDIO/volume_8253'.
 
     Returns:
-        JSON ``{"key": str, "value": str, "type": str}`` on success or
-        ``{"error": "..."}`` on failure.
+        JSON ``{"key": str, "value": str, "type": str, "live": str}``
+        (``live`` optional) on success or ``{"error": "..."}`` on
+        failure.
     """
     if not key:
         return json.dumps({"error": "Missing required field: key"})
@@ -5421,30 +5434,34 @@ async def emu_platform_set(
 async def emu_periph_attach(
     kind: str, options: dict | None = None
 ) -> str:
-    """Attach a peripheral to the emulator. WARNING: this mutates
-    cfgmain INI registry and (in V1.B.2) requires an emulator restart
-    for the change to fully take effect. Hot re-init of peripherals
-    is not yet implemented and the response will carry
-    ``requires_restart: true``.
+    """Attach a peripheral to the running emulator. WARNING: this
+    changes the emulated machine immediately, the same way as the
+    Devices menu (the choice is saved to the INI file on exit). Refused
+    while a replay is being recorded or played back.
 
-    Supported kinds (availability depends on architecture build):
+    Supported kinds and ``options.type`` values (first = default):
 
-        memext - Memory expansion (Luftner / PEHU). Option key
-                 ``type`` selects the variant (e.g. 'luftner4k').
-        fdc    - WD279x floppy controller + drives.
-        qd     - Quick Disk drive.
-        ide8   - 8-bit IDE master/slave.
-        gal5   - Geneve 5 expansion adapter.
+        memext - Memory expansion: 'pehu' | 'luftner' (default: the
+                 current type). Attaching resets the bank map.
+        fdc    - WD279x floppy controller: 'fdc0' (ports 0D8h-0DFh) |
+                 'fdc1' (secondary, ports 58h-5Fh).
+        qd     - Quick Disk drive: 'mz1f11' (.MZQ image) | 'virtual' |
+                 'unicard' (Unicard boot loader, needs Unicard).
+        ide8   - 8-bit IDE disk: 'master' | 'slave'. Opens the configured
+                 disk image (IDE8/hdd0_filepath, hdd1_filepath) and
+                 creates it when missing.
+        gal5   - Not emulated; always an error (kept for compatibility).
+
+    A state that already holds is not applied again (``changed: false``).
 
     Args:
         kind: Peripheral kind.
-        options: Optional per-peripheral configuration. For ``memext``
-                 the key ``type`` is the variant name.
+        options: Optional ``{"type": str}`` with the variant or unit.
 
     Returns:
-        JSON ``{"ok": bool, "kind": str, "requires_restart": bool,
-        "result_code": int}`` on success or ``{"error": "..."}`` on
-        failure (e.g. peripheral not in this architecture build).
+        JSON ``{"ok": true, "kind": str, "type": str, "changed": bool,
+        "requires_restart": false, "result_code": 0}`` on success or
+        ``{"error": "..."}`` on failure.
     """
     if kind not in _VALID_PERIPH_KINDS:
         return json.dumps(
@@ -5461,25 +5478,32 @@ async def emu_periph_attach(
 
 
 @mcp.tool()
-async def emu_periph_detach(kind: str) -> str:
-    """Detach a peripheral from the emulator. WARNING: same caveat as
-    ``emu_periph_attach`` - the change is recorded in cfgmain INI but
-    a restart is required for the running emulator to actually drop
-    the peripheral.
+async def emu_periph_detach(
+    kind: str, options: dict | None = None
+) -> str:
+    """Detach a peripheral from the running emulator. WARNING: same as
+    ``emu_periph_attach`` - the change applies immediately like the
+    Devices menu and is saved to the INI file on exit.
 
     Args:
         kind: Peripheral kind (same set as ``emu_periph_attach``).
+        options: Optional ``{"type": str}`` selecting the unit for
+                 ``fdc`` ('fdc0' | 'fdc1') and ``ide8`` ('master' |
+                 'slave'); ignored for ``memext`` and ``qd``.
 
     Returns:
-        JSON ``{"ok": bool, "kind": str, "requires_restart": bool,
-        "result_code": int}`` on success or ``{"error": "..."}`` on
-        failure.
+        JSON ``{"ok": true, "kind": str, "type": str, "changed": bool,
+        "requires_restart": false, "result_code": 0}`` on success or
+        ``{"error": "..."}`` on failure.
     """
     if kind not in _VALID_PERIPH_KINDS:
         return json.dumps(
             {"error": "Invalid kind (allowed: "
                        + ", ".join(_VALID_PERIPH_KINDS) + ")"})
-    resp = await _send_request("periph_detach", {"kind": kind})
+    args: dict = {"kind": kind}
+    if options:
+        args["options"] = options
+    resp = await _send_request("periph_detach", args)
     if not resp.get("success", False):
         return json.dumps(
             {"error": resp.get("error", "periph_detach failed")})

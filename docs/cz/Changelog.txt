@@ -1,3 +1,13 @@
+	- BUGFIX: MCP - last_user_action v emu_get_state a emulator://state zaznamenával každý příkaz z GUI včetně periodického čtení otevřených oken debuggeru (registry, paměť, disassembler, pokrytí kódu, profiler, RAM Write Log), takže se s otevřeným debuggerem měnil pořád. Nově zaznamená jen akce, které nejsou čtením (řízení běhu, breakpointy, zápisy, zařízení).
+
+	- BUGFIX: MCP - emu_settings_set neměl u hlasitostí a nastavení zobrazení žádný účinek: změnil jen hodnotu v konfiguraci, kterou emulátor čte jen při startu, a při ukončení ji přepsal původní hodnotou, takže se neuložila ani do INI. Nově se hodnota projeví hned a uloží se. DISPLAY/custom_fps přijímá jen rozsah 50 až 1000 jako posuvník v menu.
+
+	- MCP - emu_settings_get vrací u klíčů navázaných na proměnnou emulátoru (připojení a typy zařízení, nastavení zobrazení) navíc live, hodnotu, se kterou emulátor právě pracuje; value je dál hodnota v konfiguraci, do které se změny z menu promítnou až při ukládání INI (například typ mechaniky Quick Disk po přepnutí). Viz mcp-server/tools-overview.md.
+
+	- BUGFIX: MCP - emu_periph_attach a emu_periph_detach nikdy nefungovaly: hledaly v konfiguraci prvek active, který žádná z periferií nemá, a vždy skončily chybou. Nově periferii připojí nebo odpojí za běhu stejně jako menu Devices (volba se při ukončení uloží do INI): memext (options.type pehu nebo luftner), fdc (fdc0, fdc1), qd (mz1f11, virtual, unicard) a ide8 (master, slave). Odpověď nese type a changed, requires_restart je false. gal5 v emulátoru není a vrací chybu. Viz mcp-server/tools-overview.md.
+
+	- BUGFIX: MCP - emu_media_state hlásil u slotu qd v ro uloženou volbu ochrany proti zápisu z konfigurace, ne skutečný stav mechaniky: po vysunutí obrazu ro true, u zavaděče Unicard (vždy jen pro čtení) ro false. Nově ro odpovídá skutečné ochraně vloženého obrazu (volba uživatele, soubor bez práva zápisu, zavaděč Unicard), bez obrazu false.
+
 	- ZMĚNA: Unicard a MemExt Luftner - kořen SD karty Unicard (výchozí SD-mz800, SD-mz700, SD-mz1500) a soubor FLASH MemExt (výchozí flash.dat) zadané relativní cestou se nově hledají v konfiguračním adresáři (výchozí je adresář programu, jinak --cfg-dir), stejně jako INI a záložní soubory RAM disků; dřív v aktuálním adresáři, ze kterého byl emulátor spuštěn, kde Unicard při připojení založil novou prázdnou SD kartu. Spouštíte-li emulátor z jiného adresáře, než ve kterém leží, přesuňte dosavadní adresář SD karty a flash.dat k programu. Absolutní cesta platí beze změny.
 
 	- ZMĚNA: MCP - emu_settings_set už nepřijímá klíče QDISK/filename a QDISK/write_protected; prvky konfigurace těchto jmen neexistují, takže zápis vždy skončil chybou. Obraz Quick Disku a jeho ochranu proti zápisu nastavuje emu_media_insert(slot="qd").

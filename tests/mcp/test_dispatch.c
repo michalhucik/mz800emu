@@ -4570,6 +4570,73 @@ void test_settings_get_returns_value_and_type(void) {
 }
 
 
+void test_settings_get_live_value(void) {
+    /* Prvek s přímou vazbou na proměnnou: odpověď nese "live" vedle
+     * "value" (hodnota prvku INI se může lišit od živého stavu). */
+    dispatch_stub_reset();
+    g_stub_state.settings_fake_value  = g_strdup("UNICARD");
+    g_stub_state.settings_fake_live   = g_strdup("STANDARD");
+    g_stub_state.settings_fake_type   = 4;  /* KEYWORD */
+    g_stub_state.settings_fake_result = 0;
+    st_JSONL_MESSAGE *req = _make_request(
+        "{\"type\":\"request\",\"id\":1212,\"cmd\":\"settings_get\","
+        "\"data\":{\"key\":\"QDISK/mz1f11_type\"}}");
+    char *resp = NULL;
+    en_MCP_DISPATCH_RESULT rc = mcp_dispatch_request(req, &resp);
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, rc);
+    TEST_ASSERT_TRUE(strstr(resp, "\"value\":\"UNICARD\"") != NULL);
+    TEST_ASSERT_TRUE(strstr(resp, "\"live\":\"STANDARD\"") != NULL);
+    free(resp);
+    jsonl_msg_free(req);
+
+    /* Bez vazby pole "live" chybí. */
+    dispatch_stub_reset();
+    g_stub_state.settings_fake_value = g_strdup("abc");
+    g_stub_state.settings_fake_type  = 3;  /* TEXT */
+    req = _make_request(
+        "{\"type\":\"request\",\"id\":1213,\"cmd\":\"settings_get\","
+        "\"data\":{\"key\":\"MEMEXT/flash_filepath\"}}");
+    resp = NULL;
+    rc = mcp_dispatch_request(req, &resp);
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, rc);
+    TEST_ASSERT_NULL(strstr(resp, "\"live\""));
+    free(resp);
+    jsonl_msg_free(req);
+}
+
+
+void test_settings_set_custom_fps_range(void) {
+    /* DISPLAY/custom_fps mimo 50..1000 = INVALID_PARAMS bez dbgapi,
+     * hranice projdou. */
+    static const struct { const char *v; int ok; } cases[] = {
+        { "49", 0 }, { "50", 1 }, { "1000", 1 }, { "1001", 0 }, { "x", 0 },
+    };
+    for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+        dispatch_stub_reset();
+        g_stub_state.settings_fake_value = g_strdup("100");
+        g_stub_state.settings_fake_type  = 1;  /* UNSIGNED */
+        char *json = g_strdup_printf(
+            "{\"type\":\"request\",\"id\":1204,\"cmd\":\"settings_set\","
+            "\"data\":{\"key\":\"DISPLAY/custom_fps\",\"value\":\"%s\"}}",
+            cases[i].v);
+        st_JSONL_MESSAGE *req = _make_request(json);
+        char *resp = NULL;
+        en_MCP_DISPATCH_RESULT rc = mcp_dispatch_request(req, &resp);
+        if (cases[i].ok) {
+            TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, rc);
+            TEST_ASSERT_EQUAL_INT(DBGAPI_CMD_SETTINGS_SET,
+                                   g_stub_state.settings_last_cmd);
+        } else {
+            TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_INVALID_PARAMS, rc);
+            TEST_ASSERT_EQUAL_INT(0, g_stub_state.settings_last_cmd);
+        }
+        free(resp);
+        jsonl_msg_free(req);
+        g_free(json);
+    }
+}
+
+
 void test_settings_get_module_not_found(void) {
     /* Stub vrátí result=-2 (= module not found); dispatch vrátí
      * EMU_ERROR. */
@@ -4626,7 +4693,7 @@ void test_platform_set_requires_restart(void) {
 
 void test_periph_attach_each_kind(void) {
     /* Pro každý ze 5 kind řetězců provedeme attach, stub vrátí
-     * success + requires_restart=1. */
+     * success, changed a type "stub"; requires_restart = 0 (za běhu). */
     static const struct {
         const char *name;
         int enum_val;
@@ -4640,7 +4707,7 @@ void test_periph_attach_each_kind(void) {
     for (size_t i = 0; i < sizeof(kinds)/sizeof(kinds[0]); i++) {
         dispatch_stub_reset();
         g_stub_state.periph_fake_result = 0;
-        g_stub_state.periph_fake_requires_restart = 1;
+        g_stub_state.periph_fake_requires_restart = 0;
         char json_req[256];
         snprintf(json_req, sizeof(json_req),
                   "{\"type\":\"request\",\"id\":%d,"
@@ -4655,8 +4722,10 @@ void test_periph_attach_each_kind(void) {
                                g_stub_state.periph_last_cmd);
         TEST_ASSERT_EQUAL_INT(kinds[i].enum_val,
                                g_stub_state.periph_last_kind);
-        TEST_ASSERT_TRUE(strstr(resp, "\"requires_restart\":true")
+        TEST_ASSERT_TRUE(strstr(resp, "\"requires_restart\":false")
                           != NULL);
+        TEST_ASSERT_TRUE(strstr(resp, "\"changed\":true") != NULL);
+        TEST_ASSERT_TRUE(strstr(resp, "\"type\":\"stub\"") != NULL);
         char slot_assert[64];
         snprintf(slot_assert, sizeof(slot_assert),
                   "\"kind\":\"%s\"", kinds[i].name);
@@ -4668,18 +4737,18 @@ void test_periph_attach_each_kind(void) {
 
 
 void test_periph_attach_memext_options_type(void) {
-    /* periph_attach s options.type = "luftner4k" musí předat
+    /* periph_attach s options.type = "luftner" musí předat
      * option_value do dbgapi handleru. */
     dispatch_stub_reset();
     g_stub_state.periph_fake_result = 0;
     st_JSONL_MESSAGE *req = _make_request(
         "{\"type\":\"request\",\"id\":1310,\"cmd\":\"periph_attach\","
         "\"data\":{\"kind\":\"memext\","
-        "\"options\":{\"type\":\"luftner4k\"}}}");
+        "\"options\":{\"type\":\"luftner\"}}}");
     char *resp = NULL;
     en_MCP_DISPATCH_RESULT rc = mcp_dispatch_request(req, &resp);
     TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, rc);
-    TEST_ASSERT_EQUAL_STRING("luftner4k",
+    TEST_ASSERT_EQUAL_STRING("luftner",
                               g_stub_state.periph_last_option_value);
     free(resp);
     jsonl_msg_free(req);
@@ -4696,8 +4765,58 @@ void test_periph_detach_not_in_arch(void) {
     char *resp = NULL;
     en_MCP_DISPATCH_RESULT rc = mcp_dispatch_request(req, &resp);
     TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_EMU_ERROR, rc);
-    TEST_ASSERT_TRUE(strstr(resp, "not available in this architecture")
+    TEST_ASSERT_TRUE(strstr(resp, "not available in this build")
                       != NULL);
+    free(resp);
+    jsonl_msg_free(req);
+}
+
+
+void test_periph_detach_passes_options_type(void) {
+    /* periph_detach předá options.type (jednotka fdc / ide8). */
+    dispatch_stub_reset();
+    g_stub_state.periph_fake_result = 0;
+    st_JSONL_MESSAGE *req = _make_request(
+        "{\"type\":\"request\",\"id\":1321,\"cmd\":\"periph_detach\","
+        "\"data\":{\"kind\":\"fdc\",\"options\":{\"type\":\"fdc1\"}}}");
+    char *resp = NULL;
+    en_MCP_DISPATCH_RESULT rc = mcp_dispatch_request(req, &resp);
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, rc);
+    TEST_ASSERT_EQUAL_INT(DBGAPI_CMD_PERIPH_DETACH,
+                           g_stub_state.periph_last_cmd);
+    TEST_ASSERT_EQUAL_STRING("fdc1", g_stub_state.periph_last_option_value);
+    free(resp);
+    jsonl_msg_free(req);
+}
+
+
+void test_periph_attach_invalid_option_type(void) {
+    /* dbgapi -4 = neplatná varianta -> INVALID_PARAMS se seznamem. */
+    dispatch_stub_reset();
+    g_stub_state.periph_fake_result = -4;
+    st_JSONL_MESSAGE *req = _make_request(
+        "{\"type\":\"request\",\"id\":1322,\"cmd\":\"periph_attach\","
+        "\"data\":{\"kind\":\"memext\",\"options\":{\"type\":\"luftner4k\"}}}");
+    char *resp = NULL;
+    en_MCP_DISPATCH_RESULT rc = mcp_dispatch_request(req, &resp);
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_INVALID_PARAMS, rc);
+    TEST_ASSERT_TRUE(strstr(resp, "Invalid options.type") != NULL);
+    free(resp);
+    jsonl_msg_free(req);
+}
+
+
+void test_periph_attach_device_refused(void) {
+    /* dbgapi -5 = zařízení změnu nepřijalo. */
+    dispatch_stub_reset();
+    g_stub_state.periph_fake_result = -5;
+    st_JSONL_MESSAGE *req = _make_request(
+        "{\"type\":\"request\",\"id\":1323,\"cmd\":\"periph_attach\","
+        "\"data\":{\"kind\":\"ide8\"}}");
+    char *resp = NULL;
+    en_MCP_DISPATCH_RESULT rc = mcp_dispatch_request(req, &resp);
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_EMU_ERROR, rc);
+    TEST_ASSERT_TRUE(strstr(resp, "did not accept") != NULL);
     free(resp);
     jsonl_msg_free(req);
 }
@@ -9824,11 +9943,16 @@ int main(void) {
     RUN_TEST(test_settings_set_invalid_key_format_rejected);
     RUN_TEST(test_settings_get_returns_value_and_type);
     RUN_TEST(test_settings_get_module_not_found);
+    RUN_TEST(test_settings_get_live_value);
+    RUN_TEST(test_settings_set_custom_fps_range);
     RUN_TEST(test_platform_set_invalid_kind);
     RUN_TEST(test_platform_set_requires_restart);
     RUN_TEST(test_periph_attach_each_kind);
     RUN_TEST(test_periph_attach_memext_options_type);
     RUN_TEST(test_periph_detach_not_in_arch);
+    RUN_TEST(test_periph_detach_passes_options_type);
+    RUN_TEST(test_periph_attach_invalid_option_type);
+    RUN_TEST(test_periph_attach_device_refused);
     RUN_TEST(test_periph_attach_invalid_kind);
 
     /* V1.C.1 - HID Tools */

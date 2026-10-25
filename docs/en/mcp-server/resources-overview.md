@@ -15,7 +15,7 @@ two advantages over Tools:
 
 | URI | Content |
 |-----|---------|
-| `emulator://state` | Lightweight state (running/paused + last_user_action) |
+| `emulator://state` | Lightweight state (running/paused + last_user_action = the user's last action in the GUI; reads by debugger windows do not count) |
 | `emulator://cpu/registers` | Full Z80 register snapshot |
 | `emulator://cpu/im2_vector` | IM2 vector snapshot |
 | `emulator://cpu/interrupt_bus` | IRQ subsystem snapshot |

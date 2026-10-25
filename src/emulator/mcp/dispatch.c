@@ -69,6 +69,7 @@
 #include "../debugger/memsearch/memsearch.h"
 #include "../debugger/run_control/run_log.h"
 #include "../state_hash.h"
+#include "../display.h"
 #include <math.h>
 /* CMTSPEED_CUSTOM pro cmt_tape_block_speed s vlastními pulzy */
 #include "libs/cmtspeed/cmtspeed.h"
@@ -10414,7 +10415,13 @@ static const char *_settings_type_str(en_DBGAPI_SETTINGS_TYPE t) {
  *   - `key` (string, povinný) - klíč ve tvaru "MODULE/element".
  *
  * Volá `DBGAPI_CMD_SETTINGS_GET`. Response:
- *   {"key": str, "value": str, "type": "unsigned|bool|text|keyword|float"}
+ *   {"key": str, "value": str, "type": "unsigned|bool|text|keyword|float",
+ *    "live": str}
+ *
+ * `value` je hodnota prvku INI (konfigurace načtená při startu nebo
+ * zapsaná přes settings_set; změny z menu se do ní promítnou až při
+ * ukládání INI). `live` je hodnota proměnné, se kterou pracuje
+ * zařízení; jen u prvků s přímou číselnou vazbou, jinak chybí.
  *
  * Chyby:
  *   - Missing key, invalid format - INVALID_PARAMS
@@ -10462,6 +10469,7 @@ static en_MCP_DISPATCH_RESULT _handle_settings_get(const st_JSONL_MESSAGE *req,
         .element    = elm,
         .new_value  = NULL,
         .out_value  = NULL,
+        .out_live   = NULL,
         .out_type   = DBGAPI_SETTINGS_TYPE_UNKNOWN,
         .out_result = 0,
     };
@@ -10472,7 +10480,7 @@ static en_MCP_DISPATCH_RESULT _handle_settings_get(const st_JSONL_MESSAGE *req,
                        : (rc == -3) ? "Element not found in module"
                        : "settings_get failed";
         g_free(key); g_free(mod); g_free(elm);
-        g_free(param.out_value);
+        g_free(param.out_value); g_free(param.out_live);
         return _err_response(req_id, msg,
                               MCP_DISPATCH_EMU_ERROR, out_response);
     }
@@ -10482,8 +10490,11 @@ static en_MCP_DISPATCH_RESULT _handle_settings_get(const st_JSONL_MESSAGE *req,
                                    param.out_value ? param.out_value : "");
     json_object_set_string_member(resp, "type",
                                    _settings_type_str(param.out_type));
+    if (param.out_live) {
+        json_object_set_string_member(resp, "live", param.out_live);
+    }
     g_free(key); g_free(mod); g_free(elm);
-    g_free(param.out_value);
+    g_free(param.out_value); g_free(param.out_live);
     return _ok_response(req_id, resp, out_response);
 }
 
@@ -10528,6 +10539,20 @@ static en_MCP_DISPATCH_RESULT _handle_settings_set(const st_JSONL_MESSAGE *req,
                               "require emulator restart)",
                               MCP_DISPATCH_INVALID_PARAMS, out_response);
     }
+    /* Vlastní FPS zobrazení: rozsah jako posuvník v menu. Mimo rozsah by
+     * ho zobrazení při nejbližším přepnutí režimu tiše vrátilo na výchozí
+     * hodnotu. */
+    if (strcmp(key, "DISPLAY/custom_fps") == 0) {
+        char *endp = NULL;
+        unsigned long fv = strtoul(value, &endp, 0);
+        if (!endp || *endp != '\0' || fv < DISPLAY_CUSTOM_FPS_MIN
+            || fv > DISPLAY_CUSTOM_FPS_MAX) {
+            g_free(key); g_free(value);
+            return _err_response(req_id,
+                                  "Value out of range (expected 50..1000)",
+                                  MCP_DISPATCH_INVALID_PARAMS, out_response);
+        }
+    }
     /* Range-scope filtr cputrack: PC je 16bitový adresový prostor, hodnota
      * musí ležet v 0..0xFFFF. Ořez v jádře je sice tichý (uint16_t pole),
      * ale uživateli vracíme explicitní chybu místo nečekaného oříznutí. */
@@ -10554,6 +10579,7 @@ static en_MCP_DISPATCH_RESULT _handle_settings_set(const st_JSONL_MESSAGE *req,
         .element    = elm,
         .new_value  = value,
         .out_value  = NULL,
+        .out_live   = NULL,
         .out_type   = DBGAPI_SETTINGS_TYPE_UNKNOWN,
         .out_result = 0,
     };
@@ -10679,14 +10705,14 @@ static en_DBGAPI_PERIPH_KIND _parse_periph_kind(const char *s) {
 /**
  * @brief Společný handler pro periph_attach + periph_detach.
  *
- * Volá `DBGAPI_CMD_PERIPH_ATTACH` nebo `_DETACH` podle is_attach.
- *
- * Pro attach navíc předá `options.type` (= např. "luftner4k" pro
- * memext) do dbgapi handleru, který ho zapíše do CFGMOD/type
- * elementu.
+ * Volá `DBGAPI_CMD_PERIPH_ATTACH` nebo `_DETACH` podle is_attach; dbgapi
+ * periferii připojí nebo odpojí za běhu (jako menu Devices). Volitelné
+ * `options.type` vybírá variantu nebo jednotku (st_DBGAPI_PERIPH_PARAM),
+ * u detach jednotku fdc / ide8.
  *
  * Response:
- *   {"ok": bool, "kind": str, "requires_restart": bool, "result_code": int}
+ *   {"ok": true, "kind": str, "type": str, "changed": bool,
+ *    "requires_restart": false, "result_code": 0}
  */
 static en_MCP_DISPATCH_RESULT _handle_periph_common(const st_JSONL_MESSAGE *req,
                                                      char **out_response,
@@ -10707,9 +10733,9 @@ static en_MCP_DISPATCH_RESULT _handle_periph_common(const st_JSONL_MESSAGE *req,
                               "ide8, gal5)",
                               MCP_DISPATCH_INVALID_PARAMS, out_response);
     }
-    /* options.type pro attach (= memext variant). */
+    /* options.type: varianta (memext, qd) nebo jednotka (fdc, ide8). */
     char *option_value = NULL;
-    if (is_attach && json_object_has_member(data_obj, "options")) {
+    if (json_object_has_member(data_obj, "options")) {
         JsonNode *opts_node = json_object_get_member(data_obj, "options");
         if (opts_node && json_node_get_node_type(opts_node) == JSON_NODE_OBJECT) {
             JsonObject *opts = json_node_get_object(opts_node);
@@ -10720,6 +10746,8 @@ static en_MCP_DISPATCH_RESULT _handle_periph_common(const st_JSONL_MESSAGE *req,
         .kind                 = kind,
         .option_value         = option_value,
         .out_requires_restart = 0,
+        .out_changed          = 0,
+        .out_type             = NULL,
         .out_result           = 0,
     };
     en_DBGAPI_CMD cmd = is_attach
@@ -10728,18 +10756,36 @@ static en_MCP_DISPATCH_RESULT _handle_periph_common(const st_JSONL_MESSAGE *req,
     bool ok = _submit_dbgapi(cmd, &param, NULL);
     int rc = param.out_result;
     if (!ok) {
-        const char *msg = (rc == -10)
-            ? "Peripheral not available in this architecture build"
-            : (rc == -11)
-                ? "Peripheral does not support runtime attach via INI"
-                : (is_attach ? "periph_attach failed" : "periph_detach failed");
+        const char *msg;
+        en_MCP_DISPATCH_RESULT code = MCP_DISPATCH_EMU_ERROR;
+        switch (rc) {
+            case -4:
+                msg = "Invalid options.type (memext: pehu, luftner; "
+                      "fdc: fdc0, fdc1; qd: mz1f11, virtual, unicard; "
+                      "ide8: master, slave)";
+                code = MCP_DISPATCH_INVALID_PARAMS;
+                break;
+            case -5:
+                msg = "Device did not accept the change (IDE8 disk image "
+                      "cannot be opened, qd unicard needs a connected Unicard)";
+                break;
+            case -10:
+                msg = "Peripheral not available in this build";
+                break;
+            default:
+                msg = is_attach ? "periph_attach failed" : "periph_detach failed";
+                break;
+        }
         g_free(kind_str); g_free(option_value);
-        return _err_response(req_id, msg,
-                              MCP_DISPATCH_EMU_ERROR, out_response);
+        return _err_response(req_id, msg, code, out_response);
     }
     JsonObject *resp = json_object_new();
     json_object_set_boolean_member(resp, "ok", TRUE);
     json_object_set_string_member(resp, "kind", kind_str);
+    json_object_set_string_member(resp, "type",
+                                   param.out_type ? param.out_type : "");
+    json_object_set_boolean_member(resp, "changed",
+                                    param.out_changed ? TRUE : FALSE);
     json_object_set_boolean_member(resp, "requires_restart",
                                     param.out_requires_restart ? TRUE : FALSE);
     json_object_set_int_member(resp, "result_code", rc);
@@ -10753,12 +10799,12 @@ static en_MCP_DISPATCH_RESULT _handle_periph_common(const st_JSONL_MESSAGE *req,
  *
  * Parametry:
  *   - `kind` (string, povinný) - "memext" | "fdc" | "qd" | "ide8" | "gal5"
- *   - `options` (object, optional) - per-periferie config:
- *       * memext: {type: "luftner4k" | ...} (string, mapuje na
- *         CFGMOD MEMEXT/type)
+ *     (gal5 v emulátoru není, vždy chyba)
+ *   - `options` (object, optional) - `type`: memext "pehu" | "luftner"
+ *     (výchozí současný typ), fdc "fdc0" | "fdc1", qd "mz1f11" |
+ *     "virtual" | "unicard", ide8 "master" | "slave" (výchozí první)
  *
- * Vrátí `requires_restart: true` pokud aplikace vyžaduje restart
- * emulátoru (= V1.B.2 vždy true).
+ * Připojí za běhu, `requires_restart` je vždy false.
  */
 static en_MCP_DISPATCH_RESULT _handle_periph_attach(const st_JSONL_MESSAGE *req,
                                                      char **out_response) {
@@ -10771,6 +10817,8 @@ static en_MCP_DISPATCH_RESULT _handle_periph_attach(const st_JSONL_MESSAGE *req,
  *
  * Parametry:
  *   - `kind` (string, povinný) - "memext" | "fdc" | "qd" | "ide8" | "gal5"
+ *   - `options` (object, optional) - `type`: jednotka fdc "fdc0" | "fdc1",
+ *     ide8 "master" | "slave" (výchozí první); u memext a qd se ignoruje
  */
 static en_MCP_DISPATCH_RESULT _handle_periph_detach(const st_JSONL_MESSAGE *req,
                                                      char **out_response) {
@@ -11818,6 +11866,7 @@ static en_MCP_DISPATCH_RESULT _handle_get_config_settings(
             json_object_set_string_member(sec, element, p.out_value);
         }
         if (p.out_value) g_free(p.out_value);
+        g_free(p.out_live);
         g_free(module);
         g_free(element);
     }

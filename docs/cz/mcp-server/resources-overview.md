@@ -13,7 +13,7 @@ mají oproti Tools dvě výhody:
 
 | URI | Obsah |
 |-----|-------|
-| `emulator://state` | Lightweight stav (running/paused + last_user_action) |
+| `emulator://state` | Lightweight stav (running/paused + last_user_action = poslední akce uživatele v GUI; čtení oken debuggeru se nepočítá) |
 | `emulator://cpu/registers` | Plný Z80 register snapshot |
 | `emulator://cpu/im2_vector` | IM2 vector snapshot |
 | `emulator://cpu/interrupt_bus` | IRQ subsystem snapshot |

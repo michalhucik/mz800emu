@@ -341,10 +341,14 @@ static void *s_msg_dispatcher_user_data = NULL;
 /* ============================================================================
  * LAST USER ACTION TRACKER (V1.D.1)
  *
- * Eviduje poslední CMDRQ s cmd_origin == DBGAPI_CMD_ORIGIN_USER.
- * Slouží AI klientovi (přes emulator://state Resource) ke zjištění, co
- * naposledy user v GUI udělal - umožní AI lépe spolupracovat s uživatelem
- * (= "user právě klikl Run, počkám než se zastaví").
+ * Eviduje poslední CMDRQ s cmd_origin == DBGAPI_CMD_ORIGIN_USER, který
+ * není čtením (dbgapi_cmd_is_read(): druh DBGAPI_CMD_KIND_READ v
+ * dbgapi_cmd_props.c a čtecí operace příkazů s operací v parametru):
+ * periodická čtení otevřených oken debuggeru (registry, paměť,
+ * disassembler) by jinak záznam přepisovala pořád. Slouží AI klientovi
+ * (přes emulator://state Resource) ke zjištění, co naposledy user v GUI
+ * udělal - umožní AI lépe spolupracovat s uživatelem (= "user právě klikl
+ * Run, počkám než se zastaví").
  *
  * Thread-safety: nastavuje se z UI vlákna v dbgapi_ui_submit_cmd_sync_with_origin
  * po vložení slotu (= mimo emu thread). Čte se z emu vlákna v handleru
@@ -385,7 +389,8 @@ static void dbgapi_last_user_action_init_mutex ( void )
 /**
  * @brief Zaznamená nové USER CMD do trackeru.
  *
- * Volá se z dbgapi_ui_submit_cmd_sync_with_origin pro origin == USER.
+ * Volá se z dbgapi_ui_submit_cmd_sync_with_origin pro origin == USER
+ * a příkaz jiného druhu než čtení.
  *
  * @param cmd Zaznamenávaný DBGAPI_CMD.
  */
@@ -2282,6 +2287,212 @@ static bool dbgapi_cpu_flags_cond_check ( st_DBGAPI_CPU_FLAGS *p, const z80_t *c
     else if ( ( m & DBGAPI_CPU_FLAGS_UM_R ) && ( p->prev_r & 0x7F ) != ( p->exp_r & 0x7F ) ) ok = false;
     if ( !ok ) p->precondition_failed = 1;
     return ok;
+}
+
+
+/**
+ * @brief Hodnota proměnné, na kterou je element INI přímo navázaný.
+ *
+ * Element drží konfiguraci (načtenou při startu nebo zapsanou přes
+ * SETTINGS_SET); zařízení pracuje s proměnnou navázanou přes
+ * cfgelement_set_handlers(), do elementu se zkopíruje až při ukládání
+ * INI. Čte jen číselné vazby (KEYWORD, BOOL, UNSIGNED, FLOAT) bez
+ * volání callbacků a bez zápisu do elementu; TEXT a callbacky
+ * (cfgelement_set_save_cb()) vynechává, protože mohou patřit stavu
+ * jiného vlákna (UI).
+ *
+ * @param elm Element.
+ * @return Text hodnoty (g_strdup, uvolňuje volající přes g_free), NULL
+ *         = element přímou číselnou vazbu nemá.
+ * @pre Emu vlákno. Čte jedno zarovnané číslo: proměnné zařízení mění
+ *      emu vlákno (zásahy UI jdou přes frontu), proměnné zobrazení
+ *      (DISPLAY) mění UI vlákno přímo, pak je výsledek stará nebo nová
+ *      hodnota.
+ */
+static char *dbgapi_settings_live_value ( st_CFGELEMENT *elm )
+{
+    const void *var = elm->save_value_handler;
+    if ( !var ) return NULL;
+    switch ( elm->type )
+    {
+        case CFGENTYPE_UNSIGNED:
+            return g_strdup_printf ( "%u", *(const unsigned *) var );
+        case CFGENTYPE_BOOL:
+            return g_strdup ( *(const int *) var ? "true" : "false" );
+        case CFGENTYPE_KEYWORD:
+        {
+            char *kw = cfgelement_get_keyword_by_int ( elm, *(const int *) var );
+            return kw ? g_strdup ( kw ) : g_strdup_printf ( "%d", *(const int *) var );
+        }
+        case CFGENTYPE_FLOAT:
+            return g_strdup_printf ( "%g", (double) *(const float *) var );
+        default:
+            return NULL;
+    };
+}
+
+
+/**
+ * @brief Najde variantu nebo jednotku periferie podle jména.
+ *
+ * @param names Pole jmen zakončené NULL (index = hodnota).
+ * @param value Jméno z MCP (NULL nebo "" = @p def), velikost písmen se
+ *              nerozlišuje.
+ * @param def Výchozí index.
+ * @return Index v @p names, -1 = neznámé jméno.
+ */
+static int dbgapi_periph_option ( const char *const *names, const char *value, int def )
+{
+    if ( !value || !value[ 0 ] ) return def;
+    for ( int i = 0; names[ i ]; i++ )
+    {
+        if ( !g_ascii_strcasecmp ( value, names[ i ] ) ) return i;
+    };
+    return -1;
+}
+
+
+/**
+ * @brief Připojí nebo odpojí periferii za běhu (PERIPH_ATTACH / DETACH).
+ *
+ * Stejné funkce jako volba v menu Devices: memext_connect() /
+ * memext_disconnect(), příznak `g_fdc[].connected` (jako
+ * fdc_request_set_connected()), qdisk_apply_connection(),
+ * ide8_drive_set_connected(). Prvky INI jsou na tyto proměnné navázané,
+ * takže se stav uloží při ukončení jako volba v menu. Stav, který už
+ * platí, se znovu neaplikuje (memext_connect() by jinak vynuloval mapu
+ * bank, qdisk_apply_connection() znovu otevřel obraz).
+ *
+ * Varianty (p->option_value, viz st_DBGAPI_PERIPH_PARAM): memext
+ * "pehu"/"luftner" (výchozí současný typ), qd "mz1f11"/"virtual"/"unicard"
+ * (výchozí "mz1f11"), u odpojení se ignorují; jednotky fdc "fdc0"/"fdc1"
+ * a ide8 "master"/"slave" (výchozí první) platí pro obě operace.
+ *
+ * @param p Parametr příkazu (IN kind, option_value; OUT out_*).
+ * @param attach true = připojit, false = odpojit.
+ * @return 0 = stav platí; -1 neplatný druh; -4 neplatná varianta nebo
+ *         jednotka; -5 zařízení stav nepřijalo (obraz disku IDE8 nejde
+ *         otevřít ani vytvořit, Quick Disk "unicard" bez připojeného
+ *         Unicardu); -10 periferie v sestavě není.
+ * @pre Emu vlákno, drží device_state_lock().
+ * @post p->out_requires_restart = 0; při 0 platí p->out_type (statický
+ *       řetězec) a p->out_changed.
+ */
+static int dbgapi_periph_apply ( st_DBGAPI_PERIPH_PARAM *p, bool attach )
+{
+    p->out_requires_restart = 0;
+    p->out_changed = 0;
+    p->out_type = NULL;
+
+    switch ( p->kind )
+    {
+        case DBGAPI_PERIPH_KIND_MEMEXT:
+        {
+            static const char *const names[] = { "pehu", "luftner", NULL };
+            static const en_MEMEXT_TYPE types[] = { MEMEXT_TYPE_PEHU, MEMEXT_TYPE_LUFTNER };
+            int def = MEMEXT_TEST_TYPE_LUFTNER ? 1 : 0;
+            int idx = attach ? dbgapi_periph_option ( names, p->option_value, def ) : def;
+            if ( idx < 0 ) return -4;
+            if ( attach )
+            {
+                if ( !MEMEXT_TEST_CONNECTED || g_memext.type != types[ idx ] )
+                {
+                    memext_connect ( types[ idx ] );
+                    p->out_changed = 1;
+                };
+            }
+            else if ( MEMEXT_TEST_CONNECTED )
+            {
+                memext_disconnect ( );
+                p->out_changed = 1;
+            };
+            p->out_type = names[ idx ];
+            return 0;
+        }
+
+        case DBGAPI_PERIPH_KIND_FDC:
+        {
+#if CFG_HWEXT_HAVE_FDC
+            static const char *const names[] = { "fdc0", "fdc1", NULL };
+            int idx = dbgapi_periph_option ( names, p->option_value, 0 );
+            if ( idx < 0 ) return -4;
+            unsigned want = attach ? FDC_CONNECTED : FDC_DISCONNECTED;
+            st_FDC *fdc = &g_fdc[ idx == 0 ? FDC0 : FDC1 ];
+            if ( fdc->connected != want )
+            {
+                fdc->connected = want;
+                p->out_changed = 1;
+            };
+            p->out_type = names[ idx ];
+            return 0;
+#else
+            return -10;
+#endif
+        }
+
+        case DBGAPI_PERIPH_KIND_QD:
+        {
+#if CFG_HWEXT_HAVE_QDISK
+            static const char *const names[] = { "mz1f11", "virtual", "unicard", NULL };
+            static const en_QDISK_REQ_CONNECTION conns[] = { QDISK_REQ_MZ1F11, QDISK_REQ_VIRTUAL, QDISK_REQ_UNICARD };
+            static const int qtypes[] = { QDISK_TYPE_IMAGE, QDISK_TYPE_VIRTUAL, QDISK_TYPE_UNICARD };
+            if ( attach )
+            {
+                int idx = dbgapi_periph_option ( names, p->option_value, 0 );
+                if ( idx < 0 ) return -4;
+                if ( !QDISK_TEST_CONNECTED || (int) g_qdisk.type != qtypes[ idx ] )
+                {
+                    if ( qdisk_apply_connection ( conns[ idx ] ) != 0 ) return -5;
+                    p->out_changed = 1;
+                };
+                p->out_type = names[ idx ];
+            }
+            else
+            {
+                if ( QDISK_TEST_CONNECTED )
+                {
+                    if ( qdisk_apply_connection ( QDISK_REQ_DISCONNECTED ) != 0 ) return -5;
+                    p->out_changed = 1;
+                };
+                p->out_type = "disconnected";
+            };
+            return 0;
+#else
+            return -10;
+#endif
+        }
+
+        case DBGAPI_PERIPH_KIND_IDE8:
+        {
+#if CFG_HWEXT_HAVE_IDE8
+            static const char *const names[] = { "master", "slave", NULL };
+            static const en_IDE8_DRIVE drives[] = { IDE8_DRIVE_MASTER, IDE8_DRIVE_SLAVE };
+            int idx = dbgapi_periph_option ( names, p->option_value, 0 );
+            if ( idx < 0 ) return -4;
+            st_IDE8_DRIVE *drive = &g_ide8.drive[ drives[ idx ] ];
+            en_IDE8_STATE want = attach ? IDE8_STATE_CONNECTED : IDE8_STATE_DISCONNECTED;
+            if ( drive->connected != want )
+            {
+                ide8_drive_set_connected ( drives[ idx ], want );
+                /* Připojení otevře obraz disku (chybějící vytvoří, cesta
+                 * vůči cfg_dir); když ho otevřít nejde, zůstane odpojeno. */
+                if ( drive->connected != want ) return -5;
+                p->out_changed = 1;
+            };
+            p->out_type = names[ idx ];
+            return 0;
+#else
+            return -10;
+#endif
+        }
+
+        case DBGAPI_PERIPH_KIND_GAL5:
+            /* V emulátoru není; druh zůstává kvůli zpětné kompatibilitě. */
+            return -10;
+
+        default:
+            return -1;
+    };
 }
 
 
@@ -6162,7 +6373,10 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
 #if CFG_HWEXT_HAVE_QDISK
             p->slots[ idx ].slot = DBGAPI_MEDIA_SLOT_QD;
             p->slots[ idx ].inserted = ( g_qdisk.filename[ 0 ] != '\0' ) ? 1 : 0;
-            p->slots[ idx ].read_only = qdisc_get_write_protected ( ) ? 1 : 0;
+            /* Efektivní ochrana vloženého obrazu (volba uživatele nebo
+             * soubor bez práva zápisu, zavaděč Unicard vždy), ne uložená
+             * volba z INI (qdisc_get_write_protected()): po vysunutí 0. */
+            p->slots[ idx ].read_only = g_qdisk.readonly ? 1 : 0;
             if ( g_qdisk.filename[ 0 ] )
             {
                 strncpy ( p->slots[ idx ].filepath, g_qdisk.filename,
@@ -6204,8 +6418,9 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
             /* Čte INI element. Pomocí cfgroot_get_module_by_name +
              * cfgmodule_get_element_by_name najde element a podle
              * jeho typu naplní out_value (heap-alokovaný g_strdup) a
-             * out_type. Caller (MCP dispatch) uvolňuje out_value
-             * přes g_free. */
+             * out_type, u číselné vazby na proměnnou i out_live
+             * (dbgapi_settings_live_value()). Caller (MCP dispatch)
+             * uvolňuje out_value a out_live přes g_free. */
             st_DBGAPI_SETTINGS_PARAM *p =
                 (st_DBGAPI_SETTINGS_PARAM *) rq->data_ptr;
             if ( !p || !p->module || !p->element )
@@ -6215,6 +6430,7 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                 break;
             };
             p->out_value = NULL;
+            p->out_live = NULL;
             p->out_type = DBGAPI_SETTINGS_TYPE_UNKNOWN;
             CFGMOD *mod =
                 cfgroot_get_module_by_name ( g_cfgmain, (char *) p->module );
@@ -6232,6 +6448,7 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                 rq->success = false;
                 break;
             };
+            p->out_live = dbgapi_settings_live_value ( elm );
             switch ( elm->type )
             {
                 case CFGENTYPE_UNSIGNED:
@@ -6278,6 +6495,11 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
             {
                 p->out_result = 0;
                 rq->success = true;
+            }
+            else
+            {
+                g_free ( p->out_live );
+                p->out_live = NULL;
             };
             break;
         }
@@ -6288,7 +6510,19 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
              * do out_value (audit / rollback). Pokud type-coerce
              * stringu selže, vrátí -4. Whitelist live-settable klíčů
              * NENÍ řešen zde (= delegováno na MCP vrstvu, která má
-             * jednotný seznam). */
+             * jednotný seznam).
+             *
+             * Samotný zápis mění jen hodnotu elementu; proměnná zařízení
+             * se z ní plní jen při startu a při ukládání INI se naopak
+             * element přepíše z proměnné. Po zápisu proto hodnotu
+             * propagujeme (cfgelement_propagate(), stejně jako start),
+             * jinak by zápis neměl účinek a při ukončení by se ztratil.
+             * TEXT ne: propagate by alokoval nový řetězec bez uvolnění
+             * starého (whitelist žádný TEXT klíč nemá). Povolené klíče
+             * propagují jedno číslo: zesílení zvuku (float čtený audio
+             * vláknem, menu ho píše z UI stejně), příznaky a FPS
+             * zobrazení (int čtený UI vláknem každý snímek), meze PC
+             * trasování (emu vlákno). */
             st_DBGAPI_SETTINGS_PARAM *p =
                 (st_DBGAPI_SETTINGS_PARAM *) rq->data_ptr;
             if ( !p || !p->module || !p->element || !p->new_value )
@@ -6416,6 +6650,10 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                     rq->success = false;
                     break;
             };
+            if ( p->out_result == 0 && elm->type != CFGENTYPE_TEXT )
+            {
+                cfgelement_propagate ( elm );
+            };
             break;
         }
 
@@ -6459,22 +6697,9 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
         case DBGAPI_CMD_PERIPH_ATTACH:
         case DBGAPI_CMD_PERIPH_DETACH:
         {
-            /* Attach/detach periferie. V1.B.2 minimal implementation -
-             * zapíše cfgmain INI flag a vrátí out_requires_restart=1
-             * (= aplikace plně až po restartu emulátoru). Hot-swap
-             * (live re-init) je out of scope V1.B.2.
-             *
-             * INI mapování:
-             *   memext -> CFGMOD "MEMEXT", element "type" (TEXT)
-             *           pro attach + "active" (BOOL) flag.
-             *   fdc    -> CFGMOD "FDC",    element "active" (BOOL)
-             *   qd     -> CFGMOD "QDISK",  element "active" (BOOL)
-             *   ide8   -> CFGMOD "IDE8",   element "active" (BOOL)
-             *   gal5   -> CFGMOD "GAL5",   element "active" (BOOL)
-             *
-             * Pokud cfgmodule nebo element neexistuje (= periferie
-             * není v této arch sestavě nebo zatím nepodporuje INI
-             * active flag), handler vrátí -10 / -11. */
+            /* Připojení a odpojení za běhu stejnými funkcemi jako menu
+             * Devices (viz dbgapi_periph_apply()). Menu a okna zařízení
+             * čtou stav pod zámkem stavu zařízení. */
             st_DBGAPI_PERIPH_PARAM *p =
                 (st_DBGAPI_PERIPH_PARAM *) rq->data_ptr;
             if ( !p )
@@ -6482,64 +6707,10 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                 rq->success = false;
                 break;
             };
-            p->out_requires_restart = 0;
-            const char *mod_name = NULL;
-            switch ( p->kind )
-            {
-                case DBGAPI_PERIPH_KIND_MEMEXT: mod_name = "MEMEXT"; break;
-                case DBGAPI_PERIPH_KIND_FDC:    mod_name = "FDC";    break;
-                case DBGAPI_PERIPH_KIND_QD:     mod_name = "QDISK";  break;
-                case DBGAPI_PERIPH_KIND_IDE8:   mod_name = "IDE8";   break;
-                case DBGAPI_PERIPH_KIND_GAL5:   mod_name = "GAL5";   break;
-                default:
-                    p->out_result = -1;
-                    rq->success = false;
-                    break;
-            };
-            if ( !mod_name )
-            {
-                /* default: case už nastavil out_result. */
-                break;
-            };
-            CFGMOD *mod =
-                cfgroot_get_module_by_name ( g_cfgmain, (char *) mod_name );
-            if ( !mod )
-            {
-                /* Periferie není v této arch sestavě (= modul se
-                 * vůbec neregistroval). */
-                p->out_result = -10;
-                rq->success = false;
-                break;
-            };
-            /* "active" BOOL flag - musí existovat v modulu. Pokud
-             * konkrétní modul tento flag nemá, periferie nepodporuje
-             * runtime attach/detach. */
-            st_CFGELEMENT *active_elm =
-                cfgmodule_get_element_by_name ( mod, "active" );
-            if ( !active_elm || active_elm->type != CFGENTYPE_BOOL )
-            {
-                p->out_result = -11;
-                rq->success = false;
-                break;
-            };
-            int new_state = ( cmd == DBGAPI_CMD_PERIPH_ATTACH ) ? 1 : 0;
-            cfgelement_set_bool_value ( active_elm, new_state );
-            /* Pro memext attach option_value (= type variant) zapíšeme
-             * do "type" TEXT elementu pokud je předán. */
-            if ( cmd == DBGAPI_CMD_PERIPH_ATTACH
-                 && p->kind == DBGAPI_PERIPH_KIND_MEMEXT
-                 && p->option_value && p->option_value[ 0 ] )
-            {
-                st_CFGELEMENT *type_elm =
-                    cfgmodule_get_element_by_name ( mod, "type" );
-                if ( type_elm && type_elm->type == CFGENTYPE_TEXT )
-                {
-                    cfgelement_set_text_value ( type_elm, p->option_value );
-                };
-            };
-            p->out_requires_restart = 1;
-            p->out_result = 0;
-            rq->success = true;
+            device_state_lock ( );
+            p->out_result = dbgapi_periph_apply ( p, cmd == DBGAPI_CMD_PERIPH_ATTACH );
+            device_state_unlock ( );
+            rq->success = ( p->out_result == 0 );
             break;
         }
 
@@ -9474,8 +9645,13 @@ static en_DBGAPI_SUBMIT_STATUS dbgapi_ui_submit_impl(st_DBGAPI_CMDRQ_QUEUE *queu
     /* V1.D.1 - track last user action pro emulator://state Resource.
      * Zaznamenáváme jen origin == USER (= GUI klik / hotkey / menu).
      * MCP / TEST / INTERNAL origin ignorujeme - AI klient nás zajímá
-     * jen co dělá human user. */
-    if ( origin == DBGAPI_CMD_ORIGIN_USER )
+     * jen co dělá human user. Čtení (dbgapi_cmd_is_read(): druh READ
+     * a čtecí operace příkazů s operací, např. snímek pokrytí) ne: okna
+     * debuggeru čtou stav periodicky a záznam by se měnil bez akce
+     * člověka. Řízení běhu a konfigurace debuggeru (BP, watch) akcí
+     * člověka jsou. */
+    if ( origin == DBGAPI_CMD_ORIGIN_USER
+         && !dbgapi_cmd_is_read ( (en_DBGAPI_CMD) ( cmd & DBGAPI_CMD_MASK ), data_ptr ) )
     {
         dbgapi_track_last_user_action ( cmd );
     };

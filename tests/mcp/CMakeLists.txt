@@ -1393,6 +1393,23 @@ if(Python3_FOUND)
                    "(Python ${Python3_VERSION})")
 
     # -----------------------------------------------------------
+    # Periferie a nastavení za běhu (M21): media_state qd ro efektivní,
+    # periph_attach/detach za běhu, settings_set do proměnné a do INI
+    # -----------------------------------------------------------
+    add_test(
+        NAME    mcp_periph_settings_live
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_periph_settings_live.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_periph_settings_live PROPERTIES
+        LABELS  "e2e;mcp;pipe"
+        TIMEOUT 120
+    )
+    message(STATUS "  tests/mcp: registered mcp_periph_settings_live "
+                   "(Python ${Python3_VERSION})")
+
+    # -----------------------------------------------------------
     # Test 7e: port I/O a načtení MZF přes MCP za běhu emulace (pipe)
     # -----------------------------------------------------------
     # Regrese: io_write/io_read za běhu zastavil CPU a další port I/O

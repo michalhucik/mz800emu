@@ -197,6 +197,7 @@ void dispatch_stub_reset(void) {
     if (g_stub_state.settings_fake_value) {
         g_free(g_stub_state.settings_fake_value);
     }
+    g_free(g_stub_state.settings_fake_live);
     if (g_stub_state.periph_last_option_value) {
         g_free(g_stub_state.periph_last_option_value);
     }
@@ -1818,6 +1819,10 @@ bool dbgapi_ui_submit_cmd_sync_with_origin(st_DBGAPI_CMDRQ_QUEUE *queue,
                 }
                 p->out_type   = g_stub_state.settings_fake_type;
                 p->out_result = g_stub_state.settings_fake_result;
+                /* out_live jen u GET (caller g_free). */
+                p->out_live = (cmd == DBGAPI_CMD_SETTINGS_GET
+                               && g_stub_state.settings_fake_live)
+                    ? g_strdup(g_stub_state.settings_fake_live) : NULL;
                 if (p->out_result != 0) {
                     return false;
                 }
@@ -2015,9 +2020,9 @@ bool dbgapi_ui_submit_cmd_sync_with_origin(st_DBGAPI_CMDRQ_QUEUE *queue,
 
         case DBGAPI_CMD_PERIPH_ATTACH:
         case DBGAPI_CMD_PERIPH_DETACH:
-            /* V1.B.2 - periph attach/detach. Stub zaznamenává cmd /
-             * kind / option_value a vrací fake_result +
-             * fake_requires_restart. */
+            /* Periph attach/detach. Stub zaznamenává cmd / kind /
+             * option_value a vrací fake_result, fake_requires_restart,
+             * out_changed = 1 a out_type "stub". */
             if (data_ptr) {
                 st_DBGAPI_PERIPH_PARAM *p =
                     (st_DBGAPI_PERIPH_PARAM *)data_ptr;
@@ -2034,6 +2039,8 @@ bool dbgapi_ui_submit_cmd_sync_with_origin(st_DBGAPI_CMDRQ_QUEUE *queue,
                 p->out_result = g_stub_state.periph_fake_result;
                 p->out_requires_restart =
                     g_stub_state.periph_fake_requires_restart;
+                p->out_changed = (p->out_result == 0) ? 1 : 0;
+                p->out_type = (p->out_result == 0) ? "stub" : NULL;
                 if (p->out_result != 0) {
                     return false;
                 }

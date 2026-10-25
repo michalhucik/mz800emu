@@ -250,9 +250,8 @@ typedef enum en_DBGAPI_CMD
      * out_result = -10 a out_active_kind ze stávajícího
      * g_mzarch_platform_numeric.
      *
-     * PERIPH_ATTACH / DETACH zapisují cfgmain INI klíče pro periferii.
-     * Pro plnou aplikaci je nutný restart emulátoru s novým .ini
-     * (= out_requires_restart=1). V1.B.2 neaktivuje hot-swap.
+     * PERIPH_ATTACH / DETACH připojí nebo odpojí periferii za běhu
+     * (jako menu Devices), viz st_DBGAPI_PERIPH_PARAM.
      */
     DBGAPI_CMD_SETTINGS_GET,         /* Čte INI element - data_ptr: st_DBGAPI_SETTINGS_PARAM* (key vstup, out_value výstup) */
     DBGAPI_CMD_SETTINGS_SET,         /* Zapíše INI element - data_ptr: st_DBGAPI_SETTINGS_PARAM* (key + value vstup, out_value zachytí předchozí hodnotu) */
@@ -3582,7 +3581,7 @@ typedef struct st_DBGAPI_MEDIA_SLOT_INFO
 {
     en_DBGAPI_MEDIA_SLOT slot;        /**< Identifikace slotu. */
     uint8_t              inserted;    /**< 1 = aktuálně něco vloženo. */
-    uint8_t              read_only;   /**< 1 = R/O mount (informativní). */
+    uint8_t              read_only;   /**< 1 = vložené médium je chráněné proti zápisu (efektivní stav, bez média 0). */
     char                 filepath[1024]; /**< Aktuálně mountnutá cesta (prázdné = nic). */
 } st_DBGAPI_MEDIA_SLOT_INFO;
 
@@ -3629,12 +3628,18 @@ typedef enum en_DBGAPI_SETTINGS_TYPE
  * @brief Společný parametr pro DBGAPI_CMD_SETTINGS_GET / SETTINGS_SET.
  *
  * SETTINGS_GET vstupy: module + element. Výstup naplní handler v
- * out_value (heap-alokovaný g_strdup, uvolňuje caller přes g_free)
- * + out_type + out_result.
+ * out_value (hodnota elementu = konfigurace načtená při startu nebo
+ * zapsaná přes SETTINGS_SET; heap-alokovaný g_strdup, uvolňuje caller
+ * přes g_free) + out_type + out_result. U elementu přímo navázaného na
+ * číselnou proměnnou (cfgelement_set_handlers(), typy KEYWORD, BOOL,
+ * UNSIGNED, FLOAT) naplní i out_live = hodnota proměnné (živý stav,
+ * např. typ mechaniky QD po přepnutí v menu); jinak NULL.
  *
  * SETTINGS_SET vstupy: module + element + new_value (string,
  * type-coerce dle out_type). Před zápisem naplní handler předchozí
- * hodnotu do out_value (audit / rollback support).
+ * hodnotu do out_value (audit / rollback support). Po zápisu hodnotu
+ * propaguje do navázané proměnné (cfgelement_propagate(), jako při
+ * startu), u TEXT ne.
  *
  * Hodnoty out_result:
  *   0   = OK
@@ -3647,14 +3652,16 @@ typedef enum en_DBGAPI_SETTINGS_TYPE
  *
  * Vlastnictví: caller (MCP dispatch.c) alokuje vstupní stringy přes
  * g_strdup a po návratu z submit je uvolňuje. Handler stringy POUZE
- * čte. out_value handler alokuje přes g_strdup, caller uvolňuje.
+ * čte. out_value a out_live handler alokuje přes g_strdup, caller
+ * uvolňuje.
  */
 typedef struct st_DBGAPI_SETTINGS_PARAM
 {
     const char              *module;       /**< IN: CFGMODULE jméno (= např. "AUDIO"). */
     const char              *element;      /**< IN: element jméno (= např. "volume_8253"). */
     const char              *new_value;    /**< IN (pro SET): string s novou hodnotou, type-coerce dle out_type. */
-    char                    *out_value;    /**< OUT: stringifikovaná hodnota (před zápisem u SET, aktuální u GET). */
+    char                    *out_value;    /**< OUT: stringifikovaná hodnota elementu (před zápisem u SET, aktuální u GET). */
+    char                    *out_live;     /**< OUT (jen GET): hodnota navázané číselné proměnné, NULL = element ji nemá. */
     en_DBGAPI_SETTINGS_TYPE  out_type;     /**< OUT: typový kód elementu. */
     int                      out_result;   /**< OUT: 0 = OK, jinak chybový kód (viz výše). */
 } st_DBGAPI_SETTINGS_PARAM;
@@ -3687,41 +3694,52 @@ typedef struct st_DBGAPI_PLATFORM_PARAM
 /**
  * @brief Typový kód periferie (PERIPH_ATTACH / DETACH).
  *
- * Whitelistované hodnoty - dispatch v dbgapi.c mapuje na konkrétní
- * cfgmain modul + reset request.
+ * Handler v dbgapi.c připojí nebo odpojí periferii za běhu stejnými
+ * funkcemi jako volba v menu Devices.
  */
 typedef enum en_DBGAPI_PERIPH_KIND
 {
     DBGAPI_PERIPH_KIND_UNKNOWN = 0,
-    DBGAPI_PERIPH_KIND_MEMEXT  = 1, /**< Memory expansion (Luftner / PEHU). */
-    DBGAPI_PERIPH_KIND_FDC     = 2, /**< WD279x FDC. */
-    DBGAPI_PERIPH_KIND_QD      = 3, /**< Quick Disk. */
-    DBGAPI_PERIPH_KIND_IDE8    = 4, /**< 8-bit IDE. */
-    DBGAPI_PERIPH_KIND_GAL5    = 5, /**< Geneve 5 adapter. */
+    DBGAPI_PERIPH_KIND_MEMEXT  = 1, /**< Rozšíření paměti; varianta "pehu" / "luftner". */
+    DBGAPI_PERIPH_KIND_FDC     = 2, /**< Řadič WD279x; jednotka "fdc0" (porty 0D8h-0DFh) / "fdc1" (58h-5Fh). */
+    DBGAPI_PERIPH_KIND_QD      = 3, /**< Mechanika Quick Disk; typ "mz1f11" / "virtual" / "unicard". */
+    DBGAPI_PERIPH_KIND_IDE8    = 4, /**< 8bitové IDE; disk "master" / "slave". */
+    DBGAPI_PERIPH_KIND_GAL5    = 5, /**< Rezervováno; v emulátoru není, vždy -10 (zpětná kompatibilita). */
 } en_DBGAPI_PERIPH_KIND;
 
 
 /**
  * @brief Parametr pro DBGAPI_CMD_PERIPH_ATTACH / DETACH.
  *
- * V1.B.2 minimální implementace - nastaví cfgmain INI flag (= např.
- * MEMEXT/active=true) a vrátí out_requires_restart=1 (= aplikace až
- * po restartu emulátoru). Hot-attach (live re-init) je V1.B.3+.
+ * Připojení a odpojení za běhu stejnými funkcemi jako volba v menu
+ * (memext_connect(), g_fdc[].connected, qdisk_apply_connection(),
+ * ide8_drive_set_connected()). Prvky INI jsou navázané na živé proměnné,
+ * stav se uloží při ukončení emulátoru jako volba v menu. Požadovaný stav,
+ * který už platí, se znovu neaplikuje (out_changed = 0).
+ *
+ * option_value vybírá variantu (memext, qd: jen attach) nebo jednotku
+ * (fdc, ide8: attach i detach); NULL nebo "" = výchozí (memext: současný
+ * typ, fdc: "fdc0", qd: "mz1f11", ide8: "master"). Velikost písmen se
+ * nerozlišuje.
  *
  * Hodnoty out_result:
- *   0   = OK (INI změněno, restart vyžadován)
+ *   0   = OK (stav platí)
  *   -1  = neplatné parametry
- *   -10 = periferie není v arch sestavě (CFG_HWEXT_HAVE_*=0)
- *   -11 = periferie není podporována ani jako INI v této platformě
+ *   -4  = neplatná varianta nebo jednotka pro daný druh
+ *   -5  = zařízení požadovaný stav nepřijalo (obraz disku IDE8 nejde
+ *         otevřít ani vytvořit, Quick Disk "unicard" bez Unicardu)
+ *   -10 = periferie v této sestavě není (GAL5 vždy)
  *
  * Vlastnictví: caller alokuje option_value přes g_strdup, handler
- * pouze čte.
+ * pouze čte. out_type ukazuje na statický řetězec (neuvolňovat).
  */
 typedef struct st_DBGAPI_PERIPH_PARAM
 {
     en_DBGAPI_PERIPH_KIND  kind;                 /**< IN: typ periferie. */
-    const char            *option_value;         /**< IN (optional): typ/variant (= např. "luftner4k" pro memext). */
-    int                    out_requires_restart; /**< OUT: 1 = pro plnou aplikaci nutný restart, 0 = aplikováno. */
+    const char            *option_value;         /**< IN (optional): varianta nebo jednotka, viz výše. */
+    int                    out_requires_restart; /**< OUT: vždy 0 (aplikováno za běhu); pole zůstává kvůli zpětné kompatibilitě. */
+    int                    out_changed;          /**< OUT: 1 = příkaz stav změnil, 0 = stav už platil. */
+    const char            *out_type;             /**< OUT: použitá varianta nebo jednotka (statický řetězec), NULL při chybě. */
     int                    out_result;           /**< OUT: 0 = OK, jinak chybový kód. */
 } st_DBGAPI_PERIPH_PARAM;
 
@@ -3996,11 +4014,14 @@ typedef struct st_DBGAPI_HID_SCRIPT
  * ============================================================================ */
 
 /**
- * @brief Vrátí poslední CMDRQ s origin == USER (= GUI akce).
+ * @brief Vrátí poslední CMDRQ s origin == USER (= GUI akce), který není
+ *        čtením.
  *
  * Slouží AI klientovi přes emulator://state Resource ke zjištění, co
- * naposledy human user v GUI udělal. Thread-safe (interně mutex);
- * volání je levné (= jeden lock/unlock).
+ * naposledy human user v GUI udělal. Čtení (dbgapi_cmd_is_read(): druh
+ * DBGAPI_CMD_KIND_READ a čtecí operace příkazů s operací, např. snímek
+ * pokrytí; periodická čtení oken debuggeru) se nezaznamenávají. Thread-safe
+ * (interně mutex); volání je levné (= jeden lock/unlock).
  *
  * @param[out] out_cmd          Poslední USER CMD (validní jen pokud return true).
  * @param[out] out_timestamp_us Monotonic timestamp v mikrosekundách.
