@@ -223,8 +223,9 @@ void gdg_debug_set_regDMD(uint8_t value)
  * DMD nuluje; Service Manual MZ-800 str. 6: po zapnutí i po RESET je stroj
  * v režimu MZ-800, režim MZ-700 zapíná až monitor zápisem 08h na port CEh).
  * GATE0 CTC0 je proto do zápisu DMD z ROM v 1 (režim 800).
- * Dál vynuluje okraj, latch GATE0 režimu 700, CKSW, nastaví PALGRP 0 a
- * paletu 09h/0Fh/09h/0Fh, resetuje VRAM řadič a HW scroll, zruší
+ * Dál vynuluje okraj, latch GATE0 režimu 700, CKSW, PALGRP a paletu (všechny
+ * čtyři položky IGRB 0, černá, jako na HW: simulace netlistu GDG po /PORT
+ * i po /MNRT), resetuje VRAM řadič a HW scroll, zruší
  * rozpracovaný zápis modelu WAIT u VRAM a označí obraz k překreslení.
  *
  * @post Volající má hned potom zavolat memory_reset(), mapa VRAM závisí
@@ -243,10 +244,10 @@ void gdg_reset(void)
     g_gdg.regBOR = 0;
 
     g_gdg.regPALGRP = 0;
-    g_gdg.regPAL0 = 0x09;
-    g_gdg.regPAL1 = 0x0f;
-    g_gdg.regPAL2 = 0x09;
-    g_gdg.regPAL3 = 0x0f;
+    g_gdg.regPAL0 = 0;
+    g_gdg.regPAL1 = 0;
+    g_gdg.regPAL2 = 0;
+    g_gdg.regPAL3 = 0;
 
     g_gdg.cksw = 0;
 

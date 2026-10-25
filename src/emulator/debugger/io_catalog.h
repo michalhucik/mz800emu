@@ -109,7 +109,7 @@ extern "C"
      *
      * decode:
      *   Volitelný (NULL = nepoužije se). Pro vícebitová pole vrací
-     *   string s human-readable interpretací (např. DMD = 7 -> "320x200x16").
+     *   string s human-readable interpretací (např. DMD = 02h -> "320x200x16").
      *   Vrácený řetězec musí být statický nebo thread-local; UI ho jen
      *   přečte, neuvolňuje.
      *
@@ -189,6 +189,36 @@ extern "C"
      * @return Nenulová hodnota pokud entry s mirrorem nalezen, 0 jinak.
      */
     extern int io_catalog_probe_byte(uint8_t port_lsb, uint8_t *out_value);
+
+    /**
+     * Krátký anglický popis grafického režimu GDG MZ-800 podle hodnoty DMD
+     * (port 0xCE, zápis). Společný pro katalog portů, Event Viewer a okno I/O.
+     *
+     * Bity DMD: 0 = obraz A/B (VBANK), 1 = HICOLOR, 2 = SCRW640, 3 = MZ-700.
+     * Bity 4-7 GDG ignoruje. Při bitu 3 = 1 jsou bity 0-2 bez účinku
+     * (09h-0Fh se chovají jako 08h, nedokumentované). 03h a 07h jsou
+     * nedokumentované režimy. Zdroj: báze mz800-knowledge, `mz-800.txt`
+     * (DMD) a `hw/09a-undoc-dmd-modes.md` (ověřeno simulací netlistu GDG).
+     *
+     * | DMD      | Popis                 |
+     * |----------|-----------------------|
+     * | 00h      | `320x200x4 A`         |
+     * | 01h      | `320x200x4 B`         |
+     * | 02h      | `320x200x16`          |
+     * | 03h      | `320x200x16 undoc`    |
+     * | 04h      | `640x200x2 A`         |
+     * | 05h      | `640x200x2 B`         |
+     * | 06h      | `640x200x4`           |
+     * | 07h      | `640x200x4 undoc`     |
+     * | 08h      | `MZ-700 mode`         |
+     * | 09h-0Fh  | `MZ-700 mode (undoc)` |
+     *
+     * Bez vedlejších efektů, volatelné z libovolného vlákna.
+     *
+     * @param dmd Hodnota DMD (bity 4-7 se ignorují).
+     * @return Statický řetězec (volající neuvolňuje), nikdy NULL.
+     */
+    extern const char *io_catalog_dmd_mode_name(uint8_t dmd);
 
 #ifdef __cplusplus
 }

@@ -234,51 +234,21 @@ static void decode_mmio ( uint32_t payload, char *buf, size_t buf_len )
 
 
 /**
- * @brief Dekóduje GDG DMD byte na human-readable mode string.
- *
- * DMD layout (mz800.txt + io_catalog.c::decode_dmd):
- *   bity 1..0 = barevný režim (00=2col, 01=4col, 10=16col, 11=text)
- *   bity 3..2 = screen typ:
- *               00 = 320x200 (MZ-800 native)
- *               01 = 640x200 (MZ-800 native)
- *               10 = MZ-700 mode
- *               11 = illegal
- *
- * Pro běžné kombinace generuje krátký label "320x200x16", "640x200x4",
- * "MZ-700 text", atd. Pro illegal/neznámé padá zpět na raw layout.
- */
-static const char *decode_dmd_mode_short ( uint8_t dmd )
-{
-    const unsigned screen = ( dmd >> 2 ) & 0x03u;
-    const unsigned col    =   dmd        & 0x03u;
-    /* col coding: 00=2 barvy, 01=4 barvy, 10=16 barvy. */
-    if ( screen == 0 ) {
-        if ( col == 0 ) return "320x200x2";
-        if ( col == 1 ) return "320x200x4";
-        if ( col == 2 ) return "320x200x16";
-    } else if ( screen == 1 ) {
-        if ( col == 0 ) return "640x200x2";
-        if ( col == 1 ) return "640x200x4";
-    } else if ( screen == 2 ) {
-        return "MZ-700 mode";
-    }
-    return "?";
-}
-
-
-/**
  * @brief Dekóduje GDG_MODE event - DMD byte zapsaný na port 0xCE.
  *
  * Payload bytes (hwlog 2-byte layout přes addr+value):
  *   [0] addr low  (= 0xCE)
  *   [1] addr high (typ. 0x00)
  *   [2] value     (= DMD byte)
+ *
+ * Výstup `DMD=0xNN (popis)`, popis režimu z io_catalog_dmd_mode_name()
+ * (např. `DMD=0x00 (320x200x4 A)`, `DMD=0x08 (MZ-700 mode)`).
  */
 static void decode_gdg_mode ( uint32_t payload, char *buf, size_t buf_len )
 {
     const unsigned value = (unsigned) ( ( payload >> 16 ) & 0xFFu );
     snprintf ( buf, buf_len, "DMD=0x%02X (%s)",
-               value, decode_dmd_mode_short ( (uint8_t) value ) );
+               value, io_catalog_dmd_mode_name ( (uint8_t) value ) );
 }
 
 

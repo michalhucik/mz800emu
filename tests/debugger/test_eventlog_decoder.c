@@ -202,6 +202,31 @@ void test_eventlog_detail_gdg_mode_decode ( void )
 }
 
 
+/**
+ * @brief Popisek všech 16 hodnot DMD podle báze (mz-800.txt, hw/09a):
+ *        bit 0 = obraz A/B, bit 1 = HICOLOR, bit 2 = 640, bit 3 = MZ-700
+ *        (bity 0-2 pak bez účinku); 03h a 07h nedokumentované.
+ */
+void test_eventlog_detail_gdg_mode_all_values ( void )
+{
+    static const char *const c_expected[ 16 ] = {
+        "320x200x4 A", "320x200x4 B", "320x200x16", "320x200x16 undoc",
+        "640x200x2 A", "640x200x2 B", "640x200x4", "640x200x4 undoc",
+        "MZ-700 mode", "MZ-700 mode (undoc)", "MZ-700 mode (undoc)",
+        "MZ-700 mode (undoc)", "MZ-700 mode (undoc)", "MZ-700 mode (undoc)",
+        "MZ-700 mode (undoc)", "MZ-700 mode (undoc)"
+    };
+    char buf[ 128 ];
+    char expected[ 64 ];
+    for ( unsigned dmd = 0; dmd < 16; dmd++ ) {
+        uint32_t payload = (uint32_t) 0xCEu | ( (uint32_t) dmd << 16 );
+        run_decode ( EVENTLOG_CAT_GDG_MODE, 0, 0, payload, buf, sizeof ( buf ) );
+        snprintf ( expected, sizeof ( expected ), "DMD=0x%02X (%s)", dmd, c_expected[ dmd ] );
+        TEST_ASSERT_EQUAL_STRING ( expected, buf );
+    }
+}
+
+
 /* ================================================================
  * GDG_BANKING (port E0..E6)
  * ================================================================ */
@@ -1027,6 +1052,7 @@ int main ( int argc, char *argv[] )
     RUN_TEST ( test_eventlog_detail_mmio_decode );
 
     RUN_TEST ( test_eventlog_detail_gdg_mode_decode );
+    RUN_TEST ( test_eventlog_detail_gdg_mode_all_values );
     RUN_TEST ( test_eventlog_detail_gdg_banking_decode );
     RUN_TEST ( test_eventlog_detail_gdg_colors_decode );
     RUN_TEST ( test_eventlog_detail_gdg_video_decode );

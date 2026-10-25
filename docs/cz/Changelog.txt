@@ -1,3 +1,7 @@
+	- BUGFIX: Paleta MZ-800 po resetu byla 09h/0Fh/09h/0Fh. Na HW reset paletu vynuluje (všechny čtyři položky černé). Rozdíl byl vidět u programu, který se sám přepne do režimu MZ-800 a paletu nenastaví.
+
+	- BUGFIX: Debugger popisoval grafický režim (hodnotu DMD) v Event Vieweru, v okně I/O Ports a v katalogu portů chybně, například DMD 00h jako 320x200x2 nebo 320x200x16 místo 320x200x4 A, 05h jako 640x200x4 místo 640x200x2 B, 0Ch-0Fh jako illegal. Všechna tři místa teď používají společný popis všech 16 hodnot včetně nedokumentovaných (03h, 07h, 09h-0Fh).
+
 	- BUGFIX: MZ-800 byl po resetu v režimu MZ-700 a bez VRAM na 8000h-9FFFh. Na HW je po zapnutí i po RESET režim MZ-800 (320x200) a mapa jako po OUT E4h: ROM 0000h, CG-ROM 1000h, VRAM 8000h-9FFFh, ROM E000h, jinde RAM; režim MZ-700 zapíná až ROM. Běh ROM to neměnilo (stav nastaví v prvních instrukcích), rozdíl byl vidět v pauze hned po resetu (mapa paměti v debuggeru a přes MCP, čtení z 8000h a D000h).
 
 	- BUGFIX: Okno FDC v debuggeru zobrazovalo v anglickém rozhraní tři tooltipy česky (registry STATUS a COMMAND, položka data_counter). Nově jsou anglicky a v ostatních jazycích přeložené jako dřív.

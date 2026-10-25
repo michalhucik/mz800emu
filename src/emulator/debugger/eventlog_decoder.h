@@ -27,7 +27,7 @@
  * | IRQ_ACK_IM2       | @c PIOZ80_PA vec=0x40 isr=0x4042                   |
  * | IORQ_IN/OUT       | @c port=0xCE (GDG DMD) val=0x08                    |
  * | MMIO_R / MMIO_W   | @c addr=0xE003 val=0x80                            |
- * | GDG_MODE          | @c DMD=0x08 (320x200x16)                           |
+ * | GDG_MODE          | @c DMD=0x02 (320x200x16)                           |
  * | GDG_BANKING       | @c port 0xE0 (ROM bottom OFF)                      |
  * | GDG_HWSCROLL      | @c SOF=0x4000 / @c WID=80 / ...                    |
  * | GDG_COLORS        | @c BORDER=0xE0 / @c PAL[2]=0x9F                    |

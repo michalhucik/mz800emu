@@ -56,6 +56,14 @@ mz_add_test(mz800_bootstrap_dmd
     LABELS   "emu;peripherals"
 )
 
+# Stav registrů GDG MZ-800 po resetu jako na HW (paleta černá, DMD 0,
+# okraj 0; simulace netlistu GDG).
+mz_add_test(mz800_gdg_reset
+    TYPE     EMU
+    SOURCES  test_mz800_gdg_reset.c
+    LABELS   "emu;peripherals"
+)
+
 # Model WAIT u přístupu CPU do VRAM přes GDG (mz800_vramwait.h): případy
 # ze simulace netlistu GDG (čtení vždy čeká, zápis přes buffer).
 mz_add_test(mz800_vramwait

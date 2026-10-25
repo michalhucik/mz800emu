@@ -296,7 +296,7 @@ realokuje buffer a resetuje historii.
 +----------------------------------------------------------+
 | Frame | Scanline | px | CPU Cycle | PC | Type | Port | Addr | Value | Description |
 |-------|----------|----|-----------|----|------|------|------|-------|-------------|
-| 1234  |   128    | 42 | 4567890   | 0x4042 | OUT | 0xCE | -   | 0x07 | GDG DMD: 320x200x16 |
+| 1234  |   128    | 42 | 4567890   | 0x4042 | OUT | 0xCE | -   | 0x02 | GDG DMD: 320x200x16 |
 | 1234  |   130    | 50 | 4567920   | 0x4055 | OUT | 0xCF06 | - | 0x05 | GDG BCOL = 5 |
 | 1235  |    50    | 30 | 4571200   | 0x40A0 | MR  | -    | 0xE001 | 0xC2 | MMIO PPI Port B read |
 +----------------------------------------------------------+
@@ -339,7 +339,7 @@ CTC, FDC, PSG, Z80 PIO, joystick) nabízí value-decoded popis. Pro porty
 bez explicit decoderu se použije fallback z catalog name.
 
 Příklady IORQ:
-- 0xCE OUT 0x07 -> "GDG DMD: 320x200x16"
+- 0xCE OUT 0x02 -> "GDG DMD: 320x200x16"
 - 0xCF06 OUT 0x05 -> "GDG BCOL = 5"
 - 0xE0 OUT -> "MEM: unmap ROM 0000 + ROM 1000"
 - 0xE7 OUT 0x03 -> "MEM: MEMEXT bank 3"
@@ -348,7 +348,7 @@ Příklady IORQ:
 
 Příklady MMIO:
 - MR 0xE001 -> "MMIO PPI Port B read"
-- MW 0xE008 0x0E -> "MMIO GDG DMD: 320x200x16"
+- MW 0xE008 0x0E -> "MMIO CTC0 GATE0 = 0 (audio gate)"
 - MR 0xE004 -> "MMIO CTC counter 0 (audio)"
 
 Headery tabulky jsou anglicky natvrdo (= konzistence s ostatními

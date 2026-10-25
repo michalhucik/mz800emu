@@ -1431,15 +1431,8 @@ static const char* io_history_describe ( uint16_t port, uint8_t value,
             if ( is_in ) {
                 return "GDG Status (VBLN/HBLN/VSY/HSY)";
             }
-            /* DMD value decoded */
-            const char *mode;
-            switch ( ( value >> 2 ) & 0x03 ) {
-                case 0: mode = "320x200x16 (MZ-800)"; break;
-                case 1: mode = "640x200x4 (MZ-800)"; break;
-                case 2: mode = "MZ-700 mode"; break;
-                default: mode = "illegal"; break;
-            }
-            snprintf ( buf, sizeof ( buf ), "GDG DMD: %s", mode );
+            /* DMD value decoded (společný popis s katalogem portů a Event Viewerem) */
+            snprintf ( buf, sizeof ( buf ), "GDG DMD: %s", io_catalog_dmd_mode_name ( (uint8_t) value ) );
             return buf;
         }
         /* === Memory banking === (E0-E4 dispatchuji na addr, value irrelevant) */

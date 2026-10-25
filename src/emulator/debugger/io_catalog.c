@@ -353,29 +353,35 @@ static uint8_t read_gdg_cksw(void)
 
 #endif /* MZARCH == 800 */
 
+const char *io_catalog_dmd_mode_name(uint8_t dmd)
+{
+    /* Index = DMD bity 0-2 (VBANK, HICOLOR, SCRW640) v režimu MZ-800. */
+    static const char *const c_mz800_modes[8] = {
+        "320x200x4 A",      /* 00h */
+        "320x200x4 B",      /* 01h */
+        "320x200x16",       /* 02h */
+        "320x200x16 undoc", /* 03h */
+        "640x200x2 A",      /* 04h */
+        "640x200x2 B",      /* 05h */
+        "640x200x4",        /* 06h */
+        "640x200x4 undoc",  /* 07h */
+    };
+    dmd &= 0x0f;
+    if (dmd == 0x08) return "MZ-700 mode";
+    if (dmd & 0x08) return "MZ-700 mode (undoc)";
+    return c_mz800_modes[dmd];
+}
+
 /**
- * DMD value decoder - vrací textovou interpretaci pro různé módy.
- *
- * Bity 3-2 určují základní rozlišení:
- *   00 = 320x200 (MZ-800), 01 = 640x200, 10 = MZ-700, 11 = nepovolené.
+ * DMD value decoder pro katalog portů - popis režimu podle
+ * io_catalog_dmd_mode_name().
  *
  * @param value DMD byte.
  * @return Statický řetězec (žádný caller free).
  */
 static const char *decode_dmd(uint8_t value)
 {
-    static char buf[80];
-    const char *mode;
-    switch ((value >> 2) & 0x03)
-    {
-    case 0: mode = "320x200 (MZ-800)"; break;
-    case 1: mode = "640x200 (MZ-800)"; break;
-    case 2: mode = "MZ-700 mode"; break;
-    default: mode = "illegal"; break;
-    }
-    snprintf(buf, sizeof(buf), "screen=%s, gfx-bits=%u",
-             mode, (unsigned)(value & 0x03));
-    return buf;
+    return io_catalog_dmd_mode_name(value);
 }
 
 /**

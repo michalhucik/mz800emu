@@ -215,6 +215,38 @@ void test_io_catalog_0xCE_multi_entry ( void )
 }
 
 
+#if MZARCH == 800
+/**
+ * Dekodér DMD (0xCE W) popisuje všech 16 hodnot podle báze (mz-800.txt,
+ * hw/09a): bit 0 = obraz A/B, bit 1 = HICOLOR, bit 2 = 640, bit 3 =
+ * MZ-700 (bity 0-2 pak bez účinku); 03h a 07h nedokumentované. Bity 4-7
+ * GDG ignoruje.
+ */
+void test_io_catalog_0xCE_dmd_decode_all_values ( void )
+{
+    static const char *const c_expected[ 16 ] = {
+        "320x200x4 A", "320x200x4 B", "320x200x16", "320x200x16 undoc",
+        "640x200x2 A", "640x200x2 B", "640x200x4", "640x200x4 undoc",
+        "MZ-700 mode", "MZ-700 mode (undoc)", "MZ-700 mode (undoc)",
+        "MZ-700 mode (undoc)", "MZ-700 mode (undoc)", "MZ-700 mode (undoc)",
+        "MZ-700 mode (undoc)", "MZ-700 mode (undoc)"
+    };
+    const st_IO_PORT_DESC *dmd = NULL;
+    for ( size_t i = 0; i < g_io_ports_count; i++ ) {
+        if ( g_io_ports[ i ].addr == 0x00CE && g_io_ports[ i ].direction == IO_PORT_DIR_W ) {
+            dmd = &g_io_ports[ i ];
+        }
+    }
+    TEST_ASSERT_NOT_NULL ( dmd );
+    TEST_ASSERT_NOT_NULL ( dmd->decode );
+    for ( unsigned v = 0; v < 16; v++ ) {
+        TEST_ASSERT_EQUAL_STRING ( c_expected[ v ], dmd->decode ( (uint8_t) v ) );
+        TEST_ASSERT_EQUAL_STRING ( c_expected[ v ], dmd->decode ( (uint8_t) ( v | 0xF0 ) ) );
+    }
+}
+#endif
+
+
 /**
  * 0xF0 musí mít 2 entries: Palette (W) + JOY0 (R).
  */
@@ -399,6 +431,7 @@ int main ( int argc, char *argv[] )
     RUN_TEST ( test_io_catalog_no_legacy_0xCF_status );
 #endif
 #if MZARCH == 800
+    RUN_TEST ( test_io_catalog_0xCE_dmd_decode_all_values );
     RUN_TEST ( test_io_catalog_0xCF_subregisters_present );
     RUN_TEST ( test_io_catalog_0xCF_scroll_values_match_port_writes );
 #endif

@@ -184,7 +184,7 @@ category - the complete table is in the section
 Examples:
 
 - `port=0xCE (GDG DMD) val=0x08`
-- `DMD=0x08 (320x200x16)`
+- `DMD=0x08 (MZ-700 mode)`
 - `PIOZ80_PA vec=0x40 isr=0x4042`
 - `BP #5 reason=2 MARK`
 - `"isr_entry"`
@@ -864,7 +864,7 @@ The Detail column shows human-readable text formatted per category.
 | IRQ_ACK_IM2  | `PIOZ80_PA vec=0x40 isr=0x4042`                       |
 | IORQ_IN/OUT  | `port=0xCE (GDG DMD) val=0x08`                        |
 | MMIO_R / W   | `addr=0xE003 val=0x80`                                |
-| GDG_MODE     | `DMD=0x08 (320x200x16)`                               |
+| GDG_MODE     | `DMD=0x08 (MZ-700 mode)`                               |
 | GDG_BANKING  | `port 0xE0 (ROM bottom OFF)`                          |
 | GDG_HWSCROLL | `SOF=0x4000` / `WID=80` / ...                         |
 | GDG_COLORS   | `BORDER=0xE0` / `PAL[2]=0x9F`                         |
