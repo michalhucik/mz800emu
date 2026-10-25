@@ -90,10 +90,12 @@ Read individual topics on demand via `resources/read`.
 These return current runtime state, not documentation. Read them for
 context before / during analysis:
 
-- `emulator://state` - paused / running, frame, transport.
+- `emulator://state` - paused / running, frame, transport, `state_rev`,
+  `last_user_action` (the last action of a person in the GUI).
 - `emulator://platform/info` - architecture, mode, clocks, scanline geometry.
 - `emulator://cpu/registers` - Z80 register snapshot.
-- `emulator://memory/map` - current 16 x 4 KB banking snapshot.
+- `emulator://memory/map` - current 16 x 4 KB banking snapshot, `kind`
+  and `source` per slot.
 - `emulator://memory/{addr_hex}/{length}` - template URI to read a memory range.
 - `emulator://breakpoints`, `emulator://watch`, `emulator://vars` - debugger state.
 - `emulator://video/text_dump` - 40x25 text VRAM dump (when applicable).

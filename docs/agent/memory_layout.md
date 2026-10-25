@@ -6,7 +6,16 @@ summarises the static layout per platform and the dynamic banking
 toggles.
 
 For the **live** banking snapshot at the current moment, read
-`emulator://memory/map` - it returns the 16 x 4 KB slot mapping.
+`emulator://memory/map`. It returns 16 slots of 4 KB, each with `kind`
+(the page kind by the current banking: `ram`, `rom_low`, `rom_high`,
+`cgrom`, `vram_i`, `vram_ii`, `vram_text`, `cgram`, `pcg_1`..`pcg_3`,
+`mapped_ports`, `prohibited`, `unmapped`) and `source` (`rom`, `cgrom`,
+`ram`, `vram`, `memext_ram`, `memext_flash`, `unknown`; with a memory
+expansion connected, `memext_*` only where RAM is mapped). The same
+`kind` decides whether `emu_mem_write` accepts a byte (see "Reading /
+writing memory via MCP" below). `emu_state_observe` with
+`include: ["memory_map"]` returns the same map from the same moment as
+registers and memory windows.
 
 ## Overview - banking ports
 
@@ -225,13 +234,28 @@ This means:
 - Reading `0xD000` returns text VRAM in MZ-700 / 700-compat with proper
   banking; in MZ-800 native mode it returns RAM (text VRAM is at
   `0x8000..0xBFFF` and has different layout).
-- Writes to a read-only mapping (e.g. CG-ROM at `0x1000..0x1FFF` when
-  banked in) are silently discarded.
+- `emu_mem_write` checks every byte against the current map before it
+  writes anything. Writable page kinds are `ram`, `vram_text`, `cgram`
+  and `pcg_1`..`pcg_3`. If any byte falls on another kind (ROM, CG-ROM,
+  MZ-800 graphic VRAM `vram_i` / `vram_ii`, mapped ports, prohibited or
+  unmapped page), nothing is written and the call fails with
+  `MEM_WRITE region check failed at 0xADDR (kind=N)`. `N` is the page
+  kind as a number: `ram` 0, `rom_low` 1, `rom_high` 2, `cgrom` 3,
+  `vram_i` 4, `vram_ii` 5, `vram_text` 6, `cgram` 7, `pcg_1`..`pcg_3`
+  8..10, `mapped_ports` 11, `prohibited` 12, `unmapped` 13.
+- The map can change between your read and your write: the program
+  switches banking while it runs. Right after a reset the MZ-800 ROM
+  maps CG-ROM at `0x1000..0x1FFF` for a while to copy the character set
+  to CG-RAM, so a write of a program to that range shortly after start
+  can be refused. Pause, check `emulator://memory/map` (or read it with
+  `emu_state_observe`), and retry after the mapping changed.
 
-For deterministic reads of a specific region irrespective of current
-banking, use `emu_mem_read_force` (planned) / pause and switch banking
-first via `OUT (0xE0..0xE6), A` from a debug stub. For now, inspect
-`emulator://memory/map` to know what is mapped where.
+To read or write a specific physical memory irrespective of the current
+banking, use `emu_regions_list` and `emu_region_read` /
+`emu_region_write` (RAM, ROM, VRAM planes, MemExt banks, RAM disk, ...;
+each region in the list says whether it is `writable`).
+`emu_mem_write_force` skips the region check but still writes through
+the current mapping.
 
 ## Related
 

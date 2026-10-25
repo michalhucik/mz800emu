@@ -68,7 +68,7 @@ exact moment.
  "hashes": {"cpu": "...", "ram": "..."},
  "raster": {"scanline": 0, "...": 0},
  "memory_map": {"platform": "mz800", "slots": [
-   {"addr_start": 0, "addr_end": 4095, "kind": "rom_low", "source": "unknown",
+   {"addr_start": 0, "addr_end": 4095, "kind": "rom_low", "source": "rom",
     "ro_rw": "r", "slot_offset": 0}, "..."]}}
 ```
 

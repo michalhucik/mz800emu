@@ -115,6 +115,17 @@ another MCP client's calls give none either - compare `state_rev` if
 several clients work at once. Changes while running are not reported:
 the `paused` event carries the revision after the run.
 
+To see **what** a person did last, read `last_user_action` in
+`emu_get_state` (`emulator://state`): `{"kind": ..., "timestamp_us": ...}`,
+or `null` when nobody has acted in the GUI since start. `kind` is the
+name of the action: a debugger command (`pause`, `run`, `step_into`,
+`mem_write`, ...), `reset`, `snapshot_load`, `snapshot_quickload`, or the
+name of a device change (e.g. `fdc_set_connected`). `timestamp_us` is the
+host monotonic clock of that moment, only for comparing two reads.
+Reads by open debugger windows and snapshot saves are not recorded, and
+MCP calls never are. Unlike `state_rev` it is also updated while running,
+but it only keeps the last action.
+
 ## Which tools accept `expected_state_rev`
 
 Every tool that changes the machine state: `emu_mem_write`,
