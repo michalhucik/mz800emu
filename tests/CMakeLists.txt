@@ -30,6 +30,7 @@ add_subdirectory(libs/psg_scope)
 add_subdirectory(libs/mzglyphs)
 add_subdirectory(libs/mcs48)
 add_subdirectory(libs/mz1p16)
+add_subdirectory(devices/pcg700)
 
 # Lib (lib + emu core + stuby)
 add_subdirectory(libs/cfgfile)

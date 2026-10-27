@@ -301,6 +301,16 @@ jde zkoumat znovu a znovu s jinými breakpointy nebo trace, a zastaví se na
 prvním snímku, kde se stav liší. `--replay-verify` ověří nahraný běh v CI.
 Podrobnosti viz [`replay.md`](replay.md).
 
+## Rozšiřující jednotky (MZ-700)
+
+Emulátor MZ-700 umí připojit volitelné rozšiřující jednotky skutečného MZ-700
+z menu **HW & Devices** (každá jednotka má vlastní podmenu s volbami);
+výchozí stav je žádná nepřipojená.
+
+| Jednotka | Popis |
+|----------|-------|
+| PCG-700 (HAL) | programovatelný generátor znaků, 2 kB RAM pro znaky 80h-FFh, viz [devices/pcg700.md](devices/pcg700.md) |
+
 ## MAX SPEED benchmark
 
 Měření efektivity emulace v režimu MAX SPEED - kolik "času skutečného MZ-800"

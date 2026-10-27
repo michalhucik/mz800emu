@@ -3375,3 +3375,53 @@ const char *replay_outcome_name(en_REPLAY_OUTCOME outcome)
     };
     return "none";
 }
+
+
+/* ------------------------------------------------------------------ */
+/* Stuby registru devbus (dispatch.c čte neměnný registr přímo: whitelist
+ * settings_set a get_devices). Standalone test nemá jádro devbus: registr
+ * je prázdný, jako na MZ-800. */
+/* ------------------------------------------------------------------ */
+
+/** @brief Stub: žádná volba zařízení (prázdný registr). */
+int devbus_option_key(const char *module, const char *element, unsigned *opt_out)
+{
+    (void) module;
+    (void) element;
+    (void) opt_out;
+    return DEVBUS_ERR_NOT_FOUND;
+}
+
+/** @brief Stub: žádný deskriptor. */
+const st_DEVBUS_DEVICE_DESC *devbus_desc(int slot)
+{
+    (void) slot;
+    return NULL;
+}
+
+/** @brief Stub: žádný sekundární výstup. */
+unsigned devbus_vout_count(void)
+{
+    return 0;
+}
+
+/** @brief Stub: žádný sekundární výstup. */
+st_DEVBUS_VOUT *devbus_vout_at(unsigned i)
+{
+    (void) i;
+    return NULL;
+}
+
+/** @brief Stub: žádný sekundární výstup. */
+const st_DEVBUS_VOUT_DESC *devbus_vout_desc(const st_DEVBUS_VOUT *o)
+{
+    (void) o;
+    return NULL;
+}
+
+/** @brief Stub: žádný sekundární výstup. */
+int devbus_vout_slot(const st_DEVBUS_VOUT *o)
+{
+    (void) o;
+    return DEVBUS_ERR_NOT_FOUND;
+}

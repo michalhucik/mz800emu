@@ -70,6 +70,7 @@
 #include "hw-generic/memory/memext.h"
 #include "hw-generic/ramdisk/ramdisk.h"
 #include "debugger/trace/ramlog_hook.h"
+#include "hw-generic/devbus/devbus.h"
 
 #if MZARCH == 800
 #include "mzarch/mz800/memory/mz800_memory.h"
@@ -121,17 +122,46 @@ static uint64_t s_region_layout_fp = 0;
  * Per-arch dispatch
  * ============================================================================ */
 
+/**
+ * @brief Přidá regiony připojených zařízení devbus (REGION_KIND_DEVICE).
+ *
+ * sub_id = slot * 16 + index regionu v deskriptoru, logical_base 0xFFFFFFFF
+ * (paměť zařízení není v prostoru CPU), connected = 1. Bez inicializovaného
+ * devbus (MZ-800, MZ-1500) nepřidá nic. Otisk rozložení (kind, sub_id)
+ * zachytí změnu připojení sám.
+ *
+ * @param out       Pole výstupu.
+ * @param p_count   Počet zapsaných (počítá i nevešlé, viz dbgapi_regions_add()).
+ * @param max_count Kapacita pole.
+ */
+static void regions_collect_devbus(st_REGION_DESC *out, int *p_count, int max_count)
+{
+    for (unsigned slot = 0; slot < devbus_count(); slot++) {
+        if (!devbus_is_connected((int)slot)) continue;
+        const st_DEVBUS_DEVICE_DESC *d = devbus_desc((int)slot);
+        for (unsigned i = 0; i < d->region_count; i++) {
+            const st_DEVBUS_REGION *r = &d->regions[i];
+            dbgapi_regions_add(out, p_count, max_count,
+                REGION_KIND_DEVICE, (int)(slot * 16u + i), r->name,
+                0xFFFFFFFFu, r->size, r->writable ? 1 : 0, 1, 0);
+        }
+    }
+}
+
+
 static int arch_regions_collect(st_REGION_DESC *out, int max_count)
 {
 #if MZARCH == 800
-    return mz800_regions_collect(out, max_count);
+    int n = mz800_regions_collect(out, max_count);
 #elif MZARCH == 1500
-    return mz1500_regions_collect(out, max_count);
+    int n = mz1500_regions_collect(out, max_count);
 #elif MZARCH == 700
-    return mz700_regions_collect(out, max_count);
+    int n = mz700_regions_collect(out, max_count);
 #else
 #error "Unsupported MZARCH for dbgapi_regions"
 #endif
+    regions_collect_devbus(out, &n, max_count);
+    return n;
 }
 
 
@@ -605,6 +635,17 @@ static int regions_read_desc(const st_REGION_DESC *desc, uint32_t offset, uint8_
         return (int)n;
     }
 
+    case REGION_KIND_DEVICE: {
+        /* Paměť zařízení devbus: slot = sub_id / 16, region = sub_id % 16.
+         * Živá kontrola připojení a velikosti (deskriptor ze starší generace). */
+        const st_DEVBUS_REGION *r = devbus_region(desc->sub_id / 16, (unsigned)(desc->sub_id % 16));
+        if (!r || !devbus_is_connected(desc->sub_id / 16)) return -1;
+        if (offset + n > r->size) return -1;
+        void *ctx = devbus_ctx(desc->sub_id / 16);
+        memcpy(out, r->data(ctx) + offset, n);
+        return (int)n;
+    }
+
     case REGION_KIND_PROHIBITED_SHADOW:
         /* Virtuální region - vždy vrací konstantní shadow byte. MZ-800 = 0x1A,
          * MZ-700 = 0xFF. Dispatch dle MZARCH. */
@@ -775,6 +816,18 @@ static int regions_write_impl(const st_REGION_DESC *desc, uint32_t offset, const
         if (!g_ramdisk.pezik[pi].memory) return -1;
         uint32_t abs_off = (uint32_t)bank * 0x10000u + offset;
         memcpy(&g_ramdisk.pezik[pi].memory[abs_off], data, n);
+        return (int)n;
+    }
+
+    case REGION_KIND_DEVICE: {
+        /* Paměť zařízení devbus; po zápisu on_write(): zařízení přepočítá
+         * odvozený stav a invaliduje obraz. */
+        const st_DEVBUS_REGION *r = devbus_region(desc->sub_id / 16, (unsigned)(desc->sub_id % 16));
+        if (!r || !r->writable || !devbus_is_connected(desc->sub_id / 16)) return -1;
+        if (offset + n > r->size) return -1;
+        void *ctx = devbus_ctx(desc->sub_id / 16);
+        memcpy(r->data(ctx) + offset, data, n);
+        if (r->on_write) r->on_write(ctx, offset, n);
         return (int)n;
     }
 

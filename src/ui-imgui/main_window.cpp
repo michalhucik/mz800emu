@@ -55,6 +55,9 @@
 #include "ui-imgui/audiocap/audio_capture_ui.h"
 #include "iface/iface_audio.h"
 #include "device_request.h"
+#if MZARCH == 700
+#include "ui-imgui/mz700/devbus/menu_devbus.h"
+#endif
 
 #ifdef MZ800EMU_CFG_MCP_SERVER_ENABLED
 /* MCP Activity okno (V1.C.2) - render funkce volaná za běhu pokud
@@ -313,6 +316,11 @@ void imgui_main_window(GLuint texture)
 
     if (g_gui->showAudioWindow)
         imgui_audio(&g_gui->showAudioWindow);
+
+#if MZARCH == 700
+    /* Okna volitelných zařízení devbus (zámek stavu zařízení bere sama). */
+    imgui_devbus_windows();
+#endif
 
     /* Okna kazety čtou pásku (jméno, kontejner, bloky), kterou otevření
      * a vysunutí v emu vlákně uvolňuje; zásah mezitím neprovede. */

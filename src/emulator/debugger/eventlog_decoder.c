@@ -41,7 +41,7 @@
  * =========================================================================== */
 
 /**
- * @brief Najde human-readable jméno portu z @c g_io_ports[].
+ * @brief Najde human-readable jméno portu z katalogu (io_catalog_at(), včetně připojených zařízení devbus).
  *
  * Vrací krátký @c name (typicky "GDG DMD", "PSG L"). Match strategie:
  *  - 16-bit GDG family 0xCF&lt;RR&gt; -&gt; full addr match
@@ -59,8 +59,9 @@ static const char *decoder_lookup_port_name ( uint16_t port16 )
     const int is_gdg_cf = ( low == 0xCF && high >= 0x01 && high <= 0x07 );
     uint16_t key16 = is_gdg_cf ? (uint16_t) ( 0xCF00u | high ) : 0u;
 
-    for ( size_t i = 0; i < g_io_ports_count; i++ ) {
-        const st_IO_PORT_DESC *p = &g_io_ports[ i ];
+    for ( size_t i = 0, n_cat = io_catalog_count ( ); i < n_cat; i++ ) {
+        if ( !io_catalog_present ( i ) ) continue;
+        const st_IO_PORT_DESC *p = io_catalog_at ( i );
         if ( !p->name ) continue;
         if ( is_gdg_cf ) {
             if ( p->addr == key16 ) return p->name;

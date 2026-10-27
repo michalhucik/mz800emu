@@ -484,6 +484,34 @@ extern "C" void membrowser_regions_render_toolbar_toggle ( st_MEMBROWSER_STATE *
 }
 
 
+/**
+ * @brief Vykreslí skupinu paměti zařízení devbus (REGION_KIND_DEVICE).
+ *
+ * Leaf za každý region připojeného zařízení, popisek = jméno regionu
+ * z deskriptoru zařízení (anglický msgid, přeložený _()). Bez takového
+ * regionu se skupina nevykreslí.
+ *
+ * @param st   Memory Browser state.
+ * @param snap Snapshot.
+ */
+static void render_device_group ( st_MEMBROWSER_STATE *st,
+                                   const st_MEMBROWSER_REGION_SNAPSHOT *snap )
+{
+    if ( !snapshot_has_kind ( snap, REGION_KIND_DEVICE ) ) return;
+    if ( ImGui::TreeNodeEx ( _L ( "Expansion devices###mb_rt_devices" ),
+                              ImGuiTreeNodeFlags_SpanAvailWidth ) ) {
+        for ( int i = 0; i < snap->count; i++ ) {
+            const st_REGION_DESC *r = &snap->items[i];
+            if ( r->kind != REGION_KIND_DEVICE ) continue;
+            char id_buf[MB_REGIONS_ID_BUFLEN];
+            std::snprintf ( id_buf, sizeof ( id_buf ), "mb_rt_dev%d", r->sub_id );
+            render_leaf ( st, r, _( r->name ), id_buf );
+        }
+        ImGui::TreePop ( );
+    }
+}
+
+
 extern "C" void membrowser_regions_render_tree ( st_MEMBROWSER_STATE *st,
                                                   const st_MEMBROWSER_REGION_SNAPSHOT *snap )
 {
@@ -530,6 +558,10 @@ extern "C" void membrowser_regions_render_tree ( st_MEMBROWSER_STATE *st,
     /* Skupina 12: PROHIBITED shadow (single leaf, jen pokud arch má). */
     render_single_kind ( st, snap, REGION_KIND_PROHIBITED_SHADOW,
                           _( "Prohibited shadow" ) );
+
+    /* Skupina 13: paměť připojených zařízení devbus (jen MZ-700; bez
+     * připojeného zařízení se skupina nezobrazí). */
+    render_device_group ( st, snap );
 }
 
 

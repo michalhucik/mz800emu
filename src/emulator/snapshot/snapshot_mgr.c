@@ -13,6 +13,7 @@
 #include "cfgmain.h"
 #include "mzarch/mzarch.h"
 #include "mzarch/mzarch_config.h"
+#include "hw-generic/devbus/devbus.h"
 
 /* RAM fast-path rebuild po dokončení loadu (jen MZ-800, viz závěr
  * snapshot_load_through_io). */
@@ -336,6 +337,10 @@ void snapshot_init(void)
 
     snap_unicard_register();
 
+    /* Volitelná zařízení devbus: jen při inicializovaném devbus (v D1 jen
+     * MZ-700), jinak se komponenta neregistruje. */
+    devbus_snap_register();
+
     snap_hwconfig_register();
 
     fprintf(stderr, "Snapshot: registered %d component(s)\n", g_snapshot_registry_count);
@@ -610,6 +615,10 @@ static en_SNAPSHOT_RESULT snapshot_load_through_io(snapshot_io_t *io)
      * i v buildu bez debuggeru (dřív byl ekvivalent jen v debuggeru přes
      * debugger_forced_screen_update). Společná cesta pro file i buffer load
      * (quickload) - pokrývá všechny varianty jedním voláním. */
+    /* Zařízení devbus přepočítají odvozený stav (např. generátor znaků)
+     * před plným překreslením; bez inicializovaného devbus okamžitý návrat. */
+    devbus_after_load();
+
     mzarch_forced_full_screen_refresh();
 
     /* Video záznam: retake nebo šev (časová osa emulace se právě změnila). */

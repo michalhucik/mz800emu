@@ -204,3 +204,22 @@ mz_add_test(joy-request
     SOURCES  test_joy_request.c
     LABELS   "emu;peripherals"
 )
+
+# Jádro devbus (sběrnice volitelných zařízení, plán D1): registr, připojení,
+# kolize, dispečerské tabulky portů a MMIO, volby a INI, události životního
+# cyklu, sekundární video výstup. Adaptér nahrazuje falešný st_DEVBUS_ARCH_OPS,
+# zařízení devbus_dummy.c existuje jen v testech.
+mz_add_test(devbus
+    TYPE     EMU
+    SOURCES  test_devbus.c devbus_dummy.c
+    LABELS   "emu;peripherals"
+)
+
+# devbus: komponenta snapshotu "devbus" (round-trip, starší snapshot odpojí,
+# neznámé id a vyšší verze stavu = varování, pin INI), hash periph beze změny
+# bez připojeného zařízení, zásahy GUI přes device_request (replay odmítne).
+mz_add_test(devbus_snapshot
+    TYPE     EMU
+    SOURCES  test_devbus_snapshot.c devbus_dummy.c
+    LABELS   "emu;peripherals;snapshot"
+)

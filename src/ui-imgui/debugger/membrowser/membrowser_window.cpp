@@ -587,6 +587,40 @@ static void render_toolbar_row1 ( MembrowserView *v )
                       : _( "Ramdisk PEZIK port 0x68 bank index" ) );
         }
     }
+
+    /* --- Sub-control pro paměť zařízení devbus: výběr regionu podle
+     * jména z deskriptoru zařízení (jen připojená zařízení). --- */
+    if ( cur_group == MB_RG_DEVICE ) {
+        const st_REGION_DESC *cur = NULL;
+        for ( int i = 0; i < snap->count; i++ ) {
+            const st_REGION_DESC *r = &snap->items[i];
+            if ( r->kind == REGION_KIND_DEVICE && r->sub_id == st->current_key.sub_id ) cur = r;
+        }
+        ImGui::SameLine ( );
+        ImGui::SetNextItemWidth ( 220 );
+        if ( ImGui::BeginCombo ( "##mb_device_region", cur ? _( cur->name ) : "?" ) ) {
+            for ( int i = 0; i < snap->count; i++ ) {
+                const st_REGION_DESC *r = &snap->items[i];
+                if ( !r->connected || r->kind != REGION_KIND_DEVICE ) continue;
+                bool sel = ( r->sub_id == st->current_key.sub_id );
+                ImGui::PushID ( r->sub_id );
+                if ( ImGui::Selectable ( _( r->name ), sel ) ) {
+                    st->current_region_id = r->id;
+                    st->current_key.sub_id = r->sub_id;
+                    st->cursor_addr = 0;
+                    st->scroll_top_addr = 0;
+                    st->edit_nibble = 0;
+                    membrowser_state_save_to_persisted ( st );
+                }
+                if ( sel ) ImGui::SetItemDefaultFocus ( );
+                ImGui::PopID ( );
+            }
+            ImGui::EndCombo ( );
+        }
+        if ( ImGui::IsItemHovered ( ) ) {
+            ImGui::SetTooltip ( "%s", _( "Memory of a connected expansion device" ) );
+        }
+    }
 }
 
 

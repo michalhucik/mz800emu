@@ -97,6 +97,9 @@ extern "C"
      * načte ze souborů, pokud ještě není načtená. Při chybě uživatelské ROM
      * nainstaluje výchozí ROM.
      *
+     * Nakonec ohlásí změnu zařízením devbus (devbus_rom_changed(); bez
+     * inicializovaného devbus nic).
+     *
      * @param row Řádek g_rom_config->roms; NULL = výchozí ROM.
      * @pre Emu vlákno (zásah z GUI přes rom_request.h) nebo inicializace.
      */

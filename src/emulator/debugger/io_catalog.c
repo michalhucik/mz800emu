@@ -49,6 +49,7 @@
 #include <stddef.h>
 
 #include "mzarch/mzarch_config.h"
+#include "hw-generic/devbus/devbus.h"
 
 /* Direct register access - read-only side-effect free.
  * Per-arch include - mz800_gdg.h a mz1500_gdg.h definuji stejne nazvy
@@ -2287,10 +2288,39 @@ const st_IO_PORT_DESC g_io_ports[] = {
 const size_t g_io_ports_count =
     (sizeof(g_io_ports) / sizeof(g_io_ports[0])) - 1;
 
+/** @brief Viz io_catalog.h (statický katalog + položky zařízení devbus). */
+size_t io_catalog_count(void)
+{
+    return g_io_ports_count + devbus_io_catalog_total();
+}
+
+
+/** @brief Viz io_catalog.h. */
+const st_IO_PORT_DESC *io_catalog_at(size_t i)
+{
+    if (i < g_io_ports_count)
+        return &g_io_ports[i];
+    return devbus_io_catalog_at(i - g_io_ports_count, NULL);
+}
+
+
+/** @brief Viz io_catalog.h (atomické čtení připojení zařízení). */
+bool io_catalog_present(size_t i)
+{
+    if (i < g_io_ports_count)
+        return true;
+    int slot = -1;
+    if (!devbus_io_catalog_at(i - g_io_ports_count, &slot))
+        return false;
+    return devbus_is_connected(slot);
+}
+
+
 /**
  * Side-effect-free probe portu přes mirror gettery z `g_io_ports[]`.
  *
- * Viz doc v `io_catalog.h`. Lineární scan tabulky; pro každý port LSB
+ * Viz doc v `io_catalog.h`. Lineární scan celého katalogu (statický
+ * + připojená zařízení devbus); pro každý port LSB
  * obvykle 1-2 R/RW entries (např. 0xCE má GDG Status R + DMD W,
  * 0xE004-E006 mají IORQ + MMIO duplicitu). Bere první nalezený match
  * (= pořadí v `g_io_ports[]` určuje prioritu při shodě více R entries
@@ -2298,9 +2328,12 @@ const size_t g_io_ports_count =
  */
 int io_catalog_probe_byte(uint8_t port_lsb, uint8_t *out_value)
 {
-    for (size_t i = 0; i < g_io_ports_count; i++)
+    size_t n = io_catalog_count();
+    for (size_t i = 0; i < n; i++)
     {
-        const st_IO_PORT_DESC *e = &g_io_ports[i];
+        if (!io_catalog_present(i))
+            continue;
+        const st_IO_PORT_DESC *e = io_catalog_at(i);
         if ((uint8_t)(e->addr & 0xFFu) != port_lsb)
             continue;
         /* MMIO entries (high byte != 0, např. 0xE000+) přeskočit -

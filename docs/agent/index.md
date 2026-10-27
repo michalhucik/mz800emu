@@ -14,6 +14,7 @@ Read individual topics on demand via `resources/read`.
 | `emulator://docs/conditional_writes` | Write only if the memory or register still holds what you read: `expected_sha256` on `emu_mem_write` / `emu_mem_write_force` / `emu_region_write`, `expected` on `emu_set_register` / `emu_set_cpu_flags`; `Precondition failed:` errors, order of checks, banking weakness of CPU addresses. |
 | `emulator://docs/replay` | Record a run once and repeat it exactly: `emu_replay_record_start` / `_stop`, `emu_replay_play` (also in a new process, any speed), `emu_replay_status`; what is recorded, writes only at frame boundaries, refused tools, `deviated`, first differing frame (`replay_desync`, `desync_parts`), `inputs.jsonl` format, CI check `--replay-verify` (exit code 4). |
 | `emulator://docs/memory_layout` | Z80 64 KB address space layout per platform (MZ-700 / MZ-800 native / MZ-800 700-compat / MZ-1500). Banking ports `0xE0..0xE6`. Memory expansion (Memext) replacing the RAM, memory files inside a `.mzs` snapshot. Key ROM entry points, IRQ vectors, text/color VRAM regions. |
+| `emulator://docs/devices` | Expansion devices of the MZ-700 core (optional cards): `emu_get_devices`, connect and disconnect with `emu_periph_attach` / `_detach` by device id, options through `emu_settings_get` / `_set` (`applies`: now or on_connect), device memory as regions of kind `device`, snapshots and replay; the PCG-700 (`pcg700`): registers, options, RAM format. |
 | `emulator://docs/bp_dsl` | Breakpoint condition expression language: registers, memory deref `[addr]`, port read `port[N]`, operators, built-in functions, `$user_vars`, examples. Same language is used by Watch expressions and Action DSL arguments. |
 | `emulator://docs/smart_vars` | `$name` user variables: how to create / read / write from BP action DSL, persistence rules (`.bpt` + `.vars`), lifecycle, reading via `emulator://vars`. |
 | `emulator://docs/action_dsl` | BP Action DSL grammar - what runs when a breakpoint fires. Commands: `log`, `set <reg>`, `poke`, `mark`, `$var` writes, `if/then/else`, `enable` / `disable` / `disable_self`, `clear_vars`, `continue`, `stop`, `exit`, plus the forwarding commands `cdl_start` / `cdl_stop` / `cdl_reset` / `cdl_export`, `trace_start` / `trace_stop` / `trace_save`, `snapshot`, `ramlog_*`, `coverage_start` / `coverage_stop` / `coverage_mark` (one smart BP instead of repeated MCP calls). `log` format specs (the text is readable via `emu_trace_read` channel `bplog`), stop vs continue semantics. |
@@ -57,6 +58,8 @@ Read individual topics on demand via `resources/read`.
   the text VRAM region -> `sharp_display_code`.
 - Reading / writing memory and want to know what region is what, or
   reading RAM from a `.mzs` snapshot (Memext!) -> `memory_layout`.
+- Using an optional MZ-700 expansion card (character generator, 80 columns)
+  or a region of kind `device` -> `devices`.
 - Loading a program from cassette, starting a program in the same state
   as after a tape load, recording to tape, or working with a multi-block
   tape -> `cmt_workflow`.

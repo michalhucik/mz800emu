@@ -37,6 +37,7 @@ extern "C"
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
 
     /**
      * Směr přístupu k I/O portu.
@@ -161,9 +162,11 @@ extern "C"
     /**
      * Side-effect-free probe portu přes mirror gettery z `g_io_ports[]`.
      *
-     * Implementace lineárně skenuje `g_io_ports[]` a hledá entry, který
+     * Implementace lineárně skenuje celý katalog (io_catalog_at()) a hledá entry, který
      * splňuje VŠECHNY tři podmínky:
-     *   1. `(entry->addr & 0xFF) == port_lsb` (= shoda na low byte adresy;
+     *   0. položka je přítomná (io_catalog_present(): statická vždy, položka
+     *      zařízení devbus jen s připojeným zařízením)
+ *   1. `(entry->addr & 0xFF) == port_lsb` (= shoda na low byte adresy;
      *      MMIO entries s nenulovým high byte se přeskakují - ty patří do
      *      memory map space, ne IORQ portů)
      *   2. `entry->direction == IO_PORT_DIR_R || IO_PORT_DIR_RW` (= read-capable;
@@ -189,6 +192,40 @@ extern "C"
      * @return Nenulová hodnota pokud entry s mirrorem nalezen, 0 jinak.
      */
     extern int io_catalog_probe_byte(uint8_t port_lsb, uint8_t *out_value);
+
+    /**
+     * @brief Počet položek celého katalogu: statické g_io_ports[] + položky
+     *        registrovaných zařízení devbus.
+     *
+     * Registr devbus je po devbus_start() neměnný, takže počet se za běhu
+     * nemění a smí ho číst libovolné vlákno. Položky zařízení jsou statická
+     * data zařízení; zda je zařízení připojené, říká io_catalog_present().
+     *
+     * @return Počet položek (indexy 0 .. count - 1 pro io_catalog_at()).
+     */
+    extern size_t io_catalog_count(void);
+
+    /**
+     * @brief Položka katalogu podle indexu.
+     *
+     * Indexy 0 .. g_io_ports_count - 1 = statický katalog (beze změny pořadí),
+     * dál položky zařízení devbus v pořadí registrace.
+     *
+     * @param i Index 0 .. io_catalog_count() - 1.
+     * @return Položka (statická), nebo NULL při indexu mimo rozsah.
+     */
+    extern const st_IO_PORT_DESC *io_catalog_at(size_t i);
+
+    /**
+     * @brief Je položka katalogu přítomná (statická vždy, položka zařízení
+     *        jen s připojeným zařízením)?
+     *
+     * Atomické čtení stavu připojení; UI vlákno ho volá bez zámku.
+     *
+     * @param i Index 0 .. io_catalog_count() - 1.
+     * @return false i při indexu mimo rozsah.
+     */
+    extern bool io_catalog_present(size_t i);
 
     /**
      * Krátký anglický popis grafického režimu GDG MZ-800 podle hodnoty DMD

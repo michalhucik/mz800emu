@@ -654,9 +654,19 @@ bool replay_autotype_peek_rest(char *buf, size_t size)
  * průběhu. Seznam se kvůli ověření starších záznamů `.mzr` nemění; otisk
  * stroje (machine_hash.h) ho sdílí a mapování pokrývá vlastní částí
  * `memmap`.
+ *
+ * Komponenta `devbus` (jen MZ-700, volitelná zařízení) v seznamu je
+ * kompatibilní: bez připojeného zařízení nezapíše nic, hash i otisk se
+ * proti starším záznamům nemění; s připojeným zařízením zahrnou jeho stav.
  */
 static const char *const s_periph_components[] = {
     "mzarch", "ctc8253", "pio8255", "pioz80", "psg", "gdg", "vramctrl", "fdc", "qdisk",
+#if MZARCH == 700
+    /* Volitelná zařízení devbus: bez připojeného zařízení komponenta nic
+     * nezapíše, takže hash proti starším záznamům .mzr zůstává shodný
+     * (test devbus_snapshot, test_hash_compat). */
+    "devbus",
+#endif
 };
 
 

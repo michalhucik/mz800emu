@@ -9,6 +9,9 @@
 #include "i18n.h"
 
 #include "ui-imgui/topmenu/topmenu.h"
+#if MZARCH == 700
+#include "ui-imgui/mz700/devbus/menu_devbus.h"
+#endif
 
 extern "C"
 {
@@ -36,6 +39,11 @@ void imgui_menu_devices(void)
 #endif
 
         imgui_menu_mz800_dip_switch();
+
+#if MZARCH == 700
+        // Volitelná zařízení devbus (bez registrovaného zařízení se nezobrazí nic)
+        imgui_menu_devbus();
+#endif
 
 #if MZARCH == 800
         ImGui::Separator();

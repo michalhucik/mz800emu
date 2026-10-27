@@ -31,6 +31,7 @@
 #include "rom.h"
 #include "memory.h"
 #include "hw-generic/cmt/cmthack.h"
+#include "hw-generic/devbus/devbus.h"
 
 #include "emulator.h"
 #include "cfgmain.h"
@@ -206,6 +207,10 @@ static void rom_install ( st_ROM_CONFIG_ROW *row ) {
 void rom_reinstall ( st_ROM_CONFIG_ROW *row ) {
     rom_install ( row );
     cmthack_reinstall_rom_patch ( );
+    /* Zařízení devbus si přestaví odvozená data (např. generátor znaků
+     * PCG-700 z nové CG-ROM). Bez inicializovaného devbus (MZ-800, MZ-1500)
+     * okamžitý návrat. */
+    devbus_rom_changed ( );
 }
 
 

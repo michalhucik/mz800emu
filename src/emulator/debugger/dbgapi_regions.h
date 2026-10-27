@@ -97,6 +97,7 @@ typedef enum en_REGION_KIND
     REGION_KIND_RAMDISK_STD,            /**< Ramdisk STD bank (64 KB), sub_id = bank index 0..255. */
     REGION_KIND_RAMDISK_PEZIK,          /**< Ramdisk PEZIK bank (64 KB), sub_id = pezik_instance * 8 + bank_idx (0..7 = port 0x68 banks 0..7, 8..15 = port 0xE8 banks 0..7). */
     REGION_KIND_PROHIBITED_SHADOW,      /**< Virtuální shadow region (vrací 0x1A) když PROHIBITED mode aktivní. */
+    REGION_KIND_DEVICE,                 /**< Paměť volitelného zařízení devbus (st_DEVBUS_REGION), sub_id = slot * 16 + index regionu; jen připojená zařízení. */
     REGION_KIND_COUNT                   /**< Sentinel - počet kindů. */
 } en_REGION_KIND;
 

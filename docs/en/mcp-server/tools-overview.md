@@ -148,6 +148,7 @@ documented separately in [Resources overview](resources-overview.md).
 | `emu_platform_set` | **YES** | Platform switch attempt - returns error (compile-time MZARCH) |
 | `emu_periph_attach` | **YES** | Attaches a peripheral at runtime (like the Devices menu) |
 | `emu_periph_detach` | **YES** | Detaches a peripheral at runtime (like the Devices menu) |
+| `emu_get_devices` | no | Expansion devices of the MZ-700 core: id, options, ports, MMIO, regions, outputs |
 | `emu_stop` | **YES** | Hot-swap stop (pipe-only); terminates emu, Python wrapper keeps running |
 | `emu_start` | **YES** | Hot-swap start (pipe-only); spawns fresh mz800emu.exe child |
 | `emu_input_send_key` | **YES** | Press key + hold N frames + release |
@@ -2372,6 +2373,11 @@ Whitelist:
 - `DISPLAY/locked_window_aspect_ratio` (bool)
 - `DISPLAY/custom_fps` (unsigned, 50..1000; used in the Custom frame rate mode)
 - `TRACE_CPUTRACK/pc_range_lo` .. `TRACE_CPUTRACK/pc_range_hi` (unsigned, 0..65535; runtime PC trace filter)
+- `<ini_section>/<key>` - an option of an MZ-700 expansion device
+  (`emu_get_devices`); a keyword option takes the keyword. The response
+  has `applies`: `now` (applied immediately) or `on_connect` (applied
+  when the device is connected next time). The key `connected` is
+  changed only by `emu_periph_*`. Details: `emulator://docs/devices`.
 
 The Quick Disk image and its write protection are set with
 `emu_media_insert(slot="qd", ...)`.
@@ -2436,6 +2442,7 @@ being recorded or played back.
 | `qd` | `mz1f11` (.MZQ image), `virtual`, `unicard` (Unicard boot loader, needs a connected Unicard) |
 | `ide8` | `master`, `slave`; opens the configured disk image (`IDE8/hdd0_filepath`, `hdd1_filepath`) and creates it when missing |
 | `gal5` | not emulated, always an error (kept for compatibility) |
+| *device id* | an MZ-700 expansion device from `emu_get_devices`; `options` are ignored |
 
 ```
 emu_periph_attach(kind="memext", options={"type": "luftner"})
@@ -2447,6 +2454,12 @@ Returns `{"ok": true, "kind": "memext", "type": "luftner",
 that already holds is not applied again (`changed: false`). An unknown
 variant returns an error listing the allowed values.
 
+A `kind` that is not one of the fixed kinds is taken as the id of an
+expansion device and checked by the emulator. Errors: unknown id,
+conflict with a connected device (ports, MMIO range, video hook), the
+device failed to connect, expansion devices not available on this
+platform (MZ-800, MZ-1500). Details: `emulator://docs/devices`.
+
 ### `emu_periph_detach` (sensitive)
 
 Detaches a peripheral at runtime. For `fdc` and `ide8` the
@@ -2457,6 +2470,27 @@ Detaches a peripheral at runtime. For `fdc` and `ide8` the
 emu_periph_detach(kind="fdc")
 emu_periph_detach(kind="ide8", options={"type": "slave"})
 ```
+
+### `emu_get_devices`
+
+Read-only list of the expansion devices of the MZ-700 core (optional
+cards of the real MZ-700) and their state: `id` (the `kind` for
+`emu_periph_attach`), `name`, `connected`, `ini_section` and `options`
+(type, value, default, `apply`, keywords or range), `ports`, `mmio`
+(addresses and map states `mapped` / `dram`), `regions` (kind `device`),
+`video` hooks and secondary `outputs`.
+
+```
+emu_get_devices()
+-> {"platform_supported": true, "devices": [
+     {"id": "pcg700", "name": "PCG-700 (HAL)", "connected": false,
+      "ini_section": "PCG700", "options": [...], ...}]}
+```
+
+On MZ-800 and MZ-1500 `platform_supported` is false and `devices` is
+empty. The MZ-700 core has the device `pcg700` (PCG-700 by HAL,
+[devices/pcg700.md](../devices/pcg700.md)). Details and a full example:
+`emulator://docs/devices`.
 
 ### Example workflow - mounting a Quick Disk image
 
@@ -2957,7 +2991,9 @@ Returns:
 `kind` enum: `logical, ram, rom_lower, rom_upper, cgrom, cgram_700,
 vram_700_char, vram_700_attr, vram_phys_plane (sub_id 0..3),
 pcg_1500 (sub_id 0..2), memext_ram, memext_flash, ramdisk_std,
-ramdisk_pezik, prohibited_shadow`.
+ramdisk_pezik, prohibited_shadow, device` (`device` = memory of a connected
+MZ-700 expansion device, `sub_id` = slot * 16 + region index, see
+`emu_get_devices`).
 
 `sub_id` disambiguates regions of the same kind (= plane index, bank
 index, PEZIK instance).

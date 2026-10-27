@@ -524,3 +524,12 @@ mz_add_test(memsearch_window_queue
              ${CMAKE_SOURCE_DIR}/src/ui-imgui/debugger/dbgapi_helpers.cpp
     LABELS   "emu;debugger"
 )
+
+# devbus v debuggeru (plán D1): dynamická část katalogu I/O (položky jen
+# připojených zařízení) a regiony REGION_KIND_DEVICE (čtení, zápis s on_write,
+# zmizení po odpojení). Zařízení devbus_dummy.c z tests/peripherals.
+mz_add_test(devbus_debugger
+    TYPE     EMU
+    SOURCES  test_devbus_debugger.c ../peripherals/devbus_dummy.c
+    LABELS   "emu;debugger"
+)

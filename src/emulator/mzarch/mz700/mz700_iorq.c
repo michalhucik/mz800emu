@@ -5,6 +5,8 @@
 #include "mzarch/mzarch_config.h"
 #include "libs/cpu-z80/z80.h"
 #include "mzarch/mz700/gdg/mz700_gdg.h"
+#include "mzarch/mz700/devbus/mz700_devbus.h"
+#include "hw-generic/devbus/devbus.h"
 #include "hw-generic/memory/memory.h"
 #include "hw-generic/memory/memext.h"
 #include "hw-generic/cmt/cmthack.h"
@@ -432,6 +434,36 @@ void port_write_cb(z80_t *cpu, uint16_t addr, uint8_t value, void *user_data)
 }
 
 
+/* -------------------------------------------------------------------------- */
+/*  Obálky devbus (mz700_devbus.h). Aktivní jen s připojeným zařízením, které */
+/*  má porty; jinak CPU volá port_read_cb / port_write_cb přímo.              */
+/* -------------------------------------------------------------------------- */
+
+uint8_t port_read_cb_devbus(z80_t *cpu, uint16_t addr, void *user_data)
+{
+    const st_DEVBUS_PORT_SLOT *s = &g_devbus_ports[addr & 0xff];
+    if (!s->range)
+        return port_read_cb(cpu, addr, user_data);
+    mzarch_main_insideop_iorq();
+    TRACELOG_IORQ_MARK_HANDLED();
+    return s->range->read ? s->range->read(s->ctx, addr) : g_mzarch_main.regDBUS_latch;
+}
+
+void port_write_cb_devbus(z80_t *cpu, uint16_t addr, uint8_t value, void *user_data)
+{
+    const st_DEVBUS_PORT_SLOT *s = &g_devbus_ports[addr & 0xff];
+    if (!s->range)
+    {
+        port_write_cb(cpu, addr, value, user_data);
+        return;
+    }
+    mzarch_main_insideop_iorq();
+    TRACELOG_IORQ_MARK_HANDLED();
+    if (s->range->write)
+        s->range->write(s->ctx, addr, value);
+}
+
+
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
 #include "debugger/debugger.h"
 #include "debugger/mhmap.h"
@@ -453,7 +485,8 @@ uint8_t port_read_with_logging_cb(z80_t *cpu, uint16_t addr, void *user_data)
     };
     g_tracelog_iorq_unconnected = 0;
     g_dbg_in_cpu_path = 1;
-    uint8_t value = port_read_cb(cpu, addr, user_data);
+    /* Čisté čtení (port_read_cb, nebo obálka devbus se zařízením). */
+    uint8_t value = g_mz700_cpu_ops.pread(cpu, addr, user_data);
     g_dbg_in_cpu_path = 0;
     if (TEST_TRACE_IORQLOG_ACTIVE) {
         uint16_t bc = z80_get_reg(cpu, Z80_REG_BC);
@@ -505,7 +538,8 @@ void port_write_with_logging_cb(z80_t *cpu, uint16_t addr, uint8_t value, void *
     };
     g_tracelog_iorq_unconnected = 0;
     g_dbg_in_cpu_path = 1;
-    port_write_cb(cpu, addr, value, user_data);
+    /* Čistý zápis (port_write_cb, nebo obálka devbus se zařízením). */
+    g_mz700_cpu_ops.pwrite(cpu, addr, value, user_data);
     g_dbg_in_cpu_path = 0;
     if (TEST_TRACE_IORQLOG_ACTIVE) {
         uint16_t bc = z80_get_reg(cpu, Z80_REG_BC);
@@ -570,12 +604,18 @@ void port_write_with_logging_cb(z80_t *cpu, uint16_t addr, uint8_t value, void *
  * Z80 PIO - tyto entries v g_io_ports nejsou (MZ_AVAIL_800/1500 only),
  * helper je nenajde a vrátí false → latch fallback.
  *
+ * Port připojeného zařízení devbus se čte jako první přes jeho peek
+ * (devbus_port_peek()); zařízení bez peek padá na katalog a latch.
+ *
  * Pozn: tato funkce **NEvolá** `mzarch_main_insideop_iorq()` ani
  * trace-suite hooky - probe nesmi mutovat zadny global state.
  */
 uint8_t port_read_no_se_cb(uint16_t addr)
 {
     uint8_t v;
+    /* Port připojeného zařízení devbus: jeho peek (bez vedlejšího efektu). */
+    if (devbus_port_peek(addr, &v))
+        return v;
     if (io_catalog_probe_byte((uint8_t)(addr & 0xFFu), &v))
         return v;
     return g_mzarch_main.regDBUS_latch;

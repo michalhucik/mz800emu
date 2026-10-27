@@ -39,6 +39,7 @@
 #include "debugger/trace/tlog_common.h"
 #include "debugger/trace/ramlog.h"
 #include "debugger/trace/bplog.h"
+#include "hw-generic/devbus/devbus.h"
 #include "machine_hash.h"
 #include "debugger/trace/cputrack.h"
 #include "debugger/coverage/coverage.h"
@@ -779,6 +780,10 @@ typedef enum en_DBGAPI_CMD
      * (machine_hash.h), čte stav bez zámku, proto v emu vlákně. Přidáno na
      * KONEC enumu kvůli stabilitě číselných hodnot. */
     DBGAPI_CMD_MACHINE_HASH,         /* Otisk stroje po částech - data_ptr: st_DBGAPI_MACHINE_HASH_PARAM* */
+
+    /* dev-api (D1 mz700-devices) - výpis zařízení devbus (registr je po
+     * startu neměnný, dynamický stav čte emu vlákno). Na KONCI enumu. */
+    DBGAPI_CMD_DEVBUS_LIST,          /* Zařízení devbus a jejich stav - data_ptr: st_DBGAPI_DEVBUS_LIST_PARAM* */
 
     /* Zarážka: počet příkazů, sama není příkaz. Nové příkazy patří PŘED
      * ni. Každý příkaz musí mít řádek v tabulce vlastností
@@ -3650,6 +3655,11 @@ typedef enum en_DBGAPI_SETTINGS_TYPE
  *   -5  = klíč není live-settable (pouze SET; check je v MCP vrstvě,
  *         ale handler ho také používá pro defense in depth)
  *
+ * Volba zařízení devbus (sekce INI zařízení, devbus_option_key()): SET
+ * hodnotu ověří a nastaví přes devbus_option_set() (LIVE volba připojeného
+ * zařízení se projeví hned, CONNECT při příštím připojení), zapíše ji i do
+ * elementu a vyplní out_applies. KEYWORD se zadává klíčovým slovem.
+ *
  * Vlastnictví: caller (MCP dispatch.c) alokuje vstupní stringy přes
  * g_strdup a po návratu z submit je uvolňuje. Handler stringy POUZE
  * čte. out_value a out_live handler alokuje přes g_strdup, caller
@@ -3664,6 +3674,7 @@ typedef struct st_DBGAPI_SETTINGS_PARAM
     char                    *out_live;     /**< OUT (jen GET): hodnota navázané číselné proměnné, NULL = element ji nemá. */
     en_DBGAPI_SETTINGS_TYPE  out_type;     /**< OUT: typový kód elementu. */
     int                      out_result;   /**< OUT: 0 = OK, jinak chybový kód (viz výše). */
+    const char              *out_applies;  /**< OUT (jen SET volby zařízení devbus): "now" (DEVBUS_APPLY_LIVE) / "on_connect" (DEVBUS_APPLY_CONNECT), jinak NULL; statický řetězec. */
 } st_DBGAPI_SETTINGS_PARAM;
 
 
@@ -3705,6 +3716,7 @@ typedef enum en_DBGAPI_PERIPH_KIND
     DBGAPI_PERIPH_KIND_QD      = 3, /**< Mechanika Quick Disk; typ "mz1f11" / "virtual" / "unicard". */
     DBGAPI_PERIPH_KIND_IDE8    = 4, /**< 8bitové IDE; disk "master" / "slave". */
     DBGAPI_PERIPH_KIND_GAL5    = 5, /**< Rezervováno; v emulátoru není, vždy -10 (zpětná kompatibilita). */
+    DBGAPI_PERIPH_KIND_DEVBUS  = 6, /**< Volitelné zařízení devbus; id v st_DBGAPI_PERIPH_PARAM::devbus_id (MCP kind = id zařízení). */
 } en_DBGAPI_PERIPH_KIND;
 
 
@@ -3730,6 +3742,12 @@ typedef enum en_DBGAPI_PERIPH_KIND
  *         otevřít ani vytvořit, Quick Disk "unicard" bez Unicardu)
  *   -10 = periferie v této sestavě není (GAL5 vždy)
  *
+ * DBGAPI_PERIPH_KIND_DEVBUS (option_value se ignoruje, out_type = id):
+ *   -1  = neznámé id zařízení
+ *   -4  = kolize s jiným připojeným zařízením (porty, MMIO, video háček)
+ *   -5  = connect() zařízení selhal
+ *   -10 = devbus na této platformě není (MZ-800, MZ-1500)
+ *
  * Vlastnictví: caller alokuje option_value přes g_strdup, handler
  * pouze čte. out_type ukazuje na statický řetězec (neuvolňovat).
  */
@@ -3741,6 +3759,7 @@ typedef struct st_DBGAPI_PERIPH_PARAM
     int                    out_changed;          /**< OUT: 1 = příkaz stav změnil, 0 = stav už platil. */
     const char            *out_type;             /**< OUT: použitá varianta nebo jednotka (statický řetězec), NULL při chybě. */
     int                    out_result;           /**< OUT: 0 = OK, jinak chybový kód. */
+    const char            *devbus_id;            /**< IN (jen DBGAPI_PERIPH_KIND_DEVBUS): id zařízení devbus; jinak NULL. */
 } st_DBGAPI_PERIPH_PARAM;
 
 
@@ -5611,6 +5630,34 @@ typedef struct st_DBGAPI_MACHINE_HASH_PARAM
     uint64_t elapsed_us;      /**< (OUT) Doba výpočtu v emu vlákně [us] (g_get_monotonic_time()). */
 } st_DBGAPI_MACHINE_HASH_PARAM;
 
+
+
+/**
+ * @brief Dynamický stav jednoho zařízení devbus (DBGAPI_CMD_DEVBUS_LIST).
+ *
+ * Neměnné údaje (id, název, sekce INI, volby, porty, MMIO rozsahy, regiony,
+ * video háčky, výstupy) si volající přečte z deskriptoru (devbus_desc(slot)).
+ */
+typedef struct st_DBGAPI_DEVBUS_DEV
+{
+    int      slot;                               /**< Slot zařízení. */
+    int      connected;                          /**< 1 = připojené. */
+    unsigned opt[DEVBUS_MAX_OPTIONS];     /**< Aktuální hodnoty voleb (index jako v deskriptoru). */
+    unsigned mmio_when[DEVBUS_MAX_MMIO_RANGES];  /**< Aktuální maska stavů MMIO rozsahů. */
+} st_DBGAPI_DEVBUS_DEV;
+
+/**
+ * @brief Parametr DBGAPI_CMD_DEVBUS_LIST (čtení bez vedlejších efektů).
+ *
+ * @note Strukturu alokuje odesílatel (synchronní submit). Bez
+ *       inicializovaného devbus (MZ-800, MZ-1500) initialized = 0, count = 0.
+ */
+typedef struct st_DBGAPI_DEVBUS_LIST_PARAM
+{
+    int      initialized;                                  /**< (OUT) 1 = devbus na této platformě běží. */
+    unsigned count;                                        /**< (OUT) Počet registrovaných zařízení. */
+    st_DBGAPI_DEVBUS_DEV dev[DEVBUS_MAX_DEVICES];   /**< (OUT) Stav zařízení 0 .. count - 1. */
+} st_DBGAPI_DEVBUS_LIST_PARAM;
 
 #ifdef __cplusplus
 } /* extern "C" */

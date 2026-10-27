@@ -461,6 +461,9 @@ static en_MCP_DISPATCH_RESULT _handle_replay_goto(const st_JSONL_MESSAGE *req,
 /* machine-hash (M19) - obsahový otisk stroje po částech */
 static en_MCP_DISPATCH_RESULT _handle_machine_hash(const st_JSONL_MESSAGE *req,
                                                    char **out_response);
+/* dev-api (D1) - volitelná zařízení devbus */
+static en_MCP_DISPATCH_RESULT _handle_get_devices(const st_JSONL_MESSAGE *req,
+                                                  char **out_response);
 /* V0.B.7 - resource backing pro emulator://config/mcp */
 static en_MCP_DISPATCH_RESULT _handle_get_mcp_config(const st_JSONL_MESSAGE *req,
                                                      char **out_response);
@@ -1326,6 +1329,9 @@ static const st_MCP_CMD_MAP_ENTRY g_cmd_map[] = {
     /* machine-hash (M19 debug-gaps): obsahový otisk stroje po částech
      * (test úplnosti revize stavu, "je stav stejný jako tehdy?"). */
     { "machine_hash",             DBGAPI_CMD_MACHINE_HASH,            _handle_machine_hash             },
+    /* dev-api (D1 mz700-devices): volitelná zařízení devbus (id, volby,
+     * porty, MMIO, regiony, výstupy). Na KONEC tabulky. */
+    { "get_devices",              DBGAPI_CMD_DEVBUS_LIST,             _handle_get_devices              },
     /* sentinel */
     { NULL,              DBGAPI_CMD_NONE,              NULL                  },
 };
@@ -10361,12 +10367,21 @@ static const char *const *g_settings_read_keys = NULL;
 
 /**
  * @brief Vrátí true pokud "MODULE/element" klíč je v live-settable
- *        whitelistu.
+ *        whitelistu (statický seznam, nebo volba zařízení devbus).
  */
 static bool _settings_key_is_live(const char *key) {
     if (!key) return false;
     for (size_t i = 0; g_settings_live_keys[i] != NULL; i++) {
         if (strcmp(g_settings_live_keys[i], key) == 0) return true;
+    }
+    /* Volby zařízení devbus (sekce INI zařízení, bez "connected", ten mění
+     * jen periph_*). Registr devbus je po startu neměnný, čtení bez zámku. */
+    const char *slash = strchr(key, '/');
+    if (slash && slash != key && slash[1]) {
+        char *mod = g_strndup(key, (gsize)(slash - key));
+        bool dev = devbus_option_key(mod, slash + 1, NULL) >= 0;
+        g_free(mod);
+        if (dev) return true;
     }
     return false;
 }
@@ -10509,6 +10524,7 @@ static en_MCP_DISPATCH_RESULT _handle_settings_get(const st_JSONL_MESSAGE *req,
  * Volá `DBGAPI_CMD_SETTINGS_SET`. Před zápisem ověří whitelist
  * live-settable klíčů. Response:
  *   {"key": str, "previous_value": str, "new_value": str, "type": str}
+ *   + "applies": "now" | "on_connect" u volby zařízení devbus
  *
  * Chyby:
  *   - Klíč není live-settable - INVALID_PARAMS
@@ -10581,6 +10597,7 @@ static en_MCP_DISPATCH_RESULT _handle_settings_set(const st_JSONL_MESSAGE *req,
         .out_live   = NULL,
         .out_type   = DBGAPI_SETTINGS_TYPE_UNKNOWN,
         .out_result = 0,
+        .out_applies = NULL,
     };
     bool ok = _submit_dbgapi(DBGAPI_CMD_SETTINGS_SET, &param, NULL);
     int rc = param.out_result;
@@ -10602,6 +10619,10 @@ static en_MCP_DISPATCH_RESULT _handle_settings_set(const st_JSONL_MESSAGE *req,
     json_object_set_string_member(resp, "new_value", value);
     json_object_set_string_member(resp, "type",
                                    _settings_type_str(param.out_type));
+    /* Volba zařízení devbus: kdy se změna projeví ("now" / "on_connect"). */
+    if (param.out_applies) {
+        json_object_set_string_member(resp, "applies", param.out_applies);
+    }
     g_free(key); g_free(value); g_free(mod); g_free(elm);
     g_free(param.out_value);
     return _ok_response(req_id, resp, out_response);
@@ -10726,11 +10747,16 @@ static en_MCP_DISPATCH_RESULT _handle_periph_common(const st_JSONL_MESSAGE *req,
     char *kind_str = _obj_str_dup(data_obj, "kind");
     en_DBGAPI_PERIPH_KIND kind = _parse_periph_kind(kind_str);
     if (kind == DBGAPI_PERIPH_KIND_UNKNOWN) {
-        g_free(kind_str);
-        return _err_response(req_id,
-                              "Invalid kind (allowed: memext, fdc, qd, "
-                              "ide8, gal5)",
-                              MCP_DISPATCH_INVALID_PARAMS, out_response);
+        /* Jiný než statický druh = id zařízení devbus (get_devices); ověří
+         * ho emulátor (neznámé id = chyba). */
+        if (!kind_str || !kind_str[0]) {
+            g_free(kind_str);
+            return _err_response(req_id,
+                                  "Invalid kind (allowed: memext, fdc, qd, "
+                                  "ide8, gal5, or a device id from get_devices)",
+                                  MCP_DISPATCH_INVALID_PARAMS, out_response);
+        }
+        kind = DBGAPI_PERIPH_KIND_DEVBUS;
     }
     /* options.type: varianta (memext, qd) nebo jednotka (fdc, ide8). */
     char *option_value = NULL;
@@ -10748,6 +10774,7 @@ static en_MCP_DISPATCH_RESULT _handle_periph_common(const st_JSONL_MESSAGE *req,
         .out_changed          = 0,
         .out_type             = NULL,
         .out_result           = 0,
+        .devbus_id            = (kind == DBGAPI_PERIPH_KIND_DEVBUS) ? kind_str : NULL,
     };
     en_DBGAPI_CMD cmd = is_attach
         ? DBGAPI_CMD_PERIPH_ATTACH
@@ -10757,6 +10784,30 @@ static en_MCP_DISPATCH_RESULT _handle_periph_common(const st_JSONL_MESSAGE *req,
     if (!ok) {
         const char *msg;
         en_MCP_DISPATCH_RESULT code = MCP_DISPATCH_EMU_ERROR;
+        if (kind == DBGAPI_PERIPH_KIND_DEVBUS) {
+            switch (rc) {
+                case -1:
+                    msg = "Invalid kind: unknown peripheral or device id "
+                          "(see get_devices)";
+                    code = MCP_DISPATCH_INVALID_PARAMS;
+                    break;
+                case -4:
+                    msg = "Device conflicts with a connected device "
+                          "(ports, MMIO range or video hook)";
+                    break;
+                case -5:
+                    msg = "Device failed to connect";
+                    break;
+                case -10:
+                    msg = "Expansion devices are not available on this platform";
+                    break;
+                default:
+                    msg = is_attach ? "periph_attach failed" : "periph_detach failed";
+                    break;
+            }
+            g_free(kind_str); g_free(option_value);
+            return _err_response(req_id, msg, code, out_response);
+        }
         switch (rc) {
             case -4:
                 msg = "Invalid options.type (memext: pehu, luftner; "
@@ -15671,6 +15722,7 @@ static const char *_region_kind_to_str(int kind) {
         case REGION_KIND_RAMDISK_STD:       return "ramdisk_std";
         case REGION_KIND_RAMDISK_PEZIK:     return "ramdisk_pezik";
         case REGION_KIND_PROHIBITED_SHADOW: return "prohibited_shadow";
+        case REGION_KIND_DEVICE:            return "device";
         case REGION_KIND_COUNT:             break;
     }
     return "unknown";
@@ -20642,6 +20694,160 @@ static en_MCP_DISPATCH_RESULT _handle_coverage_export(const st_JSONL_MESSAGE *re
     json_object_set_string_member(resp, "path", path);
     json_object_set_string_member(resp, "format", fmt);
     json_object_set_int_member(resp, "rows", (gint64)rows);
+    return _ok_response(req_id, resp, out_response);
+}
+
+
+/* ------------------------------------------------------------------ */
+/* get_devices (dev-api D1): zařízení devbus                           */
+/* ------------------------------------------------------------------ */
+
+/**
+ * @brief Hodnota volby zařízení jako JSON (BOOL true/false, KEYWORD slovo, UNSIGNED číslo).
+ * @param o     Volba.
+ * @param value Hodnota (platná pro volbu).
+ * @return Nový JsonNode (vlastní volající).
+ */
+static JsonNode *_devbus_option_value_node(const st_DEVBUS_OPTION *o, unsigned value) {
+    JsonNode *n = json_node_new(JSON_NODE_VALUE);
+    if (o->type == DEVBUS_OPT_BOOL) {
+        json_node_set_boolean(n, value ? TRUE : FALSE);
+    } else if (o->type == DEVBUS_OPT_KEYWORD) {
+        json_node_set_string(n, o->keywords[value]);
+    } else {
+        json_node_set_int(n, (gint64)value);
+    }
+    return n;
+}
+
+
+/**
+ * @brief Pole stavů mapy MMIO ("mapped", "dram") podle masky.
+ * @param when Maska DEVBUS_MMIO_MAPPED | DEVBUS_MMIO_DRAM.
+ * @return Nové pole (vlastní volající).
+ */
+static JsonArray *_devbus_when_array(unsigned when) {
+    JsonArray *a = json_array_new();
+    if (when & DEVBUS_MMIO_MAPPED) json_array_add_string_element(a, "mapped");
+    if (when & DEVBUS_MMIO_DRAM) json_array_add_string_element(a, "dram");
+    return a;
+}
+
+
+/**
+ * @brief `get_devices` handler - volitelná zařízení devbus a jejich stav.
+ *
+ * Volá DBGAPI_CMD_DEVBUS_LIST (dynamický stav z emu vlákna); neměnné údaje
+ * čte z deskriptorů (registr je po startu neměnný). Response:
+ *   {"platform_supported": bool, "devices": [{"id", "name", "connected",
+ *    "ini_section", "options": [{"key", "label", "type", "value",
+ *    "default", "apply", "keywords" | "min"/"max"}], "ports": [{"first",
+ *    "last", "read", "write"}], "mmio": [{"first", "last", "when"}],
+ *    "regions": [{"name", "kind": "device", "sub_id", "size", "writable"}],
+ *    "video": {"glyph_source", "render_row"}, "outputs": [{"id", "title",
+ *    "width", "height"}]}]}
+ * Na MZ-800 a MZ-1500 (devbus neinicializovaný) devices = [].
+ */
+static en_MCP_DISPATCH_RESULT _handle_get_devices(const st_JSONL_MESSAGE *req,
+                                                  char **out_response) {
+    int64_t req_id = jsonl_msg_get_req_id(req);
+    st_DBGAPI_DEVBUS_LIST_PARAM *p = g_new0(st_DBGAPI_DEVBUS_LIST_PARAM, 1);
+    if (!_submit_dbgapi(DBGAPI_CMD_DEVBUS_LIST, p, NULL)) {
+        g_free(p);
+        return _err_response(req_id, "get_devices failed", MCP_DISPATCH_EMU_ERROR, out_response);
+    }
+    JsonObject *resp = json_object_new();
+    json_object_set_boolean_member(resp, "platform_supported", p->initialized ? TRUE : FALSE);
+    JsonArray *devs = json_array_new();
+    for (unsigned i = 0; i < p->count && i < DEVBUS_MAX_DEVICES; i++) {
+        const st_DEVBUS_DEVICE_DESC *d = devbus_desc((int)i);
+        if (!d) continue;
+        const st_DBGAPI_DEVBUS_DEV *s = &p->dev[i];
+        JsonObject *o = json_object_new();
+        json_object_set_string_member(o, "id", d->id);
+        json_object_set_string_member(o, "name", d->name);
+        json_object_set_boolean_member(o, "connected", s->connected ? TRUE : FALSE);
+        json_object_set_string_member(o, "ini_section", d->ini_section);
+
+        JsonArray *opts = json_array_new();
+        for (unsigned k = 0; k < d->option_count; k++) {
+            const st_DEVBUS_OPTION *op = &d->options[k];
+            JsonObject *jo = json_object_new();
+            json_object_set_string_member(jo, "key", op->key);
+            json_object_set_string_member(jo, "label", op->label);
+            json_object_set_string_member(jo, "type",
+                op->type == DEVBUS_OPT_BOOL ? "bool" : op->type == DEVBUS_OPT_KEYWORD ? "keyword" : "unsigned");
+            json_object_set_member(jo, "value", _devbus_option_value_node(op, s->opt[k]));
+            json_object_set_member(jo, "default", _devbus_option_value_node(op, op->def));
+            json_object_set_string_member(jo, "apply", op->apply == DEVBUS_APPLY_LIVE ? "live" : "connect");
+            if (op->type == DEVBUS_OPT_KEYWORD) {
+                JsonArray *kw = json_array_new();
+                for (unsigned w = 0; op->keywords[w]; w++) json_array_add_string_element(kw, op->keywords[w]);
+                json_object_set_array_member(jo, "keywords", kw);
+            } else if (op->type == DEVBUS_OPT_UNSIGNED) {
+                json_object_set_int_member(jo, "min", (gint64)op->min);
+                json_object_set_int_member(jo, "max", (gint64)op->max);
+            }
+            json_array_add_object_element(opts, jo);
+        }
+        json_object_set_array_member(o, "options", opts);
+
+        JsonArray *ports = json_array_new();
+        for (unsigned k = 0; k < d->port_count; k++) {
+            JsonObject *jp = json_object_new();
+            json_object_set_int_member(jp, "first", d->ports[k].first);
+            json_object_set_int_member(jp, "last", d->ports[k].last);
+            json_object_set_boolean_member(jp, "read", d->ports[k].read ? TRUE : FALSE);
+            json_object_set_boolean_member(jp, "write", d->ports[k].write ? TRUE : FALSE);
+            json_array_add_object_element(ports, jp);
+        }
+        json_object_set_array_member(o, "ports", ports);
+
+        JsonArray *mmio = json_array_new();
+        for (unsigned k = 0; k < d->mmio_count; k++) {
+            JsonObject *jm = json_object_new();
+            json_object_set_int_member(jm, "first", d->mmio[k].first);
+            json_object_set_int_member(jm, "last", d->mmio[k].last);
+            json_object_set_array_member(jm, "when", _devbus_when_array(s->mmio_when[k]));
+            json_array_add_object_element(mmio, jm);
+        }
+        json_object_set_array_member(o, "mmio", mmio);
+
+        JsonArray *regs = json_array_new();
+        for (unsigned k = 0; k < d->region_count; k++) {
+            JsonObject *jr = json_object_new();
+            json_object_set_string_member(jr, "name", d->regions[k].name);
+            json_object_set_string_member(jr, "kind", "device");
+            json_object_set_int_member(jr, "sub_id", (gint64)(i * 16u + k));
+            json_object_set_int_member(jr, "size", (gint64)d->regions[k].size);
+            json_object_set_boolean_member(jr, "writable", d->regions[k].writable ? TRUE : FALSE);
+            json_array_add_object_element(regs, jr);
+        }
+        json_object_set_array_member(o, "regions", regs);
+
+        JsonObject *vid = json_object_new();
+        json_object_set_boolean_member(vid, "glyph_source", (d->video && d->video->glyph_source) ? TRUE : FALSE);
+        json_object_set_boolean_member(vid, "render_row", (d->video && d->video->render_row) ? TRUE : FALSE);
+        json_object_set_object_member(o, "video", vid);
+
+        JsonArray *outs = json_array_new();
+        for (unsigned v = 0; v < devbus_vout_count(); v++) {
+            st_DEVBUS_VOUT *vo = devbus_vout_at(v);
+            if (devbus_vout_slot(vo) != (int)i) continue;
+            const st_DEVBUS_VOUT_DESC *vd = devbus_vout_desc(vo);
+            JsonObject *jv = json_object_new();
+            json_object_set_string_member(jv, "id", vd->id);
+            json_object_set_string_member(jv, "title", vd->title);
+            json_object_set_int_member(jv, "width", vd->width);
+            json_object_set_int_member(jv, "height", vd->height);
+            json_array_add_object_element(outs, jv);
+        }
+        json_object_set_array_member(o, "outputs", outs);
+
+        json_array_add_object_element(devs, o);
+    }
+    json_object_set_array_member(resp, "devices", devs);
+    g_free(p);
     return _ok_response(req_id, resp, out_response);
 }
 #endif /* MZ800EMU_CFG_MCP_SERVER_ENABLED */

@@ -53,6 +53,9 @@
 #include "hw-generic/memory/memory.h"
 #include "debugger/trace/ramlog.h"        /* lastwriter(): mapa posledních zapisovatelů */
 #include "debugger/trace/ramlog_hook.h"   /* lastwriter(): buňky CPU adresy po platformách */
+#if MZARCH == 700
+#include "mzarch/mz700/devbus/mz700_devbus.h" /* g_mz700_cpu_ops: port[N]! přes porty zařízení */
+#endif
 
 /* V1.6+ TODO 4.2 5b: per-arch IORQ no_se probe API. Side-effect read
  * pres regular port_read_cb(); side-effect-free pres port_read_no_se_cb().
@@ -1133,7 +1136,12 @@ static uint8_t bp_read_port ( uint16_t port, bool side_effect ) {
         /* Real read - cesta jako pri CPU IN instr. CPU pointer je NULL
          * (= pripustny pro port_read_cb na MZ-800 i 1500, dispatcher
          * cpu argument neuziva). */
+#if MZARCH == 700
+        /* MZ-700: čistý callback z adaptéru devbus (porty zařízení). */
+        return g_mz700_cpu_ops.pread ( NULL, port, NULL );
+#else
         return port_read_cb ( NULL, port, NULL );
+#endif
     }
     /* Side-effect-free probe. */
     return port_read_no_se_cb ( port );

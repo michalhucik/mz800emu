@@ -1,3 +1,9 @@
+	- MZ-700: emulace programovatelného generátoru znaků PCG-700 (HAL Laboratory), menu HW & Devices -> PCG-700 (HAL). 2 kB RAM nahrazuje znaky 80h-FFh obou znakových sad, program ji plní zápisem na 0E010h-0E012h. Přepínač HSW a propojky SSW a GSW jsou volby v menu, stejně jako sporné detaily (okamžik zápisu podle bitu 4, dekód zápisů i s DRAM na 0E000h, HSW PCG se SSW OFF, obsah RAM po zapnutí). Náhled znaků PCG RAM v okně Show PCG RAM characters, PCG RAM v Memory Browseru, registry v okně I/O Ports, stav ve snímcích stavu. Výchozí stav je nepřipojeno. Emulace PCG-700 (HAL) vznikla jen podle rešerše informací z internetu; autor zařízení nikdy neviděl ani neměřil, sporné detaily jsou volby, ne ověřené vlastnosti hardwaru. Viz devices/pcg700.md.
+
+	- MCP - emu_get_devices vypíše rozšiřující jednotky MZ-700 (id, volby, MMIO, regiony, stav připojení); emu_periph_attach a emu_periph_detach je připojí a odpojí podle id (kind: "pcg700"), emu_settings_set mění jejich volby (odpověď applies: now nebo on_connect) a jejich paměť je region druhu device. Na MZ-800 a MZ-1500 je seznam prázdný. Viz mcp-server/tools-overview.md a emulator://docs/devices.
+
+	- BUGFIX: Okno I/O Ports v debuggeru neukládalo do INI sbalení sekce QDISK a stav sbalení této sekce zapisovalo mimo stav okna (pole pro 16 sekcí, sekcí bylo 17).
+
 	- BUGFIX: Paleta MZ-800 po resetu byla 09h/0Fh/09h/0Fh. Na HW reset paletu vynuluje (všechny čtyři položky černé). Rozdíl byl vidět u programu, který se sám přepne do režimu MZ-800 a paletu nenastaví.
 
 	- BUGFIX: Debugger popisoval grafický režim (hodnotu DMD) v Event Vieweru, v okně I/O Ports a v katalogu portů chybně, například DMD 00h jako 320x200x2 nebo 320x200x16 místo 320x200x4 A, 05h jako 640x200x4 místo 640x200x2 B, 0Ch-0Fh jako illegal. Všechna tři místa teď používají společný popis všech 16 hodnot včetně nedokumentovaných (03h, 07h, 09h-0Fh).

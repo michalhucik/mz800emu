@@ -12,6 +12,8 @@
 #include "mzarch/mzarch_platform_functions.h"
 #include "libs/cpu-z80/z80.h"
 #include "mz700_iorq.h"
+#include "mzarch/mz700/devbus/mz700_devbus.h"
+#include "hw-generic/devbus/devbus.h"
 #include "mzarch/interrupt.h"
 #include "mzarch/mz700/gdg/mz700_gdg.h"
 #include "hw-generic/memory/memory.h"
@@ -105,6 +107,8 @@ void mzarch_platform_fn_exit(void)
     ide8_exit();
 #endif
 
+    mz700_devbus_exit();
+
     audio_exit();
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
@@ -129,6 +133,10 @@ void mzarch_platform_fn_init(void)
         port_read_cb, NULL,
         port_write_cb, NULL,
         pioz80_interrupt_ack_im2_cb, NULL);
+
+    /* Sběrnice volitelných zařízení (devbus): prázdný registr s adaptérem
+     * MZ-700. Zařízení se registrují níže, připojí je mz700_devbus_start(). */
+    mz700_devbus_init();
 
     g_mzarch_main.cpu->external_int_handling = true;
 
@@ -200,6 +208,10 @@ void mzarch_platform_fn_init(void)
     ide8_init();
 #endif
 
+    /* Konec registrace zařízení devbus: připojení podle INI. Reset zařízení
+     * proběhne s resetem stroje v mzarch_main(). */
+    mz700_devbus_start();
+
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
     debugger_init();
 #endif
@@ -237,19 +249,26 @@ void mzarch_platform_fn_reset_request(void)
 }
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
+/**
+ * @brief Změna stavu debuggeru: přepočítá aktivitu diagnostiky a callbacky CPU.
+ *
+ * Nejdřív se aktualizuje aktivita trace-suite (může změnit
+ * TEST_DEBUGGER_NEED_DEBUG_CALLBACKS přes iorqlog), pak se nainstalují
+ * callbacky CPU. Výběr varianty (logovací, ramlog, čisté) dělá
+ * mz700_install_cpu_callbacks() (mz700_devbus.c), které čisté callbacky
+ * bere z g_mz700_cpu_ops (bez zařízení devbus dnešní funkce, se zařízením
+ * obálky).
+ *
+ * trace-suite cputrack hookuje až po z80_step v mzarch_main_emulator_run;
+ * pomalou cestu potřebuje kvůli bajtům instrukce z fetch
+ * (g_debugger_insn_fetch). Iorqlog/intlog/hwlog mají vlastní hook strategii.
+ *
+ * @param active true = debugger aktivní.
+ * @pre Emu vlákno mezi instrukcemi.
+ * @post Callbacky CPU odpovídají stavu diagnostiky a devbus.
+ */
 void mzarch_platform_fn_debugger_state_changed(bool active)
 {
-    /*
-     * Pomalou cestu (with_history_cb) použijeme pokud je aktivní CPU
-     * Instruction History (cpuhist) NEBO Memory Heatmap (CDL).
-     *
-     * trace-suite cputrack hookuje až po z80_step v mzarch_main_emulator_run,
-     * swap memory callbacků potřebuje kvůli bajtům instrukce z fetch
-     * (g_debugger_insn_fetch). Iorqlog/intlog/hwlog mají vlastní hook
-     * strategii (Fáze 3-5).
-     */
-    /* Pořadí: nejdřív update trace-suite active (může změnit
-     * TEST_DEBUGGER_NEED_DEBUG_CALLBACKS via iorqlog), pak swap callbacků. */
     cputrack_recompute_active(active);
     iorqlog_recompute_active(active);
     intlog_recompute_active(active);
@@ -258,31 +277,7 @@ void mzarch_platform_fn_debugger_state_changed(bool active)
     ramlog_recompute_active(active);
     coverage_recompute_active();
 
-    bool need_debug = TEST_DEBUGGER_NEED_DEBUG_CALLBACKS;
-
-    if (need_debug)
-    {
-        z80_set_mread(g_mzarch_main.cpu, memory_read_with_logging_cb, NULL);
-        z80_set_mwrite(g_mzarch_main.cpu, memory_write_with_logging_cb, NULL);
-        z80_set_pread(g_mzarch_main.cpu, port_read_with_logging_cb, NULL);
-        z80_set_pwrite(g_mzarch_main.cpu, port_write_with_logging_cb, NULL);
-    }
-    else if (g_ramlog_active)
-    {
-        /* Záznam zápisů bez jiné diagnostiky (ramlog, háček A): jen write
-         * callback se záznamem, čtení a porty čisté (bez RAM fast-path). */
-        z80_set_mread(g_mzarch_main.cpu, memory_read_cb, NULL);
-        z80_set_mwrite(g_mzarch_main.cpu, ramlog_hook_cpu_write_cb, NULL);
-        z80_set_pread(g_mzarch_main.cpu, port_read_cb, NULL);
-        z80_set_pwrite(g_mzarch_main.cpu, port_write_cb, NULL);
-    }
-    else
-    {
-        z80_set_mread(g_mzarch_main.cpu, memory_read_cb, NULL);
-        z80_set_mwrite(g_mzarch_main.cpu, memory_write_cb, NULL);
-        z80_set_pread(g_mzarch_main.cpu, port_read_cb, NULL);
-        z80_set_pwrite(g_mzarch_main.cpu, port_write_cb, NULL);
-    }
+    mz700_install_cpu_callbacks();
 }
 #endif /* MZ800EMU_CFG_DEBUGGER_ENABLED */
 

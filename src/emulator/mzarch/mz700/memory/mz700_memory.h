@@ -63,6 +63,19 @@ extern "C"
 
     extern uint8_t *g_memoryVRAM;
 
+    /**
+     * @brief Zápis debuggeru do aktuálně mapované paměti MZ-700 (bez synchronizace, bez MEM_W BP).
+     *
+     * Tělo memory_write_byte_no_bp(); volá se přes g_mz700_cpu_ops.raw_write
+     * (mz700_devbus.h), aby obálka devbus mohla zápis ohlásit zařízením.
+     * Zápis na 0E000h-0E008h při mapované horní oblasti trefí 8255 / 8253 / GDG.
+     *
+     * @param addr  Adresa v mapě CPU.
+     * @param value Zapisovaný bajt.
+     * @pre Emu vlákno.
+     */
+    extern void memory_write_byte_raw(uint16_t addr, uint8_t value);
+
     /*
      *
      *  Testy mapovacich stavu

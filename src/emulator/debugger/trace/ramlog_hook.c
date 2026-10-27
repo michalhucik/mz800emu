@@ -21,6 +21,9 @@
 #include "libs/cfgfile/cfgmodule.h"
 #include "libs/sdlapp/sdlapp_options.h"
 #include "emulator/cfgmain.h"
+#if MZARCH == 700
+#include "emulator/mzarch/mz700/devbus/mz700_devbus.h"
+#endif
 
 #include <stdio.h>
 #include <glib.h>
@@ -121,10 +124,15 @@ void ramlog_hook_write(uint16_t addr, uint8_t value, en_RAMLOG_SRC default_src,
 }
 
 
-/** @brief Zápis přes memory_write_cb() (callback CPU se synchronizací). */
+/** @brief Zápis přes čistý callback CPU se synchronizací (MZ-700: g_mz700_cpu_ops.mwrite, jinak memory_write_cb()). */
 static void rl_fn_cpu(uint16_t addr, uint8_t value, void *ctx)
 {
+#if MZARCH == 700
+    /* Obálka devbus se zařízením, jinak memory_write_cb. */
+    g_mz700_cpu_ops.mwrite((z80_t *) ctx, addr, value, NULL);
+#else
     memory_write_cb((z80_t *) ctx, addr, value, NULL);
+#endif
 }
 
 

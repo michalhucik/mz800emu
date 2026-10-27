@@ -30,6 +30,7 @@
 #include "hw-generic/printer/printer.h"
 #include "hw-generic/mz1p16/mz1p16_emu.h"
 #include "hw-generic/joy/joymz-1x03.h"
+#include "hw-generic/devbus/devbus.h"
 #include "audio.h"
 #include "videorec/videorec.h"
 #include "screenshot/screenshot_series.h"
@@ -243,6 +244,11 @@ static inline void mz800_main_event_callback_screen_done(void)
     pioz80_input_resync();
 #endif
     cmt_on_screen_done_event();
+#if MZARCH == 700
+    /* Volitelná zařízení devbus: per-frame bod (bez zařízení s frame_done jen
+     * čtení čítače). Zařízení tu nesmí volat insideop (I/O, VRAM). */
+    devbus_frame_done();
+#endif
     /* --cmt-boot: uvolní drženou klávesu C, až ROM zapne motor (bez
      * držené klávesy jen jedno čtení příznaku). */
     cmt_cli_on_screen_done();
@@ -1480,6 +1486,11 @@ static void mzarch_main_reset(void)
 
 #if CFG_HWEXT_HAVE_IDE8
     ide8_reset();
+#endif
+
+#if MZARCH == 700
+    /* Volitelná zařízení devbus: signál RESET (obsah RAM zařízení se nemění). */
+    devbus_reset_all();
 #endif
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED

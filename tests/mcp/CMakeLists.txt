@@ -587,6 +587,40 @@ if(Python3_FOUND)
     message(STATUS "  tests/mcp: registered mcp_mem_read_kind "
                    "(Python ${Python3_VERSION})")
 
+    # Sběrnice volitelných zařízení (devbus, plán D1) bez zařízení:
+    # get_devices, periph_* s id zařízení, settings_set, regions_list a zápis
+    # na 0E010h / 0E00Ch na MZ-700 PAL a NTSC; get_devices na MZ-800.
+    add_test(
+        NAME    mcp_devbus_e2e
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_devbus_e2e.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_devbus_e2e PROPERTIES
+        LABELS  "e2e;mcp;pipe"
+        TIMEOUT 240
+        SKIP_RETURN_CODE 77
+    )
+    message(STATUS "  tests/mcp: registered mcp_devbus_e2e "
+                   "(Python ${Python3_VERSION})")
+
+    # PCG-700 (HAL) jako zařízení devbus: program v RAM zapíše glyf kódu 80h
+    # přes 0E010h-0E012h, kontrola bodů snímku, HSW NOM, SSW OFF, COPY
+    # z CG-ROM, snapshot round-trip; MZ-700 PAL a NTSC, MZ-800 bez zařízení.
+    add_test(
+        NAME    mcp_pcg700_e2e
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_pcg700_e2e.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_pcg700_e2e PROPERTIES
+        LABELS  "e2e;mcp;pipe;pcg700"
+        TIMEOUT 300
+        SKIP_RETURN_CODE 77
+    )
+    message(STATUS "  tests/mcp: registered mcp_pcg700_e2e "
+                   "(Python ${Python3_VERSION})")
+
     # Postupné hledání proměnných (memsearch) a Freeze Bytes přes MCP:
     # pauza i běžící program, undo/redo, ruční vyřazení, MemExt PEHU (128
     # kusů, bp_hint MMEXT_BANK), VRAM plane bez adresy, BCD, MZ-700/1500.

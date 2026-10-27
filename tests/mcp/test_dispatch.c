@@ -136,8 +136,10 @@
  * KONEC cmd_map[]) = 221 + 1 = 222.
  * machine-hash doplnil machine_hash (obsahový otisk stroje po částech, na
  * KONEC cmd_map[]) = 222 + 1 = 223.
+ * dev-api doplnil get_devices (volitelná zařízení devbus, na KONEC
+ * cmd_map[]) = 223 + 1 = 224.
  */
-#define MCP_EXPECTED_CMD_COUNT 223
+#define MCP_EXPECTED_CMD_COUNT 224
 
 
 /* ====================================================================== */
@@ -4823,16 +4825,85 @@ void test_periph_attach_device_refused(void) {
 
 
 void test_periph_attach_invalid_kind(void) {
-    /* "floppy_5_25" není ve whitelistu memext/fdc/qd/ide8/gal5. */
+    /* "floppy_5_25" není statický druh: jde do emulátoru jako id zařízení
+     * devbus (DBGAPI_PERIPH_KIND_DEVBUS) a emulátor neznámé id odmítne (-1). */
     dispatch_stub_reset();
+    g_stub_state.periph_fake_result = -1;
     st_JSONL_MESSAGE *req = _make_request(
         "{\"type\":\"request\",\"id\":1330,\"cmd\":\"periph_attach\","
         "\"data\":{\"kind\":\"floppy_5_25\"}}");
     char *resp = NULL;
     en_MCP_DISPATCH_RESULT rc = mcp_dispatch_request(req, &resp);
     TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_INVALID_PARAMS, rc);
+    TEST_ASSERT_EQUAL_INT(DBGAPI_PERIPH_KIND_DEVBUS, g_stub_state.periph_last_kind);
+    TEST_ASSERT_TRUE(strstr(resp, "unknown peripheral or device id") != NULL);
     free(resp);
     jsonl_msg_free(req);
+}
+
+
+/** @brief Dopředná deklarace pomocníka _rc_call() (definice níže u testů run-control). */
+static JsonObject *_rc_call(const char *json, en_MCP_DISPATCH_RESULT *rc_out,
+                            JsonParser **parser, char **resp_out);
+
+
+void test_periph_attach_empty_kind(void) {
+    /* Prázdný kind se do emulátoru neposílá. */
+    dispatch_stub_reset();
+    st_JSONL_MESSAGE *req = _make_request(
+        "{\"type\":\"request\",\"id\":1331,\"cmd\":\"periph_attach\","
+        "\"data\":{\"kind\":\"\"}}");
+    char *resp = NULL;
+    en_MCP_DISPATCH_RESULT rc = mcp_dispatch_request(req, &resp);
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_INVALID_PARAMS, rc);
+    TEST_ASSERT_EQUAL_INT(0, g_stub_state.periph_last_cmd);
+    free(resp);
+    jsonl_msg_free(req);
+}
+
+
+void test_periph_attach_device_id_conflict(void) {
+    /* Id zařízení devbus: kolize (-4) a nedostupnost (-10) mají vlastní text. */
+    dispatch_stub_reset();
+    g_stub_state.periph_fake_result = -4;
+    st_JSONL_MESSAGE *req = _make_request(
+        "{\"type\":\"request\",\"id\":1332,\"cmd\":\"periph_attach\","
+        "\"data\":{\"kind\":\"pcg700\"}}");
+    char *resp = NULL;
+    en_MCP_DISPATCH_RESULT rc = mcp_dispatch_request(req, &resp);
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_EMU_ERROR, rc);
+    TEST_ASSERT_TRUE(strstr(resp, "conflicts with a connected device") != NULL);
+    free(resp);
+    jsonl_msg_free(req);
+
+    dispatch_stub_reset();
+    g_stub_state.periph_fake_result = -10;
+    req = _make_request(
+        "{\"type\":\"request\",\"id\":1333,\"cmd\":\"periph_detach\","
+        "\"data\":{\"kind\":\"pcg700\"}}");
+    resp = NULL;
+    rc = mcp_dispatch_request(req, &resp);
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_EMU_ERROR, rc);
+    TEST_ASSERT_TRUE(strstr(resp, "not available on this platform") != NULL);
+    free(resp);
+    jsonl_msg_free(req);
+}
+
+
+void test_get_devices_empty_registry(void) {
+    /* Bez inicializovaného devbus (stub vrátí nulový výpis): devices = []. */
+    dispatch_stub_reset();
+    en_MCP_DISPATCH_RESULT rc;
+    JsonParser *parser = NULL;
+    char *resp = NULL;
+    JsonObject *d = _rc_call("{\"type\":\"request\",\"req_id\":1340,\"cmd\":\"get_devices\"}",
+                             &rc, &parser, &resp);
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, rc);
+    TEST_ASSERT_NOT_NULL(d);
+    TEST_ASSERT_FALSE(json_object_get_boolean_member(d, "platform_supported"));
+    TEST_ASSERT_EQUAL_UINT(0, json_array_get_length(json_object_get_array_member(d, "devices")));
+    g_object_unref(parser);
+    free(resp);
 }
 
 
@@ -10087,6 +10158,9 @@ int main(void) {
     RUN_TEST(test_state_observe_sections_hashes_unavailable);
     RUN_TEST(test_state_observe_invalid_params);
     RUN_TEST(test_machine_hash_parts_and_response);
+    RUN_TEST(test_periph_attach_empty_kind);
+    RUN_TEST(test_periph_attach_device_id_conflict);
+    RUN_TEST(test_get_devices_empty_registry);
     RUN_TEST(test_machine_hash_invalid_params);
 
     /* observe-cas (M10) - podmíněné zápisy (3 testy) */

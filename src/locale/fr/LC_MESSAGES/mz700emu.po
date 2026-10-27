@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mz800emu 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-22 19:04+0200\n"
+"POT-Creation-Date: 2026-10-26 23:48+0100\n"
 "PO-Revision-Date: 2026-03-11 21:00+0100\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -63,41 +63,41 @@ msgstr ""
 "Adresse = 0x%04x\n"
 "Instruction = '%s'\n"
 
-#: src/emulator/emulator.c:451
+#: src/emulator/emulator.c:454
 #: src/ui-imgui/mcp_activity/mcp_activity_window.cpp:425
 #: src/ui-imgui/videorec/videorec_menu.cpp:140
 msgid "PAUSED"
 msgstr "EN PAUSE"
 
-#: src/emulator/emulator.c:454
+#: src/emulator/emulator.c:457
 msgid "Max speed"
 msgstr "Vitesse maximale"
 
-#: src/emulator/emulator.c:457
+#: src/emulator/emulator.c:460
 msgid "Custom speed"
 msgstr "Vitesse personnalisée"
 
-#: src/emulator/emulator.c:459
+#: src/emulator/emulator.c:462
 msgid "Normal speed"
 msgstr "Vitesse normale"
 
-#: src/emulator/hw-generic/cmt/cmt.c:592
+#: src/emulator/hw-generic/cmt/cmt.c:593
 msgid "Create a new WAV file"
 msgstr "Créer un nouveau fichier WAV"
 
-#: src/emulator/hw-generic/cmt/cmt.c:592
+#: src/emulator/hw-generic/cmt/cmt.c:593
 msgid "newfile.wav"
 msgstr "newfile.wav"
 
-#: src/emulator/hw-generic/cmt/cmt.c:1139
+#: src/emulator/hw-generic/cmt/cmt.c:1186
 msgid "All Supported CMT Files"
 msgstr "Tous les fichiers CMT supportés"
 
-#: src/emulator/hw-generic/cmt/cmt.c:1140
+#: src/emulator/hw-generic/cmt/cmt.c:1187
 msgid "Tape Files"
 msgstr "Fichiers de bande"
 
-#: src/emulator/hw-generic/cmt/cmt.c:1217
+#: src/emulator/hw-generic/cmt/cmt.c:1264
 msgid "Select CMT file to open"
 msgstr "Sélectionner le fichier CMT à ouvrir"
 
@@ -105,7 +105,7 @@ msgstr "Sélectionner le fichier CMT à ouvrir"
 msgid "Select a MZF File"
 msgstr "Sélectionner un fichier MZF"
 
-#: src/emulator/hw-generic/fdc/fdc.c:1204
+#: src/emulator/hw-generic/fdc/fdc.c:1245
 #, c-format
 msgid "Select DSK image file for FDC%u drive FD%d"
 msgstr "Sélectionnez le fichier image DSK pour FDC%u lecteur FD%d"
@@ -118,7 +118,7 @@ msgstr "Sélectionner un fichier .MZQ existant ou créer une nouvelle image QD"
 msgid "Select directory to mount as virtual Quick Disk"
 msgstr "Sélectionner le répertoire à monter comme Quick Disk virtuel"
 
-#: src/emulator/hw-generic/unicard/unicard.c:2329
+#: src/emulator/hw-generic/unicard/unicard.c:2370
 msgid "Select SD root directory for Unicard"
 msgstr "Sélectionner le répertoire racine SD pour Unicard"
 
@@ -154,47 +154,47 @@ msgstr "Impulsions personnalisées"
 msgid "UNKNOWN"
 msgstr "INCONNU"
 
-#: src/ui/vkbd/ui_vkbd.c:206
+#: src/ui/vkbd/ui_vkbd.c:207
 msgid "PC key: CapsLock"
 msgstr "Touche PC : CapsLock"
 
-#: src/ui/vkbd/ui_vkbd.c:209
+#: src/ui/vkbd/ui_vkbd.c:210
 msgid "PC key: \\"
 msgstr "Touche PC : \\"
 
-#: src/ui/vkbd/ui_vkbd.c:212
+#: src/ui/vkbd/ui_vkbd.c:213
 msgid "PC key: \\ or Tab"
 msgstr "Touche PC : \\ ou Tab"
 
-#: src/ui/vkbd/ui_vkbd.c:215
+#: src/ui/vkbd/ui_vkbd.c:216
 msgid "PC key: ~"
 msgstr "Touche PC : ~"
 
-#: src/ui/vkbd/ui_vkbd.c:217
+#: src/ui/vkbd/ui_vkbd.c:218
 msgid "PC key: Esc or End"
 msgstr "Touche PC : Esc ou End"
 
-#: src/ui/vkbd/ui_vkbd.c:219
+#: src/ui/vkbd/ui_vkbd.c:220
 msgid "PC key: Insert"
 msgstr "Touche PC : Insert"
 
-#: src/ui/vkbd/ui_vkbd.c:221
+#: src/ui/vkbd/ui_vkbd.c:222
 msgid "PC key: Backspace or Delete"
 msgstr "Touche PC : Backspace ou Delete"
 
-#: src/ui/vkbd/ui_vkbd.c:223
+#: src/ui/vkbd/ui_vkbd.c:224
 msgid "PC key: F6"
 msgstr "Touche PC : F6"
 
-#: src/ui/vkbd/ui_vkbd.c:225
+#: src/ui/vkbd/ui_vkbd.c:226
 msgid "PC key: F7"
 msgstr "Touche PC : F7"
 
-#: src/ui/vkbd/ui_vkbd.c:227
+#: src/ui/vkbd/ui_vkbd.c:228
 msgid "PC key: F8"
 msgstr "Touche PC : F8"
 
-#: src/ui/vkbd/ui_vkbd.c:229
+#: src/ui/vkbd/ui_vkbd.c:230
 msgid "PC key: F9"
 msgstr "Touche PC : F9"
 
@@ -497,7 +497,7 @@ msgstr "Capturer l'audio (%s) démarre et arrête la capture."
 #: src/ui-imgui/debugger/sections/dbg_cpu_panel.cpp:2421
 #: src/ui-imgui/dsk/dsk_create_window.cpp:104
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:109
-#: src/ui-imgui/joy/joy_setup_window.cpp:567
+#: src/ui-imgui/joy/joy_setup_window.cpp:584
 #: src/ui-imgui/message/message_window.cpp:139
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:442
 #: src/ui-imgui/snapshot/snapshot_notification.cpp:95
@@ -512,12 +512,12 @@ msgstr "OK"
 #: src/ui-imgui/debugger/sections/dbg_focus_to.cpp:264
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:104
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:111
-#: src/ui-imgui/joy/joy_setup_window.cpp:579
+#: src/ui-imgui/joy/joy_setup_window.cpp:596
 #: src/ui-imgui/memext/memext_load_dialog.cpp:188
 #: src/ui-imgui/memext/memext_map_window.cpp:291
 #: src/ui-imgui/memext/memext_save_dialog.cpp:207
 #: src/ui-imgui/ramdisk/pezik_settings_window.cpp:289
-#: src/ui-imgui/rom/rom_settings_window.cpp:323
+#: src/ui-imgui/rom/rom_settings_window.cpp:305
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:447
 #: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:127
 #: src/ui-imgui/snapshot/snapshot_setup_dialog.cpp:176
@@ -617,118 +617,118 @@ msgstr "Afficher/masquer cette fenêtre : %s"
 msgid "Invalid character at position"
 msgstr "Caractère invalide à la position"
 
-#: src/ui-imgui/autotype/autotype_window.cpp:166
+#: src/ui-imgui/autotype/autotype_window.cpp:161
 #: src/ui-imgui/topmenu/interface/menu_keyjoy.cpp:29
 msgid "Autotype Buffer"
 msgstr "Buffer Autotype"
 
-#: src/ui-imgui/autotype/autotype_window.cpp:188
+#: src/ui-imgui/autotype/autotype_window.cpp:183
 msgid "Autotype!"
 msgstr "Autotype!"
 
-#: src/ui-imgui/autotype/autotype_window.cpp:189
+#: src/ui-imgui/autotype/autotype_window.cpp:184
 msgid "Stop!"
 msgstr "Stop!"
 
-#: src/ui-imgui/autotype/autotype_window.cpp:204
+#: src/ui-imgui/autotype/autotype_window.cpp:199
 msgid "Text buffer is empty"
 msgstr "Le buffer de texte est vide"
 
-#: src/ui-imgui/autotype/autotype_window.cpp:218
+#: src/ui-imgui/autotype/autotype_window.cpp:213
 msgid "Key down"
 msgstr "Touche enfoncée"
 
-#: src/ui-imgui/autotype/autotype_window.cpp:237
+#: src/ui-imgui/autotype/autotype_window.cpp:232
 msgid "Key up"
 msgstr "Touche relâchée"
 
-#: src/ui-imgui/autotype/autotype_window.cpp:288
+#: src/ui-imgui/autotype/autotype_window.cpp:283
 msgid "Characters"
 msgstr "Caractères"
 
-#: src/ui-imgui/autotype/autotype_window.cpp:298
+#: src/ui-imgui/autotype/autotype_window.cpp:293
 msgid "Typed"
 msgstr "Saisi"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:156
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:158
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:177
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:179
 msgid "MZF Size Warning"
 msgstr "Avertissement taille MZF"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:167
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:188
 msgid "MZF file"
 msgstr "Fichier MZF"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:175
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:196
 msgid "Exceeded bytes"
 msgstr "Octets excédentaires"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:187
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:208
 msgid "This MZF file is a bit bigger than it should be."
 msgstr "Ce fichier MZF est un peu plus grand qu'il ne devrait l'être."
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:189
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:210
 msgid "This could arise, for example, when the MZF file is exported from cp/m."
 msgstr ""
 "Cela peut se produire, par exemple, lorsque le fichier MZF est exporté "
 "depuis cp/m."
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:190
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:211
 msgid "You can ignore it, or truncate the original file."
 msgstr "Vous pouvez l'ignorer ou tronquer le fichier original."
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:191
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:212
 msgid ""
 "Is recommended to use the Save as, for create truncated copy of this file."
 msgstr ""
 "Il est recommandé d'utiliser Enregistrer sous pour créer une copie tronquée "
 "de ce fichier."
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:198
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:219
 msgid "MZF size check enabled"
 msgstr "Vérification de la taille MZF activée"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:212
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:233
 msgid "Ignore"
 msgstr "Ignorer"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:221
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:242
 msgid "Truncate"
 msgstr "Tronquer"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:239
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:260
 msgid "Save As"
 msgstr "Enregistrer sous"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:251
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:271
 msgid "Save MZF file as"
 msgstr "Enregistrer le fichier MZF sous"
 
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:198
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:214
 msgid "Tape Filelist"
 msgstr "Liste des fichiers de la bande"
 
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:236
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:260 src/ui-imgui/cmt/cmt_window.cpp:213
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:252
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:276 src/ui-imgui/cmt/cmt_window.cpp:214
 #: src/ui-imgui/debugger/sections/dbg_stack_panel.cpp:2677
 #: src/ui-imgui/debugger/vars/vars_window.cpp:1502
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1696
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1697
 msgid "Name"
 msgstr "Nom"
 
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:237
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:263 src/ui-imgui/cmt/cmt_window.cpp:212
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:253
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:279 src/ui-imgui/cmt/cmt_window.cpp:213
 #: src/ui-imgui/debugger/memsearch_window/memsearch_window.cpp:576
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1700
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1701
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:132
-#: src/ui-imgui/joy/joy_setup_window.cpp:240
+#: src/ui-imgui/joy/joy_setup_window.cpp:257
 #: src/ui-imgui/memext/memext_map_window.cpp:105
 #: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:155
 msgid "Type"
 msgstr "Type"
 
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:238
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:266
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:254
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:282
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:133
 #: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:209
 #: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:211
@@ -737,85 +737,85 @@ msgstr "Type"
 msgid "Size"
 msgstr "Taille"
 
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:239
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:269
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:255
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:285
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:416
 msgid "Start"
 msgstr "Début"
 
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:240
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:272
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:256
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:288
 msgid "Exec"
 msgstr "Exec"
 
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:241
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:275 src/ui-imgui/cmt/cmt_window.cpp:214
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:257
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:291 src/ui-imgui/cmt/cmt_window.cpp:215
 #: src/ui-imgui/topmenu/menu_speed.cpp:27
 msgid "Speed"
 msgstr "Vitesse"
 
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:242
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:278
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:258
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:294
 msgid "Length"
 msgstr "Longueur"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:65
+#: src/ui-imgui/cmt/cmt_window.cpp:66
 msgid "Playing time:"
 msgstr "Durée de lecture :"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:69
+#: src/ui-imgui/cmt/cmt_window.cpp:70
 msgid "Remaining time:"
 msgstr "Temps restant :"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:81 src/ui-imgui/cmt/cmt_window.cpp:789
+#: src/ui-imgui/cmt/cmt_window.cpp:82 src/ui-imgui/cmt/cmt_window.cpp:790
 msgid "CMT Hack"
 msgstr "CMT Hack"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:90
+#: src/ui-imgui/cmt/cmt_window.cpp:91
 msgid "CPU Boost"
 msgstr "CPU Boost"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:127
+#: src/ui-imgui/cmt/cmt_window.cpp:128
 msgid "Click here to change the time info mode."
 msgstr "Cliquez ici pour changer le mode d'affichage du temps."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:211
+#: src/ui-imgui/cmt/cmt_window.cpp:212
 msgid "Block"
 msgstr "Bloc"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:211
+#: src/ui-imgui/cmt/cmt_window.cpp:212
 msgid "of"
 msgstr "de"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:212
+#: src/ui-imgui/cmt/cmt_window.cpp:213
 msgid "FSize"
 msgstr "FSize"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:213
+#: src/ui-imgui/cmt/cmt_window.cpp:214
 msgid "FExec"
 msgstr "FExec"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:214
+#: src/ui-imgui/cmt/cmt_window.cpp:215
 msgid "FStart"
 msgstr "FStart"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:215
+#: src/ui-imgui/cmt/cmt_window.cpp:216
 msgid "Stream"
 msgstr "Stream"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:216
+#: src/ui-imgui/cmt/cmt_window.cpp:217
 msgid "Rate"
 msgstr "Rate"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:216
+#: src/ui-imgui/cmt/cmt_window.cpp:217
 msgid "SSize"
 msgstr "SSize"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:439
+#: src/ui-imgui/cmt/cmt_window.cpp:440
 msgid "Default MZ Speed:"
 msgstr "Vitesse MZ par défaut :"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:720
+#: src/ui-imgui/cmt/cmt_window.cpp:721
 msgid ""
 "Recording a replay: tape control is recorded; another tape and speed "
 "settings are not available."
@@ -824,61 +824,61 @@ msgstr ""
 "enregistrées ; une autre cassette et les réglages de vitesse ne sont pas "
 "disponibles."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:724
+#: src/ui-imgui/cmt/cmt_window.cpp:725
 msgid "Tape control is not available while a replay is recorded or played."
 msgstr ""
 "Le contrôle de la cassette n'est pas disponible pendant l'enregistrement ou "
 "la lecture des entrées."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:761 src/ui-imgui/cmt/cmt_window.cpp:878
+#: src/ui-imgui/cmt/cmt_window.cpp:762 src/ui-imgui/cmt/cmt_window.cpp:879
 msgid "Virtual CMT"
 msgstr "CMT virtuel"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:798
+#: src/ui-imgui/cmt/cmt_window.cpp:799
 msgid "CMT Hack is activated!"
 msgstr "CMT Hack est activé !"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:799
+#: src/ui-imgui/cmt/cmt_window.cpp:800
 msgid "Virtual CMT is not available!"
 msgstr "Le CMT virtuel n'est pas disponible !"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:805
+#: src/ui-imgui/cmt/cmt_window.cpp:806
 #: src/ui-imgui/version_check/imgui_version_check.cpp:390
 msgid "Close"
 msgstr "Fermer"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:827
+#: src/ui-imgui/cmt/cmt_window.cpp:828
 msgid "No tape loaded"
 msgstr "Aucune bande chargée"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:836
+#: src/ui-imgui/cmt/cmt_window.cpp:837
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:363
 #: src/ui-imgui/topmenu/replay_window.cpp:205
 msgid "Recording"
 msgstr "Enregistrement"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:846
+#: src/ui-imgui/cmt/cmt_window.cpp:847
 #: src/ui-imgui/topmenu/replay_window.cpp:213
 msgid "Playing"
 msgstr "Lecture"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:861
+#: src/ui-imgui/cmt/cmt_window.cpp:862
 msgid "Stopped - Ready to Play"
 msgstr "Arrêté - Prêt à lire"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:868
+#: src/ui-imgui/cmt/cmt_window.cpp:869
 msgid "(paused)"
 msgstr "(en pause)"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:890
+#: src/ui-imgui/cmt/cmt_window.cpp:891
 msgid "*** Empty ***"
 msgstr "*** Vide ***"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:896
+#: src/ui-imgui/cmt/cmt_window.cpp:897
 msgid "Recording (paused)"
 msgstr "Enregistrement (en pause)"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:900
+#: src/ui-imgui/cmt/cmt_window.cpp:901
 msgid "Recording.."
 msgstr "Enregistrement.."
 
@@ -940,7 +940,7 @@ msgstr "Ajouter un nouveau signet (déroule le formulaire ci-dessous)."
 
 #: src/ui-imgui/debugger/bookmarks/bm_window.cpp:283
 #: src/ui-imgui/debugger/vars/vars_window.cpp:562
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1250
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1251
 msgid "Filter:"
 msgstr "Filtre :"
 
@@ -960,7 +960,7 @@ msgstr "Effacer##bm_filter_clr"
 
 #: src/ui-imgui/debugger/bookmarks/bm_window.cpp:299
 #: src/ui-imgui/debugger/vars/vars_window.cpp:573
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1263
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1264
 msgid "Clear the filter text."
 msgstr "Effacer le texte du filtre."
 
@@ -970,7 +970,7 @@ msgstr "Nombre de signets visibles / total."
 
 #: src/ui-imgui/debugger/bookmarks/bm_window.cpp:309
 #: src/ui-imgui/debugger/vars/vars_window.cpp:580
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1282
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1283
 msgid "Selected:"
 msgstr "Sélectionné :"
 
@@ -1151,7 +1151,7 @@ msgid "Label"
 msgstr "Étiquette"
 
 #: src/ui-imgui/debugger/bookmarks/bm_window.cpp:981
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1154
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1188
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:314
 msgid "Address"
 msgstr "Adresse"
@@ -1291,7 +1291,7 @@ msgid "(root)"
 msgstr "(racine)"
 
 #: src/ui-imgui/debugger/breakpoints/bpt_edit_panel.cpp:1370
-#: src/ui-imgui/debugger/watch/watch_window.cpp:498
+#: src/ui-imgui/debugger/watch/watch_window.cpp:499
 #: src/ui-imgui/memext/memext_save_dialog.cpp:132
 msgid "Type:"
 msgstr "Type :"
@@ -1393,7 +1393,7 @@ msgstr "Offset :"
 #: src/ui-imgui/debugger/breakpoints/bpt_edit_panel.cpp:1537
 #: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1687
 #: src/ui-imgui/debugger/sections/dbg_focus_to.cpp:211
-#: src/ui-imgui/debugger/watch/watch_window.cpp:465
+#: src/ui-imgui/debugger/watch/watch_window.cpp:466
 msgid "Address:"
 msgstr "Adresse :"
 
@@ -1528,7 +1528,7 @@ msgstr "(sélectionner un évènement)"
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:1756
 #: src/ui-imgui/debugger/pioz80_window.cpp:424
 #: src/ui-imgui/debugger/pioz80_window.cpp:471
-#: src/ui-imgui/debugger/ppi_window.cpp:406
+#: src/ui-imgui/debugger/ppi_window.cpp:409
 #: src/ui-imgui/debugger/sections/dbg_stack_panel.cpp:1302
 msgid "(none)"
 msgstr "(aucun)"
@@ -1602,7 +1602,7 @@ msgstr ""
 #: src/ui-imgui/debugger/breakpoints/bpt_edit_panel.cpp:1854
 #: src/ui-imgui/debugger/breakpoints/bpt_edit_panel.cpp:2425
 #: src/ui-imgui/debugger/heatmap/mhmap_window.cpp:686
-#: src/ui-imgui/debugger/watch/watch_window.cpp:444
+#: src/ui-imgui/debugger/watch/watch_window.cpp:445
 msgid "Mode:"
 msgstr "Mode :"
 
@@ -1891,7 +1891,7 @@ msgstr "Nom auto-généré##bpt_panel"
 #: src/ui-imgui/debugger/breakpoints/bpt_edit_panel.cpp:2295
 #: src/ui-imgui/debugger/breakpoints/bpt_edit_panel.cpp:2647
 #: src/ui-imgui/debugger/vars/vars_window.cpp:812
-#: src/ui-imgui/debugger/watch/watch_window.cpp:488
+#: src/ui-imgui/debugger/watch/watch_window.cpp:489
 msgid "Name:"
 msgstr "Nom :"
 
@@ -2468,7 +2468,7 @@ msgstr "Champ"
 #: src/ui-imgui/debugger/psg_window.cpp:459
 #: src/ui-imgui/debugger/psg_window.cpp:537
 #: src/ui-imgui/debugger/vars/vars_window.cpp:1504
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1702
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1703
 msgid "Value"
 msgstr "Valeur"
 
@@ -2705,7 +2705,7 @@ msgstr "Focaliser sur la cible"
 #: src/ui-imgui/debugger/dasm_window/dasm_window.cpp:669
 #: src/ui-imgui/debugger/memmap/memmap_window.cpp:1202
 #: src/ui-imgui/debugger/memmap/memmap_window.cpp:1241
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1698
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1699
 msgid "Addr"
 msgstr "Adr"
 
@@ -2962,7 +2962,7 @@ msgid "Hide noise"
 msgstr "Masquer le bruit"
 
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:1149
-#: src/ui-imgui/debugger/ioview/io_window.cpp:995
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1006
 #: src/ui-imgui/debugger/symbols/sym_window.cpp:619
 msgid "Clear filter"
 msgstr "Effacer le filtre"
@@ -3134,7 +3134,7 @@ msgstr ""
 "Attention : enregistrement d'un filtre vide (matche tous les évènements)."
 
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:1901
-#: src/ui-imgui/debugger/watch/watch_window.cpp:476
+#: src/ui-imgui/debugger/watch/watch_window.cpp:477
 msgid "Expression:"
 msgstr "Expression :"
 
@@ -3251,8 +3251,8 @@ msgstr ""
 "(partagé avec l'onglet Strip)."
 
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:2155
-#: src/ui-imgui/joy/joy_setup_window.cpp:416
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:308
+#: src/ui-imgui/joy/joy_setup_window.cpp:433
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:320
 msgid "None"
 msgstr "Aucun"
 
@@ -3774,13 +3774,13 @@ msgstr "FDC State"
 
 #: src/ui-imgui/debugger/fdc_window.cpp:198
 #: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:403
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:312
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:324
 msgid "FDC0 (standard)"
 msgstr "FDC0 (standard)"
 
 #: src/ui-imgui/debugger/fdc_window.cpp:199
 #: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:409
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:316
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:328
 msgid "FDC1 (secondary)"
 msgstr "FDC1 (secondaire)"
 
@@ -4492,11 +4492,11 @@ msgstr "Lecteur Master"
 msgid "Drive Slave"
 msgstr "Lecteur Slave"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:481
+#: src/ui-imgui/debugger/ioview/io_window.cpp:491
 msgid "(no bit-level decode available)"
 msgstr "(décodage bit-level non disponible)"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:636
+#: src/ui-imgui/debugger/ioview/io_window.cpp:646
 msgid ""
 "16-bit CRTC family port. Bus addr is 0x<RR>CF (Z80 OUT (C),A pattern with "
 "B=register index, C=0xCF). MZ notation 0xCF<RR> is human-readable display."
@@ -4505,54 +4505,54 @@ msgstr ""
 "avec B=index registre, C=0xCF). La notation MZ 0xCF<RR> est l'affichage "
 "humainement lisible."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:654
+#: src/ui-imgui/debugger/ioview/io_window.cpp:664
 msgid "Add IORQ R BP##ioctx"
 msgstr "Ajouter IORQ R BP##ioctx"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:657
+#: src/ui-imgui/debugger/ioview/io_window.cpp:667
 msgid "Add IORQ W BP##ioctx"
 msgstr "Ajouter IORQ W BP##ioctx"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:661
+#: src/ui-imgui/debugger/ioview/io_window.cpp:671
 msgid "Add MEM R BP##ioctx"
 msgstr "Ajouter MEM R BP##ioctx"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:664
+#: src/ui-imgui/debugger/ioview/io_window.cpp:674
 msgid "Add MEM W BP##ioctx"
 msgstr "Ajouter MEM W BP##ioctx"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:669
+#: src/ui-imgui/debugger/ioview/io_window.cpp:679
 msgid "Reset activity counter##ioctx"
 msgstr "Reset compteur d'activité##ioctx"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:681
+#: src/ui-imgui/debugger/ioview/io_window.cpp:691
 msgid "Show in History tab##ioctx"
 msgstr "Afficher dans l'onglet Historique##ioctx"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:718
+#: src/ui-imgui/debugger/ioview/io_window.cpp:728
 msgid "Show in Memory Map##ioctx"
 msgstr "Afficher dans Memory Map##ioctx"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:813
+#: src/ui-imgui/debugger/ioview/io_window.cpp:823
 #, c-format
 msgid "Last cached value %u frames ago"
 msgstr "Dernière valeur cachée il y a %u frames"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:820
+#: src/ui-imgui/debugger/ioview/io_window.cpp:830
 msgid "No data captured (port has no mirror and no IORQ event yet)"
 msgstr ""
 "Aucune donnée capturée (le port n'a pas de mirror et aucun évènement IORQ "
 "pour l'instant)"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:849
+#: src/ui-imgui/debugger/ioview/io_window.cpp:859
 msgid "Hits per second over last 1s window (50 buckets)"
 msgstr "Hits par seconde sur la fenêtre des 1s dernières (50 buckets)"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:855
+#: src/ui-imgui/debugger/ioview/io_window.cpp:865
 msgid "Tracking disabled (panel closed or toggled off)"
 msgstr "Tracking désactivé (panneau fermé ou désactivé)"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:879
+#: src/ui-imgui/debugger/ioview/io_window.cpp:889
 msgid ""
 "MMIO events (0xE000-0xE008) are always recorded (per-port filter applies to "
 "8-bit IORQ space only)"
@@ -4560,7 +4560,7 @@ msgstr ""
 "Les évènements MMIO (0xE000-0xE008) sont toujours enregistrés (le filtre par "
 "port s'applique uniquement à l'espace IORQ 8-bit)"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:893
+#: src/ui-imgui/debugger/ioview/io_window.cpp:903
 msgid ""
 "Record IORQ events for this port into History ring buffer. Uncheck to skip "
 "high-frequency ports and preserve ring capacity for events of interest."
@@ -4569,12 +4569,12 @@ msgstr ""
 "Décocher pour ignorer les ports haute fréquence et préserver la capacité du "
 "ring pour les évènements d'intérêt."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:981
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1888
+#: src/ui-imgui/debugger/ioview/io_window.cpp:992
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1896
 msgid "Filter..."
 msgstr "Filtre..."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:987
+#: src/ui-imgui/debugger/ioview/io_window.cpp:998
 msgid ""
 "Filter visible ports (case-insensitive substring match on name, address hex, "
 "or direction r/w/rw)."
@@ -4582,37 +4582,37 @@ msgstr ""
 "Filtrer les ports visibles (correspondance de sous-chaîne insensible à la "
 "casse sur nom, adresse hex ou direction r/w/rw)."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:991
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1002
 msgid "Clear##io_clear_filter"
 msgstr "Effacer##io_clear_filter"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1001
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1012
 msgid "Reset Activity##io_reset_act"
 msgstr "Reset Activité##io_reset_act"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1008
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1019
 msgid "Clear activity counters for all 256 ports"
 msgstr "Effacer les compteurs d'activité pour les 256 ports"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1014
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2002
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1025
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2010
 #: src/ui-imgui/debugger/sections/dbg_coverage.cpp:340
 msgid "Capacity:"
 msgstr "Capacité :"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1048
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2032
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1059
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2040
 msgid "History buffer size. Resize discards existing events."
 msgstr ""
 "Taille du buffer historique. Le redimensionnement abandonne les évènements "
 "existants."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1056
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1067
 msgid "Track##io_track"
 msgstr "Suivre##io_track"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1061
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2050
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1072
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2058
 msgid ""
 "Enable IORQ activity + history capture (gated). Default ON when panel is "
 "open. Toggle off to reduce overhead."
@@ -4620,77 +4620,77 @@ msgstr ""
 "Activer la capture d'activité IORQ + historique (gated). Défaut ON quand le "
 "panneau est ouvert. Désactiver pour réduire la surcharge."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1076
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1087
 msgid "Heat...##io_heat_btn"
 msgstr "Heat...##io_heat_btn"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1081
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1092
 msgid "Configure activity heat coloring thresholds."
 msgstr "Configurer les seuils de coloration heat d'activité."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1084
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1095
 msgid "Heat coloring thresholds (hits/s):"
 msgstr "Seuils de coloration heat (hits/s) :"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1087
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1098
 msgid "Text active (green)##io_heat_text"
 msgstr "Texte actif (vert)##io_heat_text"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1098
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1109
 msgid "Minimum hits/s to color row text green. Default 1."
 msgstr "Hits/s minimum pour colorer le texte de la ligne en vert. Défaut 1."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1101
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1112
 msgid "Bg hot tint (red)##io_heat_bg"
 msgstr "Teinte chaude fond (rouge)##io_heat_bg"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1112
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1123
 msgid ""
 "Minimum hits/s for red row background tint (bottleneck warn). Default 10000."
 msgstr ""
 "Hits/s minimum pour la teinte rouge du fond de ligne (avertissement goulot). "
 "Défaut 10000."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1116
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1127
 msgid "Reset to defaults##io_heat_reset"
 msgstr "Restaurer les défauts##io_heat_reset"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1156
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1167
 msgid "No ports match filter"
 msgstr "Aucun port ne correspond au filtre"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1647
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1655
 msgid "(no selection)"
 msgstr "(aucune sélection)"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1648
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1656
 msgid "Click a row to see details"
 msgstr "Cliquer sur une ligne pour voir les détails"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1660
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1668
 msgid "Selected event:"
 msgstr "Évènement sélectionné :"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1694
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1702
 msgid "Focus to primary disassembly. Right-click for additional actions."
 msgstr ""
 "Cibler dans le Disassembly principal. Clic droit pour des actions "
 "supplémentaires."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1735
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1743
 msgid "Focus to..."
 msgstr "Cibler vers..."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1754
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1762
 #: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3387
 msgid "Add to bookmarks"
 msgstr "Ajouter aux signets"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1773
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1781
 msgid "Add breakpoint"
 msgstr "Ajouter breakpoint"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1894
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1902
 msgid ""
 "Filter syntax (boolean expression):\n"
 "Atoms (leaf tokens):\n"
@@ -4743,23 +4743,23 @@ msgstr ""
 "  (port:CE pc:42) | port:CF  groupe OR groupe\n"
 "  !(in | out)                ni IN ni OUT"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1920
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1928
 msgid "Clear##io_hist_clear"
 msgstr "Effacer##io_hist_clear"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1954
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1962
 msgid "Latest##io_hist_latest"
 msgstr "Dernier##io_hist_latest"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1960
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1968
 msgid "Re-enable auto-follow and scroll to latest event"
 msgstr "Réactiver l'auto-follow et défiler jusqu'au dernier évènement"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1964
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1972
 msgid "Auto-follow##io_hist_af"
 msgstr "Auto-follow##io_hist_af"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1976
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1984
 msgid ""
 "Auto-scroll History tab to latest event. User scroll up disables follow; "
 "click [Latest] re-enables."
@@ -4767,27 +4767,27 @@ msgstr ""
 "Défilement auto de l'onglet Historique jusqu'au dernier évènement. Un scroll "
 "utilisateur vers le haut désactive le follow ; cliquer [Dernier] le réactive."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1982
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1990
 msgid "Clear history##io_hist_purge"
 msgstr "Effacer l'historique##io_hist_purge"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1993
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2001
 msgid "Discard all recorded IORQ events"
 msgstr "Abandonner tous les évènements IORQ enregistrés"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2038
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2046
 msgid "Track##io_hist_track"
 msgstr "Suivre##io_hist_track"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2057
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2065
 msgid "Filter error"
 msgstr "Erreur de filtre"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2196
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2204
 msgid "Filter actions for this event:"
 msgstr "Actions de filtre pour cet évènement :"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2475
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2483
 msgid ""
 "Wraps the current filter in parentheses, then appends ' & token'. Use to AND-"
 "narrow an OR chain (parser precedence: & binds tighter than |)."
@@ -4796,7 +4796,7 @@ msgstr ""
 "Utiliser pour restreindre par AND une chaîne OR (priorité parser : & lie "
 "plus fort que |)."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2479
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2487
 msgid ""
 "Wraps the current filter in parentheses, then appends ' | token'. Use when "
 "the current filter is itself an AND chain that should be OR-extended as a "
@@ -4806,15 +4806,15 @@ msgstr ""
 "Utiliser quand le filtre actuel est lui-même une chaîne AND devant être "
 "étendue par OR globalement."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2775
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2783
 msgid "I/O Ports###io_main"
 msgstr "Ports I/O###io_main"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2811
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2819
 msgid "Overview##io_tab_ov"
 msgstr "Aperçu##io_tab_ov"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2825
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2833
 msgid "History##io_tab_hist"
 msgstr "Historique##io_tab_hist"
 
@@ -5211,7 +5211,7 @@ msgstr "Exemple : \"AA BB CC\" ou \"DEADBEEF\" - max 64 octets"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_fill_dialog.cpp:262
 #: src/ui-imgui/debugger/sections/dbg_focus_to.cpp:274
-#: src/ui-imgui/joy/joy_setup_window.cpp:574
+#: src/ui-imgui/joy/joy_setup_window.cpp:591
 #: src/ui-imgui/memext/memext_map_window.cpp:277
 #: src/ui-imgui/version_check/imgui_version_check.cpp:245
 #: src/ui-imgui/version_check/imgui_version_check.cpp:250
@@ -5477,7 +5477,7 @@ msgstr "Instantané : %u o"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:443
 #: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:503
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1433
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1434
 msgid "No snapshot"
 msgstr "Pas de snapshot"
 
@@ -5527,8 +5527,8 @@ msgstr "Delta instantané"
 #: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:497
 #: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:148
 #: src/ui-imgui/maxspeed_bench_window.cpp:156
-#: src/ui-imgui/plotter/plotter_window.cpp:431
-#: src/ui-imgui/topmenu/topmenu.cpp:58
+#: src/ui-imgui/plotter/plotter_window.cpp:432
+#: src/ui-imgui/topmenu/topmenu.cpp:59
 msgid "Reset"
 msgstr "Réinitialiser"
 
@@ -5615,12 +5615,12 @@ msgid "Monitor ROM###mb_rt_rom_group"
 msgstr "Monitor ROM###mb_rt_rom_group"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:210
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:546
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:578
 msgid "lower (4 KB)"
 msgstr "inférieur (4 Ko)"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:214
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:547
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:579
 msgid "upper (8 KB)"
 msgstr "supérieur (8 Ko)"
 
@@ -5633,12 +5633,12 @@ msgid "Physical Planes###mb_rt_vram_planes"
 msgstr "Plans physiques###mb_rt_vram_planes"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:271
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:553
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:585
 msgid "VRAM 700 char (1 KB)"
 msgstr "VRAM 700 carac (1 Ko)"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:277
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:554
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:586
 msgid "VRAM 700 attr (1 KB)"
 msgstr "VRAM 700 attr (1 Ko)"
 
@@ -5699,89 +5699,94 @@ msgstr "Régions : INACTIVE###mb_regions_toggle"
 msgid "Toggle Regions sidebar (hierarchical region tree)"
 msgstr "Basculer la barre latérale Régions (arborescence hiérarchique)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:494
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:543
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:501
+msgid "Expansion devices###mb_rt_devices"
+msgstr "Périphériques d'extension###mb_rt_devices"
+
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:522
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:575
 msgid "Logical Z80 (current)"
 msgstr "Logique Z80 (actuelle)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:497
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:544
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:525
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:576
 msgid "User RAM (64 KB)"
 msgstr "RAM utilisateur (64 Ko)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:503
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:548
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:531
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:580
 msgid "CG-ROM (4 KB)"
 msgstr "CG-ROM (4 Ko)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:510
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:555
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:538
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:587
 msgid "CG-RAM (4 KB) [700 mode]"
 msgstr "CG-RAM (4 Ko) [mode 700]"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:524
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:563
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:552
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:595
 msgid "Ramdisk PEZIK 0x68"
 msgstr "Ramdisk PEZIK 0x68"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:527
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:564
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:555
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:596
 msgid "Ramdisk PEZIK 0xE8"
 msgstr "Ramdisk PEZIK 0xE8"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:532
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:565
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:560
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:597
 msgid "Prohibited shadow"
 msgstr "Shadow interdit"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:545
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:577
 msgid "Monitor ROM"
 msgstr "Monitor ROM"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:549
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:581
 #: src/ui-imgui/debugger/memsearch_window/memsearch_window.cpp:563
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:118
 msgid "VRAM"
 msgstr "VRAM"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:550
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:582
 msgid "Physical Planes"
 msgstr "Plans physiques"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:551
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:583
 msgid "Plane III (8 KB) [exVRAM]"
 msgstr "Plan III (8 Ko) [exVRAM]"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:552
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:584
 msgid "Plane IV (8 KB) [exVRAM]"
 msgstr "Plan IV (8 Ko) [exVRAM]"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:556
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:588
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:119
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:44
 msgid "PCG"
 msgstr "PCG"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:557
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:589
 msgid "Memext"
 msgstr "Memext"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:558
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:590
 msgid "RAM banks"
 msgstr "Banques RAM"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:559
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:591
 msgid "FLASH banks"
 msgstr "Banques FLASH"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:560
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:592
 msgid "Bank 0xFF (4 KB) [R/O]"
 msgstr "Banque 0xFF (4 Ko) [R/O]"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:561
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:593
 msgid "Bank 0xFF (64 KB)"
 msgstr "Banque 0xFF (64 Ko)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:562
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:594
 msgid "Ramdisk STD"
 msgstr "Ramdisk STD"
 
@@ -5854,385 +5859,389 @@ msgstr "Index de banque Ramdisk PEZIK port 0xE8"
 msgid "Ramdisk PEZIK port 0x68 bank index"
 msgstr "Index de banque Ramdisk PEZIK port 0x68"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:609
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:621
+msgid "Memory of a connected expansion device"
+msgstr "Mémoire d'un périphérique d'extension connecté"
+
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:643
 msgid "Encoding:"
 msgstr "Encodage :"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:632
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:666
 msgid "ASCII column encoding"
 msgstr "Encodage de la colonne ASCII"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:640
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:674
 msgid "Bytes/row:"
 msgstr "Octets/ligne :"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:664
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:698
 msgid "Bytes per row (8/16/32)"
 msgstr "Octets par ligne (8/16/32)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:672
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:706
 msgid "ASCII###mb_ascii_toggle"
 msgstr "ASCII###mb_ascii_toggle"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:677
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:711
 msgid "Show or hide ASCII decoded column"
 msgstr "Afficher ou masquer la colonne ASCII décodée"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:687
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:721
 msgid "PC###mb_pc_marker"
 msgstr "PC###mb_pc_marker"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:691
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:725
 msgid "Highlight row containing Z80 PC"
 msgstr "Surligner la ligne contenant le PC Z80"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:694
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:728
 msgid "SP###mb_sp_marker"
 msgstr "SP###mb_sp_marker"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:698
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:732
 msgid "Highlight row containing Z80 SP"
 msgstr "Surligner la ligne contenant le SP Z80"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:703
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:737
 msgid "Origin###mb_origin_labels"
 msgstr "Origine###mb_origin_labels"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:709
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:743
 msgid "Show per-row physical origin label (banking-aware)"
 msgstr "Afficher l'étiquette d'origine physique par ligne (banking-aware)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:728
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:762
 msgid "HEX:"
 msgstr "HEX :"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:743
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:777
 msgid "Hex address (Enter or Goto)"
 msgstr "Adresse hex (Entrée ou Aller à)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:749
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:783
 msgid "DEC:"
 msgstr "DEC :"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:768
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:802
 msgid "Decimal address (Enter or Goto)"
 msgstr "Adresse décimale (Entrée ou Aller à)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:774
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:808
 msgid "Goto###mb_goto_btn"
 msgstr "Aller à###mb_goto_btn"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:793
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:827
 msgid "Search###mb_search_btn"
 msgstr "Rechercher###mb_search_btn"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:797
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:831
 msgid "Toggle search panel"
 msgstr "Basculer le panneau de recherche"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:829
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:863
 msgid "R/W"
 msgstr "R/W"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:829
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:863
 msgid "R/O"
 msgstr "R/O"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:830
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:864
 msgid "mapped"
 msgstr "mappé"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:830
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:864
 msgid "not mapped"
 msgstr "non mappé"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:832
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:866
 #, c-format
 msgid "Size: %u B | %s | %s | Z80 base 0x%04X"
 msgstr "Taille : %u o | %s | %s | base Z80 0x%04X"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:836
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:870
 #, c-format
 msgid "Size: %u B | %s | %s"
 msgstr "Taille : %u o | %s | %s"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:841
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:875
 msgid "Region disconnected - falling back to Logical"
 msgstr "Région déconnectée - retour à Logique"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:879
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:933
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:913
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:967
 msgid "[PROHIBITED]"
 msgstr "[INTERDIT]"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:882
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:916
 msgid ""
 "Prohibited mode active (OUT E5) - 0xE000-0xFFFF reads return shadow 0x1A"
 msgstr ""
 "Mode interdit actif (OUT E5) - les lectures 0xE000-0xFFFF retournent shadow "
 "0x1A"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:889
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:923
 msgid "[SCRW640]"
 msgstr "[SCRW640]"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:892
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:926
 msgid ""
 "640px wide screen mode active (DMD bit 2) - VRAM II mapped to 0xA000-0xBFFF"
 msgstr ""
 "Mode écran large 640px actif (DMD bit 2) - VRAM II mappée à 0xA000-0xBFFF"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:899
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:933
 msgid "[HICOLOR]"
 msgstr "[HICOLOR]"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:902
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:936
 msgid "16-color mode active (DMD bit 1) - 4-plane VRAM addressing"
 msgstr "Mode 16 couleurs actif (DMD bit 1) - adressage VRAM 4 plans"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:909
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:943
 msgid "[VBANK]"
 msgstr "[VBANK]"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:912
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:946
 msgid "Display bank toggled (DMD bit 5)"
 msgstr "Banque d'affichage basculée (DMD bit 5)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:919
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:953
 msgid "MZ-700 mode"
 msgstr "Mode MZ-700"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:919
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:953
 msgid "MZ-800 mode"
 msgstr "Mode MZ-800"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:921
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:955
 #, c-format
 msgid "DMD: %s (0x%02X)"
 msgstr "DMD : %s (0x%02X)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:925
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:959
 msgid "Display Mode Descriptor - GDG register, bit 3 = MZ-700 compat mode"
 msgstr "Display Mode Descriptor - registre GDG, bit 3 = mode compat MZ-700"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:936
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:970
 msgid ""
 "Prohibited mode active (OUT E5) - 0xE000-0xFFFF reads return shadow 0xFF"
 msgstr ""
 "Mode interdit actif (OUT E5) - les lectures 0xE000-0xFFFF retournent shadow "
 "0xFF"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:968
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1002
 msgid " (current encoding affected)"
 msgstr " (encodage actuel affecté)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:971
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1005
 #, c-format
 msgid "KOI8-CS table not loaded - showing identity mapping%s"
 msgstr "Table KOI8-CS non chargée - affichage du mapping identité%s"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1015
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1049
 msgid "<##mb_page_prev"
 msgstr "<##mb_page_prev"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1025
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1059
 msgid "Previous page (PgUp)"
 msgstr "Page précédente (PgUp)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1032
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1066
 msgid ">##mb_page_next"
 msgstr ">##mb_page_next"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1042
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1076
 msgid "Next page (PgDn)"
 msgstr "Page suivante (PgDn)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1047
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1081
 #, c-format
 msgid "Page: %llu of: %llu"
 msgstr "Page : %llu sur : %llu"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1070
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1104
 msgid "Bytes (HEX + ASCII)"
 msgstr "Octets (HEX + ASCII)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1071
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1105
 msgid "Byte sequence (hex, legacy)"
 msgstr "Séquence d'octets (hex, ancien)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1072
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1106
 msgid "ASCII (current encoding, legacy)"
 msgstr "ASCII (encodage actuel, ancien)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1073
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1107
 msgid "Word LE (16-bit)"
 msgstr "Mot LE (16-bit)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1074
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1108
 msgid "Word BE (16-bit)"
 msgstr "Mot BE (16-bit)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1075
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1109
 msgid "Masked (AA ?? BB)"
 msgstr "Masqué (AA ?? BB)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1076
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1110
 msgid "Regex (POSIX ERE)"
 msgstr "Regex (POSIX ERE)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1077
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1111
 msgid "Expression (per byte)"
 msgstr "Expression (par octet)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1089
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1123
 msgid "Current region"
 msgstr "Région actuelle"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1090
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1124
 msgid "All regions (current arch)"
 msgstr "Toutes les régions (arch. actuelle)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1131
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1165
 msgid "Results###mb_search_results_hdr"
 msgstr "Résultats###mb_search_results_hdr"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1136
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1170
 #, c-format
 msgid "Hits: %d"
 msgstr "Hits : %d"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1138
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1172
 msgid "Clear###mb_search_results_clear"
 msgstr "Effacer###mb_search_results_clear"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1155
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1189
 #: src/ui-imgui/debugger/memsearch_window/memsearch_window.cpp:483
 msgid "Region"
 msgstr "Région"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1156
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1190
 msgid "Preview (hex)"
 msgstr "Aperçu (hex)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1325
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1359
 #: src/ui-imgui/debugger/symbols/sym_window.cpp:608
 msgid "Search:"
 msgstr "Rechercher :"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1370
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1404
 msgid "HEX bytes: AA BB CC (spaces optional)"
 msgstr "Octets HEX : AA BB CC (espaces optionnels)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1396
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1430
 msgid ""
 "ASCII view (current encoding). Type to update HEX. Use [+] for special chars."
 msgstr ""
 "Vue ASCII (encodage actuel). Taper pour mettre à jour HEX. Utiliser [+] pour "
 "caractères spéciaux."
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1409
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1443
 msgid "[+]###mb_search_insert_char"
 msgstr "[+]###mb_search_insert_char"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1412
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1446
 msgid "Search pattern"
 msgstr "Motif de recherche"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1416
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1450
 msgid "Insert special character via Char Inserter (palette of MZ/KOI8 glyphs)"
 msgstr ""
 "Insérer un caractère spécial via Inserteur de caractères (palette de glyphes "
 "MZ/KOI8)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1434
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1468
 msgid "H###mb_search_hist_btn"
 msgstr "H###mb_search_hist_btn"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1438
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1472
 msgid "Recent patterns"
 msgstr "Motifs récents"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1460
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1494
 msgid "Find Next###mb_search_next"
 msgstr "Suivant###mb_search_next"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1462
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1496
 msgid "Prev###mb_search_prev"
 msgstr "Précédent###mb_search_prev"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1464
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1498
 msgid "All###mb_search_all"
 msgstr "Tous###mb_search_all"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1470
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1504
 msgid "Cancel###mb_search_cancel"
 msgstr "Annuler###mb_search_cancel"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1475
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1509
 msgid "Close###mb_search_close"
 msgstr "Fermer###mb_search_close"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1480
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1514
 msgid "Scope:"
 msgstr "Portée :"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1495
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1529
 msgid "Case sens.###mb_search_case"
 msgstr "Sens. casse###mb_search_case"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1515
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1549
 #, c-format
 msgid "Error: %s"
 msgstr "Erreur : %s"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1517
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1551
 msgid "Canceled"
 msgstr "Annulé"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1519
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1553
 #, c-format
 msgid "Match @ 0x%08X"
 msgstr "Correspondance @ 0x%08X"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1569
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1603
 #, c-format
 msgid "Cursor: 0x%08X = 0x%02X '%s' (%s)"
 msgstr "Curseur : 0x%08X = 0x%02X '%s' (%s)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1575
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1609
 #, c-format
 msgid "Cursor: 0x%08X (no data)"
 msgstr "Curseur : 0x%08X (aucune donnée)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1586
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1620
 msgid "ASCII"
 msgstr "ASCII"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1586
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1620
 msgid "HEX"
 msgstr "HEX"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1588
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1622
 #, c-format
 msgid "Mode: %s (Tab to switch)"
 msgstr "Mode : %s (Tab pour basculer)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1622
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1656
 msgid "Edit error"
 msgstr "Erreur d'édition"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1668
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1702
 #, c-format
 msgid "PEZIK port %s bank %d | byte order: native (TODO BE/LE toggle V3+)"
 msgstr ""
 "Port PEZIK %s banque %d | ordre des octets : natif (TODO bascule BE/LE V3+)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1686
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1720
 #, c-format
 msgid "Annotation: %s"
 msgstr "Annotation : %s"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:2249
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:2283
 msgid "No region available"
 msgstr "Aucune région disponible"
 
@@ -6718,7 +6727,7 @@ msgid "decreased by"
 msgstr "diminué de"
 
 #: src/ui-imgui/debugger/memsearch_window/memsearch_window.cpp:671
-#: src/ui-imgui/debugger/watch/watch_window.cpp:830
+#: src/ui-imgui/debugger/watch/watch_window.cpp:831
 msgid "changed"
 msgstr "modifié"
 
@@ -6836,7 +6845,7 @@ msgid "Max Speed"
 msgstr "Vitesse maximale"
 
 #: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:160
-#: src/ui-imgui/topmenu/topmenu.cpp:53
+#: src/ui-imgui/topmenu/topmenu.cpp:54
 msgid "Pause Emulation"
 msgstr "Mettre en pause l'émulation"
 
@@ -7230,7 +7239,7 @@ msgid "Deferred ICENA event (idle = -1, otherwise GDG ticks)"
 msgstr "Événement ICENA différé (idle = -1, sinon ticks GDG)"
 
 #: src/ui-imgui/debugger/pioz80_window.cpp:448
-#: src/ui-imgui/plotter/plotter_window.cpp:525
+#: src/ui-imgui/plotter/plotter_window.cpp:526
 msgid "idle"
 msgstr "inactif"
 
@@ -7242,21 +7251,21 @@ msgstr "planifie"
 msgid "Port for which icena_event is scheduled"
 msgstr "Port pour lequel icena_event est planifié"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:93
-#: src/ui-imgui/debugger/ppi_window.cpp:95
+#: src/ui-imgui/debugger/ppi_window.cpp:94
+#: src/ui-imgui/debugger/ppi_window.cpp:96
 msgid "Mode Set (D7=1)"
 msgstr "Mode Set (D7=1)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:124
-#: src/ui-imgui/debugger/ppi_window.cpp:126
+#: src/ui-imgui/debugger/ppi_window.cpp:125
+#: src/ui-imgui/debugger/ppi_window.cpp:127
 msgid "Bit Set/Reset (D7=0)"
 msgstr "Bit Set/Reset (D7=0)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:161
+#: src/ui-imgui/debugger/ppi_window.cpp:162
 msgid "bit"
 msgstr "bit"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:173
+#: src/ui-imgui/debugger/ppi_window.cpp:174
 msgid ""
 "0 = key pressed, 1 = released (active LOW). Rows = bit 0..7, columns = PA0-3 "
 "selected column."
@@ -7264,15 +7273,15 @@ msgstr ""
 "0 = touche pressee, 1 = relachee (active LOW). Lignes = bit 0..7, colonnes = "
 "colonne selectionnee par PA0-3."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:216
+#: src/ui-imgui/debugger/ppi_window.cpp:217
 msgid "PPI 8255 State###PPIState"
 msgstr "Etat PPI 8255###PPIState"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:226
+#: src/ui-imgui/debugger/ppi_window.cpp:227
 msgid "Last Control Word###PPI_CW"
 msgstr "Dernier Control Word###PPI_CW"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:239
+#: src/ui-imgui/debugger/ppi_window.cpp:240
 msgid ""
 "Last byte written to Control port (debug mirror - 8255 CW sequencer is not "
 "HW readable)."
@@ -7280,165 +7289,165 @@ msgstr ""
 "Dernier octet ecrit sur le port Control (debug mirror - le sequenceur CW du "
 "8255 n est pas lisible par le materiel)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:250
+#: src/ui-imgui/debugger/ppi_window.cpp:251
 msgid "Port A###PPI_PA"
 msgstr "Port A###PPI_PA"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:263
+#: src/ui-imgui/debugger/ppi_window.cpp:264
 msgid "Output port A (sampled keyboard column + JOY enables)."
 msgstr "Port A de sortie (colonne clavier echantillonnee + activations JOY)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:268
-#: src/ui-imgui/debugger/ppi_window.cpp:354
+#: src/ui-imgui/debugger/ppi_window.cpp:269
+#: src/ui-imgui/debugger/ppi_window.cpp:355
 msgid "Bit decode:"
 msgstr "Decodage des bits:"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:271
+#: src/ui-imgui/debugger/ppi_window.cpp:272
 msgid "keyboard column (PA0-3)"
 msgstr "colonne clavier (PA0-3)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:275
+#: src/ui-imgui/debugger/ppi_window.cpp:276
 msgid "JOY1 enable (active LOW)"
 msgstr "JOY1 activé (LOW actif)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:278
+#: src/ui-imgui/debugger/ppi_window.cpp:279
 msgid "JOY2 enable (active LOW)"
 msgstr "JOY2 activé (LOW actif)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:282
+#: src/ui-imgui/debugger/ppi_window.cpp:283
 msgid "JOY1 enable"
 msgstr "JOY1 actif"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:283
-#: src/ui-imgui/debugger/ppi_window.cpp:286
+#: src/ui-imgui/debugger/ppi_window.cpp:284
+#: src/ui-imgui/debugger/ppi_window.cpp:287
 msgid "not present on this arch"
 msgstr "absent sur cette architecture"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:285
+#: src/ui-imgui/debugger/ppi_window.cpp:286
 msgid "JOY2 enable"
 msgstr "JOY2 actif"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:288
+#: src/ui-imgui/debugger/ppi_window.cpp:289
 msgid "reserved"
 msgstr "réservé"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:295
+#: src/ui-imgui/debugger/ppi_window.cpp:296
 msgid "Port B - Keyboard Matrix###PPI_PB"
 msgstr "Port B - matrice clavier###PPI_PB"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:301
+#: src/ui-imgui/debugger/ppi_window.cpp:302
 msgid "View:"
 msgstr "Vue:"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:303
+#: src/ui-imgui/debugger/ppi_window.cpp:304
 msgid "Combined###PPI_PB_VIEW_C"
 msgstr "Combine###PPI_PB_VIEW_C"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:307
+#: src/ui-imgui/debugger/ppi_window.cpp:308
 msgid "AND of physical and virtual matrix (what CPU actually reads)."
 msgstr ""
 "AND des matrices physique et virtuelle (ce que le CPU lit réellement).AND de "
 "la matrice physique et virtuelle (ce que le CPU lit reellement)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:310
+#: src/ui-imgui/debugger/ppi_window.cpp:311
 msgid "Physical###PPI_PB_VIEW_P"
 msgstr "Physique###PPI_PB_VIEW_P"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:314
+#: src/ui-imgui/debugger/ppi_window.cpp:315
 msgid "g_pio8255.keyboard_matrix[] only (SDL keyboard)."
 msgstr "g_pio8255.keyboard_matrix[] uniquement (clavier SDL)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:317
+#: src/ui-imgui/debugger/ppi_window.cpp:318
 msgid "Virtual###PPI_PB_VIEW_V"
 msgstr "Virtuel###PPI_PB_VIEW_V"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:321
+#: src/ui-imgui/debugger/ppi_window.cpp:322
 msgid "g_pio8255.vkbd_matrix[] only (VKBD / autotype)."
 msgstr "g_pio8255.vkbd_matrix[] uniquement (VKBD / autotype)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:328
+#: src/ui-imgui/debugger/ppi_window.cpp:329
 msgid "Cell '*' = key pressed (bit=0, active LOW), '.' = released (bit=1)."
 msgstr ""
 "Cellule '*' = touche pressée (bit=0, LOW actif), '.' = relâchée "
 "(bit=1).Cellule '*' = touche pressee (bit=0, active LOW), '.' = relachee "
 "(bit=1)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:335
+#: src/ui-imgui/debugger/ppi_window.cpp:336
 msgid "Port C###PPI_PC"
 msgstr "Port C###PPI_PC"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:348
+#: src/ui-imgui/debugger/ppi_window.cpp:349
 msgid "Port C raw output state (D0-D3 OUT, D4-D7 IN; D5-D7 computed on read)."
 msgstr ""
 "État de sortie brut de Port C (D0-D3 OUT, D4-D7 IN; D5-D7 calculés à la "
 "lecture).Etat de sortie brut du Port C (D0-D3 OUT, D4-D7 IN; D5-D7 calcules "
 "a la lecture)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:358
+#: src/ui-imgui/debugger/ppi_window.cpp:359
 msgid "CTC0 audio mask (0 = mute, 1 = pass)"
 msgstr "Masque audio CTC0 (0 = mute, 1 = laisser passer)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:361
+#: src/ui-imgui/debugger/ppi_window.cpp:362
 msgid "CTC0 audio mask not present"
 msgstr "Masque audio CTC0 absent"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:364
+#: src/ui-imgui/debugger/ppi_window.cpp:365
 msgid "CMT data out"
 msgstr "CMT data out"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:366
+#: src/ui-imgui/debugger/ppi_window.cpp:367
 msgid "CTC2 INT mask (0 = blocked, 1 = enabled)"
 msgstr "Masque INT CTC2 (0 = bloque, 1 = active)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:368
+#: src/ui-imgui/debugger/ppi_window.cpp:369
 msgid "CMT motor control (rising edge toggles)"
 msgstr "Controle moteur CMT (front montant bascule)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:370
+#: src/ui-imgui/debugger/ppi_window.cpp:371
 msgid "CMT motor state"
 msgstr "Etat moteur CMT"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:372
+#: src/ui-imgui/debugger/ppi_window.cpp:373
 msgid "CMT data in - computed on read (not in mirror)"
 msgstr "CMT data in - calcule a la lecture (pas dans le mirror)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:374
+#: src/ui-imgui/debugger/ppi_window.cpp:375
 msgid "Cursor blink NE556@OUT - computed on read"
 msgstr "Clignotement curseur NE556@OUT - calcule a la lecture"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:376
+#: src/ui-imgui/debugger/ppi_window.cpp:377
 msgid "VBLN - computed on read"
 msgstr "VBLN - calcule a la lecture"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:386
+#: src/ui-imgui/debugger/ppi_window.cpp:387
 msgid "VKBD Autotype###PPI_VKBD"
 msgstr "VKBD Autotype###PPI_VKBD"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:412
+#: src/ui-imgui/debugger/ppi_window.cpp:415
 msgid "Current column index into vkbd_autotype string."
 msgstr "Index de colonne actuel dans la chaine vkbd_autotype."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:415
+#: src/ui-imgui/debugger/ppi_window.cpp:418
 msgid "Last decoded matrix byte (column<<4 | bit)."
 msgstr "Dernier octet de matrice decode (column<<4 | bit)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:418
+#: src/ui-imgui/debugger/ppi_window.cpp:421
 msgid "Shift modifier required for current char."
 msgstr "Modificateur Shift requis pour le caractere actuel."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:421
+#: src/ui-imgui/debugger/ppi_window.cpp:424
 msgid "Currently in key-down phase (vs. key-up gap)."
 msgstr "Actuellement en phase key-down (vs. intervalle key-up)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:434
+#: src/ui-imgui/debugger/ppi_window.cpp:437
 msgid "Key-down duration in gdgclk ticks."
 msgstr "Duree key-down en ticks gdgclk."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:446
+#: src/ui-imgui/debugger/ppi_window.cpp:449
 msgid "Key-up gap duration in gdgclk ticks."
 msgstr "Duree de l intervalle key-up en ticks gdgclk."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:449
+#: src/ui-imgui/debugger/ppi_window.cpp:452
 msgid "Tick stamp of current phase start."
 msgstr "Horodatage tick du debut de la phase actuelle."
 
@@ -7839,8 +7848,8 @@ msgid "QDisk State"
 msgstr "QDisk State"
 
 #: src/ui-imgui/debugger/qdisk_window.cpp:154
-#: src/ui-imgui/joy/joy_setup_window.cpp:239
-#: src/ui-imgui/joy/joy_setup_window.cpp:285
+#: src/ui-imgui/joy/joy_setup_window.cpp:256
+#: src/ui-imgui/joy/joy_setup_window.cpp:302
 msgid "Device"
 msgstr "Périphérique"
 
@@ -7885,7 +7894,7 @@ msgid "MemExt"
 msgstr "MemExt"
 
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:121
-#: src/ui-imgui/topmenu/devices/menu_rom.cpp:24
+#: src/ui-imgui/topmenu/devices/menu_rom.cpp:25
 msgid "ROM"
 msgstr "ROM"
 
@@ -10553,130 +10562,130 @@ msgstr ""
 msgid "Persist"
 msgstr "Persister"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:440
+#: src/ui-imgui/debugger/watch/watch_window.cpp:441
 msgid "Add new watch entry:"
 msgstr "Ajouter une nouvelle entrée Watch :"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:474
+#: src/ui-imgui/debugger/watch/watch_window.cpp:475
 msgid "(e.g. 0xC080, 0C080h, 49280, or symbol name)"
 msgstr "(ex. 0xC080, 0C080h, 49280, ou nom de symbole)"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:485
+#: src/ui-imgui/debugger/watch/watch_window.cpp:486
 msgid "(e.g. [HL], {0x4000}, $framecnt, 0xC080+1, port[0xCE])"
 msgstr "(ex. [HL], {0x4000}, $framecnt, 0xC080+1, port[0xCE])"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:495
+#: src/ui-imgui/debugger/watch/watch_window.cpp:496
 msgid "(optional)"
 msgstr "(optionnel)"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:521
+#: src/ui-imgui/debugger/watch/watch_window.cpp:522
 msgid "Length:"
 msgstr "Longueur :"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:536
+#: src/ui-imgui/debugger/watch/watch_window.cpp:537
 msgid "Bit:"
 msgstr "Bit :"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:548
+#: src/ui-imgui/debugger/watch/watch_window.cpp:549
 msgid "Add##watch_add_ok"
 msgstr "Ajouter##watch_add_ok"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:550
+#: src/ui-imgui/debugger/watch/watch_window.cpp:551
 msgid "Cancel##watch_add_cancel"
 msgstr "Annuler##watch_add_cancel"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:566
+#: src/ui-imgui/debugger/watch/watch_window.cpp:567
 msgid "Cannot parse address (unknown symbol or invalid format)."
 msgstr "Impossible de parser l'adresse (symbole inconnu ou format invalide)."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:580
+#: src/ui-imgui/debugger/watch/watch_window.cpp:581
 msgid "Expression cannot be empty."
 msgstr "L'expression ne peut pas être vide."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:755
+#: src/ui-imgui/debugger/watch/watch_window.cpp:756
 msgid "(new)"
 msgstr "(nouveau)"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:759
+#: src/ui-imgui/debugger/watch/watch_window.cpp:760
 msgid "(type changed)"
 msgstr "(type modifié)"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:871
+#: src/ui-imgui/debugger/watch/watch_window.cpp:872
 msgid "(N/A for scalar expr)"
 msgstr "(N/A pour expr scalaire)"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:952
+#: src/ui-imgui/debugger/watch/watch_window.cpp:953
 msgid "Min:"
 msgstr "Min :"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:953
+#: src/ui-imgui/debugger/watch/watch_window.cpp:954
 msgid "Max:"
 msgstr "Max :"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:954
-#: src/ui-imgui/debugger/watch/watch_window.cpp:957
+#: src/ui-imgui/debugger/watch/watch_window.cpp:955
+#: src/ui-imgui/debugger/watch/watch_window.cpp:958
 msgid "Changes:"
 msgstr "Changements :"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:960
+#: src/ui-imgui/debugger/watch/watch_window.cpp:961
 msgid "(Min/Max not tracked for string types)"
 msgstr "(Min/Max non suivi pour les types string)"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1033
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1034
 msgid "Drag to reorder this watch row."
 msgstr "Glisser pour réorganiser cette ligne Watch."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1079
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1080
 msgid "Double-click to rename. Right-click for context menu."
 msgstr "Double-cliquer pour renommer. Clic droit pour le menu contextuel."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1085
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1086
 msgid "Rename##watch_ctx_rename"
 msgstr "Renommer##watch_ctx_rename"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1089
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1090
 msgid "Delete##watch_ctx_del"
 msgstr "Supprimer##watch_ctx_del"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1094
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1095
 msgid "Copy expression##watch_ctx_copy"
 msgstr "Copier l'expression##watch_ctx_copy"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1104
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1105
 msgid "Copy address (hex) or expression text to clipboard."
 msgstr ""
 "Copier l'adresse (hex) ou le texte de l'expression dans le presse-papiers."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1170
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1171
 msgid "Display format"
 msgstr "Format d'affichage"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1184
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1185
 msgid "Reset min/max##watch_ctx_resetmm"
 msgstr "Reset min/max##watch_ctx_resetmm"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1188
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1189
 msgid "Clear min/max tracking and changes count for this row."
 msgstr ""
 "Effacer le suivi min/max et le compteur de changements pour cette ligne."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1208
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1209
 msgid "Delete this watch (no confirm)."
 msgstr "Supprimer ce Watch (sans confirmation)."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1236
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1237
 msgid "+ Add##watch_add_btn"
 msgstr "+ Ajouter##watch_add_btn"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1247
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1248
 msgid "Add a new watch entry."
 msgstr "Ajouter une nouvelle entrée Watch."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1254
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1255
 msgid "name, expression, address, type"
 msgstr "nom, expression, adresse, type"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1256
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1257
 msgid ""
 "Filter matches watch name, expression text, hex address or type label (case-"
 "insensitive substring)."
@@ -10684,19 +10693,19 @@ msgstr ""
 "Le filtre matche le nom Watch, le texte d'expression, l'adresse hex ou le "
 "label de type (sous-chaîne insensible à la casse)."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1260
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1261
 msgid "Clear##watch_clrflt"
 msgstr "Effacer##watch_clrflt"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1266
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1267
 msgid "Visible / total watch count."
 msgstr "Nombre de Watch visibles / total."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1273
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1274
 msgid "Highlight changes##watch_hl"
 msgstr "Surligner les changements##watch_hl"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1277
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1278
 msgid ""
 "Briefly color value cells when they change. Green=up, Red=down, "
 "Yellow=string changed."
@@ -10704,59 +10713,59 @@ msgstr ""
 "Colorer brièvement les cellules de valeurs lors d'un changement. Vert=monte, "
 "Rouge=descend, Jaune=string modifié."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1285
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1286
 msgid "Delete##watch_delsel"
 msgstr "Supprimer##watch_delsel"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1295
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1296
 msgid "Delete selected watches (confirm if more than one)."
 msgstr "Supprimer les Watch sélectionnés (confirmation si plus d'un)."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1304
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1305
 msgid "Save##watch_save"
 msgstr "Enregistrer##watch_save"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1315
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1316
 msgid "Save to default per-arch .watch file."
 msgstr "Enregistrer dans le fichier .watch par défaut par architecture."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1318
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1319
 msgid "Save As...##watch_saveas"
 msgstr "Enregistrer sous...##watch_saveas"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1327
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1328
 msgid "Save Watches As..."
 msgstr "Enregistrer les Watch sous..."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1331
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1332
 msgid "Save watches to a chosen file."
 msgstr "Enregistrer les Watch dans un fichier choisi."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1334
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1335
 msgid "Load From...##watch_loadfrom"
 msgstr "Charger depuis...##watch_loadfrom"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1342
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1343
 msgid "Load Watches From..."
 msgstr "Charger les Watch depuis..."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1346
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1347
 msgid "Replace current watches with file content."
 msgstr "Remplacer les Watch actuels par le contenu du fichier."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1350
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1351
 msgid "Clear All...##watch_clrall"
 msgstr "Tout effacer...##watch_clrall"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1353
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1354
 msgid "Remove all watch entries (with confirmation)."
 msgstr "Retirer toutes les entrées Watch (avec confirmation)."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1361
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1362
 msgid "Snapshot##watch_snap"
 msgstr "Snapshot##watch_snap"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1383
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1384
 msgid ""
 "Capture current values as baseline. Adds Delta column showing change since "
 "snapshot."
@@ -10764,95 +10773,95 @@ msgstr ""
 "Capturer les valeurs actuelles comme baseline. Ajoute une colonne Delta "
 "montrant le changement depuis le snapshot."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1389
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1390
 msgid "Clear snapshot##watch_snapclr"
 msgstr "Effacer snapshot##watch_snapclr"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1395
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1396
 msgid "Clear snapshot baseline (Delta column hides)."
 msgstr "Effacer le baseline snapshot (la colonne Delta se masque)."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1430
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1431
 #, c-format
 msgid "Snapshot @ frame %d  (Δ %d frames)"
 msgstr "Snapshot @ frame %d  (Δ %d frames)"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1445
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1446
 #, c-format
 msgid "%zu / %zu rows"
 msgstr "%zu / %zu lignes"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1448
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1449
 #, c-format
 msgid "%zu rows"
 msgstr "%zu lignes"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1563
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1564
 msgid "Deselect all visible watches."
 msgstr "Désélectionner tous les Watch visibles."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1565
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1566
 msgid "Select all visible watches."
 msgstr "Sélectionner tous les Watch visibles."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1567
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1568
 msgid "Some selected. Click to select all visible."
 msgstr "Certains sélectionnés. Cliquer pour tout sélectionner."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1591
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1706
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1592
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1707
 msgid "Delta"
 msgstr "Delta"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1647
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1648
 msgid "Watch###watch_panel"
 msgstr "Watch###watch_panel"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1672
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1673
 msgid "No watches defined. Use [+ Add] above to add one."
 msgstr "Aucun Watch défini. Utilisez [+ Ajouter] ci-dessus pour en ajouter un."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1778
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1779
 msgid "Delete Selected Watches?###watch_confirm_bulkdel"
 msgstr "Supprimer les Watch sélectionnés ?###watch_confirm_bulkdel"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1780
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1781
 #, c-format
 msgid "Delete %zu selected watch(es)?"
 msgstr "Supprimer %zu Watch sélectionné(s) ?"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1783
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1784
 msgid "Delete##watch_bulkdel_ok"
 msgstr "Supprimer##watch_bulkdel_ok"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1801
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1802
 msgid "Cancel##watch_bulkdel_cancel"
 msgstr "Annuler##watch_bulkdel_cancel"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1810
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1813
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1811
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1814
 msgid "Clear All Watches?###watch_confirm_clrall"
 msgstr "Effacer tous les Watch ?###watch_confirm_clrall"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1815
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1816
 msgid "Remove all watch entries? This cannot be undone."
 msgstr ""
 "Retirer toutes les entrées Watch ? Cette action ne peut pas être annulée."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1817
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1818
 msgid "Clear##watch_clrall_ok"
 msgstr "Effacer##watch_clrall_ok"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1826
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1827
 msgid "Cancel##watch_clrall_cancel"
 msgstr "Annuler##watch_clrall_cancel"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1835
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1837
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1836
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1838
 msgid "Replace Watches?###watch_confirm_load"
 msgstr "Remplacer les Watch ?###watch_confirm_load"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1839
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1840
 #, c-format
 msgid ""
 "Loading from:\n"
@@ -10865,16 +10874,16 @@ msgstr ""
 "\n"
 "Remplacer tous les Watch actuels ?"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1842
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1843
 msgid "Replace##watch_load_ok"
 msgstr "Remplacer##watch_load_ok"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1856
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1857
 msgid "Cancel##watch_load_cancel"
 msgstr "Annuler##watch_load_cancel"
 
 #: src/ui-imgui/devices/device_request_ui.cpp:36
-#: src/ui-imgui/topmenu/topmenu.cpp:43
+#: src/ui-imgui/topmenu/topmenu.cpp:44
 msgid ""
 "Machine settings cannot be changed while a replay is recorded or played. "
 "Stop it in the Replay menu first."
@@ -11031,97 +11040,97 @@ msgstr "Écart :"
 msgid "Measuring Update Interval (s):"
 msgstr "Intervalle de mise à jour de la mesure (s) :"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:223
-#: src/ui-imgui/joy/joy_setup_window.cpp:231
+#: src/ui-imgui/joy/joy_setup_window.cpp:240
+#: src/ui-imgui/joy/joy_setup_window.cpp:248
 msgid "Trigger"
 msgstr "Déclencheur"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:240
+#: src/ui-imgui/joy/joy_setup_window.cpp:257
 msgid "Gamepad (standard mapping)"
 msgstr "Gamepad (mappage standard)"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:244
+#: src/ui-imgui/joy/joy_setup_window.cpp:261
 msgid "Left Stick"
 msgstr "Stick gauche"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:244
+#: src/ui-imgui/joy/joy_setup_window.cpp:261
 msgid "D-Pad"
 msgstr "D-Pad"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:247
-#: src/ui-imgui/joy/joy_setup_window.cpp:371
+#: src/ui-imgui/joy/joy_setup_window.cpp:264
+#: src/ui-imgui/joy/joy_setup_window.cpp:388
 msgid "Directions"
 msgstr "Directions"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:257
-#: src/ui-imgui/joy/joy_setup_window.cpp:320
+#: src/ui-imgui/joy/joy_setup_window.cpp:274
+#: src/ui-imgui/joy/joy_setup_window.cpp:337
 msgid "Deadzone"
 msgstr "Zone morte"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:266
-#: src/ui-imgui/joy/joy_setup_window.cpp:327
+#: src/ui-imgui/joy/joy_setup_window.cpp:283
+#: src/ui-imgui/joy/joy_setup_window.cpp:344
 msgid "Trigger 1"
 msgstr "Déclencheur 1"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:274
-#: src/ui-imgui/joy/joy_setup_window.cpp:334
+#: src/ui-imgui/joy/joy_setup_window.cpp:291
+#: src/ui-imgui/joy/joy_setup_window.cpp:351
 msgid "Trigger 2"
 msgstr "Déclencheur 2"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:287
+#: src/ui-imgui/joy/joy_setup_window.cpp:304
 msgid "Axes"
 msgstr "Axes"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:288
+#: src/ui-imgui/joy/joy_setup_window.cpp:305
 msgid "Buttons"
 msgstr "Boutons"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:293
+#: src/ui-imgui/joy/joy_setup_window.cpp:310
 msgid "X Axis"
 msgstr "Axe X"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:300
-#: src/ui-imgui/joy/joy_setup_window.cpp:313
+#: src/ui-imgui/joy/joy_setup_window.cpp:317
+#: src/ui-imgui/joy/joy_setup_window.cpp:330
 msgid "Invert"
 msgstr "Inverser"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:306
+#: src/ui-imgui/joy/joy_setup_window.cpp:323
 msgid "Y Axis"
 msgstr "Axe Y"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:358
+#: src/ui-imgui/joy/joy_setup_window.cpp:375
 msgid "Live Status"
 msgstr "État en direct"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:400
+#: src/ui-imgui/joy/joy_setup_window.cpp:417
 msgid "Setup preferences for Joystick"
 msgstr "Configurer les préférences pour Joystick"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:417
+#: src/ui-imgui/joy/joy_setup_window.cpp:434
 msgid "Emulated on numeric keypad"
 msgstr "Émulé sur pavé numérique"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:502
+#: src/ui-imgui/joy/joy_setup_window.cpp:519
 msgid "Joystick Setup"
 msgstr "Configuration joystick"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:507
+#: src/ui-imgui/joy/joy_setup_window.cpp:524
 msgid "Initialize Joystick Subsystem"
 msgstr "Initialiser le sous-système Joystick"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:517
+#: src/ui-imgui/joy/joy_setup_window.cpp:534
 msgid "need only for real gaming devices"
 msgstr "nécessaire uniquement pour les vrais périphériques de jeu"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:521
+#: src/ui-imgui/joy/joy_setup_window.cpp:538
 msgid "Rescan Devices"
 msgstr "Rescanner les périphériques"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:540
+#: src/ui-imgui/joy/joy_setup_window.cpp:557
 msgid "Joystick"
 msgstr "Joystick"
 
-#: src/ui-imgui/main_window.cpp:114
+#: src/ui-imgui/main_window.cpp:117
 msgid "No audio device - running without sound"
 msgstr "Aucun périphérique audio - fonctionnement sans son"
 
@@ -11551,7 +11560,7 @@ msgstr "Fichier d'entrée"
 
 #: src/ui-imgui/memext/memext_load_dialog.cpp:117
 #: src/ui-imgui/ramdisk/pezik_settings_window.cpp:199
-#: src/ui-imgui/rom/rom_settings_window.cpp:163
+#: src/ui-imgui/rom/rom_settings_window.cpp:164
 msgid "Browse..."
 msgstr "Parcourir..."
 
@@ -11665,15 +11674,154 @@ msgstr "Erreur"
 msgid "Warning"
 msgstr "Avertissement"
 
-#: src/ui-imgui/mz800/topmenu/devices/menu_mz800_hw_compat.cpp:22
+#: src/ui-imgui/mz700/devbus/menu_devbus.cpp:119
+#, c-format
+msgid "Range %u - %u, press Enter to apply"
+msgstr "Plage %u - %u, appuyez sur Entrée pour appliquer"
+
+#: src/ui-imgui/mz700/devbus/menu_devbus.cpp:127
+msgid "(applies after reconnect)"
+msgstr "(prend effet après reconnexion)"
+
+#: src/ui-imgui/mz700/devbus/menu_devbus.cpp:144
+#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:112
+msgid "Connected"
+msgstr "Connecté"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:41
+msgid "PCG-700 (HAL)"
+msgstr "PCG-700 (HAL)"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:42
+msgid "HSW switch"
+msgstr "Commutateur HSW"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:43
+msgid "NOM (standard character set)"
+msgstr "NOM (jeu de caractères standard)"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:45
+msgid "SSW jumper (software control)"
+msgstr "Cavalier SSW (contrôle logiciel)"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:46
+msgid "OFF (software cannot switch PCG)"
+msgstr "OFF (le logiciel ne peut pas commuter le PCG)"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:47
+msgid "ON (bit 3 of 0E012h switches PCG)"
+msgstr "ON (le bit 3 de 0E012h commute le PCG)"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:48
+msgid "GSW jumper (registers)"
+msgstr "Cavalier GSW (registres)"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:49
+msgid "OFF (registers disconnected)"
+msgstr "OFF (registres déconnectés)"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:50
+msgid "ON (registers connected)"
+msgstr "ON (registres connectés)"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:51
+msgid "HSW PCG with SSW OFF"
+msgstr "HSW PCG avec SSW OFF"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:52
+msgid "PCG on, HSW decides"
+msgstr "PCG actif, HSW décide"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:53
+msgid "PCG stays off"
+msgstr "Le PCG reste éteint"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:54
+msgid "Write strobe"
+msgstr "Strobe d'écriture"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:55
+msgid "Rising edge of bit 4"
+msgstr "Front montant du bit 4"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:56
+msgid "Every write while bit 4 is set"
+msgstr "Chaque écriture tant que le bit 4 est à 1"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:57
+msgid "Falling edge of bit 4 (experimental)"
+msgstr "Front descendant du bit 4 (expérimental)"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:58
+msgid "Decode writes also with DRAM at 0E000h"
+msgstr "Décoder les écritures aussi avec la DRAM en 0E000h"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:59
+msgid "RAM after power on"
+msgstr "RAM à la mise sous tension"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:60
+msgid "Zeros"
+msgstr "Zéros"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:61
+msgid "Copy of CG-ROM characters"
+msgstr "Copie des caractères de la CG-ROM"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:71
+msgid "Show PCG RAM characters"
+msgstr "Afficher les caractères de la PCG RAM"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:115
+#, c-format
+msgid "Code %02Xh, set %u, PCG RAM %03Xh"
+msgstr "Code %02Xh, jeu %u, PCG RAM %03Xh"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:127
+msgid "PCG-700 Characters###pcg700_chars"
+msgstr "Caractères PCG-700###pcg700_chars"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:130
+msgid "The PCG-700 is not connected."
+msgstr "Le PCG-700 n'est pas connecté."
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:133
+#, c-format
+msgid "Display: %s"
+msgstr "Affichage : %s"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:133
+msgid "PCG RAM"
+msgstr "PCG RAM"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:133
+#: src/ui-imgui/rom/rom_settings_window.cpp:129
+#: src/ui-imgui/rom/rom_settings_window.cpp:215
+msgid "CG-ROM"
+msgstr "CG-ROM"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:135
+#, c-format
+msgid "Control 0E012h: %02Xh"
+msgstr "Contrôle 0E012h : %02Xh"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:136
+msgid "Character set 1, codes 80h-FFh"
+msgstr "Jeu de caractères 1, codes 80h-FFh"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:138
+msgid "Character set 2, codes 80h-FFh"
+msgstr "Jeu de caractères 2, codes 80h-FFh"
+
+#: src/ui-imgui/mz800/topmenu/devices/menu_mz800_hw_compat.cpp:23
 msgid "HW Compatibility Experiments"
 msgstr "Expériences de compatibilité HW"
 
-#: src/ui-imgui/mz800/topmenu/devices/menu_mz800_hw_compat.cpp:24
+#: src/ui-imgui/mz800/topmenu/devices/menu_mz800_hw_compat.cpp:25
 msgid "Allow PSG1 (stereo)"
 msgstr "Activer PSG1 (stéréo)"
 
-#: src/ui-imgui/mz800/topmenu/devices/menu_mz800_hw_compat.cpp:28
+#: src/ui-imgui/mz800/topmenu/devices/menu_mz800_hw_compat.cpp:29
 msgid ""
 "Enables a second PSG (SN76489), providing stereo sound similar to the "
 "MZ-1500. Port 0xF2 is still used as a mono audio PSG (left + right "
@@ -11686,130 +11834,126 @@ msgstr ""
 "Le port 0xF3 est uniquement PSG0 (gauche) et le port 0xF9 est uniquement "
 "PSG1 (droite)."
 
-#: src/ui-imgui/plotter/plotter_window.cpp:107
+#: src/ui-imgui/plotter/plotter_window.cpp:108
 msgid "Black"
 msgstr "Noir"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:108
+#: src/ui-imgui/plotter/plotter_window.cpp:109
 msgid "Red"
 msgstr "Rouge"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:109
+#: src/ui-imgui/plotter/plotter_window.cpp:110
 #: src/ui-imgui/topmenu/interface/menu_display.cpp:38
 msgid "Green"
 msgstr "Vert"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:110
+#: src/ui-imgui/plotter/plotter_window.cpp:111
 msgid "Blue"
 msgstr "Bleu"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:368
+#: src/ui-imgui/plotter/plotter_window.cpp:369
 msgid "Save plotter drawing"
 msgstr "Enregistrer le dessin du traceur"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:368
+#: src/ui-imgui/plotter/plotter_window.cpp:369
 msgid "plotter.png"
 msgstr "plotter.png"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:405
+#: src/ui-imgui/plotter/plotter_window.cpp:406
 msgid "Plotter MZ-1P16"
 msgstr "Plotter MZ-1P16"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:414
+#: src/ui-imgui/plotter/plotter_window.cpp:415
 msgid "Save..."
 msgstr "Enregistrer..."
 
-#: src/ui-imgui/plotter/plotter_window.cpp:419
+#: src/ui-imgui/plotter/plotter_window.cpp:420
 msgid "Clear paper"
 msgstr "Effacer le papier"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:424
+#: src/ui-imgui/plotter/plotter_window.cpp:425
 msgid "Clear the drawing and reset the plotter (plain RESET keeps the paper)"
 msgstr ""
 "Efface le dessin et réinitialise le traceur (un simple RESET conserve le "
 "papier)"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:427
+#: src/ui-imgui/plotter/plotter_window.cpp:428
 msgid "Plotter buttons:"
 msgstr "Boutons du traceur :"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:437
+#: src/ui-imgui/plotter/plotter_window.cpp:438
 msgid "Paper feed"
 msgstr "Avance du papier"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:447
+#: src/ui-imgui/plotter/plotter_window.cpp:449
 msgid "Hold to feed paper"
 msgstr "Maintenir pour faire avancer le papier"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:450
+#: src/ui-imgui/plotter/plotter_window.cpp:452
 msgid "Run drawing self-test"
 msgstr "Lancer l'autotest de dessin"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:459
+#: src/ui-imgui/plotter/plotter_window.cpp:460
 msgid "Reset with PAPER FEED held -> writes the character set in 4 colors"
 msgstr ""
 "Reset avec PAPER FEED maintenu -> écrit le jeu de caractères en 4 couleurs"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:464
+#: src/ui-imgui/plotter/plotter_window.cpp:465
 msgid "Zoom"
 msgstr "Zoom"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:466
+#: src/ui-imgui/plotter/plotter_window.cpp:467
 msgid "Preview scale: pixels per motor step"
 msgstr "Échelle d'aperçu : pixels par pas du moteur"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:469
+#: src/ui-imgui/plotter/plotter_window.cpp:470
 msgid "Show carriage"
 msgstr "Afficher le chariot"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:471
+#: src/ui-imgui/plotter/plotter_window.cpp:472
 msgid "Live marker at the current pen/carriage position"
 msgstr "Marqueur en direct à la position actuelle du stylo/chariot"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:495
+#: src/ui-imgui/plotter/plotter_window.cpp:496
 #, c-format
 msgid "X: %ld"
 msgstr "X: %ld"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:497
+#: src/ui-imgui/plotter/plotter_window.cpp:498
 #, c-format
 msgid "Y: %ld"
 msgstr "Y: %ld"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:501
+#: src/ui-imgui/plotter/plotter_window.cpp:502
 msgid "Color:"
 msgstr "Couleur :"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:514
+#: src/ui-imgui/plotter/plotter_window.cpp:515
 #, c-format
 msgid "Pen: %s"
 msgstr "Stylo : %s"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:514
+#: src/ui-imgui/plotter/plotter_window.cpp:515
 msgid "DOWN"
 msgstr "BAS"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:514
+#: src/ui-imgui/plotter/plotter_window.cpp:515
 msgid "UP"
 msgstr "HAUT"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:520
+#: src/ui-imgui/plotter/plotter_window.cpp:521
 msgid "BUSY"
 msgstr "BUSY"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:530
+#: src/ui-imgui/plotter/plotter_window.cpp:531
 #, c-format
 msgid "Strokes: %u"
 msgstr "Traits : %u"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:534
+#: src/ui-imgui/plotter/plotter_window.cpp:535
 #, c-format
 msgid "(dropped %u)"
 msgstr "(%u ignorés)"
-
-#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:112
-msgid "Connected"
-msgstr "Connecté"
 
 #: src/ui-imgui/ramdisk/pezik_settings_window.cpp:141
 msgid "Ports:"
@@ -11835,50 +11979,45 @@ msgstr "PEZIK standard :"
 msgid "Experimental PEZIK:"
 msgstr "PEZIK expérimental :"
 
-#: src/ui-imgui/rom/rom_settings_window.cpp:117
+#: src/ui-imgui/rom/rom_settings_window.cpp:118
 msgid "Select ROM file"
 msgstr "Sélectionner le fichier ROM"
 
-#: src/ui-imgui/rom/rom_settings_window.cpp:127
-#: src/ui-imgui/rom/rom_settings_window.cpp:213
+#: src/ui-imgui/rom/rom_settings_window.cpp:128
+#: src/ui-imgui/rom/rom_settings_window.cpp:214
 msgid "ROM 0x0000"
 msgstr "ROM 0x0000"
 
-#: src/ui-imgui/rom/rom_settings_window.cpp:128
-#: src/ui-imgui/rom/rom_settings_window.cpp:214
-msgid "CG-ROM"
-msgstr "CG-ROM"
-
-#: src/ui-imgui/rom/rom_settings_window.cpp:129
-#: src/ui-imgui/rom/rom_settings_window.cpp:215
+#: src/ui-imgui/rom/rom_settings_window.cpp:130
+#: src/ui-imgui/rom/rom_settings_window.cpp:216
 msgid "ROM 0xE000"
 msgstr "ROM 0xE000"
 
-#: src/ui-imgui/rom/rom_settings_window.cpp:173
+#: src/ui-imgui/rom/rom_settings_window.cpp:174
 msgid "optional"
 msgstr "optionnel"
 
-#: src/ui-imgui/rom/rom_settings_window.cpp:189
+#: src/ui-imgui/rom/rom_settings_window.cpp:190
 msgid "All-In-One ROM Binary File"
 msgstr "Fichier binaire ROM tout-en-un"
 
-#: src/ui-imgui/rom/rom_settings_window.cpp:202
+#: src/ui-imgui/rom/rom_settings_window.cpp:203
 msgid "Separate ROM Binary Files"
 msgstr "Fichiers binaires ROM séparés"
 
-#: src/ui-imgui/rom/rom_settings_window.cpp:249
+#: src/ui-imgui/rom/rom_settings_window.cpp:238
 msgid "User Defined ROM Settings"
 msgstr "Paramètres ROM définis par l'utilisateur"
 
-#: src/ui-imgui/rom/rom_settings_window.cpp:254
+#: src/ui-imgui/rom/rom_settings_window.cpp:243
 msgid "CMT Hack Patch:"
 msgstr "Patch CMT Hack :"
 
-#: src/ui-imgui/rom/rom_settings_window.cpp:273
+#: src/ui-imgui/rom/rom_settings_window.cpp:262
 msgid "ROM Binary Files"
 msgstr "Fichiers binaires ROM"
 
-#: src/ui-imgui/rom/rom_settings_window.cpp:278
+#: src/ui-imgui/rom/rom_settings_window.cpp:267
 msgid "CMT Hack Patch ROM"
 msgstr "ROM patch CMT Hack"
 
@@ -12243,71 +12382,71 @@ msgstr "Vitesse actuelle"
 msgid "Reset sliders"
 msgstr "Réinitialiser les curseurs"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:26
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:27
 msgid "CMT"
 msgstr "CMT"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:34
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:35
 msgid "Use CMT Hack"
 msgstr "Utiliser CMT Hack"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:41
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:42
 msgid "Set Default CMT MZ Speed"
 msgstr "Définir la vitesse MZ CMT par défaut"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:43
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:44
 msgid "1:1 - 1200 Bd"
 msgstr "1:1 - 1200 Bd"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:48
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:49
 msgid "2:1 - 2 400 Bd"
 msgstr "2:1 - 2 400 Bd"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:53
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:54
 msgid "2:1 - 2 400 Bd (cp/m)"
 msgstr "2:1 - 2 400 Bd (cp/m)"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:58
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:59
 msgid "7:3 - 2 800 Bd"
 msgstr "7:3 - 2 800 Bd"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:63
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:64
 msgid "8:3 - 3 200 Bd"
 msgstr "8:3 - 3 200 Bd"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:68
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:69
 msgid "3:1 - 3 600 Bd"
 msgstr "3:1 - 3 600 Bd"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:78
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:79
 msgid "Fast Open CMT File & Play..."
 msgstr "Ouverture rapide du fichier CMT et lecture..."
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:83
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:84
 msgid "Show Virtual CMT"
 msgstr "Afficher le CMT virtuel"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:90
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:91
 msgid "CMT Options"
 msgstr "Options CMT"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:92
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:93
 msgid "Enable CPU Boost"
 msgstr "Activer le CPU Boost"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:97
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:98
 msgid "MZF"
 msgstr "MZF"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:99
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:100
 msgid "Enable MZF Size Check"
 msgstr "Activer la vérification de taille MZF"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:104
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:105
 msgid "Fix FNAME Terminator"
 msgstr "Corriger le terminateur FNAME"
 
-#: src/ui-imgui/topmenu/devices/menu_devices.cpp:21
+#: src/ui-imgui/topmenu/devices/menu_devices.cpp:24
 msgid "HW & Devices"
 msgstr "HW et périphériques"
 
@@ -12421,7 +12560,9 @@ msgstr "Translation bus : passthrough"
 msgid ""
 "NOT compatible with Sharp MZ - no inversion between CPU bus and WD279x chip. "
 "Reserved for future 'true bus' ROMs / experiments."
-msgstr "PAS compatible avec Sharp MZ - sans inversion entre bus CPU et chip WD279x. Réservé pour de futures ROMs 'true bus' / expérimentations."
+msgstr ""
+"PAS compatible avec Sharp MZ - sans inversion entre bus CPU et chip WD279x. "
+"Réservé pour de futures ROMs 'true bus' / expérimentations."
 
 #: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:351
 msgid "Floppy Drives"
@@ -12589,7 +12730,7 @@ msgid "Centronics"
 msgstr "Centronics"
 
 #: src/ui-imgui/topmenu/devices/menu_printer.cpp:70
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:73
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:75
 msgid "MZ"
 msgstr "MZ"
 
@@ -12680,7 +12821,7 @@ msgid "directory"
 msgstr "répertoire"
 
 #: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:235
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:220
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:232
 msgid "Unicard"
 msgstr "Unicard"
 
@@ -12818,49 +12959,49 @@ msgstr "Fichier du disque RAM..."
 msgid "Memory Disk State (debugger)..."
 msgstr "État Disque mémoire (debugger)..."
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:27
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:29
 msgid "Rear DIP Switch"
 msgstr "Commutateur DIP arrière"
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:30
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:32
 msgid "Mode 700 Compat.: "
 msgstr "Mode 700 compat. : "
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:33
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:35
 msgid "OFF"
 msgstr "OFF"
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:37
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:39
 msgid "ON (default)"
 msgstr "ON (par défaut)"
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:47
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:49
 msgid "CMT Polarity: "
 msgstr "Polarité CMT : "
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:50
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:52
 msgid "Inverted"
 msgstr "Inversée"
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:54
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:56
 #: src/ui-imgui/topmenu/interface/menu_display.cpp:30
 #: src/ui-imgui/topmenu/interface/menu_display.cpp:65
 msgid "Normal"
 msgstr "Normal"
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:70
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:72
 msgid "Printer Standard: "
 msgstr "Standard d'imprimante : "
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:77
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:79
 msgid "Centronics (default)"
 msgstr "Centronics (par défaut)"
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:81
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:83
 msgid " (locked: plotter connected)"
 msgstr " (verrouillé : traceur connecté)"
 
-#: src/ui-imgui/topmenu/devices/menu_rom.cpp:54
+#: src/ui-imgui/topmenu/devices/menu_rom.cpp:55
 msgid "Settings for User Defined..."
 msgstr "Paramètres pour ROM utilisateur..."
 
@@ -12887,7 +13028,7 @@ msgid "Unicard runtime files in '{SD}/unicard/' have been reinitialized."
 msgstr ""
 "Les fichiers runtime Unicard dans '{SD}/unicard/' ont été réinitialisés."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:124
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:131
 msgid ""
 "SD card runtime in '{SD}/unicard/' is missing, incomplete, or does not match "
 "the selected firmware."
@@ -12895,15 +13036,15 @@ msgstr ""
 "Le runtime de la carte SD dans '{SD}/unicard/' est manquant, incomplet ou ne "
 "correspond pas au firmware sélectionné."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:127
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:134
 msgid "State on SD:"
 msgstr "État sur SD :"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:128
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:135
 msgid "Selected firmware:"
 msgstr "Firmware sélectionné :"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:131
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:138
 msgid ""
 "[Reinitialize] overwrites the SD manager files to match the selected "
 "firmware. [Continue] connects with the mismatch (client may see inconsistent "
@@ -12913,19 +13054,19 @@ msgstr ""
 "firmware sélectionné. [Continuer] connecte avec le mismatch (le client peut "
 "voir un comportement incohérent). [Annuler] laisse l'Unicard déconnecté."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:137
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:144
 msgid "Reinitialize##unicard_rt_reinit"
 msgstr "Réinitialiser##unicard_rt_reinit"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:147
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:154
 msgid "Continue##unicard_rt_continue"
 msgstr "Continuer##unicard_rt_continue"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:157
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:164
 msgid "Cancel##unicard_rt_cancel"
 msgstr "Annuler##unicard_rt_cancel"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:183
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:195
 msgid ""
 "Choose which manager version to install in '{SD}/unicard/'. This will "
 "overwrite the existing manager files."
@@ -12933,7 +13074,7 @@ msgstr ""
 "Choisissez quelle version du gestionnaire installer dans '{SD}/unicard/'. "
 "Cela écrasera les fichiers gestionnaire existants."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:187
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:199
 msgid ""
 "Note: This choice is independent of the currently selected simulated "
 "firmware. You can install one version while simulating the other (useful for "
@@ -12943,40 +13084,40 @@ msgstr ""
 "Vous pouvez installer une version tout en simulant l'autre (utile pour les "
 "tests)."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:195
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:207
 msgid "mgr V2.4 (uc1)##unicard_reinit_v24"
 msgstr "mgr V2.4 (uc1)##unicard_reinit_v24"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:202
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:214
 msgid "mgr V2.11b (uc3)##unicard_reinit_v211b"
 msgstr "mgr V2.11b (uc3)##unicard_reinit_v211b"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:209
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:221
 msgid "Cancel##unicard_reinit_cancel"
 msgstr "Annuler##unicard_reinit_cancel"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:225
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:237
 msgid "Unicard Connected"
 msgstr "Unicard connecté"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:226
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:238
 msgid "Unicard Not Connected"
 msgstr "Unicard non connecté"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:252
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:264
 msgid "Firmware: uc1 (rev.60)"
 msgstr "Firmware : uc1 (rev.60)"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:262
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:274
 #, c-format
 msgid "Firmware: uc3 (v%d.%d)###unicard_fw_uc3"
 msgstr "Firmware : uc3 (v%d.%d)###unicard_fw_uc3"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:271
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:283
 msgid "Check runtime version on connect"
 msgstr "Vérifier la version du runtime à la connexion"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:278
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:290
 msgid ""
 "On Connect, verify that {SD}/unicard/ contains the manager matching the "
 "selected firmware. Mismatch shows a dialog with option to reinitialize."
@@ -12985,15 +13126,15 @@ msgstr ""
 "correspondant au firmware sélectionné. En cas de mismatch, affiche un "
 "dialogue avec l'option de réinitialiser."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:287
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:299
 msgid "Read-only SD"
 msgstr "SD en lecture seule"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:298
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:310
 msgid "Managed FDC"
 msgstr "FDC géré"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:302
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:314
 msgid ""
 "Which FDC controller the Unicard API manages (DSK mount).\n"
 "'None' disables Unicard FDD commands.\n"
@@ -13003,11 +13144,11 @@ msgstr ""
 "'Aucun' désactive les commandes FDD d'Unicard.\n"
 "Le changement n'affecte que les opérations futures."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:329
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:341
 msgid "Set SD Root Directory..."
 msgstr "Définir le répertoire racine SD..."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:336
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:348
 msgid ""
 "Change the host directory used as the Unicard SD root.\n"
 "If connected, the Unicard is automatically reconnected to the new root."
@@ -13015,11 +13156,11 @@ msgstr ""
 "Change le répertoire hôte utilisé comme racine SD de l'Unicard.\n"
 "Si connectée, l'Unicard est automatiquement reconnectée à la nouvelle racine."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:354
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:366
 msgid "Reinitialize Runtime..."
 msgstr "Réinitialiser le runtime..."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:371
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:383
 msgid ""
 "Overwrites manager files in '{SD}/unicard/' (mgr.mzf, mgr800.mzf, "
 "mgr700.mzf, mgr1500.mzf) with the selected version.\n"
@@ -13712,7 +13853,7 @@ msgstr ""
 msgid "Available while playing a replay."
 msgstr "Disponible pendant la lecture d'un replay."
 
-#: src/ui-imgui/topmenu/topmenu.cpp:74
+#: src/ui-imgui/topmenu/topmenu.cpp:75
 msgid "About..."
 msgstr "À propos..."
 

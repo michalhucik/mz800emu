@@ -5222,6 +5222,8 @@ _VALID_SETTINGS_KEYS = (
 
 _VALID_PLATFORM_KINDS = ("mz700", "mz800", "mz1500")
 _VALID_PLATFORM_MODES = ("native", "compat")
+# Statické druhy periferií; jiný neprázdný kind je id zařízení devbus
+# (emu_get_devices) a ověří ho emulátor.
 _VALID_PERIPH_KINDS = ("memext", "fdc", "qd", "ide8", "gal5")
 
 
@@ -5245,6 +5247,11 @@ async def emu_settings_set(key: str, value: str) -> str:
                                                frame rate mode)
         TRACE_CPUTRACK/pc_range_lo - cputrack PC-range filter low bound (0..65535)
         TRACE_CPUTRACK/pc_range_hi - cputrack PC-range filter high bound (0..65535)
+        <ini_section>/<key>        - option of an MZ-700 expansion device
+                                     (``emu_get_devices``); a keyword
+                                     option takes the keyword, the
+                                     response has ``applies``: "now" or
+                                     "on_connect"
 
     Value is type-coerced server-side (unsigned: integer literal;
     bool: 'true'/'false' or '1'/'0'; text: passed as-is; float:
@@ -5256,16 +5263,21 @@ async def emu_settings_set(key: str, value: str) -> str:
 
     Returns:
         JSON ``{"key": str, "previous_value": str, "new_value": str,
-        "type": str}`` on success or ``{"error": "..."}`` on failure.
+        "type": str}`` (+ ``"applies"`` for a device option) on success or
+        ``{"error": "..."}`` on failure.
     """
     if not key:
         return json.dumps({"error": "Missing required field: key"})
     if value is None:
         return json.dumps({"error": "Missing required field: value"})
-    if key not in _VALID_SETTINGS_KEYS:
+    # Options of expansion devices ("<ini_section>/<key>" from
+    # emu_get_devices) are validated by the emulator; other keys must be
+    # in the static list.
+    if key not in _VALID_SETTINGS_KEYS and "/" not in key:
         return json.dumps(
             {"error": "Key is not live-settable (allowed: "
-                       + ", ".join(_VALID_SETTINGS_KEYS) + ")"})
+                       + ", ".join(_VALID_SETTINGS_KEYS)
+                       + ", or an expansion device option)"})
     resp = await _send_request(
         "settings_set", {"key": key, "value": str(value)})
     if not resp.get("success", False):
@@ -5451,6 +5463,12 @@ async def emu_periph_attach(
                  disk image (IDE8/hdd0_filepath, hdd1_filepath) and
                  creates it when missing.
         gal5   - Not emulated; always an error (kept for compatibility).
+        <id>   - An expansion device of the MZ-700 core by its id from
+                 ``emu_get_devices`` (e.g. a character generator or an
+                 80-column card); ``options`` are ignored. Errors: unknown
+                 id, conflict with a connected device (ports, MMIO range,
+                 video hook), the device failed to connect, or expansion
+                 devices are not available on this platform.
 
     A state that already holds is not applied again (``changed: false``).
 
@@ -5463,10 +5481,11 @@ async def emu_periph_attach(
         "requires_restart": false, "result_code": 0}`` on success or
         ``{"error": "..."}`` on failure.
     """
-    if kind not in _VALID_PERIPH_KINDS:
+    if not isinstance(kind, str) or not kind:
         return json.dumps(
             {"error": "Invalid kind (allowed: "
-                       + ", ".join(_VALID_PERIPH_KINDS) + ")"})
+                       + ", ".join(_VALID_PERIPH_KINDS)
+                       + ", or a device id from emu_get_devices)"})
     args: dict = {"kind": kind}
     if options:
         args["options"] = options
@@ -5486,7 +5505,8 @@ async def emu_periph_detach(
     Devices menu and is saved to the INI file on exit.
 
     Args:
-        kind: Peripheral kind (same set as ``emu_periph_attach``).
+        kind: Peripheral kind or device id (same set as
+              ``emu_periph_attach``).
         options: Optional ``{"type": str}`` selecting the unit for
                  ``fdc`` ('fdc0' | 'fdc1') and ``ide8`` ('master' |
                  'slave'); ignored for ``memext`` and ``qd``.
@@ -5496,10 +5516,11 @@ async def emu_periph_detach(
         "requires_restart": false, "result_code": 0}`` on success or
         ``{"error": "..."}`` on failure.
     """
-    if kind not in _VALID_PERIPH_KINDS:
+    if not isinstance(kind, str) or not kind:
         return json.dumps(
             {"error": "Invalid kind (allowed: "
-                       + ", ".join(_VALID_PERIPH_KINDS) + ")"})
+                       + ", ".join(_VALID_PERIPH_KINDS)
+                       + ", or a device id from emu_get_devices)"})
     args: dict = {"kind": kind}
     if options:
         args["options"] = options
@@ -5507,6 +5528,37 @@ async def emu_periph_detach(
     if not resp.get("success", False):
         return json.dumps(
             {"error": resp.get("error", "periph_detach failed")})
+    return json.dumps(_data_or_error(resp))
+
+
+@mcp.tool()
+async def emu_get_devices() -> str:
+    """List the expansion devices of the MZ-700 core and their state.
+
+    Read-only. Expansion devices are optional cards of the real MZ-700
+    (for example a programmable character generator or an 80-column
+    card) emulated through one generic device interface. Each device has
+    an ``id`` used as ``kind`` in ``emu_periph_attach`` /
+    ``emu_periph_detach``, an INI section whose options are read and
+    changed with ``emu_settings_get`` / ``emu_settings_set``
+    (``"<ini_section>/<key>"``; the ``connected`` key is changed only by
+    ``emu_periph_*``), and optional memory regions (``kind: "device"`` in
+    ``emu_regions_list``). Details: ``emulator://docs/devices``.
+
+    Returns:
+        JSON ``{"platform_supported": bool, "devices": [{"id": str,
+        "name": str, "connected": bool, "ini_section": str, "options":
+        [{"key", "label", "type": "bool"|"keyword"|"unsigned", "value",
+        "default", "apply": "live"|"connect", "keywords" | "min"/"max"}],
+        "ports": [{"first", "last", "read", "write"}], "mmio": [{"first",
+        "last", "when": ["mapped", "dram"]}], "regions": [{"name", "kind",
+        "sub_id", "size", "writable"}], "video": {"glyph_source",
+        "render_row"}, "outputs": [{"id", "title", "width", "height"}]}]}``.
+        On MZ-800 and MZ-1500 ``platform_supported`` is false and
+        ``devices`` is empty; a build without registered devices returns
+        an empty list too.
+    """
+    resp = await _send_request("get_devices", {})
     return json.dumps(_data_or_error(resp))
 
 

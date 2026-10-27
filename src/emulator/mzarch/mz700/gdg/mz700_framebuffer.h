@@ -70,6 +70,31 @@ extern void framebuffer_init(void);
 extern void framebuffer_MZ800_current_screen_row_fill(unsigned last_pixel);
 extern void framebuffer_MZ800_all_screen_rows_fill(void);
 extern void framebuffer_update_MZ700_current_screen_row(void);
+
+/**
+ * @brief Kreslení jednoho řádku plátna MZ-700.
+ * @param beam_row Řádek paprsku (VIDEO_BEAM_CANVAS_FIRST_ROW .. VIDEO_BEAM_CANVAS_LAST_ROW).
+ */
+typedef void (*framebuffer_mz700_row_fn_t)(unsigned beam_row);
+
+/**
+ * @brief Vymění kreslení řádku plátna (adaptér devbus).
+ *
+ * Všechny cesty kreslení plátna MZ-700 (řádek po HBLN, řádek při DMD bit 0
+ * = 1, plné překreslení, flush při CMT hacku) volají nastavenou funkci.
+ *
+ * @param fn Nová funkce; NULL = výchozí kreslení s g_rom.cgrom.
+ * @pre Emu vlákno mezi instrukcemi, nebo zastavená emulace.
+ */
+extern void framebuffer_mz700_set_row_fn(framebuffer_mz700_row_fn_t fn);
+
+/**
+ * @brief Výchozí kreslení řádku s jiným generátorem znaků (zdroj glyfů devbus).
+ * @param beam_row Řádek paprsku v rozsahu plátna.
+ * @param cg       Generátor znaků 4 kB ve formátu CG-ROM.
+ * @pre Emu vlákno.
+ */
+extern void framebuffer_mz700_row_with_cg(unsigned beam_row, const uint8_t *cg);
 extern void framebuffer_update_MZ700_all_rows(void);
 extern void framebuffer_MZ800_screen_changed(void);
 

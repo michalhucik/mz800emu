@@ -74,12 +74,17 @@ void framebuffer_init(void)
 }
 
 
-/*
- * MZ-700 rezim: znakovy rendering s CGROM
+/**
+ * @brief Vykreslí jeden řádek plátna MZ-700 (znakový režim) generátorem @p CGROM.
+ *
+ * 40 znaků x 8 bodů, bod zdvojený na 2 pixely; levý bod = bit 0 bajtu
+ * generátoru, sada znaků podle bitu 7 atributu (posun 0800h).
+ *
+ * @param beam_row Řádek paprsku v rozsahu plátna.
+ * @param CGROM    Generátor znaků (4 kB ve formátu CG-ROM).
  */
-static inline void framebuffer_update_MZ700_screen_row(unsigned beam_row)
+static inline void framebuffer_mz700_row_render(unsigned beam_row, const uint8_t *CGROM)
 {
-    uint8_t *CGROM = g_rom.cgrom;
     uint8_t *VRAM_CHAR = &g_memory.VRAM[MZ700_VRAM_CHAR];
     uint8_t *VRAM_ATTR = &g_memory.VRAM[MZ700_VRAM_ATTR];
 
@@ -144,9 +149,42 @@ static inline void framebuffer_update_MZ700_screen_row(unsigned beam_row)
 }
 
 
+/**
+ * @brief Výchozí kreslení řádku: tělo framebuffer_mz700_row_render() s CG-ROM.
+ * @param beam_row Řádek paprsku v rozsahu plátna.
+ */
+static void framebuffer_mz700_row_default(unsigned beam_row)
+{
+    framebuffer_mz700_row_render(beam_row, g_rom.cgrom);
+}
+
+
+/**
+ * @brief Aktuální kreslení řádku plátna.
+ *
+ * Výchozí framebuffer_mz700_row_default(); adaptér devbus ho vymění, když je
+ * připojené zařízení s video háčkem (framebuffer_mz700_set_row_fn()). Volají
+ * ho všechny cesty kreslení plátna (oba režimy DMD bit 0 i plné překreslení).
+ * Mění se jen v emu vlákně mezi instrukcemi nebo při zastavené emulaci.
+ */
+static framebuffer_mz700_row_fn_t s_row_fn = framebuffer_mz700_row_default;
+
+
+void framebuffer_mz700_set_row_fn(framebuffer_mz700_row_fn_t fn)
+{
+    s_row_fn = fn ? fn : framebuffer_mz700_row_default;
+}
+
+
+void framebuffer_mz700_row_with_cg(unsigned beam_row, const uint8_t *cg)
+{
+    framebuffer_mz700_row_render(beam_row, cg);
+}
+
+
 void framebuffer_update_MZ700_current_screen_row(void)
 {
-    framebuffer_update_MZ700_screen_row(g_gdg.beam_row);
+    s_row_fn(g_gdg.beam_row);
 }
 
 
@@ -154,53 +192,7 @@ void framebuffer_update_MZ700_all_rows(void)
 {
     for (int i = VIDEO_BEAM_CANVAS_FIRST_ROW; i <= VIDEO_BEAM_CANVAS_LAST_ROW; i++)
     {
-        framebuffer_update_MZ700_screen_row(i);
-    }
-}
-
-
-/*
- * MZ-700 rezim: znakovy rendering
- *
- * Kazdy znak ma 8x8 pixelu z CGROM.
- */
-static inline void framebuffer_MZ700_screen_row_fill(unsigned beam_row)
-{
-    uint8_t *CGROM = g_rom.cgrom;
-    uint8_t *VRAM = g_memory.VRAM;
-
-    uint8_t *p = g_framebuffer.pixels + (beam_row * VIDEO_DISPLAY_WIDTH + VIDEO_BORDER_LEFT_WIDTH);
-
-    unsigned pos_Y = beam_row - VIDEO_BEAM_CANVAS_FIRST_ROW;
-    unsigned vram_addr = (pos_Y / 8) * CHARS_WIDTH;
-    unsigned char_line = pos_Y % 8;
-
-    uint8_t *char_p = &VRAM[MZ700_VRAM_CHAR + vram_addr];
-    uint8_t *attr_p = &VRAM[MZ700_VRAM_ATTR + vram_addr];
-
-    for (unsigned char_x = 0; char_x < CHARS_WIDTH; char_x++)
-    {
-        unsigned attr_fgc = (*attr_p >> 4) & 0x07;
-        unsigned attr_bgc = *attr_p & 0x07;
-        unsigned attr_grp = ((*attr_p << 4) & 0x0800);
-
-        unsigned cg_addr = attr_grp | (*char_p * 8);
-        unsigned mask = CGROM[cg_addr + char_line];
-
-        uint8_t fgc = c_MZ700_COLORMAP[attr_fgc];
-        uint8_t bgc = c_MZ700_COLORMAP[attr_bgc];
-
-        for (int bit = 0; bit < 8; bit++)
-        {
-            uint8_t color = (mask & 1) ? fgc : bgc;
-            p[0] = color;
-            p[1] = color;
-            p += 2;
-            mask >>= 1;
-        }
-
-        char_p++;
-        attr_p++;
+        s_row_fn(i);
     }
 }
 
@@ -212,7 +204,7 @@ static inline void framebuffer_MZ700_screen_row_fill(unsigned beam_row)
 void framebuffer_MZ800_current_screen_row_fill(unsigned last_pixel)
 {
     (void)last_pixel;
-    framebuffer_MZ700_screen_row_fill(g_gdg.beam_row);
+    s_row_fn(g_gdg.beam_row);
 }
 
 
@@ -220,7 +212,7 @@ void framebuffer_MZ800_all_screen_rows_fill(void)
 {
     for (int i = VIDEO_BEAM_CANVAS_FIRST_ROW; i <= VIDEO_BEAM_CANVAS_LAST_ROW; i++)
     {
-        framebuffer_MZ700_screen_row_fill(i);
+        s_row_fn(i);
     }
 }
 
@@ -383,14 +375,8 @@ void framebuffer_flush_full_screen(void)
             {
                 if ((g_gdg.beam_row >= VIDEO_BEAM_CANVAS_FIRST_ROW) && (g_gdg.beam_row <= VIDEO_BEAM_CANVAS_LAST_ROW))
                 {
-                    if (!GDG_MZ800_DMD_TEST_MZ700)
-                    {
-                        framebuffer_MZ700_screen_row_fill(g_gdg.beam_row);
-                    }
-                    else
-                    {
-                        framebuffer_update_MZ700_screen_row(g_gdg.beam_row);
-                    }
+                    /* Obě cesty DMD bit 0 kreslí totéž (dřív dvě shodná těla). */
+                    s_row_fn(g_gdg.beam_row);
                 }
                 g_gdg.screen_need_update_from = 0;
             }

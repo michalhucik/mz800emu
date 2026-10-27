@@ -1,0 +1,159 @@
+/**
+ * @file   mz700_devbus.h
+ * @brief  Adaptér sběrnice volitelných zařízení (devbus) pro jádro MZ-700.
+ *
+ * Adaptér drží jediné místo, odkud se berou "čisté" callbacky CPU MZ-700
+ * (g_mz700_cpu_ops), a jediné místo volání z80_set_* (mz700_install_cpu_callbacks()).
+ * Bez připojeného zařízení jsou v g_mz700_cpu_ops přímo dnešní funkce
+ * (memory_write_cb, port_read_cb, port_write_cb, memory_write_byte_raw),
+ * takže CPU volá stejnou strojovou funkci jako dřív. Zařízení s porty nebo
+ * MMIO přepne příslušné callbacky na obálky (*_devbus); obálky volají
+ * původní funkci beze změny a teprve pak dispečink devbus.
+ *
+ * Logovací varianty callbacků (debugger) a záznam zápisů (ramlog) volají
+ * g_mz700_cpu_ops.* místo jména funkce, takže zařízení vidí i zápisy
+ * a porty v ladicím režimu.
+ *
+ * @par Licence: GPLv3
+ */
+
+#ifndef MZ700_DEVBUS_H
+#define MZ700_DEVBUS_H
+
+#include <stdint.h>
+#include <stdbool.h>
+
+#include "libs/cpu-z80/z80.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**
+ * @brief Aktuální čisté callbacky CPU MZ-700.
+ *
+ * @invariant Žádný ukazatel není NULL. Zapisuje jen mz700_devbus_recompute()
+ *            (emu vlákno mezi instrukcemi, nebo zastavená emulace).
+ */
+typedef struct st_MZ700_CPU_OPS {
+    z80_mwrite_cb mwrite;                         /**< memory_write_cb | memory_write_cb_devbus */
+    z80_pread_cb  pread;                          /**< port_read_cb | port_read_cb_devbus */
+    z80_pwrite_cb pwrite;                         /**< port_write_cb | port_write_cb_devbus */
+    void (*raw_write)(uint16_t addr, uint8_t v);  /**< memory_write_byte_raw | memory_write_byte_raw_devbus */
+} st_MZ700_CPU_OPS;
+
+/** @brief Aktuální čisté callbacky (viz st_MZ700_CPU_OPS). */
+extern st_MZ700_CPU_OPS g_mz700_cpu_ops;
+
+/**
+ * @brief Nainstaluje callbacky CPU podle stavu debuggeru a g_mz700_cpu_ops.
+ *
+ * Jediné místo volání z80_set_mread/mwrite/pread/pwrite na MZ-700. Volá ho
+ * změna stavu debuggeru (mzarch_platform_fn_debugger_state_changed()) a
+ * adaptér devbus po každé změně háčků. Varianty: logovací (debugger
+ * potřebuje ladicí callbacky), záznam zápisů (ramlog), čisté
+ * (g_mz700_cpu_ops). V buildu bez debuggeru jen čisté.
+ *
+ * @pre Emu vlákno mezi instrukcemi, nebo zastavená emulace (load snapshotu);
+ *      g_mzarch_main.cpu existuje.
+ * @post CPU volá callbacky odpovídající aktuálnímu stavu.
+ */
+void mz700_install_cpu_callbacks(void);
+
+/**
+ * @brief Obálka port_read_cb() pro porty zařízení devbus (mz700_iorq.c).
+ *
+ * Port bez zařízení (g_devbus_ports[].range == NULL) předá port_read_cb()
+ * beze změny. Port zařízení: mzarch_main_insideop_iorq(), značka
+ * "obslouženo" pro trace, handler read() (bez něj latch sběrnice).
+ *
+ * @param cpu CPU.
+ * @param addr Adresa portu (dekód podle dolního bajtu).
+ * @param user_data Nepoužito.
+ * @return Přečtená hodnota.
+ * @pre Emu vlákno uvnitř instrukce (callback CPU) nebo dbgapi.
+ */
+uint8_t port_read_cb_devbus(z80_t *cpu, uint16_t addr, void *user_data);
+
+/**
+ * @brief Obálka port_write_cb() pro porty zařízení devbus (mz700_iorq.c).
+ *
+ * Port bez zařízení předá port_write_cb() beze změny; port zařízení:
+ * mzarch_main_insideop_iorq(), značka "obslouženo", handler write().
+ *
+ * @param cpu CPU.
+ * @param addr Adresa portu.
+ * @param value Zapisovaný bajt.
+ * @param user_data Nepoužito.
+ * @pre Jako port_read_cb_devbus().
+ */
+void port_write_cb_devbus(z80_t *cpu, uint16_t addr, uint8_t value, void *user_data);
+
+/**
+ * @brief Obálka memory_write_cb() se snoopem MMIO stránky 0E000h (mz700_memory.c).
+ *
+ * Nejdřív memory_write_cb() beze změny (deska), pak u adres 0E000h-0EFFFh
+ * devbus_mmio_dispatch() se stavem mapy (MAPPED / DRAM), příznakem
+ * Prohibited a DEVBUS_ACC_CPU. Mapu stránky mění jen OUT, ne zápis do
+ * paměti, takže stav zjištěný po zápisu platí i pro okamžik zápisu.
+ *
+ * @param cpu CPU.
+ * @param addr Adresa.
+ * @param value Zapisovaný bajt.
+ * @param user_data Nepoužito.
+ * @pre Emu vlákno uvnitř instrukce.
+ */
+void memory_write_cb_devbus(z80_t *cpu, uint16_t addr, uint8_t value, void *user_data);
+
+/**
+ * @brief Obálka memory_write_byte_raw() (zápis debuggeru) se snoopem MMIO.
+ *
+ * Jako memory_write_cb_devbus(), ale s DEVBUS_ACC_DEBUGGER (bez
+ * synchronizace času).
+ *
+ * @param addr Adresa.
+ * @param value Zapisovaný bajt.
+ * @pre Emu vlákno.
+ */
+void memory_write_byte_raw_devbus(uint16_t addr, uint8_t value);
+
+/**
+ * @brief Inicializuje devbus s adaptérem MZ-700 (prázdný registr).
+ * @pre Emu vlákno v mzarch_platform_fn_init() po vytvoření CPU, před
+ *      registrací zařízení.
+ */
+void mz700_devbus_init(void);
+
+/**
+ * @brief Zaregistruje zařízení MZ-700 (PCG-700) a ukončí registraci:
+ *        devbus_start() (připojení podle INI).
+ * @pre Emu vlákno na konci mzarch_platform_fn_init(), po memory_init()
+ *      (CG-ROM je nainstalovaná, připojení z INI z ní staví generátor).
+ */
+void mz700_devbus_start(void);
+
+/**
+ * @brief Ukončí devbus (devbus_exit()) bez překreslování obrazu.
+ *
+ * Odpojení zařízení s video háčkem by v pauze překreslilo plátno; při
+ * ukončení emulátoru už video rozhraní nemusí existovat.
+ *
+ * @pre Emu vlákno v mzarch_platform_fn_exit() (po cfgmain_exit(), INI je uložené).
+ * @post Kreslení řádku je výchozí, registr devbus prázdný.
+ */
+void mz700_devbus_exit(void);
+
+/**
+ * @brief Je adresa sledovaná oknem I/O a Event Viewerem jako MMIO zápis?
+ *
+ * 0E000h-0E008h vždy (8255, 8253, GDG), navíc MMIO rozsahy připojených
+ * zařízení v okně 0E000h-0E0FFh (bitmapa, přepočítá ji změna háčků).
+ * Jen ladicí cesta.
+ */
+bool mz700_devbus_mmio_tracked(uint16_t addr);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* MZ700_DEVBUS_H */

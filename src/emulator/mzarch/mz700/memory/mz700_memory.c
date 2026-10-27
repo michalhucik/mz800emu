@@ -36,6 +36,8 @@
 #include "memory/memext.h"
 #include "memory/memory.h"
 #include "mz700_memory.h"
+#include "mzarch/mz700/devbus/mz700_devbus.h"
+#include "hw-generic/devbus/devbus.h"
 #include "memory/rom.h"
 #include "mzarch/mz700/gdg/mz700_gdg.h"
 #include "mzarch/mz700/gdg/mz700_vramctrl.h"
@@ -770,14 +772,14 @@ void memory_write_with_logging_cb ( z80_t *cpu, uint16_t addr, uint8_t value, vo
 
     /*
      * V1.5.E - I/O Ports panel MMIO event tracking (write side).
-     * Filter: rozsah 0xE000-0xE008 (= MZ-700 mode mirror PIO/CTC/GDG).
+     * Filter: 0xE000-0xE008 (PIO/CTC/GDG) + MMIO rozsahy připojených zařízení
+     * devbus v 0xE000-0xE0FF (mz700_devbus_mmio_tracked(), bitmapa).
      * Gated pres g_io_window_tracking_active. Hook PRED memory_write_cb
      * (= konzistentni s MEM_W BP a MHmap, ktere take fire pred write,
      * aby UI videlo "starou" hodnotu pres [addr] no-side-effect deref;
      * hodnota `value` je nove zapisovana data).
      */
-    if ( addr >= 0xE000u && addr <= 0xE008u
-         && g_io_window_tracking_active ) {
+    if ( g_io_window_tracking_active && mz700_devbus_mmio_tracked ( addr ) ) {
         uint32_t frame_n = (uint32_t) g_gdg.total_elapsed.screens;
         io_activity_record_hit ( addr, value,
                                   false /* is_in - jsme write */, frame_n );
@@ -791,9 +793,9 @@ void memory_write_with_logging_cb ( z80_t *cpu, uint16_t addr, uint8_t value, vo
     }
 
     /* event-viewer Vlna 1: paralelní fan-out MMIO_W do eventlog ringu. */
-    if ( addr >= 0xE000u && addr <= 0xE008u
-         && TEST_TRACE_EVENTLOG_ACTIVE
-         && ( g_eventlog_active_mask & ( 1ULL << EVENTLOG_CAT_MMIO_W ) ) ) {
+    if ( TEST_TRACE_EVENTLOG_ACTIVE
+         && ( g_eventlog_active_mask & ( 1ULL << EVENTLOG_CAT_MMIO_W ) )
+         && mz700_devbus_mmio_tracked ( addr ) ) {
         uint32_t pl = (uint32_t) addr | ( (uint32_t) value << 16 );
         eventlog_record ( EVENTLOG_CAT_MMIO_W, 0,
                           g_mzarch_main.instruction_addr, pl );
@@ -848,7 +850,8 @@ void memory_write_with_logging_cb ( z80_t *cpu, uint16_t addr, uint8_t value, vo
     if ( g_ramlog_active ) {
         ramlog_hook_logging_write ( cpu, addr, value, user_data );
     } else {
-        memory_write_cb ( cpu, addr, value, user_data );
+        /* Čistý zápis (memory_write_cb, nebo obálka devbus se zařízením). */
+        g_mz700_cpu_ops.mwrite ( cpu, addr, value, user_data );
     };
     g_dbg_in_cpu_path = 0;
 }
@@ -881,10 +884,14 @@ void memory_write_byte ( uint16_t addr, uint8_t value ) {
  * (debugger_memory_write_byte, region Logical: MCP region_write, Memory
  * Browser, freeze) - MEM_W breakpoint hlida zapisy CPU.
  *
- * @param addr
- * @param value
+ * Volající jdou přes g_mz700_cpu_ops.raw_write (mz700_devbus.h): bez
+ * připojeného zařízení devbus je to tato funkce, se zařízením s MMIO obálka,
+ * která zápis navíc ohlásí zařízení (DEVBUS_ACC_DEBUGGER).
+ *
+ * @param addr Adresa v mapě CPU.
+ * @param value Zapisovaný bajt.
  */
-static void memory_write_byte_raw ( uint16_t addr, uint8_t value ) {
+void memory_write_byte_raw ( uint16_t addr, uint8_t value ) {
     unsigned addr_high = addr >> 12;
     memory_internal_write_0000_0fff ( addr_high );
     memory_internal_write_1000_cfff ( addr_high );
@@ -895,10 +902,10 @@ static void memory_write_byte_raw ( uint16_t addr, uint8_t value ) {
 
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
-/** @brief memory_write_byte_raw() pro ramlog_hook_write(). */
+/** @brief g_mz700_cpu_ops.raw_write pro ramlog_hook_write(). */
 static void memory_write_byte_raw_fn ( uint16_t addr, uint8_t value, void *ctx ) {
     ( void ) ctx;
-    memory_write_byte_raw ( addr, value );
+    g_mz700_cpu_ops.raw_write ( addr, value );
 }
 #endif
 
@@ -919,7 +926,40 @@ void memory_write_byte_no_bp ( uint16_t addr, uint8_t value ) {
         return;
     };
 #endif
+    g_mz700_cpu_ops.raw_write ( addr, value );
+}
+
+
+/*******************************************************************************
+ *
+ * Obálky devbus (mz700_devbus.h): snoop zápisu do stránky 0E000h. Aktivní jen
+ * s připojeným zařízením, které má MMIO rozsah; jinak CPU volá memory_write_cb
+ * a debugger memory_write_byte_raw přímo.
+ *
+ ******************************************************************************/
+
+
+/**
+ * @brief Stav mapy stránky 0E000h a příznak Prohibited pro MMIO handler devbus.
+ * @return DEVBUS_MMIO_MAPPED nebo DEVBUS_MMIO_DRAM, případně | DEVBUS_ACC_PROHIBITED.
+ */
+static inline unsigned memory_devbus_map_flags ( void ) {
+    return ( MEMORY_MZ700_MAP_TEST_ROM_E000 ? DEVBUS_MMIO_MAPPED : DEVBUS_MMIO_DRAM )
+           | ( MEMORY_MZ700_MAP_TEST_PROHIBITED ? DEVBUS_ACC_PROHIBITED : 0u );
+}
+
+
+void memory_write_cb_devbus ( z80_t *cpu, uint16_t addr, uint8_t value, void *user_data ) {
+    memory_write_cb ( cpu, addr, value, user_data ); /* základní deska beze změny */
+    if ( ( addr >> 12 ) != 0x0e ) return;
+    devbus_mmio_dispatch ( addr, value, memory_devbus_map_flags ( ) | DEVBUS_ACC_CPU );
+}
+
+
+void memory_write_byte_raw_devbus ( uint16_t addr, uint8_t value ) {
     memory_write_byte_raw ( addr, value );
+    if ( ( addr >> 12 ) != 0x0e ) return;
+    devbus_mmio_dispatch ( addr, value, memory_devbus_map_flags ( ) | DEVBUS_ACC_DEBUGGER );
 }
 
 

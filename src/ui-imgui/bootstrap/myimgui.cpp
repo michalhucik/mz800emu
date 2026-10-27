@@ -26,6 +26,9 @@
 extern "C" void imgui_filechooser_settings_init(void);
 
 #include "mzarch/mzarch_config.h"
+#if MZARCH == 700
+#include "ui-imgui/mz700/devices/devices_ui.h"
+#endif
 #ifdef MZ800EMU_CFG_MCP_SERVER_ENABLED
 /* MCP Activity okno (V1.C.2 mutant mcp-server) - init/shutdown ring
  * bufferu pro real-time log MCP akcí. Bootstrap UI vrstva si vlastní
@@ -468,6 +471,10 @@ gboolean myimgui_init_cb(SdlAppWindow *win, gpointer user_data)
      * (= dispatcher feeduje buffer při každém MCP_ACTION broadcastu).
      * Shutdown ring bufferu je v myimgui_destroy_cb. */
     gui->showMcpActivityWindow = false;
+#if MZARCH == 700
+    /* Specifické UI zařízení devbus (okna, položky podmenu HW & Devices). */
+    mz700_devices_ui_register();
+#endif
 #ifdef MZ800EMU_CFG_MCP_SERVER_ENABLED
     mcp_activity_window_init();
     /* V1.C.3 - action toast subsystém pro destruktivní MCP akce. */

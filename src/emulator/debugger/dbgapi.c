@@ -270,6 +270,9 @@ static void dbgapi_cmt_pulses_to_us ( const st_MZTAPE_PULSES_LENGTH *pulses, dou
 #include "debugger/trace/ramlog_hook.h"
 #include "debugger/trace/bplog.h"
 #include "debugger/coverage/coverage_hook.h"
+#if MZARCH == 700
+#include "mzarch/mz700/devbus/mz700_devbus.h"
+#endif
 
 
 #if CFG_HWEXT_HAVE_FDC
@@ -1103,6 +1106,7 @@ const char *dbgapi_cmd_to_str(en_DBGAPI_CMD cmd)
         case DBGAPI_CMD_BPLOG:                     return "bplog";
         case DBGAPI_CMD_RUN_UNTIL_TICKS:           return "run_until_ticks";
         case DBGAPI_CMD_MACHINE_HASH:              return "machine_hash";
+        case DBGAPI_CMD_DEVBUS_LIST:               return "devbus_list";
         case DBGAPI_CMD_MEMSEARCH_SAMPLE:          return "memsearch_sample";
         case DBGAPI_CMD_FREEZE_LIST:               return "freeze_list";
         /* V1.D.1 - Core + CPU extras Resources */
@@ -2442,6 +2446,10 @@ static int dbgapi_periph_option ( const char *const *names, const char *value, i
  * (výchozí "mz1f11"), u odpojení se ignorují; jednotky fdc "fdc0"/"fdc1"
  * a ide8 "master"/"slave" (výchozí první) platí pro obě operace.
  *
+ * Zařízení devbus (DBGAPI_PERIPH_KIND_DEVBUS, p->devbus_id): devbus_connect()
+ * / devbus_disconnect(); -1 neznámé id, -4 kolize s připojeným zařízením,
+ * -5 connect() selhal, -10 devbus na platformě není.
+ *
  * @param p Parametr příkazu (IN kind, option_value; OUT out_*).
  * @param attach true = připojit, false = odpojit.
  * @return 0 = stav platí; -1 neplatný druh; -4 neplatná varianta nebo
@@ -2452,6 +2460,47 @@ static int dbgapi_periph_option ( const char *const *names, const char *value, i
  * @post p->out_requires_restart = 0; při 0 platí p->out_type (statický
  *       řetězec) a p->out_changed.
  */
+/**
+ * @brief SETTINGS_SET pro volbu zařízení devbus.
+ *
+ * Text hodnoty převede devbus_option_parse() (KEYWORD klíčovým slovem,
+ * BOOL true/false/0/1, UNSIGNED číslo v rozsahu), nastaví ji
+ * devbus_option_set() a zapíše i do elementu INI. out_value = předchozí
+ * hodnota v textové podobě, out_applies podle DEVBUS_OPT_APPLY.
+ *
+ * @param p    Parametr příkazu (IN module, element, new_value; OUT out_*).
+ * @param elm  Element INI volby (sekce zařízení).
+ * @param slot Slot zařízení (z devbus_option_key()).
+ * @param opt  Index volby.
+ * @return true = nastaveno (out_result 0); false = neplatná hodnota (-4).
+ * @pre Emu vlákno (drain dbgapi).
+ */
+static bool dbgapi_settings_set_devbus ( st_DBGAPI_SETTINGS_PARAM *p, st_CFGELEMENT *elm,
+                                         int slot, unsigned opt )
+{
+    const st_DEVBUS_OPTION *o = &devbus_desc ( slot )->options[ opt ];
+    char buf[ 40 ];
+    devbus_option_format ( slot, opt, devbus_option_get ( slot, opt ), buf, sizeof ( buf ) );
+    p->out_value = g_strdup ( buf );
+    p->out_type = ( o->type == DEVBUS_OPT_BOOL ) ? DBGAPI_SETTINGS_TYPE_BOOL
+                : ( o->type == DEVBUS_OPT_KEYWORD ) ? DBGAPI_SETTINGS_TYPE_KEYWORD
+                : DBGAPI_SETTINGS_TYPE_UNSIGNED;
+    unsigned v = 0;
+    if ( !devbus_option_parse ( slot, opt, p->new_value, &v ) ||
+         devbus_option_set ( slot, opt, v ) != DEVBUS_OK )
+    {
+        p->out_result = -4;
+        return false;
+    };
+    if ( o->type == DEVBUS_OPT_BOOL ) cfgelement_set_bool_value ( elm, (int) v );
+    else if ( o->type == DEVBUS_OPT_KEYWORD ) cfgelement_set_keyword_value ( elm, (int) v );
+    else cfgelement_set_unsigned_value ( elm, v );
+    p->out_applies = ( o->apply == DEVBUS_APPLY_LIVE ) ? "now" : "on_connect";
+    p->out_result = 0;
+    return true;
+}
+
+
 static int dbgapi_periph_apply ( st_DBGAPI_PERIPH_PARAM *p, bool attach )
 {
     p->out_requires_restart = 0;
@@ -2563,6 +2612,25 @@ static int dbgapi_periph_apply ( st_DBGAPI_PERIPH_PARAM *p, bool attach )
         case DBGAPI_PERIPH_KIND_GAL5:
             /* V emulátoru není; druh zůstává kvůli zpětné kompatibilitě. */
             return -10;
+
+        case DBGAPI_PERIPH_KIND_DEVBUS:
+        {
+            /* Volitelné zařízení devbus (jen MZ-700): id místo statického
+             * druhu, varianta se ignoruje. Připojení stejnou cestou jako
+             * zásah z menu (devbus_connect() / devbus_disconnect()). */
+            if ( !devbus_is_initialized ( ) ) return -10;
+            int slot = devbus_find ( p->devbus_id );
+            if ( slot < 0 ) return -1;
+            if ( attach != devbus_is_connected ( slot ) )
+            {
+                int rc = attach ? devbus_connect ( slot ) : devbus_disconnect ( slot );
+                if ( rc == DEVBUS_ERR_CONFLICT ) return -4;
+                if ( rc != DEVBUS_OK ) return -5;
+                p->out_changed = 1;
+            };
+            p->out_type = devbus_desc ( slot )->id;
+            return 0;
+        }
 
         default:
             return -1;
@@ -4934,7 +5002,12 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                 rq->success = false;
                 break;
             };
+#if MZARCH == 700
+            /* MZ-700: čistý callback z adaptéru devbus (porty zařízení). */
+            p->value = g_mz700_cpu_ops.pread ( g_mzarch_main.cpu, p->port, NULL );
+#else
             p->value = port_read_cb ( g_mzarch_main.cpu, p->port, NULL );
+#endif
             rq->success = true;
             break;
         }
@@ -4952,7 +5025,12 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                 rq->success = false;
                 break;
             };
+#if MZARCH == 700
+            /* MZ-700: čistý callback z adaptéru devbus (porty zařízení). */
+            g_mz700_cpu_ops.pwrite ( g_mzarch_main.cpu, p->port, p->value, NULL );
+#else
             port_write_cb ( g_mzarch_main.cpu, p->port, p->value, NULL );
+#endif
             rq->success = true;
             break;
         }
@@ -5843,6 +5921,34 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
             break;
         }
 
+        /* --- Výpis zařízení devbus (dev-api D1) ---
+         * Dynamický stav (připojení, volby, MMIO masky) čte emu vlákno;
+         * neměnný deskriptor si volající přečte sám. */
+        case DBGAPI_CMD_DEVBUS_LIST:
+        {
+            st_DBGAPI_DEVBUS_LIST_PARAM *p = (st_DBGAPI_DEVBUS_LIST_PARAM *) rq->data_ptr;
+            if ( !p )
+            {
+                rq->success = false;
+                break;
+            };
+            memset ( p, 0, sizeof ( *p ) );
+            p->initialized = devbus_is_initialized ( ) ? 1 : 0;
+            p->count = devbus_count ( );
+            for ( unsigned i = 0; i < p->count && i < DEVBUS_MAX_DEVICES; i++ )
+            {
+                const st_DEVBUS_DEVICE_DESC *d = devbus_desc ( (int) i );
+                p->dev[ i ].slot = (int) i;
+                p->dev[ i ].connected = devbus_is_connected ( (int) i ) ? 1 : 0;
+                for ( unsigned o = 0; o < d->option_count; o++ )
+                    p->dev[ i ].opt[ o ] = devbus_option_get ( (int) i, o );
+                for ( unsigned m = 0; m < d->mmio_count; m++ )
+                    p->dev[ i ].mmio_when[ m ] = devbus_mmio_get_when ( (int) i, m );
+            };
+            rq->success = true;
+            break;
+        }
+
         /* --- Otisk stroje po částech (machine-hash M19) ---
          * Čte stav emulátoru bez zámku, proto v emu vlákně; stav nemění. */
         case DBGAPI_CMD_MACHINE_HASH:
@@ -6623,6 +6729,18 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                 rq->success = false;
                 break;
             };
+            /* Volba zařízení devbus: ověření a nastavení přes devbus (LIVE
+             * volba připojeného zařízení se projeví hned), hodnota i do
+             * elementu, aby settings_get a INI viděly totéž. */
+            {
+                unsigned dopt = 0;
+                int dslot = devbus_option_key ( p->module, p->element, &dopt );
+                if ( dslot >= 0 )
+                {
+                    rq->success = dbgapi_settings_set_devbus ( p, elm, dslot, dopt );
+                    break;
+                };
+            }
             switch ( elm->type )
             {
                 case CFGENTYPE_UNSIGNED:

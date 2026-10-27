@@ -289,6 +289,16 @@ bug can be studied again and again with other breakpoints or trace, and
 stops at the first frame where the state differs. `--replay-verify` checks
 a recorded run in CI. For details see [`replay.md`](replay.md).
 
+## Expansion devices (MZ-700)
+
+The MZ-700 emulator can connect optional expansion units of the real MZ-700
+from the menu **HW & Devices** (each unit has its own submenu with the
+options); by default none is connected.
+
+| Unit | Description |
+|------|-------------|
+| PCG-700 (HAL) | programmable character generator, 2 KB RAM for the characters 80h-FFh, see [devices/pcg700.md](devices/pcg700.md) |
+
 ## MAX SPEED benchmark
 
 Measuring emulation efficiency in MAX SPEED mode - how much "real MZ-800 time"

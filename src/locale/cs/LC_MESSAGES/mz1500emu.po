@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mz800emu 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-22 19:04+0200\n"
+"POT-Creation-Date: 2026-10-26 23:48+0100\n"
 "PO-Revision-Date: 2026-03-11 21:00+0100\n"
 "Last-Translator: Michal Hucik <hucik@ordoz.com>\n"
 "Language-Team: Czech\n"
@@ -62,41 +62,41 @@ msgstr ""
 "Adresa = 0x%04x\n"
 "Instrukce = '%s'\n"
 
-#: src/emulator/emulator.c:451
+#: src/emulator/emulator.c:454
 #: src/ui-imgui/mcp_activity/mcp_activity_window.cpp:425
 #: src/ui-imgui/videorec/videorec_menu.cpp:140
 msgid "PAUSED"
 msgstr "POZASTAVENO"
 
-#: src/emulator/emulator.c:454
+#: src/emulator/emulator.c:457
 msgid "Max speed"
 msgstr "Maximální rychlost"
 
-#: src/emulator/emulator.c:457
+#: src/emulator/emulator.c:460
 msgid "Custom speed"
 msgstr "Vlastní rychlost"
 
-#: src/emulator/emulator.c:459
+#: src/emulator/emulator.c:462
 msgid "Normal speed"
 msgstr "Normální rychlost"
 
-#: src/emulator/hw-generic/cmt/cmt.c:592
+#: src/emulator/hw-generic/cmt/cmt.c:593
 msgid "Create a new WAV file"
 msgstr "Vytvořit nový WAV soubor"
 
-#: src/emulator/hw-generic/cmt/cmt.c:592
+#: src/emulator/hw-generic/cmt/cmt.c:593
 msgid "newfile.wav"
 msgstr "newfile.wav"
 
-#: src/emulator/hw-generic/cmt/cmt.c:1139
+#: src/emulator/hw-generic/cmt/cmt.c:1186
 msgid "All Supported CMT Files"
 msgstr "Všechny podporované CMT soubory"
 
-#: src/emulator/hw-generic/cmt/cmt.c:1140
+#: src/emulator/hw-generic/cmt/cmt.c:1187
 msgid "Tape Files"
 msgstr "Soubory pásek"
 
-#: src/emulator/hw-generic/cmt/cmt.c:1217
+#: src/emulator/hw-generic/cmt/cmt.c:1264
 msgid "Select CMT file to open"
 msgstr "Vyberte CMT soubor k otevření"
 
@@ -104,7 +104,7 @@ msgstr "Vyberte CMT soubor k otevření"
 msgid "Select a MZF File"
 msgstr "Vyberte MZF soubor"
 
-#: src/emulator/hw-generic/fdc/fdc.c:1204
+#: src/emulator/hw-generic/fdc/fdc.c:1245
 #, c-format
 msgid "Select DSK image file for FDC%u drive FD%d"
 msgstr "Vyberte soubor obrazu DSK pro FDC%u mechaniku FD%d"
@@ -117,7 +117,7 @@ msgstr "Vyberte existující .MZQ soubor nebo vytvořte nový QD obraz"
 msgid "Select directory to mount as virtual Quick Disk"
 msgstr "Vyberte adresář pro připojení jako virtuální Quick Disk"
 
-#: src/emulator/hw-generic/unicard/unicard.c:2329
+#: src/emulator/hw-generic/unicard/unicard.c:2370
 msgid "Select SD root directory for Unicard"
 msgstr "Vyberte kořenový adresář SD pro Unicard"
 
@@ -153,47 +153,47 @@ msgstr "Vlastní pulzy"
 msgid "UNKNOWN"
 msgstr "NEZNÁMÝ"
 
-#: src/ui/vkbd/ui_vkbd.c:206
+#: src/ui/vkbd/ui_vkbd.c:207
 msgid "PC key: CapsLock"
 msgstr "Klávesa PC: CapsLock"
 
-#: src/ui/vkbd/ui_vkbd.c:209
+#: src/ui/vkbd/ui_vkbd.c:210
 msgid "PC key: \\"
 msgstr "Klávesa PC: \\"
 
-#: src/ui/vkbd/ui_vkbd.c:212
+#: src/ui/vkbd/ui_vkbd.c:213
 msgid "PC key: \\ or Tab"
 msgstr "Klávesa PC: \\ nebo Tab"
 
-#: src/ui/vkbd/ui_vkbd.c:215
+#: src/ui/vkbd/ui_vkbd.c:216
 msgid "PC key: ~"
 msgstr "Klávesa PC: ~"
 
-#: src/ui/vkbd/ui_vkbd.c:217
+#: src/ui/vkbd/ui_vkbd.c:218
 msgid "PC key: Esc or End"
 msgstr "Klávesa PC: Esc nebo End"
 
-#: src/ui/vkbd/ui_vkbd.c:219
+#: src/ui/vkbd/ui_vkbd.c:220
 msgid "PC key: Insert"
 msgstr "Klávesa PC: Insert"
 
-#: src/ui/vkbd/ui_vkbd.c:221
+#: src/ui/vkbd/ui_vkbd.c:222
 msgid "PC key: Backspace or Delete"
 msgstr "Klávesa PC: Backspace nebo Delete"
 
-#: src/ui/vkbd/ui_vkbd.c:223
+#: src/ui/vkbd/ui_vkbd.c:224
 msgid "PC key: F6"
 msgstr "Klávesa PC: F6"
 
-#: src/ui/vkbd/ui_vkbd.c:225
+#: src/ui/vkbd/ui_vkbd.c:226
 msgid "PC key: F7"
 msgstr "Klávesa PC: F7"
 
-#: src/ui/vkbd/ui_vkbd.c:227
+#: src/ui/vkbd/ui_vkbd.c:228
 msgid "PC key: F8"
 msgstr "Klávesa PC: F8"
 
-#: src/ui/vkbd/ui_vkbd.c:229
+#: src/ui/vkbd/ui_vkbd.c:230
 msgid "PC key: F9"
 msgstr "Klávesa PC: F9"
 
@@ -493,7 +493,7 @@ msgstr "Zachytit zvuk (%s) spustí a zastaví zachycení."
 #: src/ui-imgui/debugger/sections/dbg_cpu_panel.cpp:2421
 #: src/ui-imgui/dsk/dsk_create_window.cpp:104
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:109
-#: src/ui-imgui/joy/joy_setup_window.cpp:567
+#: src/ui-imgui/joy/joy_setup_window.cpp:584
 #: src/ui-imgui/message/message_window.cpp:139
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:442
 #: src/ui-imgui/snapshot/snapshot_notification.cpp:95
@@ -508,12 +508,12 @@ msgstr "OK"
 #: src/ui-imgui/debugger/sections/dbg_focus_to.cpp:264
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:104
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:111
-#: src/ui-imgui/joy/joy_setup_window.cpp:579
+#: src/ui-imgui/joy/joy_setup_window.cpp:596
 #: src/ui-imgui/memext/memext_load_dialog.cpp:188
 #: src/ui-imgui/memext/memext_map_window.cpp:291
 #: src/ui-imgui/memext/memext_save_dialog.cpp:207
 #: src/ui-imgui/ramdisk/pezik_settings_window.cpp:289
-#: src/ui-imgui/rom/rom_settings_window.cpp:323
+#: src/ui-imgui/rom/rom_settings_window.cpp:305
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:447
 #: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:127
 #: src/ui-imgui/snapshot/snapshot_setup_dialog.cpp:176
@@ -613,116 +613,116 @@ msgstr "Zobrazit/skrýt toto okno: %s"
 msgid "Invalid character at position"
 msgstr "Neplatný znak na pozici"
 
-#: src/ui-imgui/autotype/autotype_window.cpp:166
+#: src/ui-imgui/autotype/autotype_window.cpp:161
 #: src/ui-imgui/topmenu/interface/menu_keyjoy.cpp:29
 msgid "Autotype Buffer"
 msgstr "Autotype buffer"
 
-#: src/ui-imgui/autotype/autotype_window.cpp:188
+#: src/ui-imgui/autotype/autotype_window.cpp:183
 msgid "Autotype!"
 msgstr "Autotype!"
 
-#: src/ui-imgui/autotype/autotype_window.cpp:189
+#: src/ui-imgui/autotype/autotype_window.cpp:184
 msgid "Stop!"
 msgstr "Stop!"
 
-#: src/ui-imgui/autotype/autotype_window.cpp:204
+#: src/ui-imgui/autotype/autotype_window.cpp:199
 msgid "Text buffer is empty"
 msgstr "Textový buffer je prázdný"
 
-#: src/ui-imgui/autotype/autotype_window.cpp:218
+#: src/ui-imgui/autotype/autotype_window.cpp:213
 msgid "Key down"
 msgstr "Stisk klávesy"
 
-#: src/ui-imgui/autotype/autotype_window.cpp:237
+#: src/ui-imgui/autotype/autotype_window.cpp:232
 msgid "Key up"
 msgstr "Uvolnění klávesy"
 
-#: src/ui-imgui/autotype/autotype_window.cpp:288
+#: src/ui-imgui/autotype/autotype_window.cpp:283
 msgid "Characters"
 msgstr "Znaky"
 
-#: src/ui-imgui/autotype/autotype_window.cpp:298
+#: src/ui-imgui/autotype/autotype_window.cpp:293
 msgid "Typed"
 msgstr "Napsáno"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:156
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:158
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:177
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:179
 msgid "MZF Size Warning"
 msgstr "Upozornění na velikost MZF"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:167
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:188
 msgid "MZF file"
 msgstr "MZF soubor"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:175
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:196
 msgid "Exceeded bytes"
 msgstr "Přebytečné bajty"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:187
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:208
 msgid "This MZF file is a bit bigger than it should be."
 msgstr "Tento MZF soubor je o něco větší, než by měl být."
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:189
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:210
 msgid "This could arise, for example, when the MZF file is exported from cp/m."
 msgstr "To může nastat například, když je MZF soubor exportován z cp/m."
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:190
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:211
 msgid "You can ignore it, or truncate the original file."
 msgstr "Můžete to ignorovat, nebo zkrátit původní soubor."
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:191
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:212
 msgid ""
 "Is recommended to use the Save as, for create truncated copy of this file."
 msgstr ""
 "Doporučuje se použít Uložit jako, pro vytvoření zkrácené kopie tohoto "
 "souboru."
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:198
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:219
 msgid "MZF size check enabled"
 msgstr "Kontrola velikosti MZF zapnuta"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:212
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:233
 msgid "Ignore"
 msgstr "Ignorovat"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:221
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:242
 msgid "Truncate"
 msgstr "Zkrátit"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:239
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:260
 msgid "Save As"
 msgstr "Uložit jako"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:251
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:271
 msgid "Save MZF file as"
 msgstr "Uložit MZF soubor jako"
 
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:198
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:214
 msgid "Tape Filelist"
 msgstr "Seznam souborů na pásce"
 
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:236
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:260 src/ui-imgui/cmt/cmt_window.cpp:213
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:252
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:276 src/ui-imgui/cmt/cmt_window.cpp:214
 #: src/ui-imgui/debugger/sections/dbg_stack_panel.cpp:2677
 #: src/ui-imgui/debugger/vars/vars_window.cpp:1502
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1696
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1697
 msgid "Name"
 msgstr "Název"
 
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:237
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:263 src/ui-imgui/cmt/cmt_window.cpp:212
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:253
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:279 src/ui-imgui/cmt/cmt_window.cpp:213
 #: src/ui-imgui/debugger/memsearch_window/memsearch_window.cpp:576
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1700
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1701
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:132
-#: src/ui-imgui/joy/joy_setup_window.cpp:240
+#: src/ui-imgui/joy/joy_setup_window.cpp:257
 #: src/ui-imgui/memext/memext_map_window.cpp:105
 #: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:155
 msgid "Type"
 msgstr "Typ"
 
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:238
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:266
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:254
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:282
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:133
 #: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:209
 #: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:211
@@ -731,85 +731,85 @@ msgstr "Typ"
 msgid "Size"
 msgstr "Velikost"
 
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:239
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:269
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:255
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:285
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:416
 msgid "Start"
 msgstr "Start"
 
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:240
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:272
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:256
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:288
 msgid "Exec"
 msgstr "Exec"
 
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:241
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:275 src/ui-imgui/cmt/cmt_window.cpp:214
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:257
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:291 src/ui-imgui/cmt/cmt_window.cpp:215
 #: src/ui-imgui/topmenu/menu_speed.cpp:27
 msgid "Speed"
 msgstr "Rychlost"
 
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:242
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:278
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:258
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:294
 msgid "Length"
 msgstr "Délka"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:65
+#: src/ui-imgui/cmt/cmt_window.cpp:66
 msgid "Playing time:"
 msgstr "Doba přehrávání:"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:69
+#: src/ui-imgui/cmt/cmt_window.cpp:70
 msgid "Remaining time:"
 msgstr "Zbývající čas:"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:81 src/ui-imgui/cmt/cmt_window.cpp:789
+#: src/ui-imgui/cmt/cmt_window.cpp:82 src/ui-imgui/cmt/cmt_window.cpp:790
 msgid "CMT Hack"
 msgstr "CMT Hack"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:90
+#: src/ui-imgui/cmt/cmt_window.cpp:91
 msgid "CPU Boost"
 msgstr "CPU Boost"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:127
+#: src/ui-imgui/cmt/cmt_window.cpp:128
 msgid "Click here to change the time info mode."
 msgstr "Klikněte zde pro změnu režimu zobrazení času."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:211
+#: src/ui-imgui/cmt/cmt_window.cpp:212
 msgid "Block"
 msgstr "Blok"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:211
+#: src/ui-imgui/cmt/cmt_window.cpp:212
 msgid "of"
 msgstr "z"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:212
+#: src/ui-imgui/cmt/cmt_window.cpp:213
 msgid "FSize"
 msgstr "FSize"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:213
+#: src/ui-imgui/cmt/cmt_window.cpp:214
 msgid "FExec"
 msgstr "FExec"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:214
+#: src/ui-imgui/cmt/cmt_window.cpp:215
 msgid "FStart"
 msgstr "FStart"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:215
+#: src/ui-imgui/cmt/cmt_window.cpp:216
 msgid "Stream"
 msgstr "Stream"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:216
+#: src/ui-imgui/cmt/cmt_window.cpp:217
 msgid "Rate"
 msgstr "Rate"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:216
+#: src/ui-imgui/cmt/cmt_window.cpp:217
 msgid "SSize"
 msgstr "SSize"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:439
+#: src/ui-imgui/cmt/cmt_window.cpp:440
 msgid "Default MZ Speed:"
 msgstr "Výchozí MZ rychlost:"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:720
+#: src/ui-imgui/cmt/cmt_window.cpp:721
 msgid ""
 "Recording a replay: tape control is recorded; another tape and speed "
 "settings are not available."
@@ -817,59 +817,59 @@ msgstr ""
 "Záznam vstupů: ovládání kazety se zaznamenává; jiná páska a nastavení "
 "rychlosti nejsou k dispozici."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:724
+#: src/ui-imgui/cmt/cmt_window.cpp:725
 msgid "Tape control is not available while a replay is recorded or played."
 msgstr "Ovládání kazety není během záznamu nebo přehrávání vstupů k dispozici."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:761 src/ui-imgui/cmt/cmt_window.cpp:878
+#: src/ui-imgui/cmt/cmt_window.cpp:762 src/ui-imgui/cmt/cmt_window.cpp:879
 msgid "Virtual CMT"
 msgstr "Virtuální CMT"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:798
+#: src/ui-imgui/cmt/cmt_window.cpp:799
 msgid "CMT Hack is activated!"
 msgstr "CMT Hack je aktivován!"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:799
+#: src/ui-imgui/cmt/cmt_window.cpp:800
 msgid "Virtual CMT is not available!"
 msgstr "Virtuální CMT není k dispozici!"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:805
+#: src/ui-imgui/cmt/cmt_window.cpp:806
 #: src/ui-imgui/version_check/imgui_version_check.cpp:390
 msgid "Close"
 msgstr "Zavřít"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:827
+#: src/ui-imgui/cmt/cmt_window.cpp:828
 msgid "No tape loaded"
 msgstr "Není vložena páska"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:836
+#: src/ui-imgui/cmt/cmt_window.cpp:837
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:363
 #: src/ui-imgui/topmenu/replay_window.cpp:205
 msgid "Recording"
 msgstr "Nahrávání"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:846
+#: src/ui-imgui/cmt/cmt_window.cpp:847
 #: src/ui-imgui/topmenu/replay_window.cpp:213
 msgid "Playing"
 msgstr "Přehrávání"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:861
+#: src/ui-imgui/cmt/cmt_window.cpp:862
 msgid "Stopped - Ready to Play"
 msgstr "Zastaveno - Připraveno k přehrávání"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:868
+#: src/ui-imgui/cmt/cmt_window.cpp:869
 msgid "(paused)"
 msgstr "(pozastaveno)"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:890
+#: src/ui-imgui/cmt/cmt_window.cpp:891
 msgid "*** Empty ***"
 msgstr "*** Prázdný ***"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:896
+#: src/ui-imgui/cmt/cmt_window.cpp:897
 msgid "Recording (paused)"
 msgstr "Nahrávání (pozastaveno)"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:900
+#: src/ui-imgui/cmt/cmt_window.cpp:901
 msgid "Recording.."
 msgstr "Nahrávání.."
 
@@ -929,7 +929,7 @@ msgstr "Přidat novou záložku (rozbalí formulář níže)."
 
 #: src/ui-imgui/debugger/bookmarks/bm_window.cpp:283
 #: src/ui-imgui/debugger/vars/vars_window.cpp:562
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1250
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1251
 msgid "Filter:"
 msgstr "Filtr:"
 
@@ -949,7 +949,7 @@ msgstr "Vymazat##bm_filter_clr"
 
 #: src/ui-imgui/debugger/bookmarks/bm_window.cpp:299
 #: src/ui-imgui/debugger/vars/vars_window.cpp:573
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1263
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1264
 msgid "Clear the filter text."
 msgstr "Vymazat text filtru."
 
@@ -959,7 +959,7 @@ msgstr "Počet viditelných / celkový počet záložek."
 
 #: src/ui-imgui/debugger/bookmarks/bm_window.cpp:309
 #: src/ui-imgui/debugger/vars/vars_window.cpp:580
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1282
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1283
 msgid "Selected:"
 msgstr "Vybráno:"
 
@@ -1135,7 +1135,7 @@ msgid "Label"
 msgstr "Název"
 
 #: src/ui-imgui/debugger/bookmarks/bm_window.cpp:981
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1154
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1188
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:314
 msgid "Address"
 msgstr "Adresa"
@@ -1272,7 +1272,7 @@ msgid "(root)"
 msgstr "(kořen)"
 
 #: src/ui-imgui/debugger/breakpoints/bpt_edit_panel.cpp:1370
-#: src/ui-imgui/debugger/watch/watch_window.cpp:498
+#: src/ui-imgui/debugger/watch/watch_window.cpp:499
 #: src/ui-imgui/memext/memext_save_dialog.cpp:132
 msgid "Type:"
 msgstr "Typ:"
@@ -1374,7 +1374,7 @@ msgstr "Offset:"
 #: src/ui-imgui/debugger/breakpoints/bpt_edit_panel.cpp:1537
 #: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1687
 #: src/ui-imgui/debugger/sections/dbg_focus_to.cpp:211
-#: src/ui-imgui/debugger/watch/watch_window.cpp:465
+#: src/ui-imgui/debugger/watch/watch_window.cpp:466
 msgid "Address:"
 msgstr "Adresa:"
 
@@ -1508,7 +1508,7 @@ msgstr "(vyberte událost)"
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:1756
 #: src/ui-imgui/debugger/pioz80_window.cpp:424
 #: src/ui-imgui/debugger/pioz80_window.cpp:471
-#: src/ui-imgui/debugger/ppi_window.cpp:406
+#: src/ui-imgui/debugger/ppi_window.cpp:409
 #: src/ui-imgui/debugger/sections/dbg_stack_panel.cpp:1302
 msgid "(none)"
 msgstr "(žádný)"
@@ -1582,7 +1582,7 @@ msgstr ""
 #: src/ui-imgui/debugger/breakpoints/bpt_edit_panel.cpp:1854
 #: src/ui-imgui/debugger/breakpoints/bpt_edit_panel.cpp:2425
 #: src/ui-imgui/debugger/heatmap/mhmap_window.cpp:686
-#: src/ui-imgui/debugger/watch/watch_window.cpp:444
+#: src/ui-imgui/debugger/watch/watch_window.cpp:445
 msgid "Mode:"
 msgstr "Režim:"
 
@@ -1863,7 +1863,7 @@ msgstr "Automaticky generovaný název##bpt_panel"
 #: src/ui-imgui/debugger/breakpoints/bpt_edit_panel.cpp:2295
 #: src/ui-imgui/debugger/breakpoints/bpt_edit_panel.cpp:2647
 #: src/ui-imgui/debugger/vars/vars_window.cpp:812
-#: src/ui-imgui/debugger/watch/watch_window.cpp:488
+#: src/ui-imgui/debugger/watch/watch_window.cpp:489
 msgid "Name:"
 msgstr "Název:"
 
@@ -2436,7 +2436,7 @@ msgstr "Pole"
 #: src/ui-imgui/debugger/psg_window.cpp:459
 #: src/ui-imgui/debugger/psg_window.cpp:537
 #: src/ui-imgui/debugger/vars/vars_window.cpp:1504
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1702
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1703
 msgid "Value"
 msgstr "Hodnota"
 
@@ -2666,7 +2666,7 @@ msgstr "Zaměřit na cíl"
 #: src/ui-imgui/debugger/dasm_window/dasm_window.cpp:669
 #: src/ui-imgui/debugger/memmap/memmap_window.cpp:1202
 #: src/ui-imgui/debugger/memmap/memmap_window.cpp:1241
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1698
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1699
 msgid "Addr"
 msgstr "Adr"
 
@@ -2919,7 +2919,7 @@ msgid "Hide noise"
 msgstr "Skrýt šum"
 
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:1149
-#: src/ui-imgui/debugger/ioview/io_window.cpp:995
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1006
 #: src/ui-imgui/debugger/symbols/sym_window.cpp:619
 msgid "Clear filter"
 msgstr "Vymazat filtr"
@@ -3088,7 +3088,7 @@ msgid "Warning: saving an empty filter (matches all events)."
 msgstr "Upozornění: ukládáte prázdný filtr (odpovídá všem událostem)."
 
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:1901
-#: src/ui-imgui/debugger/watch/watch_window.cpp:476
+#: src/ui-imgui/debugger/watch/watch_window.cpp:477
 msgid "Expression:"
 msgstr "Výraz:"
 
@@ -3202,8 +3202,8 @@ msgstr ""
 "záložkou Strip)."
 
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:2155
-#: src/ui-imgui/joy/joy_setup_window.cpp:416
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:308
+#: src/ui-imgui/joy/joy_setup_window.cpp:433
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:320
 msgid "None"
 msgstr "Žádné"
 
@@ -3716,13 +3716,13 @@ msgstr "FDC State"
 
 #: src/ui-imgui/debugger/fdc_window.cpp:198
 #: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:403
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:312
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:324
 msgid "FDC0 (standard)"
 msgstr "FDC0 (standardní)"
 
 #: src/ui-imgui/debugger/fdc_window.cpp:199
 #: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:409
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:316
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:328
 msgid "FDC1 (secondary)"
 msgstr "FDC1 (sekundární)"
 
@@ -4429,11 +4429,11 @@ msgstr "Mechanika Master"
 msgid "Drive Slave"
 msgstr "Mechanika Slave"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:481
+#: src/ui-imgui/debugger/ioview/io_window.cpp:491
 msgid "(no bit-level decode available)"
 msgstr "(bit-level dekód není k dispozici)"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:636
+#: src/ui-imgui/debugger/ioview/io_window.cpp:646
 msgid ""
 "16-bit CRTC family port. Bus addr is 0x<RR>CF (Z80 OUT (C),A pattern with "
 "B=register index, C=0xCF). MZ notation 0xCF<RR> is human-readable display."
@@ -4441,52 +4441,52 @@ msgstr ""
 "16bitový port rodiny CRTC. Sběrnicová adresa je 0x<RR>CF (Z80 vzor OUT (C),A "
 "s B=index registru, C=0xCF). MZ notace 0xCF<RR> je člověku čitelné zobrazení."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:654
+#: src/ui-imgui/debugger/ioview/io_window.cpp:664
 msgid "Add IORQ R BP##ioctx"
 msgstr "Přidat IORQ R BP##ioctx"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:657
+#: src/ui-imgui/debugger/ioview/io_window.cpp:667
 msgid "Add IORQ W BP##ioctx"
 msgstr "Přidat IORQ W BP##ioctx"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:661
+#: src/ui-imgui/debugger/ioview/io_window.cpp:671
 msgid "Add MEM R BP##ioctx"
 msgstr "Přidat MEM R BP##ioctx"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:664
+#: src/ui-imgui/debugger/ioview/io_window.cpp:674
 msgid "Add MEM W BP##ioctx"
 msgstr "Přidat MEM W BP##ioctx"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:669
+#: src/ui-imgui/debugger/ioview/io_window.cpp:679
 msgid "Reset activity counter##ioctx"
 msgstr "Reset čítače aktivity##ioctx"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:681
+#: src/ui-imgui/debugger/ioview/io_window.cpp:691
 msgid "Show in History tab##ioctx"
 msgstr "Zobrazit v záložce Historie##ioctx"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:718
+#: src/ui-imgui/debugger/ioview/io_window.cpp:728
 msgid "Show in Memory Map##ioctx"
 msgstr "Zobrazit v Memory Map##ioctx"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:813
+#: src/ui-imgui/debugger/ioview/io_window.cpp:823
 #, c-format
 msgid "Last cached value %u frames ago"
 msgstr "Poslední cachovaná hodnota před %u snímky"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:820
+#: src/ui-imgui/debugger/ioview/io_window.cpp:830
 msgid "No data captured (port has no mirror and no IORQ event yet)"
 msgstr "Žádná data zachycena (port nemá mirror a zatím nemá IORQ událost)"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:849
+#: src/ui-imgui/debugger/ioview/io_window.cpp:859
 msgid "Hits per second over last 1s window (50 buckets)"
 msgstr "Zásahy za sekundu v okně poslední 1 s (50 přihrádek)"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:855
+#: src/ui-imgui/debugger/ioview/io_window.cpp:865
 msgid "Tracking disabled (panel closed or toggled off)"
 msgstr "Sledování zakázáno (panel zavřený nebo vypnutý)"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:879
+#: src/ui-imgui/debugger/ioview/io_window.cpp:889
 msgid ""
 "MMIO events (0xE000-0xE008) are always recorded (per-port filter applies to "
 "8-bit IORQ space only)"
@@ -4494,7 +4494,7 @@ msgstr ""
 "MMIO události (0xE000-0xE008) jsou zaznamenávány vždy (filtr per port se "
 "vztahuje pouze na 8bitový IORQ prostor)"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:893
+#: src/ui-imgui/debugger/ioview/io_window.cpp:903
 msgid ""
 "Record IORQ events for this port into History ring buffer. Uncheck to skip "
 "high-frequency ports and preserve ring capacity for events of interest."
@@ -4503,12 +4503,12 @@ msgstr ""
 "Odškrtněte pro přeskočení vysokofrekvenčních portů a zachování kapacity "
 "bufferu pro zajímavé události."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:981
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1888
+#: src/ui-imgui/debugger/ioview/io_window.cpp:992
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1896
 msgid "Filter..."
 msgstr "Filtr..."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:987
+#: src/ui-imgui/debugger/ioview/io_window.cpp:998
 msgid ""
 "Filter visible ports (case-insensitive substring match on name, address hex, "
 "or direction r/w/rw)."
@@ -4516,35 +4516,35 @@ msgstr ""
 "Filtrovat viditelné porty (shoda podřetězce bez ohledu na velikost písmen v "
 "názvu, hex adrese nebo směru r/w/rw)."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:991
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1002
 msgid "Clear##io_clear_filter"
 msgstr "Vymazat##io_clear_filter"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1001
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1012
 msgid "Reset Activity##io_reset_act"
 msgstr "Reset aktivity##io_reset_act"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1008
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1019
 msgid "Clear activity counters for all 256 ports"
 msgstr "Vymazat čítače aktivity pro všech 256 portů"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1014
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2002
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1025
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2010
 #: src/ui-imgui/debugger/sections/dbg_coverage.cpp:340
 msgid "Capacity:"
 msgstr "Kapacita:"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1048
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2032
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1059
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2040
 msgid "History buffer size. Resize discards existing events."
 msgstr "Velikost bufferu historie. Změna velikosti zahodí stávající události."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1056
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1067
 msgid "Track##io_track"
 msgstr "Sledovat##io_track"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1061
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2050
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1072
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2058
 msgid ""
 "Enable IORQ activity + history capture (gated). Default ON when panel is "
 "open. Toggle off to reduce overhead."
@@ -4552,75 +4552,75 @@ msgstr ""
 "Povolit zachycení IORQ aktivity + historie (řízené). Výchozí ON, když je "
 "panel otevřený. Vypněte pro snížení režie."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1076
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1087
 msgid "Heat...##io_heat_btn"
 msgstr "Heat...##io_heat_btn"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1081
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1092
 msgid "Configure activity heat coloring thresholds."
 msgstr "Nastavit prahy heat obarvení aktivity."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1084
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1095
 msgid "Heat coloring thresholds (hits/s):"
 msgstr "Prahy heat obarvení (zásahy/s):"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1087
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1098
 msgid "Text active (green)##io_heat_text"
 msgstr "Text aktivní (zelená)##io_heat_text"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1098
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1109
 msgid "Minimum hits/s to color row text green. Default 1."
 msgstr "Minimum zásahů/s pro obarvení textu řádku zeleně. Výchozí 1."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1101
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1112
 msgid "Bg hot tint (red)##io_heat_bg"
 msgstr "Pozadí horké (červená)##io_heat_bg"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1112
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1123
 msgid ""
 "Minimum hits/s for red row background tint (bottleneck warn). Default 10000."
 msgstr ""
 "Minimum zásahů/s pro červené tónování pozadí řádku (varování úzkého hrdla). "
 "Výchozí 10000."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1116
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1127
 msgid "Reset to defaults##io_heat_reset"
 msgstr "Obnovit výchozí##io_heat_reset"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1156
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1167
 msgid "No ports match filter"
 msgstr "Žádné porty neodpovídají filtru"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1647
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1655
 msgid "(no selection)"
 msgstr "(nic nevybráno)"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1648
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1656
 msgid "Click a row to see details"
 msgstr "Kliknutím na řádek zobrazíte detaily"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1660
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1668
 msgid "Selected event:"
 msgstr "Vybraná událost:"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1694
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1702
 msgid "Focus to primary disassembly. Right-click for additional actions."
 msgstr "Zaměřit na primární Disasm. Pravý klik pro další akce."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1735
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1743
 msgid "Focus to..."
 msgstr "Zaměřit na..."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1754
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1762
 #: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3387
 msgid "Add to bookmarks"
 msgstr "Přidat do záložek"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1773
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1781
 msgid "Add breakpoint"
 msgstr "Přidat breakpoint"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1894
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1902
 msgid ""
 "Filter syntax (boolean expression):\n"
 "Atoms (leaf tokens):\n"
@@ -4672,23 +4672,23 @@ msgstr ""
 "  (port:CE pc:42) | port:CF  skupina OR skupina\n"
 "  !(in | out)                ani IN ani OUT"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1920
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1928
 msgid "Clear##io_hist_clear"
 msgstr "Vymazat##io_hist_clear"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1954
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1962
 msgid "Latest##io_hist_latest"
 msgstr "Nejnovější##io_hist_latest"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1960
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1968
 msgid "Re-enable auto-follow and scroll to latest event"
 msgstr "Znovu povolit auto-follow a posunout na nejnovější událost"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1964
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1972
 msgid "Auto-follow##io_hist_af"
 msgstr "Auto-follow##io_hist_af"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1976
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1984
 msgid ""
 "Auto-scroll History tab to latest event. User scroll up disables follow; "
 "click [Latest] re-enables."
@@ -4696,27 +4696,27 @@ msgstr ""
 "Automaticky posouvat záložku Historie na nejnovější událost. Posun "
 "uživatelem nahoru vypne follow; klik na [Nejnovější] jej znovu povolí."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1982
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1990
 msgid "Clear history##io_hist_purge"
 msgstr "Vymazat historii##io_hist_purge"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1993
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2001
 msgid "Discard all recorded IORQ events"
 msgstr "Zahodit všechny zaznamenané IORQ události"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2038
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2046
 msgid "Track##io_hist_track"
 msgstr "Sledovat##io_hist_track"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2057
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2065
 msgid "Filter error"
 msgstr "Chyba filtru"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2196
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2204
 msgid "Filter actions for this event:"
 msgstr "Akce filtru pro tuto událost:"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2475
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2483
 msgid ""
 "Wraps the current filter in parentheses, then appends ' & token'. Use to AND-"
 "narrow an OR chain (parser precedence: & binds tighter than |)."
@@ -4724,7 +4724,7 @@ msgstr ""
 "Obalí aktuální filtr závorkami a přidá ' & token'. Použijte pro zúžení OR "
 "řetězce přes AND (priorita parseru: & váže silněji než |)."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2479
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2487
 msgid ""
 "Wraps the current filter in parentheses, then appends ' | token'. Use when "
 "the current filter is itself an AND chain that should be OR-extended as a "
@@ -4733,15 +4733,15 @@ msgstr ""
 "Obalí aktuální filtr závorkami a přidá ' | token'. Použijte, když je "
 "aktuální filtr sám AND řetězcem, který má být jako celek rozšířen přes OR."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2775
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2783
 msgid "I/O Ports###io_main"
 msgstr "I/O Porty###io_main"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2811
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2819
 msgid "Overview##io_tab_ov"
 msgstr "Přehled##io_tab_ov"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2825
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2833
 msgid "History##io_tab_hist"
 msgstr "Historie##io_tab_hist"
 
@@ -5136,7 +5136,7 @@ msgstr "Příklad: \"AA BB CC\" nebo \"DEADBEEF\" - max 64 bajtů"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_fill_dialog.cpp:262
 #: src/ui-imgui/debugger/sections/dbg_focus_to.cpp:274
-#: src/ui-imgui/joy/joy_setup_window.cpp:574
+#: src/ui-imgui/joy/joy_setup_window.cpp:591
 #: src/ui-imgui/memext/memext_map_window.cpp:277
 #: src/ui-imgui/version_check/imgui_version_check.cpp:245
 #: src/ui-imgui/version_check/imgui_version_check.cpp:250
@@ -5398,7 +5398,7 @@ msgstr "Snímek: %u B"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:443
 #: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:503
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1433
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1434
 msgid "No snapshot"
 msgstr "Žádný snapshot"
 
@@ -5446,8 +5446,8 @@ msgstr "Snímek Δ"
 #: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:497
 #: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:148
 #: src/ui-imgui/maxspeed_bench_window.cpp:156
-#: src/ui-imgui/plotter/plotter_window.cpp:431
-#: src/ui-imgui/topmenu/topmenu.cpp:58
+#: src/ui-imgui/plotter/plotter_window.cpp:432
+#: src/ui-imgui/topmenu/topmenu.cpp:59
 msgid "Reset"
 msgstr "Reset"
 
@@ -5534,12 +5534,12 @@ msgid "Monitor ROM###mb_rt_rom_group"
 msgstr "Monitor ROM###mb_rt_rom_group"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:210
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:546
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:578
 msgid "lower (4 KB)"
 msgstr "spodní (4 KB)"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:214
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:547
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:579
 msgid "upper (8 KB)"
 msgstr "horní (8 KB)"
 
@@ -5552,12 +5552,12 @@ msgid "Physical Planes###mb_rt_vram_planes"
 msgstr "Fyzické roviny###mb_rt_vram_planes"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:271
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:553
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:585
 msgid "VRAM 700 char (1 KB)"
 msgstr "VRAM 700 znaky (1 KB)"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:277
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:554
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:586
 msgid "VRAM 700 attr (1 KB)"
 msgstr "VRAM 700 atributy (1 KB)"
 
@@ -5618,89 +5618,94 @@ msgstr "Regiony: VYP###mb_regions_toggle"
 msgid "Toggle Regions sidebar (hierarchical region tree)"
 msgstr "Přepnout boční panel Regiony (hierarchický strom regionů)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:494
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:543
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:501
+msgid "Expansion devices###mb_rt_devices"
+msgstr "Rozšiřující zařízení###mb_rt_devices"
+
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:522
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:575
 msgid "Logical Z80 (current)"
 msgstr "Logický Z80 (aktuální)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:497
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:544
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:525
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:576
 msgid "User RAM (64 KB)"
 msgstr "User RAM (64 KB)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:503
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:548
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:531
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:580
 msgid "CG-ROM (4 KB)"
 msgstr "CG-ROM (4 KB)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:510
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:555
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:538
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:587
 msgid "CG-RAM (4 KB) [700 mode]"
 msgstr "CG-RAM (4 KB) [700 mód]"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:524
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:563
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:552
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:595
 msgid "Ramdisk PEZIK 0x68"
 msgstr "Ramdisk PEZIK 0x68"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:527
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:564
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:555
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:596
 msgid "Ramdisk PEZIK 0xE8"
 msgstr "Ramdisk PEZIK 0xE8"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:532
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:565
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:560
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:597
 msgid "Prohibited shadow"
 msgstr "Prohibited shadow"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:545
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:577
 msgid "Monitor ROM"
 msgstr "Monitor ROM"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:549
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:581
 #: src/ui-imgui/debugger/memsearch_window/memsearch_window.cpp:563
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:118
 msgid "VRAM"
 msgstr "VRAM"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:550
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:582
 msgid "Physical Planes"
 msgstr "Fyzické roviny"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:551
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:583
 msgid "Plane III (8 KB) [exVRAM]"
 msgstr "Rovina III (8 KB) [exVRAM]"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:552
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:584
 msgid "Plane IV (8 KB) [exVRAM]"
 msgstr "Rovina IV (8 KB) [exVRAM]"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:556
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:588
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:119
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:44
 msgid "PCG"
 msgstr "PCG"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:557
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:589
 msgid "Memext"
 msgstr "Memext"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:558
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:590
 msgid "RAM banks"
 msgstr "RAM banky"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:559
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:591
 msgid "FLASH banks"
 msgstr "FLASH banky"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:560
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:592
 msgid "Bank 0xFF (4 KB) [R/O]"
 msgstr "Banka 0xFF (4 KB) [R/O]"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:561
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:593
 msgid "Bank 0xFF (64 KB)"
 msgstr "Banka 0xFF (64 KB)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:562
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:594
 msgid "Ramdisk STD"
 msgstr "Ramdisk STD"
 
@@ -5772,380 +5777,384 @@ msgstr "Index banky Ramdisk PEZIK port 0xE8"
 msgid "Ramdisk PEZIK port 0x68 bank index"
 msgstr "Index banky Ramdisk PEZIK port 0x68"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:609
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:621
+msgid "Memory of a connected expansion device"
+msgstr "Paměť připojeného rozšiřujícího zařízení"
+
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:643
 msgid "Encoding:"
 msgstr "Kódování:"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:632
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:666
 msgid "ASCII column encoding"
 msgstr "Kódování ASCII sloupce"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:640
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:674
 msgid "Bytes/row:"
 msgstr "Bajtů/řádek:"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:664
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:698
 msgid "Bytes per row (8/16/32)"
 msgstr "Počet bajtů na řádek (8/16/32)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:672
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:706
 msgid "ASCII###mb_ascii_toggle"
 msgstr "ASCII###mb_ascii_toggle"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:677
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:711
 msgid "Show or hide ASCII decoded column"
 msgstr "Zobrazí nebo skryje sloupec dekódovaný do ASCII"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:687
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:721
 msgid "PC###mb_pc_marker"
 msgstr "PC###mb_pc_marker"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:691
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:725
 msgid "Highlight row containing Z80 PC"
 msgstr "Zvýraznit řádek obsahující Z80 PC"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:694
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:728
 msgid "SP###mb_sp_marker"
 msgstr "SP###mb_sp_marker"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:698
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:732
 msgid "Highlight row containing Z80 SP"
 msgstr "Zvýraznit řádek obsahující Z80 SP"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:703
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:737
 msgid "Origin###mb_origin_labels"
 msgstr "Původ###mb_origin_labels"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:709
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:743
 msgid "Show per-row physical origin label (banking-aware)"
 msgstr "Zobrazit popisek fyzického původu na řádku (s ohledem na banking)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:728
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:762
 msgid "HEX:"
 msgstr "HEX:"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:743
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:777
 msgid "Hex address (Enter or Goto)"
 msgstr "Adresa v hex (Enter nebo Goto)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:749
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:783
 msgid "DEC:"
 msgstr "DEC:"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:768
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:802
 msgid "Decimal address (Enter or Goto)"
 msgstr "Adresa desítkově (Enter nebo Goto)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:774
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:808
 msgid "Goto###mb_goto_btn"
 msgstr "Přejít###mb_goto_btn"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:793
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:827
 msgid "Search###mb_search_btn"
 msgstr "Hledat###mb_search_btn"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:797
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:831
 msgid "Toggle search panel"
 msgstr "Přepnout panel hledání"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:829
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:863
 msgid "R/W"
 msgstr "R/W"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:829
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:863
 msgid "R/O"
 msgstr "R/O"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:830
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:864
 msgid "mapped"
 msgstr "mapováno"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:830
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:864
 msgid "not mapped"
 msgstr "nemapováno"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:832
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:866
 #, c-format
 msgid "Size: %u B | %s | %s | Z80 base 0x%04X"
 msgstr "Velikost: %u B | %s | %s | Z80 base 0x%04X"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:836
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:870
 #, c-format
 msgid "Size: %u B | %s | %s"
 msgstr "Velikost: %u B | %s | %s"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:841
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:875
 msgid "Region disconnected - falling back to Logical"
 msgstr "Region odpojen - přepínám zpět na Logický"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:879
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:933
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:913
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:967
 msgid "[PROHIBITED]"
 msgstr "[PROHIBITED]"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:882
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:916
 msgid ""
 "Prohibited mode active (OUT E5) - 0xE000-0xFFFF reads return shadow 0x1A"
 msgstr ""
 "Prohibited mód aktivní (OUT E5) - čtení 0xE000-0xFFFF vrací shadow 0x1A"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:889
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:923
 msgid "[SCRW640]"
 msgstr "[SCRW640]"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:892
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:926
 msgid ""
 "640px wide screen mode active (DMD bit 2) - VRAM II mapped to 0xA000-0xBFFF"
 msgstr "Mód 640px aktivní (DMD bit 2) - VRAM II mapována na 0xA000-0xBFFF"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:899
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:933
 msgid "[HICOLOR]"
 msgstr "[HICOLOR]"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:902
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:936
 msgid "16-color mode active (DMD bit 1) - 4-plane VRAM addressing"
 msgstr "16barevný mód aktivní (DMD bit 1) - 4-rovinné adresování VRAM"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:909
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:943
 msgid "[VBANK]"
 msgstr "[VBANK]"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:912
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:946
 msgid "Display bank toggled (DMD bit 5)"
 msgstr "Display banka přepnuta (DMD bit 5)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:919
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:953
 msgid "MZ-700 mode"
 msgstr "MZ-700 mód"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:919
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:953
 msgid "MZ-800 mode"
 msgstr "MZ-800 mód"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:921
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:955
 #, c-format
 msgid "DMD: %s (0x%02X)"
 msgstr "DMD: %s (0x%02X)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:925
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:959
 msgid "Display Mode Descriptor - GDG register, bit 3 = MZ-700 compat mode"
 msgstr "Display Mode Descriptor - registr GDG, bit 3 = MZ-700 kompatibilní mód"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:936
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:970
 msgid ""
 "Prohibited mode active (OUT E5) - 0xE000-0xFFFF reads return shadow 0xFF"
 msgstr ""
 "Prohibited mód aktivní (OUT E5) - čtení 0xE000-0xFFFF vrací shadow 0xFF"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:968
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1002
 msgid " (current encoding affected)"
 msgstr " (aktuální kódování ovlivněno)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:971
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1005
 #, c-format
 msgid "KOI8-CS table not loaded - showing identity mapping%s"
 msgstr "Tabulka KOI8-CS nenačtena - zobrazuje se identické mapování%s"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1015
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1049
 msgid "<##mb_page_prev"
 msgstr "<##mb_page_prev"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1025
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1059
 msgid "Previous page (PgUp)"
 msgstr "Předchozí stránka (PgUp)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1032
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1066
 msgid ">##mb_page_next"
 msgstr ">##mb_page_next"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1042
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1076
 msgid "Next page (PgDn)"
 msgstr "Další stránka (PgDn)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1047
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1081
 #, c-format
 msgid "Page: %llu of: %llu"
 msgstr "Stránka: %llu z: %llu"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1070
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1104
 msgid "Bytes (HEX + ASCII)"
 msgstr "Bajty (HEX + ASCII)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1071
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1105
 msgid "Byte sequence (hex, legacy)"
 msgstr "Sekvence bajtů (hex, legacy)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1072
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1106
 msgid "ASCII (current encoding, legacy)"
 msgstr "ASCII (aktuální kódování, legacy)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1073
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1107
 msgid "Word LE (16-bit)"
 msgstr "Word LE (16-bit)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1074
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1108
 msgid "Word BE (16-bit)"
 msgstr "Word BE (16-bit)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1075
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1109
 msgid "Masked (AA ?? BB)"
 msgstr "Maskováno (AA ?? BB)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1076
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1110
 msgid "Regex (POSIX ERE)"
 msgstr "Regex (POSIX ERE)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1077
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1111
 msgid "Expression (per byte)"
 msgstr "Výraz (na bajt)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1089
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1123
 msgid "Current region"
 msgstr "Aktuální region"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1090
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1124
 msgid "All regions (current arch)"
 msgstr "Všechny regiony (aktuální arch)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1131
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1165
 msgid "Results###mb_search_results_hdr"
 msgstr "Výsledky###mb_search_results_hdr"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1136
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1170
 #, c-format
 msgid "Hits: %d"
 msgstr "Nálezů: %d"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1138
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1172
 msgid "Clear###mb_search_results_clear"
 msgstr "Vyčistit###mb_search_results_clear"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1155
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1189
 #: src/ui-imgui/debugger/memsearch_window/memsearch_window.cpp:483
 msgid "Region"
 msgstr "Region"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1156
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1190
 msgid "Preview (hex)"
 msgstr "Náhled (hex)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1325
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1359
 #: src/ui-imgui/debugger/symbols/sym_window.cpp:608
 msgid "Search:"
 msgstr "Hledat:"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1370
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1404
 msgid "HEX bytes: AA BB CC (spaces optional)"
 msgstr "HEX bajty: AA BB CC (mezery volitelně)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1396
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1430
 msgid ""
 "ASCII view (current encoding). Type to update HEX. Use [+] for special chars."
 msgstr ""
 "ASCII pohled (aktuální kódování). Pište pro aktualizaci HEX. Použijte [+] "
 "pro speciální znaky."
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1409
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1443
 msgid "[+]###mb_search_insert_char"
 msgstr "[+]###mb_search_insert_char"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1412
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1446
 msgid "Search pattern"
 msgstr "Hledaný vzor"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1416
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1450
 msgid "Insert special character via Char Inserter (palette of MZ/KOI8 glyphs)"
 msgstr "Vložit speciální znak přes Vkládání znaků (paleta MZ/KOI8 glyfů)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1434
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1468
 msgid "H###mb_search_hist_btn"
 msgstr "H###mb_search_hist_btn"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1438
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1472
 msgid "Recent patterns"
 msgstr "Nedávné vzory"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1460
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1494
 msgid "Find Next###mb_search_next"
 msgstr "Najít další###mb_search_next"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1462
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1496
 msgid "Prev###mb_search_prev"
 msgstr "Předchozí###mb_search_prev"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1464
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1498
 msgid "All###mb_search_all"
 msgstr "Vše###mb_search_all"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1470
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1504
 msgid "Cancel###mb_search_cancel"
 msgstr "Zrušit###mb_search_cancel"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1475
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1509
 msgid "Close###mb_search_close"
 msgstr "Zavřít###mb_search_close"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1480
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1514
 msgid "Scope:"
 msgstr "Rozsah:"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1495
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1529
 msgid "Case sens.###mb_search_case"
 msgstr "Velikost písmen###mb_search_case"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1515
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1549
 #, c-format
 msgid "Error: %s"
 msgstr "Chyba: %s"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1517
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1551
 msgid "Canceled"
 msgstr "Zrušeno"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1519
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1553
 #, c-format
 msgid "Match @ 0x%08X"
 msgstr "Nález @ 0x%08X"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1569
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1603
 #, c-format
 msgid "Cursor: 0x%08X = 0x%02X '%s' (%s)"
 msgstr "Kurzor: 0x%08X = 0x%02X '%s' (%s)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1575
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1609
 #, c-format
 msgid "Cursor: 0x%08X (no data)"
 msgstr "Kurzor: 0x%08X (žádná data)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1586
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1620
 msgid "ASCII"
 msgstr "ASCII"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1586
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1620
 msgid "HEX"
 msgstr "HEX"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1588
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1622
 #, c-format
 msgid "Mode: %s (Tab to switch)"
 msgstr "Mód: %s (Tab pro přepnutí)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1622
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1656
 msgid "Edit error"
 msgstr "Chyba editace"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1668
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1702
 #, c-format
 msgid "PEZIK port %s bank %d | byte order: native (TODO BE/LE toggle V3+)"
 msgstr ""
 "PEZIK port %s banka %d | pořadí bajtů: native (TODO BE/LE přepínač V3+)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1686
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1720
 #, c-format
 msgid "Annotation: %s"
 msgstr "Poznámka: %s"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:2249
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:2283
 msgid "No region available"
 msgstr "Žádný region není dostupný"
 
@@ -6623,7 +6632,7 @@ msgid "decreased by"
 msgstr "snížilo se o"
 
 #: src/ui-imgui/debugger/memsearch_window/memsearch_window.cpp:671
-#: src/ui-imgui/debugger/watch/watch_window.cpp:830
+#: src/ui-imgui/debugger/watch/watch_window.cpp:831
 msgid "changed"
 msgstr "změněno"
 
@@ -6739,7 +6748,7 @@ msgid "Max Speed"
 msgstr "Maximální rychlost"
 
 #: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:160
-#: src/ui-imgui/topmenu/topmenu.cpp:53
+#: src/ui-imgui/topmenu/topmenu.cpp:54
 msgid "Pause Emulation"
 msgstr "Pozastavit emulaci"
 
@@ -7130,7 +7139,7 @@ msgid "Deferred ICENA event (idle = -1, otherwise GDG ticks)"
 msgstr "Odložený ICENA event (idle = -1, jinak GDG ticks)"
 
 #: src/ui-imgui/debugger/pioz80_window.cpp:448
-#: src/ui-imgui/plotter/plotter_window.cpp:525
+#: src/ui-imgui/plotter/plotter_window.cpp:526
 msgid "idle"
 msgstr "nečinný"
 
@@ -7142,21 +7151,21 @@ msgstr "naplánováno"
 msgid "Port for which icena_event is scheduled"
 msgstr "Port pro který je icena_event naplánován"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:93
-#: src/ui-imgui/debugger/ppi_window.cpp:95
+#: src/ui-imgui/debugger/ppi_window.cpp:94
+#: src/ui-imgui/debugger/ppi_window.cpp:96
 msgid "Mode Set (D7=1)"
 msgstr "Mode Set (D7=1)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:124
-#: src/ui-imgui/debugger/ppi_window.cpp:126
+#: src/ui-imgui/debugger/ppi_window.cpp:125
+#: src/ui-imgui/debugger/ppi_window.cpp:127
 msgid "Bit Set/Reset (D7=0)"
 msgstr "Bit Set/Reset (D7=0)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:161
+#: src/ui-imgui/debugger/ppi_window.cpp:162
 msgid "bit"
 msgstr "bit"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:173
+#: src/ui-imgui/debugger/ppi_window.cpp:174
 msgid ""
 "0 = key pressed, 1 = released (active LOW). Rows = bit 0..7, columns = PA0-3 "
 "selected column."
@@ -7164,15 +7173,15 @@ msgstr ""
 "0 = klávesa stisknuta, 1 = uvolněna (active LOW). Řádky = bit 0..7, sloupce "
 "= sloupec vybraný PA0-3."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:216
+#: src/ui-imgui/debugger/ppi_window.cpp:217
 msgid "PPI 8255 State###PPIState"
 msgstr "Stav PPI 8255###PPIState"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:226
+#: src/ui-imgui/debugger/ppi_window.cpp:227
 msgid "Last Control Word###PPI_CW"
 msgstr "Poslední Control Word###PPI_CW"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:239
+#: src/ui-imgui/debugger/ppi_window.cpp:240
 msgid ""
 "Last byte written to Control port (debug mirror - 8255 CW sequencer is not "
 "HW readable)."
@@ -7180,163 +7189,163 @@ msgstr ""
 "Poslední bajt zapsaný do Control portu (debug mirror - 8255 CW sekvencer "
 "není HW čitelný)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:250
+#: src/ui-imgui/debugger/ppi_window.cpp:251
 msgid "Port A###PPI_PA"
 msgstr "Port A###PPI_PA"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:263
+#: src/ui-imgui/debugger/ppi_window.cpp:264
 msgid "Output port A (sampled keyboard column + JOY enables)."
 msgstr "Výstupní port A (vzorkovaný sloupec klávesnice + JOY enables)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:268
-#: src/ui-imgui/debugger/ppi_window.cpp:354
+#: src/ui-imgui/debugger/ppi_window.cpp:269
+#: src/ui-imgui/debugger/ppi_window.cpp:355
 msgid "Bit decode:"
 msgstr "Dekódování bitů:"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:271
+#: src/ui-imgui/debugger/ppi_window.cpp:272
 msgid "keyboard column (PA0-3)"
 msgstr "sloupec klávesnice (PA0-3)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:275
+#: src/ui-imgui/debugger/ppi_window.cpp:276
 msgid "JOY1 enable (active LOW)"
 msgstr "JOY1 povolen (aktivní LOW)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:278
+#: src/ui-imgui/debugger/ppi_window.cpp:279
 msgid "JOY2 enable (active LOW)"
 msgstr "JOY2 povolen (aktivní LOW)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:282
+#: src/ui-imgui/debugger/ppi_window.cpp:283
 msgid "JOY1 enable"
 msgstr "JOY1 povolení"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:283
-#: src/ui-imgui/debugger/ppi_window.cpp:286
+#: src/ui-imgui/debugger/ppi_window.cpp:284
+#: src/ui-imgui/debugger/ppi_window.cpp:287
 msgid "not present on this arch"
 msgstr "na této architektuře nepřítomno"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:285
+#: src/ui-imgui/debugger/ppi_window.cpp:286
 msgid "JOY2 enable"
 msgstr "JOY2 povolení"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:288
+#: src/ui-imgui/debugger/ppi_window.cpp:289
 msgid "reserved"
 msgstr "rezervováno"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:295
+#: src/ui-imgui/debugger/ppi_window.cpp:296
 msgid "Port B - Keyboard Matrix###PPI_PB"
 msgstr "Port B - matice klávesnice###PPI_PB"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:301
+#: src/ui-imgui/debugger/ppi_window.cpp:302
 msgid "View:"
 msgstr "Pohled:"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:303
+#: src/ui-imgui/debugger/ppi_window.cpp:304
 msgid "Combined###PPI_PB_VIEW_C"
 msgstr "Kombinované###PPI_PB_VIEW_C"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:307
+#: src/ui-imgui/debugger/ppi_window.cpp:308
 msgid "AND of physical and virtual matrix (what CPU actually reads)."
 msgstr "AND fyzické a virtuální matice (co CPU skutečně čte)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:310
+#: src/ui-imgui/debugger/ppi_window.cpp:311
 msgid "Physical###PPI_PB_VIEW_P"
 msgstr "Fyzické###PPI_PB_VIEW_P"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:314
+#: src/ui-imgui/debugger/ppi_window.cpp:315
 msgid "g_pio8255.keyboard_matrix[] only (SDL keyboard)."
 msgstr "pouze g_pio8255.keyboard_matrix[] (SDL klávesnice)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:317
+#: src/ui-imgui/debugger/ppi_window.cpp:318
 msgid "Virtual###PPI_PB_VIEW_V"
 msgstr "Virtuální###PPI_PB_VIEW_V"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:321
+#: src/ui-imgui/debugger/ppi_window.cpp:322
 msgid "g_pio8255.vkbd_matrix[] only (VKBD / autotype)."
 msgstr "pouze g_pio8255.vkbd_matrix[] (VKBD / autotype)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:328
+#: src/ui-imgui/debugger/ppi_window.cpp:329
 msgid "Cell '*' = key pressed (bit=0, active LOW), '.' = released (bit=1)."
 msgstr ""
 "Buňka '*' = klávesa stisknuta (bit=0, aktivní LOW), '.' = uvolněna "
 "(bit=1).Buňka '*' = klávesa stisknuta (bit=0, active LOW), '.' = uvolněna "
 "(bit=1)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:335
+#: src/ui-imgui/debugger/ppi_window.cpp:336
 msgid "Port C###PPI_PC"
 msgstr "Port C###PPI_PC"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:348
+#: src/ui-imgui/debugger/ppi_window.cpp:349
 msgid "Port C raw output state (D0-D3 OUT, D4-D7 IN; D5-D7 computed on read)."
 msgstr ""
 "Port C surový výstupní stav (D0-D3 OUT, D4-D7 IN; D5-D7 počítáno při "
 "čtení).Surový výstupní stav Port C (D0-D3 OUT, D4-D7 IN; D5-D7 dopočítány "
 "při čtení)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:358
+#: src/ui-imgui/debugger/ppi_window.cpp:359
 msgid "CTC0 audio mask (0 = mute, 1 = pass)"
 msgstr "CTC0 audio maska (0 = mute, 1 = propustit)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:361
+#: src/ui-imgui/debugger/ppi_window.cpp:362
 msgid "CTC0 audio mask not present"
 msgstr "CTC0 audio maska nepřítomna"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:364
+#: src/ui-imgui/debugger/ppi_window.cpp:365
 msgid "CMT data out"
 msgstr "CMT data out"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:366
+#: src/ui-imgui/debugger/ppi_window.cpp:367
 msgid "CTC2 INT mask (0 = blocked, 1 = enabled)"
 msgstr "CTC2 INT maska (0 = blokováno, 1 = povoleno)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:368
+#: src/ui-imgui/debugger/ppi_window.cpp:369
 msgid "CMT motor control (rising edge toggles)"
 msgstr "Řízení motoru CMT (nástupná hrana přepíná)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:370
+#: src/ui-imgui/debugger/ppi_window.cpp:371
 msgid "CMT motor state"
 msgstr "Stav motoru CMT"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:372
+#: src/ui-imgui/debugger/ppi_window.cpp:373
 msgid "CMT data in - computed on read (not in mirror)"
 msgstr "CMT data in - dopočítáno při čtení (není v mirroru)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:374
+#: src/ui-imgui/debugger/ppi_window.cpp:375
 msgid "Cursor blink NE556@OUT - computed on read"
 msgstr "Blikání kurzoru NE556@OUT - dopočítáno při čtení"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:376
+#: src/ui-imgui/debugger/ppi_window.cpp:377
 msgid "VBLN - computed on read"
 msgstr "VBLN - dopočítáno při čtení"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:386
+#: src/ui-imgui/debugger/ppi_window.cpp:387
 msgid "VKBD Autotype###PPI_VKBD"
 msgstr "VKBD Autotype###PPI_VKBD"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:412
+#: src/ui-imgui/debugger/ppi_window.cpp:415
 msgid "Current column index into vkbd_autotype string."
 msgstr "Aktuální index sloupce v řetězci vkbd_autotype."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:415
+#: src/ui-imgui/debugger/ppi_window.cpp:418
 msgid "Last decoded matrix byte (column<<4 | bit)."
 msgstr "Poslední dekódovaný matricový bajt (column<<4 | bit)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:418
+#: src/ui-imgui/debugger/ppi_window.cpp:421
 msgid "Shift modifier required for current char."
 msgstr "Shift modifikátor potřebný pro aktuální znak."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:421
+#: src/ui-imgui/debugger/ppi_window.cpp:424
 msgid "Currently in key-down phase (vs. key-up gap)."
 msgstr "Aktuálně ve fázi key-down (vs. mezera key-up)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:434
+#: src/ui-imgui/debugger/ppi_window.cpp:437
 msgid "Key-down duration in gdgclk ticks."
 msgstr "Doba trvání key-down v gdgclk tikách."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:446
+#: src/ui-imgui/debugger/ppi_window.cpp:449
 msgid "Key-up gap duration in gdgclk ticks."
 msgstr "Doba mezery key-up v gdgclk tikách."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:449
+#: src/ui-imgui/debugger/ppi_window.cpp:452
 msgid "Tick stamp of current phase start."
 msgstr "Časová značka začátku aktuální fáze."
 
@@ -7725,8 +7734,8 @@ msgid "QDisk State"
 msgstr "QDisk State"
 
 #: src/ui-imgui/debugger/qdisk_window.cpp:154
-#: src/ui-imgui/joy/joy_setup_window.cpp:239
-#: src/ui-imgui/joy/joy_setup_window.cpp:285
+#: src/ui-imgui/joy/joy_setup_window.cpp:256
+#: src/ui-imgui/joy/joy_setup_window.cpp:302
 msgid "Device"
 msgstr "Zařízení"
 
@@ -7771,7 +7780,7 @@ msgid "MemExt"
 msgstr "MemExt"
 
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:121
-#: src/ui-imgui/topmenu/devices/menu_rom.cpp:24
+#: src/ui-imgui/topmenu/devices/menu_rom.cpp:25
 msgid "ROM"
 msgstr "ROM"
 
@@ -10399,128 +10408,128 @@ msgstr ""
 msgid "Persist"
 msgstr "Zachovat"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:440
+#: src/ui-imgui/debugger/watch/watch_window.cpp:441
 msgid "Add new watch entry:"
 msgstr "Přidat novou položku Watch:"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:474
+#: src/ui-imgui/debugger/watch/watch_window.cpp:475
 msgid "(e.g. 0xC080, 0C080h, 49280, or symbol name)"
 msgstr "(např. 0xC080, 0C080h, 49280, nebo název symbolu)"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:485
+#: src/ui-imgui/debugger/watch/watch_window.cpp:486
 msgid "(e.g. [HL], {0x4000}, $framecnt, 0xC080+1, port[0xCE])"
 msgstr "(např. [HL], {0x4000}, $framecnt, 0xC080+1, port[0xCE])"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:495
+#: src/ui-imgui/debugger/watch/watch_window.cpp:496
 msgid "(optional)"
 msgstr "(volitelné)"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:521
+#: src/ui-imgui/debugger/watch/watch_window.cpp:522
 msgid "Length:"
 msgstr "Délka:"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:536
+#: src/ui-imgui/debugger/watch/watch_window.cpp:537
 msgid "Bit:"
 msgstr "Bit:"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:548
+#: src/ui-imgui/debugger/watch/watch_window.cpp:549
 msgid "Add##watch_add_ok"
 msgstr "Přidat##watch_add_ok"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:550
+#: src/ui-imgui/debugger/watch/watch_window.cpp:551
 msgid "Cancel##watch_add_cancel"
 msgstr "Zrušit##watch_add_cancel"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:566
+#: src/ui-imgui/debugger/watch/watch_window.cpp:567
 msgid "Cannot parse address (unknown symbol or invalid format)."
 msgstr "Nelze rozparsovat adresu (neznámý symbol nebo neplatný formát)."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:580
+#: src/ui-imgui/debugger/watch/watch_window.cpp:581
 msgid "Expression cannot be empty."
 msgstr "Výraz nesmí být prázdný."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:755
+#: src/ui-imgui/debugger/watch/watch_window.cpp:756
 msgid "(new)"
 msgstr "(nové)"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:759
+#: src/ui-imgui/debugger/watch/watch_window.cpp:760
 msgid "(type changed)"
 msgstr "(změněn typ)"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:871
+#: src/ui-imgui/debugger/watch/watch_window.cpp:872
 msgid "(N/A for scalar expr)"
 msgstr "(nedostupné pro skalární výraz)"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:952
+#: src/ui-imgui/debugger/watch/watch_window.cpp:953
 msgid "Min:"
 msgstr "Min:"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:953
+#: src/ui-imgui/debugger/watch/watch_window.cpp:954
 msgid "Max:"
 msgstr "Max:"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:954
-#: src/ui-imgui/debugger/watch/watch_window.cpp:957
+#: src/ui-imgui/debugger/watch/watch_window.cpp:955
+#: src/ui-imgui/debugger/watch/watch_window.cpp:958
 msgid "Changes:"
 msgstr "Změny:"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:960
+#: src/ui-imgui/debugger/watch/watch_window.cpp:961
 msgid "(Min/Max not tracked for string types)"
 msgstr "(Min/Max se nesleduje pro řetězcové typy)"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1033
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1034
 msgid "Drag to reorder this watch row."
 msgstr "Tažením přeskupit tento řádek Watch."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1079
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1080
 msgid "Double-click to rename. Right-click for context menu."
 msgstr "Dvojklik pro přejmenování. Pravý klik pro kontextové menu."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1085
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1086
 msgid "Rename##watch_ctx_rename"
 msgstr "Přejmenovat##watch_ctx_rename"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1089
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1090
 msgid "Delete##watch_ctx_del"
 msgstr "Smazat##watch_ctx_del"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1094
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1095
 msgid "Copy expression##watch_ctx_copy"
 msgstr "Kopírovat výraz##watch_ctx_copy"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1104
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1105
 msgid "Copy address (hex) or expression text to clipboard."
 msgstr "Zkopírovat adresu (hex) nebo text výrazu do schránky."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1170
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1171
 msgid "Display format"
 msgstr "Formát zobrazení"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1184
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1185
 msgid "Reset min/max##watch_ctx_resetmm"
 msgstr "Reset min/max##watch_ctx_resetmm"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1188
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1189
 msgid "Clear min/max tracking and changes count for this row."
 msgstr "Vymazat sledování min/max a počet změn pro tento řádek."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1208
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1209
 msgid "Delete this watch (no confirm)."
 msgstr "Smazat tento Watch (bez potvrzení)."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1236
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1237
 msgid "+ Add##watch_add_btn"
 msgstr "+ Přidat##watch_add_btn"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1247
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1248
 msgid "Add a new watch entry."
 msgstr "Přidat novou položku Watch."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1254
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1255
 msgid "name, expression, address, type"
 msgstr "název, výraz, adresa, typ"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1256
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1257
 msgid ""
 "Filter matches watch name, expression text, hex address or type label (case-"
 "insensitive substring)."
@@ -10528,19 +10537,19 @@ msgstr ""
 "Filtr porovnává název Watch, text výrazu, hex adresu nebo název typu "
 "(podřetězec bez ohledu na velikost písmen)."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1260
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1261
 msgid "Clear##watch_clrflt"
 msgstr "Vymazat##watch_clrflt"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1266
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1267
 msgid "Visible / total watch count."
 msgstr "Viditelný / celkový počet položek Watch."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1273
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1274
 msgid "Highlight changes##watch_hl"
 msgstr "Zvýrazňovat změny##watch_hl"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1277
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1278
 msgid ""
 "Briefly color value cells when they change. Green=up, Red=down, "
 "Yellow=string changed."
@@ -10548,59 +10557,59 @@ msgstr ""
 "Krátce obarvit buňky hodnot při změně. Zelená=nahoru, Červená=dolů, "
 "Žlutá=změna řetězce."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1285
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1286
 msgid "Delete##watch_delsel"
 msgstr "Smazat##watch_delsel"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1295
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1296
 msgid "Delete selected watches (confirm if more than one)."
 msgstr "Smazat vybrané položky Watch (potvrzení pokud více než jedna)."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1304
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1305
 msgid "Save##watch_save"
 msgstr "Uložit##watch_save"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1315
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1316
 msgid "Save to default per-arch .watch file."
 msgstr "Uložit do výchozího .watch souboru podle architektury."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1318
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1319
 msgid "Save As...##watch_saveas"
 msgstr "Uložit jako...##watch_saveas"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1327
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1328
 msgid "Save Watches As..."
 msgstr "Uložit Watch jako..."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1331
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1332
 msgid "Save watches to a chosen file."
 msgstr "Uložit Watch do zvoleného souboru."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1334
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1335
 msgid "Load From...##watch_loadfrom"
 msgstr "Načíst z...##watch_loadfrom"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1342
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1343
 msgid "Load Watches From..."
 msgstr "Načíst Watch z..."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1346
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1347
 msgid "Replace current watches with file content."
 msgstr "Nahradit aktuální Watch obsahem souboru."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1350
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1351
 msgid "Clear All...##watch_clrall"
 msgstr "Vymazat vše...##watch_clrall"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1353
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1354
 msgid "Remove all watch entries (with confirmation)."
 msgstr "Odebrat všechny položky Watch (s potvrzením)."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1361
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1362
 msgid "Snapshot##watch_snap"
 msgstr "Snapshot##watch_snap"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1383
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1384
 msgid ""
 "Capture current values as baseline. Adds Delta column showing change since "
 "snapshot."
@@ -10608,94 +10617,94 @@ msgstr ""
 "Sejmout aktuální hodnoty jako baseline. Přidá sloupec Delta zobrazující "
 "změnu od snapshotu."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1389
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1390
 msgid "Clear snapshot##watch_snapclr"
 msgstr "Vymazat snapshot##watch_snapclr"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1395
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1396
 msgid "Clear snapshot baseline (Delta column hides)."
 msgstr "Vymazat baseline snapshotu (sloupec Delta se skryje)."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1430
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1431
 #, c-format
 msgid "Snapshot @ frame %d  (Δ %d frames)"
 msgstr "Snapshot @ snímek %d  (Δ %d snímků)"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1445
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1446
 #, c-format
 msgid "%zu / %zu rows"
 msgstr "%zu / %zu řádků"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1448
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1449
 #, c-format
 msgid "%zu rows"
 msgstr "%zu řádků"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1563
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1564
 msgid "Deselect all visible watches."
 msgstr "Zrušit výběr všech viditelných položek Watch."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1565
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1566
 msgid "Select all visible watches."
 msgstr "Vybrat všechny viditelné položky Watch."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1567
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1568
 msgid "Some selected. Click to select all visible."
 msgstr "Některé vybrány. Kliknutím vyberete všechny viditelné."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1591
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1706
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1592
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1707
 msgid "Delta"
 msgstr "Delta"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1647
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1648
 msgid "Watch###watch_panel"
 msgstr "Watch###watch_panel"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1672
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1673
 msgid "No watches defined. Use [+ Add] above to add one."
 msgstr "Žádné Watch nejsou definovány. Použijte [+ Přidat] výše pro přidání."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1778
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1779
 msgid "Delete Selected Watches?###watch_confirm_bulkdel"
 msgstr "Smazat vybrané Watch?###watch_confirm_bulkdel"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1780
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1781
 #, c-format
 msgid "Delete %zu selected watch(es)?"
 msgstr "Smazat %zu vybraných položek Watch?"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1783
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1784
 msgid "Delete##watch_bulkdel_ok"
 msgstr "Smazat##watch_bulkdel_ok"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1801
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1802
 msgid "Cancel##watch_bulkdel_cancel"
 msgstr "Zrušit##watch_bulkdel_cancel"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1810
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1813
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1811
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1814
 msgid "Clear All Watches?###watch_confirm_clrall"
 msgstr "Vymazat všechny Watch?###watch_confirm_clrall"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1815
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1816
 msgid "Remove all watch entries? This cannot be undone."
 msgstr "Odebrat všechny položky Watch? Toto nelze vrátit zpět."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1817
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1818
 msgid "Clear##watch_clrall_ok"
 msgstr "Vymazat##watch_clrall_ok"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1826
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1827
 msgid "Cancel##watch_clrall_cancel"
 msgstr "Zrušit##watch_clrall_cancel"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1835
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1837
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1836
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1838
 msgid "Replace Watches?###watch_confirm_load"
 msgstr "Nahradit Watch?###watch_confirm_load"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1839
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1840
 #, c-format
 msgid ""
 "Loading from:\n"
@@ -10708,16 +10717,16 @@ msgstr ""
 "\n"
 "Nahradit všechny aktuální Watch?"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1842
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1843
 msgid "Replace##watch_load_ok"
 msgstr "Nahradit##watch_load_ok"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1856
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1857
 msgid "Cancel##watch_load_cancel"
 msgstr "Zrušit##watch_load_cancel"
 
 #: src/ui-imgui/devices/device_request_ui.cpp:36
-#: src/ui-imgui/topmenu/topmenu.cpp:43
+#: src/ui-imgui/topmenu/topmenu.cpp:44
 msgid ""
 "Machine settings cannot be changed while a replay is recorded or played. "
 "Stop it in the Replay menu first."
@@ -10871,97 +10880,97 @@ msgstr "Odchylka:"
 msgid "Measuring Update Interval (s):"
 msgstr "Interval aktualizace měření (s):"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:223
-#: src/ui-imgui/joy/joy_setup_window.cpp:231
+#: src/ui-imgui/joy/joy_setup_window.cpp:240
+#: src/ui-imgui/joy/joy_setup_window.cpp:248
 msgid "Trigger"
 msgstr "Spoušť"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:240
+#: src/ui-imgui/joy/joy_setup_window.cpp:257
 msgid "Gamepad (standard mapping)"
 msgstr "Gamepad (standardní mapování)"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:244
+#: src/ui-imgui/joy/joy_setup_window.cpp:261
 msgid "Left Stick"
 msgstr "Levá páčka"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:244
+#: src/ui-imgui/joy/joy_setup_window.cpp:261
 msgid "D-Pad"
 msgstr "D-Pad"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:247
-#: src/ui-imgui/joy/joy_setup_window.cpp:371
+#: src/ui-imgui/joy/joy_setup_window.cpp:264
+#: src/ui-imgui/joy/joy_setup_window.cpp:388
 msgid "Directions"
 msgstr "Směry"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:257
-#: src/ui-imgui/joy/joy_setup_window.cpp:320
+#: src/ui-imgui/joy/joy_setup_window.cpp:274
+#: src/ui-imgui/joy/joy_setup_window.cpp:337
 msgid "Deadzone"
 msgstr "Mrtvá zóna"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:266
-#: src/ui-imgui/joy/joy_setup_window.cpp:327
+#: src/ui-imgui/joy/joy_setup_window.cpp:283
+#: src/ui-imgui/joy/joy_setup_window.cpp:344
 msgid "Trigger 1"
 msgstr "Spoušť 1"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:274
-#: src/ui-imgui/joy/joy_setup_window.cpp:334
+#: src/ui-imgui/joy/joy_setup_window.cpp:291
+#: src/ui-imgui/joy/joy_setup_window.cpp:351
 msgid "Trigger 2"
 msgstr "Spoušť 2"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:287
+#: src/ui-imgui/joy/joy_setup_window.cpp:304
 msgid "Axes"
 msgstr "Osy"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:288
+#: src/ui-imgui/joy/joy_setup_window.cpp:305
 msgid "Buttons"
 msgstr "Tlačítka"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:293
+#: src/ui-imgui/joy/joy_setup_window.cpp:310
 msgid "X Axis"
 msgstr "Osa X"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:300
-#: src/ui-imgui/joy/joy_setup_window.cpp:313
+#: src/ui-imgui/joy/joy_setup_window.cpp:317
+#: src/ui-imgui/joy/joy_setup_window.cpp:330
 msgid "Invert"
 msgstr "Invertovat"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:306
+#: src/ui-imgui/joy/joy_setup_window.cpp:323
 msgid "Y Axis"
 msgstr "Osa Y"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:358
+#: src/ui-imgui/joy/joy_setup_window.cpp:375
 msgid "Live Status"
 msgstr "Živý stav"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:400
+#: src/ui-imgui/joy/joy_setup_window.cpp:417
 msgid "Setup preferences for Joystick"
 msgstr "Nastavení předvoleb pro joystick"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:417
+#: src/ui-imgui/joy/joy_setup_window.cpp:434
 msgid "Emulated on numeric keypad"
 msgstr "Emulováno na numerické klávesnici"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:502
+#: src/ui-imgui/joy/joy_setup_window.cpp:519
 msgid "Joystick Setup"
 msgstr "Nastavení joysticku"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:507
+#: src/ui-imgui/joy/joy_setup_window.cpp:524
 msgid "Initialize Joystick Subsystem"
 msgstr "Inicializovat subsystém joysticku"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:517
+#: src/ui-imgui/joy/joy_setup_window.cpp:534
 msgid "need only for real gaming devices"
 msgstr "potřeba pouze pro skutečná herní zařízení"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:521
+#: src/ui-imgui/joy/joy_setup_window.cpp:538
 msgid "Rescan Devices"
 msgstr "Znovu prohledat zařízení"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:540
+#: src/ui-imgui/joy/joy_setup_window.cpp:557
 msgid "Joystick"
 msgstr "Joystick"
 
-#: src/ui-imgui/main_window.cpp:114
+#: src/ui-imgui/main_window.cpp:117
 msgid "No audio device - running without sound"
 msgstr "Žádné zvukové zařízení - běží bez zvuku"
 
@@ -11388,7 +11397,7 @@ msgstr "Vstupní soubor"
 
 #: src/ui-imgui/memext/memext_load_dialog.cpp:117
 #: src/ui-imgui/ramdisk/pezik_settings_window.cpp:199
-#: src/ui-imgui/rom/rom_settings_window.cpp:163
+#: src/ui-imgui/rom/rom_settings_window.cpp:164
 msgid "Browse..."
 msgstr "Procházet..."
 
@@ -11502,15 +11511,154 @@ msgstr "Chyba"
 msgid "Warning"
 msgstr "Upozornění"
 
-#: src/ui-imgui/mz800/topmenu/devices/menu_mz800_hw_compat.cpp:22
+#: src/ui-imgui/mz700/devbus/menu_devbus.cpp:119
+#, c-format
+msgid "Range %u - %u, press Enter to apply"
+msgstr "Rozsah %u - %u, Enter použije hodnotu"
+
+#: src/ui-imgui/mz700/devbus/menu_devbus.cpp:127
+msgid "(applies after reconnect)"
+msgstr "(projeví se po novém připojení)"
+
+#: src/ui-imgui/mz700/devbus/menu_devbus.cpp:144
+#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:112
+msgid "Connected"
+msgstr "Připojeno"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:41
+msgid "PCG-700 (HAL)"
+msgstr "PCG-700 (HAL)"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:42
+msgid "HSW switch"
+msgstr "Přepínač HSW"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:43
+msgid "NOM (standard character set)"
+msgstr "NOM (standardní znaková sada)"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:45
+msgid "SSW jumper (software control)"
+msgstr "Propojka SSW (ovládání softwarem)"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:46
+msgid "OFF (software cannot switch PCG)"
+msgstr "OFF (software PCG nepřepne)"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:47
+msgid "ON (bit 3 of 0E012h switches PCG)"
+msgstr "ON (bit 3 v 0E012h přepíná PCG)"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:48
+msgid "GSW jumper (registers)"
+msgstr "Propojka GSW (registry)"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:49
+msgid "OFF (registers disconnected)"
+msgstr "OFF (registry odpojené)"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:50
+msgid "ON (registers connected)"
+msgstr "ON (registry připojené)"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:51
+msgid "HSW PCG with SSW OFF"
+msgstr "HSW PCG při SSW OFF"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:52
+msgid "PCG on, HSW decides"
+msgstr "PCG zapnuto, rozhoduje HSW"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:53
+msgid "PCG stays off"
+msgstr "PCG zůstane vypnuté"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:54
+msgid "Write strobe"
+msgstr "Strobe zápisu"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:55
+msgid "Rising edge of bit 4"
+msgstr "Nástupná hrana bitu 4"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:56
+msgid "Every write while bit 4 is set"
+msgstr "Každý zápis při nastaveném bitu 4"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:57
+msgid "Falling edge of bit 4 (experimental)"
+msgstr "Sestupná hrana bitu 4 (experimentální)"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:58
+msgid "Decode writes also with DRAM at 0E000h"
+msgstr "Dekódovat zápisy i s DRAM na 0E000h"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:59
+msgid "RAM after power on"
+msgstr "RAM po zapnutí"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:60
+msgid "Zeros"
+msgstr "Nuly"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:61
+msgid "Copy of CG-ROM characters"
+msgstr "Kopie znaků z CG-ROM"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:71
+msgid "Show PCG RAM characters"
+msgstr "Zobrazit znaky PCG RAM"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:115
+#, c-format
+msgid "Code %02Xh, set %u, PCG RAM %03Xh"
+msgstr "Kód %02Xh, sada %u, PCG RAM %03Xh"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:127
+msgid "PCG-700 Characters###pcg700_chars"
+msgstr "Znaky PCG-700###pcg700_chars"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:130
+msgid "The PCG-700 is not connected."
+msgstr "PCG-700 není připojené."
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:133
+#, c-format
+msgid "Display: %s"
+msgstr "Zobrazení: %s"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:133
+msgid "PCG RAM"
+msgstr "PCG RAM"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:133
+#: src/ui-imgui/rom/rom_settings_window.cpp:129
+#: src/ui-imgui/rom/rom_settings_window.cpp:215
+msgid "CG-ROM"
+msgstr "CG-ROM"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:135
+#, c-format
+msgid "Control 0E012h: %02Xh"
+msgstr "Řízení 0E012h: %02Xh"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:136
+msgid "Character set 1, codes 80h-FFh"
+msgstr "Znaková sada 1, kódy 80h-FFh"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:138
+msgid "Character set 2, codes 80h-FFh"
+msgstr "Znaková sada 2, kódy 80h-FFh"
+
+#: src/ui-imgui/mz800/topmenu/devices/menu_mz800_hw_compat.cpp:23
 msgid "HW Compatibility Experiments"
 msgstr "Experimenty s HW kompatibilitou"
 
-#: src/ui-imgui/mz800/topmenu/devices/menu_mz800_hw_compat.cpp:24
+#: src/ui-imgui/mz800/topmenu/devices/menu_mz800_hw_compat.cpp:25
 msgid "Allow PSG1 (stereo)"
 msgstr "Povolit PSG1 (stereo)"
 
-#: src/ui-imgui/mz800/topmenu/devices/menu_mz800_hw_compat.cpp:28
+#: src/ui-imgui/mz800/topmenu/devices/menu_mz800_hw_compat.cpp:29
 msgid ""
 "Enables a second PSG (SN76489), providing stereo sound similar to the "
 "MZ-1500. Port 0xF2 is still used as a mono audio PSG (left + right "
@@ -11521,127 +11669,123 @@ msgstr ""
 "MZ-1500. Port 0xF2 je stále mono PSG (levý + pravý kanál).\n"
 "Port 0xF3 je pouze PSG0 (levý) a port 0xF9 je pouze PSG1 (pravý)."
 
-#: src/ui-imgui/plotter/plotter_window.cpp:107
+#: src/ui-imgui/plotter/plotter_window.cpp:108
 msgid "Black"
 msgstr "Černá"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:108
+#: src/ui-imgui/plotter/plotter_window.cpp:109
 msgid "Red"
 msgstr "Červená"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:109
+#: src/ui-imgui/plotter/plotter_window.cpp:110
 #: src/ui-imgui/topmenu/interface/menu_display.cpp:38
 msgid "Green"
 msgstr "Zelená"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:110
+#: src/ui-imgui/plotter/plotter_window.cpp:111
 msgid "Blue"
 msgstr "Modrá"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:368
+#: src/ui-imgui/plotter/plotter_window.cpp:369
 msgid "Save plotter drawing"
 msgstr "Uložit kresbu plotteru"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:368
+#: src/ui-imgui/plotter/plotter_window.cpp:369
 msgid "plotter.png"
 msgstr "plotter.png"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:405
+#: src/ui-imgui/plotter/plotter_window.cpp:406
 msgid "Plotter MZ-1P16"
 msgstr "Plotter MZ-1P16"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:414
+#: src/ui-imgui/plotter/plotter_window.cpp:415
 msgid "Save..."
 msgstr "Uložit..."
 
-#: src/ui-imgui/plotter/plotter_window.cpp:419
+#: src/ui-imgui/plotter/plotter_window.cpp:420
 msgid "Clear paper"
 msgstr "Vyčistit papír"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:424
+#: src/ui-imgui/plotter/plotter_window.cpp:425
 msgid "Clear the drawing and reset the plotter (plain RESET keeps the paper)"
 msgstr "Smaže kresbu a resetuje plotter (samotný RESET papír ponechá)"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:427
+#: src/ui-imgui/plotter/plotter_window.cpp:428
 msgid "Plotter buttons:"
 msgstr "Tlačítka plotteru:"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:437
+#: src/ui-imgui/plotter/plotter_window.cpp:438
 msgid "Paper feed"
 msgstr "Posuv papíru"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:447
+#: src/ui-imgui/plotter/plotter_window.cpp:449
 msgid "Hold to feed paper"
 msgstr "Podržením posunete papír"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:450
+#: src/ui-imgui/plotter/plotter_window.cpp:452
 msgid "Run drawing self-test"
 msgstr "Spustit kreslicí self-test"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:459
+#: src/ui-imgui/plotter/plotter_window.cpp:460
 msgid "Reset with PAPER FEED held -> writes the character set in 4 colors"
 msgstr "Reset s podrženým PAPER FEED -> vypíše znakovou sadu ve 4 barvách"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:464
+#: src/ui-imgui/plotter/plotter_window.cpp:465
 msgid "Zoom"
 msgstr "Přiblížení"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:466
+#: src/ui-imgui/plotter/plotter_window.cpp:467
 msgid "Preview scale: pixels per motor step"
 msgstr "Měřítko náhledu: pixelů na krok motoru"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:469
+#: src/ui-imgui/plotter/plotter_window.cpp:470
 msgid "Show carriage"
 msgstr "Zobrazit vozík"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:471
+#: src/ui-imgui/plotter/plotter_window.cpp:472
 msgid "Live marker at the current pen/carriage position"
 msgstr "Živý marker na aktuální pozici pera/vozíku"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:495
+#: src/ui-imgui/plotter/plotter_window.cpp:496
 #, c-format
 msgid "X: %ld"
 msgstr "X: %ld"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:497
+#: src/ui-imgui/plotter/plotter_window.cpp:498
 #, c-format
 msgid "Y: %ld"
 msgstr "Y: %ld"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:501
+#: src/ui-imgui/plotter/plotter_window.cpp:502
 msgid "Color:"
 msgstr "Barva:"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:514
+#: src/ui-imgui/plotter/plotter_window.cpp:515
 #, c-format
 msgid "Pen: %s"
 msgstr "Pero: %s"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:514
+#: src/ui-imgui/plotter/plotter_window.cpp:515
 msgid "DOWN"
 msgstr "DOLE"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:514
+#: src/ui-imgui/plotter/plotter_window.cpp:515
 msgid "UP"
 msgstr "NAHOŘE"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:520
+#: src/ui-imgui/plotter/plotter_window.cpp:521
 msgid "BUSY"
 msgstr "BUSY"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:530
+#: src/ui-imgui/plotter/plotter_window.cpp:531
 #, c-format
 msgid "Strokes: %u"
 msgstr "Tahy: %u"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:534
+#: src/ui-imgui/plotter/plotter_window.cpp:535
 #, c-format
 msgid "(dropped %u)"
 msgstr "(zahozeno %u)"
-
-#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:112
-msgid "Connected"
-msgstr "Připojeno"
 
 #: src/ui-imgui/ramdisk/pezik_settings_window.cpp:141
 msgid "Ports:"
@@ -11667,50 +11811,45 @@ msgstr "Standardní PEZIK:"
 msgid "Experimental PEZIK:"
 msgstr "Experimentální PEZIK:"
 
-#: src/ui-imgui/rom/rom_settings_window.cpp:117
+#: src/ui-imgui/rom/rom_settings_window.cpp:118
 msgid "Select ROM file"
 msgstr "Vyberte ROM soubor"
 
-#: src/ui-imgui/rom/rom_settings_window.cpp:127
-#: src/ui-imgui/rom/rom_settings_window.cpp:213
+#: src/ui-imgui/rom/rom_settings_window.cpp:128
+#: src/ui-imgui/rom/rom_settings_window.cpp:214
 msgid "ROM 0x0000"
 msgstr "ROM 0x0000"
 
-#: src/ui-imgui/rom/rom_settings_window.cpp:128
-#: src/ui-imgui/rom/rom_settings_window.cpp:214
-msgid "CG-ROM"
-msgstr "CG-ROM"
-
-#: src/ui-imgui/rom/rom_settings_window.cpp:129
-#: src/ui-imgui/rom/rom_settings_window.cpp:215
+#: src/ui-imgui/rom/rom_settings_window.cpp:130
+#: src/ui-imgui/rom/rom_settings_window.cpp:216
 msgid "ROM 0xE000"
 msgstr "ROM 0xE000"
 
-#: src/ui-imgui/rom/rom_settings_window.cpp:173
+#: src/ui-imgui/rom/rom_settings_window.cpp:174
 msgid "optional"
 msgstr "volitelné"
 
-#: src/ui-imgui/rom/rom_settings_window.cpp:189
+#: src/ui-imgui/rom/rom_settings_window.cpp:190
 msgid "All-In-One ROM Binary File"
 msgstr "Binární soubor ROM vše v jednom"
 
-#: src/ui-imgui/rom/rom_settings_window.cpp:202
+#: src/ui-imgui/rom/rom_settings_window.cpp:203
 msgid "Separate ROM Binary Files"
 msgstr "Samostatné binární ROM soubory"
 
-#: src/ui-imgui/rom/rom_settings_window.cpp:249
+#: src/ui-imgui/rom/rom_settings_window.cpp:238
 msgid "User Defined ROM Settings"
 msgstr "Uživatelsky definované nastavení ROM"
 
-#: src/ui-imgui/rom/rom_settings_window.cpp:254
+#: src/ui-imgui/rom/rom_settings_window.cpp:243
 msgid "CMT Hack Patch:"
 msgstr "CMT Hack patch:"
 
-#: src/ui-imgui/rom/rom_settings_window.cpp:273
+#: src/ui-imgui/rom/rom_settings_window.cpp:262
 msgid "ROM Binary Files"
 msgstr "Binární soubory ROM"
 
-#: src/ui-imgui/rom/rom_settings_window.cpp:278
+#: src/ui-imgui/rom/rom_settings_window.cpp:267
 msgid "CMT Hack Patch ROM"
 msgstr "ROM CMT Hack patche"
 
@@ -12070,71 +12209,71 @@ msgstr "Aktuální rychlost"
 msgid "Reset sliders"
 msgstr "Resetovat posuvníky"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:26
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:27
 msgid "CMT"
 msgstr "CMT"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:34
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:35
 msgid "Use CMT Hack"
 msgstr "Použít CMT Hack"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:41
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:42
 msgid "Set Default CMT MZ Speed"
 msgstr "Nastavit výchozí CMT MZ rychlost"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:43
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:44
 msgid "1:1 - 1200 Bd"
 msgstr "1:1 - 1200 Bd"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:48
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:49
 msgid "2:1 - 2 400 Bd"
 msgstr "2:1 - 2 400 Bd"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:53
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:54
 msgid "2:1 - 2 400 Bd (cp/m)"
 msgstr "2:1 - 2 400 Bd (cp/m)"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:58
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:59
 msgid "7:3 - 2 800 Bd"
 msgstr "7:3 - 2 800 Bd"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:63
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:64
 msgid "8:3 - 3 200 Bd"
 msgstr "8:3 - 3 200 Bd"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:68
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:69
 msgid "3:1 - 3 600 Bd"
 msgstr "3:1 - 3 600 Bd"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:78
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:79
 msgid "Fast Open CMT File & Play..."
 msgstr "Rychle otevřít CMT soubor a přehrát..."
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:83
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:84
 msgid "Show Virtual CMT"
 msgstr "Zobrazit virtuální CMT"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:90
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:91
 msgid "CMT Options"
 msgstr "Nastavení CMT"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:92
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:93
 msgid "Enable CPU Boost"
 msgstr "Zapnout CPU Boost"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:97
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:98
 msgid "MZF"
 msgstr "MZF"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:99
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:100
 msgid "Enable MZF Size Check"
 msgstr "Zapnout kontrolu velikosti MZF"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:104
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:105
 msgid "Fix FNAME Terminator"
 msgstr "Opravit ukončovač FNAME"
 
-#: src/ui-imgui/topmenu/devices/menu_devices.cpp:21
+#: src/ui-imgui/topmenu/devices/menu_devices.cpp:24
 msgid "HW & Devices"
 msgstr "HW a zařízení"
 
@@ -12246,7 +12385,9 @@ msgstr "Překlad sběrnice: passthrough"
 msgid ""
 "NOT compatible with Sharp MZ - no inversion between CPU bus and WD279x chip. "
 "Reserved for future 'true bus' ROMs / experiments."
-msgstr "NENÍ kompatibilní se Sharp MZ - bez inverze mezi CPU sběrnicí a čipem WD279x. Vyhrazeno pro budoucí 'true bus' ROM / experimenty."
+msgstr ""
+"NENÍ kompatibilní se Sharp MZ - bez inverze mezi CPU sběrnicí a čipem "
+"WD279x. Vyhrazeno pro budoucí 'true bus' ROM / experimenty."
 
 #: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:351
 msgid "Floppy Drives"
@@ -12414,7 +12555,7 @@ msgid "Centronics"
 msgstr "Centronics"
 
 #: src/ui-imgui/topmenu/devices/menu_printer.cpp:70
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:73
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:75
 msgid "MZ"
 msgstr "MZ"
 
@@ -12503,7 +12644,7 @@ msgid "directory"
 msgstr "adresář"
 
 #: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:235
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:220
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:232
 msgid "Unicard"
 msgstr "Unicard"
 
@@ -12641,49 +12782,49 @@ msgstr "Soubor RAM Disku..."
 msgid "Memory Disk State (debugger)..."
 msgstr "Stav Memory Disk (debugger)..."
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:27
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:29
 msgid "Rear DIP Switch"
 msgstr "Zadní DIP přepínač"
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:30
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:32
 msgid "Mode 700 Compat.: "
 msgstr "Režim 700 kompatib.: "
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:33
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:35
 msgid "OFF"
 msgstr "VYP"
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:37
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:39
 msgid "ON (default)"
 msgstr "ZAP (výchozí)"
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:47
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:49
 msgid "CMT Polarity: "
 msgstr "CMT polarita: "
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:50
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:52
 msgid "Inverted"
 msgstr "Invertovaná"
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:54
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:56
 #: src/ui-imgui/topmenu/interface/menu_display.cpp:30
 #: src/ui-imgui/topmenu/interface/menu_display.cpp:65
 msgid "Normal"
 msgstr "Normální"
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:70
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:72
 msgid "Printer Standard: "
 msgstr "Standard tiskárny: "
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:77
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:79
 msgid "Centronics (default)"
 msgstr "Centronics (výchozí)"
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:81
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:83
 msgid " (locked: plotter connected)"
 msgstr " (uzamčeno: plotter připojen)"
 
-#: src/ui-imgui/topmenu/devices/menu_rom.cpp:54
+#: src/ui-imgui/topmenu/devices/menu_rom.cpp:55
 msgid "Settings for User Defined..."
 msgstr "Nastavení pro uživatelský..."
 
@@ -12709,7 +12850,7 @@ msgstr "Unicard runtime přeinstalován s mgr V2.11b (uc3)."
 msgid "Unicard runtime files in '{SD}/unicard/' have been reinitialized."
 msgstr "Soubory Unicard runtime v '{SD}/unicard/' byly reinicializovány."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:124
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:131
 msgid ""
 "SD card runtime in '{SD}/unicard/' is missing, incomplete, or does not match "
 "the selected firmware."
@@ -12717,15 +12858,15 @@ msgstr ""
 "Runtime SD karty v '{SD}/unicard/' chybí, je neúplný nebo neodpovídá "
 "vybranému firmwaru."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:127
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:134
 msgid "State on SD:"
 msgstr "Stav na SD:"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:128
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:135
 msgid "Selected firmware:"
 msgstr "Vybraný firmware:"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:131
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:138
 msgid ""
 "[Reinitialize] overwrites the SD manager files to match the selected "
 "firmware. [Continue] connects with the mismatch (client may see inconsistent "
@@ -12735,19 +12876,19 @@ msgstr ""
 "vybranému firmwaru. [Pokračovat] připojí přes neshodu (klient může vykazovat "
 "nekonzistentní chování). [Zrušit] ponechá Unicard odpojený."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:137
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:144
 msgid "Reinitialize##unicard_rt_reinit"
 msgstr "Reinicializovat##unicard_rt_reinit"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:147
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:154
 msgid "Continue##unicard_rt_continue"
 msgstr "Pokračovat##unicard_rt_continue"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:157
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:164
 msgid "Cancel##unicard_rt_cancel"
 msgstr "Zrušit##unicard_rt_cancel"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:183
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:195
 msgid ""
 "Choose which manager version to install in '{SD}/unicard/'. This will "
 "overwrite the existing manager files."
@@ -12755,7 +12896,7 @@ msgstr ""
 "Vyberte, kterou verzi správce nainstalovat do '{SD}/unicard/'. Toto přepíše "
 "stávající soubory správce."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:187
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:199
 msgid ""
 "Note: This choice is independent of the currently selected simulated "
 "firmware. You can install one version while simulating the other (useful for "
@@ -12764,40 +12905,40 @@ msgstr ""
 "Poznámka: Tato volba je nezávislá na aktuálně vybraném simulovaném firmwaru. "
 "Můžete nainstalovat jednu verzi a simulovat druhou (užitečné pro testování)."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:195
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:207
 msgid "mgr V2.4 (uc1)##unicard_reinit_v24"
 msgstr "mgr V2.4 (uc1)##unicard_reinit_v24"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:202
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:214
 msgid "mgr V2.11b (uc3)##unicard_reinit_v211b"
 msgstr "mgr V2.11b (uc3)##unicard_reinit_v211b"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:209
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:221
 msgid "Cancel##unicard_reinit_cancel"
 msgstr "Zrušit##unicard_reinit_cancel"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:225
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:237
 msgid "Unicard Connected"
 msgstr "Unicard připojen"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:226
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:238
 msgid "Unicard Not Connected"
 msgstr "Unicard nepřipojen"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:252
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:264
 msgid "Firmware: uc1 (rev.60)"
 msgstr "Firmware: uc1 (rev.60)"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:262
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:274
 #, c-format
 msgid "Firmware: uc3 (v%d.%d)###unicard_fw_uc3"
 msgstr "Firmware: uc3 (v%d.%d)###unicard_fw_uc3"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:271
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:283
 msgid "Check runtime version on connect"
 msgstr "Při připojení kontrolovat verzi runtime"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:278
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:290
 msgid ""
 "On Connect, verify that {SD}/unicard/ contains the manager matching the "
 "selected firmware. Mismatch shows a dialog with option to reinitialize."
@@ -12805,15 +12946,15 @@ msgstr ""
 "Při připojení ověřit, že {SD}/unicard/ obsahuje správce odpovídající "
 "vybranému firmwaru. Při neshodě se zobrazí dialog s možností reinicializace."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:287
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:299
 msgid "Read-only SD"
 msgstr "SD jen pro čtení"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:298
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:310
 msgid "Managed FDC"
 msgstr "Spravovaný FDC"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:302
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:314
 msgid ""
 "Which FDC controller the Unicard API manages (DSK mount).\n"
 "'None' disables Unicard FDD commands.\n"
@@ -12823,11 +12964,11 @@ msgstr ""
 "'Žádné' vypne FDD příkazy Unicard.\n"
 "Změna ovlivní jen budoucí operace."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:329
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:341
 msgid "Set SD Root Directory..."
 msgstr "Nastavit kořenový adresář SD..."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:336
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:348
 msgid ""
 "Change the host directory used as the Unicard SD root.\n"
 "If connected, the Unicard is automatically reconnected to the new root."
@@ -12835,11 +12976,11 @@ msgstr ""
 "Změní hostitelský adresář používaný jako SD root Unicard.\n"
 "Pokud je připojena, Unicard se automaticky znovu připojí k novému rootu."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:354
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:366
 msgid "Reinitialize Runtime..."
 msgstr "Reinicializovat runtime..."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:371
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:383
 msgid ""
 "Overwrites manager files in '{SD}/unicard/' (mgr.mzf, mgr800.mzf, "
 "mgr700.mzf, mgr1500.mzf) with the selected version.\n"
@@ -13520,7 +13661,7 @@ msgstr "Snímek %d = %s; zpět přes checkpoint, dopředu maximální rychlostí
 msgid "Available while playing a replay."
 msgstr "Dostupné při přehrávání záznamu."
 
-#: src/ui-imgui/topmenu/topmenu.cpp:74
+#: src/ui-imgui/topmenu/topmenu.cpp:75
 msgid "About..."
 msgstr "O programu..."
 

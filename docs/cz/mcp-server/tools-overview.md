@@ -148,6 +148,7 @@ dokumentu [Resources overview](resources-overview.md).
 | `emu_platform_set` | **ANO** | Pokus o platform switch - vrací error (compile-time MZARCH) |
 | `emu_periph_attach` | **ANO** | Připojí periferii za běhu (jako menu Devices) |
 | `emu_periph_detach` | **ANO** | Odpojí periferii za běhu (jako menu Devices) |
+| `emu_get_devices` | ne | Rozšiřující zařízení jádra MZ-700: id, volby, porty, MMIO, regiony, výstupy |
 | `emu_stop` | **ANO** | Hot-swap stop (pipe-only); ukončí emu, Python wrapper běží dál |
 | `emu_start` | **ANO** | Hot-swap start (pipe-only); spawne nový mz800emu.exe child |
 | `emu_input_send_key` | **ANO** | Press klávesy + N framů hold + release |
@@ -2305,6 +2306,11 @@ Whitelist:
 - `DISPLAY/locked_window_aspect_ratio` (bool)
 - `DISPLAY/custom_fps` (unsigned, 50..1000; platí v režimu snímkové frekvence Custom)
 - `TRACE_CPUTRACK/pc_range_lo` .. `TRACE_CPUTRACK/pc_range_hi` (unsigned, 0..65535; PC filtr trasování za běhu)
+- `<ini_section>/<key>` - volba rozšiřujícího zařízení MZ-700
+  (`emu_get_devices`); volba typu keyword se zadává klíčovým slovem.
+  Odpověď má `applies`: `now` (projeví se hned) nebo `on_connect`
+  (projeví se při příštím připojení zařízení). Klíč `connected` mění jen
+  `emu_periph_*`. Podrobnosti: `emulator://docs/devices`.
 
 Obraz Quick Disku a jeho ochranu proti zápisu nastavuje
 `emu_media_insert(slot="qd", ...)`.
@@ -2366,6 +2372,7 @@ odmítnut.
 | `qd` | `mz1f11` (obraz .MZQ), `virtual`, `unicard` (zavaděč Unicard, jen s připojeným Unicardem) |
 | `ide8` | `master`, `slave`; otevře obraz disku z konfigurace (`IDE8/hdd0_filepath`, `hdd1_filepath`), chybějící vytvoří |
 | `gal5` | v emulátoru není, vždy chyba (zůstává kvůli zpětné kompatibilitě) |
+| *id zařízení* | rozšiřující zařízení MZ-700 z `emu_get_devices`; `options` se ignorují |
 
 ```
 emu_periph_attach(kind="memext", options={"type": "luftner"})
@@ -2377,6 +2384,12 @@ Vrátí `{"ok": true, "kind": "memext", "type": "luftner",
 který už platí, se znovu neaplikuje (`changed: false`). Neznámá
 varianta vrátí chybu se seznamem povolených hodnot.
 
+`kind`, který není žádným z pevných druhů, se bere jako id rozšiřujícího
+zařízení a ověří ho emulátor. Chyby: neznámé id, kolize s připojeným
+zařízením (porty, MMIO rozsah, video háček), zařízení se nepodařilo
+připojit, rozšiřující zařízení na této platformě nejsou (MZ-800,
+MZ-1500). Podrobnosti: `emulator://docs/devices`.
+
 ### `emu_periph_detach` (sensitive)
 
 Odpojí periferii za běhu. U `fdc` a `ide8` vybírá `options.type`
@@ -2386,6 +2399,27 @@ jednotku (výchozí `fdc0`, `master`), u `memext` a `qd` se ignoruje.
 emu_periph_detach(kind="fdc")
 emu_periph_detach(kind="ide8", options={"type": "slave"})
 ```
+
+### `emu_get_devices`
+
+Jen čtení: seznam rozšiřujících zařízení jádra MZ-700 (volitelné karty
+skutečného MZ-700) a jejich stav: `id` (`kind` pro `emu_periph_attach`),
+`name`, `connected`, `ini_section` a `options` (typ, hodnota, výchozí,
+`apply`, klíčová slova nebo rozsah), `ports`, `mmio` (adresy a stavy mapy
+`mapped` / `dram`), `regions` (druh `device`), video háčky `video`
+a sekundární výstupy `outputs`.
+
+```
+emu_get_devices()
+-> {"platform_supported": true, "devices": [
+     {"id": "pcg700", "name": "PCG-700 (HAL)", "connected": false,
+      "ini_section": "PCG700", "options": [...], ...}]}
+```
+
+Na MZ-800 a MZ-1500 je `platform_supported` false a `devices` prázdné.
+Jádro MZ-700 má zařízení `pcg700` (PCG-700 od HAL,
+[devices/pcg700.md](../devices/pcg700.md)). Podrobnosti a úplný příklad:
+`emulator://docs/devices`.
 
 ### Příklad workflow - vložení Quick Disk obrazu
 
@@ -2880,7 +2914,9 @@ Returns:
 `kind` enum: `logical, ram, rom_lower, rom_upper, cgrom, cgram_700,
 vram_700_char, vram_700_attr, vram_phys_plane (sub_id 0..3),
 pcg_1500 (sub_id 0..2), memext_ram, memext_flash, ramdisk_std,
-ramdisk_pezik, prohibited_shadow`.
+ramdisk_pezik, prohibited_shadow, device` (`device` = paměť připojeného
+rozšiřujícího zařízení MZ-700, `sub_id` = slot * 16 + index regionu, viz
+`emu_get_devices`).
 
 `sub_id` disambiguuje regiony stejného kindu (= plane index, bank
 index, PEZIK instance).

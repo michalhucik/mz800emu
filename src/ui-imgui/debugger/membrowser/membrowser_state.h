@@ -241,6 +241,7 @@ typedef enum en_MEMBROWSER_REGION_GROUP
     MB_RG_RAMDISK_PEZIK_68,        /**< REGION_KIND_RAMDISK_PEZIK sub_id 0..7. */
     MB_RG_RAMDISK_PEZIK_E8,        /**< REGION_KIND_RAMDISK_PEZIK sub_id 8..15. */
     MB_RG_PROHIBITED_SHADOW,       /**< REGION_KIND_PROHIBITED_SHADOW. */
+    MB_RG_DEVICE,                  /**< REGION_KIND_DEVICE (paměť zařízení devbus, sub-control výběr regionu). */
     MB_RG__COUNT                   /**< Sentinel. */
 } en_MEMBROWSER_REGION_GROUP;
 

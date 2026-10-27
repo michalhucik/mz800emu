@@ -176,8 +176,16 @@ static const SectionGroup g_sections[] = {
     { "ramdisk",   "Ramdisk (Pezik / Std)",    "Ramdisk -" },
     { "ide8",      "IDE8 (8-bit ATA)",         "IDE8 -" },
     { "qdisk",     "QDISK (Z80 SIO)",          "QDISK -" },
+    /* Volitelná zařízení devbus (jen připojená): položky katalogu zařízení
+     * mají jméno s prefixem "Device - " (devdoc/devbus.md). */
+    { "devices",   "Expansion devices",        "Device -" },
 };
 static const size_t g_sections_count = sizeof(g_sections) / sizeof(g_sections[0]);
+
+/** @brief Kapacita pole stavu sbalení sekcí (g_io_ui.section_collapsed). */
+#define IO_UI_MAX_SECTIONS 32
+static_assert ( sizeof ( g_sections ) / sizeof ( g_sections[0] ) <= IO_UI_MAX_SECTIONS,
+                "g_io_ui.section_collapsed is too small for g_sections" );
 
 
 /**
@@ -196,7 +204,9 @@ struct IoUiState {
                                         projeví jen v UI session. User si může
                                         odškrtnout a uložit do cfg jako 0. */
     /* Collapse state per section - default expanded. int pro cfgmodule. */
-    int  section_collapsed[16] = { 0 };  /* zarovnano na 16 = max sections */
+    /* Kapacita IO_UI_MAX_SECTIONS hlídá static_assert u g_sections (dřív 16
+     * při 17 sekcích: sekce QDISK četla a zapisovala mimo pole). */
+    int  section_collapsed[IO_UI_MAX_SECTIONS] = { 0 };
     /* Track že okno bylo poprvé otevřeno - prevence opakovaného
      * tracking_active = 1 přepsání. */
     bool was_open_last_frame = false;
@@ -966,8 +976,9 @@ static void io_window_render_overview_tab ( void )
     /* Spočítej kolik portů je viditelných pro arch + filter */
     size_t total_arch = 0;
     size_t visible = 0;
-    for ( size_t i = 0; i < g_io_ports_count; i++ ) {
-        const st_IO_PORT_DESC *p = &g_io_ports[ i ];
+    for ( size_t i = 0, n_cat = io_catalog_count ( ); i < n_cat; i++ ) {
+        if ( !io_catalog_present ( i ) ) continue;
+        const st_IO_PORT_DESC *p = io_catalog_at ( i );
         if ( !p->name ) continue;
         if ( p->available_for_mzarch != 0
              && ( p->available_for_mzarch & arch_mask ) == 0 ) continue;
@@ -1189,8 +1200,9 @@ static void io_window_render_overview_tab ( void )
 
         /* Spočítej kolik portů v této section je viditelných */
         size_t sec_visible = 0;
-        for ( size_t i = 0; i < g_io_ports_count; i++ ) {
-            const st_IO_PORT_DESC *p = &g_io_ports[ i ];
+        for ( size_t i = 0, n_cat = io_catalog_count ( ); i < n_cat; i++ ) {
+            if ( !io_catalog_present ( i ) ) continue;
+            const st_IO_PORT_DESC *p = io_catalog_at ( i );
             if ( !p->name ) continue;
             if ( p->available_for_mzarch != 0
                  && ( p->available_for_mzarch & arch_mask ) == 0 ) continue;
@@ -1219,8 +1231,9 @@ static void io_window_render_overview_tab ( void )
         if ( g_io_ui.section_collapsed[ s ] ) continue;
 
         /* Render port rows v této section */
-        for ( size_t i = 0; i < g_io_ports_count; i++ ) {
-            const st_IO_PORT_DESC *p = &g_io_ports[ i ];
+        for ( size_t i = 0, n_cat = io_catalog_count ( ); i < n_cat; i++ ) {
+            if ( !io_catalog_present ( i ) ) continue;
+            const st_IO_PORT_DESC *p = io_catalog_at ( i );
             if ( !p->name ) continue;
             if ( p->available_for_mzarch != 0
                  && ( p->available_for_mzarch & arch_mask ) == 0 ) continue;
@@ -1239,7 +1252,7 @@ static void io_window_render_overview_tab ( void )
 /* ========================================================================= */
 
 /**
- * @brief Najde port name v g_io_ports[] dle adresy, směru a typu události.
+ * @brief Najde port name v katalogu (io_catalog_at(), včetně připojených zařízení devbus) dle adresy, směru a typu události.
  *
  * Pro multi-entry (= 0xCE má R i W entry) vybírá podle is_in:
  *   is_in==true  -> hledá direction == R nebo RW
@@ -1268,8 +1281,9 @@ static const char* io_history_lookup_port_name ( uint16_t port, bool is_in,
      * hack), takže by sváděl na špatnou identifikaci. */
     if ( is_mem ) {
         const st_IO_PORT_DESC *fallback = NULL;
-        for ( size_t i = 0; i < g_io_ports_count; i++ ) {
-            const st_IO_PORT_DESC *p = &g_io_ports[ i ];
+        for ( size_t i = 0, n_cat = io_catalog_count ( ); i < n_cat; i++ ) {
+            if ( !io_catalog_present ( i ) ) continue;
+            const st_IO_PORT_DESC *p = io_catalog_at ( i );
             if ( !p->name ) continue;
             if ( p->addr != port ) continue;
 
@@ -1294,8 +1308,9 @@ static const char* io_history_lookup_port_name ( uint16_t port, bool is_in,
     uint16_t key8 = (uint16_t) ( port & 0xFF );
 
     const st_IO_PORT_DESC *fallback = NULL;
-    for ( size_t i = 0; i < g_io_ports_count; i++ ) {
-        const st_IO_PORT_DESC *p = &g_io_ports[ i ];
+    for ( size_t i = 0, n_cat = io_catalog_count ( ); i < n_cat; i++ ) {
+        if ( !io_catalog_present ( i ) ) continue;
+        const st_IO_PORT_DESC *p = io_catalog_at ( i );
         if ( !p->name ) continue;
 
         bool match = false;
@@ -2863,7 +2878,7 @@ extern "C" void io_window_register_persistence ( void *cmod_void )
 
     /* Per-chip collapse state. Default 0 = expanded (user vidí všechno).
      * Indexovány v g_sections pořadí - název klíče je "collapse_<id>". */
-    for ( size_t s = 0; s < g_sections_count && s < 16; s++ ) {
+    for ( size_t s = 0; s < g_sections_count && s < IO_UI_MAX_SECTIONS; s++ ) {
         char keybuf[ 64 ];
         const char *key = io_window_cfg_collapse_key ( s, keybuf,
                                                         sizeof ( keybuf ) );

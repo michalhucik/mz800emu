@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mz800emu 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-22 19:04+0200\n"
+"POT-Creation-Date: 2026-10-26 23:48+0100\n"
 "PO-Revision-Date: 2026-03-11 21:00+0100\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -63,41 +63,41 @@ msgstr ""
 "アドレス = 0x%04x\n"
 "命令 = '%s'\n"
 
-#: src/emulator/emulator.c:451
+#: src/emulator/emulator.c:454
 #: src/ui-imgui/mcp_activity/mcp_activity_window.cpp:425
 #: src/ui-imgui/videorec/videorec_menu.cpp:140
 msgid "PAUSED"
 msgstr "一時停止"
 
-#: src/emulator/emulator.c:454
+#: src/emulator/emulator.c:457
 msgid "Max speed"
 msgstr "最高速度"
 
-#: src/emulator/emulator.c:457
+#: src/emulator/emulator.c:460
 msgid "Custom speed"
 msgstr "カスタム速度"
 
-#: src/emulator/emulator.c:459
+#: src/emulator/emulator.c:462
 msgid "Normal speed"
 msgstr "通常速度"
 
-#: src/emulator/hw-generic/cmt/cmt.c:592
+#: src/emulator/hw-generic/cmt/cmt.c:593
 msgid "Create a new WAV file"
 msgstr "新しいWAVファイルを作成"
 
-#: src/emulator/hw-generic/cmt/cmt.c:592
+#: src/emulator/hw-generic/cmt/cmt.c:593
 msgid "newfile.wav"
 msgstr "newfile.wav"
 
-#: src/emulator/hw-generic/cmt/cmt.c:1139
+#: src/emulator/hw-generic/cmt/cmt.c:1186
 msgid "All Supported CMT Files"
 msgstr "すべてのサポートされたCMTファイル"
 
-#: src/emulator/hw-generic/cmt/cmt.c:1140
+#: src/emulator/hw-generic/cmt/cmt.c:1187
 msgid "Tape Files"
 msgstr "テープファイル"
 
-#: src/emulator/hw-generic/cmt/cmt.c:1217
+#: src/emulator/hw-generic/cmt/cmt.c:1264
 msgid "Select CMT file to open"
 msgstr "開くCMTファイルを選択"
 
@@ -105,7 +105,7 @@ msgstr "開くCMTファイルを選択"
 msgid "Select a MZF File"
 msgstr "MZFファイルを選択"
 
-#: src/emulator/hw-generic/fdc/fdc.c:1204
+#: src/emulator/hw-generic/fdc/fdc.c:1245
 #, c-format
 msgid "Select DSK image file for FDC%u drive FD%d"
 msgstr "FDC%u ドライブ FD%d 用の DSK イメージファイルを選択"
@@ -118,7 +118,7 @@ msgstr "既存の.MZQファイルを選択、または新しいQDイメージを
 msgid "Select directory to mount as virtual Quick Disk"
 msgstr "仮想Quick Diskとしてマウントするディレクトリを選択"
 
-#: src/emulator/hw-generic/unicard/unicard.c:2329
+#: src/emulator/hw-generic/unicard/unicard.c:2370
 msgid "Select SD root directory for Unicard"
 msgstr "UnicardのSDルートディレクトリを選択"
 
@@ -154,47 +154,47 @@ msgstr "カスタムパルス"
 msgid "UNKNOWN"
 msgstr "不明"
 
-#: src/ui/vkbd/ui_vkbd.c:206
+#: src/ui/vkbd/ui_vkbd.c:207
 msgid "PC key: CapsLock"
 msgstr "PCキー: CapsLock"
 
-#: src/ui/vkbd/ui_vkbd.c:209
+#: src/ui/vkbd/ui_vkbd.c:210
 msgid "PC key: \\"
 msgstr "PCキー: \\"
 
-#: src/ui/vkbd/ui_vkbd.c:212
+#: src/ui/vkbd/ui_vkbd.c:213
 msgid "PC key: \\ or Tab"
 msgstr "PCキー: \\ または Tab"
 
-#: src/ui/vkbd/ui_vkbd.c:215
+#: src/ui/vkbd/ui_vkbd.c:216
 msgid "PC key: ~"
 msgstr "PCキー: ~"
 
-#: src/ui/vkbd/ui_vkbd.c:217
+#: src/ui/vkbd/ui_vkbd.c:218
 msgid "PC key: Esc or End"
 msgstr "PCキー: Esc または End"
 
-#: src/ui/vkbd/ui_vkbd.c:219
+#: src/ui/vkbd/ui_vkbd.c:220
 msgid "PC key: Insert"
 msgstr "PCキー: Insert"
 
-#: src/ui/vkbd/ui_vkbd.c:221
+#: src/ui/vkbd/ui_vkbd.c:222
 msgid "PC key: Backspace or Delete"
 msgstr "PCキー: Backspace または Delete"
 
-#: src/ui/vkbd/ui_vkbd.c:223
+#: src/ui/vkbd/ui_vkbd.c:224
 msgid "PC key: F6"
 msgstr "PCキー: F6"
 
-#: src/ui/vkbd/ui_vkbd.c:225
+#: src/ui/vkbd/ui_vkbd.c:226
 msgid "PC key: F7"
 msgstr "PCキー: F7"
 
-#: src/ui/vkbd/ui_vkbd.c:227
+#: src/ui/vkbd/ui_vkbd.c:228
 msgid "PC key: F8"
 msgstr "PCキー: F8"
 
-#: src/ui/vkbd/ui_vkbd.c:229
+#: src/ui/vkbd/ui_vkbd.c:230
 msgid "PC key: F9"
 msgstr "PCキー: F9"
 
@@ -494,7 +494,7 @@ msgstr "オーディオをキャプチャ (%s) でキャプチャを開始/停�
 #: src/ui-imgui/debugger/sections/dbg_cpu_panel.cpp:2421
 #: src/ui-imgui/dsk/dsk_create_window.cpp:104
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:109
-#: src/ui-imgui/joy/joy_setup_window.cpp:567
+#: src/ui-imgui/joy/joy_setup_window.cpp:584
 #: src/ui-imgui/message/message_window.cpp:139
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:442
 #: src/ui-imgui/snapshot/snapshot_notification.cpp:95
@@ -509,12 +509,12 @@ msgstr "OK"
 #: src/ui-imgui/debugger/sections/dbg_focus_to.cpp:264
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:104
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:111
-#: src/ui-imgui/joy/joy_setup_window.cpp:579
+#: src/ui-imgui/joy/joy_setup_window.cpp:596
 #: src/ui-imgui/memext/memext_load_dialog.cpp:188
 #: src/ui-imgui/memext/memext_map_window.cpp:291
 #: src/ui-imgui/memext/memext_save_dialog.cpp:207
 #: src/ui-imgui/ramdisk/pezik_settings_window.cpp:289
-#: src/ui-imgui/rom/rom_settings_window.cpp:323
+#: src/ui-imgui/rom/rom_settings_window.cpp:305
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:447
 #: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:127
 #: src/ui-imgui/snapshot/snapshot_setup_dialog.cpp:176
@@ -614,116 +614,116 @@ msgstr "このウィンドウの表示/非表示: %s"
 msgid "Invalid character at position"
 msgstr "位置に無効な文字"
 
-#: src/ui-imgui/autotype/autotype_window.cpp:166
+#: src/ui-imgui/autotype/autotype_window.cpp:161
 #: src/ui-imgui/topmenu/interface/menu_keyjoy.cpp:29
 msgid "Autotype Buffer"
 msgstr "Autotype バッファ"
 
-#: src/ui-imgui/autotype/autotype_window.cpp:188
+#: src/ui-imgui/autotype/autotype_window.cpp:183
 msgid "Autotype!"
 msgstr "Autotype!"
 
-#: src/ui-imgui/autotype/autotype_window.cpp:189
+#: src/ui-imgui/autotype/autotype_window.cpp:184
 msgid "Stop!"
 msgstr "停止!"
 
-#: src/ui-imgui/autotype/autotype_window.cpp:204
+#: src/ui-imgui/autotype/autotype_window.cpp:199
 msgid "Text buffer is empty"
 msgstr "テキストバッファが空です"
 
-#: src/ui-imgui/autotype/autotype_window.cpp:218
+#: src/ui-imgui/autotype/autotype_window.cpp:213
 msgid "Key down"
 msgstr "キー押下"
 
-#: src/ui-imgui/autotype/autotype_window.cpp:237
+#: src/ui-imgui/autotype/autotype_window.cpp:232
 msgid "Key up"
 msgstr "キー解放"
 
-#: src/ui-imgui/autotype/autotype_window.cpp:288
+#: src/ui-imgui/autotype/autotype_window.cpp:283
 msgid "Characters"
 msgstr "文字"
 
-#: src/ui-imgui/autotype/autotype_window.cpp:298
+#: src/ui-imgui/autotype/autotype_window.cpp:293
 msgid "Typed"
 msgstr "入力済み"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:156
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:158
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:177
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:179
 msgid "MZF Size Warning"
 msgstr "MZFサイズ警告"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:167
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:188
 msgid "MZF file"
 msgstr "MZFファイル"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:175
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:196
 msgid "Exceeded bytes"
 msgstr "超過バイト数"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:187
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:208
 msgid "This MZF file is a bit bigger than it should be."
 msgstr "このMZFファイルは本来のサイズより少し大きいです。"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:189
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:210
 msgid "This could arise, for example, when the MZF file is exported from cp/m."
 msgstr ""
 "これは例えば、MZFファイルがcp/mからエクスポートされた場合に発生することがあり"
 "ます。"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:190
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:211
 msgid "You can ignore it, or truncate the original file."
 msgstr "無視するか、元のファイルを切り詰めることができます。"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:191
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:212
 msgid ""
 "Is recommended to use the Save as, for create truncated copy of this file."
 msgstr "切り詰めたコピーを作成するには、名前を付けて保存の使用をお勧めします。"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:198
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:219
 msgid "MZF size check enabled"
 msgstr "MZFサイズチェック有効"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:212
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:233
 msgid "Ignore"
 msgstr "無視"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:221
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:242
 msgid "Truncate"
 msgstr "切り詰め"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:239
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:260
 msgid "Save As"
 msgstr "名前を付けて保存"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:251
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:271
 msgid "Save MZF file as"
 msgstr "MZFファイルを名前を付けて保存"
 
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:198
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:214
 msgid "Tape Filelist"
 msgstr "テープファイル一覧"
 
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:236
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:260 src/ui-imgui/cmt/cmt_window.cpp:213
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:252
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:276 src/ui-imgui/cmt/cmt_window.cpp:214
 #: src/ui-imgui/debugger/sections/dbg_stack_panel.cpp:2677
 #: src/ui-imgui/debugger/vars/vars_window.cpp:1502
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1696
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1697
 msgid "Name"
 msgstr "名前"
 
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:237
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:263 src/ui-imgui/cmt/cmt_window.cpp:212
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:253
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:279 src/ui-imgui/cmt/cmt_window.cpp:213
 #: src/ui-imgui/debugger/memsearch_window/memsearch_window.cpp:576
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1700
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1701
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:132
-#: src/ui-imgui/joy/joy_setup_window.cpp:240
+#: src/ui-imgui/joy/joy_setup_window.cpp:257
 #: src/ui-imgui/memext/memext_map_window.cpp:105
 #: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:155
 msgid "Type"
 msgstr "タイプ"
 
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:238
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:266
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:254
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:282
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:133
 #: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:209
 #: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:211
@@ -732,85 +732,85 @@ msgstr "タイプ"
 msgid "Size"
 msgstr "サイズ"
 
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:239
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:269
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:255
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:285
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:416
 msgid "Start"
 msgstr "Start"
 
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:240
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:272
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:256
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:288
 msgid "Exec"
 msgstr "Exec"
 
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:241
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:275 src/ui-imgui/cmt/cmt_window.cpp:214
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:257
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:291 src/ui-imgui/cmt/cmt_window.cpp:215
 #: src/ui-imgui/topmenu/menu_speed.cpp:27
 msgid "Speed"
 msgstr "速度"
 
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:242
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:278
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:258
+#: src/ui-imgui/cmt/cmt_tape_index.cpp:294
 msgid "Length"
 msgstr "長さ"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:65
+#: src/ui-imgui/cmt/cmt_window.cpp:66
 msgid "Playing time:"
 msgstr "再生時間:"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:69
+#: src/ui-imgui/cmt/cmt_window.cpp:70
 msgid "Remaining time:"
 msgstr "残り時間:"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:81 src/ui-imgui/cmt/cmt_window.cpp:789
+#: src/ui-imgui/cmt/cmt_window.cpp:82 src/ui-imgui/cmt/cmt_window.cpp:790
 msgid "CMT Hack"
 msgstr "CMT Hack"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:90
+#: src/ui-imgui/cmt/cmt_window.cpp:91
 msgid "CPU Boost"
 msgstr "CPUブースト"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:127
+#: src/ui-imgui/cmt/cmt_window.cpp:128
 msgid "Click here to change the time info mode."
 msgstr "ここをクリックして時間情報モードを変更します。"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:211
+#: src/ui-imgui/cmt/cmt_window.cpp:212
 msgid "Block"
 msgstr "ブロック"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:211
+#: src/ui-imgui/cmt/cmt_window.cpp:212
 msgid "of"
 msgstr "/"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:212
+#: src/ui-imgui/cmt/cmt_window.cpp:213
 msgid "FSize"
 msgstr "FSize"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:213
+#: src/ui-imgui/cmt/cmt_window.cpp:214
 msgid "FExec"
 msgstr "FExec"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:214
+#: src/ui-imgui/cmt/cmt_window.cpp:215
 msgid "FStart"
 msgstr "FStart"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:215
+#: src/ui-imgui/cmt/cmt_window.cpp:216
 msgid "Stream"
 msgstr "Stream"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:216
+#: src/ui-imgui/cmt/cmt_window.cpp:217
 msgid "Rate"
 msgstr "Rate"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:216
+#: src/ui-imgui/cmt/cmt_window.cpp:217
 msgid "SSize"
 msgstr "SSize"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:439
+#: src/ui-imgui/cmt/cmt_window.cpp:440
 msgid "Default MZ Speed:"
 msgstr "デフォルトMZ速度:"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:720
+#: src/ui-imgui/cmt/cmt_window.cpp:721
 msgid ""
 "Recording a replay: tape control is recorded; another tape and speed "
 "settings are not available."
@@ -818,59 +818,59 @@ msgstr ""
 "リプレイ記録中: テープ操作は記録されます。別のテープと速度設定は使用できませ"
 "ん。"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:724
+#: src/ui-imgui/cmt/cmt_window.cpp:725
 msgid "Tape control is not available while a replay is recorded or played."
 msgstr "入力の記録中または再生中はテープを操作できません。"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:761 src/ui-imgui/cmt/cmt_window.cpp:878
+#: src/ui-imgui/cmt/cmt_window.cpp:762 src/ui-imgui/cmt/cmt_window.cpp:879
 msgid "Virtual CMT"
 msgstr "仮想CMT"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:798
+#: src/ui-imgui/cmt/cmt_window.cpp:799
 msgid "CMT Hack is activated!"
 msgstr "CMT Hackが有効です！"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:799
+#: src/ui-imgui/cmt/cmt_window.cpp:800
 msgid "Virtual CMT is not available!"
 msgstr "仮想CMTは利用できません！"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:805
+#: src/ui-imgui/cmt/cmt_window.cpp:806
 #: src/ui-imgui/version_check/imgui_version_check.cpp:390
 msgid "Close"
 msgstr "閉じる"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:827
+#: src/ui-imgui/cmt/cmt_window.cpp:828
 msgid "No tape loaded"
 msgstr "テープが挿入されていません"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:836
+#: src/ui-imgui/cmt/cmt_window.cpp:837
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:363
 #: src/ui-imgui/topmenu/replay_window.cpp:205
 msgid "Recording"
 msgstr "録音中"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:846
+#: src/ui-imgui/cmt/cmt_window.cpp:847
 #: src/ui-imgui/topmenu/replay_window.cpp:213
 msgid "Playing"
 msgstr "再生中"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:861
+#: src/ui-imgui/cmt/cmt_window.cpp:862
 msgid "Stopped - Ready to Play"
 msgstr "停止 - 再生準備完了"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:868
+#: src/ui-imgui/cmt/cmt_window.cpp:869
 msgid "(paused)"
 msgstr "(一時停止)"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:890
+#: src/ui-imgui/cmt/cmt_window.cpp:891
 msgid "*** Empty ***"
 msgstr "*** 空 ***"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:896
+#: src/ui-imgui/cmt/cmt_window.cpp:897
 msgid "Recording (paused)"
 msgstr "録音中 (一時停止)"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:900
+#: src/ui-imgui/cmt/cmt_window.cpp:901
 msgid "Recording.."
 msgstr "録音中.."
 
@@ -930,7 +930,7 @@ msgstr "新しいブックマークを追加 (下のフォームを展開)。"
 
 #: src/ui-imgui/debugger/bookmarks/bm_window.cpp:283
 #: src/ui-imgui/debugger/vars/vars_window.cpp:562
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1250
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1251
 msgid "Filter:"
 msgstr "フィルタ:"
 
@@ -949,7 +949,7 @@ msgstr "クリア##bm_filter_clr"
 
 #: src/ui-imgui/debugger/bookmarks/bm_window.cpp:299
 #: src/ui-imgui/debugger/vars/vars_window.cpp:573
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1263
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1264
 msgid "Clear the filter text."
 msgstr "フィルタテキストをクリア。"
 
@@ -959,7 +959,7 @@ msgstr "表示中 / 総ブックマーク数。"
 
 #: src/ui-imgui/debugger/bookmarks/bm_window.cpp:309
 #: src/ui-imgui/debugger/vars/vars_window.cpp:580
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1282
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1283
 msgid "Selected:"
 msgstr "選択:"
 
@@ -1135,7 +1135,7 @@ msgid "Label"
 msgstr "ラベル"
 
 #: src/ui-imgui/debugger/bookmarks/bm_window.cpp:981
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1154
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1188
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:314
 msgid "Address"
 msgstr "アドレス"
@@ -1269,7 +1269,7 @@ msgid "(root)"
 msgstr "(ルート)"
 
 #: src/ui-imgui/debugger/breakpoints/bpt_edit_panel.cpp:1370
-#: src/ui-imgui/debugger/watch/watch_window.cpp:498
+#: src/ui-imgui/debugger/watch/watch_window.cpp:499
 #: src/ui-imgui/memext/memext_save_dialog.cpp:132
 msgid "Type:"
 msgstr "タイプ:"
@@ -1369,7 +1369,7 @@ msgstr "オフセット:"
 #: src/ui-imgui/debugger/breakpoints/bpt_edit_panel.cpp:1537
 #: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1687
 #: src/ui-imgui/debugger/sections/dbg_focus_to.cpp:211
-#: src/ui-imgui/debugger/watch/watch_window.cpp:465
+#: src/ui-imgui/debugger/watch/watch_window.cpp:466
 msgid "Address:"
 msgstr "アドレス:"
 
@@ -1503,7 +1503,7 @@ msgstr "(イベントを選択)"
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:1756
 #: src/ui-imgui/debugger/pioz80_window.cpp:424
 #: src/ui-imgui/debugger/pioz80_window.cpp:471
-#: src/ui-imgui/debugger/ppi_window.cpp:406
+#: src/ui-imgui/debugger/ppi_window.cpp:409
 #: src/ui-imgui/debugger/sections/dbg_stack_panel.cpp:1302
 msgid "(none)"
 msgstr "(なし)"
@@ -1575,7 +1575,7 @@ msgstr ""
 #: src/ui-imgui/debugger/breakpoints/bpt_edit_panel.cpp:1854
 #: src/ui-imgui/debugger/breakpoints/bpt_edit_panel.cpp:2425
 #: src/ui-imgui/debugger/heatmap/mhmap_window.cpp:686
-#: src/ui-imgui/debugger/watch/watch_window.cpp:444
+#: src/ui-imgui/debugger/watch/watch_window.cpp:445
 msgid "Mode:"
 msgstr "モード:"
 
@@ -1850,7 +1850,7 @@ msgstr "自動生成名##bpt_panel"
 #: src/ui-imgui/debugger/breakpoints/bpt_edit_panel.cpp:2295
 #: src/ui-imgui/debugger/breakpoints/bpt_edit_panel.cpp:2647
 #: src/ui-imgui/debugger/vars/vars_window.cpp:812
-#: src/ui-imgui/debugger/watch/watch_window.cpp:488
+#: src/ui-imgui/debugger/watch/watch_window.cpp:489
 msgid "Name:"
 msgstr "名前:"
 
@@ -2424,7 +2424,7 @@ msgstr "フィールド"
 #: src/ui-imgui/debugger/psg_window.cpp:459
 #: src/ui-imgui/debugger/psg_window.cpp:537
 #: src/ui-imgui/debugger/vars/vars_window.cpp:1504
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1702
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1703
 msgid "Value"
 msgstr "値"
 
@@ -2653,7 +2653,7 @@ msgstr "ターゲットへフォーカス"
 #: src/ui-imgui/debugger/dasm_window/dasm_window.cpp:669
 #: src/ui-imgui/debugger/memmap/memmap_window.cpp:1202
 #: src/ui-imgui/debugger/memmap/memmap_window.cpp:1241
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1698
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1699
 msgid "Addr"
 msgstr "Addr"
 
@@ -2906,7 +2906,7 @@ msgid "Hide noise"
 msgstr "ノイズを非表示"
 
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:1149
-#: src/ui-imgui/debugger/ioview/io_window.cpp:995
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1006
 #: src/ui-imgui/debugger/symbols/sym_window.cpp:619
 msgid "Clear filter"
 msgstr "フィルタをクリア"
@@ -3071,7 +3071,7 @@ msgid "Warning: saving an empty filter (matches all events)."
 msgstr "警告: 空のフィルタを保存 (すべてのイベントにマッチ)。"
 
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:1901
-#: src/ui-imgui/debugger/watch/watch_window.cpp:476
+#: src/ui-imgui/debugger/watch/watch_window.cpp:477
 msgid "Expression:"
 msgstr "式:"
 
@@ -3183,8 +3183,8 @@ msgid "Tint Log table rows by event category color (shared with Strip tab)."
 msgstr "イベントカテゴリ色でLogテーブル行を着色 (Stripタブと共有)。"
 
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:2155
-#: src/ui-imgui/joy/joy_setup_window.cpp:416
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:308
+#: src/ui-imgui/joy/joy_setup_window.cpp:433
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:320
 msgid "None"
 msgstr "なし"
 
@@ -3695,13 +3695,13 @@ msgstr "FDC State"
 
 #: src/ui-imgui/debugger/fdc_window.cpp:198
 #: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:403
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:312
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:324
 msgid "FDC0 (standard)"
 msgstr "FDC0 (標準)"
 
 #: src/ui-imgui/debugger/fdc_window.cpp:199
 #: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:409
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:316
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:328
 msgid "FDC1 (secondary)"
 msgstr "FDC1 (セカンダリ)"
 
@@ -4407,11 +4407,11 @@ msgstr "ドライブ Master"
 msgid "Drive Slave"
 msgstr "ドライブ Slave"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:481
+#: src/ui-imgui/debugger/ioview/io_window.cpp:491
 msgid "(no bit-level decode available)"
 msgstr "(ビットレベルデコード利用不可)"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:636
+#: src/ui-imgui/debugger/ioview/io_window.cpp:646
 msgid ""
 "16-bit CRTC family port. Bus addr is 0x<RR>CF (Z80 OUT (C),A pattern with "
 "B=register index, C=0xCF). MZ notation 0xCF<RR> is human-readable display."
@@ -4419,52 +4419,52 @@ msgstr ""
 "16ビットCRTCファミリーポート。バスアドレスは 0x<RR>CF (Z80 OUT (C),A パター"
 "ン、B=レジスタインデックス、C=0xCF)。MZ表記 0xCF<RR> は人間が読める表示。"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:654
+#: src/ui-imgui/debugger/ioview/io_window.cpp:664
 msgid "Add IORQ R BP##ioctx"
 msgstr "IORQ R BPを追加##ioctx"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:657
+#: src/ui-imgui/debugger/ioview/io_window.cpp:667
 msgid "Add IORQ W BP##ioctx"
 msgstr "IORQ W BPを追加##ioctx"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:661
+#: src/ui-imgui/debugger/ioview/io_window.cpp:671
 msgid "Add MEM R BP##ioctx"
 msgstr "MEM R BPを追加##ioctx"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:664
+#: src/ui-imgui/debugger/ioview/io_window.cpp:674
 msgid "Add MEM W BP##ioctx"
 msgstr "MEM W BPを追加##ioctx"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:669
+#: src/ui-imgui/debugger/ioview/io_window.cpp:679
 msgid "Reset activity counter##ioctx"
 msgstr "アクティビティカウンタをリセット##ioctx"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:681
+#: src/ui-imgui/debugger/ioview/io_window.cpp:691
 msgid "Show in History tab##ioctx"
 msgstr "Historyタブで表示##ioctx"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:718
+#: src/ui-imgui/debugger/ioview/io_window.cpp:728
 msgid "Show in Memory Map##ioctx"
 msgstr "Memory Mapで表示##ioctx"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:813
+#: src/ui-imgui/debugger/ioview/io_window.cpp:823
 #, c-format
 msgid "Last cached value %u frames ago"
 msgstr "最後のキャッシュ値 %u フレーム前"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:820
+#: src/ui-imgui/debugger/ioview/io_window.cpp:830
 msgid "No data captured (port has no mirror and no IORQ event yet)"
 msgstr "データなし (ポートはミラーがなく、IORQイベントもまだない)"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:849
+#: src/ui-imgui/debugger/ioview/io_window.cpp:859
 msgid "Hits per second over last 1s window (50 buckets)"
 msgstr "直近1秒のヒット/秒 (50バケット)"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:855
+#: src/ui-imgui/debugger/ioview/io_window.cpp:865
 msgid "Tracking disabled (panel closed or toggled off)"
 msgstr "追跡無効 (パネル閉鎖またはオフ)"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:879
+#: src/ui-imgui/debugger/ioview/io_window.cpp:889
 msgid ""
 "MMIO events (0xE000-0xE008) are always recorded (per-port filter applies to "
 "8-bit IORQ space only)"
@@ -4472,7 +4472,7 @@ msgstr ""
 "MMIOイベント (0xE000-0xE008) は常に記録される (ポート別フィルタは8ビットIORQ"
 "空間のみに適用)"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:893
+#: src/ui-imgui/debugger/ioview/io_window.cpp:903
 msgid ""
 "Record IORQ events for this port into History ring buffer. Uncheck to skip "
 "high-frequency ports and preserve ring capacity for events of interest."
@@ -4480,12 +4480,12 @@ msgstr ""
 "このポートのIORQイベントを履歴リングバッファに記録。高頻度ポートをスキップし"
 "て関心イベント用にリング容量を確保するにはチェックを外す。"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:981
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1888
+#: src/ui-imgui/debugger/ioview/io_window.cpp:992
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1896
 msgid "Filter..."
 msgstr "フィルタ..."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:987
+#: src/ui-imgui/debugger/ioview/io_window.cpp:998
 msgid ""
 "Filter visible ports (case-insensitive substring match on name, address hex, "
 "or direction r/w/rw)."
@@ -4493,35 +4493,35 @@ msgstr ""
 "表示中ポートをフィルタ (名前、hexアドレス、または方向 r/w/rwの大小区別なし部"
 "分文字列マッチ)。"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:991
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1002
 msgid "Clear##io_clear_filter"
 msgstr "クリア##io_clear_filter"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1001
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1012
 msgid "Reset Activity##io_reset_act"
 msgstr "アクティビティをリセット##io_reset_act"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1008
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1019
 msgid "Clear activity counters for all 256 ports"
 msgstr "全256ポートのアクティビティカウンタをクリア"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1014
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2002
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1025
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2010
 #: src/ui-imgui/debugger/sections/dbg_coverage.cpp:340
 msgid "Capacity:"
 msgstr "容量:"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1048
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2032
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1059
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2040
 msgid "History buffer size. Resize discards existing events."
 msgstr "履歴バッファサイズ。リサイズで既存イベントが破棄されます。"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1056
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1067
 msgid "Track##io_track"
 msgstr "追跡##io_track"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1061
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2050
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1072
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2058
 msgid ""
 "Enable IORQ activity + history capture (gated). Default ON when panel is "
 "open. Toggle off to reduce overhead."
@@ -4529,73 +4529,73 @@ msgstr ""
 "IORQアクティビティ + 履歴キャプチャを有効化 (ゲート付き)。パネル開時のデフォ"
 "ルトON。オーバーヘッド削減のためオフに。"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1076
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1087
 msgid "Heat...##io_heat_btn"
 msgstr "Heat...##io_heat_btn"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1081
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1092
 msgid "Configure activity heat coloring thresholds."
 msgstr "アクティビティheat着色の閾値を設定。"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1084
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1095
 msgid "Heat coloring thresholds (hits/s):"
 msgstr "Heat着色の閾値 (ヒット/秒):"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1087
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1098
 msgid "Text active (green)##io_heat_text"
 msgstr "テキストアクティブ (緑)##io_heat_text"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1098
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1109
 msgid "Minimum hits/s to color row text green. Default 1."
 msgstr "行テキストを緑にするための最小ヒット/秒。デフォルト 1。"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1101
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1112
 msgid "Bg hot tint (red)##io_heat_bg"
 msgstr "背景ホット色 (赤)##io_heat_bg"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1112
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1123
 msgid ""
 "Minimum hits/s for red row background tint (bottleneck warn). Default 10000."
 msgstr "赤の行背景色 (ボトルネック警告) の最小ヒット/秒。デフォルト 10000。"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1116
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1127
 msgid "Reset to defaults##io_heat_reset"
 msgstr "デフォルトにリセット##io_heat_reset"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1156
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1167
 msgid "No ports match filter"
 msgstr "フィルタに一致するポートなし"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1647
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1655
 msgid "(no selection)"
 msgstr "(選択なし)"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1648
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1656
 msgid "Click a row to see details"
 msgstr "行をクリックして詳細を表示"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1660
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1668
 msgid "Selected event:"
 msgstr "選択イベント:"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1694
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1702
 msgid "Focus to primary disassembly. Right-click for additional actions."
 msgstr "メインの逆アセンブルにフォーカス。右クリックで追加アクション。"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1735
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1743
 msgid "Focus to..."
 msgstr "フォーカス先..."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1754
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1762
 #: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3387
 msgid "Add to bookmarks"
 msgstr "ブックマークに追加"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1773
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1781
 msgid "Add breakpoint"
 msgstr "ブレークポイントを追加"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1894
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1902
 msgid ""
 "Filter syntax (boolean expression):\n"
 "Atoms (leaf tokens):\n"
@@ -4647,23 +4647,23 @@ msgstr ""
 "  (port:CE pc:42) | port:CF  グループ OR グループ\n"
 "  !(in | out)                IN でも OUT でもない"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1920
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1928
 msgid "Clear##io_hist_clear"
 msgstr "クリア##io_hist_clear"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1954
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1962
 msgid "Latest##io_hist_latest"
 msgstr "最新##io_hist_latest"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1960
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1968
 msgid "Re-enable auto-follow and scroll to latest event"
 msgstr "自動追跡を再有効化し最新イベントへスクロール"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1964
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1972
 msgid "Auto-follow##io_hist_af"
 msgstr "自動追跡##io_hist_af"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1976
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1984
 msgid ""
 "Auto-scroll History tab to latest event. User scroll up disables follow; "
 "click [Latest] re-enables."
@@ -4671,27 +4671,27 @@ msgstr ""
 "Historyタブを最新イベントへ自動スクロール。ユーザの上スクロールでfollow無効、"
 "[Latest]クリックで再有効化。"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1982
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1990
 msgid "Clear history##io_hist_purge"
 msgstr "履歴をクリア##io_hist_purge"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1993
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2001
 msgid "Discard all recorded IORQ events"
 msgstr "記録されたすべてのIORQイベントを破棄"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2038
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2046
 msgid "Track##io_hist_track"
 msgstr "追跡##io_hist_track"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2057
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2065
 msgid "Filter error"
 msgstr "フィルタエラー"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2196
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2204
 msgid "Filter actions for this event:"
 msgstr "このイベントに対するフィルタアクション:"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2475
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2483
 msgid ""
 "Wraps the current filter in parentheses, then appends ' & token'. Use to AND-"
 "narrow an OR chain (parser precedence: & binds tighter than |)."
@@ -4699,7 +4699,7 @@ msgstr ""
 "現在のフィルタを括弧で囲み、' & token' を追加。ORチェーンをANDで狭めるのに使"
 "用 (パーサ優先度: & は | より強く結合)。"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2479
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2487
 msgid ""
 "Wraps the current filter in parentheses, then appends ' | token'. Use when "
 "the current filter is itself an AND chain that should be OR-extended as a "
@@ -4708,15 +4708,15 @@ msgstr ""
 "現在のフィルタを括弧で囲み、' | token' を追加。現在のフィルタ自身がANDチェー"
 "ンで全体をORで拡張する場合に使用。"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2775
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2783
 msgid "I/O Ports###io_main"
 msgstr "I/O ポート###io_main"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2811
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2819
 msgid "Overview##io_tab_ov"
 msgstr "概要##io_tab_ov"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2825
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2833
 msgid "History##io_tab_hist"
 msgstr "履歴##io_tab_hist"
 
@@ -5111,7 +5111,7 @@ msgstr "例: \"AA BB CC\" または \"DEADBEEF\" - 最大64バイト"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_fill_dialog.cpp:262
 #: src/ui-imgui/debugger/sections/dbg_focus_to.cpp:274
-#: src/ui-imgui/joy/joy_setup_window.cpp:574
+#: src/ui-imgui/joy/joy_setup_window.cpp:591
 #: src/ui-imgui/memext/memext_map_window.cpp:277
 #: src/ui-imgui/version_check/imgui_version_check.cpp:245
 #: src/ui-imgui/version_check/imgui_version_check.cpp:250
@@ -5373,7 +5373,7 @@ msgstr "スナップショット: %u B"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:443
 #: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:503
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1433
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1434
 msgid "No snapshot"
 msgstr "スナップショットなし"
 
@@ -5421,8 +5421,8 @@ msgstr "スナップショット Δ"
 #: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:497
 #: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:148
 #: src/ui-imgui/maxspeed_bench_window.cpp:156
-#: src/ui-imgui/plotter/plotter_window.cpp:431
-#: src/ui-imgui/topmenu/topmenu.cpp:58
+#: src/ui-imgui/plotter/plotter_window.cpp:432
+#: src/ui-imgui/topmenu/topmenu.cpp:59
 msgid "Reset"
 msgstr "リセット"
 
@@ -5509,12 +5509,12 @@ msgid "Monitor ROM###mb_rt_rom_group"
 msgstr "モニタ ROM###mb_rt_rom_group"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:210
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:546
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:578
 msgid "lower (4 KB)"
 msgstr "下位 (4 KB)"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:214
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:547
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:579
 msgid "upper (8 KB)"
 msgstr "上位 (8 KB)"
 
@@ -5527,12 +5527,12 @@ msgid "Physical Planes###mb_rt_vram_planes"
 msgstr "物理プレーン###mb_rt_vram_planes"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:271
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:553
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:585
 msgid "VRAM 700 char (1 KB)"
 msgstr "VRAM 700 文字 (1 KB)"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:277
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:554
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:586
 msgid "VRAM 700 attr (1 KB)"
 msgstr "VRAM 700 属性 (1 KB)"
 
@@ -5593,89 +5593,94 @@ msgstr "リージョン: OFF###mb_regions_toggle"
 msgid "Toggle Regions sidebar (hierarchical region tree)"
 msgstr "リージョンサイドバーを切替 (階層リージョンツリー)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:494
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:543
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:501
+msgid "Expansion devices###mb_rt_devices"
+msgstr "拡張デバイス###mb_rt_devices"
+
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:522
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:575
 msgid "Logical Z80 (current)"
 msgstr "論理 Z80 (現在)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:497
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:544
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:525
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:576
 msgid "User RAM (64 KB)"
 msgstr "ユーザ RAM (64 KB)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:503
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:548
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:531
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:580
 msgid "CG-ROM (4 KB)"
 msgstr "CG-ROM (4 KB)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:510
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:555
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:538
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:587
 msgid "CG-RAM (4 KB) [700 mode]"
 msgstr "CG-RAM (4 KB) [700 モード]"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:524
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:563
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:552
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:595
 msgid "Ramdisk PEZIK 0x68"
 msgstr "ラムディスク PEZIK 0x68"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:527
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:564
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:555
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:596
 msgid "Ramdisk PEZIK 0xE8"
 msgstr "ラムディスク PEZIK 0xE8"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:532
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:565
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:560
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:597
 msgid "Prohibited shadow"
 msgstr "禁止シャドウ"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:545
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:577
 msgid "Monitor ROM"
 msgstr "モニタ ROM"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:549
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:581
 #: src/ui-imgui/debugger/memsearch_window/memsearch_window.cpp:563
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:118
 msgid "VRAM"
 msgstr "VRAM"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:550
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:582
 msgid "Physical Planes"
 msgstr "物理プレーン"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:551
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:583
 msgid "Plane III (8 KB) [exVRAM]"
 msgstr "プレーン III (8 KB) [exVRAM]"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:552
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:584
 msgid "Plane IV (8 KB) [exVRAM]"
 msgstr "プレーン IV (8 KB) [exVRAM]"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:556
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:588
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:119
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:44
 msgid "PCG"
 msgstr "PCG"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:557
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:589
 msgid "Memext"
 msgstr "Memext"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:558
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:590
 msgid "RAM banks"
 msgstr "RAM バンク"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:559
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:591
 msgid "FLASH banks"
 msgstr "FLASH バンク"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:560
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:592
 msgid "Bank 0xFF (4 KB) [R/O]"
 msgstr "バンク 0xFF (4 KB) [R/O]"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:561
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:593
 msgid "Bank 0xFF (64 KB)"
 msgstr "バンク 0xFF (64 KB)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:562
+#: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:594
 msgid "Ramdisk STD"
 msgstr "ラムディスク STD"
 
@@ -5746,382 +5751,386 @@ msgstr "ラムディスク PEZIK ポート 0xE8 バンクインデックス"
 msgid "Ramdisk PEZIK port 0x68 bank index"
 msgstr "ラムディスク PEZIK ポート 0x68 バンクインデックス"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:609
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:621
+msgid "Memory of a connected expansion device"
+msgstr "接続された拡張デバイスのメモリ"
+
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:643
 msgid "Encoding:"
 msgstr "エンコーディング:"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:632
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:666
 msgid "ASCII column encoding"
 msgstr "ASCII 列エンコーディング"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:640
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:674
 msgid "Bytes/row:"
 msgstr "バイト/行:"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:664
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:698
 msgid "Bytes per row (8/16/32)"
 msgstr "1行あたりのバイト数 (8/16/32)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:672
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:706
 msgid "ASCII###mb_ascii_toggle"
 msgstr "ASCII###mb_ascii_toggle"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:677
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:711
 msgid "Show or hide ASCII decoded column"
 msgstr "ASCII デコード列の表示/非表示"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:687
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:721
 msgid "PC###mb_pc_marker"
 msgstr "PC###mb_pc_marker"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:691
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:725
 msgid "Highlight row containing Z80 PC"
 msgstr "Z80 PC を含む行をハイライト"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:694
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:728
 msgid "SP###mb_sp_marker"
 msgstr "SP###mb_sp_marker"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:698
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:732
 msgid "Highlight row containing Z80 SP"
 msgstr "Z80 SP を含む行をハイライト"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:703
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:737
 msgid "Origin###mb_origin_labels"
 msgstr "原点###mb_origin_labels"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:709
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:743
 msgid "Show per-row physical origin label (banking-aware)"
 msgstr "行ごとの物理原点ラベルを表示 (バンク対応)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:728
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:762
 msgid "HEX:"
 msgstr "HEX:"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:743
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:777
 msgid "Hex address (Enter or Goto)"
 msgstr "Hex アドレス (Enter または Goto)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:749
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:783
 msgid "DEC:"
 msgstr "DEC:"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:768
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:802
 msgid "Decimal address (Enter or Goto)"
 msgstr "10進アドレス (Enter または Goto)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:774
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:808
 msgid "Goto###mb_goto_btn"
 msgstr "Goto###mb_goto_btn"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:793
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:827
 msgid "Search###mb_search_btn"
 msgstr "検索###mb_search_btn"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:797
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:831
 msgid "Toggle search panel"
 msgstr "検索パネルを切替"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:829
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:863
 msgid "R/W"
 msgstr "R/W"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:829
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:863
 msgid "R/O"
 msgstr "R/O"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:830
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:864
 msgid "mapped"
 msgstr "マップ済み"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:830
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:864
 msgid "not mapped"
 msgstr "マップ未済み"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:832
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:866
 #, c-format
 msgid "Size: %u B | %s | %s | Z80 base 0x%04X"
 msgstr "サイズ: %u B | %s | %s | Z80 ベース 0x%04X"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:836
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:870
 #, c-format
 msgid "Size: %u B | %s | %s"
 msgstr "サイズ: %u B | %s | %s"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:841
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:875
 msgid "Region disconnected - falling back to Logical"
 msgstr "リージョン切断 - 論理にフォールバック"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:879
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:933
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:913
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:967
 msgid "[PROHIBITED]"
 msgstr "[PROHIBITED]"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:882
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:916
 msgid ""
 "Prohibited mode active (OUT E5) - 0xE000-0xFFFF reads return shadow 0x1A"
 msgstr ""
 "禁止モード有効 (OUT E5) - 0xE000-0xFFFF の読み込みはシャドウ 0x1A を返却"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:889
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:923
 msgid "[SCRW640]"
 msgstr "[SCRW640]"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:892
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:926
 msgid ""
 "640px wide screen mode active (DMD bit 2) - VRAM II mapped to 0xA000-0xBFFF"
 msgstr ""
 "640px ワイドスクリーンモード有効 (DMD ビット 2) - VRAM II を 0xA000-0xBFFF に"
 "マップ"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:899
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:933
 msgid "[HICOLOR]"
 msgstr "[HICOLOR]"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:902
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:936
 msgid "16-color mode active (DMD bit 1) - 4-plane VRAM addressing"
 msgstr "16色モード有効 (DMD ビット 1) - 4プレーン VRAM アドレッシング"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:909
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:943
 msgid "[VBANK]"
 msgstr "[VBANK]"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:912
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:946
 msgid "Display bank toggled (DMD bit 5)"
 msgstr "表示バンク切替 (DMD ビット 5)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:919
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:953
 msgid "MZ-700 mode"
 msgstr "MZ-700 モード"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:919
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:953
 msgid "MZ-800 mode"
 msgstr "MZ-800 モード"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:921
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:955
 #, c-format
 msgid "DMD: %s (0x%02X)"
 msgstr "DMD: %s (0x%02X)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:925
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:959
 msgid "Display Mode Descriptor - GDG register, bit 3 = MZ-700 compat mode"
 msgstr "Display Mode Descriptor - GDG レジスタ、ビット 3 = MZ-700 互換モード"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:936
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:970
 msgid ""
 "Prohibited mode active (OUT E5) - 0xE000-0xFFFF reads return shadow 0xFF"
 msgstr ""
 "禁止モード有効 (OUT E5) - 0xE000-0xFFFF の読み込みはシャドウ 0xFF を返却"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:968
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1002
 msgid " (current encoding affected)"
 msgstr " (現在のエンコーディングに影響)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:971
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1005
 #, c-format
 msgid "KOI8-CS table not loaded - showing identity mapping%s"
 msgstr "KOI8-CS テーブル未ロード - 恒等マッピングを表示%s"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1015
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1049
 msgid "<##mb_page_prev"
 msgstr "<##mb_page_prev"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1025
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1059
 msgid "Previous page (PgUp)"
 msgstr "前のページ (PgUp)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1032
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1066
 msgid ">##mb_page_next"
 msgstr ">##mb_page_next"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1042
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1076
 msgid "Next page (PgDn)"
 msgstr "次のページ (PgDn)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1047
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1081
 #, c-format
 msgid "Page: %llu of: %llu"
 msgstr "ページ: %llu / %llu"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1070
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1104
 msgid "Bytes (HEX + ASCII)"
 msgstr "バイト (HEX + ASCII)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1071
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1105
 msgid "Byte sequence (hex, legacy)"
 msgstr "バイトシーケンス (hex, レガシー)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1072
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1106
 msgid "ASCII (current encoding, legacy)"
 msgstr "ASCII (現在のエンコーディング, レガシー)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1073
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1107
 msgid "Word LE (16-bit)"
 msgstr "ワード LE (16-bit)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1074
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1108
 msgid "Word BE (16-bit)"
 msgstr "ワード BE (16-bit)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1075
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1109
 msgid "Masked (AA ?? BB)"
 msgstr "マスク付き (AA ?? BB)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1076
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1110
 msgid "Regex (POSIX ERE)"
 msgstr "正規表現 (POSIX ERE)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1077
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1111
 msgid "Expression (per byte)"
 msgstr "式 (バイト単位)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1089
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1123
 msgid "Current region"
 msgstr "現在のリージョン"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1090
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1124
 msgid "All regions (current arch)"
 msgstr "全リージョン (現在のアーキテクチャ)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1131
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1165
 msgid "Results###mb_search_results_hdr"
 msgstr "結果###mb_search_results_hdr"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1136
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1170
 #, c-format
 msgid "Hits: %d"
 msgstr "ヒット: %d"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1138
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1172
 msgid "Clear###mb_search_results_clear"
 msgstr "クリア###mb_search_results_clear"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1155
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1189
 #: src/ui-imgui/debugger/memsearch_window/memsearch_window.cpp:483
 msgid "Region"
 msgstr "リージョン"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1156
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1190
 msgid "Preview (hex)"
 msgstr "プレビュー (hex)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1325
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1359
 #: src/ui-imgui/debugger/symbols/sym_window.cpp:608
 msgid "Search:"
 msgstr "検索:"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1370
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1404
 msgid "HEX bytes: AA BB CC (spaces optional)"
 msgstr "HEX バイト: AA BB CC (スペース任意)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1396
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1430
 msgid ""
 "ASCII view (current encoding). Type to update HEX. Use [+] for special chars."
 msgstr ""
 "ASCII 表示 (現在のエンコーディング)。入力で HEX を更新。特殊文字は [+] を使"
 "用。"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1409
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1443
 msgid "[+]###mb_search_insert_char"
 msgstr "[+]###mb_search_insert_char"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1412
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1446
 msgid "Search pattern"
 msgstr "検索パターン"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1416
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1450
 msgid "Insert special character via Char Inserter (palette of MZ/KOI8 glyphs)"
 msgstr "文字インサータ経由で特殊文字を挿入 (MZ/KOI8 グリフのパレット)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1434
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1468
 msgid "H###mb_search_hist_btn"
 msgstr "H###mb_search_hist_btn"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1438
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1472
 msgid "Recent patterns"
 msgstr "最近のパターン"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1460
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1494
 msgid "Find Next###mb_search_next"
 msgstr "次を検索###mb_search_next"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1462
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1496
 msgid "Prev###mb_search_prev"
 msgstr "前へ###mb_search_prev"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1464
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1498
 msgid "All###mb_search_all"
 msgstr "全て###mb_search_all"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1470
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1504
 msgid "Cancel###mb_search_cancel"
 msgstr "キャンセル###mb_search_cancel"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1475
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1509
 msgid "Close###mb_search_close"
 msgstr "閉じる###mb_search_close"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1480
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1514
 msgid "Scope:"
 msgstr "スコープ:"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1495
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1529
 msgid "Case sens.###mb_search_case"
 msgstr "大文字小文字区別###mb_search_case"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1515
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1549
 #, c-format
 msgid "Error: %s"
 msgstr "エラー: %s"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1517
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1551
 msgid "Canceled"
 msgstr "キャンセルされました"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1519
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1553
 #, c-format
 msgid "Match @ 0x%08X"
 msgstr "マッチ @ 0x%08X"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1569
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1603
 #, c-format
 msgid "Cursor: 0x%08X = 0x%02X '%s' (%s)"
 msgstr "カーソル: 0x%08X = 0x%02X '%s' (%s)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1575
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1609
 #, c-format
 msgid "Cursor: 0x%08X (no data)"
 msgstr "カーソル: 0x%08X (データなし)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1586
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1620
 msgid "ASCII"
 msgstr "ASCII"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1586
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1620
 msgid "HEX"
 msgstr "HEX"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1588
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1622
 #, c-format
 msgid "Mode: %s (Tab to switch)"
 msgstr "モード: %s (Tab で切替)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1622
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1656
 msgid "Edit error"
 msgstr "編集エラー"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1668
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1702
 #, c-format
 msgid "PEZIK port %s bank %d | byte order: native (TODO BE/LE toggle V3+)"
 msgstr ""
 "PEZIK ポート %s バンク %d | バイト順序: ネイティブ (TODO BE/LE トグル V3+)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1686
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1720
 #, c-format
 msgid "Annotation: %s"
 msgstr "注釈: %s"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:2249
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:2283
 msgid "No region available"
 msgstr "利用可能なリージョンなし"
 
@@ -6602,7 +6611,7 @@ msgid "decreased by"
 msgstr "指定量だけ減った"
 
 #: src/ui-imgui/debugger/memsearch_window/memsearch_window.cpp:671
-#: src/ui-imgui/debugger/watch/watch_window.cpp:830
+#: src/ui-imgui/debugger/watch/watch_window.cpp:831
 msgid "changed"
 msgstr "変更"
 
@@ -6720,7 +6729,7 @@ msgid "Max Speed"
 msgstr "最高速度"
 
 #: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:160
-#: src/ui-imgui/topmenu/topmenu.cpp:53
+#: src/ui-imgui/topmenu/topmenu.cpp:54
 msgid "Pause Emulation"
 msgstr "エミュレーションを一時停止"
 
@@ -7111,7 +7120,7 @@ msgid "Deferred ICENA event (idle = -1, otherwise GDG ticks)"
 msgstr "遅延された ICENA イベント (idle = -1、それ以外は GDG ティック)"
 
 #: src/ui-imgui/debugger/pioz80_window.cpp:448
-#: src/ui-imgui/plotter/plotter_window.cpp:525
+#: src/ui-imgui/plotter/plotter_window.cpp:526
 msgid "idle"
 msgstr "アイドル"
 
@@ -7123,21 +7132,21 @@ msgstr "予約済み"
 msgid "Port for which icena_event is scheduled"
 msgstr "icena_event がスケジュールされているポート"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:93
-#: src/ui-imgui/debugger/ppi_window.cpp:95
+#: src/ui-imgui/debugger/ppi_window.cpp:94
+#: src/ui-imgui/debugger/ppi_window.cpp:96
 msgid "Mode Set (D7=1)"
 msgstr "Mode Set (D7=1)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:124
-#: src/ui-imgui/debugger/ppi_window.cpp:126
+#: src/ui-imgui/debugger/ppi_window.cpp:125
+#: src/ui-imgui/debugger/ppi_window.cpp:127
 msgid "Bit Set/Reset (D7=0)"
 msgstr "Bit Set/Reset (D7=0)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:161
+#: src/ui-imgui/debugger/ppi_window.cpp:162
 msgid "bit"
 msgstr "ビット"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:173
+#: src/ui-imgui/debugger/ppi_window.cpp:174
 msgid ""
 "0 = key pressed, 1 = released (active LOW). Rows = bit 0..7, columns = PA0-3 "
 "selected column."
@@ -7145,15 +7154,15 @@ msgstr ""
 "0 = キー押下, 1 = リリース (active LOW). 行 = bit 0..7, 列 = PA0-3 で選択され"
 "た列."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:216
+#: src/ui-imgui/debugger/ppi_window.cpp:217
 msgid "PPI 8255 State###PPIState"
 msgstr "PPI 8255 状態###PPIState"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:226
+#: src/ui-imgui/debugger/ppi_window.cpp:227
 msgid "Last Control Word###PPI_CW"
 msgstr "最後の Control Word###PPI_CW"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:239
+#: src/ui-imgui/debugger/ppi_window.cpp:240
 msgid ""
 "Last byte written to Control port (debug mirror - 8255 CW sequencer is not "
 "HW readable)."
@@ -7161,157 +7170,157 @@ msgstr ""
 "Control ポートに書かれた最後のバイト (debug mirror - 8255 CW シーケンサは HW "
 "から読めません)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:250
+#: src/ui-imgui/debugger/ppi_window.cpp:251
 msgid "Port A###PPI_PA"
 msgstr "Port A###PPI_PA"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:263
+#: src/ui-imgui/debugger/ppi_window.cpp:264
 msgid "Output port A (sampled keyboard column + JOY enables)."
 msgstr "出力ポート A (サンプリングされたキーボード列 + JOY enables)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:268
-#: src/ui-imgui/debugger/ppi_window.cpp:354
+#: src/ui-imgui/debugger/ppi_window.cpp:269
+#: src/ui-imgui/debugger/ppi_window.cpp:355
 msgid "Bit decode:"
 msgstr "ビットデコード:"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:271
+#: src/ui-imgui/debugger/ppi_window.cpp:272
 msgid "keyboard column (PA0-3)"
 msgstr "キーボード列 (PA0-3)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:275
+#: src/ui-imgui/debugger/ppi_window.cpp:276
 msgid "JOY1 enable (active LOW)"
 msgstr "JOY1 有効 (active LOW)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:278
+#: src/ui-imgui/debugger/ppi_window.cpp:279
 msgid "JOY2 enable (active LOW)"
 msgstr "JOY2 有効 (active LOW)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:282
+#: src/ui-imgui/debugger/ppi_window.cpp:283
 msgid "JOY1 enable"
 msgstr "JOY1 有効"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:283
-#: src/ui-imgui/debugger/ppi_window.cpp:286
+#: src/ui-imgui/debugger/ppi_window.cpp:284
+#: src/ui-imgui/debugger/ppi_window.cpp:287
 msgid "not present on this arch"
 msgstr "このアーキテクチャには存在しない"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:285
+#: src/ui-imgui/debugger/ppi_window.cpp:286
 msgid "JOY2 enable"
 msgstr "JOY2 有効"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:288
+#: src/ui-imgui/debugger/ppi_window.cpp:289
 msgid "reserved"
 msgstr "予約"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:295
+#: src/ui-imgui/debugger/ppi_window.cpp:296
 msgid "Port B - Keyboard Matrix###PPI_PB"
 msgstr "Port B - キーボードマトリクス###PPI_PB"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:301
+#: src/ui-imgui/debugger/ppi_window.cpp:302
 msgid "View:"
 msgstr "表示:"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:303
+#: src/ui-imgui/debugger/ppi_window.cpp:304
 msgid "Combined###PPI_PB_VIEW_C"
 msgstr "結合###PPI_PB_VIEW_C"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:307
+#: src/ui-imgui/debugger/ppi_window.cpp:308
 msgid "AND of physical and virtual matrix (what CPU actually reads)."
 msgstr "物理マトリクスと仮想マトリクスの AND (CPU が実際に読む値)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:310
+#: src/ui-imgui/debugger/ppi_window.cpp:311
 msgid "Physical###PPI_PB_VIEW_P"
 msgstr "物理###PPI_PB_VIEW_P"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:314
+#: src/ui-imgui/debugger/ppi_window.cpp:315
 msgid "g_pio8255.keyboard_matrix[] only (SDL keyboard)."
 msgstr "g_pio8255.keyboard_matrix[] のみ (SDL キーボード)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:317
+#: src/ui-imgui/debugger/ppi_window.cpp:318
 msgid "Virtual###PPI_PB_VIEW_V"
 msgstr "仮想###PPI_PB_VIEW_V"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:321
+#: src/ui-imgui/debugger/ppi_window.cpp:322
 msgid "g_pio8255.vkbd_matrix[] only (VKBD / autotype)."
 msgstr "g_pio8255.vkbd_matrix[] のみ (VKBD / autotype)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:328
+#: src/ui-imgui/debugger/ppi_window.cpp:329
 msgid "Cell '*' = key pressed (bit=0, active LOW), '.' = released (bit=1)."
 msgstr "セル '*' = キー押下 (bit=0, active LOW), '.' = リリース (bit=1)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:335
+#: src/ui-imgui/debugger/ppi_window.cpp:336
 msgid "Port C###PPI_PC"
 msgstr "Port C###PPI_PC"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:348
+#: src/ui-imgui/debugger/ppi_window.cpp:349
 msgid "Port C raw output state (D0-D3 OUT, D4-D7 IN; D5-D7 computed on read)."
 msgstr "Port C 生の出力状態 (D0-D3 OUT, D4-D7 IN; D5-D7 は読み出し時に計算)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:358
+#: src/ui-imgui/debugger/ppi_window.cpp:359
 msgid "CTC0 audio mask (0 = mute, 1 = pass)"
 msgstr "CTC0 オーディオマスク (0 = ミュート, 1 = 通過)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:361
+#: src/ui-imgui/debugger/ppi_window.cpp:362
 msgid "CTC0 audio mask not present"
 msgstr "CTC0 オーディオマスクは存在しません"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:364
+#: src/ui-imgui/debugger/ppi_window.cpp:365
 msgid "CMT data out"
 msgstr "CMT data out"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:366
+#: src/ui-imgui/debugger/ppi_window.cpp:367
 msgid "CTC2 INT mask (0 = blocked, 1 = enabled)"
 msgstr "CTC2 INT マスク (0 = ブロック, 1 = 有効)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:368
+#: src/ui-imgui/debugger/ppi_window.cpp:369
 msgid "CMT motor control (rising edge toggles)"
 msgstr "CMT モーター制御 (立ち上がりエッジで切替)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:370
+#: src/ui-imgui/debugger/ppi_window.cpp:371
 msgid "CMT motor state"
 msgstr "CMT モーター状態"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:372
+#: src/ui-imgui/debugger/ppi_window.cpp:373
 msgid "CMT data in - computed on read (not in mirror)"
 msgstr "CMT data in - 読み出し時に計算 (mirror には無し)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:374
+#: src/ui-imgui/debugger/ppi_window.cpp:375
 msgid "Cursor blink NE556@OUT - computed on read"
 msgstr "カーソル点滅 NE556@OUT - 読み出し時に計算"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:376
+#: src/ui-imgui/debugger/ppi_window.cpp:377
 msgid "VBLN - computed on read"
 msgstr "VBLN - 読み出し時に計算"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:386
+#: src/ui-imgui/debugger/ppi_window.cpp:387
 msgid "VKBD Autotype###PPI_VKBD"
 msgstr "VKBD Autotype###PPI_VKBD"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:412
+#: src/ui-imgui/debugger/ppi_window.cpp:415
 msgid "Current column index into vkbd_autotype string."
 msgstr "vkbd_autotype 文字列内の現在の列インデックス."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:415
+#: src/ui-imgui/debugger/ppi_window.cpp:418
 msgid "Last decoded matrix byte (column<<4 | bit)."
 msgstr "最後にデコードしたマトリクスバイト (column<<4 | bit)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:418
+#: src/ui-imgui/debugger/ppi_window.cpp:421
 msgid "Shift modifier required for current char."
 msgstr "現在の文字に Shift 修飾子が必要."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:421
+#: src/ui-imgui/debugger/ppi_window.cpp:424
 msgid "Currently in key-down phase (vs. key-up gap)."
 msgstr "現在 key-down フェーズ (vs. key-up ギャップ)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:434
+#: src/ui-imgui/debugger/ppi_window.cpp:437
 msgid "Key-down duration in gdgclk ticks."
 msgstr "key-down 持続時間 (gdgclk ティック)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:446
+#: src/ui-imgui/debugger/ppi_window.cpp:449
 msgid "Key-up gap duration in gdgclk ticks."
 msgstr "key-up ギャップ持続時間 (gdgclk ティック)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:449
+#: src/ui-imgui/debugger/ppi_window.cpp:452
 msgid "Tick stamp of current phase start."
 msgstr "現在のフェーズ開始時のティックスタンプ."
 
@@ -7702,8 +7711,8 @@ msgid "QDisk State"
 msgstr "QDisk State"
 
 #: src/ui-imgui/debugger/qdisk_window.cpp:154
-#: src/ui-imgui/joy/joy_setup_window.cpp:239
-#: src/ui-imgui/joy/joy_setup_window.cpp:285
+#: src/ui-imgui/joy/joy_setup_window.cpp:256
+#: src/ui-imgui/joy/joy_setup_window.cpp:302
 msgid "Device"
 msgstr "デバイス"
 
@@ -7748,7 +7757,7 @@ msgid "MemExt"
 msgstr "MemExt"
 
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:121
-#: src/ui-imgui/topmenu/devices/menu_rom.cpp:24
+#: src/ui-imgui/topmenu/devices/menu_rom.cpp:25
 msgid "ROM"
 msgstr "ROM"
 
@@ -10367,128 +10376,128 @@ msgstr "変数未定義。上の [+ 追加] またはsmart breakpointアクシ�
 msgid "Persist"
 msgstr "永続化"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:440
+#: src/ui-imgui/debugger/watch/watch_window.cpp:441
 msgid "Add new watch entry:"
 msgstr "新しいウォッチエントリを追加:"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:474
+#: src/ui-imgui/debugger/watch/watch_window.cpp:475
 msgid "(e.g. 0xC080, 0C080h, 49280, or symbol name)"
 msgstr "(例: 0xC080、0C080h、49280、またはシンボル名)"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:485
+#: src/ui-imgui/debugger/watch/watch_window.cpp:486
 msgid "(e.g. [HL], {0x4000}, $framecnt, 0xC080+1, port[0xCE])"
 msgstr "(例: [HL]、{0x4000}、$framecnt、0xC080+1、port[0xCE])"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:495
+#: src/ui-imgui/debugger/watch/watch_window.cpp:496
 msgid "(optional)"
 msgstr "(オプション)"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:521
+#: src/ui-imgui/debugger/watch/watch_window.cpp:522
 msgid "Length:"
 msgstr "長さ:"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:536
+#: src/ui-imgui/debugger/watch/watch_window.cpp:537
 msgid "Bit:"
 msgstr "Bit:"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:548
+#: src/ui-imgui/debugger/watch/watch_window.cpp:549
 msgid "Add##watch_add_ok"
 msgstr "追加##watch_add_ok"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:550
+#: src/ui-imgui/debugger/watch/watch_window.cpp:551
 msgid "Cancel##watch_add_cancel"
 msgstr "キャンセル##watch_add_cancel"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:566
+#: src/ui-imgui/debugger/watch/watch_window.cpp:567
 msgid "Cannot parse address (unknown symbol or invalid format)."
 msgstr "アドレスをパースできません (不明なシンボルまたは無効な形式)。"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:580
+#: src/ui-imgui/debugger/watch/watch_window.cpp:581
 msgid "Expression cannot be empty."
 msgstr "式は空にできません。"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:755
+#: src/ui-imgui/debugger/watch/watch_window.cpp:756
 msgid "(new)"
 msgstr "(新規)"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:759
+#: src/ui-imgui/debugger/watch/watch_window.cpp:760
 msgid "(type changed)"
 msgstr "(タイプが変更されました)"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:871
+#: src/ui-imgui/debugger/watch/watch_window.cpp:872
 msgid "(N/A for scalar expr)"
 msgstr "(スカラー式では非対応)"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:952
+#: src/ui-imgui/debugger/watch/watch_window.cpp:953
 msgid "Min:"
 msgstr "最小:"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:953
+#: src/ui-imgui/debugger/watch/watch_window.cpp:954
 msgid "Max:"
 msgstr "最大:"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:954
-#: src/ui-imgui/debugger/watch/watch_window.cpp:957
+#: src/ui-imgui/debugger/watch/watch_window.cpp:955
+#: src/ui-imgui/debugger/watch/watch_window.cpp:958
 msgid "Changes:"
 msgstr "変更:"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:960
+#: src/ui-imgui/debugger/watch/watch_window.cpp:961
 msgid "(Min/Max not tracked for string types)"
 msgstr "(文字列タイプではMin/Maxを追跡しません)"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1033
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1034
 msgid "Drag to reorder this watch row."
 msgstr "ドラッグでこのwatch行を並べ替え。"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1079
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1080
 msgid "Double-click to rename. Right-click for context menu."
 msgstr "ダブルクリックで名前変更。右クリックでコンテキストメニュー。"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1085
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1086
 msgid "Rename##watch_ctx_rename"
 msgstr "名前変更##watch_ctx_rename"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1089
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1090
 msgid "Delete##watch_ctx_del"
 msgstr "削除##watch_ctx_del"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1094
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1095
 msgid "Copy expression##watch_ctx_copy"
 msgstr "式をコピー##watch_ctx_copy"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1104
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1105
 msgid "Copy address (hex) or expression text to clipboard."
 msgstr "アドレス (hex) または式テキストをクリップボードへコピー。"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1170
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1171
 msgid "Display format"
 msgstr "表示形式"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1184
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1185
 msgid "Reset min/max##watch_ctx_resetmm"
 msgstr "min/maxをリセット##watch_ctx_resetmm"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1188
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1189
 msgid "Clear min/max tracking and changes count for this row."
 msgstr "この行のmin/max追跡と変更数をクリア。"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1208
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1209
 msgid "Delete this watch (no confirm)."
 msgstr "このウォッチを削除 (確認なし)。"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1236
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1237
 msgid "+ Add##watch_add_btn"
 msgstr "+ Add##watch_add_btn"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1247
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1248
 msgid "Add a new watch entry."
 msgstr "新しいウォッチエントリを追加。"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1254
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1255
 msgid "name, expression, address, type"
 msgstr "名前、式、アドレス、タイプ"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1256
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1257
 msgid ""
 "Filter matches watch name, expression text, hex address or type label (case-"
 "insensitive substring)."
@@ -10496,77 +10505,77 @@ msgstr ""
 "フィルタはウォッチ名、式テキスト、hexアドレス、またはタイプラベルにマッチ (大"
 "小区別なし部分文字列)。"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1260
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1261
 msgid "Clear##watch_clrflt"
 msgstr "クリア##watch_clrflt"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1266
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1267
 msgid "Visible / total watch count."
 msgstr "表示中 / 総ウォッチ数。"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1273
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1274
 msgid "Highlight changes##watch_hl"
 msgstr "変更をハイライト##watch_hl"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1277
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1278
 msgid ""
 "Briefly color value cells when they change. Green=up, Red=down, "
 "Yellow=string changed."
 msgstr "変更時に値セルを短時間着色。緑=上昇、赤=下降、黄=文字列変更。"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1285
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1286
 msgid "Delete##watch_delsel"
 msgstr "削除##watch_delsel"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1295
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1296
 msgid "Delete selected watches (confirm if more than one)."
 msgstr "選択ウォッチを削除 (複数の場合は確認)。"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1304
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1305
 msgid "Save##watch_save"
 msgstr "保存##watch_save"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1315
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1316
 msgid "Save to default per-arch .watch file."
 msgstr "アーキテクチャ別のデフォルト.watchファイルに保存。"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1318
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1319
 msgid "Save As...##watch_saveas"
 msgstr "名前を付けて保存...##watch_saveas"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1327
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1328
 msgid "Save Watches As..."
 msgstr "ウォッチを名前を付けて保存..."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1331
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1332
 msgid "Save watches to a chosen file."
 msgstr "選択したファイルにウォッチを保存。"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1334
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1335
 msgid "Load From...##watch_loadfrom"
 msgstr "次から読み込み...##watch_loadfrom"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1342
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1343
 msgid "Load Watches From..."
 msgstr "ウォッチを読み込み..."
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1346
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1347
 msgid "Replace current watches with file content."
 msgstr "現在のウォッチをファイル内容で置換。"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1350
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1351
 msgid "Clear All...##watch_clrall"
 msgstr "すべてクリア...##watch_clrall"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1353
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1354
 msgid "Remove all watch entries (with confirmation)."
 msgstr "すべてのウォッチエントリを削除 (確認あり)。"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1361
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1362
 msgid "Snapshot##watch_snap"
 msgstr "スナップショット##watch_snap"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1383
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1384
 msgid ""
 "Capture current values as baseline. Adds Delta column showing change since "
 "snapshot."
@@ -10574,94 +10583,94 @@ msgstr ""
 "現在の値をベースラインとしてキャプチャ。スナップショットからの変更を示すDelta"
 "列を追加。"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1389
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1390
 msgid "Clear snapshot##watch_snapclr"
 msgstr "スナップショットをクリア##watch_snapclr"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1395
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1396
 msgid "Clear snapshot baseline (Delta column hides)."
 msgstr "スナップショットベースラインをクリア (Delta列を非表示)。"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1430
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1431
 #, c-format
 msgid "Snapshot @ frame %d  (Δ %d frames)"
 msgstr "スナップショット @ フレーム %d  (Δ %d フレーム)"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1445
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1446
 #, c-format
 msgid "%zu / %zu rows"
 msgstr "%zu / %zu 行"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1448
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1449
 #, c-format
 msgid "%zu rows"
 msgstr "%zu 行"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1563
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1564
 msgid "Deselect all visible watches."
 msgstr "表示中のウォッチの選択をすべて解除。"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1565
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1566
 msgid "Select all visible watches."
 msgstr "表示中のウォッチをすべて選択。"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1567
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1568
 msgid "Some selected. Click to select all visible."
 msgstr "一部選択中。クリックで表示中すべてを選択。"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1591
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1706
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1592
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1707
 msgid "Delta"
 msgstr "Delta"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1647
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1648
 msgid "Watch###watch_panel"
 msgstr "ウォッチ###watch_panel"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1672
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1673
 msgid "No watches defined. Use [+ Add] above to add one."
 msgstr "ウォッチ未定義。上の [+ 追加] で追加してください。"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1778
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1779
 msgid "Delete Selected Watches?###watch_confirm_bulkdel"
 msgstr "選択ウォッチを削除?###watch_confirm_bulkdel"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1780
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1781
 #, c-format
 msgid "Delete %zu selected watch(es)?"
 msgstr "%zu の選択ウォッチを削除しますか?"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1783
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1784
 msgid "Delete##watch_bulkdel_ok"
 msgstr "削除##watch_bulkdel_ok"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1801
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1802
 msgid "Cancel##watch_bulkdel_cancel"
 msgstr "キャンセル##watch_bulkdel_cancel"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1810
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1813
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1811
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1814
 msgid "Clear All Watches?###watch_confirm_clrall"
 msgstr "すべてのウォッチをクリア?###watch_confirm_clrall"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1815
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1816
 msgid "Remove all watch entries? This cannot be undone."
 msgstr "すべてのウォッチエントリを削除しますか? 元に戻せません。"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1817
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1818
 msgid "Clear##watch_clrall_ok"
 msgstr "クリア##watch_clrall_ok"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1826
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1827
 msgid "Cancel##watch_clrall_cancel"
 msgstr "キャンセル##watch_clrall_cancel"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1835
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1837
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1836
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1838
 msgid "Replace Watches?###watch_confirm_load"
 msgstr "ウォッチを置換?###watch_confirm_load"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1839
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1840
 #, c-format
 msgid ""
 "Loading from:\n"
@@ -10674,16 +10683,16 @@ msgstr ""
 "\n"
 "現在のすべてのウォッチを置換しますか?"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1842
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1843
 msgid "Replace##watch_load_ok"
 msgstr "置換##watch_load_ok"
 
-#: src/ui-imgui/debugger/watch/watch_window.cpp:1856
+#: src/ui-imgui/debugger/watch/watch_window.cpp:1857
 msgid "Cancel##watch_load_cancel"
 msgstr "キャンセル##watch_load_cancel"
 
 #: src/ui-imgui/devices/device_request_ui.cpp:36
-#: src/ui-imgui/topmenu/topmenu.cpp:43
+#: src/ui-imgui/topmenu/topmenu.cpp:44
 msgid ""
 "Machine settings cannot be changed while a replay is recorded or played. "
 "Stop it in the Replay menu first."
@@ -10837,97 +10846,97 @@ msgstr "偏差:"
 msgid "Measuring Update Interval (s):"
 msgstr "測定更新間隔 (秒):"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:223
-#: src/ui-imgui/joy/joy_setup_window.cpp:231
+#: src/ui-imgui/joy/joy_setup_window.cpp:240
+#: src/ui-imgui/joy/joy_setup_window.cpp:248
 msgid "Trigger"
 msgstr "トリガー"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:240
+#: src/ui-imgui/joy/joy_setup_window.cpp:257
 msgid "Gamepad (standard mapping)"
 msgstr "ゲームパッド (標準マッピング)"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:244
+#: src/ui-imgui/joy/joy_setup_window.cpp:261
 msgid "Left Stick"
 msgstr "左スティック"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:244
+#: src/ui-imgui/joy/joy_setup_window.cpp:261
 msgid "D-Pad"
 msgstr "D-Pad"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:247
-#: src/ui-imgui/joy/joy_setup_window.cpp:371
+#: src/ui-imgui/joy/joy_setup_window.cpp:264
+#: src/ui-imgui/joy/joy_setup_window.cpp:388
 msgid "Directions"
 msgstr "方向"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:257
-#: src/ui-imgui/joy/joy_setup_window.cpp:320
+#: src/ui-imgui/joy/joy_setup_window.cpp:274
+#: src/ui-imgui/joy/joy_setup_window.cpp:337
 msgid "Deadzone"
 msgstr "デッドゾーン"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:266
-#: src/ui-imgui/joy/joy_setup_window.cpp:327
+#: src/ui-imgui/joy/joy_setup_window.cpp:283
+#: src/ui-imgui/joy/joy_setup_window.cpp:344
 msgid "Trigger 1"
 msgstr "トリガー 1"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:274
-#: src/ui-imgui/joy/joy_setup_window.cpp:334
+#: src/ui-imgui/joy/joy_setup_window.cpp:291
+#: src/ui-imgui/joy/joy_setup_window.cpp:351
 msgid "Trigger 2"
 msgstr "トリガー 2"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:287
+#: src/ui-imgui/joy/joy_setup_window.cpp:304
 msgid "Axes"
 msgstr "軸"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:288
+#: src/ui-imgui/joy/joy_setup_window.cpp:305
 msgid "Buttons"
 msgstr "ボタン"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:293
+#: src/ui-imgui/joy/joy_setup_window.cpp:310
 msgid "X Axis"
 msgstr "X 軸"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:300
-#: src/ui-imgui/joy/joy_setup_window.cpp:313
+#: src/ui-imgui/joy/joy_setup_window.cpp:317
+#: src/ui-imgui/joy/joy_setup_window.cpp:330
 msgid "Invert"
 msgstr "反転"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:306
+#: src/ui-imgui/joy/joy_setup_window.cpp:323
 msgid "Y Axis"
 msgstr "Y 軸"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:358
+#: src/ui-imgui/joy/joy_setup_window.cpp:375
 msgid "Live Status"
 msgstr "ライブステータス"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:400
+#: src/ui-imgui/joy/joy_setup_window.cpp:417
 msgid "Setup preferences for Joystick"
 msgstr "ジョイスティックの設定"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:417
+#: src/ui-imgui/joy/joy_setup_window.cpp:434
 msgid "Emulated on numeric keypad"
 msgstr "テンキーでエミュレート"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:502
+#: src/ui-imgui/joy/joy_setup_window.cpp:519
 msgid "Joystick Setup"
 msgstr "ジョイスティック設定"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:507
+#: src/ui-imgui/joy/joy_setup_window.cpp:524
 msgid "Initialize Joystick Subsystem"
 msgstr "ジョイスティックサブシステムを初期化"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:517
+#: src/ui-imgui/joy/joy_setup_window.cpp:534
 msgid "need only for real gaming devices"
 msgstr "実際のゲーミングデバイスのみ必要"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:521
+#: src/ui-imgui/joy/joy_setup_window.cpp:538
 msgid "Rescan Devices"
 msgstr "デバイス再スキャン"
 
-#: src/ui-imgui/joy/joy_setup_window.cpp:540
+#: src/ui-imgui/joy/joy_setup_window.cpp:557
 msgid "Joystick"
 msgstr "ジョイスティック"
 
-#: src/ui-imgui/main_window.cpp:114
+#: src/ui-imgui/main_window.cpp:117
 msgid "No audio device - running without sound"
 msgstr "オーディオデバイスがありません - サウンドなしで実行中"
 
@@ -11352,7 +11361,7 @@ msgstr "入力ファイル"
 
 #: src/ui-imgui/memext/memext_load_dialog.cpp:117
 #: src/ui-imgui/ramdisk/pezik_settings_window.cpp:199
-#: src/ui-imgui/rom/rom_settings_window.cpp:163
+#: src/ui-imgui/rom/rom_settings_window.cpp:164
 msgid "Browse..."
 msgstr "参照..."
 
@@ -11466,15 +11475,154 @@ msgstr "エラー"
 msgid "Warning"
 msgstr "警告"
 
-#: src/ui-imgui/mz800/topmenu/devices/menu_mz800_hw_compat.cpp:22
+#: src/ui-imgui/mz700/devbus/menu_devbus.cpp:119
+#, c-format
+msgid "Range %u - %u, press Enter to apply"
+msgstr "範囲 %u - %u、Enter で適用"
+
+#: src/ui-imgui/mz700/devbus/menu_devbus.cpp:127
+msgid "(applies after reconnect)"
+msgstr "(再接続後に反映)"
+
+#: src/ui-imgui/mz700/devbus/menu_devbus.cpp:144
+#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:112
+msgid "Connected"
+msgstr "接続済み"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:41
+msgid "PCG-700 (HAL)"
+msgstr "PCG-700 (HAL)"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:42
+msgid "HSW switch"
+msgstr "HSW スイッチ"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:43
+msgid "NOM (standard character set)"
+msgstr "NOM (標準文字セット)"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:45
+msgid "SSW jumper (software control)"
+msgstr "SSW ジャンパ (ソフトウェア制御)"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:46
+msgid "OFF (software cannot switch PCG)"
+msgstr "OFF (ソフトウェアで PCG を切り替え不可)"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:47
+msgid "ON (bit 3 of 0E012h switches PCG)"
+msgstr "ON (0E012h のビット 3 で PCG を切り替え)"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:48
+msgid "GSW jumper (registers)"
+msgstr "GSW ジャンパ (レジスタ)"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:49
+msgid "OFF (registers disconnected)"
+msgstr "OFF (レジスタ切断)"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:50
+msgid "ON (registers connected)"
+msgstr "ON (レジスタ接続)"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:51
+msgid "HSW PCG with SSW OFF"
+msgstr "SSW OFF 時の HSW PCG"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:52
+msgid "PCG on, HSW decides"
+msgstr "PCG オン (HSW で決定)"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:53
+msgid "PCG stays off"
+msgstr "PCG はオフのまま"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:54
+msgid "Write strobe"
+msgstr "書き込みストローブ"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:55
+msgid "Rising edge of bit 4"
+msgstr "ビット 4 の立ち上がりエッジ"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:56
+msgid "Every write while bit 4 is set"
+msgstr "ビット 4 がセット中の毎回の書き込み"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:57
+msgid "Falling edge of bit 4 (experimental)"
+msgstr "ビット 4 の立ち下がりエッジ (実験的)"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:58
+msgid "Decode writes also with DRAM at 0E000h"
+msgstr "0E000h が DRAM の時も書き込みをデコード"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:59
+msgid "RAM after power on"
+msgstr "電源投入後の RAM"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:60
+msgid "Zeros"
+msgstr "ゼロ"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:61
+msgid "Copy of CG-ROM characters"
+msgstr "CG-ROM の文字のコピー"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:71
+msgid "Show PCG RAM characters"
+msgstr "PCG RAM の文字を表示"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:115
+#, c-format
+msgid "Code %02Xh, set %u, PCG RAM %03Xh"
+msgstr "コード %02Xh、セット %u、PCG RAM %03Xh"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:127
+msgid "PCG-700 Characters###pcg700_chars"
+msgstr "PCG-700 文字###pcg700_chars"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:130
+msgid "The PCG-700 is not connected."
+msgstr "PCG-700 は接続されていません。"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:133
+#, c-format
+msgid "Display: %s"
+msgstr "表示: %s"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:133
+msgid "PCG RAM"
+msgstr "PCG RAM"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:133
+#: src/ui-imgui/rom/rom_settings_window.cpp:129
+#: src/ui-imgui/rom/rom_settings_window.cpp:215
+msgid "CG-ROM"
+msgstr "CG-ROM"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:135
+#, c-format
+msgid "Control 0E012h: %02Xh"
+msgstr "制御 0E012h: %02Xh"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:136
+msgid "Character set 1, codes 80h-FFh"
+msgstr "文字セット 1、コード 80h-FFh"
+
+#: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:138
+msgid "Character set 2, codes 80h-FFh"
+msgstr "文字セット 2、コード 80h-FFh"
+
+#: src/ui-imgui/mz800/topmenu/devices/menu_mz800_hw_compat.cpp:23
 msgid "HW Compatibility Experiments"
 msgstr "HW互換性実験"
 
-#: src/ui-imgui/mz800/topmenu/devices/menu_mz800_hw_compat.cpp:24
+#: src/ui-imgui/mz800/topmenu/devices/menu_mz800_hw_compat.cpp:25
 msgid "Allow PSG1 (stereo)"
 msgstr "PSG1を有効化（ステレオ）"
 
-#: src/ui-imgui/mz800/topmenu/devices/menu_mz800_hw_compat.cpp:28
+#: src/ui-imgui/mz800/topmenu/devices/menu_mz800_hw_compat.cpp:29
 msgid ""
 "Enables a second PSG (SN76489), providing stereo sound similar to the "
 "MZ-1500. Port 0xF2 is still used as a mono audio PSG (left + right "
@@ -11486,127 +11634,123 @@ msgstr ""
 "れます。\n"
 "ポート0xF3はPSG0のみ（左）、ポート0xF9はPSG1のみ（右）です。"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:107
+#: src/ui-imgui/plotter/plotter_window.cpp:108
 msgid "Black"
 msgstr "黒"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:108
+#: src/ui-imgui/plotter/plotter_window.cpp:109
 msgid "Red"
 msgstr "赤"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:109
+#: src/ui-imgui/plotter/plotter_window.cpp:110
 #: src/ui-imgui/topmenu/interface/menu_display.cpp:38
 msgid "Green"
 msgstr "グリーン"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:110
+#: src/ui-imgui/plotter/plotter_window.cpp:111
 msgid "Blue"
 msgstr "青"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:368
+#: src/ui-imgui/plotter/plotter_window.cpp:369
 msgid "Save plotter drawing"
 msgstr "プロッタの描画を保存"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:368
+#: src/ui-imgui/plotter/plotter_window.cpp:369
 msgid "plotter.png"
 msgstr "plotter.png"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:405
+#: src/ui-imgui/plotter/plotter_window.cpp:406
 msgid "Plotter MZ-1P16"
 msgstr "Plotter MZ-1P16"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:414
+#: src/ui-imgui/plotter/plotter_window.cpp:415
 msgid "Save..."
 msgstr "保存..."
 
-#: src/ui-imgui/plotter/plotter_window.cpp:419
+#: src/ui-imgui/plotter/plotter_window.cpp:420
 msgid "Clear paper"
 msgstr "用紙をクリア"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:424
+#: src/ui-imgui/plotter/plotter_window.cpp:425
 msgid "Clear the drawing and reset the plotter (plain RESET keeps the paper)"
 msgstr "描画を消去してプロッタをリセット（通常のRESETでは用紙は残ります）"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:427
+#: src/ui-imgui/plotter/plotter_window.cpp:428
 msgid "Plotter buttons:"
 msgstr "プロッタのボタン:"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:437
+#: src/ui-imgui/plotter/plotter_window.cpp:438
 msgid "Paper feed"
 msgstr "用紙送り"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:447
+#: src/ui-imgui/plotter/plotter_window.cpp:449
 msgid "Hold to feed paper"
 msgstr "押し続けると用紙を送ります"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:450
+#: src/ui-imgui/plotter/plotter_window.cpp:452
 msgid "Run drawing self-test"
 msgstr "描画セルフテストを実行"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:459
+#: src/ui-imgui/plotter/plotter_window.cpp:460
 msgid "Reset with PAPER FEED held -> writes the character set in 4 colors"
 msgstr "PAPER FEED を押しながらリセット -> 文字セットを4色で印字します"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:464
+#: src/ui-imgui/plotter/plotter_window.cpp:465
 msgid "Zoom"
 msgstr "ズーム"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:466
+#: src/ui-imgui/plotter/plotter_window.cpp:467
 msgid "Preview scale: pixels per motor step"
 msgstr "プレビュー倍率: モーター1ステップあたりのピクセル数"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:469
+#: src/ui-imgui/plotter/plotter_window.cpp:470
 msgid "Show carriage"
 msgstr "キャリッジを表示"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:471
+#: src/ui-imgui/plotter/plotter_window.cpp:472
 msgid "Live marker at the current pen/carriage position"
 msgstr "ペン/キャリッジの現在位置を示すライブマーカー"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:495
+#: src/ui-imgui/plotter/plotter_window.cpp:496
 #, c-format
 msgid "X: %ld"
 msgstr "X: %ld"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:497
+#: src/ui-imgui/plotter/plotter_window.cpp:498
 #, c-format
 msgid "Y: %ld"
 msgstr "Y: %ld"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:501
+#: src/ui-imgui/plotter/plotter_window.cpp:502
 msgid "Color:"
 msgstr "色:"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:514
+#: src/ui-imgui/plotter/plotter_window.cpp:515
 #, c-format
 msgid "Pen: %s"
 msgstr "ペン: %s"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:514
+#: src/ui-imgui/plotter/plotter_window.cpp:515
 msgid "DOWN"
 msgstr "下"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:514
+#: src/ui-imgui/plotter/plotter_window.cpp:515
 msgid "UP"
 msgstr "上"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:520
+#: src/ui-imgui/plotter/plotter_window.cpp:521
 msgid "BUSY"
 msgstr "BUSY"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:530
+#: src/ui-imgui/plotter/plotter_window.cpp:531
 #, c-format
 msgid "Strokes: %u"
 msgstr "ストローク数: %u"
 
-#: src/ui-imgui/plotter/plotter_window.cpp:534
+#: src/ui-imgui/plotter/plotter_window.cpp:535
 #, c-format
 msgid "(dropped %u)"
 msgstr "(破棄 %u)"
-
-#: src/ui-imgui/ramdisk/pezik_settings_window.cpp:112
-msgid "Connected"
-msgstr "接続済み"
 
 #: src/ui-imgui/ramdisk/pezik_settings_window.cpp:141
 msgid "Ports:"
@@ -11632,50 +11776,45 @@ msgstr "標準 PEZIK:"
 msgid "Experimental PEZIK:"
 msgstr "実験的 PEZIK:"
 
-#: src/ui-imgui/rom/rom_settings_window.cpp:117
+#: src/ui-imgui/rom/rom_settings_window.cpp:118
 msgid "Select ROM file"
 msgstr "ROMファイルを選択"
 
-#: src/ui-imgui/rom/rom_settings_window.cpp:127
-#: src/ui-imgui/rom/rom_settings_window.cpp:213
+#: src/ui-imgui/rom/rom_settings_window.cpp:128
+#: src/ui-imgui/rom/rom_settings_window.cpp:214
 msgid "ROM 0x0000"
 msgstr "ROM 0x0000"
 
-#: src/ui-imgui/rom/rom_settings_window.cpp:128
-#: src/ui-imgui/rom/rom_settings_window.cpp:214
-msgid "CG-ROM"
-msgstr "CG-ROM"
-
-#: src/ui-imgui/rom/rom_settings_window.cpp:129
-#: src/ui-imgui/rom/rom_settings_window.cpp:215
+#: src/ui-imgui/rom/rom_settings_window.cpp:130
+#: src/ui-imgui/rom/rom_settings_window.cpp:216
 msgid "ROM 0xE000"
 msgstr "ROM 0xE000"
 
-#: src/ui-imgui/rom/rom_settings_window.cpp:173
+#: src/ui-imgui/rom/rom_settings_window.cpp:174
 msgid "optional"
 msgstr "オプション"
 
-#: src/ui-imgui/rom/rom_settings_window.cpp:189
+#: src/ui-imgui/rom/rom_settings_window.cpp:190
 msgid "All-In-One ROM Binary File"
 msgstr "オールインワンROMバイナリファイル"
 
-#: src/ui-imgui/rom/rom_settings_window.cpp:202
+#: src/ui-imgui/rom/rom_settings_window.cpp:203
 msgid "Separate ROM Binary Files"
 msgstr "個別ROMバイナリファイル"
 
-#: src/ui-imgui/rom/rom_settings_window.cpp:249
+#: src/ui-imgui/rom/rom_settings_window.cpp:238
 msgid "User Defined ROM Settings"
 msgstr "ユーザー定義ROM設定"
 
-#: src/ui-imgui/rom/rom_settings_window.cpp:254
+#: src/ui-imgui/rom/rom_settings_window.cpp:243
 msgid "CMT Hack Patch:"
 msgstr "CMT Hack Patch:"
 
-#: src/ui-imgui/rom/rom_settings_window.cpp:273
+#: src/ui-imgui/rom/rom_settings_window.cpp:262
 msgid "ROM Binary Files"
 msgstr "ROMバイナリファイル"
 
-#: src/ui-imgui/rom/rom_settings_window.cpp:278
+#: src/ui-imgui/rom/rom_settings_window.cpp:267
 msgid "CMT Hack Patch ROM"
 msgstr "CMT Hack Patch ROM"
 
@@ -12038,71 +12177,71 @@ msgstr "現在の速度"
 msgid "Reset sliders"
 msgstr "スライダーをリセット"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:26
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:27
 msgid "CMT"
 msgstr "CMT"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:34
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:35
 msgid "Use CMT Hack"
 msgstr "CMT Hackを使用"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:41
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:42
 msgid "Set Default CMT MZ Speed"
 msgstr "デフォルトCMT MZ速度を設定"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:43
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:44
 msgid "1:1 - 1200 Bd"
 msgstr "1:1 - 1200 Bd"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:48
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:49
 msgid "2:1 - 2 400 Bd"
 msgstr "2:1 - 2 400 Bd"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:53
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:54
 msgid "2:1 - 2 400 Bd (cp/m)"
 msgstr "2:1 - 2 400 Bd (cp/m)"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:58
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:59
 msgid "7:3 - 2 800 Bd"
 msgstr "7:3 - 2 800 Bd"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:63
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:64
 msgid "8:3 - 3 200 Bd"
 msgstr "8:3 - 3 200 Bd"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:68
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:69
 msgid "3:1 - 3 600 Bd"
 msgstr "3:1 - 3 600 Bd"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:78
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:79
 msgid "Fast Open CMT File & Play..."
 msgstr "CMTファイルを素早く開いて再生..."
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:83
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:84
 msgid "Show Virtual CMT"
 msgstr "仮想CMTを表示"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:90
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:91
 msgid "CMT Options"
 msgstr "CMTオプション"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:92
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:93
 msgid "Enable CPU Boost"
 msgstr "CPUブーストを有効化"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:97
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:98
 msgid "MZF"
 msgstr "MZF"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:99
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:100
 msgid "Enable MZF Size Check"
 msgstr "MZFサイズチェックを有効化"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:104
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:105
 msgid "Fix FNAME Terminator"
 msgstr "FNAMEターミネータを修正"
 
-#: src/ui-imgui/topmenu/devices/menu_devices.cpp:21
+#: src/ui-imgui/topmenu/devices/menu_devices.cpp:24
 msgid "HW & Devices"
 msgstr "HWとデバイス"
 
@@ -12214,7 +12353,9 @@ msgstr "バス変換: passthrough"
 msgid ""
 "NOT compatible with Sharp MZ - no inversion between CPU bus and WD279x chip. "
 "Reserved for future 'true bus' ROMs / experiments."
-msgstr "Sharp MZと非互換 - CPUバスとWD279xチップ間に反転なし。将来の'true bus' ROM / 実験用に予約。"
+msgstr ""
+"Sharp MZと非互換 - CPUバスとWD279xチップ間に反転なし。将来の'true bus' ROM / "
+"実験用に予約。"
 
 #: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:351
 msgid "Floppy Drives"
@@ -12382,7 +12523,7 @@ msgid "Centronics"
 msgstr "Centronics"
 
 #: src/ui-imgui/topmenu/devices/menu_printer.cpp:70
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:73
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:75
 msgid "MZ"
 msgstr "MZ"
 
@@ -12471,7 +12612,7 @@ msgid "directory"
 msgstr "ディレクトリ"
 
 #: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:235
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:220
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:232
 msgid "Unicard"
 msgstr "Unicard"
 
@@ -12607,49 +12748,49 @@ msgstr "RAMディスクファイル..."
 msgid "Memory Disk State (debugger)..."
 msgstr "Memory Disk State (debugger)..."
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:27
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:29
 msgid "Rear DIP Switch"
 msgstr "背面DIPスイッチ"
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:30
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:32
 msgid "Mode 700 Compat.: "
 msgstr "700互換モード: "
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:33
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:35
 msgid "OFF"
 msgstr "OFF"
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:37
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:39
 msgid "ON (default)"
 msgstr "ON (デフォルト)"
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:47
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:49
 msgid "CMT Polarity: "
 msgstr "CMT極性: "
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:50
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:52
 msgid "Inverted"
 msgstr "反転"
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:54
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:56
 #: src/ui-imgui/topmenu/interface/menu_display.cpp:30
 #: src/ui-imgui/topmenu/interface/menu_display.cpp:65
 msgid "Normal"
 msgstr "標準"
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:70
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:72
 msgid "Printer Standard: "
 msgstr "プリンタ規格: "
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:77
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:79
 msgid "Centronics (default)"
 msgstr "Centronics (既定)"
 
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:81
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:83
 msgid " (locked: plotter connected)"
 msgstr " (ロック中: プロッタ接続)"
 
-#: src/ui-imgui/topmenu/devices/menu_rom.cpp:54
+#: src/ui-imgui/topmenu/devices/menu_rom.cpp:55
 msgid "Settings for User Defined..."
 msgstr "ユーザー定義の設定..."
 
@@ -12675,7 +12816,7 @@ msgstr "mgr V2.11b (uc3) でUnicardランタイムを再インストールしま
 msgid "Unicard runtime files in '{SD}/unicard/' have been reinitialized."
 msgstr "'{SD}/unicard/' のUnicardランタイムファイルが再初期化されました。"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:124
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:131
 msgid ""
 "SD card runtime in '{SD}/unicard/' is missing, incomplete, or does not match "
 "the selected firmware."
@@ -12683,15 +12824,15 @@ msgstr ""
 "'{SD}/unicard/' のSDカードランタイムが欠落、不完全、または選択ファームウェア"
 "と不一致。"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:127
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:134
 msgid "State on SD:"
 msgstr "SDの状態:"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:128
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:135
 msgid "Selected firmware:"
 msgstr "選択ファームウェア:"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:131
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:138
 msgid ""
 "[Reinitialize] overwrites the SD manager files to match the selected "
 "firmware. [Continue] connects with the mismatch (client may see inconsistent "
@@ -12701,19 +12842,19 @@ msgstr ""
 "き。[Continue] は不一致のまま接続 (クライアントが不一致挙動を見る可能性)。"
 "[Cancel] はUnicardを未接続のまま。"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:137
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:144
 msgid "Reinitialize##unicard_rt_reinit"
 msgstr "Reinitialize##unicard_rt_reinit"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:147
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:154
 msgid "Continue##unicard_rt_continue"
 msgstr "続行##unicard_rt_continue"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:157
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:164
 msgid "Cancel##unicard_rt_cancel"
 msgstr "キャンセル##unicard_rt_cancel"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:183
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:195
 msgid ""
 "Choose which manager version to install in '{SD}/unicard/'. This will "
 "overwrite the existing manager files."
@@ -12721,7 +12862,7 @@ msgstr ""
 "'{SD}/unicard/' にインストールするマネージャバージョンを選択。既存のマネー"
 "ジャファイルを上書きします。"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:187
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:199
 msgid ""
 "Note: This choice is independent of the currently selected simulated "
 "firmware. You can install one version while simulating the other (useful for "
@@ -12730,40 +12871,40 @@ msgstr ""
 "注: この選択は現在選択中のシミュレートファームウェアとは独立。一方のバージョ"
 "ンをインストールしつつ他方をシミュレート可 (テストに便利)。"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:195
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:207
 msgid "mgr V2.4 (uc1)##unicard_reinit_v24"
 msgstr "mgr V2.4 (uc1)##unicard_reinit_v24"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:202
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:214
 msgid "mgr V2.11b (uc3)##unicard_reinit_v211b"
 msgstr "mgr V2.11b (uc3)##unicard_reinit_v211b"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:209
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:221
 msgid "Cancel##unicard_reinit_cancel"
 msgstr "キャンセル##unicard_reinit_cancel"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:225
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:237
 msgid "Unicard Connected"
 msgstr "Unicard接続済み"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:226
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:238
 msgid "Unicard Not Connected"
 msgstr "Unicard未接続"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:252
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:264
 msgid "Firmware: uc1 (rev.60)"
 msgstr "ファームウェア: uc1 (rev.60)"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:262
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:274
 #, c-format
 msgid "Firmware: uc3 (v%d.%d)###unicard_fw_uc3"
 msgstr "Firmware: uc3 (v%d.%d)###unicard_fw_uc3"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:271
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:283
 msgid "Check runtime version on connect"
 msgstr "接続時にランタイムバージョンを確認"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:278
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:290
 msgid ""
 "On Connect, verify that {SD}/unicard/ contains the manager matching the "
 "selected firmware. Mismatch shows a dialog with option to reinitialize."
@@ -12771,15 +12912,15 @@ msgstr ""
 "接続時に {SD}/unicard/ に選択ファームウェアと合致するマネージャがあるか確認。"
 "不一致時は再初期化オプション付きダイアログを表示。"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:287
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:299
 msgid "Read-only SD"
 msgstr "読み取り専用SD"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:298
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:310
 msgid "Managed FDC"
 msgstr "管理対象 FDC"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:302
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:314
 msgid ""
 "Which FDC controller the Unicard API manages (DSK mount).\n"
 "'None' disables Unicard FDD commands.\n"
@@ -12789,11 +12930,11 @@ msgstr ""
 "'なし' は Unicard の FDD コマンドを無効にします。\n"
 "変更は今後の操作にのみ影響します。"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:329
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:341
 msgid "Set SD Root Directory..."
 msgstr "SDルートディレクトリを設定..."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:336
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:348
 msgid ""
 "Change the host directory used as the Unicard SD root.\n"
 "If connected, the Unicard is automatically reconnected to the new root."
@@ -12801,11 +12942,11 @@ msgstr ""
 "Unicard の SD ルートとして使用するホストディレクトリを変更します。\n"
 "接続中の場合、Unicard は新しいルートに自動的に再接続されます。"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:354
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:366
 msgid "Reinitialize Runtime..."
 msgstr "ランタイムを再初期化..."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:371
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:383
 msgid ""
 "Overwrites manager files in '{SD}/unicard/' (mgr.mzf, mgr800.mzf, "
 "mgr700.mzf, mgr1500.mzf) with the selected version.\n"
@@ -13489,7 +13630,7 @@ msgstr ""
 msgid "Available while playing a replay."
 msgstr "リプレイ再生中に使用できます。"
 
-#: src/ui-imgui/topmenu/topmenu.cpp:74
+#: src/ui-imgui/topmenu/topmenu.cpp:75
 msgid "About..."
 msgstr "バージョン情報..."
 

@@ -594,6 +594,7 @@ extern "C" en_MEMBROWSER_REGION_GROUP membrowser_region_kind_to_group (
         case REGION_KIND_VRAM_700_CHAR:  return MB_RG_VRAM_700_CHAR;
         case REGION_KIND_VRAM_700_ATTR:  return MB_RG_VRAM_700_ATTR;
         case REGION_KIND_PROHIBITED_SHADOW: return MB_RG_PROHIBITED_SHADOW;
+        case REGION_KIND_DEVICE:         return MB_RG_DEVICE;
 
         case REGION_KIND_VRAM_PHYS_PLANE:
             switch ( sub_id ) {
@@ -649,6 +650,11 @@ extern "C" void membrowser_group_to_region (
         case MB_RG_VRAM_700_CHAR:  *out_kind = REGION_KIND_VRAM_700_CHAR;  break;
         case MB_RG_VRAM_700_ATTR:  *out_kind = REGION_KIND_VRAM_700_ATTR;  break;
         case MB_RG_PROHIBITED_SHADOW: *out_kind = REGION_KIND_PROHIBITED_SHADOW; break;
+        case MB_RG_DEVICE:
+            /* Paměť zařízení devbus: sub_id = slot * 16 + index regionu;
+             * kanonický výchozí je první region slotu 0, skutečný vybere
+             * sub-control podle snapshotu. */
+            *out_kind = REGION_KIND_DEVICE; *out_sub = bank_idx; break;
 
         case MB_RG_VRAM_PLANE_I:
             *out_kind = REGION_KIND_VRAM_PHYS_PLANE; *out_sub = 0; break;
@@ -725,6 +731,7 @@ extern "C" const char *membrowser_group_label_en (
         case MB_RG_RAMDISK_PEZIK_68:    return "Ramdisk PEZIK 68";
         case MB_RG_RAMDISK_PEZIK_E8:    return "Ramdisk PEZIK E8";
         case MB_RG_PROHIBITED_SHADOW:   return "PROHIBITED shadow";
+        case MB_RG_DEVICE:              return "Expansion device";
         default:                        return "?";
     }
 }
@@ -738,6 +745,7 @@ extern "C" bool membrowser_group_has_subcontrols (
         case MB_RG_RAMDISK_STD:
         case MB_RG_RAMDISK_PEZIK_68:
         case MB_RG_RAMDISK_PEZIK_E8:
+        case MB_RG_DEVICE:
             return true;
         default:
             return false;
