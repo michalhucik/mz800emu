@@ -15241,8 +15241,10 @@ static en_MCP_DISPATCH_RESULT _handle_screenshot_save_to_file(
  * @brief `get_video_text_dump` handler - V1.D.4 Resource pro
  *        `emulator://video/text_dump`.
  *
- * 40x25 text dump pro MZ-700 mode. chars[] obsahuje raw Sharp ASCII
- * bajty (= klient si může převést na UTF-8 přes Sharp ASCII mapping).
+ * 40x25 text dump pro MZ-700 mode (obsah, který CPU vidí na D000h a
+ * D800h; na MZ-800 v režimu MZ-700 jiný offset v rovině I, viz handler
+ * DBGAPI_CMD_GET_VIDEO_TEXT_DUMP). chars[] obsahuje syrové bajty VRAM =
+ * Sharp display code (ne Sharp ASCII; převod na UTF-8 dělá klient).
  * attributes[] obsahuje raw attribute byte per cell.
  *
  * Layout response (available=true):

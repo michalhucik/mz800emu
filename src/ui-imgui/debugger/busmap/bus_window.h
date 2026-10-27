@@ -130,6 +130,7 @@ typedef struct st_BUS_WINDOW_DEBUG {
     int visible_rows;      /**< Počet řádků seznamu vykreslených v posledním snímku. */
     char activity_line[96];/**< Řádek aktivity detailu ("IN/s ..."). */
     char peek_line[96];    /**< Řádek peeku detailu. */
+    char flags_line[300];  /**< Řádek příznaků detailu ("Flags: -" = žádný příznak). */
     char status_line[96];  /**< Stavový řádek. */
 } st_BUS_WINDOW_DEBUG;
 

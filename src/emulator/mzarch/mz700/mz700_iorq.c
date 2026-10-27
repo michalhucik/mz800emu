@@ -633,12 +633,14 @@ void port_write_with_logging_cb(z80_t *cpu, uint16_t addr, uint8_t value, void *
  * @brief Side-effect-free probe variant pro IORQ read (MZ-700).
  *
  * V1.7+ CHECKLIST 3.4: implementace přes mirror gettery z `g_io_ports[]`
- * (= `io_catalog_probe_byte` dispatch). io_catalog.c je per-arch
- * kompilované, takže pro MZ-700 binárku obsahuje jen MZ_AVAIL_700
- * entries. Mirror callbacky (PPI Port B + CW, CTC counter + CW,
+ * (= `io_catalog_probe_byte` dispatch). Katalog obsahuje položky
+ * všech platforem; io_catalog_probe_byte() bere jen položky s bitem
+ * MZ_AVAIL_700 (nebo bez masky), ostatní přeskočí (dřív je
+ * nepřeskakoval, nález N-D6-9). Mirror callbacky (PPI Port B + CW,
+ * CTC counter + CW,
  * WD279x R/W latches, banking 0xE0-E6) vrací konzistentní hodnoty
  * s Overview I/O Ports panelem. MZ-700 nemá joystick na 0xF0/F1 ani
- * Z80 PIO - tyto entries v g_io_ports nejsou (MZ_AVAIL_800/1500 only),
+ * Z80 PIO - tyto entries mají jen MZ_AVAIL_800 / MZ_AVAIL_1500,
  * helper je nenajde a vrátí false → latch fallback.
  *
  * Port připojeného zařízení devbus se čte jako první přes jeho peek

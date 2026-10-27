@@ -120,10 +120,16 @@ static uint8_t dummy_cat_reg(void)
     return 0;
 }
 
-/** @brief Katalog I/O dummy zařízení. */
+/**
+ * @brief Katalog I/O dummy zařízení.
+ *
+ * Maska všech platforem: zařízení se registruje do testovacího jádra
+ * MZ-800 (falešný adaptér MZ-700 je jen maska oken MMIO) a
+ * io_catalog_probe_byte() bere jen položky platformy jádra.
+ */
 static const st_IO_PORT_DESC s_catalog[] = {
-    { 0x0074, "DUMMY REG", "Dummy register", IO_PORT_DIR_RW, NULL, 0, dummy_cat_reg, NULL, MZ_AVAIL_700, IO_CROSS_NONE },
-    { 0xE013, "DUMMY MMIO", "Dummy MMIO", IO_PORT_DIR_W, NULL, 0, NULL, NULL, MZ_AVAIL_700, IO_CROSS_NONE },
+    { 0x0074, "DUMMY REG", "Dummy register", IO_PORT_DIR_RW, NULL, 0, dummy_cat_reg, NULL, MZ_AVAIL_ALL, IO_CROSS_NONE },
+    { 0xE013, "DUMMY MMIO", "Dummy MMIO", IO_PORT_DIR_W, NULL, 0, NULL, NULL, MZ_AVAIL_ALL, IO_CROSS_NONE },
 };
 
 

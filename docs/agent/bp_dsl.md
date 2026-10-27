@@ -101,12 +101,22 @@ Probe semantics per chip (default `port[N]`):
 |-------|------|---------------|
 | `0xF0`-`0xF1` | Joystick (MZ-800 only) | real read (pure function) |
 | `0xE0`-`0xE6` | Memory banking | mirror cache |
-| `0xCE` | GDG DMD status | mirror cache |
-| `0xD0`-`0xD3` | PPI 8255 | PortB keyboard row + control cache |
-| `0xD4`-`0xD6` | CTC 8253 | counter decode + control cache |
+| `0xCE` | GDG DMD status (MZ-800 only) | mirror cache |
+| `0xD0`-`0xD3` | PPI 8255 (MZ-800 only; MZ-700 / MZ-1500 have it at `0xE000`) | PortB keyboard row + control cache |
+| `0xD4`-`0xD6` | CTC 8253 (MZ-800 only; MZ-700 / MZ-1500 have it at `0xE004`) | counter decode + control cache |
 | `0xD8`-`0xDB` | FDC WD279x | status / track / sector mirror |
-| `0xFC`-`0xFF` | Z80 PIO | control word cache |
+| `0xFC`-`0xFF` | Z80 PIO (MZ-800, MZ-1500) | control word cache |
 | other | unconnected | bus latch / `0xFF` |
+
+A row applies only on a platform that has the chip at that port; elsewhere
+`port[N]` returns the bus latch, as the CPU would read. (Up to 2.0.6 the
+MZ-700 and MZ-1500 returned the MZ-800 mirrors for `0xCE`, `0xD0`-`0xD6`,
+`0xF0`-`0xF1` and, on the MZ-700, `0xFC`-`0xFF`.) The probe does not follow
+the MZ-800 display mode or whether a peripheral is attached: in MZ-700 mode
+`0xD0`-`0xD6` still return the 8255 / 8253 mirrors and the FDC rows return
+the controller mirror without an attached FDC, although the CPU reads the
+bus latch there. For the value the CPU would read now use `emu_bus_peek`
+(see `emulator://docs/bus_map`).
 
 ## Operators (highest to lowest precedence)
 

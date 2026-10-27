@@ -187,7 +187,7 @@ void test_documented_drives(void)
             TEST_ASSERT_EQUAL(DEVBUS_DRIVE_NONE, r->drive);
             TEST_ASSERT_EQUAL_UINT(BUS_DIR_W, r->dirs);
         }
-        if (strcmp(r->id, "qdisk") == 0) { seen_qd = true; TEST_ASSERT_NOT_NULL(strstr(r->source_note, "74h-77h")); }
+        if (strcmp(r->id, "qdisk") == 0) { seen_qd = true; TEST_ASSERT_NOT_NULL(strstr(r->source_note, "0F4h-0F7h")); TEST_ASSERT_NULL(strstr(r->source_note, "74h-77h")); }
         if (strcmp(r->id, "mapper") == 0) TEST_ASSERT_EQUAL(DEVBUS_DRIVE_NONE, r->drive);
         if (r->drive == DEVBUS_DRIVE_TRISTATE) {
             TEST_ASSERT_TRUE(strstr(r->source_note, "datasheet") || strstr(r->source_note, "VHDL"));

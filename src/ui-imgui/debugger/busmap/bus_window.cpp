@@ -173,6 +173,7 @@ struct BusUiState {
     int visible_rows = 0;                /**< Řádky vykreslené clipperem (testy). */
     char activity_line[96] = "";         /**< Řádek aktivity detailu (testy). */
     char peek_line[96] = "";             /**< Řádek peeku detailu (testy). */
+    char flags_line[300] = "";           /**< Řádek příznaků detailu "Flags: ..." (testy). */
     char status_line[96] = "";           /**< Stavový řádek (testy). */
 };
 
@@ -208,6 +209,12 @@ constexpr ImU32 COL_DIM_OVER   = IM_COL32(0, 0, 0, 90);
 constexpr ImU32 COL_STRIP      = IM_COL32(0x2F, 0x5A, 0x86, 255);
 const ImVec4   COL4_ROW_SEL    = ImVec4(0x34 / 255.0f, 0x68 / 255.0f, 0xAD / 255.0f, 1.0f);
 const ImVec4   COL4_ROW_SEL_HI = ImVec4(0x40 / 255.0f, 0x78 / 255.0f, 0xC0 / 255.0f, 1.0f);
+/* Tlačítko Connect / Disconnect ve vybraném řádku: neprůhledné a tmavší než
+ * řádek, bílý text >= 4,5:1 ve všech stavech (R09; výchozí Button s alfou 0,4
+ * dával nad COL4_ROW_SEL 3A7ACC = 4,34:1). Hranici vůči řádku nese bílý rámeček. */
+const ImVec4   COL4_SEL_BTN        = ImVec4(0x24 / 255.0f, 0x52 / 255.0f, 0x8C / 255.0f, 1.0f); /* 7,89:1 */
+const ImVec4   COL4_SEL_BTN_HOVER  = ImVec4(0x2C / 255.0f, 0x62 / 255.0f, 0xA8 / 255.0f, 1.0f); /* 6,14:1 */
+const ImVec4   COL4_SEL_BTN_ACTIVE = ImVec4(0x1E / 255.0f, 0x46 / 255.0f, 0x78 / 255.0f, 1.0f); /* 9,53:1 */
 
 
 /** @brief Slovo pro výstupní stupeň (sloupec Drive, detail). */
@@ -577,7 +584,18 @@ void cell_context_menu(unsigned addr, bool mmio)
     }
 }
 
-/** @brief Příznaky buňky slovy (detail, tooltip). */
+/**
+ * @brief Příznaky buňky slovy (detail, tooltip).
+ *
+ * "no present owner" jen u adresy, která vlastníky má, ale žádný není
+ * přítomný (BUS_PORT_UNMAPPED je nastavený i u adresy bez vlastníka;
+ * tam to říká titulek "no owner" a řádek o nebuzené sběrnici, R08).
+ * @param flags  Příznaky BUS_PORT_* adresy.
+ * @param owners Vlastníci adresy (n položek, smí být NULL při n == 0).
+ * @param n      Počet vlastníků.
+ * @param buf    Výstup, slova oddělená čárkou; prázdný řetězec = žádný příznak.
+ * @param size   Velikost bufferu (> 0).
+ */
 void flags_words(uint8_t flags, const st_BUS_OWNER *owners, unsigned n, char *buf, size_t size)
 {
     buf[0] = '\0';
@@ -585,7 +603,7 @@ void flags_words(uint8_t flags, const st_BUS_OWNER *owners, unsigned n, char *bu
         size_t used = strlen(buf);
         snprintf(buf + used, size - used, "%s%s", used ? ", " : "", w);
     };
-    if (flags & BUS_PORT_UNMAPPED) add(_("no present owner"));
+    if ((flags & BUS_PORT_UNMAPPED) && n > 0) add(_("no present owner"));
     if (flags & BUS_PORT_DIR_SPLIT) add(_("different owners for IN and OUT"));
     if (flags & BUS_PORT_POTENTIAL_CONFLICT) add(_("potential conflict"));
     if (flags & BUS_PORT_CONFLICT_SEEN) add(_("conflict seen at run time"));
@@ -969,11 +987,14 @@ void render_owner_list(bool mmio, float height)
                     if (selected) {
                         ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
                         ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(1.0f, 1.0f, 1.0f, 0.7f));
+                        ImGui::PushStyleColor(ImGuiCol_Button, COL4_SEL_BTN);
+                        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, COL4_SEL_BTN_HOVER);
+                        ImGui::PushStyleColor(ImGuiCol_ButtonActive, COL4_SEL_BTN_ACTIVE);
                     }
                     if (ImGui::Button(r.connected ? _L("Disconnect##bus_row_act") : _L("Connect##bus_row_act"), ImVec2(-FLT_MIN, 0.0f))) {
                         devbus_request_connect(r.id, !r.connected);
                     }
-                    if (selected) { ImGui::PopStyleColor(); ImGui::PopStyleVar(); }
+                    if (selected) { ImGui::PopStyleColor(4); ImGui::PopStyleVar(); }
                 }
             }
             g_bus_ui.visible_rows++;
@@ -1127,6 +1148,7 @@ void render_detail(bool mmio)
     char fl[256], fl_line[300];
     flags_words(flags, owners, n, fl, sizeof(fl));
     snprintf(fl_line, sizeof(fl_line), "%s %s", _("Flags:"), fl[0] ? fl : "-");
+    snprintf(g_bus_ui.flags_line, sizeof(g_bus_ui.flags_line), "%s", fl_line);
     bool fl_cut = clipped_line(fl_line, COL_TEXT);
     bool fl_conflict = (flags & (BUS_PORT_POTENTIAL_CONFLICT | BUS_PORT_CONFLICT_SEEN)) != 0;
     if ((fl_cut || fl_conflict) && ImGui::BeginItemTooltip()) {
@@ -1335,6 +1357,7 @@ extern "C" void bus_window_debug_get(st_BUS_WINDOW_DEBUG *out)
     out->visible_rows = g_bus_ui.visible_rows;
     snprintf(out->activity_line, sizeof(out->activity_line), "%s", g_bus_ui.activity_line);
     snprintf(out->peek_line, sizeof(out->peek_line), "%s", g_bus_ui.peek_line);
+    snprintf(out->flags_line, sizeof(out->flags_line), "%s", g_bus_ui.flags_line);
     snprintf(out->status_line, sizeof(out->status_line), "%s", g_bus_ui.status_line);
 }
 

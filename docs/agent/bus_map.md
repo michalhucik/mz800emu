@@ -41,9 +41,9 @@ Platform notes:
 - MZ-1500: `psg` owns 0E9h (both chips), 0F2h (left) and 0F3h (right),
   `gdg` owns 0F0h-0F1h writes; 0CEh and 0D0h-0D7h have no owner (the 8255,
   8253 and status are reachable only at 0E000h-0E008h). The emulator
-  decodes the Quick Disk at 0F4h-0F7h; the knowledge base says the
-  built-in QD of the MZ-1500 uses 74h-77h (`source_note` of `qdisk` says
-  so).
+  decodes the Quick Disk at 0F4h-0F7h, the same ports as the MZ-700 and
+  MZ-800 (knowledge base `hw/15-quick-disk.md`; not measured on a real
+  MZ-1500).
 - `mirror_note` of every port owner on the MZ-800 and MZ-1500 says that the
   emulator decodes the low address byte only (a port is mirrored over
   A8-A15) and that this is not measured on the real machine.

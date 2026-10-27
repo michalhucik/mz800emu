@@ -5,7 +5,8 @@
  *
  * Běží v testovacím jádru MZ-800 se zařízením devbus_dummy.c a falešným
  * adaptérem (platforma MZ-700 jen jako maska). Položky katalogu a regiony
- * zařízení jsou vidět jen s připojeným zařízením.
+ * zařízení jsou vidět jen s připojeným zařízením; probe katalogu přeskočí
+ * položky jiné platformy než jádra (N-D6-9).
  *
  * Licence: GPLv3
  */
@@ -82,6 +83,41 @@ void test_io_catalog_dynamic(void)
     TEST_ASSERT_FALSE(io_catalog_present(base));
 }
 
+/** @brief Zrcadlo položky jen pro MZ-700 (v jádru MZ-800 ho probe nesmí vrátit). */
+static uint8_t foreign_cat_reg(void)
+{
+    return 0x99;
+}
+
+/** @brief Katalog zařízení s položkou jen pro MZ-700. */
+static const st_IO_PORT_DESC s_foreign_catalog[] = {
+    { 0x0074, "FOREIGN REG", "Register of another platform", IO_PORT_DIR_RW, NULL, 0, foreign_cat_reg, NULL, MZ_AVAIL_700, IO_CROSS_NONE },
+};
+
+static st_DEVBUS_DUMMY s_b;
+static st_DEVBUS_DEVICE_DESC s_desc_b;
+
+/* Probe přeskočí přítomnou položku jiné platformy (N-D6-9), statickou položku platformy jádra najde. */
+void test_io_catalog_probe_skips_other_platform(void)
+{
+    devbus_exit();
+    devbus_init(&s_fake_ops);
+    memset(&s_b, 0, sizeof(s_b));
+    devbus_dummy_make_desc(&s_desc_b, "foreign", "FOREIGNDBG", 0);
+    s_desc_b.io_catalog = s_foreign_catalog;
+    s_desc_b.io_catalog_count = G_N_ELEMENTS(s_foreign_catalog);
+    s_b.slot = devbus_register(&s_desc_b, &s_b);
+    TEST_ASSERT_EQUAL_INT(0, s_b.slot);
+    devbus_start();
+    devbus_connect(s_b.slot);
+    TEST_ASSERT_TRUE(io_catalog_present(g_io_ports_count));
+    uint8_t v = 0xEE;
+    TEST_ASSERT_EQUAL_INT(0, io_catalog_probe_byte(0x74, &v));
+    TEST_ASSERT_EQUAL_HEX8(0xEE, v);
+    /* Stav GDG 0CEh má MZ_AVAIL_800: v jádru MZ-800 ho probe najde. */
+    TEST_ASSERT_EQUAL_INT(1, io_catalog_probe_byte(0xCE, &v));
+}
+
 void test_io_catalog_without_devbus(void)
 {
     devbus_exit();
@@ -151,6 +187,7 @@ int main(int argc, char *argv[])
     UNITY_BEGIN();
 
     RUN_TEST(test_io_catalog_dynamic);
+    RUN_TEST(test_io_catalog_probe_skips_other_platform);
     RUN_TEST(test_io_catalog_without_devbus);
     RUN_TEST(test_regions_device);
 

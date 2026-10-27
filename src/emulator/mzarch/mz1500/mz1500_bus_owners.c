@@ -30,8 +30,8 @@
 #define SRC_PSG_1500 "two SN76489AN of the MZ-1500 (hw/13-sound-psg.md); the port assignment 0E9h both, 0F2h left, 0F3h right is the emulator model (mz1500_iorq.c), the data bus of the chip is input only (SN76489_techinfo.md)"
 /** @brief Zdroj: registry GDG MZ-1500 na 0F0h / 0F1h. */
 #define SRC_GDG_1500 "emulator model (mz1500_iorq.c, gdg_write_byte): 0F0h display mode, 0F1h palette, OUT only; the knowledge base has no MZ-1500 GDG register description"
-/** @brief Zdroj: Quick Disk na MZ-1500 (rozpor s bází). */
-#define SRC_QDISK_1500 "MZ-1E19 parts list names an SN74LS244 buffer (QuickDisk_kompendium.md), direction on the data bus unclear. The emulator decodes 0F4h-0F7h as on the MZ-800; hw/15-quick-disk.md says the built-in QD of the MZ-1500 uses 74h-77h (not verified, see plan D6 report)"
+/** @brief Zdroj: Quick Disk na MZ-1500 (porty 0F4h-0F7h shodné s MZ-700 a MZ-800, podle báze hw/15; na HW neměřeno). */
+#define SRC_QDISK_1500 "MZ-1E19 parts list names an SN74LS244 buffer (QuickDisk_kompendium.md), direction on the data bus unclear. Ports 0F4h-0F7h as on the MZ-700 and MZ-800 (hw/15-quick-disk.md), not measured on a real MZ-1500"
 /** @brief Zdroj: stav GDG 0E008h na MZ-1500. */
 #define SRC_E008_1500 "emulator model (gdg_read_dmd_status_memop, mz1500_memory.c): status read / GATE0 write at 0E008h; the driving chip of the MZ-1500 is not documented in the knowledge base"
 

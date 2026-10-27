@@ -5069,13 +5069,15 @@ typedef struct st_DBGAPI_FRAME_SCREENSHOT_PNG_PARAM
 /**
  * @brief Parametr pro DBGAPI_CMD_GET_VIDEO_TEXT_DUMP.
  *
- * Text mode dump pro MZ-700 (D000-D3FF chars + D800-DBFF attributes, 40
- * cols x 25 rows). MZ-1500 v MZ-700 compat mode má stejný layout. Pro
+ * Text mode dump pro MZ-700 (D000-D3E7 chars + D800-DBE7 attributes, 40
+ * cols x 25 rows), tedy obsah, který CPU vidí na těchto adresách. MZ-1500
+ * v MZ-700 compat mode má stejný layout; MZ-800 v 700 mode také, jen
+ * fyzicky na VRAM[0x1000..] a VRAM[0x1800..] (viz handler v dbgapi.c). Pro
  * MZ-800 v 800 mode (= GDG grafický mode) `available=0` + důvod.
  *
- * `chars` jsou Sharp ASCII bajty (= mapping na UTF-8 dělá až dispatch v
- * presentation layeru). `attributes` jsou raw bajty atributu char cellu
- * (význam záleží na MZARCH; klient si interpretaci řeší sám).
+ * `chars` jsou syrové bajty VRAM, tedy Sharp display code (ne Sharp
+ * ASCII; převod dělá klient). `attributes` jsou raw bajty atributu char
+ * cellu (význam záleží na MZARCH; klient si interpretaci řeší sám).
  */
 typedef struct st_DBGAPI_VIDEO_TEXT_DUMP_PARAM
 {

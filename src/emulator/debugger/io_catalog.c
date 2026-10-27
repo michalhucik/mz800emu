@@ -2317,10 +2317,36 @@ bool io_catalog_present(size_t i)
 
 
 /**
+ * @brief Bit MZ_AVAIL_* platformy, pro kterou je modul přeložen.
+ *
+ * Katalog `g_io_ports[]` je jedno pole pro všechny platformy; která
+ * položka na které platformě existuje, říká `available_for_mzarch`.
+ *
+ * @return MZ_AVAIL_700, MZ_AVAIL_800 nebo MZ_AVAIL_1500 podle MZARCH
+ *         (MZ_AVAIL_ALL, pokud MZARCH není 700 / 800 / 1500).
+ */
+static uint8_t io_catalog_arch_mask(void)
+{
+#if MZARCH == 800
+    return MZ_AVAIL_800;
+#elif MZARCH == 1500
+    return MZ_AVAIL_1500;
+#elif MZARCH == 700
+    return MZ_AVAIL_700;
+#else
+    return MZ_AVAIL_ALL;
+#endif
+}
+
+
+/**
  * Side-effect-free probe portu přes mirror gettery z `g_io_ports[]`.
  *
  * Viz doc v `io_catalog.h`. Lineární scan celého katalogu (statický
- * + připojená zařízení devbus); pro každý port LSB
+ * + připojená zařízení devbus); položky jiné platformy (bez bitu
+ * io_catalog_arch_mask() v `available_for_mzarch`) se přeskakují - dřív
+ * (nález N-D6-9) je probe bral, takže na MZ-700 / MZ-1500
+ * vracel např. pro 0CEh zrcadlo stavu GDG MZ-800. Pro každý port LSB
  * obvykle 1-2 R/RW entries (např. 0xCE má GDG Status R + DMD W,
  * 0xE004-E006 mají IORQ + MMIO duplicitu). Bere první nalezený match
  * (= pořadí v `g_io_ports[]` určuje prioritu při shodě více R entries
@@ -2329,12 +2355,16 @@ bool io_catalog_present(size_t i)
 int io_catalog_probe_byte(uint8_t port_lsb, uint8_t *out_value)
 {
     size_t n = io_catalog_count();
+    const uint8_t arch = io_catalog_arch_mask();
     for (size_t i = 0; i < n; i++)
     {
         if (!io_catalog_present(i))
             continue;
         const st_IO_PORT_DESC *e = io_catalog_at(i);
         if ((uint8_t)(e->addr & 0xFFu) != port_lsb)
+            continue;
+        /* Položka jiné platformy (0 = všechny, jako v okně I/O Ports). */
+        if (e->available_for_mzarch != 0u && (e->available_for_mzarch & arch) == 0u)
             continue;
         /* MMIO entries (high byte != 0, např. 0xE000+) přeskočit -
          * patří do memory map space, ne IORQ portů. */

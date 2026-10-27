@@ -27,6 +27,10 @@
 #ifndef BUS_OWNERS_H
 #define BUS_OWNERS_H
 
+/* stddef.h kvůli NULL: tabulky vlastníků platforem (mz*_bus_owners.c) mají
+ * v polích source_note a mirror_note NULL a nesmí spoléhat na to, že ho
+ * přinese jiná hlavička nepřímo (na Linuxu a macOS to neplatí). */
+#include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -53,8 +57,12 @@ extern "C" {
  */
 /** @brief Zdroj: datasheet NEC uPD8255A. */
 #define BUS_SRC_8255 "NEC uPD8255A datasheet p. 8-70: three-state bidirectional data bus buffer"
-/** @brief Zdroj: datasheet OKI MSM82C53 (jen blokové schéma). */
-#define BUS_SRC_8253 "OKI MSM82C53 datasheet: data bus buffer in the block diagram; an explicit three-state statement was not found"
+/**
+ * @brief Zdroj: datasheet OKI MSM82C53-2 (Jan. 1998), popis vývodů str. 7/19
+ *        ("Three-state 8-bit bidirectional data bus") a časování čtení str. 6/19
+ *        (D0-D7 mimo /RD ve vysoké impedanci).
+ */
+#define BUS_SRC_8253 "OKI MSM82C53-2 datasheet p. 7/19: D7-D0 three-state 8-bit bidirectional data bus (p. 6/19: high impedance outside /RD)"
 /** @brief Zdroj: řídicí slovo 8253 nelze číst. */
 #define BUS_SRC_8253_CW "8253 control word register is write-only (datasheet); the emulator returns the bus latch on read"
 /** @brief Zdroj: Unicard VHDL. */

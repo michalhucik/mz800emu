@@ -33,7 +33,7 @@
 /** @brief Zdroj: 8255 a 8253 na portech jen v režimu MZ-800. */
 #define SRC_8255_MODE "NEC uPD8255A datasheet p. 8-70: three-state bidirectional data bus buffer; decoded on 0D0h-0D3h only with DMD in MZ-800 mode (hw/04-io-ports.md), in MZ-700 mode at 0E000h-0E003h"
 /** @brief Zdroj: 8253 na portech jen v režimu MZ-800. */
-#define SRC_8253_MODE "OKI MSM82C53 datasheet: data bus buffer in the block diagram, an explicit three-state statement was not found; decoded on 0D4h-0D7h only with DMD in MZ-800 mode"
+#define SRC_8253_MODE "OKI MSM82C53-2 datasheet p. 7/19: D7-D0 three-state 8-bit bidirectional data bus (p. 6/19: high impedance outside /RD); decoded on 0D4h-0D7h only with DMD in MZ-800 mode"
 /** @brief Zdroj: druhý PSG (volba HW kompatibility). */
 #define SRC_PSG_STEREO "HW compatibility experiment allow_psg1 of the emulator (second SN76489 on 0F3h left and 0F9h right, 0F2h writes both); no second PSG on a real MZ-800 (hw/13-sound-psg.md)"
 /** @brief Zdroj: standardní RAM disk na MZ-800 (zápis i 0E9h). */

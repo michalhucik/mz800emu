@@ -6089,8 +6089,10 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                           && io_catalog_probe_byte ( (uint8_t) ( p->addr & 0xFFu ), &v ) )
                 {
                     /* Zrcadlo katalogu jen pro port, který deska teď dekóduje
-                     * a budí (katalog sám položky podle platformy nefiltruje:
-                     * na MZ-1500 má i stav GDG 0CEh, který tam na portu není). */
+                     * a budí. Katalog filtruje jen podle platformy, ne podle
+                     * režimu (8255 na 0D0h MZ-800 v režimu MZ-700) ani podle
+                     * připojení periferie (FDC, IDE8, ...), proto zůstává
+                     * i kontrola statickou tabulkou vlastníků. */
                     d = 0xFFu;
                     p->source = DBGAPI_BUS_PEEK_SRC_BOARD;
                 }
@@ -9186,11 +9188,16 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
         {
             /* V1.D.4 - Text VRAM dump pro MZ-700 mode.
              *
-             * MZ-700 a MZ-1500: 40x25 text mode, chars na D000-D3FF
-             * (g_memory.VRAM[0x000..0x3FF]), atributy na D800-DBFF
-             * (g_memory.VRAM[0x800..0xBFF]).
+             * MZ-700 a MZ-1500: 40x25 text mode, znaky na D000-D3E7
+             * (g_memory.VRAM[0x000..0x3E7]), atributy na D800-DBE7
+             * (g_memory.VRAM[0x800..0xBE7]).
              *
-             * MZ-800 v 700 mode (DMD bit MZ700 = 1): stejný layout.
+             * MZ-800 v 700 mode (DMD bit MZ700 = 1): CPU adresa se do roviny I
+             * mapuje jako addr & 1FFFh (MEMORY_VRAM_MZ700_READ_BYTE
+             * v mz800_memory.c, schéma v mz800_vramctrl.c), takže znaky jsou
+             * na VRAM[0x1000..], atributy na VRAM[0x1800..]; VRAM[0x0000..
+             * 0x0FFF] je CG-RAM na C000h. Do 2.0.6 se četlo od 0x000 / 0x800
+             * jako na MZ-700, dump tak vracel CG-RAM (nález N-D6-1).
              * MZ-800 v 800 mode: GDG grafický mode (různé rozlišení), bez
              * 40x25 textové struktury -> available=0.
              */
@@ -9202,8 +9209,12 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                 break;
             };
             memset ( p, 0, sizeof ( *p ) );
+            /* Offset znakové VRAM 0D000h ve fyzickém poli g_memory.VRAM;
+             * atributová VRAM 0D800h leží o 0x800 výš. */
+            uint32_t text_base = 0x000;
 #if MZARCH == 800
             memcpy ( p->platform, "mz800", 6 );
+            text_base = 0x1000;
             if ( !GDG_MZ800_DMD_TEST_MZ700 )
             {
                 p->available = 0;
@@ -9223,8 +9234,8 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                 p->cell_count = sizeof ( p->chars );
             for ( uint32_t i = 0; i < p->cell_count; i++ )
             {
-                p->chars[ i ]      = g_memory.VRAM[ i ];
-                p->attributes[ i ] = g_memory.VRAM[ 0x800 + i ];
+                p->chars[ i ]      = g_memory.VRAM[ text_base + i ];
+                p->attributes[ i ] = g_memory.VRAM[ text_base + 0x800 + i ];
             };
             p->available = 1;
             rq->success = true;

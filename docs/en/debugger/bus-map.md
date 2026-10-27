@@ -191,7 +191,7 @@ connected to the data bus:
 | Output stage | Meaning | Examples |
 |--------------|---------|----------|
 | none (write only) | never drives the bus, only watches writes | PCG-700 registers, SUC latch, memory mapper, GDG registers, PSG |
-| tri-state | drives all eight bits while its own address is decoded | 8255 PPI (datasheet), Z80 PIO (technical manual), Unicard (VHDL), K&P 80 card (74LS245 behind the board-select signal) |
+| tri-state | drives all eight bits while its own address is decoded | 8255 PPI, 8253 CTC (datasheets), Z80 PIO (technical manual), Unicard (VHDL), K&P 80 card (74LS245 behind the board-select signal) |
 | partial | drives only some bits, the rest float | joystick buffers of the MZ-800 (74LS365, bits 0-5; nobody drives bits 6-7 on the hardware, the emulator returns 0FFh without a joystick) |
 | open collector | wired-AND with idle 1 | not found on the data lines of any MZ; kept for completeness |
 | unknown | the knowledge base has no schematic or datasheet of the output stage | FDC card, IDE8, RAM disks, Quick Disk interface, GDG status (0CEh, 0E008h; custom LSI without a datasheet) |

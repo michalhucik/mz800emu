@@ -2321,7 +2321,7 @@ msgstr "keine"
 
 #: src/ui-imgui/debugger/busmap/bus_window.cpp:218
 msgid "tri-state"
-msgstr "Tri-State"
+msgstr "tri-state"
 
 #: src/ui-imgui/debugger/busmap/bus_window.cpp:219
 msgid "partial"

@@ -424,9 +424,10 @@ pro celý seznam slouží `emulator://watch`.
   chars, D800-DBFF attributes). MZ-800 vrací `available=false` když
   emulátor běží v 800 graphics módu (= je dostupný jen v 700 compat
   módu). MZ-1500 vždy available (sdílí 700-compat layout).
-- **text_dump Sharp ASCII nekonvertován** - `chars_b64` nese raw
-  8-bit Sharp ASCII byte stream. Klienti aplikují Sharp ASCII -> UTF-8
-  mapping sami.
+- **text_dump display code nekonvertován** - `chars_b64` nese syrové
+  bajty VRAM, tedy Sharp display code (ne Sharp ASCII). Převod display
+  code -> UTF-8 dělají klienti sami (viz
+  `emulator://docs/sharp_display_code`).
 - **keyboard/matrix_info aliasy** - tabulka symbolických jmen
   obsahuje aliasy (RETURN/ENTER/CR; CTRL/CONTROL; ARROW_UP/UP/...).
   Stejný (col, bit) pár se objevuje vícekrát pod různými `name`

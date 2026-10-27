@@ -176,7 +176,7 @@ připojen k datové sběrnici:
 | Výstupní stupeň | Význam | Příklady |
 |-----------------|--------|----------|
 | none (write only) | sběrnici nikdy nebudí, jen sleduje zápisy | registry PCG-700, latch SUC, paměťový mapper, registry GDG, PSG |
-| tri-state | budí všech osm bitů, dokud je dekódovaná jeho adresa | 8255 PPI (datasheet), Z80 PIO (technický manuál), Unicard (VHDL), karta K&P 80 (74LS245 za signálem výběru desky) |
+| tri-state | budí všech osm bitů, dokud je dekódovaná jeho adresa | 8255 PPI, 8253 CTC (datasheet), Z80 PIO (technický manuál), Unicard (VHDL), karta K&P 80 (74LS245 za signálem výběru desky) |
 | partial | budí jen některé bity, ostatní plavou | budiče joysticku MZ-800 (74LS365, bity 0-5; bity 6-7 na HW nikdo nebudí, emulátor bez joysticku vrací 0FFh) |
 | open collector | wired-AND s klidovou 1 | na datových linkách žádného MZ nenalezen; jen pro úplnost |
 | unknown | báze znalostí nemá schéma ani datasheet výstupního stupně | karta FDC, IDE8, RAM disky, rozhraní Quick Disk, stav GDG (0CEh, 0E008h; zákaznický obvod bez datasheetu) |

@@ -163,9 +163,11 @@ extern "C"
      * Side-effect-free probe portu přes mirror gettery z `g_io_ports[]`.
      *
      * Implementace lineárně skenuje celý katalog (io_catalog_at()) a hledá entry, který
-     * splňuje VŠECHNY tři podmínky:
+     * splňuje VŠECHNY podmínky:
      *   0. položka je přítomná (io_catalog_present(): statická vždy, položka
-     *      zařízení devbus jen s připojeným zařízením)
+     *      zařízení devbus jen s připojeným zařízením) a patří platformě, pro
+     *      kterou je modul přeložen (`available_for_mzarch` == 0 nebo obsahuje
+     *      bit MZ_AVAIL_* podle MZARCH; stejný filtr jako okno I/O Ports)
  *   1. `(entry->addr & 0xFF) == port_lsb` (= shoda na low byte adresy;
      *      MMIO entries s nenulovým high byte se přeskakují - ty patří do
      *      memory map space, ne IORQ portů)
@@ -182,6 +184,12 @@ extern "C"
      * Použití: side-effect-free probe path `port_read_no_se_cb` v mzarch
      * vrstvě (per arch) volá tento helper jako prvotní krok; `regDBUS_latch`
      * fallback se použije jen pokud helper nevrátil mirror.
+     *
+     * Omezení: filtr je podle platformy, ne podle stavu stroje. Položka
+     * přítomná na platformě vrací zrcadlo i tehdy, když ji port v aktuálním
+     * režimu nebo bez připojené periferie nedekóduje (např. 8255 na 0D0h
+     * MZ-800 v režimu MZ-700, FDC bez řadiče); kdo potřebuje "co by dostalo
+     * CPU", kombinuje probe s bus_map_static_port_driven().
      *
      * Performance: lineární scan, není určeno do CPU hot path; volá se z BP
      * DSL `port[N]` probe, což je rate-limited debug operace.

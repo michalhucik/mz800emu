@@ -79,7 +79,7 @@ two advantages over Tools:
 | `emulator://frame/framebuffer/info` | Framebuffer shape, pixel_format=index8, dirty flag, 16-entry palette |
 | `emulator://frame/screenshot.raw` | RGBA8888 base64 buffer (auto downscale 1/2/4) + `fallback_source`, `image_sha256`, `vram_sha256`, `beam` |
 | `emulator://frame/screenshot` | PNG base64 (`format: "png"`, full frame, stb_image_write encoder) + `image_sha256`, `vram_sha256`, `beam` |
-| `emulator://video/text_dump` | 40x25 chars + attributes (Sharp ASCII) from MZ-700 text VRAM |
+| `emulator://video/text_dump` | 40x25 chars (Sharp display code) + attributes from MZ-700 text VRAM |
 
 ### AI reference docs
 
@@ -441,9 +441,10 @@ URI; use `emulator://watch` for the full list.
   returns `available=false` when the emulator runs in 800 graphics
   mode (= only available in 700 compat mode). MZ-1500 always returns
   available (shares the 700-compat layout).
-- **text_dump Sharp ASCII not converted** - `chars_b64` carries the
-  raw 8-bit Sharp ASCII byte stream. Clients apply the Sharp ASCII ->
-  UTF-8 mapping themselves.
+- **text_dump display code not converted** - `chars_b64` carries the
+  raw VRAM bytes, i.e. Sharp display code (not Sharp ASCII). Clients
+  apply the display code -> UTF-8 mapping themselves (see
+  `emulator://docs/sharp_display_code`).
 - **keyboard/matrix_info aliases** - the symbolic name table contains
   aliases (RETURN/ENTER/CR; CTRL/CONTROL; ARROW_UP/UP/...). The same
   (col, bit) pair appears multiple times under different `name`

@@ -711,6 +711,40 @@ if(Python3_FOUND)
     message(STATUS "  tests/mcp: registered mcp_vram700_regions "
                    "(Python ${Python3_VERSION})")
 
+    # get_video_text_dump vrací textovou VRAM, kterou CPU vidí na 0D000h
+    # a 0D800h (plán D7, N-D6-1): na mz800emu v režimu MZ-700 dřív CG-RAM;
+    # mz700emu-pal a mz1500emu jako kontrola.
+    add_test(
+        NAME    mcp_video_text_dump
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_video_text_dump.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_video_text_dump PROPERTIES
+        LABELS  "e2e;mcp;pipe"
+        TIMEOUT 200
+        SKIP_RETURN_CODE 77
+    )
+    message(STATUS "  tests/mcp: registered mcp_video_text_dump "
+                   "(Python ${Python3_VERSION})")
+
+    # Sonda port[N] (Watch, podmínka BP) bere jen položky katalogu I/O
+    # aktuální platformy (plán D7, N-D6-9): na mz700emu-pal a mz1500emu
+    # vrací pro 0CEh, 0D0h, 0D4h, 0F0h latch, ne zrcadla MZ-800.
+    add_test(
+        NAME    mcp_port_probe_platform
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_port_probe_platform.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_port_probe_platform PROPERTIES
+        LABELS  "e2e;mcp;pipe"
+        TIMEOUT 200
+        SKIP_RETURN_CODE 77
+    )
+    message(STATUS "  tests/mcp: registered mcp_port_probe_platform "
+                   "(Python ${Python3_VERSION})")
+
     # Wrapper čte čísla [MCP] z INI šestnáctkově jako cfgfile (plán D5,
     # N-D5-1): rotace logu podle size_mb / keep z GUI. Bez emulátoru
     # a bez balíku mcp (funkce se berou ze zdroje přes ast).

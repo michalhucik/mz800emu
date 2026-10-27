@@ -9,7 +9,8 @@
  * - klik na buňku vybere adresu i řádek seznamu, klik na řádek vybere jeho první buňku;
  * - hover na řádek seznamu zvýrazní jeho buňky v mřížce (další snímek);
  * - vypnuté sledování: řádek aktivity má "-" místo nul; detail má stejnou výšku
- *   se sledováním, bez něj i bez vlastníka (R04);
+ *   se sledováním, bez něj i bez vlastníka (R04); adresa bez vlastníka má
+ *   "Flags: -" (R08);
  * - pod přirozenou šířkou se nic nepřeskládá (buňka i seznam na minimu, dva snímky);
  * - peek v pauze automaticky s textem "(automatic while paused)", za běhu bez něj;
  * - záložka MMIO, zrušená záložka Devices (2) = Ports; šířka seznamu, buňka
@@ -338,6 +339,8 @@ static void test_tracking_off_shows_dash(void)
     for (int i = 0; i < 2; i++) frame_with_window(&open);
     bus_window_debug_get(&d);
     TEST_ASSERT_FLOAT_WITHIN(0.5f, detail_on, d.detail_h);
+    /* adresa bez vlastníka nemá příznak "no present owner" (R08) */
+    TEST_ASSERT_EQUAL_STRING("Flags: -", d.flags_line);
 }
 
 /* Pod přirozenou šířkou: buňka na minimu, seznam na minimu, nic se nepřeskládá (dva snímky). */

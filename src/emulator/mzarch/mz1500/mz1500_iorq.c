@@ -610,12 +610,14 @@ bool mz1500_bus_owner_present(unsigned kind)
  * @brief Side-effect-free probe variant pro IORQ read (MZ-1500).
  *
  * V1.7+ CHECKLIST 3.4: implementace přes mirror gettery z `g_io_ports[]`
- * (= `io_catalog_probe_byte` dispatch). io_catalog.c je per-arch
- * kompilované, takže pro MZ-1500 binárku obsahuje jen MZ_AVAIL_1500
- * entries. Mirror callbacky (PPI Port B + CW, CTC counter + CW,
+ * (= `io_catalog_probe_byte` dispatch). Katalog obsahuje položky
+ * všech platforem; io_catalog_probe_byte() bere jen položky s bitem
+ * MZ_AVAIL_1500 (nebo bez masky), ostatní přeskočí (dřív je
+ * nepřeskakoval, nález N-D6-9). Mirror callbacky (PPI Port B + CW,
+ * CTC counter + CW,
  * WD279x R/W latches, banking 0xE0-E6 s MZ-1500 SPEC pole, Z80 PIO
  * 0xFC/FD) vrací konzistentní hodnoty s Overview I/O Ports panelem.
- * MZ-1500 nemá joystick na 0xF0/F1 - tyto entries v g_io_ports nejsou
+ * MZ-1500 nemá joystick na 0xF0/F1 - tyto entries mají jen MZ_AVAIL_800
  * (MZ_AVAIL_800 only), helper je nenajde a vrátí false → latch fallback.
  *
  * Pozn: tato funkce **NEvolá** `mzarch_main_insideop_iorq()` ani
