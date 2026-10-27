@@ -544,7 +544,7 @@ static int regions_read_desc(const st_REGION_DESC *desc, uint32_t offset, uint8_
         return (int)n;
 
     case REGION_KIND_VRAM_700_CHAR:
-        /* MZ-800 v 700 compat módu: char VRAM = Plane I offset 0x1000..0x17FF.
+        /* MZ-800 v 700 compat módu: char VRAM (2 KB) = Plane I offset 0x1000..0x17FF.
          * Ověřeno proti mz800_memory.c:1105 kde write z 0xD000 jde na
          * g_memoryVRAM_I[0x1000 | (addr & 0x0FFF)]. Bug pre-fix četl offset
          * 0 = začátek CG-RAM (= chybný obsah). */
@@ -552,10 +552,10 @@ static int regions_read_desc(const st_REGION_DESC *desc, uint32_t offset, uint8_
         return (int)n;
 
     case REGION_KIND_VRAM_700_ATTR:
-        /* MZ-800 v 700 compat módu: attr VRAM = Plane I offset 0x1800..0x1BFF.
-         * Stejná logika jako CHAR + posun o 0x0800 (znaková VRAM má 1 KB
-         * data + 1 KB padding do 0x800-0xFFF; attr leží za nimi).
-         * Bug pre-fix četl offset 0x0800 = uvnitř CG-RAM (= chybný obsah). */
+        /* MZ-800 v 700 compat módu: attr VRAM (2 KB) = Plane I offset 0x1800..0x1FFF.
+         * Stejná logika jako CHAR + posun o 0x0800 (znaková VRAM má 2 KB,
+         * attr leží za ní). Bug pre-fix četl offset 0x0800 = uvnitř CG-RAM
+         * (= chybný obsah). */
         memcpy(out, &g_memory.VRAM[0x1800 + offset], n);
         return (int)n;
 
@@ -743,7 +743,7 @@ static int regions_write_impl(const st_REGION_DESC *desc, uint32_t offset, const
         return (int)n;
 
     case REGION_KIND_VRAM_700_ATTR:
-        /* Attr VRAM v MZ-700 compat módu = Plane I offset 0x1800..0x1BFF. */
+        /* Attr VRAM v MZ-700 compat módu = Plane I offset 0x1800..0x1FFF. */
         memcpy(&g_memory.VRAM[0x1800 + offset], data, n);
         return (int)n;
 

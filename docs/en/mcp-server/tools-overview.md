@@ -2653,7 +2653,13 @@ which presses and releases the keys itself on frame boundaries. A paused
 emulator runs exactly the length of the sequence and pauses again (like
 `emu_run(frames=N)`); a running one keeps running. `emu_input_send_keys`
 leaves 1 frame with no key pressed between consecutive keys (a repeated
-key registers as two presses). The reply carries
+key registers as two presses). A character that needs SHIFT (e.g. `*`,
+`+`, lowercase letters) presses SHIFT one frame before the key and
+releases both together, within the same hold (with a hold of at least
+2 frames; the length of the sequence does not change). Programs that
+read the SHIFT column at another moment of their scan than the key
+(e.g. K&P Disk BASIC) otherwise sometimes got the key without SHIFT.
+The reply carries
 `emu_frames` (emulated frames that actually elapsed), `complete` and
 `interrupted` (`true` = cut short by a breakpoint, a pause or a reset;
 the held key was released). At normal speed a sequence takes real time

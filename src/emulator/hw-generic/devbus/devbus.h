@@ -152,6 +152,12 @@ typedef struct st_DEVBUS_OPTION {
  * mzarch_main_insideop_iorq() (čas je srovnaný s paprskem), takže smějí
  * volat devbus_cpu_wait() a devbus_time_ticks().
  *
+ * read a write volá stejnou cestou i debugger (MCP io_read / io_write,
+ * okno I/O, podmínka nebo akce breakpointu s port[N]!), a to uvnitř
+ * devbus_debugger_access_begin() / devbus_debugger_access_end().
+ * devbus_cpu_wait() se pak ignoruje; handler, který chce rozlišit i jiné
+ * vedlejší efekty, se zeptá devbus_access_is_debugger().
+ *
  * @invariant first <= last; žádný port rozsahu neobsluhuje statický switch
  *            platformy (st_DEVBUS_ARCH_OPS::port_is_static).
  */
@@ -607,6 +613,9 @@ unsigned devbus_mmio_get_when(int slot, unsigned range_idx);
  * Volá ho obálka zápisu adaptéru po zápisu do desky. Rozsah reaguje, když
  * adresa leží v rozsahu a stav mapy z @p flags je v jeho masce. V CPU cestě
  * (DEVBUS_ACC_CPU) zavolá před prvním handlerem st_DEVBUS_ARCH_OPS::mmio_sync.
+ * Při DEVBUS_ACC_DEBUGGER volá handlery uvnitř
+ * devbus_debugger_access_begin() / devbus_debugger_access_end()
+ * (devbus_cpu_wait() se ignoruje).
  *
  * @param addr  Adresa zápisu.
  * @param value Zapsaný bajt.
@@ -644,8 +653,41 @@ bool devbus_port_peek(uint16_t port, uint8_t *out);
  * Jen z portového handleru nebo MMIO handleru s DEVBUS_ACC_CPU. Adaptér
  * MZ-700: z80_add_wait_states() + saturovaná
  * g_mzarch_main.instruction_wait_tstates.
+ *
+ * Během přístupu debuggeru (devbus_access_is_debugger() = true) nic
+ * neudělá: přístup debuggeru neběží v cyklu CPU a WAIT by se přičetl
+ * následující instrukci laděného programu.
  */
 void devbus_cpu_wait(unsigned tstates);
+
+/**
+ * @brief Začátek přístupu debuggeru k portu nebo MMIO zařízení.
+ *
+ * Volá ho debugger kolem portového callbacku volaného mimo instrukci CPU
+ * (MCP io_read / io_write, port[N]! v breakpointu) a devbus_mmio_dispatch()
+ * při DEVBUS_ACC_DEBUGGER. Do párového devbus_debugger_access_end()
+ * devbus_cpu_wait() nic nedělá. Vnořitelné (počítadlo).
+ *
+ * @pre Emu vlákno (bez zámku a atomik).
+ * @post devbus_access_is_debugger() vrací true.
+ */
+void devbus_debugger_access_begin(void);
+
+/**
+ * @brief Konec přístupu debuggeru (pár k devbus_debugger_access_begin()).
+ *
+ * @pre Emu vlákno; předchozí devbus_debugger_access_begin() bez páru.
+ *      Nepárové volání (počítadlo 0) se ignoruje.
+ * @post Po posledním vnořeném páru devbus_access_is_debugger() vrací false.
+ */
+void devbus_debugger_access_end(void);
+
+/**
+ * @brief Běží právě přístup debuggeru (uvnitř devbus_debugger_access_begin())?
+ * @return true = handler volá debugger, ne instrukce CPU.
+ * @pre Emu vlákno.
+ */
+bool devbus_access_is_debugger(void);
 
 /** @brief Čas emulace v taktech GDG od startu (snímky * takty snímku + takty snímku). */
 uint64_t devbus_time_ticks(void);

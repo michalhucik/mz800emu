@@ -35,6 +35,28 @@ uživatel obvykle neinvokuje přímo z příkazové řádky. Manuální použit�
 je vhodné pro debug (= ověřit, že emu odpoví na ručně poslaný JSONL
 request).
 
+### Přijímané volby
+
+Pipe režim přijímá jen tyto volby příkazové řádky (pevný seznam), každou
+jinou odmítne hláškou `Unknown option: <volba>` na stderr a nespustí se:
+
+| Volba | Význam |
+|-------|--------|
+| `--mcp-pipe`, `--headless` | pipe režim, bez okna (headless se zapne vždy) |
+| `--help`, `--version` | vypíše volby nebo verzi a skončí |
+| `--home-dir`, `--cfg-dir`, `--work-dir` | přesměrování adresářů (data, konfigurace, výchozí cesta dialogů) |
+| `--config <soubor>` | cesta k hlavnímu INI |
+| `--no-save-ini`, `--no-first-run-windows` | neukládat INI při ukončení, bez úvodních oken |
+| `--cmt <soubor>`, `--cmt-play`, `--cmt-play-pause`, `--cmt-boot` | páska ve virtuálním magnetofonu od startu |
+| `--fdd <N>=<soubor>`, `--fdd0` až `--fdd7`, `--fdd-readonly <N>` | obrazy DSK v disketových mechanikách od startu |
+
+Ostatní volby `mz800emu.exe` (např. `--run-mzf`, `--speed`, `--mode-switch`,
+`--mcp-tcp-port`) v pipe režimu nejsou. Program se spustí nástrojem MCP
+`emu_media_run_mzf` (stejné zavedení jako `--run-mzf`), rychlost se nastaví
+nástrojem `emu_set_speed`. Kdo potřebuje `--run-mzf` přímo z příkazové
+řádky, spustí emulátor jako `mz800emu.exe --headless --mcp-tcp-port=<port>
+--run-mzf <soubor>` a připojí se přes [TCP transport](transport-tcp.md).
+
 ## Co se stane při startu
 
 1. Emu se nakonfiguruje jako headless (žádné SDL okno, no-op audio

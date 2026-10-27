@@ -387,6 +387,47 @@ void test_dispatch_ports(void)
     TEST_ASSERT_EQUAL_UINT(1, s_invalidate);
 }
 
+/**
+ * @brief Přístup debuggeru (N-D5-5): WAIT zařízení se nepřičte.
+ *
+ * Portový handler i MMIO handler volají devbus_cpu_wait(); uvnitř
+ * devbus_debugger_access_begin() / _end() (vnořeně) i při MMIO zápisu
+ * s DEVBUS_ACC_DEBUGGER adaptér WAIT nedostane, mimo něj ano.
+ */
+void test_debugger_access_no_wait(void)
+{
+    reg_ab(false);
+    devbus_connect(0);
+    const st_DEVBUS_PORT_SLOT *ps = &g_devbus_ports[0x74];
+    s_a.wait_on_write = 5;
+    TEST_ASSERT_FALSE(devbus_access_is_debugger());
+    devbus_debugger_access_begin();
+    TEST_ASSERT_TRUE(devbus_access_is_debugger());
+    ps->range->write(ps->ctx, 0x74, 1);
+    devbus_debugger_access_begin();
+    ps->range->write(ps->ctx, 0x74, 2);
+    devbus_debugger_access_end();
+    TEST_ASSERT_TRUE(devbus_access_is_debugger());
+    ps->range->write(ps->ctx, 0x74, 3);
+    devbus_debugger_access_end();
+    TEST_ASSERT_FALSE(devbus_access_is_debugger());
+    TEST_ASSERT_EQUAL_UINT(0, s_wait_sum);
+    TEST_ASSERT_EQUAL_HEX8(3, s_a.reg);
+    /* nepárový end nepodteče */
+    devbus_debugger_access_end();
+    TEST_ASSERT_FALSE(devbus_access_is_debugger());
+    ps->range->write(ps->ctx, 0x74, 4);
+    TEST_ASSERT_EQUAL_UINT(5, s_wait_sum);
+    /* MMIO: zápis debuggeru bez WAIT, zápis CPU s WAIT */
+    devbus_mmio_dispatch(0xE013, 0x33, DEVBUS_MMIO_MAPPED | DEVBUS_ACC_DEBUGGER);
+    TEST_ASSERT_TRUE(s_a.mmio_dbg);
+    TEST_ASSERT_EQUAL_UINT(5, s_wait_sum);
+    TEST_ASSERT_FALSE(devbus_access_is_debugger());
+    devbus_mmio_dispatch(0xE013, 0x34, DEVBUS_MMIO_MAPPED | DEVBUS_ACC_CPU);
+    TEST_ASSERT_FALSE(s_a.mmio_dbg);
+    TEST_ASSERT_EQUAL_UINT(10, s_wait_sum);
+}
+
 void test_dispatch_mmio_map_state(void)
 {
     reg_ab(false);
@@ -708,6 +749,7 @@ int main(int argc, char *argv[])
     RUN_TEST(test_connect_conflict_video);
     RUN_TEST(test_connect_failure_keeps_tables_clean);
     RUN_TEST(test_dispatch_ports);
+    RUN_TEST(test_debugger_access_no_wait);
     RUN_TEST(test_dispatch_mmio_map_state);
     RUN_TEST(test_dispatch_mmio_set_when);
     RUN_TEST(test_dispatch_mmio_when_window);

@@ -72,8 +72,8 @@ For the authoritative banking reference see
 | `0x1000..0x1FFF` | RAM | CG-ROM (4 KB) |
 | `0x2000..0xBFFF` | RAM | - |
 | `0xC000..0xCFFF` | RAM | CG-RAM (PCG, 4 KB) |
-| `0xD000..0xD7FF` | RAM | Text VRAM (chars, 1 KB used at `D000..D3E7`) |
-| `0xD800..0xDFFF` | RAM | Attribute VRAM (1 KB used at `D800..DBE7`) |
+| `0xD000..0xD7FF` | RAM | Text VRAM (chars, 2 KB; the picture shows 1000 bytes at `D000..D3E7`, region `vram_700_char` covers all 2 KB) |
+| `0xD800..0xDFFF` | RAM | Attribute VRAM (2 KB; the picture uses 1000 bytes at `D800..DBE7`, region `vram_700_attr` covers all 2 KB) |
 | `0xE000..0xFFFF` | upper MONITOR ROM (8 KB) + MMIO at `0xE000..0xE008` | RAM |
 
 Memory-mapped I/O in MZ-700 mode (only when upper ROM is active):

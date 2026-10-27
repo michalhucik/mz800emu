@@ -88,16 +88,17 @@ int mz1500_regions_collect(st_REGION_DESC *out, int max_count)
         0xD000, ROM_SIZE_CGROM, 0, 1,
         (rom_upper && spec_id == 1) ? 1 : 0);
 
-    /* VRAM 700 char + attr (společné s MZ-700, MEMORY_SIZE_VRAM = 0x1000). */
+    /* VRAM 700 char + attr (společné s MZ-700, MEMORY_SIZE_VRAM = 0x1000):
+     * znaková 2 KB (D000-D7FF) + atributová 2 KB (D800-DFFF). */
     int vram_mapped = (rom_upper && spec_id == 0) ? 1 : 0;
 
     dbgapi_regions_add(out, &count, max_count,
-        REGION_KIND_VRAM_700_CHAR, 0, "VRAM 700 char (1 KB)",
-        0xD000, 0x0400, 1, 1, vram_mapped);
+        REGION_KIND_VRAM_700_CHAR, 0, "VRAM 700 char (2 KB)",
+        0xD000, 0x0800, 1, 1, vram_mapped);
 
     dbgapi_regions_add(out, &count, max_count,
-        REGION_KIND_VRAM_700_ATTR, 0, "VRAM 700 attr (1 KB)",
-        0xD800, 0x0400, 1, 1, vram_mapped);
+        REGION_KIND_VRAM_700_ATTR, 0, "VRAM 700 attr (2 KB)",
+        0xD800, 0x0800, 1, 1, vram_mapped);
 
     /* PCG banky 1, 2, 3 (každá 8 KB). Logical base D000 (kde se mapuje
      * přes SPEC=2/3/4). g_memory.PCG[MEMORY_SIZE_PCG] = 3 * 8 KB. */

@@ -93,7 +93,7 @@ The tree reflects differences between mz800, mz700 and mz1500:
 - **VRAM**
   - Physical Planes I / II / III / IV (8 KB each, MZ-800;
     III and IV only if exVRAM is connected)
-  - VRAM 700 char + attr (1 KB each, only in 700 / 700-compat mode)
+  - VRAM 700 char + attr (2 KB each, only in 700 / 700-compat mode)
 - **CG-RAM** (4 KB, only in 700 mode)
 - **PCG bank 1 / 2 / 3** (8 KB each, only MZ-1500)
 - **Memext** (Luftner / PEHU, only if connected)

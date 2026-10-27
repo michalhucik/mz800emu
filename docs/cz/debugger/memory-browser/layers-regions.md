@@ -89,7 +89,7 @@ Strom respektuje rozdíly mezi mz800, mz700 a mz1500:
 - **VRAM**
   - Physical Planes I / II / III / IV (8 KB každý, MZ-800;
     III a IV jen pokud je exVRAM connected)
-  - VRAM 700 char + attr (1 KB každý, jen v 700 / 700-compat módu)
+  - VRAM 700 char + attr (2 KB každý, jen v 700 / 700-compat módu)
 - **CG-RAM** (4 KB, jen v 700 módu)
 - **PCG bank 1 / 2 / 3** (8 KB každá, jen MZ-1500)
 - **Memext** (Luftner / PEHU, jen pokud connected)

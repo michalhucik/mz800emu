@@ -109,19 +109,19 @@ int mz800_regions_collect(st_REGION_DESC *out, int max_count)
         0xC000, 0x1000, 1, 1,
         (is_700_mode && MEMORY_MZ800_MAP_TEST_CGRAM) ? 1 : 0);
 
-    /* VRAM 700: char + attr jsou fyzicky jedno pole g_memory.VRAM[0..0x0FFF],
-     * ale logicky 1 KB znaková (D000-D3FF) + 1 KB attr (D800-DBFF).
-     * Pro REGION_LIST exposujeme oba jako samostatné regiony s 1 KB každý.
-     * [neověřeno přesné mirror chování ve VRAM ve 4 KB - rozbor V2 sekce
-     * 1.1 řádek 43 zmiňuje "fyzicky jeden array s mirrors"]. */
+    /* VRAM 700: char + attr leží v rovině I (g_memory.VRAM[0x1000..0x1FFF],
+     * mz800_memory.c: 0x1000 | (addr & 0x0FFF)): znaková 2 KB (D000-D7FF)
+     * + atributová 2 KB (D800-DFFF). Pro REGION_LIST jsou to dva
+     * samostatné regiony po 2 KB; obraz používá prvních 1000 bajtů
+     * každého, zbytek je RAM. */
     dbgapi_regions_add(out, &count, max_count,
-        REGION_KIND_VRAM_700_CHAR, 0, "VRAM 700 char (1 KB)",
-        0xD000, 0x0400, 1, 1,
+        REGION_KIND_VRAM_700_CHAR, 0, "VRAM 700 char (2 KB)",
+        0xD000, 0x0800, 1, 1,
         (is_700_mode && MEMORY_MZ800_MAP_TEST_VRAM_D000) ? 1 : 0);
 
     dbgapi_regions_add(out, &count, max_count,
-        REGION_KIND_VRAM_700_ATTR, 0, "VRAM 700 attr (1 KB)",
-        0xD800, 0x0400, 1, 1,
+        REGION_KIND_VRAM_700_ATTR, 0, "VRAM 700 attr (2 KB)",
+        0xD800, 0x0800, 1, 1,
         (is_700_mode && MEMORY_MZ800_MAP_TEST_VRAM_D000) ? 1 : 0);
 
     /* ---- VRAM PHYS PLANE I-IV (MZ-800 native, 8 KB každý). ---- *

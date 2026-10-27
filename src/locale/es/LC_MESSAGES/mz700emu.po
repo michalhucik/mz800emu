@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mz800emu 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-27 01:38+0100\n"
+"POT-Creation-Date: 2026-10-27 03:16+0100\n"
 "PO-Revision-Date: 2026-03-11 21:00+0100\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -4874,7 +4874,7 @@ msgid "auto-snapshots taken: %d"
 msgstr "instantáneas automáticas tomadas: %d"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_diff_window.cpp:764
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:496
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:498
 msgid "Snapshot Now"
 msgstr "Instantánea ahora"
 
@@ -5347,34 +5347,34 @@ msgstr "Editar OFF / RO"
 msgid "Char Inserter###mb_char_inserter"
 msgstr "Insertador de caracteres###mb_char_inserter"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:310
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:312
 msgid "Layers ▼###mb_layers_toggle"
 msgstr "Capas ▼###mb_layers_toggle"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:311
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:313
 msgid "Layers ▶###mb_layers_toggle"
 msgstr "Capas ▶###mb_layers_toggle"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:317
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:319
 msgid "Toggle Layers side panel (color overlays, snapshot, freeze)"
 msgstr ""
 "Alternar panel lateral de Capas (superposiciones de color, instantánea, "
 "congelado)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:328
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:490
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:330
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:492
 msgid "Layers"
 msgstr "Capas"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:336
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:338
 msgid "* MH/CDL recording ON"
 msgstr "* Grabación MH/CDL ON"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:339
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:341
 msgid "o MH/CDL recording OFF"
 msgstr "o Grabación MH/CDL OFF"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:344
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:346
 msgid ""
 "Memory Heatmap / CDL recording state. Enable in Memory Heatmap window "
 "(Debugger -> Memory Heatmap). Without recording, CDL X/R/W and Heatmap "
@@ -5384,124 +5384,124 @@ msgstr ""
 "ventana de Mapa de calor de memoria (Depurador -> Mapa de calor de memoria). "
 "Sin grabación, las capas CDL X/R/W y Mapa de calor permanecen invisibles."
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:356
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:358
 msgid "CDL Code (X)###mb_layer_cdl_x"
 msgstr "Código CDL (X)###mb_layer_cdl_x"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:361
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:363
 msgid "Highlight bytes executed as instructions"
 msgstr "Resaltar bytes ejecutados como instrucciones"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:363
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:376
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:389
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:402
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:365
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:378
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:391
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:404
 msgid "Requires MH/CDL recording active (enable in Memory Heatmap window)."
 msgstr ""
 "Requiere grabación MH/CDL activa (habilítela en la ventana Mapa de calor de "
 "memoria)."
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:369
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:371
 msgid "CDL Data Read (R)###mb_layer_cdl_r"
 msgstr "Lectura de datos CDL (R)###mb_layer_cdl_r"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:374
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:376
 msgid "Highlight bytes read as data"
 msgstr "Resaltar bytes leídos como datos"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:382
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:384
 msgid "CDL Data Write (W)###mb_layer_cdl_w"
 msgstr "Escritura de datos CDL (W)###mb_layer_cdl_w"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:387
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:389
 msgid "Highlight bytes written by CPU"
 msgstr "Resaltar bytes escritos por la CPU"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:395
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:397
 msgid "Heatmap###mb_layer_heatmap"
 msgstr "Mapa de calor###mb_layer_heatmap"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:400
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:402
 msgid "Color by access count (cool -> hot)"
 msgstr "Colorear por conteo de accesos (frío -> caliente)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:410
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:412
 msgid "Snapshot Δ###mb_layer_delta"
 msgstr "Δ de instantánea###mb_layer_delta"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:413
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:415
 msgid "Highlight bytes changed since snapshot"
 msgstr "Resaltar bytes modificados desde la instantánea"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:420
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:422
 msgid "Snapshot Now###mb_snap_take"
 msgstr "Instantánea ahora###mb_snap_take"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:425
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:427
 msgid "Capture current region content as snapshot baseline"
 msgstr "Capturar contenido actual de la región como línea base de instantánea"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:431
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:433
 msgid "Reset###mb_snap_reset"
 msgstr "Restablecer###mb_snap_reset"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:436
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:438
 msgid "Discard snapshot for current region"
 msgstr "Descartar instantánea para la región actual"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:441
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:443
 #, c-format
 msgid "Snapshot: %u B"
 msgstr "Instantánea: %u B"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:443
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:503
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:445
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:505
 #: src/ui-imgui/debugger/watch/watch_window.cpp:1434
 msgid "No snapshot"
 msgstr "Sin snapshot"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:448
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:450
 msgid "Frozen Bytes###mb_layer_frozen"
 msgstr "Bytes congelados###mb_layer_frozen"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:451
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:453
 msgid "Highlight frozen bytes (cheat engine style)"
 msgstr "Resaltar bytes congelados (estilo cheat engine)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:453
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:455
 #, c-format
 msgid "Frozen: %u"
 msgstr "Congelados: %u"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:457
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:459
 msgid "Symbols###mb_layer_symbols"
 msgstr "Símbolos###mb_layer_symbols"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:460
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:462
 msgid "Show symbol labels in ASCII column (Logical region only)"
 msgstr "Mostrar etiquetas de símbolos en la columna ASCII (sólo región lógica)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:491
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:493
 msgid "CDL Code (X)"
 msgstr "Código CDL (X)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:492
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:494
 msgid "CDL Data Read (R)"
 msgstr "Lectura de datos CDL (R)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:493
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:495
 msgid "CDL Data Write (W)"
 msgstr "Escritura de datos CDL (W)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:494
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:496
 msgid "Heatmap"
 msgstr "Mapa de calor"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:495
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:497
 msgid "Snapshot Δ"
 msgstr "Δ de instantánea"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:497
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:499
 #: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:148
 #: src/ui-imgui/maxspeed_bench_window.cpp:156
 #: src/ui-imgui/plotter/plotter_window.cpp:432
@@ -5509,21 +5509,21 @@ msgstr "Δ de instantánea"
 msgid "Reset"
 msgstr "Restablecer"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:498
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:500
 msgid "Frozen Bytes"
 msgstr "Bytes congelados"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:499
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:501
 #: src/ui-imgui/topmenu/menu_debugger.cpp:161
 #: src/ui-imgui/topmenu/menu_debugger.cpp:503
 msgid "Symbols"
 msgstr "Símbolos"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:501
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:503
 msgid "Snapshot: 16777216 B"
 msgstr "Instantánea: 16777216 B"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:502
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:504
 msgid "Frozen: 99999"
 msgstr "Congelados: 99999"
 
@@ -5611,13 +5611,13 @@ msgstr "Planos físicos###mb_rt_vram_planes"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:271
 #: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:585
-msgid "VRAM 700 char (1 KB)"
-msgstr "VRAM 700 carácter (1 KB)"
+msgid "VRAM 700 char (2 KB)"
+msgstr "VRAM 700 carácter (2 KB)"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:277
 #: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:586
-msgid "VRAM 700 attr (1 KB)"
-msgstr "VRAM 700 atributo (1 KB)"
+msgid "VRAM 700 attr (2 KB)"
+msgstr "VRAM 700 atributo (2 KB)"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:294
 msgid "PCG###mb_rt_pcg_group"

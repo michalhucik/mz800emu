@@ -268,13 +268,13 @@ static void render_vram_group ( st_MEMBROWSER_STATE *st,
         if ( has_char ) {
             const st_REGION_DESC *r =
                 find_desc ( snap, REGION_KIND_VRAM_700_CHAR, 0 );
-            if ( r ) render_leaf ( st, r, _( "VRAM 700 char (1 KB)" ),
+            if ( r ) render_leaf ( st, r, _( "VRAM 700 char (2 KB)" ),
                                     "mb_rt_vram_700_char" );
         }
         if ( has_attr ) {
             const st_REGION_DESC *r =
                 find_desc ( snap, REGION_KIND_VRAM_700_ATTR, 0 );
-            if ( r ) render_leaf ( st, r, _( "VRAM 700 attr (1 KB)" ),
+            if ( r ) render_leaf ( st, r, _( "VRAM 700 attr (2 KB)" ),
                                     "mb_rt_vram_700_attr" );
         }
 
@@ -582,8 +582,8 @@ extern "C" int membrowser_regions_compute_optimal_panel_width ( void )
         _( "Physical Planes" ),
         _( "Plane III (8 KB) [exVRAM]" ),
         _( "Plane IV (8 KB) [exVRAM]" ),
-        _( "VRAM 700 char (1 KB)" ),
-        _( "VRAM 700 attr (1 KB)" ),
+        _( "VRAM 700 char (2 KB)" ),
+        _( "VRAM 700 attr (2 KB)" ),
         _( "CG-RAM (4 KB) [700 mode]" ),
         _( "PCG" ),
         _( "Memext" ),

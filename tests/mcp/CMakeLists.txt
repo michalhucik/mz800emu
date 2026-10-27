@@ -658,6 +658,88 @@ if(Python3_FOUND)
     message(STATUS "  tests/mcp: registered mcp_kp80_e2e "
                    "(Python ${Python3_VERSION})")
 
+    # Přístup debuggeru k portu zařízení devbus bez WAIT (plán D5, N-D5-5):
+    # BP s podmínkou port[0x71]! a karta K&P s wait = 8 nemění časování
+    # programu, io_read / io_write v pauze nemění čas.
+    add_test(
+        NAME    mcp_devbus_dbg_wait
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_devbus_dbg_wait.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_devbus_dbg_wait PROPERTIES
+        LABELS  "e2e;mcp;pipe;kp80;devbus"
+        TIMEOUT 150
+        SKIP_RETURN_CODE 77
+    )
+    message(STATUS "  tests/mcp: registered mcp_devbus_dbg_wait "
+                   "(Python ${Python3_VERSION})")
+
+    # Regiony VRAM 700 po 2 KB (plán D5, N-D5-4): velikost, jméno, čtení
+    # a zápis horní poloviny na MZ-700 PAL a MZ-1500.
+    add_test(
+        NAME    mcp_vram700_regions
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_vram700_regions.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_vram700_regions PROPERTIES
+        LABELS  "e2e;mcp;pipe;regions"
+        TIMEOUT 150
+        SKIP_RETURN_CODE 77
+    )
+    message(STATUS "  tests/mcp: registered mcp_vram700_regions "
+                   "(Python ${Python3_VERSION})")
+
+    # Wrapper čte čísla [MCP] z INI šestnáctkově jako cfgfile (plán D5,
+    # N-D5-1): rotace logu podle size_mb / keep z GUI. Bez emulátoru
+    # a bez balíku mcp (funkce se berou ze zdroje přes ast).
+    add_test(
+        NAME    mcp_wrapper_ini_unsigned
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_wrapper_ini_unsigned.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_wrapper_ini_unsigned PROPERTIES
+        LABELS  "mcp;wrapper"
+        TIMEOUT 60
+    )
+    message(STATUS "  tests/mcp: registered mcp_wrapper_ini_unsigned "
+                   "(Python ${Python3_VERSION})")
+
+    # Znak se SHIFT v sekvenci HID: SHIFT o snímek dřív než klávesa (plán
+    # D5, N-D5-2). Program v RAM čte SHIFT a klávesu v různých okamžicích
+    # skenu; MZ-700 PAL.
+    add_test(
+        NAME    mcp_hid_shift
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_hid_shift.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_hid_shift PROPERTIES
+        LABELS  "e2e;mcp;pipe;hid"
+        TIMEOUT 150
+        SKIP_RETURN_CODE 77
+    )
+    message(STATUS "  tests/mcp: registered mcp_hid_shift "
+                   "(Python ${Python3_VERSION})")
+
+    # Port I/O debuggeru v pauze neposune čas emulace (plán D5, N-D5-6):
+    # io_read / io_write portu 74h na MZ-700 PAL, MZ-800 a MZ-1500.
+    add_test(
+        NAME    mcp_dbgapi_io_paused_time
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_dbgapi_io_paused_time.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_dbgapi_io_paused_time PROPERTIES
+        LABELS  "e2e;mcp;pipe;io"
+        TIMEOUT 200
+        SKIP_RETURN_CODE 77
+    )
+    message(STATUS "  tests/mcp: registered mcp_dbgapi_io_paused_time "
+                   "(Python ${Python3_VERSION})")
+
     # Postupné hledání proměnných (memsearch) a Freeze Bytes přes MCP:
     # pauza i běžící program, undo/redo, ruční vyřazení, MemExt PEHU (128
     # kusů, bp_hint MMEXT_BANK), VRAM plane bez adresy, BCD, MZ-700/1500.

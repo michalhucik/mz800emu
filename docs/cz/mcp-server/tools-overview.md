@@ -2580,7 +2580,12 @@ emulace a klávesy samo mačká a pouští na hranicích snímků. Emulátor
 v pauze odehraje přesně délku sekvence a znovu se pauzne (jako
 `emu_run(frames=N)`); běžící emulátor běží dál. `emu_input_send_keys`
 nechává mezi klávesami 1 snímek bez stisku (opakovaná klávesa se tak
-zaregistruje dvakrát). Odpověď nese
+zaregistruje dvakrát). Znak, který potřebuje SHIFT (např. `*`, `+`,
+malá písmena), stiskne SHIFT o snímek dřív než klávesu a obě pustí
+naráz, v rámci stejného držení (při držení aspoň 2 snímky; délka
+sekvence se nemění). Programy, které čtou sloupec SHIFT v jiném
+okamžiku skenu než klávesu (např. K&P Disk BASIC), jinak občas dostaly
+klávesu bez SHIFT. Odpověď nese
 `emu_frames` (skutečně uplynulé snímky emulace), `complete`
 a `interrupted` (`true` = sekvenci ukončil breakpoint, pauza nebo
 reset; držená klávesa byla uvolněna). Při normální rychlosti trvá

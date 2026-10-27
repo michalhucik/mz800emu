@@ -4,7 +4,7 @@
  * Per-arch implementace pro REGION_LIST API. MZ-700 má:
  *   - Monitor ROM (4 KB lower + 8 KB upper)
  *   - User RAM 64 KB
- *   - VRAM 700 char + attr (logicky 1+1 KB, fyzicky jedno pole 4 KB)
+ *   - VRAM 700 char + attr (2 + 2 KB, fyzicky jedno pole 4 KB)
  *   - Memext (Luftner/PEHU) přes port 0xE7
  *   - Ramdisk STD (port 0xEA) + Ramdisk PEZIK 0x68 (jen pi=0; PEZIK 0xE8
  *     není na MZ-700 v IORQ namapován, viz mz700_iorq.c poznámka u 0xE8)
@@ -81,17 +81,19 @@ int mz700_regions_collect(st_REGION_DESC *out, int max_count)
         MEMORY_MZ700_MAP_TEST_ROM_E000 ? 1 : 0);
 
     /* VRAM 700 char + attr (fyzicky jedno pole g_memory.VRAM s velikostí
-     * MEMORY_SIZE_VRAM = 0x1000 = 4 KB - viz memory.h:65). Logicky 1 KB
-     * char (D000-D3FF) + 1 KB attr (D800-DBFF). */
+     * MEMORY_SIZE_VRAM = 0x1000 = 4 KB - viz memory.h:65). Znaková 2 KB
+     * (D000-D7FF = VRAM[0x000-0x7FF]) + atributová 2 KB (D800-DFFF =
+     * VRAM[0x800-0xFFF]); obraz používá prvních 1000 bajtů každé, zbytek
+     * je RAM (např. blok B kitu SUC). */
     int vram_mapped = MEMORY_MZ700_MAP_TEST_VRAM_D000 ? 1 : 0;
 
     dbgapi_regions_add(out, &count, max_count,
-        REGION_KIND_VRAM_700_CHAR, 0, "VRAM 700 char (1 KB)",
-        0xD000, 0x0400, 1, 1, vram_mapped);
+        REGION_KIND_VRAM_700_CHAR, 0, "VRAM 700 char (2 KB)",
+        0xD000, 0x0800, 1, 1, vram_mapped);
 
     dbgapi_regions_add(out, &count, max_count,
-        REGION_KIND_VRAM_700_ATTR, 0, "VRAM 700 attr (1 KB)",
-        0xD800, 0x0400, 1, 1, vram_mapped);
+        REGION_KIND_VRAM_700_ATTR, 0, "VRAM 700 attr (2 KB)",
+        0xD800, 0x0800, 1, 1, vram_mapped);
 
     /* ---- Memext (Luftner/PEHU) - pokud připojen, port 0xE7. ---- *
      * Luftner: 128 RAM banks + 128 FLASH banks (sub_id 0x80..0xFF).

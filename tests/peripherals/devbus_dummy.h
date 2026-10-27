@@ -45,7 +45,7 @@ typedef struct st_DEVBUS_DUMMY {
     uint8_t ram[DUMMY_RAM_SIZE]; /**< RAM zařízení (region). */
     bool fail_connect;           /**< true = connect() vrátí chybu. */
     bool fail_init;              /**< true = init() vrátí chybu. */
-    unsigned wait_on_write;      /**< T-stavy WAIT při zápisu na 74h (devbus_cpu_wait). */
+    unsigned wait_on_write;      /**< T-stavy WAIT při zápisu na 74h a při MMIO zápisu (devbus_cpu_wait). */
     int slot;                    /**< Slot z devbus_register() (nastaví test); connect() podle něj čte volbu "fill". */
 
     unsigned n_init, n_connect, n_reset, n_disconnect, n_destroy; /**< Čítače životního cyklu. */
@@ -55,6 +55,7 @@ typedef struct st_DEVBUS_DUMMY {
     uint16_t mmio_addr;                      /**< Poslední MMIO adresa. */
     uint8_t mmio_value;                      /**< Poslední MMIO hodnota. */
     unsigned mmio_flags;                     /**< Poslední MMIO příznaky. */
+    bool mmio_dbg;                           /**< devbus_access_is_debugger() při posledním MMIO zápisu. */
     unsigned n_region_write;                 /**< Počet on_write() regionu. */
     unsigned n_row;                          /**< Počet render_row(). */
 } st_DEVBUS_DUMMY;

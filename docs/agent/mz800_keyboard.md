@@ -215,7 +215,18 @@ The agent sends keys via the MCP tools `emu_input_send_key`, `emu_input_send_key
 `emu_input_send_keys_with_delays`. **All of them use ONE shared key-name table**
 (one resolver in the emulator), so a name valid in one tool is valid in all of
 them. Names are case-insensitive; an unknown name is rejected with
-`Unknown key '<name>'. Closest valid names: ...`. Supported symbolic names:
+`Unknown key '<name>'. Closest valid names: ...`.
+
+A key that needs SHIFT (ASCII `*`, `+`, lowercase letters, names such as
+`LIBRA`) is sent as SHIFT first and the key one frame later, both
+released together, inside the same hold (`frames` / `frame_per_key` /
+`hold_frames` >= 2; the default 3 qualifies). Total frames do not
+change. With a hold of 1 frame SHIFT and the key go down together, and
+programs that read the SHIFT column apart from the key column (K&P Disk
+BASIC) may then see the key without SHIFT. `emu_input_press_key` keeps
+pressing both at once (hold SHIFT yourself first if a program needs it).
+
+Supported symbolic names:
 
 | Name(s) | Key |
 |---------|-----|

@@ -114,12 +114,12 @@ static const st_MHMAP_CELL *resolve_mhmap_cell ( int region_kind, int sub_id,
             return NULL;
         case REGION_KIND_VRAM_700_CHAR:
             /* MZ-800 v MZ-700 compat: vram700 pole (char + attr 4 KB).
-             * UI region je 1 KB char na D000-D3FF -> offset 0..0x3FF. */
-            if ( offset < 0x400u ) return &g_mhmap.vram700[offset];
+             * UI region je 2 KB char na D000-D7FF -> offset 0..0x7FF. */
+            if ( offset < 0x800u ) return &g_mhmap.vram700[offset];
             return NULL;
         case REGION_KIND_VRAM_700_ATTR:
-            /* Attr je 0x800-0xBFF v fyzickém vram700 (po char + 1 KB gap). */
-            if ( offset < 0x400u ) return &g_mhmap.vram700[0x800u + offset];
+            /* Attr je 0x800-0xFFF v fyzickém vram700 (za 2 KB char). */
+            if ( offset < 0x800u ) return &g_mhmap.vram700[0x800u + offset];
             return NULL;
 #elif MZARCH == 1500
         case REGION_KIND_ROM_LOWER:
@@ -134,10 +134,11 @@ static const st_MHMAP_CELL *resolve_mhmap_cell ( int region_kind, int sub_id,
             if ( offset < MHMAP_SIZE_CGROM ) return &g_mhmap.cgrom[offset];
             return NULL;
         case REGION_KIND_VRAM_700_CHAR:
-            if ( offset < 0x400u ) return &g_mhmap.vram[offset];
+            /* Znaková 2 KB = vram[0x000-0x7FF], atributová 2 KB = vram[0x800-0xFFF]. */
+            if ( offset < 0x800u ) return &g_mhmap.vram[offset];
             return NULL;
         case REGION_KIND_VRAM_700_ATTR:
-            if ( offset < 0x400u ) return &g_mhmap.vram[0x800u + offset];
+            if ( offset < 0x800u ) return &g_mhmap.vram[0x800u + offset];
             return NULL;
         case REGION_KIND_PCG_1500: {
             const st_MHMAP_CELL *base = NULL;
@@ -161,10 +162,11 @@ static const st_MHMAP_CELL *resolve_mhmap_cell ( int region_kind, int sub_id,
             if ( offset < MHMAP_SIZE_CGROM ) return &g_mhmap.cgrom[offset];
             return NULL;
         case REGION_KIND_VRAM_700_CHAR:
-            if ( offset < 0x400u ) return &g_mhmap.vram[offset];
+            /* Znaková 2 KB = vram[0x000-0x7FF], atributová 2 KB = vram[0x800-0xFFF]. */
+            if ( offset < 0x800u ) return &g_mhmap.vram[offset];
             return NULL;
         case REGION_KIND_VRAM_700_ATTR:
-            if ( offset < 0x400u ) return &g_mhmap.vram[0x800u + offset];
+            if ( offset < 0x800u ) return &g_mhmap.vram[0x800u + offset];
             return NULL;
 #endif
         case REGION_KIND_MEMEXT_RAM:

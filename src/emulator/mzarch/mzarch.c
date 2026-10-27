@@ -321,6 +321,15 @@ static inline void mz800_main_event_callback_screen_done(void)
  * Pro ladicí příkaz zvenčí je to přijatelné. Příkazy bez operace na
  * sběrnici účty nemění, takže se jich úklid nijak nedotkne.
  *
+ * Výjimka IO_READ a IO_WRITE (MCP io_read / io_write, okno I/O): před
+ * příkazem se cpu->op_tstate dočasně vynuluje. Přístup debuggeru k portu
+ * leží přesně mezi instrukcemi, insideop pak čas nedorovná o délku
+ * předchozí instrukce a příkaz čas emulace neposune (dřív o délku
+ * poslední instrukce, MZ-700 typicky 20 taktů GDG, MZ-800 35, každým
+ * příkazem; test mcp_dbgapi_io_paused_time). Čekací stavy zápisu do PSG
+ * (INSIDEOP_IORQ_PSG_WRITE) zůstávají. Ostatní příkazy op_tstate
+ * nemění: snapshot ukládá op_tstate do skrytého stavu CPU.
+ *
  * @pre Volá se jen z EMU vlákna v konzistentním bodě mezi instrukcemi
  *      (hlavní smyčka za mzarch_main_process_events() nebo paused smyčka):
  *      nikdy z callbacku události ani z insideop. V obou bodech jsou účty
@@ -334,6 +343,12 @@ static void mzarch_main_dbgapi_dispatch_one(st_DBGAPI_CMDRQ *rq)
 {
     z80_t *cpu = g_mzarch_main.cpu;
     const int saved_op_tstate = cpu->op_tstate;
+    const en_DBGAPI_CMD cmd = (en_DBGAPI_CMD)(rq->cmd & DBGAPI_CMD_MASK);
+
+    /* Port I/O debuggeru mezi instrukcemi: insideop bez předstihu (viz výše). */
+    if (cmd == DBGAPI_CMD_IO_READ || cmd == DBGAPI_CMD_IO_WRITE) {
+        cpu->op_tstate = 0;
+    }
 
     dbgapi_emu_dispatch(rq);
 

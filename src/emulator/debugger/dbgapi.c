@@ -272,6 +272,7 @@ static void dbgapi_cmt_pulses_to_us ( const st_MZTAPE_PULSES_LENGTH *pulses, dou
 #include "debugger/coverage/coverage_hook.h"
 #if MZARCH == 700
 #include "mzarch/mz700/devbus/mz700_devbus.h"
+#include "hw-generic/devbus/devbus.h" /* devbus_debugger_access_*: IO_READ / IO_WRITE bez WAIT zařízení */
 #endif
 
 
@@ -5004,8 +5005,11 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                 break;
             };
 #if MZARCH == 700
-            /* MZ-700: čistý callback z adaptéru devbus (porty zařízení). */
+            /* MZ-700: čistý callback z adaptéru devbus (porty zařízení).
+             * Přístup debuggeru: WAIT zařízení (devbus_cpu_wait) se nepřičte. */
+            devbus_debugger_access_begin ( );
             p->value = g_mz700_cpu_ops.pread ( g_mzarch_main.cpu, p->port, NULL );
+            devbus_debugger_access_end ( );
 #else
             p->value = port_read_cb ( g_mzarch_main.cpu, p->port, NULL );
 #endif
@@ -5027,8 +5031,11 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                 break;
             };
 #if MZARCH == 700
-            /* MZ-700: čistý callback z adaptéru devbus (porty zařízení). */
+            /* MZ-700: čistý callback z adaptéru devbus (porty zařízení).
+             * Přístup debuggeru: WAIT zařízení (devbus_cpu_wait) se nepřičte. */
+            devbus_debugger_access_begin ( );
             g_mz700_cpu_ops.pwrite ( g_mzarch_main.cpu, p->port, p->value, NULL );
+            devbus_debugger_access_end ( );
 #else
             port_write_cb ( g_mzarch_main.cpu, p->port, p->value, NULL );
 #endif

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mz800emu 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-27 01:38+0100\n"
+"POT-Creation-Date: 2026-10-27 03:16+0100\n"
 "PO-Revision-Date: 2026-03-11 21:00+0100\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -4797,7 +4797,7 @@ msgid "auto-snapshots taken: %d"
 msgstr "自動スナップショット取得回数: %d"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_diff_window.cpp:764
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:496
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:498
 msgid "Snapshot Now"
 msgstr "今すぐスナップショット"
 
@@ -5267,33 +5267,33 @@ msgstr "編集 OFF / RO"
 msgid "Char Inserter###mb_char_inserter"
 msgstr "文字インサータ###mb_char_inserter"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:310
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:312
 msgid "Layers ▼###mb_layers_toggle"
 msgstr "レイヤー ▼###mb_layers_toggle"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:311
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:313
 msgid "Layers ▶###mb_layers_toggle"
 msgstr "レイヤー ▶###mb_layers_toggle"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:317
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:319
 msgid "Toggle Layers side panel (color overlays, snapshot, freeze)"
 msgstr ""
 "レイヤーサイドパネルを切替 (カラーオーバーレイ、スナップショット、フリーズ)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:328
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:490
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:330
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:492
 msgid "Layers"
 msgstr "レイヤー"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:336
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:338
 msgid "* MH/CDL recording ON"
 msgstr "* MH/CDL 記録 ON"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:339
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:341
 msgid "o MH/CDL recording OFF"
 msgstr "o MH/CDL 記録 OFF"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:344
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:346
 msgid ""
 "Memory Heatmap / CDL recording state. Enable in Memory Heatmap window "
 "(Debugger -> Memory Heatmap). Without recording, CDL X/R/W and Heatmap "
@@ -5303,122 +5303,122 @@ msgstr ""
 "-> メモリヒートマップ) で有効化。記録なしでは CDL X/R/W とヒートマップレイ"
 "ヤーは非表示。"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:356
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:358
 msgid "CDL Code (X)###mb_layer_cdl_x"
 msgstr "CDL コード (X)###mb_layer_cdl_x"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:361
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:363
 msgid "Highlight bytes executed as instructions"
 msgstr "命令として実行されたバイトをハイライト"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:363
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:376
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:389
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:402
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:365
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:378
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:391
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:404
 msgid "Requires MH/CDL recording active (enable in Memory Heatmap window)."
 msgstr "MH/CDL 記録の有効化が必要 (メモリヒートマップウィンドウで有効化)。"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:369
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:371
 msgid "CDL Data Read (R)###mb_layer_cdl_r"
 msgstr "CDL データ読み込み (R)###mb_layer_cdl_r"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:374
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:376
 msgid "Highlight bytes read as data"
 msgstr "データとして読み込まれたバイトをハイライト"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:382
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:384
 msgid "CDL Data Write (W)###mb_layer_cdl_w"
 msgstr "CDL データ書き込み (W)###mb_layer_cdl_w"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:387
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:389
 msgid "Highlight bytes written by CPU"
 msgstr "CPU が書き込んだバイトをハイライト"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:395
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:397
 msgid "Heatmap###mb_layer_heatmap"
 msgstr "ヒートマップ###mb_layer_heatmap"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:400
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:402
 msgid "Color by access count (cool -> hot)"
 msgstr "アクセス回数で着色 (cool -> hot)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:410
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:412
 msgid "Snapshot Δ###mb_layer_delta"
 msgstr "スナップショット Δ###mb_layer_delta"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:413
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:415
 msgid "Highlight bytes changed since snapshot"
 msgstr "スナップショット以降に変更されたバイトをハイライト"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:420
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:422
 msgid "Snapshot Now###mb_snap_take"
 msgstr "今すぐスナップショット###mb_snap_take"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:425
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:427
 msgid "Capture current region content as snapshot baseline"
 msgstr "現在のリージョン内容をスナップショットベースラインとして取得"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:431
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:433
 msgid "Reset###mb_snap_reset"
 msgstr "リセット###mb_snap_reset"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:436
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:438
 msgid "Discard snapshot for current region"
 msgstr "現在のリージョンのスナップショットを破棄"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:441
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:443
 #, c-format
 msgid "Snapshot: %u B"
 msgstr "スナップショット: %u B"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:443
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:503
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:445
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:505
 #: src/ui-imgui/debugger/watch/watch_window.cpp:1434
 msgid "No snapshot"
 msgstr "スナップショットなし"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:448
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:450
 msgid "Frozen Bytes###mb_layer_frozen"
 msgstr "フリーズ済みバイト###mb_layer_frozen"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:451
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:453
 msgid "Highlight frozen bytes (cheat engine style)"
 msgstr "フリーズされたバイトをハイライト (チートエンジンスタイル)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:453
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:455
 #, c-format
 msgid "Frozen: %u"
 msgstr "フリーズ: %u"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:457
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:459
 msgid "Symbols###mb_layer_symbols"
 msgstr "シンボル###mb_layer_symbols"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:460
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:462
 msgid "Show symbol labels in ASCII column (Logical region only)"
 msgstr "ASCII列にシンボルラベルを表示 (論理リージョンのみ)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:491
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:493
 msgid "CDL Code (X)"
 msgstr "CDL コード (X)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:492
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:494
 msgid "CDL Data Read (R)"
 msgstr "CDL データ読み込み (R)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:493
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:495
 msgid "CDL Data Write (W)"
 msgstr "CDL データ書き込み (W)"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:494
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:496
 msgid "Heatmap"
 msgstr "ヒートマップ"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:495
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:497
 msgid "Snapshot Δ"
 msgstr "スナップショット Δ"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:497
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:499
 #: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:148
 #: src/ui-imgui/maxspeed_bench_window.cpp:156
 #: src/ui-imgui/plotter/plotter_window.cpp:432
@@ -5426,21 +5426,21 @@ msgstr "スナップショット Δ"
 msgid "Reset"
 msgstr "リセット"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:498
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:500
 msgid "Frozen Bytes"
 msgstr "フリーズ済みバイト"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:499
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:501
 #: src/ui-imgui/topmenu/menu_debugger.cpp:161
 #: src/ui-imgui/topmenu/menu_debugger.cpp:503
 msgid "Symbols"
 msgstr "シンボル"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:501
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:503
 msgid "Snapshot: 16777216 B"
 msgstr "スナップショット: 16777216 B"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:502
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:504
 msgid "Frozen: 99999"
 msgstr "フリーズ: 99999"
 
@@ -5528,13 +5528,13 @@ msgstr "物理プレーン###mb_rt_vram_planes"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:271
 #: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:585
-msgid "VRAM 700 char (1 KB)"
-msgstr "VRAM 700 文字 (1 KB)"
+msgid "VRAM 700 char (2 KB)"
+msgstr "VRAM 700 文字 (2 KB)"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:277
 #: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:586
-msgid "VRAM 700 attr (1 KB)"
-msgstr "VRAM 700 属性 (1 KB)"
+msgid "VRAM 700 attr (2 KB)"
+msgstr "VRAM 700 属性 (2 KB)"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_regions.cpp:294
 msgid "PCG###mb_rt_pcg_group"

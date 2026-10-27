@@ -10,6 +10,13 @@
  *
  *     stisk @ S  ->  uvolnění @ S + H  ->  další stisk @ S + H + G
  *
+ * Klávesa se SHIFT (key.needs_shift) a H >= 2: SHIFT se stiskne @ S,
+ * hlavní klávesa až @ S + 1 (fáze HID_SCRIPT_PHASE_SHIFT), obě se uvolní
+ * @ S + H. Délka události se nemění. Program, který čte sloupec SHIFT
+ * v jiném okamžiku skenu než klávesu (K&P Disk BASIC), jinak při
+ * současném stisku na hranici snímku občas dostal klávesu bez SHIFT.
+ * Stejné pořadí používá autotype GUI (pio8255.c, vkbd_autotype_keydown).
+ *
  * Všechny tři body leží v per-frame bodě hlavní smyčky (nebo v drainu
  * fronty dbgapi při START), tedy vždy na hranici snímku mezi instrukcemi.
  */
@@ -44,7 +51,13 @@ typedef enum en_HID_SCRIPT_PHASE
 {
     HID_SCRIPT_PHASE_HOLD = 0, /**< Vstup je stisknutý, čeká se na uvolnění. */
     HID_SCRIPT_PHASE_GAP,      /**< Vstup je uvolněný, čeká se na konec mezery. */
+    HID_SCRIPT_PHASE_SHIFT,    /**< Jen SHIFT klávesy se SHIFT je stisknutý, hlavní klávesa za 1 snímek. */
 } en_HID_SCRIPT_PHASE;
+
+/** @brief Sloupec matice klávesy SHIFT (col 8). */
+#define HID_SCRIPT_SHIFT_COL 8
+/** @brief Bit klávesy SHIFT ve sloupci 8. */
+#define HID_SCRIPT_SHIFT_BIT 0
 
 /** @brief Index aktuální události v g_hid_script_active->events. */
 static int s_index = 0;
@@ -108,6 +121,30 @@ static void hid_script_press ( st_DBGAPI_HID_SCRIPT_EVENT *ev ) {
 
 
 /**
+ * @brief Začne událost: nastaví fázi a cílový snímek prvního kroku.
+ *
+ * Klávesa se SHIFT s držením aspoň 2 snímky: stiskne jen SHIFT, fáze
+ * HID_SCRIPT_PHASE_SHIFT na 1 snímek (hlavní klávesu stiskne
+ * hid_script_advance()). Jinak stiskne celý vstup, fáze HOLD na
+ * hold_frames snímků.
+ *
+ * @param[in] ev Událost, která právě začíná.
+ * @post s_phase a s_next_screens odpovídají prvnímu kroku události.
+ */
+static void hid_script_begin ( st_DBGAPI_HID_SCRIPT_EVENT *ev ) {
+    if ( ev->type == DBGAPI_HID_EVENT_KEY && ev->key.needs_shift && ev->hold_frames >= 2 ) {
+        hid_keymap_press ( HID_SCRIPT_SHIFT_COL, HID_SCRIPT_SHIFT_BIT, false );
+        s_phase = HID_SCRIPT_PHASE_SHIFT;
+        s_next_screens = hid_script_now ( ) + 1u;
+        return;
+    };
+    hid_script_press ( ev );
+    s_phase = HID_SCRIPT_PHASE_HOLD;
+    s_next_screens = hid_script_now ( ) + (uint32_t) ev->hold_frames;
+}
+
+
+/**
  * @brief Uvolní vstup události; u klávesy s `probe` zapíše `landed`
  *        a sondu odzbrojí.
  */
@@ -164,6 +201,14 @@ static void hid_script_advance ( void ) {
         st_DBGAPI_HID_SCRIPT *s = g_hid_script_active;
         st_DBGAPI_HID_SCRIPT_EVENT *ev = &s->events[s_index];
 
+        if ( s_phase == HID_SCRIPT_PHASE_SHIFT ) {
+            /* SHIFT drží 1 snímek, teď hlavní klávesa (zbytek držení). */
+            hid_script_press ( ev );
+            s_phase = HID_SCRIPT_PHASE_HOLD;
+            s_next_screens = hid_script_now ( ) + (uint32_t) ( ev->hold_frames - 1 );
+            continue;
+        };
+
         if ( s_phase == HID_SCRIPT_PHASE_HOLD ) {
             hid_script_release ( ev );
             s_phase = HID_SCRIPT_PHASE_GAP;
@@ -179,9 +224,7 @@ static void hid_script_advance ( void ) {
             return;
         };
         ev = &s->events[s_index];
-        hid_script_press ( ev );
-        s_phase = HID_SCRIPT_PHASE_HOLD;
-        s_next_screens = hid_script_now ( ) + (uint32_t) ev->hold_frames;
+        hid_script_begin ( ev );
     };
 }
 
@@ -205,9 +248,7 @@ bool hid_script_start ( st_DBGAPI_HID_SCRIPT *script ) {
 
     g_hid_script_active = script;
     s_index = 0;
-    s_phase = HID_SCRIPT_PHASE_HOLD;
-    hid_script_press ( &script->events[0] );
-    s_next_screens = script->start_screens + (uint32_t) script->events[0].hold_frames;
+    hid_script_begin ( &script->events[0] );
 
     /* Nulová držení a mezery proběhnou hned. */
     hid_script_advance ( );
@@ -236,6 +277,10 @@ bool hid_script_cancel ( st_DBGAPI_HID_SCRIPT *script ) {
     };
     if ( s_phase == HID_SCRIPT_PHASE_HOLD ) {
         hid_script_release ( &script->events[s_index] );
+    } else if ( s_phase == HID_SCRIPT_PHASE_SHIFT ) {
+        /* Hlavní klávesa ještě nebyla stisknutá (sonda neozbrojená):
+         * uvolnit jen SHIFT, událost se nepočítá jako provedená. */
+        hid_keymap_release ( HID_SCRIPT_SHIFT_COL, HID_SCRIPT_SHIFT_BIT, false );
     } else {
         /* Zrušeno v mezeře: vstup události byl stisknut i uvolněn. */
         script->events_done = s_index + 1;

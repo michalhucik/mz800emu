@@ -218,12 +218,41 @@ def _read_ini_mcp_section() -> dict:
     return dict(parser.items("MCP"))
 
 
-def _safe_int(value: Any, default: int) -> int:
-    """Bezpečně převede hodnotu na int; vrátí default při selhání."""
-    try:
-        return int(str(value).strip())
-    except (TypeError, ValueError):
+def _ini_unsigned(value: Any, default: int, lo: int, hi: int) -> int:
+    """Převede číslo z INI emulátoru na int stejně jako cfgfile (UNSIGNED).
+
+    Emulátor ukládá čísla jako ``0x..`` a čte je vždy šestnáctkově, i bez
+    prefixu (``cfgmodule_parse()``: odstraní ``0x``, ``0X`` nebo ``#``,
+    zbytek je hex, takže ``50`` je 80). Wrapper musí číst tytéž klíče
+    stejně, jinak se hodnota z GUI (``0x32``) neprojeví nebo znamená něco
+    jiného než v emulátoru.
+
+    Args:
+        value: Hodnota z INI (řetězec) nebo None, když klíč chybí.
+        default: Výchozí hodnota (chybějící klíč, neplatný zápis, mimo rozsah).
+        lo: Nejmenší přípustná hodnota (jako rozsah elementu v emulátoru).
+        hi: Největší přípustná hodnota.
+
+    Returns:
+        Hodnota v rozsahu lo..hi, jinak default (emulátor hodnotu mimo
+        rozsah také ignoruje). Poškozený zápis (např. ``1O``) dá default;
+        cfgfile ho čte jinak (od konce do prvního neplatného znaku), na
+        ručně poškozená INI wrapper tuto odchylku záměrně nekopíruje.
+    """
+    if value is None:
         return default
+    text = str(value).strip()
+    if text[:2] in ("0x", "0X"):
+        text = text[2:]
+    elif text[:1] == "#":
+        text = text[1:]
+    if not text:
+        return default
+    try:
+        number = int(text, 16)
+    except ValueError:
+        return default
+    return number if lo <= number <= hi else default
 
 
 def _build_log_handler(cfg: dict, path: str) -> logging.Handler:
@@ -234,13 +263,10 @@ def _build_log_handler(cfg: dict, path: str) -> logging.Handler:
     `NullHandler` v `_setup_logging`.
     """
     kind = cfg.get("wrapper_log_rotate_kind", "none").strip().lower()
-    keep = _safe_int(cfg.get("wrapper_log_rotate_keep"), 5)
-    if keep < 0:
-        keep = 0
+    # Rozsahy a výchozí hodnoty jako elementy v mcp_config.c.
+    keep = _ini_unsigned(cfg.get("wrapper_log_rotate_keep"), 5, 0, 1000)
     if kind == "size":
-        size_mb = _safe_int(cfg.get("wrapper_log_rotate_size_mb"), 10)
-        if size_mb < 1:
-            size_mb = 1
+        size_mb = _ini_unsigned(cfg.get("wrapper_log_rotate_size_mb"), 10, 1, 10240)
         return logging.handlers.RotatingFileHandler(
             path,
             maxBytes=size_mb * 1024 * 1024,

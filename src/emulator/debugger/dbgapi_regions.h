@@ -88,8 +88,8 @@ typedef enum en_REGION_KIND
     REGION_KIND_ROM_UPPER,              /**< Monitor ROM 0xE000-0xFFFF (8 KB). */
     REGION_KIND_CGROM,                  /**< CG-ROM (4 KB). MZ-800 native v 0x1000-0x1FFF, MZ-1500 přes SPEC=1. */
     REGION_KIND_CGRAM_700,              /**< CG-RAM MZ-700 (4 KB). MZ-800 v 700 compat módu. */
-    REGION_KIND_VRAM_700_CHAR,          /**< Znaková VRAM MZ-700 (1 KB v 0xD000-0xD3FF). */
-    REGION_KIND_VRAM_700_ATTR,          /**< Atributová VRAM MZ-700 (1 KB v 0xD800-0xDBFF). */
+    REGION_KIND_VRAM_700_CHAR,          /**< Znaková VRAM MZ-700 (2 KB v 0xD000-0xD7FF; obraz používá prvních 1000 B). */
+    REGION_KIND_VRAM_700_ATTR,          /**< Atributová VRAM MZ-700 (2 KB v 0xD800-0xDFFF; obraz používá prvních 1000 B). */
     REGION_KIND_VRAM_PHYS_PLANE,        /**< MZ-800 fyzická plane I-IV (8 KB raw), sub_id = 0..3. */
     REGION_KIND_PCG_1500,               /**< MZ-1500 PCG bank 1..3 (8 KB), sub_id = 0..2. */
     REGION_KIND_MEMEXT_RAM,             /**< Memext RAM bank (4 KB), sub_id = raw 4 KB index 0..0x7F (Luftner i PEHU; PEHU 8 KB banka b = raw 2*b a 2*b + 1). */

@@ -36,6 +36,29 @@ The Python wrapper runs this command **automatically** as a subprocess
 for debugging (= verifying the emu responds to a manually crafted
 JSONL request).
 
+### Accepted options
+
+Pipe mode accepts only these command line options (a fixed list); any other
+option is rejected with `Unknown option: <option>` on stderr and the
+emulator does not start:
+
+| Option | Meaning |
+|--------|---------|
+| `--mcp-pipe`, `--headless` | pipe mode, no window (headless is always on) |
+| `--help`, `--version` | print the options or the version and exit |
+| `--home-dir`, `--cfg-dir`, `--work-dir` | override the directories (assets, configuration, default dialog path) |
+| `--config <file>` | path to the main INI file |
+| `--no-save-ini`, `--no-first-run-windows` | do not save the INI at exit, no first-run windows |
+| `--cmt <file>`, `--cmt-play`, `--cmt-play-pause`, `--cmt-boot` | tape in the virtual cassette recorder from the start |
+| `--fdd <N>=<file>`, `--fdd0` to `--fdd7`, `--fdd-readonly <N>` | DSK images in the floppy drives from the start |
+
+Other `mz800emu.exe` options (e.g. `--run-mzf`, `--speed`, `--mode-switch`,
+`--mcp-tcp-port`) are not available in pipe mode. Start a program with the
+MCP tool `emu_media_run_mzf` (the same bootstrap as `--run-mzf`) and set the
+speed with `emu_set_speed`. If you need `--run-mzf` on the command line, run
+the emulator as `mz800emu.exe --headless --mcp-tcp-port=<port> --run-mzf
+<file>` and connect through the [TCP transport](transport-tcp.md).
+
 ## What happens at startup
 
 1. Emu is configured as headless (no SDL window, no-op audio device).

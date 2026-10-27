@@ -27,14 +27,20 @@ section `[MCP]` with the following keys:
 | `wrapper_log_rotate_when` | text | `midnight` | Token for `TimedRotatingFileHandler` (only for `time`) |
 | `wrapper_log_rotate_keep` | unsigned | `5` | Number of rotated files (backupCount, 0-1000) |
 
+Numbers (`unsigned`) are hexadecimal in the INI file, like everywhere in
+the configuration file: the emulator saves them with the `0x` prefix and
+reads them as hexadecimal even without it (`wrapper_log_rotate_size_mb = 50`
+means 80 MB). `bool` values are `0` and `1`. The table gives the defaults
+in decimal.
+
 Example INI:
 
 ```ini
 [MCP]
-tcp_port=23800
+tcp_port=0x5cf8
 bind_address=127.0.0.1
 profile=wild
-auto_start_tcp=true
+auto_start_tcp=1
 action_log_path=/home/user/mz800-activity.log
 wrapper_log_level=off
 wrapper_log_rotate_kind=none
@@ -110,8 +116,8 @@ Size-rotated DEBUG log, 50 MB max, 10 historical files:
 wrapper_log_level = debug
 wrapper_log_path = C:/mz800-logs/wrapper.log
 wrapper_log_rotate_kind = size
-wrapper_log_rotate_size_mb = 50
-wrapper_log_rotate_keep = 10
+wrapper_log_rotate_size_mb = 0x32
+wrapper_log_rotate_keep = 0x0a
 ```
 
 Daily rotation with 30-day history:
@@ -122,7 +128,7 @@ wrapper_log_level = info
 wrapper_log_path = /var/log/mz800/wrapper.log
 wrapper_log_rotate_kind = time
 wrapper_log_rotate_when = midnight
-wrapper_log_rotate_keep = 30
+wrapper_log_rotate_keep = 0x1e
 ```
 
 #### Error tolerance
@@ -223,9 +229,9 @@ At emu startup CLI flags override INI values:
 | `--mcp-bind=ADDR` | `bind_address` |
 | `--mcp-profile=PROFILE` | `profile` |
 
-Using `--mcp-tcp-port` additionally **implies `auto_start_tcp = true`
+Using `--mcp-tcp-port` additionally **implies `auto_start_tcp = 1`
 for this run only** (= the server comes up even if INI has
-`auto_start_tcp = false`). The persistent `auto_start_tcp` state is
+`auto_start_tcp = 0`). The persistent `auto_start_tcp` state is
 not modified.
 
 Example:

@@ -659,6 +659,9 @@ void devbus_mmio_dispatch(uint16_t addr, uint8_t value, unsigned flags)
 {
     bool synced = false;
     unsigned state = flags & DEVBUS_MMIO_WHEN_MASK;
+    bool debugger = (flags & DEVBUS_ACC_DEBUGGER) != 0;
+    /* Pojistka: handler, který by při zápisu debuggeru volal WAIT, ho nepřičte. */
+    if (debugger) devbus_debugger_access_begin();
     for (unsigned i = 0; i < g_devbus.mmio_active_count; i++) {
         const st_DEVBUS_MMIO_ACTIVE *a = &g_devbus.mmio_active[i];
         if (addr < a->first || addr > a->last || !(a->when & state)) continue;
@@ -668,6 +671,7 @@ void devbus_mmio_dispatch(uint16_t addr, uint8_t value, unsigned flags)
         }
         a->write(a->ctx, addr, value, flags);
     }
+    if (debugger) devbus_debugger_access_end();
 }
 
 
@@ -701,9 +705,37 @@ bool devbus_port_peek(uint16_t port, uint8_t *out)
 /*                             WAIT, čas, obraz                              */
 /* ------------------------------------------------------------------------- */
 
+/**
+ * @brief Hloubka vnoření přístupu debuggeru (devbus_debugger_access_begin()).
+ *
+ * Mimo st_DEVBUS: devbus_init() stav nuluje memsetem, přístup debuggeru
+ * ale na životním cyklu registru nezávisí. Jen emu vlákno.
+ */
+static unsigned s_debugger_access_depth;
+
+
 void devbus_cpu_wait(unsigned tstates)
 {
+    if (s_debugger_access_depth) return;
     if (g_devbus.arch && g_devbus.arch->cpu_wait && tstates) g_devbus.arch->cpu_wait(tstates);
+}
+
+
+void devbus_debugger_access_begin(void)
+{
+    s_debugger_access_depth++;
+}
+
+
+void devbus_debugger_access_end(void)
+{
+    if (s_debugger_access_depth) s_debugger_access_depth--;
+}
+
+
+bool devbus_access_is_debugger(void)
+{
+    return s_debugger_access_depth != 0;
 }
 
 

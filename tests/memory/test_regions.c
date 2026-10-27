@@ -353,6 +353,50 @@ void test_regions_vram_plane(void)
  * offset 0 / 0x800 = CG-RAM oblast.
  * ================================================================ */
 
+/* ================================================================
+ * Test 7c: VRAM_700_CHAR + VRAM_700_ATTR pokrývají celé 2 KB (N-D5-4)
+ *
+ * Fyzická znaková VRAM v režimu 700 je 2 KB (0D000h-0D7FFh = Plane I
+ * 0x1000-0x17FF), atributová 2 KB (0D800h-0DFFFh = 0x1800-0x1FFF), viz
+ * mz800_memory.c (0x1000 | (addr & 0x0FFF)). Dřív regiony měly 1 KB
+ * a horní polovina (blok B kitu SUC) přes region_read nešla.
+ * ================================================================ */
+
+void test_regions_vram_700_full_2k(void)
+{
+    g_memory.VRAM[0x1400] = 0x5A;
+    g_memory.VRAM[0x17FF] = 0x5B;
+    g_memory.VRAM[0x1C00] = 0x6A;
+    g_memory.VRAM[0x1FFF] = 0x6B;
+
+    st_REGION_DESC regs[128];
+    int count = dbgapi_regions_enumerate(regs, 128);
+    int char_id = find_region(regs, count, REGION_KIND_VRAM_700_CHAR);
+    int attr_id = find_region(regs, count, REGION_KIND_VRAM_700_ATTR);
+    TEST_ASSERT_NOT_EQUAL_INT(-1, char_id);
+    TEST_ASSERT_NOT_EQUAL_INT(-1, attr_id);
+    TEST_ASSERT_EQUAL_HEX32(0x0800, regs[char_id].size);
+    TEST_ASSERT_EQUAL_HEX32(0x0800, regs[attr_id].size);
+    TEST_ASSERT_EQUAL_HEX32(0xD000, regs[char_id].logical_base);
+    TEST_ASSERT_EQUAL_HEX32(0xD800, regs[attr_id].logical_base);
+
+    uint8_t b = 0;
+    TEST_ASSERT_EQUAL_INT(1, dbgapi_regions_read(regs[char_id].id, 0x400, &b, 1));
+    TEST_ASSERT_EQUAL_HEX8(0x5A, b);
+    TEST_ASSERT_EQUAL_INT(1, dbgapi_regions_read(regs[char_id].id, 0x7FF, &b, 1));
+    TEST_ASSERT_EQUAL_HEX8(0x5B, b);
+    TEST_ASSERT_EQUAL_INT(1, dbgapi_regions_read(regs[attr_id].id, 0x400, &b, 1));
+    TEST_ASSERT_EQUAL_HEX8(0x6A, b);
+    TEST_ASSERT_EQUAL_INT(1, dbgapi_regions_read(regs[attr_id].id, 0x7FF, &b, 1));
+    TEST_ASSERT_EQUAL_HEX8(0x6B, b);
+    /* za koncem regionu nic */
+    TEST_ASSERT_EQUAL_INT(0, dbgapi_regions_read(regs[char_id].id, 0x800, &b, 1));
+
+    uint8_t wd = 0x99;
+    TEST_ASSERT_EQUAL_INT(1, dbgapi_regions_write(regs[attr_id].id, 0x7FE, &wd, 1));
+    TEST_ASSERT_EQUAL_HEX8(0x99, g_memory.VRAM[0x1FFE]);
+}
+
 void test_regions_vram_700_offsets(void)
 {
     /* Zapiš známé vzory přímo do Plane I (= g_memory.VRAM):
@@ -888,6 +932,7 @@ int main(int argc, char *argv[])
     RUN_TEST(test_regions_prohibited_shadow);
     RUN_TEST(test_regions_vram_plane);
     RUN_TEST(test_regions_vram_700_offsets);
+    RUN_TEST(test_regions_vram_700_full_2k);
     RUN_TEST(test_regions_ramdisk_pezik_e8);
     RUN_TEST(test_regions_ramdisk_std_shrink_stale);
     RUN_TEST(test_regions_memext_pehu_bank_count);

@@ -55,6 +55,7 @@
 #include "debugger/trace/ramlog_hook.h"   /* lastwriter(): buňky CPU adresy po platformách */
 #if MZARCH == 700
 #include "mzarch/mz700/devbus/mz700_devbus.h" /* g_mz700_cpu_ops: port[N]! přes porty zařízení */
+#include "hw-generic/devbus/devbus.h" /* devbus_debugger_access_*: port[N]! bez WAIT zařízení */
 #endif
 
 /* V1.6+ TODO 4.2 5b: per-arch IORQ no_se probe API. Side-effect read
@@ -1126,7 +1127,9 @@ static uint16_t bp_read_word ( uint16_t addr, bool side_effect ) {
  *    Side-effect-heavy chipy (PIO/CTC/GDG/FDC/PIO Z80) vraci
  *    bus latch (`regDBUS_latch`) jako safer fallback.
  *  - `port[N]!` (side_effect=true): real `port_read_cb` = stejne
- *    jako CPU IN instr. Volat jen explicit user request.
+ *    jako CPU IN instr. Volat jen explicit user request. Na MZ-700
+ *    uvnitř devbus_debugger_access_begin() / _end(): WAIT zařízení
+ *    devbus (devbus_cpu_wait) se laděnému programu nepřičte.
  *
  * Per-chip plne no_se refactor je odlozen V1.7+ (= per-chip dispatcher
  * rozdvojeni mezi probe a real path).
@@ -1137,8 +1140,12 @@ static uint8_t bp_read_port ( uint16_t port, bool side_effect ) {
          * (= pripustny pro port_read_cb na MZ-800 i 1500, dispatcher
          * cpu argument neuziva). */
 #if MZARCH == 700
-        /* MZ-700: čistý callback z adaptéru devbus (porty zařízení). */
-        return g_mz700_cpu_ops.pread ( NULL, port, NULL );
+        /* MZ-700: čistý callback z adaptéru devbus (porty zařízení).
+         * Přístup debuggeru: WAIT zařízení se nepřičte. */
+        devbus_debugger_access_begin ( );
+        uint8_t v = g_mz700_cpu_ops.pread ( NULL, port, NULL );
+        devbus_debugger_access_end ( );
+        return v;
 #else
         return port_read_cb ( NULL, port, NULL );
 #endif

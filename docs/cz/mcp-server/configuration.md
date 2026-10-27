@@ -27,14 +27,19 @@ INI soubor `mz800emu.ini` v user config adresáři obsahuje sekci
 | `wrapper_log_rotate_when` | text | `midnight` | Token pro `TimedRotatingFileHandler` (jen pro `time`) |
 | `wrapper_log_rotate_keep` | unsigned | `5` | Počet rotovaných souborů (backupCount, 0-1000) |
 
+Čísla (`unsigned`) jsou v INI šestnáctková jako všude v konfiguračním
+souboru: emulátor je ukládá s prefixem `0x` a čte šestnáctkově i bez něj
+(`wrapper_log_rotate_size_mb = 50` znamená 80 MB). Hodnoty `bool` jsou
+`0` a `1`. Tabulka uvádí výchozí hodnoty desítkově.
+
 Příklad INI:
 
 ```ini
 [MCP]
-tcp_port=23800
+tcp_port=0x5cf8
 bind_address=127.0.0.1
 profile=wild
-auto_start_tcp=true
+auto_start_tcp=1
 action_log_path=/home/user/mz800-activity.log
 wrapper_log_level=off
 wrapper_log_rotate_kind=none
@@ -108,8 +113,8 @@ Velikostně rotovaný DEBUG log, max 50 MB, 10 historických:
 wrapper_log_level = debug
 wrapper_log_path = C:/mz800-logs/wrapper.log
 wrapper_log_rotate_kind = size
-wrapper_log_rotate_size_mb = 50
-wrapper_log_rotate_keep = 10
+wrapper_log_rotate_size_mb = 0x32
+wrapper_log_rotate_keep = 0x0a
 ```
 
 Denní rotace s historií 30 dní:
@@ -120,7 +125,7 @@ wrapper_log_level = info
 wrapper_log_path = /var/log/mz800/wrapper.log
 wrapper_log_rotate_kind = time
 wrapper_log_rotate_when = midnight
-wrapper_log_rotate_keep = 30
+wrapper_log_rotate_keep = 0x1e
 ```
 
 #### Tolerance chyb
@@ -217,9 +222,9 @@ Při spuštění emu lze přebít INI hodnoty CLI flagy:
 | `--mcp-bind=ADDR` | `bind_address` |
 | `--mcp-profile=PROFILE` | `profile` |
 
-Použití `--mcp-tcp-port` zároveň **implikuje `auto_start_tcp = true`
+Použití `--mcp-tcp-port` zároveň **implikuje `auto_start_tcp = 1`
 jen pro tento run** (= server naskočí, i když INI má `auto_start_tcp =
-false`). Persistentní stav `auto_start_tcp` se tím nezmění.
+0`). Persistentní stav `auto_start_tcp` se tím nezmění.
 
 Příklad:
 

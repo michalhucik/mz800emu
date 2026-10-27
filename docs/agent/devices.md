@@ -252,7 +252,7 @@ Options (`KP80/<key>`, all `applies: now`):
 | `data_to_reg` | true | OUT 71h also writes the selected CRTC register |
 | `addr_on_r31` | true | R18/R19 take effect on an access to R31 (false = at once) |
 | `update_delay` | 0 | status bit 7 stays 0 this many character clocks (2 MHz) after an update |
-| `wait` | 0 | extra WAIT T-states on IN/OUT 71h-73h |
+| `wait` | 0 | extra WAIT T-states on IN/OUT 71h-73h (CPU only: `io_read` / `io_write` and breakpoint `port[N]!` add no WAIT) |
 | `phosphor` | white | colour of the second monitor: white, green, amber |
 
 Note: numbers in the INI file are read as hexadecimal (`wait = 10` is 16).

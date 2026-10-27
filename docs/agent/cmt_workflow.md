@@ -150,7 +150,12 @@ When no tape is loaded the tape resource returns
 ## Inserting a tape from the command line
 
 The emulator can start with a tape already in the virtual cassette
-recorder. These options also work with `--mcp-pipe`:
+recorder. These options also work with `--mcp-pipe`. `--run-mzf` does
+not: pipe mode accepts only `--help`, `--version`, `--headless`,
+`--home-dir`, `--cfg-dir`, `--work-dir`, `--config`, `--no-save-ini`,
+`--no-first-run-windows`, the `--cmt*` options below and the `--fdd*`
+options; any other option ends the emulator with `Unknown option: <option>`
+on stderr.
 
 | Option | Effect |
 |--|--|
@@ -164,8 +169,13 @@ toggles it. The ROM of all three computers makes such an edge during its
 startup, which stops a playing tape. So with a normal ROM boot,
 `--cmt-play` ends in PLAY + PAUSE as well; the tape keeps playing only
 together with `--run-mzf` (that skips the ROM). For a program that loads
-its further parts through the ROM loader, `--run-mzf <part1.mzf> --cmt
-<rest.mzt> --cmt-play-pause` is the usual combination.
+its further parts through the ROM loader:
+
+- `mz800emu --headless --mcp-tcp-port=<port> --run-mzf <part1.mzf> --cmt
+  <rest.mzt> --cmt-play-pause` (MCP over TCP), or
+- in pipe mode `--mcp-pipe --cmt <rest.mzt> --cmt-play-pause` and then
+  `emu_media_run_mzf(part1.mzf)`. The tape stays in PLAY + PAUSE after
+  `emu_media_run_mzf` and starts when the program turns the motor on.
 
 Check the result in `emulator://periph/cmt` (`filled`, `state`,
 `paused`, `cmthack_enabled`). Invalid combinations (a modifier without

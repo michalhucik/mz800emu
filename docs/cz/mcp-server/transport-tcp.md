@@ -45,7 +45,7 @@ Pokud chcete, aby TCP server naskočil hned při startu emu:
 mz800emu.exe --mcp-tcp-port=23800
 ```
 
-Alternativně lze nastavit `auto_start_tcp = true` v INI konfiguraci
+Alternativně lze nastavit `auto_start_tcp = 1` v INI konfiguraci
 (viz [Konfigurace](configuration.md)) - pak se TCP server zapne
 automaticky při každém startu emu.
 

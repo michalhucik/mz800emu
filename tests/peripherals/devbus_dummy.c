@@ -61,6 +61,8 @@ static void dummy_mmio_write(void *ctx, uint16_t addr, uint8_t value, unsigned f
     d->mmio_addr = addr;
     d->mmio_value = value;
     d->mmio_flags = flags;
+    d->mmio_dbg = devbus_access_is_debugger();
+    if (d->wait_on_write) devbus_cpu_wait(d->wait_on_write);
 }
 
 /** @brief MMIO dummy zařízení: 0E013h (MAPPED), 0E014h (DRAM). */
