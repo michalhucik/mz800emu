@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mz800emu 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-27 03:16+0100\n"
+"POT-Creation-Date: 2026-10-27 09:52+0100\n"
 "PO-Revision-Date: 2026-03-11 22:00+0100\n"
 "Last-Translator: Claude Code\n"
 "Language-Team: Italiano\n"
@@ -430,6 +430,7 @@ msgstr "Controllo cattura audio..."
 
 #: src/ui-imgui/audiocap/audio_capture_ui.cpp:110
 #: src/ui-imgui/audiocap/audio_capture_ui.cpp:431
+#: src/ui-imgui/mz700/devbus/menu_devbus.cpp:340
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:209
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:658
 #: src/ui-imgui/videorec/videorec_menu.cpp:462
@@ -530,6 +531,7 @@ msgstr "Acquisisci audio (%s) avvia e ferma l'acquisizione."
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:109
 #: src/ui-imgui/joy/joy_setup_window.cpp:584
 #: src/ui-imgui/message/message_window.cpp:139
+#: src/ui-imgui/mz700/devbus/menu_devbus.cpp:243
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:442
 #: src/ui-imgui/snapshot/snapshot_notification.cpp:95
 #: src/ui-imgui/videorec/videorec_setup_dialog.cpp:338
@@ -547,6 +549,7 @@ msgstr "OK"
 #: src/ui-imgui/memext/memext_load_dialog.cpp:188
 #: src/ui-imgui/memext/memext_map_window.cpp:291
 #: src/ui-imgui/memext/memext_save_dialog.cpp:207
+#: src/ui-imgui/mz700/devbus/menu_devbus.cpp:256
 #: src/ui-imgui/ramdisk/pezik_settings_window.cpp:289
 #: src/ui-imgui/rom/rom_settings_window.cpp:305
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:447
@@ -5069,6 +5072,7 @@ msgstr "Dimensione (hex)###mb_save_size"
 #: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1833
 #: src/ui-imgui/debugger/sections/dbg_coverage.cpp:433
 #: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:307
+#: src/ui-imgui/mz700/devbus/menu_devbus.cpp:231
 msgid "Range:"
 msgstr "Intervallo:"
 
@@ -6915,6 +6919,7 @@ msgid "Set directory..."
 msgstr "Imposta directory..."
 
 #: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:329
+#: src/ui-imgui/mz700/devbus/menu_devbus.cpp:186
 msgid "Settings"
 msgstr "Impostazioni"
 
@@ -11674,16 +11679,12 @@ msgstr "Errore"
 msgid "Warning"
 msgstr "Avviso"
 
-#: src/ui-imgui/mz700/devbus/menu_devbus.cpp:119
-#, c-format
-msgid "Range %u - %u, press Enter to apply"
-msgstr "Intervallo %u - %u, premere Invio per applicare"
-
-#: src/ui-imgui/mz700/devbus/menu_devbus.cpp:127
+#: src/ui-imgui/mz700/devbus/menu_devbus.cpp:237
+#: src/ui-imgui/mz700/devbus/menu_devbus.cpp:282
 msgid "(applies after reconnect)"
 msgstr "(effettivo dopo la riconnessione)"
 
-#: src/ui-imgui/mz700/devbus/menu_devbus.cpp:144
+#: src/ui-imgui/mz700/devbus/menu_devbus.cpp:333
 #: src/ui-imgui/ramdisk/pezik_settings_window.cpp:112
 msgid "Connected"
 msgstr "Connesso"
@@ -14441,6 +14442,10 @@ msgstr "Tastiera virtuale MZ-1500"
 #: src/ui-imgui/vkbd_window.cpp:229
 msgid "MZ-800 Virtual Keyboard"
 msgstr "Tastiera virtuale MZ-800"
+
+#, c-format
+#~ msgid "Range %u - %u, press Enter to apply"
+#~ msgstr "Intervallo %u - %u, premere Invio per applicare"
 
 #~ msgid "Restart emulator to apply change."
 #~ msgstr "Riavvia l'emulatore per applicare la modifica."

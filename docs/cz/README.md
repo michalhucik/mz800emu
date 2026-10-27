@@ -304,7 +304,8 @@ Podrobnosti viz [`replay.md`](replay.md).
 ## Rozšiřující jednotky (MZ-700)
 
 Emulátor MZ-700 umí připojit volitelné rozšiřující jednotky skutečného MZ-700
-z menu **HW & Devices** (každá jednotka má vlastní podmenu s volbami);
+z menu **HW & Devices** (každá jednotka má vlastní podmenu s volbami
+a položkou **Settings...**, oknem se všemi volbami jednotky);
 výchozí stav je žádná nepřipojená.
 
 | Jednotka | Popis |

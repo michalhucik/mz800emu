@@ -293,7 +293,8 @@ a recorded run in CI. For details see [`replay.md`](replay.md).
 
 The MZ-700 emulator can connect optional expansion units of the real MZ-700
 from the menu **HW & Devices** (each unit has its own submenu with the
-options); by default none is connected.
+options and **Settings...**, a window with all options of the unit);
+by default none is connected.
 
 | Unit | Description |
 |------|-------------|

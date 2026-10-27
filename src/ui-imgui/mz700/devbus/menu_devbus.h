@@ -3,8 +3,11 @@
  * @brief  Generické menu volitelných zařízení devbus (jen MZ-700).
  *
  * Za každé registrované zařízení podmenu v HW & Devices: připojení, volby
- * (BOOL zaškrtávátko, KEYWORD výběr, UNSIGNED číselné pole), u voleb
- * DEVBUS_APPLY_CONNECT poznámka, že se projeví po novém připojení.
+ * (BOOL zaškrtávátko, KEYWORD výběr, UNSIGNED jen hodnota) a položka
+ * Settings..., která otevře okno nastavení zařízení se všemi volbami
+ * (OK / Cancel). Číselné pole je jen v okně: v popupu menu by stisky kláves
+ * dostávala i emulovaná klávesnice. U voleb DEVBUS_APPLY_CONNECT poznámka,
+ * že se projeví po novém připojení.
  * Změny jdou přes zásahy (devbus_request.h), UI stav zařízení jen čte
  * pod zámkem stavu zařízení (drží ho volající menu).
  *
@@ -56,9 +59,11 @@ int devbus_ui_register_extra(const char *id, devbus_ui_menu_fn menu_fn, devbus_u
 void imgui_menu_devbus(void);
 
 /**
- * @brief Okna zařízení (windows_fn z devbus_ui_register_extra()).
+ * @brief Okna zařízení: otevřená okna nastavení (Settings...) a windows_fn
+ *        z devbus_ui_register_extra().
  *
- * Bere zámek stavu zařízení sám. Bez registrovaného UI nic nedělá.
+ * Bere zámek stavu zařízení sám. Bez inicializovaného devbus nebo bez
+ * registrovaného zařízení nic nedělá.
  *
  * @pre UI vlákno, každý snímek.
  */
