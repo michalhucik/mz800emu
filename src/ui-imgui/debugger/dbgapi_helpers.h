@@ -352,6 +352,23 @@ bool dbg_ui_io_activity_reset_all(void);
  */
 bool dbg_ui_io_activity_reset_port(uint16_t port, bool is_8bit);
 
+/**
+ * @brief Čtení adresy bez vedlejších efektů s rezolucí sběrnice (Bus Map).
+ *
+ * DBGAPI_CMD_BUS_PEEK v emu vlákně: zařízení devbus přes peek handlery,
+ * čipy desky přes zrcadla katalogu nebo peek paměti, nebuzené bity
+ * z modelu nebuzené sběrnice. Timeout DBG_UI_IO_CMD_TIMEOUT_MS.
+ *
+ * @param addr   Port (dekód podle dolního bajtu) nebo MMIO adresa.
+ * @param mmio   true = MMIO adresa (jen MZ-700).
+ * @param value  Výstup hodnoty.
+ * @param driven Výstup masky buzených bitů (0 = jen model nebuzené sběrnice).
+ * @param source Výstup DBGAPI_BUS_PEEK_SRC_* (smí být NULL).
+ * @return true = hodnota platí; false = timeout, nebo MMIO peek na platformě bez podpory.
+ * @pre UI vlákno bez drženého device_state_lock() (čeká na emu vlákno).
+ */
+bool dbg_ui_bus_peek(uint16_t addr, bool mmio, uint8_t *value, uint8_t *driven, int *source);
+
 /* ============================================================================
  * Hromadné operace s breakpointy (okno Breakpoints)
  *

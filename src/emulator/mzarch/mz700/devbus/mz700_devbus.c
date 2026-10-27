@@ -23,6 +23,22 @@
 #include "hw-generic/memory/rom.h"
 #include "hw-generic/gdg/video.h"
 #include "hw-generic/devbus/devbus.h"
+#include "hw-generic/unicard/unicard.h"
+#include "hw-generic/cmt/cmthack.h"
+#include "hw-generic/memory/memext.h"
+#if CFG_HWEXT_HAVE_FDC
+#include "hw-generic/fdc/fdc.h"
+#endif
+#if CFG_HWEXT_HAVE_IDE8
+#include "hw-generic/ide8/ide8.h"
+#endif
+#if CFG_HWEXT_HAVE_RAMDISK
+#include "hw-generic/ramdisk/ramdisk.h"
+#endif
+#if CFG_HWEXT_HAVE_QDISK
+#include "hw-generic/qdisk/qdisk.h"
+#endif
+#include "mzarch/mz700/mz700_bus_owners.h"
 #include "mzarch/mz700/devices/pcg700/pcg700_devbus.h"
 #include "mzarch/mz700/devices/suc80/suc80_devbus.h"
 #include "mzarch/mz700/devices/kp80/kp80_devbus.h"
@@ -37,6 +53,10 @@
 #include "debugger/coverage/coverage_hook.h"
 #include "debugger/trace/hwlog.h"
 #include "debugger/trace/marklog.h"
+#ifdef MZ800EMU_CFG_MCP_SERVER_ENABLED
+#include <json-glib/json-glib.h>
+#include "mcp/event_bus.h"
+#endif
 #endif
 
 
@@ -105,38 +125,46 @@ void mz700_install_cpu_callbacks(void)
 /**
  * @brief Obsluhuje port statický switch MZ-700 (port_read_cb / port_write_cb)?
  *
- * Sjednocení větví `case` obou funkcí v mz700_iorq.c se stejnými
- * podmínkami překladu. Port statického zařízení, které je odpojené
- * (50h, 78h-7Fh ...), se zařízení devbus nedá.
+ * Jediná pravda je statická tabulka vlastníků (mz700_bus_owners.c), která
+ * zrcadlí větve `case` obou funkcí v mz700_iorq.c se stejnými podmínkami
+ * překladu. Port statického zařízení, které je odpojené (50h, 78h-7Fh ...),
+ * se zařízení devbus nedá.
  *
  * @param p Dolní bajt adresy portu.
  * @return true = port patří statickému switchi.
  */
 static bool mz700_devbus_port_is_static(uint8_t p)
 {
-    if (p == 0x01 || p == 0x02) return true;            /* CMT hack */
-    if (p == 0x50 || p == 0x51) return true;            /* Unicard */
+    return mz700_bus_port_is_static(p);
+}
+
+
+bool mz700_bus_owner_present(unsigned kind)
+{
+    switch ((en_MZ700_BUS_PRESENT) kind) {
+    case MZ700_BUS_PRESENT_ALWAYS:      return true;
+    case MZ700_BUS_PRESENT_CMTHACK:     return CMTHACK_TEST_IS_INSTALLED != 0;
+    case MZ700_BUS_PRESENT_UNICARD:     return UNICARD_TEST_IS_CONNECTED;
 #if CFG_HWEXT_HAVE_RAMDISK
-    if (p >= 0x68 && p <= 0x6f) return true;            /* RAM disk (PEZIK 68h) */
-    if (p == 0xea || p == 0xeb) return true;            /* RAM disk (PEZIK E8h) */
-    if (p >= 0xf8 && p <= 0xfa) return true;            /* RAM disk MR-1R18 */
+    case MZ700_BUS_PRESENT_PEZIK68:     return g_ramdisk.pezik[RAMDISK_PEZIK_68].connected != 0;
+    case MZ700_BUS_PRESENT_RAMDISK_STD: return g_ramdisk.std.connected != 0;
 #endif
 #if CFG_HWEXT_HAVE_IDE8
-    if (p >= 0x78 && p <= 0x7f) return true;            /* IDE8 */
+    case MZ700_BUS_PRESENT_IDE8:        return IDE8_TEST_CONNECTED;
 #endif
 #if CFG_HWEXT_HAVE_FDC
-    if (p >= 0xd8 && p <= 0xdf) return true;            /* FDC 0 */
-    if (p >= 0x58 && p <= 0x5f) return true;            /* FDC 1 */
+    case MZ700_BUS_PRESENT_FDC0:        return g_fdc[FDC0].connected != 0;
+    case MZ700_BUS_PRESENT_FDC1:        return g_fdc[FDC1].connected != 0;
 #endif
-    if (p >= 0xe0 && p <= 0xe7) return true;            /* banking */
-    if (p == 0xf0 || p == 0xf1) return true;            /* joystick / MemExt */
+    case MZ700_BUS_PRESENT_MEMEXT:      return MEMEXT_TEST_CONNECTED;
 #if CFG_HWEXT_HAVE_QDISK
-    if (p >= 0xf4 && p <= 0xf7) return true;            /* Quick Disk */
+    case MZ700_BUS_PRESENT_QDISK:       return g_qdisk.connected != 0;
 #endif
 #if HAVE_PIOZ80
-    if (p >= 0xfc) return true;                         /* Z80 PIO */
+    case MZ700_BUS_PRESENT_PIOZ80:      return true;
 #endif
-    return false;
+    default:                            return false;
+    }
 }
 
 
@@ -154,6 +182,59 @@ static void mz700_devbus_cpu_wait(unsigned tstates)
 static uint64_t mz700_devbus_time_ticks(void)
 {
     return gdg_get_total_ticks();
+}
+
+
+/** @brief Poslední bajt na datové sběrnici (model nebuzené sběrnice LATCH). */
+static uint8_t mz700_devbus_bus_latch(void)
+{
+    return g_mzarch_main.regDBUS_latch;
+}
+
+
+/**
+ * @brief Hlášení kolize čtení (dva budiče devbus na témže bitu).
+ *
+ * Značka pro iorqlog (port_read_with_logging_cb vybere
+ * IORQLOG_EVENT_IORQ_CONFLICT a podtyp CONFLICT v Event Vieweru) a událost
+ * `bus_conflict` na sběrnici událostí MCP (jen s odběratelem). Výsledek
+ * čtení je model emulátoru (politika AND / FIRST), ne chování HW.
+ *
+ * @param info Popis kolize z jádra devbus.
+ * @pre Emu vlákno, uvnitř portového callbacku (nebo čtení MMIO).
+ */
+static void mz700_devbus_bus_conflict(const st_DEVBUS_CONFLICT_INFO *info)
+{
+    (void) info;
+#ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
+    if (!info->mmio) TRACELOG_IORQ_MARK_CONFLICT();
+#ifdef MZ800EMU_CFG_MCP_SERVER_ENABLED
+    if (event_bus_has_subscriber("bus_conflict"))
+    {
+        JsonObject *payload = json_object_new();
+        json_object_set_int_member(payload, info->mmio ? "addr" : "port", (gint64) info->addr);
+        json_object_set_boolean_member(payload, "mmio", info->mmio ? TRUE : FALSE);
+        json_object_set_int_member(payload, "value", (gint64) info->result);
+        json_object_set_int_member(payload, "conflict_mask", (gint64) info->conflict);
+        json_object_set_int_member(payload, "driven_mask", (gint64) info->driven);
+        json_object_set_string_member(payload, "policy", devbus_conflict_name(info->policy));
+        json_object_set_int_member(payload, "ticks", (gint64) info->ticks);
+        json_object_set_int_member(payload, "cycles", (gint64) g_mzarch_main.cpu->total_cycles);
+        JsonArray *parts = json_array_new();
+        for (unsigned i = 0; i < info->count; i++)
+        {
+            JsonObject *p = json_object_new();
+            const st_DEVBUS_DEVICE_DESC *d = info->part[i].slot >= 0 ? devbus_desc(info->part[i].slot) : NULL;
+            json_object_set_string_member(p, "id", d ? d->id : "board");
+            json_object_set_int_member(p, "value", (gint64) info->part[i].value);
+            json_object_set_int_member(p, "driven_mask", (gint64) info->part[i].driven);
+            json_array_add_object_element(parts, p);
+        }
+        json_object_set_array_member(payload, "drivers", parts);
+        event_bus_emit("bus_conflict", payload);
+    }
+#endif
+#endif
 }
 
 
@@ -258,6 +339,9 @@ static const st_DEVBUS_ARCH_OPS s_mz700_arch_ops = {
     mzarch_main_insideop_mreq,
     0xE009, 0xEFFF,  /* MAPPED: nad 8255 / 8253 / GDG (0E000h-0E008h) */
     0xE000, 0xEFFF,  /* DRAM: celá stránka po OUT 0E1h */
+    mz700_devbus_bus_latch,
+    NULL,            /* mmio_board_driven: čtecí cesta MMIO (doplní se s obálkou čtení) */
+    mz700_devbus_bus_conflict,
 };
 
 

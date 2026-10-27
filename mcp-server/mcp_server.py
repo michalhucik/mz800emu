@@ -5636,6 +5636,92 @@ async def emu_device_screenshot(output: str = "", path: str = "",
     return json.dumps(_data_or_error(resp))
 
 
+@mcp.tool()
+async def emu_get_bus_map(include: list[str] | None = None,
+                          only_mapped: bool = False) -> str:
+    """Map of the Z80 bus: who owns each I/O port and MMIO address.
+
+    Read-only, allowed during replay. For every port 00h-0FFh and every
+    address of the MMIO window 0E000h-0E0FFh lists the owners: chips of
+    the board (``kind: "static"``: PPI, CTC, memory mapper, FDC, ...) and
+    expansion devices (``kind: "devbus"``, see ``emu_get_devices``), with
+    direction, output stage ``drive`` (``none`` = never drives the bus,
+    ``tristate``, ``partial`` + ``drive_mask``, ``open_collector``,
+    ``unknown`` = not documented), ``connected`` and the address range.
+    Flags per address: ``unmapped`` (a read returns the undriven-bus
+    model), ``dir_split``, ``potential_conflict`` (two drivers overlap),
+    ``conflict_seen``, ``ghost_seen`` (the program touched an address
+    without an owner). The header carries the bus model: ``conflict_policy``
+    (``refuse`` / ``and`` / ``first``), ``bus_idle`` (``latch`` = last byte
+    read from memory, ``const`` = ``bus_idle_value``) and the ``idle_byte``
+    in effect. Details and recipes: ``emulator://docs/bus_map``.
+
+    Args:
+        include: parts to return, any of ``"ports"``, ``"mmio"``,
+            ``"devices"``, ``"activity"``; None = all. ``activity`` adds
+            per-port counters and last values (live only while
+            ``tracking_active``, i.e. while the I/O Ports or Bus Map window
+            is open in the GUI).
+        only_mapped: True = omit ports and MMIO cells without any owner.
+
+    Returns:
+        JSON ``{"platform", "supported", "devbus_supported",
+        "conflict_policy", "bus_idle", "bus_idle_value", "idle_byte",
+        "tracking_active", "mmio_mapped_now", "frame", "devbus":
+        {"registered", "connected"}, "ports": [{"port", "owners": [{"id",
+        "name", "kind", "slot", "dir", "drive", "drive_mask", "connected",
+        "range", "source_note"}], "flags", "last_in", "last_out",
+        "hits_in_per_sec", "hits_out_per_sec", "total_in", "total_out",
+        "ghost_hits", "conflict_hits"}], "mmio": [{"addr", "owners",
+        "flags", "when", "last_write", "hits_out_per_sec"}], "devices":
+        [{"id", "name", "kind", "connected", "slot", "ports", "mmio",
+        "drive", "glyph_source", "render_row", "regions", "outputs"}]}``.
+        ``supported`` is true on every core (static owner table of the
+        board); ``devbus_supported`` (expansion devices, conflict policy,
+        bus_idle settings) only on the MZ-700 core.
+    """
+    data: dict[str, Any] = {"only_mapped": bool(only_mapped)}
+    if include is not None:
+        data["include"] = list(include)
+    resp = await _send_request("get_bus_map", data)
+    return json.dumps(_data_or_error(resp))
+
+
+@mcp.tool()
+async def emu_bus_peek(port: int = -1, addr: int = -1) -> str:
+    """Read one bus address without side effects, with the bus resolution.
+
+    Read-only, allowed during replay. Unlike ``emu_io_read`` (the real
+    path: FDC status clears, CRTC strobes, device WAIT) it asks the
+    expansion devices through their side-effect-free ``peek`` handlers,
+    board chips through the register mirrors of the I/O catalog or the
+    memory peek, and fills undriven bits from the undriven-bus model
+    (``bus_idle``). Use it to see what the CPU would read at an address
+    the Bus Map marks as owned, split or unmapped. Details:
+    ``emulator://docs/bus_map``.
+
+    Args:
+        port: I/O port 0-65535 (decoded by the low byte; the high byte is
+            what register B would carry). Exactly one of ``port`` / ``addr``.
+        addr: MMIO address in the window 0xE000-0xE0FF.
+
+    Returns:
+        JSON ``{"port" | "addr": int, "value": int, "driven_mask": int,
+        "source": "devbus" | "board" | "idle"}``. ``driven_mask`` 0 means
+        nobody drives the bus and ``value`` is the idle model (latch or the
+        configured constant); bits outside the mask are idle bits too.
+        Errors: both or none of ``port`` / ``addr``, ``addr`` outside the
+        window.
+    """
+    data: dict[str, Any] = {}
+    if port >= 0:
+        data["port"] = int(port)
+    if addr >= 0:
+        data["addr"] = int(addr)
+    resp = await _send_request("bus_peek", data)
+    return json.dumps(_data_or_error(resp))
+
+
 # === V1.C.1 - HID input Tools ========================================
 # Simulace klávesnice + joysticku přes PIO8255 VKBD matrix (= virtual
 # keyboard matrix paralelní s fyzickou SDL scan). Klíčové pro user
@@ -7413,7 +7499,7 @@ async def resource_platform_info() -> str:
       (= compile-time MZARCH_NAME, includes PAL/NTSC variant for MZ-700)
     - ``full_name``: human-readable label (= "MZ-700 (PAL)", "MZ-800", ...)
     - ``mode``: ``native`` / ``compat700`` (= runtime from GDG regDMD bit;
-      MZ-700 always native, MZ-800 bit 3 = native_800)
+      MZ-700 always native, MZ-800 bit 3 = 1 means compat700)
     - ``tv_system``: ``PAL`` / ``NTSC`` (= compile-time MZTVSYS)
     - ``framerate_hz``: 50 / 60 (= derived from TV system)
     - ``pxclk_hz``: GDG base clock (= simulated, integer multiple of frame)

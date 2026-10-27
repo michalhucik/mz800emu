@@ -236,6 +236,10 @@ Další debugger dokumenty:
 - [`debugger/code-coverage.md`](debugger/code-coverage.md) - pokrytí kódu:
   vykonaný kód a výsledky větví (záložka Coverage v CPU Profileru, značky
   v Disassembly, `--coverage*`, `[COVERAGE]`, lcov přes `docs/tools/`)
+- [`debugger/bus-map.md`](debugger/bus-map.md) - Bus Map (menu HW &
+  Devices): kdo vlastní který port a MMIO adresu (čipy desky, na MZ-700
+  i rozšiřující zařízení),
+  výstupní stupeň, kolize, model nebuzené sběrnice, aktivita
 - [`debugger/ram-write-log.md`](debugger/ram-write-log.md) - RAM Write Log:
   kdo zapsal bajt, historie zápisů buňky, nejnovější zápisy
   (`--ramlog-*`, `[RAMLOG]`)
@@ -313,6 +317,17 @@ výchozí stav je žádná nepřipojená.
 | PCG-700 (HAL) | programovatelný generátor znaků, 2 kB RAM pro znaky 80h-FFh, viz [devices/pcg700.md](devices/pcg700.md) |
 | SUC 80-column kit | 80 sloupců x 25 řádků z existující VRAM (kit klubu Sharp Users Club UK), viz [devices/suc80.md](devices/suc80.md) |
 | K&P 80 Column Card | 80sloupcová karta Kersten & Partner s vlastní videopamětí a výstupem na druhý monitor (okno K&P 80 Column Monitor), viz [devices/kp80.md](devices/kp80.md) |
+
+Rozšiřující jednotky sdílejí datovou sběrnici Z80 jako na skutečném stroji:
+každá deklaruje, jak ji budí (jen zápis, třístavový budič, část bitů), zápis
+dostanou všechny jednotky dekódující adresu a čtení se skládá z odpovědí
+všech. Bity, které nikdo nebudí, vrací model nebuzené sběrnice (výchozí
+poslední bajt přečtený z paměti; volitelně konstanta, sekce INI `[DEVBUS]`
+klíče `bus_idle`, `bus_idle_value`) - na skutečném hardwaru neměřeno. Dva
+budiče na stejných bitech jsou kolize; výchozí politika druhé zařízení
+nepřipojí (`conflict = refuse`), politiky `and` a `first` jsou modely pro
+pokusy a každé čtení s kolizí hlásí. Kdo vlastní kterou adresu ukazuje okno
+debuggeru Bus Map ([debugger/bus-map.md](debugger/bus-map.md)).
 
 ## MAX SPEED benchmark
 

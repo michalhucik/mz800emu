@@ -229,6 +229,10 @@ Other debugger documents:
 - [`debugger/code-coverage.md`](debugger/code-coverage.md) - Code coverage:
   executed code and branch results (Coverage tab in CPU Profiler, marks in
   Disassembly, `--coverage*`, `[COVERAGE]`, lcov via `docs/tools/`)
+- [`debugger/bus-map.md`](debugger/bus-map.md) - Bus Map (HW & Devices
+  menu): who owns which I/O port and MMIO address (board chips, on the
+  MZ-700 also expansion devices),
+  output stage, conflicts, undriven-bus model, activity
 - [`debugger/ram-write-log.md`](debugger/ram-write-log.md) - RAM Write Log:
   who wrote a byte, write history of a cell, newest writes
   (`--ramlog-*`, `[RAMLOG]`)
@@ -301,6 +305,18 @@ by default none is connected.
 | PCG-700 (HAL) | programmable character generator, 2 KB RAM for the characters 80h-FFh, see [devices/pcg700.md](devices/pcg700.md) |
 | SUC 80-column kit | 80 columns x 25 rows from the existing VRAM (kit of the Sharp Users Club UK), see [devices/suc80.md](devices/suc80.md) |
 | K&P 80 Column Card | 80-column card of Kersten & Partner with its own video RAM and an output for a second monitor (window K&P 80 Column Monitor), see [devices/kp80.md](devices/kp80.md) |
+
+The expansion devices share the Z80 data bus as on the real machine: each
+one declares how it drives the bus (write only, tri-state driver, some
+bits), a write reaches every device decoding the address and a read is
+composed from the answers of all of them. Bits nobody drives return the
+undriven-bus model (by default the last byte read from memory; optionally
+a constant, INI section `[DEVBUS]`, keys `bus_idle`, `bus_idle_value`) -
+not measured on real hardware. Two drivers on the same bits are a
+conflict; the default policy does not connect the second device
+(`conflict = refuse`), the policies `and` and `first` are models for
+experiments and report every conflicting read. The debugger window Bus
+Map shows who owns which address ([debugger/bus-map.md](debugger/bus-map.md)).
 
 ## MAX SPEED benchmark
 

@@ -162,7 +162,10 @@ static void pcg700_devbus_mmio_write(void *ctx, uint16_t addr, uint8_t value, un
 
 /** @brief MMIO rozsah: tři registry, výchozí jen s mapovanou horní oblastí. */
 static const st_DEVBUS_MMIO_RANGE s_mmio[] = {
-    { PCG700_MMIO_FIRST, PCG700_MMIO_LAST, DEVBUS_MMIO_MAPPED, pcg700_devbus_mmio_write },
+    /* Registry jsou podle manuálu HAL jen pro zápis ("All bits are write
+     * only"): deska sběrnici při čtení nebudí (DEVBUS_DRIVE_NONE). */
+    { .first = PCG700_MMIO_FIRST, .last = PCG700_MMIO_LAST, .when_default = DEVBUS_MMIO_MAPPED,
+      .drive = DEVBUS_DRIVE_NONE, .write = pcg700_devbus_mmio_write },
 };
 
 /**

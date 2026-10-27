@@ -47,6 +47,8 @@ typedef struct st_DEVBUS_DUMMY {
     bool fail_init;              /**< true = init() vrátí chybu. */
     unsigned wait_on_write;      /**< T-stavy WAIT při zápisu na 74h a při MMIO zápisu (devbus_cpu_wait). */
     int slot;                    /**< Slot z devbus_register() (nastaví test); connect() podle něj čte volbu "fill". */
+    bool driven_override_valid;  /**< true = read / peek vrátí v *driven hodnotu driven_override (test částečného buzení). */
+    uint8_t driven_override;     /**< Maska buzených bitů při driven_override_valid. */
 
     unsigned n_init, n_connect, n_reset, n_disconnect, n_destroy; /**< Čítače životního cyklu. */
     unsigned n_option_changed, n_frame_done, n_after_load, n_rom_changed; /**< Čítače událostí. */
@@ -71,7 +73,7 @@ typedef struct st_DEVBUS_DUMMY {
  */
 void devbus_dummy_make_desc(st_DEVBUS_DEVICE_DESC *out, const char *id, const char *section, int video);
 
-/** @brief Vynuluje čítače a stav (ne příznaky fail_* a slot). */
+/** @brief Vynuluje čítače a stav (ne příznaky fail_*, slot a driven_override*). */
 void devbus_dummy_reset_counters(st_DEVBUS_DUMMY *d);
 
 #ifdef __cplusplus

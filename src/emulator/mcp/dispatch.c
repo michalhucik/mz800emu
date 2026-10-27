@@ -59,6 +59,7 @@
 
 #include "../debugger/dbgapi_cmdrq.h"
 #include "../debugger/png_encode.h"   /* device_screenshot (kp80 D4) */
+#include "../debugger/bus_map.h"      /* get_bus_map, bus_peek (bus-model D6) */
 /* mcp-trace-read: čtenář proudu záznamů (kurzor, stránka) */
 #include "../debugger/trace/trace_reader.h"
 #include "../audio_capture.h"
@@ -468,6 +469,10 @@ static en_MCP_DISPATCH_RESULT _handle_get_devices(const st_JSONL_MESSAGE *req,
 /* kp80 (D4) - snímek sekundárního výstupu zařízení devbus (druhý monitor) */
 static en_MCP_DISPATCH_RESULT _handle_device_screenshot(const st_JSONL_MESSAGE *req,
                                                         char **out_response);
+static en_MCP_DISPATCH_RESULT _handle_get_bus_map(const st_JSONL_MESSAGE *req,
+                                                  char **out_response);
+static en_MCP_DISPATCH_RESULT _handle_bus_peek(const st_JSONL_MESSAGE *req,
+                                               char **out_response);
 /* V0.B.7 - resource backing pro emulator://config/mcp */
 static en_MCP_DISPATCH_RESULT _handle_get_mcp_config(const st_JSONL_MESSAGE *req,
                                                      char **out_response);
@@ -1339,6 +1344,10 @@ static const st_MCP_CMD_MAP_ENTRY g_cmd_map[] = {
     /* kp80 (D4 mz700-devices): obraz sekundárního výstupu zařízení devbus
      * (druhý monitor karty K&P 80) jako PNG nebo indexy palety. */
     { "device_screenshot",        DBGAPI_CMD_DEVBUS_VOUT_READ,        _handle_device_screenshot        },
+    /* bus-model (D6 mz700-devices): mapa vlastníků adres sběrnice (statické
+     * čipy + devbus, budiče, příznaky, aktivita) a peek s rezolucí sběrnice. */
+    { "get_bus_map",              DBGAPI_CMD_BUS_MAP,                 _handle_get_bus_map              },
+    { "bus_peek",                 DBGAPI_CMD_BUS_PEEK,                _handle_bus_peek                 },
     /* sentinel */
     { NULL,              DBGAPI_CMD_NONE,              NULL                  },
 };
@@ -8732,12 +8741,13 @@ static const char *_trace_parse_filter(JsonObject *f, en_TRACE_KIND kind, st_TRA
         else return "filter dir must be in or out (iorqlog)";
     }
     if (json_object_has_member(f, "type")) {
-        if (kind != TRACE_KIND_IORQLOG || !_obj_is_string(f, "type")) return "filter type must be iorq, mreq_mapped or iorq_unconnected (iorqlog)";
+        if (kind != TRACE_KIND_IORQLOG || !_obj_is_string(f, "type")) return "filter type must be iorq, mreq_mapped, iorq_unconnected or iorq_conflict (iorqlog)";
         const char *t = json_object_get_string_member(f, "type");
         if (g_strcmp0(t, "iorq") == 0) out->type = 0;
         else if (g_strcmp0(t, "mreq_mapped") == 0) out->type = 1;
         else if (g_strcmp0(t, "iorq_unconnected") == 0) out->type = 2;
-        else return "filter type must be iorq, mreq_mapped or iorq_unconnected (iorqlog)";
+        else if (g_strcmp0(t, "iorq_conflict") == 0) out->type = 3;
+        else return "filter type must be iorq, mreq_mapped, iorq_unconnected or iorq_conflict (iorqlog)";
     }
     if (json_object_has_member(f, "chip")) {
         if (kind != TRACE_KIND_HWLOG) return "filter chip is only for hwlog";
@@ -10357,6 +10367,12 @@ static const char *const g_settings_live_keys[] = {
      * v dbgapi SETTINGS_SET handleru; hot-path čte nové meze bez restartu). */
     "TRACE_CPUTRACK/pc_range_lo",
     "TRACE_CPUTRACK/pc_range_hi",
+    /* DEVBUS - model sdílené datové sběrnice volitelných zařízení (jen
+     * MZ-700): politika kolize dvou budičů a model nebuzené sběrnice.
+     * Konfigurace mimo snapshot; jádro devbus ji aplikuje hned. */
+    "DEVBUS/conflict",
+    "DEVBUS/bus_idle",
+    "DEVBUS/bus_idle_value",
     NULL,
 };
 
@@ -15573,8 +15589,9 @@ static void _dispatch_detect_platform(const char **platform_out,
 #if MZARCH == 700
     *mode_out = "native";   /* MZ-700 = vždy sám sebou */
 #elif MZARCH == 800
-    /* DMD3 bit 3 = 1: native 800 mode, 0: 700 compat */
-    bool native_800 = (g_gdg.regDMD & 0x08) != 0;
+    /* DMD bit 3 (REGISTER_DMD_FLAG_MZ700) = 1: režim MZ-700, 0: režim
+     * MZ-800 (hw/04-io-ports.md, GDG_MZ800_DMD_TEST_MZ700). */
+    bool native_800 = !GDG_MZ800_DMD_TEST_MZ700;
     *mode_out = native_800 ? "native" : "compat700";
 #elif MZARCH == 1500
     /* MZ-1500 regDMD bit 0 = 1: 1500 native, 0: 700 sim (= reset default) */
@@ -15933,7 +15950,7 @@ static en_MCP_DISPATCH_RESULT _handle_region_read(
  *  - `platform`: "mz700" / "mz800" / "mz1500" (= compile-time MZARCH)
  *  - `mode`: "native" / "compat700" (= runtime z GDG regDMD bit)
  *    - MZ-700: vždy "native"
- *    - MZ-800: bit 3 = 1 native, 0 compat700
+ *    - MZ-800: bit 3 = 0 native, 1 compat700 (režim MZ-700)
  *    - MZ-1500: bit 0 = 1 native, 0 compat700 (= reset default)
  *  - `mzarch`: identický s `platform` (= legacy field pro V0.B.7 klienty)
  *  - `rom_version`: TBD (= V2 z ROM header signature)
@@ -20749,7 +20766,8 @@ static JsonArray *_devbus_when_array(unsigned when) {
  *   {"platform_supported": bool, "devices": [{"id", "name", "connected",
  *    "ini_section", "options": [{"key", "label", "type", "value",
  *    "default", "apply", "keywords" | "min"/"max"}], "ports": [{"first",
- *    "last", "read", "write"}], "mmio": [{"first", "last", "when"}],
+ *    "last", "read", "write", "drive", "drive_mask"}], "mmio": [{"first",
+ *    "last", "when", "read", "write", "drive", "drive_mask"}],
  *    "regions": [{"name", "kind": "device", "sub_id", "size", "writable"}],
  *    "video": {"glyph_source", "render_row"}, "outputs": [{"id", "title",
  *    "width", "height"}]}]}
@@ -20806,6 +20824,9 @@ static en_MCP_DISPATCH_RESULT _handle_get_devices(const st_JSONL_MESSAGE *req,
             json_object_set_int_member(jp, "last", d->ports[k].last);
             json_object_set_boolean_member(jp, "read", d->ports[k].read ? TRUE : FALSE);
             json_object_set_boolean_member(jp, "write", d->ports[k].write ? TRUE : FALSE);
+            json_object_set_string_member(jp, "drive", devbus_drive_name(d->ports[k].drive));
+            json_object_set_int_member(jp, "drive_mask",
+                (gint64) devbus_drive_mask(d->ports[k].drive, d->ports[k].drive_mask));
             json_array_add_object_element(ports, jp);
         }
         json_object_set_array_member(o, "ports", ports);
@@ -20816,6 +20837,11 @@ static en_MCP_DISPATCH_RESULT _handle_get_devices(const st_JSONL_MESSAGE *req,
             json_object_set_int_member(jm, "first", d->mmio[k].first);
             json_object_set_int_member(jm, "last", d->mmio[k].last);
             json_object_set_array_member(jm, "when", _devbus_when_array(s->mmio_when[k]));
+            json_object_set_boolean_member(jm, "read", d->mmio[k].read ? TRUE : FALSE);
+            json_object_set_boolean_member(jm, "write", d->mmio[k].write ? TRUE : FALSE);
+            json_object_set_string_member(jm, "drive", devbus_drive_name(d->mmio[k].drive));
+            json_object_set_int_member(jm, "drive_mask",
+                (gint64) devbus_drive_mask(d->mmio[k].drive, d->mmio[k].drive_mask));
             json_array_add_object_element(mmio, jm);
         }
         json_object_set_array_member(o, "mmio", mmio);
@@ -20855,6 +20881,278 @@ static en_MCP_DISPATCH_RESULT _handle_get_devices(const st_JSONL_MESSAGE *req,
     }
     json_object_set_array_member(resp, "devices", devs);
     g_free(p);
+    return _ok_response(req_id, resp, out_response);
+}
+
+
+/* ------------------------------------------------------------------ */
+/* get_bus_map, bus_peek (bus-model D6): mapa vlastníků sběrnice        */
+/* ------------------------------------------------------------------ */
+
+/** @brief JSON jednoho vlastníka adresy snímku Bus Map. */
+static JsonObject *_bus_owner_to_json(const st_BUS_OWNER *o, bool mmio) {
+    JsonObject *j = json_object_new();
+    json_object_set_string_member(j, "id", o->id);
+    json_object_set_string_member(j, "name", o->name);
+    json_object_set_string_member(j, "kind", o->kind == BUS_OWNER_DEVBUS ? "devbus" : "static");
+    if (o->kind == BUS_OWNER_DEVBUS) json_object_set_int_member(j, "slot", o->devbus_slot);
+    json_object_set_string_member(j, "dir",
+        o->dirs == BUS_DIR_RW ? "rw" : (o->dirs & BUS_DIR_R) ? "r" : "w");
+    json_object_set_string_member(j, "drive", devbus_drive_name(o->drive));
+    json_object_set_int_member(j, "drive_mask", o->drive_mask);
+    json_object_set_boolean_member(j, "connected", o->connected ? TRUE : FALSE);
+    JsonArray *range = json_array_new();
+    json_array_add_int_element(range, o->range_first);
+    json_array_add_int_element(range, o->range_last);
+    json_object_set_array_member(j, "range", range);
+    if (mmio) json_object_set_array_member(j, "when", _devbus_when_array(o->when_mask));
+    if (o->source_note) json_object_set_string_member(j, "source_note", o->source_note);
+    if (o->mirror_note) json_object_set_string_member(j, "mirror_note", o->mirror_note);
+    return j;
+}
+
+
+/** @brief JSON pole jmen příznaků BUS_PORT_*. */
+static JsonArray *_bus_flags_to_json(unsigned flags) {
+    JsonArray *a = json_array_new();
+    for (unsigned bit = 1; bit <= BUS_PORT_GHOST_SEEN; bit <<= 1) {
+        const char *n = bus_map_flag_name(bit);
+        if ((flags & bit) && n) json_array_add_string_element(a, n);
+    }
+    return a;
+}
+
+
+/**
+ * @brief `get_bus_map` handler - mapa vlastníků adres sběrnice.
+ *
+ * Read-only, povolen při replay. Parametry (data, volitelné):
+ *   - `include` (pole stringů) - které části: "ports", "mmio", "devices",
+ *     "activity" (výchozí všechny); "activity" doplní čítače a poslední
+ *     hodnoty (platné jen při `tracking_active`),
+ *   - `only_mapped` (bool, výchozí false) - vynechat porty / buňky bez
+ *     vlastníka.
+ * Response: {"platform": "mz700", "supported": bool, "devbus_supported":
+ *   bool, "conflict_policy", "bus_idle", "bus_idle_value", "idle_byte",
+ *   "tracking_active", "mmio_mapped_now", "frame", "devbus": {"registered",
+ *   "connected"}, "ports": [{"port", "owners": [...], "flags": [...],
+ *   "last_in": {"value", "age_frames"} | null, "last_out": ..., "hits_in_per_sec",
+ *   "hits_out_per_sec", "total_in", "total_out", "ghost_hits",
+ *   "conflict_hits"}], "mmio": [{"addr", "owners", "flags", "when",
+ *   "last_write", "hits_out_per_sec"}], "devices": [{"id", "name", "kind",
+ *   "connected", "slot", "ports", "mmio", "drive", "glyph_source",
+ *   "render_row", "regions", "outputs"}]}.
+ * `supported` true na všech platformách (statická tabulka desky),
+ * `devbus_supported` jen na MZ-700 (rozšiřující zařízení).
+ */
+static en_MCP_DISPATCH_RESULT _handle_get_bus_map(const st_JSONL_MESSAGE *req,
+                                                  char **out_response) {
+    int64_t req_id = jsonl_msg_get_req_id(req);
+    JsonNode *data_node = (JsonNode *)jsonl_msg_get_data_node(req);
+    JsonObject *obj = (data_node && json_node_get_node_type(data_node) == JSON_NODE_OBJECT)
+                      ? json_node_get_object(data_node) : NULL;
+    unsigned want = 0;
+    bool only_mapped = false;
+    if (obj && json_object_has_member(obj, "include")) {
+        JsonNode *n = json_object_get_member(obj, "include");
+        if (!n || !JSON_NODE_HOLDS_ARRAY(n)) {
+            return _err_response(req_id, "include must be an array of strings",
+                                 MCP_DISPATCH_INVALID_PARAMS, out_response);
+        }
+        JsonArray *a = json_node_get_array(n);
+        for (guint i = 0; i < json_array_get_length(a); i++) {
+            JsonNode *e = json_array_get_element(a, i);
+            const char *s = (e && JSON_NODE_HOLDS_VALUE(e) && json_node_get_value_type(e) == G_TYPE_STRING)
+                            ? json_node_get_string(e) : NULL;
+            if (!s) return _err_response(req_id, "include must be an array of strings",
+                                         MCP_DISPATCH_INVALID_PARAMS, out_response);
+            if (g_strcmp0(s, "ports") == 0) want |= BUS_WANT_PORTS;
+            else if (g_strcmp0(s, "mmio") == 0) want |= BUS_WANT_MMIO;
+            else if (g_strcmp0(s, "devices") == 0) want |= BUS_WANT_DEVICES;
+            else if (g_strcmp0(s, "activity") == 0) want |= BUS_WANT_ACTIVITY;
+            else return _err_response(req_id, "include item must be ports, mmio, devices or activity",
+                                      MCP_DISPATCH_INVALID_PARAMS, out_response);
+        }
+    } else {
+        want = BUS_WANT_ALL;
+    }
+    if (obj && json_object_has_member(obj, "only_mapped")) {
+        JsonNode *n = json_object_get_member(obj, "only_mapped");
+        if (!n || !JSON_NODE_HOLDS_VALUE(n) || json_node_get_value_type(n) != G_TYPE_BOOLEAN) {
+            return _err_response(req_id, "only_mapped must be a boolean",
+                                 MCP_DISPATCH_INVALID_PARAMS, out_response);
+        }
+        only_mapped = json_node_get_boolean(n) ? true : false;
+    }
+
+    st_BUS_MAP_SNAPSHOT *snap = g_new0(st_BUS_MAP_SNAPSHOT, 1);
+    st_DBGAPI_BUS_MAP_PARAM p;
+    p.want = want;
+    p.snap = snap;
+    if (!_submit_dbgapi(DBGAPI_CMD_BUS_MAP, &p, NULL)) {
+        g_free(snap);
+        return _err_response(req_id, "get_bus_map failed", MCP_DISPATCH_EMU_ERROR, out_response);
+    }
+
+    JsonObject *resp = json_object_new();
+    json_object_set_string_member(resp, "platform", MZARCH_NAME);
+    json_object_set_boolean_member(resp, "supported", snap->supported ? TRUE : FALSE);
+    json_object_set_boolean_member(resp, "devbus_supported", snap->devbus_initialized ? TRUE : FALSE);
+    json_object_set_string_member(resp, "conflict_policy", devbus_conflict_name(snap->conflict_policy));
+    json_object_set_string_member(resp, "bus_idle", devbus_idle_name(snap->bus_idle));
+    json_object_set_int_member(resp, "bus_idle_value", snap->bus_idle_value);
+    json_object_set_int_member(resp, "idle_byte", snap->idle_byte);
+    json_object_set_boolean_member(resp, "tracking_active", snap->tracking_active ? TRUE : FALSE);
+    json_object_set_boolean_member(resp, "mmio_mapped_now", snap->mmio_mapped_now ? TRUE : FALSE);
+    json_object_set_int_member(resp, "frame", (gint64) snap->frame);
+    {
+        JsonObject *d = json_object_new();
+        json_object_set_int_member(d, "registered", (gint64) snap->devbus_registered);
+        json_object_set_int_member(d, "connected", (gint64) snap->devbus_connected);
+        json_object_set_object_member(resp, "devbus", d);
+    }
+    bool with_act = (want & BUS_WANT_ACTIVITY) != 0;
+    if (want & BUS_WANT_PORTS) {
+        JsonArray *ports = json_array_new();
+        for (unsigned i = 0; i < 256; i++) {
+            const st_BUS_PORT *bp = &snap->ports[i];
+            if (only_mapped && bp->owner_count == 0) continue;
+            JsonObject *jp = json_object_new();
+            json_object_set_int_member(jp, "port", (gint64) i);
+            JsonArray *owners = json_array_new();
+            for (unsigned k = 0; k < bp->owner_count; k++) json_array_add_object_element(owners, _bus_owner_to_json(&bp->owners[k], false));
+            json_object_set_array_member(jp, "owners", owners);
+            json_object_set_array_member(jp, "flags", _bus_flags_to_json(bp->flags));
+            if (with_act) {
+                if (bp->last_read_valid) {
+                    JsonObject *l = json_object_new();
+                    json_object_set_int_member(l, "value", bp->last_read_value);
+                    json_object_set_int_member(l, "age_frames", (gint64) bp->last_read_age);
+                    json_object_set_object_member(jp, "last_in", l);
+                } else {
+                    json_object_set_null_member(jp, "last_in");
+                }
+                if (bp->last_write_valid) {
+                    JsonObject *l = json_object_new();
+                    json_object_set_int_member(l, "value", bp->last_write_value);
+                    json_object_set_int_member(l, "age_frames", (gint64) bp->last_write_age);
+                    json_object_set_object_member(jp, "last_out", l);
+                } else {
+                    json_object_set_null_member(jp, "last_out");
+                }
+                json_object_set_int_member(jp, "hits_in_per_sec", (gint64) bp->hits_in_per_sec);
+                json_object_set_int_member(jp, "hits_out_per_sec", (gint64) bp->hits_out_per_sec);
+                json_object_set_int_member(jp, "total_in", (gint64) bp->total_in);
+                json_object_set_int_member(jp, "total_out", (gint64) bp->total_out);
+                json_object_set_int_member(jp, "ghost_hits", (gint64) bp->ghost_hits);
+            }
+            json_object_set_int_member(jp, "conflict_hits", (gint64) bp->conflict_hits);
+            json_array_add_object_element(ports, jp);
+        }
+        json_object_set_array_member(resp, "ports", ports);
+    }
+    if (want & BUS_WANT_MMIO) {
+        JsonArray *cells = json_array_new();
+        for (unsigned i = 0; i < 256; i++) {
+            const st_BUS_MMIO_CELL *c = &snap->mmio[i];
+            if (only_mapped && c->owner_count == 0) continue;
+            JsonObject *jc = json_object_new();
+            json_object_set_int_member(jc, "addr", (gint64) c->addr);
+            JsonArray *owners = json_array_new();
+            for (unsigned k = 0; k < c->owner_count; k++) json_array_add_object_element(owners, _bus_owner_to_json(&c->owners[k], true));
+            json_object_set_array_member(jc, "owners", owners);
+            json_object_set_array_member(jc, "flags", _bus_flags_to_json(c->flags));
+            json_object_set_array_member(jc, "when", _devbus_when_array(c->when_mask));
+            if (with_act) {
+                if (c->last_write_valid) {
+                    JsonObject *l = json_object_new();
+                    json_object_set_int_member(l, "value", c->last_write_value);
+                    json_object_set_int_member(l, "age_frames", (gint64) c->last_write_age);
+                    json_object_set_object_member(jc, "last_write", l);
+                } else {
+                    json_object_set_null_member(jc, "last_write");
+                }
+                json_object_set_int_member(jc, "hits_out_per_sec", (gint64) c->hits_out_per_sec);
+            }
+            json_array_add_object_element(cells, jc);
+        }
+        json_object_set_array_member(resp, "mmio", cells);
+    }
+    if (want & BUS_WANT_DEVICES) {
+        JsonArray *devs = json_array_new();
+        for (unsigned i = 0; i < snap->device_count; i++) {
+            const st_BUS_DEVICE *dv = &snap->devices[i];
+            JsonObject *jd = json_object_new();
+            json_object_set_string_member(jd, "id", dv->id);
+            json_object_set_string_member(jd, "name", dv->name ? dv->name : "");
+            json_object_set_string_member(jd, "kind", dv->kind == BUS_OWNER_DEVBUS ? "devbus" : "static");
+            json_object_set_boolean_member(jd, "connected", dv->connected ? TRUE : FALSE);
+            if (dv->kind == BUS_OWNER_DEVBUS) json_object_set_int_member(jd, "slot", dv->devbus_slot);
+            json_object_set_int_member(jd, "ports", dv->port_count);
+            json_object_set_int_member(jd, "mmio", dv->mmio_count);
+            json_object_set_string_member(jd, "drive", devbus_drive_name(dv->drive));
+            json_object_set_boolean_member(jd, "glyph_source", dv->has_glyph ? TRUE : FALSE);
+            json_object_set_boolean_member(jd, "render_row", dv->has_row ? TRUE : FALSE);
+            json_object_set_int_member(jd, "regions", dv->region_count);
+            json_object_set_int_member(jd, "outputs", dv->vout_count);
+            json_array_add_object_element(devs, jd);
+        }
+        json_object_set_array_member(resp, "devices", devs);
+    }
+    g_free(snap);
+    return _ok_response(req_id, resp, out_response);
+}
+
+
+/**
+ * @brief `bus_peek` handler - čtení adresy bez vedlejších efektů s rezolucí sběrnice.
+ *
+ * Read-only, povolen při replay. Parametry: `port` (0-65535, dekód podle
+ * dolního bajtu) nebo `addr` (MMIO adresa 0E000h-0E0FFh, jen MZ-700);
+ * právě jeden z nich.
+ * Response: {"port" | "addr", "value", "driven_mask", "source": "idle" |
+ *   "board" | "devbus"}. `driven_mask` 0 = nikdo nebudí, `value` je model
+ * nebuzené sběrnice (latch nebo konstanta). Na rozdíl od `io_read` nemá
+ * vedlejší efekty (peek zařízení, zrcadla katalogu).
+ */
+static en_MCP_DISPATCH_RESULT _handle_bus_peek(const st_JSONL_MESSAGE *req,
+                                               char **out_response) {
+    int64_t req_id = jsonl_msg_get_req_id(req);
+    JsonNode *data_node = (JsonNode *)jsonl_msg_get_data_node(req);
+    JsonObject *obj = (data_node && json_node_get_node_type(data_node) == JSON_NODE_OBJECT)
+                      ? json_node_get_object(data_node) : NULL;
+    bool has_port = obj && json_object_has_member(obj, "port");
+    bool has_addr = obj && json_object_has_member(obj, "addr");
+    if (has_port == has_addr) {
+        return _err_response(req_id, "exactly one of port or addr is required",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+    gint64 a = _obj_int_or(obj, has_port ? "port" : "addr", -1);
+    if (a < 0 || a > 0xFFFF) {
+        return _err_response(req_id, "port / addr must be in range 0..65535",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+    if (has_addr && (a < 0xE000 || a > 0xE0FF)) {
+        return _err_response(req_id, "addr must be in the MMIO window 0xE000..0xE0FF",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+    st_DBGAPI_BUS_PEEK_PARAM p;
+    memset(&p, 0, sizeof(p));
+    p.addr = (uint16_t) a;
+    p.mmio = has_addr ? 1 : 0;
+    if (!_submit_dbgapi(DBGAPI_CMD_BUS_PEEK, &p, NULL)) {
+        return _err_response(req_id, "bus_peek failed", MCP_DISPATCH_EMU_ERROR, out_response);
+    }
+    if (!p.supported) {
+        return _err_response(req_id, "MMIO peek is available only on the MZ-700 core",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+    JsonObject *resp = json_object_new();
+    json_object_set_int_member(resp, has_port ? "port" : "addr", a);
+    json_object_set_int_member(resp, "value", p.value);
+    json_object_set_int_member(resp, "driven_mask", p.driven);
+    json_object_set_string_member(resp, "source",
+        p.source == DBGAPI_BUS_PEEK_SRC_DEVBUS ? "devbus" : p.source == DBGAPI_BUS_PEEK_SRC_BOARD ? "board" : "idle");
     return _ok_response(req_id, resp, out_response);
 }
 

@@ -38,6 +38,7 @@
 
 #include "snapshot/snapshot.h"
 #include "debugger/io_catalog.h"
+#include "devbus_resolve.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -142,6 +143,13 @@ typedef struct st_DEVBUS_OPTION {
 } st_DEVBUS_OPTION;
 
 /* ------------------------------------------------------------------------- */
+/*                        Model datové sběrnice                              */
+/* ------------------------------------------------------------------------- */
+
+/* en_DEVBUS_DRIVE, en_DEVBUS_CONFLICT, en_DEVBUS_IDLE a jejich jména:
+ * devbus_resolve.h (čistý modul bez závislostí, sdílený s MCP a testy). */
+
+/* ------------------------------------------------------------------------- */
 /*                               I/O porty                                   */
 /* ------------------------------------------------------------------------- */
 
@@ -158,24 +166,49 @@ typedef struct st_DEVBUS_OPTION {
  * devbus_cpu_wait() se pak ignoruje; handler, který chce rozlišit i jiné
  * vedlejší efekty, se zeptá devbus_access_is_debugger().
  *
+ * Čtení (read, peek) dostane v @c *driven masku bitů, které rozsah podle
+ * deklarace budí (0FFh u TRISTATE, drive_mask u PARTIAL), a smí ji snížit:
+ * "teď budím jen tyto bity" (K&P při čtení R31 vrátí 0). Jádro masku
+ * s deklarací znovu ořízne, nebuzené bity doplní z hodnoty nebuzené
+ * sběrnice platformy (en_DEVBUS_IDLE) a případný souběh s jiným budičem
+ * vyřeší podle politiky. Handler, který masku nemění, budí vždy vše.
+ *
  * @invariant first <= last; žádný port rozsahu neobsluhuje statický switch
- *            platformy (st_DEVBUS_ARCH_OPS::port_is_static).
+ *            platformy (st_DEVBUS_ARCH_OPS::port_is_static); read != NULL
+ *            právě tehdy, když drive != DEVBUS_DRIVE_NONE; drive není
+ *            UNKNOWN; PARTIAL má drive_mask != 0.
  */
 typedef struct st_DEVBUS_PORT_RANGE {
     uint8_t first;                                          /**< První port (včetně). */
     uint8_t last;                                           /**< Poslední port (včetně). */
-    uint8_t (*read)(void *ctx, uint16_t port);              /**< IN; NULL = čtení vrací latch sběrnice. */
-    uint8_t (*peek)(void *ctx, uint16_t port);              /**< Čtení bez vedlejšího efektu (debugger); NULL = latch. */
+    en_DEVBUS_DRIVE drive;                                  /**< Výstupní stupeň při IN (NONE = jen zápis). */
+    uint8_t drive_mask;                                     /**< Jen PARTIAL: bity, které rozsah budí; jinak se ignoruje. */
+    uint8_t (*read)(void *ctx, uint16_t port, uint8_t *driven); /**< IN; NULL = nebudí (drive NONE). */
+    uint8_t (*peek)(void *ctx, uint16_t port, uint8_t *driven); /**< Čtení bez vedlejšího efektu (debugger); NULL = nepřispívá. */
     void    (*write)(void *ctx, uint16_t port, uint8_t v);  /**< OUT; NULL = zápis se ignoruje. */
 } st_DEVBUS_PORT_RANGE;
 
+/** @brief Nejvyšší počet připojených vlastníků jednoho portu. */
+#define DEVBUS_MAX_PORT_OWNERS 4
+
 /**
- * @brief Slot záložní tabulky portů.
- * @invariant range == NULL právě tehdy, když port nepatří žádnému připojenému zařízení.
+ * @brief Jeden vlastník portu v záložní tabulce.
+ */
+typedef struct st_DEVBUS_PORT_OWNER {
+    const st_DEVBUS_PORT_RANGE *range; /**< Rozsah připojeného zařízení. */
+    void *ctx;                         /**< Kontext zařízení pro handlery. */
+    uint8_t slot;                      /**< Slot zařízení (pro ladění a Bus Map). */
+} st_DEVBUS_PORT_OWNER;
+
+/**
+ * @brief Slot záložní tabulky portů: seznam vlastníků v pořadí připojení.
+ * @invariant count == 0 právě tehdy, když port nepatří žádnému připojenému
+ *            zařízení; count <= DEVBUS_MAX_PORT_OWNERS; owner[0..count-1]
+ *            jsou platní.
  */
 typedef struct st_DEVBUS_PORT_SLOT {
-    const st_DEVBUS_PORT_RANGE *range; /**< Rozsah připojeného zařízení, nebo NULL. */
-    void *ctx;                         /**< Kontext zařízení pro handlery. */
+    uint8_t count;                                     /**< Počet vlastníků. */
+    st_DEVBUS_PORT_OWNER owner[DEVBUS_MAX_PORT_OWNERS]; /**< Vlastníci v pořadí připojení. */
 } st_DEVBUS_PORT_SLOT;
 
 /**
@@ -204,21 +237,34 @@ extern st_DEVBUS_PORT_SLOT g_devbus_ports[256];
 #define DEVBUS_ACC_PROHIBITED (1u << 10)
 
 /**
- * @brief MMIO rozsah; zařízení zápis jen pozoruje, chování desky se nemění.
+ * @brief MMIO rozsah: pozorovaný zápis a volitelně čtecí cesta.
  *
- * Handler dostane v @c flags stav mapy (DEVBUS_MMIO_MAPPED nebo
+ * Handler zápisu dostane v @c flags stav mapy (DEVBUS_MMIO_MAPPED nebo
  * DEVBUS_MMIO_DRAM) a druh přístupu (DEVBUS_ACC_*). V CPU cestě volá adaptér
  * před prvním handlerem synchronizaci času (st_DEVBUS_ARCH_OPS::mmio_sync).
+ * Chování desky zápis nemění (deska jde první).
+ *
+ * Rozsah s drive != NONE má čtecí cestu: read / peek se stejným
+ * kontraktem @c *driven jako u portů (st_DEVBUS_PORT_RANGE); deska je
+ * při čtení další budič, když adresu dekóduje
+ * (st_DEVBUS_ARCH_OPS::mmio_board_driven). Adaptér instaluje obálku čtení
+ * paměti jen s připojeným rozsahem s budičem (st_DEVBUS_HOOKS::mmio_read).
  *
  * @invariant first <= last; pro každý stav v when_default leží rozsah v okně
  *            platformy pro ten stav (MZ-700: MAPPED 0E009h-0EFFFh, DRAM
- *            0E000h-0EFFFh); write != NULL.
+ *            0E000h-0EFFFh); write != NULL nebo read != NULL; read != NULL
+ *            právě tehdy, když drive != NONE; drive není UNKNOWN; PARTIAL
+ *            má drive_mask != 0.
  */
 typedef struct st_DEVBUS_MMIO_RANGE {
     uint16_t first;         /**< První adresa (včetně). */
     uint16_t last;          /**< Poslední adresa (včetně). */
     unsigned when_default;  /**< Výchozí maska DEVBUS_MMIO_MAPPED | DEVBUS_MMIO_DRAM (0 = neaktivní). */
-    void (*write)(void *ctx, uint16_t addr, uint8_t value, unsigned flags); /**< Pozorovaný zápis. */
+    en_DEVBUS_DRIVE drive;  /**< Výstupní stupeň při čtení (NONE = jen snoop zápisu). */
+    uint8_t drive_mask;     /**< Jen PARTIAL: bity, které rozsah budí. */
+    void (*write)(void *ctx, uint16_t addr, uint8_t value, unsigned flags); /**< Pozorovaný zápis; NULL = nic. */
+    uint8_t (*read)(void *ctx, uint16_t addr, unsigned flags, uint8_t *driven); /**< Čtení CPU; NULL u NONE. */
+    uint8_t (*peek)(void *ctx, uint16_t addr, unsigned flags, uint8_t *driven); /**< Čtení bez vedlejšího efektu; NULL = nepřispívá. */
 } st_DEVBUS_MMIO_RANGE;
 
 /* ------------------------------------------------------------------------- */
@@ -360,6 +406,36 @@ typedef struct st_DEVBUS_DEVICE_DESC {
 } st_DEVBUS_DEVICE_DESC;
 
 /* ------------------------------------------------------------------------- */
+/*                             Kolize čtení                                  */
+/* ------------------------------------------------------------------------- */
+
+/**
+ * @brief Popis jedné kolize čtení (dva a více budičů na témže bitu).
+ *
+ * Vzniká jen s politikou AND nebo FIRST (REFUSE kolizní zařízení
+ * nepřipojí). Jádro ji předá adaptéru (st_DEVBUS_ARCH_OPS::bus_conflict)
+ * a uchová jako poslední kolizi (devbus_last_conflict()).
+ *
+ * @invariant count <= DEVBUS_MAX_PORT_OWNERS + 1 (deska + vlastníci);
+ *            part[i].slot == -1 značí desku platformy.
+ */
+typedef struct st_DEVBUS_CONFLICT_INFO {
+    uint16_t addr;        /**< Adresa portu (celá, A8-A15 z B) nebo MMIO adresa. */
+    uint8_t mmio;         /**< 1 = MMIO čtení, 0 = IORQ IN. */
+    uint8_t result;       /**< Hodnota, kterou CPU dostal. */
+    uint8_t conflict;     /**< Bity buzené více budiči. */
+    uint8_t driven;       /**< Sjednocení buzených bitů. */
+    en_DEVBUS_CONFLICT policy; /**< Politika, podle které se výsledek složil. */
+    uint64_t ticks;       /**< Čas emulace (devbus_time_ticks()). */
+    unsigned count;       /**< Počet příspěvků. */
+    struct {
+        int8_t  slot;     /**< Slot zařízení, -1 = deska platformy. */
+        uint8_t value;    /**< Vrácená hodnota. */
+        uint8_t driven;   /**< Buzené bity příspěvku. */
+    } part[DEVBUS_MAX_PORT_OWNERS + 1]; /**< Příspěvky v pořadí rezoluce. */
+} st_DEVBUS_CONFLICT_INFO;
+
+/* ------------------------------------------------------------------------- */
 /*                                Adaptér                                    */
 /* ------------------------------------------------------------------------- */
 
@@ -380,6 +456,9 @@ typedef struct st_DEVBUS_ARCH_OPS {
     uint16_t mmio_mapped_last;                /**< Konec okna MAPPED (včetně). */
     uint16_t mmio_dram_first;                 /**< Okno MMIO ve stavu DEVBUS_MMIO_DRAM (first > last = nepodporováno). */
     uint16_t mmio_dram_last;                  /**< Konec okna DRAM (včetně). */
+    uint8_t (*bus_latch)(void);               /**< Poslední bajt na datové sběrnici (regDBUS_latch) pro DEVBUS_IDLE_LATCH (NULL = 0). */
+    bool (*mmio_board_driven)(uint16_t addr, unsigned flags); /**< Budí deska při čtení MMIO adresy ve stavu mapy z @p flags? (NULL = nebudí). */
+    void (*bus_conflict)(const struct st_DEVBUS_CONFLICT_INFO *info); /**< Hlášení kolize čtení (iorqlog, Event Viewer, MCP); NULL = nic. */
 } st_DEVBUS_ARCH_OPS;
 
 /**
@@ -389,12 +468,16 @@ typedef struct st_DEVBUS_ARCH_OPS {
  * před voláním hooks_changed(). Čte ho adaptér (emu vlákno).
  *
  * @invariant ports == true, právě když g_devbus_ports má aspoň jeden obsazený
- *            slot; mmio == true, právě když existuje připojený MMIO rozsah
- *            s nenulovou maskou stavů.
+ *            slot, nebo platí model nebuzené sběrnice CONST (obálka doplní
+ *            konstantu i portům bez zařízení); mmio == true, právě když
+ *            existuje připojený MMIO rozsah s nenulovou maskou stavů;
+ *            mmio_read == true, právě když takový rozsah má navíc
+ *            drive != NONE (čtecí cestu).
  */
 typedef struct st_DEVBUS_HOOKS {
     bool ports;               /**< Je potřeba obálka portových callbacků. */
     bool mmio;                /**< Je potřeba obálka zápisu do paměti. */
+    bool mmio_read;           /**< Je potřeba obálka čtení paměti (MMIO rozsah s budičem). */
     devbus_glyph_fn glyph;    /**< Zdroj glyfů připojeného zařízení, nebo NULL. */
     void *glyph_ctx;          /**< Kontext zdroje glyfů. */
     devbus_row_fn row;        /**< Náhrada kreslení řádku, nebo NULL. */
@@ -630,18 +713,193 @@ void devbus_mmio_dispatch(uint16_t addr, uint8_t value, unsigned flags);
  */
 bool devbus_mmio_claims(uint16_t addr);
 
+/**
+ * @brief Složí hodnotu čtení MMIO adresy z desky a aktivních rozsahů s budičem.
+ *
+ * Volá ho obálka čtení paměti adaptéru (jen s g_devbus_hooks.mmio_read) po
+ * čtení desky. Rozsah přispívá, když adresa leží v rozsahu, stav mapy
+ * z @p flags je v jeho masce a má read. Deska je první příspěvek
+ * (TRISTATE, budí jen při @p board_driven). Nebuzené bity doplní
+ * devbus_idle_byte(); kolize podle politiky ohlásí adaptéru.
+ *
+ * @param addr         Adresa.
+ * @param board_value  Hodnota, kterou vrátila deska.
+ * @param board_driven true = deska adresu dekóduje (st_DEVBUS_ARCH_OPS::mmio_board_driven).
+ * @param flags        Stav mapy | DEVBUS_ACC_*.
+ * @param driven_out   Výstup sjednocení buzených bitů (smí být NULL).
+ * @return Bajt pro CPU.
+ * @pre Emu vlákno.
+ */
+uint8_t devbus_mmio_read_resolve(uint16_t addr, uint8_t board_value, bool board_driven,
+                                 unsigned flags, uint8_t *driven_out);
+
+/**
+ * @brief Čtení MMIO adresy bez vedlejších efektů (peek rozsahů, bez události kolize).
+ *
+ * @param addr         Adresa.
+ * @param board_value  Hodnota desky bez vedlejších efektů.
+ * @param board_driven true = deska adresu dekóduje.
+ * @param flags        Stav mapy (DEVBUS_MMIO_*).
+ * @param value        Výstup hodnoty (nesmí být NULL).
+ * @param driven       Výstup buzených bitů (smí být NULL).
+ * @return true = aspoň jeden aktivní rozsah s budičem adresu kryje.
+ */
+bool devbus_mmio_peek(uint16_t addr, uint8_t board_value, bool board_driven, unsigned flags,
+                      uint8_t *value, uint8_t *driven);
+
 /* ------------------------------------------------------------------------- */
 /*                                  Porty                                    */
 /* ------------------------------------------------------------------------- */
 
 /**
+ * @brief Složí hodnotu IN z desky a všech vlastníků portu (rezoluce čtení).
+ *
+ * Volá ho obálka portového callbacku adaptéru po statickém switchi. Každý
+ * vlastník s read dostane předvyplněnou masku své deklarace a vrátí
+ * hodnotu; jádro příspěvky složí (devbus_resolve()) s hodnotou nebuzené
+ * sběrnice devbus_idle_byte() a politikou devbus_conflict_policy().
+ * Kolize zvýší čítač portu, uloží poslední kolizi a zavolá
+ * st_DEVBUS_ARCH_OPS::bus_conflict.
+ *
+ * @param port         Adresa portu (dekód podle dolního bajtu).
+ * @param board_value  Hodnota ze statického switche.
+ * @param board_driven true = statický switch port obsloužil (deska budí).
+ * @param driven_out   Výstup sjednocení buzených bitů; 0 = nikdo neodpověděl
+ *                     (volající značí UNCONNECTED). Smí být NULL.
+ * @return Bajt pro CPU.
+ * @pre Emu vlákno, port má aspoň jednoho vlastníka (g_devbus_ports[].count > 0)
+ *      nebo board_driven; jinak vrátí idle.
+ */
+uint8_t devbus_port_read_resolve(uint16_t port, uint8_t board_value, bool board_driven,
+                                 uint8_t *driven_out);
+
+/**
+ * @brief Rozešle OUT všem vlastníkům portu v pořadí připojení (broadcast).
+ *
+ * Vlastník bez write se přeskočí; vlastníci s drive NONE zápis dostávají
+ * také (snoop). Statický switch volá adaptér sám před touto funkcí.
+ *
+ * @param port  Adresa portu.
+ * @param value Zapsaný bajt.
+ * @pre Emu vlákno.
+ */
+void devbus_port_write_all(uint16_t port, uint8_t value);
+
+/**
  * @brief Čtení portu zařízení bez vedlejšího efektu (debugger, katalog).
+ *
+ * Totéž co devbus_port_read_resolve() s peek handlery a bez desky: vlastník
+ * bez peek nepřispívá, nebuzené bity doplní devbus_idle_byte(), kolize se
+ * nehlásí ani nepočítá.
+ *
  * @param port Adresa portu (dekód podle dolního bajtu).
  * @param out  Výstup hodnoty.
- * @return true = port patří připojenému zařízení s peek (*out zapsán);
- *         false = volající použije latch sběrnice.
+ * @return true = port patří aspoň jednomu připojenému zařízení (*out zapsán);
+ *         false = volající použije katalog nebo latch sběrnice.
  */
 bool devbus_port_peek(uint16_t port, uint8_t *out);
+
+/**
+ * @brief Jako devbus_port_peek(), navíc vrátí masku buzených bitů (Bus Map).
+ * @param port   Adresa portu.
+ * @param value  Výstup hodnoty (nesmí být NULL).
+ * @param driven Výstup buzených bitů (smí být NULL); 0 = jen idle.
+ * @return true = port má připojeného vlastníka.
+ */
+bool devbus_port_peek_ex(uint16_t port, uint8_t *value, uint8_t *driven);
+
+/**
+ * @brief Čítač kolizí čtení portu od startu nebo od devbus_conflict_hits_reset().
+ * @param port_lsb Dolní bajt adresy.
+ * @return Počet čtení, při kterých rezoluce ohlásila kolizi (ladicí stav, mimo snapshot).
+ */
+uint32_t devbus_port_conflict_hits(uint8_t port_lsb);
+
+/**
+ * @brief Čítač kolizí čtení MMIO adresy v okně 0E000h-0E0FFh.
+ * @param addr Adresa (mimo okno vrací 0).
+ * @return Počet čtení s kolizí (ladicí stav, mimo snapshot).
+ */
+uint32_t devbus_mmio_conflict_hits(uint16_t addr);
+
+/** @brief Vynuluje čítače kolizí všech portů i MMIO a poslední kolizi. Emu vlákno. */
+void devbus_conflict_hits_reset(void);
+
+/**
+ * @brief Poslední ohlášená kolize čtení.
+ * @return Popis, nebo NULL, když od startu / resetu čítačů žádná nebyla.
+ */
+const st_DEVBUS_CONFLICT_INFO *devbus_last_conflict(void);
+
+/* ------------------------------------------------------------------------- */
+/*                 Konfigurace sběrnice (politika, nebuzená sběrnice)         */
+/* ------------------------------------------------------------------------- */
+
+/**
+ * @brief Nastaví politiku kolize dvou budičů.
+ *
+ * Platí pro další připojení (REFUSE) a pro každé další čtení (AND /
+ * FIRST). Konfigurace, ne stav stroje: mimo snapshot a hash; do záznamu
+ * vstupů (.mzr) se ukládá jako metadata.
+ *
+ * @pre Emu vlákno (INI při startu, settings_set), nebo test.
+ */
+void devbus_set_conflict_policy(en_DEVBUS_CONFLICT policy);
+
+/** @brief Aktuální politika kolize (výchozí REFUSE). */
+en_DEVBUS_CONFLICT devbus_conflict_policy(void);
+
+/**
+ * @brief Nastaví model nebuzené sběrnice.
+ *
+ * Po devbus_start() změna režimu přepočítá háčky (hooks_changed): s CONST
+ * je obálka portů nainstalovaná i bez zařízení, aby konstantu dostaly
+ * i porty, které nikdo nedekóduje (v buildu s debuggerem; bez něj jen
+ * porty zařízení).
+ *
+ * @param mode  LATCH (regDBUS_latch platformy) nebo CONST.
+ * @param value Hodnota pro CONST (u LATCH se jen uloží).
+ * @pre Jako devbus_set_conflict_policy().
+ */
+void devbus_set_bus_idle(en_DEVBUS_IDLE mode, uint8_t value);
+
+/** @brief Aktuální model nebuzené sběrnice (výchozí LATCH). */
+en_DEVBUS_IDLE devbus_bus_idle(void);
+
+/** @brief Hodnota pro DEVBUS_IDLE_CONST (výchozí 0FFh). */
+uint8_t devbus_bus_idle_value(void);
+
+/**
+ * @brief Aktuální hodnota nebuzených bitů: latch platformy, nebo konstanta.
+ * @return Bajt; bez adaptéru s bus_latch v režimu LATCH 0.
+ * @pre Emu vlákno (čte regDBUS_latch).
+ */
+uint8_t devbus_idle_byte(void);
+
+/**
+ * @brief Nastaví prvek sekce INI [DEVBUS] z textu (settings_set, test).
+ *
+ * Klíče: "conflict" (refuse | and | first), "bus_idle" (latch | const),
+ * "bus_idle_value" (0-255, číslo s prefixem 0x nebo bez). Zapíše hodnotu
+ * do jádra i do elementu INI, aby settings_get a uložení INI viděly totéž.
+ *
+ * @param key   Klíč prvku (bez ohledu na velikost písmen).
+ * @param text  Nová hodnota.
+ * @return DEVBUS_OK; DEVBUS_ERR_NOT_FOUND (neznámý klíč);
+ *         DEVBUS_ERR_INVALID (hodnota); DEVBUS_ERR_UNSUPPORTED (devbus bez inicializace).
+ * @pre Emu vlákno.
+ */
+int devbus_cfg_set_core(const char *key, const char *text);
+
+/**
+ * @brief Je sekce INI @p module sekce jádra devbus ([DEVBUS])?
+ * @param module Název sekce (bez ohledu na velikost písmen, smí být NULL).
+ * @return true = ano (prvky nastavuje devbus_cfg_set_core()).
+ */
+bool devbus_cfg_is_core_section(const char *module);
+
+/** @brief Název sekce INI jádra devbus. */
+#define DEVBUS_CORE_INI_SECTION "DEVBUS"
 
 /* ------------------------------------------------------------------------- */
 /*                             WAIT, čas, obraz                              */

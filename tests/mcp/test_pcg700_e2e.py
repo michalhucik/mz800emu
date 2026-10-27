@@ -206,7 +206,8 @@ def check_mz700(exe, tmp):
         keys = [o["key"] for o in pcg[0]["options"]]
         check(keys == ["hsw", "ssw", "gsw", "ssw_off", "strobe", "decode_dram", "poweron_ram"],
               f"{stem}: pcg700 options ({keys})")
-        check(pcg[0]["mmio"] == [{"first": 0xE010, "last": 0xE012, "when": ["mapped"]}],
+        check(pcg[0]["mmio"] == [{"first": 0xE010, "last": 0xE012, "when": ["mapped"],
+                                  "read": False, "write": True, "drive": "none", "drive_mask": 0}],
               f"{stem}: pcg700 mmio ({pcg[0]['mmio']})")
         check(pcg[0]["video"] == {"glyph_source": True, "render_row": False},
               f"{stem}: pcg700 video hooks ({pcg[0]['video']})")

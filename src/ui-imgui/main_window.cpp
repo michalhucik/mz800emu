@@ -58,6 +58,7 @@
 #if MZARCH == 700
 #include "ui-imgui/mz700/devbus/menu_devbus.h"
 #endif
+#include "ui-imgui/debugger/busmap/bus_window.h"
 
 #ifdef MZ800EMU_CFG_MCP_SERVER_ENABLED
 /* MCP Activity okno (V1.C.2) - render funkce volaná za běhu pokud
@@ -555,6 +556,10 @@ void imgui_main_window(GLuint texture)
     /* I/O Ports viewer panel (D.7) */
     if (g_gui->showIoWindow)
         io_window_render(&g_gui->showIoWindow);
+
+    /* Bus Map (D6): vlastníci portů a MMIO adres (všechny platformy); bere
+     * zámek stavu zařízení sám kolem snímku, proto mimo zamčený blok. */
+    bus_window_render(&g_gui->showBusMapWindow);
 
     /* Symbol Browser panel (D.8.6) */
     if (g_gui->showSymbolsWindow)

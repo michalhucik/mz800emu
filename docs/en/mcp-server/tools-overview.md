@@ -150,6 +150,8 @@ documented separately in [Resources overview](resources-overview.md).
 | `emu_periph_detach` | **YES** | Detaches a peripheral at runtime (like the Devices menu) |
 | `emu_get_devices` | no | Expansion devices of the MZ-700 core: id, options, ports, MMIO, regions, outputs |
 | `emu_device_screenshot` | no | Picture of an expansion device's own monitor (secondary output) as PNG or palette indices |
+| `emu_get_bus_map` | no | Who owns each I/O port and MMIO address (board chips and expansion devices), output stage, flags, activity; bus model (conflict policy, undriven bus) |
+| `emu_bus_peek` | no | Read one port or MMIO address without side effects with the bus resolution (`driven_mask`, `source`) |
 | `emu_stop` | **YES** | Hot-swap stop (pipe-only); terminates emu, Python wrapper keeps running |
 | `emu_start` | **YES** | Hot-swap start (pipe-only); spawns fresh mz800emu.exe child |
 | `emu_input_send_key` | **YES** | Press key + hold N frames + release |
@@ -2527,6 +2529,63 @@ emu_device_screenshot(output="kp80", format="indexed", want_data=False)
 `lit_pixels` counts dots with a non-zero palette index, `seq` grows with
 every frame the device draws. A disconnected device returns
 `{"available": false, "reason": ...}`; an unknown `output` is an error.
+
+### `emu_get_bus_map`
+
+Read-only map of the Z80 bus (MZ-700, MZ-800, MZ-1500): for every I/O
+port 00h-0FFh and every address of the MMIO window 0E000h-0E0FFh the owners
+(chips of the board from the static table of the platform, on the MZ-700
+also expansion devices from their descriptors), their direction, output stage (`drive`: `none` = never drives
+the bus, `tristate`, `partial` with `drive_mask`, `open_collector`,
+`unknown` = not documented in the knowledge base), whether they are
+present, and flags: `unmapped`, `dir_split`, `potential_conflict`,
+`conflict_seen`, `ghost_seen`. The header carries the bus model: the
+conflict policy (`refuse` / `and` / `first`) and the undriven-bus model
+(`bus_idle` `latch` = the last byte read from memory, `const` =
+`bus_idle_value`); both are INI keys of `[DEVBUS]` settable with
+`emu_settings_set`. The undriven-bus value is a model of the emulator, not
+measured on real hardware.
+
+| Parameter | Default | Meaning |
+|-----------|---------|---------|
+| `include` | all | any of `ports`, `mmio`, `devices`, `activity` (counters and last values, live only while the I/O Ports or Bus Map window tracks) |
+| `only_mapped` | false | omit ports and cells without an owner |
+
+```
+emu_get_bus_map(include=["ports"], only_mapped=True)
+-> {"platform": "mz700", "supported": true, "devbus_supported": true,
+    "conflict_policy": "refuse", "bus_idle": "latch", "bus_idle_value": 255,
+    "idle_byte": 112, "tracking_active": false, "mmio_mapped_now": true,
+    "frame": 1234, "devbus": {"registered": 3, "connected": 1},
+    "ports": [{"port": 112, "owners": [{"id": "kp80", "name": "K&P 80 Column Card",
+      "kind": "devbus", "slot": 2, "dir": "rw", "drive": "tristate",
+      "drive_mask": 255, "connected": true, "range": [112, 115]}],
+      "flags": [], "conflict_hits": 0}, ...]}
+```
+
+`supported` is true on every platform (static table of the board chips),
+`devbus_supported` (expansion devices, conflict policy, `bus_idle`) only on
+the MZ-700 core. Details and recipes:
+`emulator://docs/bus_map`; the GUI counterpart is the Bus Map window of
+the debugger ([debugger/bus-map.md](../debugger/bus-map.md)).
+
+### `emu_bus_peek`
+
+Read-only read of one address **without side effects** through the bus
+resolution: expansion devices answer with their `peek` handlers, board
+chips with the register mirrors of the I/O catalog (ports) or the memory
+peek (MMIO), undriven bits come from the undriven-bus model. Exactly one
+of `port` (0-65535, decoded by the low byte) or `addr` (MMIO window
+0E000h-0E0FFh, every platform).
+
+```
+emu_bus_peek(port=0x72)   -> {"port": 114, "value": 128, "driven_mask": 255, "source": "devbus"}
+emu_bus_peek(port=0x74)   -> {"port": 116, "value": 112, "driven_mask": 0, "source": "idle"}
+emu_bus_peek(addr=0xE000) -> {"addr": 57344, "value": 255, "driven_mask": 255, "source": "board"}
+```
+
+`driven_mask` 0 = nobody drives, `value` is the idle model. Unlike
+`emu_io_read` nothing in the machine changes.
 
 ### Example workflow - mounting a Quick Disk image
 

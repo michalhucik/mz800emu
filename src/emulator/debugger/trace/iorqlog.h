@@ -16,7 +16,7 @@
  * | 0      | 8 B      | pxclk_total                                    |
  * | 8      | 4 B      | screens_total                                  |
  * | 12     | 4 B      | pxclk_in_screen                                |
- * | 16     | 1 B      | event_type (IORQ / MREQ / IORQ_UNCONNECTED)    |
+ * | 16     | 1 B      | event_type (IORQ / MREQ / IORQ_UNCONNECTED / IORQ_CONFLICT) |
  * | 17     | 1 B      | direction (IN / OUT)                           |
  * | 18     | 2 B      | source_addr (regBC pro IORQ, regPC pro MREQ)   |
  * | 20     | 2 B      | port_or_addr                                   |
@@ -45,6 +45,7 @@ typedef enum en_IORQLOG_EVENT_TYPE
     IORQLOG_EVENT_IORQ = 0,           /**< Standard IORQ na mapovaný port */
     IORQLOG_EVENT_MREQ_MAPPED,        /**< MREQ na 0xE000-0xE008 (MZ-700 mode) */
     IORQLOG_EVENT_IORQ_UNCONNECTED,   /**< IORQ na nemapovaný port (ghost read) */
+    IORQLOG_EVENT_IORQ_CONFLICT,      /**< IORQ s kolizí dvou budičů (devbus, politika AND / FIRST) */
 } en_IORQLOG_EVENT_TYPE;
 
 /**
@@ -115,6 +116,19 @@ extern uint8_t g_tracelog_iorq_unconnected;
  * Ekvivalent na write side k pre-clear strategii read side.
  */
 #define TRACELOG_IORQ_MARK_HANDLED()      do { g_tracelog_iorq_unconnected = 0; } while (0)
+
+/**
+ * @brief Globální flag - aktuální IORQ čtení skončilo kolizí dvou budičů.
+ *
+ * Nastavuje adaptér devbus (st_DEVBUS_ARCH_OPS::bus_conflict) při rezoluci
+ * čtení s politikou AND / FIRST; @c port_read_with_logging_cb ho nuluje
+ * na vstupu a při návratu podle něj vybere @c IORQLOG_EVENT_IORQ_CONFLICT
+ * (má přednost před UNCONNECTED). Jen emu vlákno. Default 0.
+ */
+extern uint8_t g_tracelog_iorq_conflict;
+
+/** @brief Označí aktuálně probíhající IORQ jako kolizi budičů (viz g_tracelog_iorq_conflict). */
+#define TRACELOG_IORQ_MARK_CONFLICT()     do { g_tracelog_iorq_conflict = 1; } while (0)
 
 void iorqlog_init ( void );
 void iorqlog_apply_cli_options ( void );

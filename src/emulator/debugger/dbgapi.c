@@ -270,9 +270,11 @@ static void dbgapi_cmt_pulses_to_us ( const st_MZTAPE_PULSES_LENGTH *pulses, dou
 #include "debugger/trace/ramlog_hook.h"
 #include "debugger/trace/bplog.h"
 #include "debugger/coverage/coverage_hook.h"
+#include "bus_map.h"                  /* DBGAPI_CMD_BUS_MAP, DBGAPI_CMD_BUS_PEEK (všechny platformy) */
+#include "io_catalog.h"
+#include "hw-generic/devbus/devbus.h" /* devbus_debugger_access_*: IO_READ / IO_WRITE bez WAIT zařízení */
 #if MZARCH == 700
 #include "mzarch/mz700/devbus/mz700_devbus.h"
-#include "hw-generic/devbus/devbus.h" /* devbus_debugger_access_*: IO_READ / IO_WRITE bez WAIT zařízení */
 #endif
 
 
@@ -1109,6 +1111,8 @@ const char *dbgapi_cmd_to_str(en_DBGAPI_CMD cmd)
         case DBGAPI_CMD_MACHINE_HASH:              return "machine_hash";
         case DBGAPI_CMD_DEVBUS_LIST:               return "devbus_list";
         case DBGAPI_CMD_DEVBUS_VOUT_READ:          return "devbus_vout_read";
+        case DBGAPI_CMD_BUS_MAP:                   return "bus_map";
+        case DBGAPI_CMD_BUS_PEEK:                  return "bus_peek";
         case DBGAPI_CMD_MEMSEARCH_SAMPLE:          return "memsearch_sample";
         case DBGAPI_CMD_FREEZE_LIST:               return "freeze_list";
         /* V1.D.1 - Core + CPU extras Resources */
@@ -2498,6 +2502,43 @@ static bool dbgapi_settings_set_devbus ( st_DBGAPI_SETTINGS_PARAM *p, st_CFGELEM
     else if ( o->type == DEVBUS_OPT_KEYWORD ) cfgelement_set_keyword_value ( elm, (int) v );
     else cfgelement_set_unsigned_value ( elm, v );
     p->out_applies = ( o->apply == DEVBUS_APPLY_LIVE ) ? "now" : "on_connect";
+    p->out_result = 0;
+    return true;
+}
+
+
+/**
+ * @brief SETTINGS_SET pro prvek sekce jádra devbus [DEVBUS].
+ *
+ * Prvky conflict (KEYWORD), bus_idle (KEYWORD) a bus_idle_value (UNSIGNED)
+ * nastaví devbus_cfg_set_core() (ověří text, zapíše do jádra i do
+ * elementu INI). out_value = předchozí hodnota textem, out_applies "now".
+ *
+ * @param p   Parametr příkazu (module, element, new_value; OUT out_*).
+ * @param elm Element INI (pro předchozí hodnotu a typ).
+ * @return true = nastaveno (out_result 0); false = neplatná hodnota nebo
+ *         neznámý klíč (out_result -4).
+ * @pre Emu vlákno (drain dbgapi).
+ */
+static bool dbgapi_settings_set_devbus_core ( st_DBGAPI_SETTINGS_PARAM *p, st_CFGELEMENT *elm )
+{
+    if ( elm->type == CFGENTYPE_KEYWORD )
+    {
+        char *kw = cfgelement_get_keyword_by_value ( elm );
+        p->out_value = g_strdup ( kw ? kw : "" );
+        p->out_type = DBGAPI_SETTINGS_TYPE_KEYWORD;
+    }
+    else
+    {
+        p->out_value = g_strdup_printf ( "%u", cfgelement_get_unsigned_value ( elm ) );
+        p->out_type = DBGAPI_SETTINGS_TYPE_UNSIGNED;
+    };
+    if ( devbus_cfg_set_core ( p->element, p->new_value ) != DEVBUS_OK )
+    {
+        p->out_result = -4;
+        return false;
+    };
+    p->out_applies = "now";
     p->out_result = 0;
     return true;
 }
@@ -5957,6 +5998,115 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
             break;
         }
 
+        /* --- Snímek Bus Map (bus-model D6) ---
+         * Vlastníci adres, příznaky a aktivita (bus_map_snapshot()) v emu
+         * vlákně; cíl alokuje odesílatel. */
+        case DBGAPI_CMD_BUS_MAP:
+        {
+            st_DBGAPI_BUS_MAP_PARAM *p = (st_DBGAPI_BUS_MAP_PARAM *) rq->data_ptr;
+            if ( !p || !p->snap )
+            {
+                rq->success = false;
+                break;
+            };
+            bus_map_snapshot ( p->snap, p->want );
+            rq->success = true;
+            break;
+        }
+
+        /* --- Peek adresy s rezolucí sběrnice (bus-model D6) --- */
+        case DBGAPI_CMD_BUS_PEEK:
+        {
+            st_DBGAPI_BUS_PEEK_PARAM *p = (st_DBGAPI_BUS_PEEK_PARAM *) rq->data_ptr;
+            if ( !p )
+            {
+                rq->success = false;
+                break;
+            };
+            p->value = 0;
+            p->driven = 0;
+            p->source = DBGAPI_BUS_PEEK_SRC_IDLE;
+            p->supported = 1;
+            if ( p->mmio )
+            {
+                /* Deska: peek paměti (zrcadla čipů, bez vedlejších efektů);
+                 * zda budí, říká statická tabulka (řádek se čtením,
+                 * přítomný, s budičem nebo UNKNOWN) a stav mapy (jen MAPPED;
+                 * DRAM, CG-ROM nebo PCG budí vždy). */
+#if MZARCH == 700
+                unsigned flags = MEMORY_MZ700_MAP_TEST_ROM_E000 ? DEVBUS_MMIO_MAPPED : DEVBUS_MMIO_DRAM;
+                bool area_const = false;
+#elif MZARCH == 800
+                unsigned flags = MEMORY_MZ800_MAP_TEST_ROM_E000 ? DEVBUS_MMIO_MAPPED : DEVBUS_MMIO_DRAM;
+                /* MZ-800: v režimu MZ-800 nebo s Prohibited čte celá oblast
+                 * 0E000h-0E00Fh konstantu (0FFh, resp. 1Ah), v režimu MZ-700
+                 * konstantu 1Ah na 0E009h-0E00Fh (model podle měření HW
+                 * v mz800_memory.c) - něco budí, hodnotu dá peek paměti. */
+                bool area_const = !GDG_MZ800_DMD_TEST_MZ700 || MEMORY_MZ800_MAP_TEST_PROHIBITED
+                                  || ( p->addr > 0xE008u );
+#else
+                unsigned flags = MEMORY_MZ1500_MAP_TEST_E000_PORTS ? DEVBUS_MMIO_MAPPED : DEVBUS_MMIO_DRAM;
+                bool area_const = false;
+#endif
+                uint8_t board = memory_read_byte_no_se ( p->addr );
+                bool board_driven = ( flags == DEVBUS_MMIO_DRAM ) || area_const;
+                if ( !board_driven )
+                {
+                    const st_BUS_STATIC_TABLE *t = bus_map_static_table ( );
+                    for ( unsigned i = 0; i < t->count; i++ )
+                    {
+                        const st_BUS_STATIC_OWNER *r = &t->rows[ i ];
+                        if ( !r->mmio || !( r->dirs & BUS_DIR_R ) || p->addr < r->first || p->addr > r->last ) continue;
+                        if ( r->drive == DEVBUS_DRIVE_NONE ) continue;
+                        if ( r->present_kind != BUS_PRESENT_ALWAYS && t->present && !t->present ( r->present_kind ) ) continue;
+                        board_driven = true;
+                        break;
+                    };
+                    if ( p->addr > 0xE00Fu ) board_driven = true; /* ROM 0E010h+ (nebo 0FFh v Prohibited) */
+                };
+                uint8_t v = board, d = board_driven ? 0xFFu : 0u;
+                if ( devbus_is_initialized ( ) && devbus_mmio_peek ( p->addr, board, board_driven, flags, &v, &d ) )
+                {
+                    p->source = DBGAPI_BUS_PEEK_SRC_DEVBUS;
+                }
+                else
+                {
+                    if ( !board_driven ) v = devbus_is_initialized ( ) ? devbus_idle_byte ( ) : g_mzarch_main.regDBUS_latch;
+                    p->source = board_driven ? DBGAPI_BUS_PEEK_SRC_BOARD : DBGAPI_BUS_PEEK_SRC_IDLE;
+                };
+                p->value = v;
+                p->driven = d;
+                rq->success = true;
+                break;
+            };
+            {
+                uint8_t v = 0, d = 0;
+                if ( devbus_is_initialized ( ) && devbus_port_peek_ex ( p->addr, &v, &d ) )
+                {
+                    p->source = DBGAPI_BUS_PEEK_SRC_DEVBUS;
+                }
+                else if ( bus_map_static_port_driven ( (uint8_t) ( p->addr & 0xFFu ) )
+                          && io_catalog_probe_byte ( (uint8_t) ( p->addr & 0xFFu ), &v ) )
+                {
+                    /* Zrcadlo katalogu jen pro port, který deska teď dekóduje
+                     * a budí (katalog sám položky podle platformy nefiltruje:
+                     * na MZ-1500 má i stav GDG 0CEh, který tam na portu není). */
+                    d = 0xFFu;
+                    p->source = DBGAPI_BUS_PEEK_SRC_BOARD;
+                }
+                else
+                {
+                    v = devbus_is_initialized ( ) ? devbus_idle_byte ( ) : g_mzarch_main.regDBUS_latch;
+                    d = 0;
+                    p->source = DBGAPI_BUS_PEEK_SRC_IDLE;
+                };
+                p->value = v;
+                p->driven = d;
+            }
+            rq->success = true;
+            break;
+        }
+
         /* --- Snímek sekundárního výstupu zařízení devbus (kp80 D4) ---
          * Kopie posledního předaného snímku přes devbus_vout_read_last()
          * (druhý čtecí kanál emu vlákna, okno GUI čte nezávisle přes
@@ -6800,6 +6950,13 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
             {
                 p->out_result = -3;
                 rq->success = false;
+                break;
+            };
+            /* Sekce jádra devbus [DEVBUS]: politika kolize a model nebuzené
+             * sběrnice (klíčová slova), hodnota i do elementu INI. */
+            if ( devbus_cfg_is_core_section ( p->module ) )
+            {
+                rq->success = dbgapi_settings_set_devbus_core ( p, elm );
                 break;
             };
             /* Volba zařízení devbus: ověření a nastavení přes devbus (LIVE

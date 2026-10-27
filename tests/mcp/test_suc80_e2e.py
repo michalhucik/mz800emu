@@ -239,7 +239,8 @@ def check_binary(exe, tmp):
         check(len(suc) == 1, f"{name}: get_devices lists suc80")
         suc = suc[0]
         check(suc["connected"] is False, f"{name}: suc80 disconnected after start")
-        check(suc["mmio"] == [{"first": 0xE00C, "last": 0xE00F, "when": ["mapped"]}],
+        check(suc["mmio"] == [{"first": 0xE00C, "last": 0xE00F, "when": ["mapped"],
+                               "read": False, "write": True, "drive": "none", "drive_mask": 0}],
               f"{name}: suc80 MMIO 0E00Ch-0E00Fh mapped ({suc['mmio']})")
         check(suc["video"] == {"glyph_source": False, "render_row": True},
               f"{name}: suc80 video hooks ({suc['video']})")

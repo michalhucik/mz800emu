@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mz800emu 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-27 09:52+0100\n"
+"POT-Creation-Date: 2026-10-27 15:33+0100\n"
 "PO-Revision-Date: 2026-03-11 21:00+0100\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -537,6 +537,9 @@ msgid "Audio Capture Control"
 msgstr "Control de captura de audio"
 
 #: src/ui-imgui/audiocap/audio_capture_ui.cpp:376
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:889
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:910
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1206
 #: src/ui-imgui/topmenu/replay_window.cpp:201
 #: src/ui-imgui/videorec/videorec_remote_window.cpp:171
 msgid "State"
@@ -1151,6 +1154,8 @@ msgid "Label"
 msgstr "Etiqueta"
 
 #: src/ui-imgui/debugger/bookmarks/bm_window.cpp:981
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1030
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1031
 #: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1188
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:314
 msgid "Address"
@@ -2322,6 +2327,627 @@ msgstr "Varios###bpt_tab_misc"
 msgid "Groups###bpt_tab_groups"
 msgstr "Grupos###bpt_tab_groups"
 
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:217
+#: src/ui-imgui/version_check/imgui_version_check.cpp:169
+msgid "none"
+msgstr "ninguno"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:218
+msgid "tri-state"
+msgstr "triestado"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:219
+msgid "partial"
+msgstr "parcial"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:220
+msgid "open collector"
+msgstr "colector abierto"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:222
+msgid "not documented"
+msgstr "no documentado"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:230
+#: src/ui-imgui/debugger/memsearch_window/memsearch_window.cpp:706
+msgid "and"
+msgstr "y"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:231
+#: src/ui-imgui/debugger/memsearch_window/memsearch_window.cpp:673
+msgid "first"
+msgstr "primera"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:233
+msgid "refuse"
+msgstr "rechazar"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:246
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1536
+msgid "connected"
+msgstr "conectado"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:246
+msgid "not connected"
+msgstr "no conectado"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:247
+msgid "present"
+msgstr "presente"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:247
+msgid "not present"
+msgstr "ausente"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:566
+msgid "Show in I/O Ports##bus_ctx_io"
+msgstr "Mostrar en I/O Ports##bus_ctx_io"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:567
+msgid "Break on IN##bus_ctx_bpr"
+msgstr "Detener en IN##bus_ctx_bpr"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:568
+msgid "Break on OUT##bus_ctx_bpw"
+msgstr "Detener en OUT##bus_ctx_bpw"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:569
+msgid "Reset activity of this port##bus_ctx_rst"
+msgstr "Reiniciar actividad de este puerto##bus_ctx_rst"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:571
+msgid "Show in I/O Ports##bus_ctx_io_m"
+msgstr "Mostrar en I/O Ports##bus_ctx_io_m"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:572
+msgid "Reset activity of this address##bus_ctx_rst_m"
+msgstr "Reiniciar actividad de esta dirección##bus_ctx_rst_m"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:574
+msgid "Peek now (no side effects)##bus_ctx_peek"
+msgstr "Leer ahora (sin efectos secundarios)##bus_ctx_peek"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:588
+msgid "no present owner"
+msgstr "ningún propietario presente"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:589
+msgid "different owners for IN and OUT"
+msgstr "propietarios distintos para IN y OUT"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:590
+msgid "potential conflict"
+msgstr "conflicto potencial"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:591
+msgid "conflict seen at run time"
+msgstr "conflicto visto en ejecución"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:592
+msgid "ghost access seen"
+msgstr "acceso fantasma visto"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:593
+msgid "drive not documented"
+msgstr "excitador no documentado"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:604
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1031
+msgid "no owner"
+msgstr "sin propietario"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:610
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1037
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1107
+msgid "device"
+msgstr "dispositivo"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:610
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1037
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1108
+msgid "board"
+msgstr "placa"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:611
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1038
+msgid ", not connected"
+msgstr ", no conectado"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:611
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1038
+msgid ", not present"
+msgstr ", no presente"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:613
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1055
+#, c-format
+msgid "Driven bits: %02Xh"
+msgstr "Bits excitados: %02Xh"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:614
+msgid "Decodes IN but does not drive the bus (reads count as ghost accesses)"
+msgstr ""
+"Decodifica IN pero no excita el bus (las lecturas cuentan como accesos "
+"fantasma)"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:616
+#, c-format
+msgid "Range %04Xh-%04Xh, decodes when: %s%s"
+msgstr "Rango %04Xh-%04Xh, decodifica cuando: %s%s"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:617
+msgid "upper area mapped"
+msgstr "área superior mapeada"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:618
+msgid ", DRAM at 0E000h"
+msgstr ", DRAM en 0E000h"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:618
+msgid "DRAM at 0E000h"
+msgstr "DRAM en 0E000h"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:620
+#, c-format
+msgid "Range %02Xh-%02Xh"
+msgstr "Rango %02Xh-%02Xh"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:622
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:844
+msgid "Source:"
+msgstr "Fuente:"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:623
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:846
+msgid "Mirrors:"
+msgstr "Espejos:"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:623
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:846
+msgid "not verified"
+msgstr "no verificado"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:625
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1040
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1049
+#, c-format
+msgid "A read returns the undriven bus: %s %02Xh"
+msgstr "Una lectura devuelve el bus sin excitar: %s %02Xh"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:626
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1040
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1050
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1549
+msgid "constant"
+msgstr "constante"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:626
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1040
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1050
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1549
+msgid "bus latch"
+msgstr "latch del bus"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:629
+msgid "Marks:"
+msgstr "Marcas:"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:631
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1093
+msgid "Activity tracking is off"
+msgstr "El seguimiento de actividad está desactivado"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:634
+#, c-format
+msgid "Last IN %02Xh (%u frames ago)"
+msgstr "Último IN %02Xh (hace %u cuadros)"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:635
+#, c-format
+msgid "Last OUT %02Xh (%u frames ago)"
+msgstr "Último OUT %02Xh (hace %u cuadros)"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:636
+#, c-format
+msgid "IN/s %u, OUT/s %u"
+msgstr "IN/s %u, OUT/s %u"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:639
+#, c-format
+msgid "Last write %02Xh (%u frames ago)"
+msgstr "Última escritura %02Xh (hace %u cuadros)"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:640
+#, c-format
+msgid "Writes/s %u"
+msgstr "Escrituras/s %u"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:659
+msgid "DRAM at 0E000h now: dimmed cells do not decode"
+msgstr "DRAM en 0E000h ahora: las celdas atenuadas no decodifican"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:660
+msgid ""
+"The upper area 0E000h+ is not mapped at the moment (OUT (0E1h)); only owners "
+"decoding in the DRAM state react. Left half of a cell = upper area mapped, "
+"right half = DRAM at 0E000h."
+msgstr ""
+"El área superior 0E000h+ no está mapeada ahora (OUT (0E1h)); solo reaccionan "
+"los propietarios que decodifican en estado DRAM. Mitad izquierda de la celda "
+"= área superior mapeada, derecha = DRAM en 0E000h."
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:663
+msgid "Activity tracking is off: enable Track activity"
+msgstr "Seguimiento de actividad desactivado: active Seguir actividad"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:664
+msgid ""
+"Without tracking the grid shows owners, marks and conflict counters of the "
+"bus core; IN/OUT rates, last values and ghost accesses are not collected."
+msgstr ""
+"Sin seguimiento la cuadrícula muestra propietarios, marcas y contadores de "
+"conflicto del núcleo del bus; las tasas IN/OUT, últimos valores y accesos "
+"fantasma no se recogen."
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:666
+msgid "Left half: upper area mapped, right half: DRAM"
+msgstr "Mitad izquierda: área superior mapeada, derecha: DRAM"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:667
+msgid ""
+"Addresses 0E000h-0E0FFh (row + column = low byte). Each cell has two halves: "
+"left = owner when the upper area is mapped, right = owner with DRAM at "
+"0E000h; grey half = nobody decodes in that state."
+msgstr ""
+"Direcciones 0E000h-0E0FFh (fila + columna = byte bajo). Cada celda tiene dos "
+"mitades: izquierda = propietario con el área superior mapeada, derecha = "
+"propietario con DRAM en 0E000h; mitad gris = nadie decodifica en ese estado."
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:669
+msgid "Ports 00h-0FFh (low address byte)"
+msgstr "Puertos 00h-0FFh (byte bajo de la dirección)"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:670
+msgid ""
+"Row + column = low byte of the port address; the emulator decodes the low "
+"byte only. Left click selects, right click opens actions, arrows move the "
+"selection."
+msgstr ""
+"Fila + columna = byte bajo de la dirección del puerto; el emulador "
+"decodifica solo el byte bajo. Clic izquierdo selecciona, clic derecho abre "
+"acciones, las flechas mueven la selección."
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:841
+#, c-format
+msgid "Drive: %s, driven bits %02Xh"
+msgstr "Excitador: %s, bits excitados %02Xh"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:842
+#, c-format
+msgid "Drive: %s"
+msgstr "Excitador: %s"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:851
+#, c-format
+msgid "Ports %u, MMIO addresses %u, memory regions %u, outputs %u%s%s"
+msgstr ""
+"Puertos %u, direcciones MMIO %u, regiones de memoria %u, salidas %u%s%s"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:852
+msgid ", glyph source"
+msgstr ", fuente de glifos"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:852
+msgid ", render row"
+msgstr ", renderizado de fila"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:855
+msgid "Enter or the button disconnects the device"
+msgstr "Intro o el botón desconecta el dispositivo"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:855
+msgid "Enter or the button connects the device"
+msgstr "Intro o el botón conecta el dispositivo"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:857
+msgid "Board chips are attached in the HW & Devices menu"
+msgstr "Los chips de la placa se conectan en el menú HW & Devices"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:887
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:909
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1206
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1439
+msgid "Drive"
+msgstr "Driver"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:890
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1211
+#: src/ui-imgui/mz700/devices/kp80/kp80_window.cpp:194
+msgid "Connect"
+msgstr "Conectar"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:890
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1211
+msgid "Disconnect"
+msgstr "Desconectar"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:907
+msgid "Owner"
+msgstr "Propietario"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:908
+msgid "Ports"
+msgstr "Puertos"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:973
+msgid "Disconnect##bus_row_act"
+msgstr "Desconectar##bus_row_act"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:973
+msgid "Connect##bus_row_act"
+msgstr "Conectar##bus_row_act"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1030
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1031
+msgid "Port"
+msgstr "Puerto"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1058
+msgid "Also:"
+msgstr "También:"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1071
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1075
+msgid "IN/s"
+msgstr "IN/s"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1071
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1075
+msgid "OUT/s"
+msgstr "OUT/s"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1071
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1076
+msgid "ghost"
+msgstr "fantasma"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1071
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1076
+msgid "conflicts"
+msgstr "conflictos"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1072
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1082
+msgid "writes/s"
+msgstr "escrit./s"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1080
+msgid "Last IN"
+msgstr "Último IN"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1080
+msgid "Last OUT"
+msgstr "Último OUT"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1083
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1084
+msgid "Last write"
+msgstr "Última escritura"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1090
+msgid "Last value and its age in frames; rates are per second of emulated time"
+msgstr ""
+"Último valor y su antigüedad en cuadros; tasas por segundo de tiempo emulado"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1108
+msgid "undriven bus"
+msgstr "bus sin excitar"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1109
+#, c-format
+msgid "Peek: %02Xh, %s"
+msgstr "Peek: %02Xh, %s"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1110
+#, c-format
+msgid "Peek: %02Xh, driven bits %02Xh, %s"
+msgstr "Peek: %02Xh, bits excitados %02Xh, %s"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1112
+msgid "Peek: -"
+msgstr "Peek: -"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1116
+msgid "(automatic while paused)"
+msgstr "(automático en pausa)"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1121
+msgid ""
+"The value the CPU would read now, without side effects (device peek "
+"handlers, board register mirrors, undriven bus model)"
+msgstr ""
+"El valor que la CPU leería ahora, sin efectos secundarios (manejadores peek "
+"de los dispositivos, espejos de registros de la placa, modelo de bus sin "
+"excitar)"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1124
+msgid "Peek now##bus_det_peek"
+msgstr "Peek ahora##bus_det_peek"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1129
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1614
+msgid "Flags:"
+msgstr "Flags:"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1135
+msgid ""
+"Two drivers on the same bits: the result on real hardware is not modelled; "
+"the conflict policy decides the emulated value."
+msgstr ""
+"Dos excitadores en los mismos bits: el resultado en hardware real no está "
+"modelado; la política de conflicto decide el valor emulado."
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1143
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1214
+msgid "Show in I/O Ports"
+msgstr "Mostrar en I/O Ports"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1143
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1214
+msgid "Reset activity"
+msgstr "Restablecer actividad"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1143
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1214
+msgid "Break on IN"
+msgstr "Detener en IN"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1143
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1214
+msgid "Break on OUT"
+msgstr "Detener en OUT"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1146
+msgid "Show in I/O Ports##bus_det_io"
+msgstr "Mostrar en I/O Ports##bus_det_io"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1148
+msgid "Reset activity##bus_det_rst"
+msgstr "Restablecer actividad##bus_det_rst"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1150
+msgid "Break on IN##bus_det_bpr"
+msgstr "Detener en IN##bus_det_bpr"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1151
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1154
+msgid "IORQ breakpoints apply to ports only"
+msgstr "Los puntos de interrupción IORQ solo se aplican a puertos"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1153
+msgid "Break on OUT##bus_det_bpw"
+msgstr "Detener en OUT##bus_det_bpw"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1419
+msgid "Bus Map###bus_map"
+msgstr "Mapa del bus###bus_map"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1429
+msgid "Ports##bus_tab_ports"
+msgstr "Puertos##bus_tab_ports"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1431
+msgid "MMIO##bus_tab_mmio"
+msgstr "MMIO##bus_tab_mmio"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1434
+msgid "Color by"
+msgstr "Colorear por"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1439
+msgid "Owners"
+msgstr "Propietarios"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1439
+msgid "Activity"
+msgstr "Actividad"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1451
+msgid ""
+"Owners: blue = board chip, green = expansion device; dark and hatched = not "
+"present or not connected; grey = no owner."
+msgstr ""
+"Owners: azul = chip de la placa, verde = dispositivo de expansión; oscuro "
+"rayado = ausente o no conectado; gris = sin propietario."
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1452
+msgid ""
+"Drive: how the owner drives the data bus when read: tri-state, partial (some "
+"bits), open collector, none (write only), not documented (no schematic in "
+"the knowledge base)."
+msgstr ""
+"Drive: cómo el propietario excita el bus de datos al leer: tri-state, "
+"partial (algunos bits), open collector, none (solo escritura), not "
+"documented (sin esquema en la base de conocimiento)."
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1453
+msgid ""
+"Activity: grey = no access, green = active, red = hot; the thresholds are "
+"shared with the I/O Ports window:"
+msgstr ""
+"Activity: gris = sin acceso, verde = activo, rojo = caliente; los umbrales "
+"se comparten con la ventana I/O Ports:"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1455
+msgid "active above"
+msgstr "activo por encima de"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1455
+msgid "hot above"
+msgstr "caliente por encima de"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1459
+msgid "Track activity##bus_track"
+msgstr "Seguir actividad##bus_track"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1463
+msgid ""
+"Shared with the I/O Ports window: counts IN / OUT per port, ghost and "
+"conflict accesses (logging CPU callbacks)."
+msgstr ""
+"Compartido con la ventana I/O Ports: cuenta IN / OUT por puerto, accesos "
+"fantasma y en conflicto (callbacks de CPU con registro)."
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1536
+msgid "devices"
+msgstr "dispositivos"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1538
+msgid "undriven: const"
+msgstr "sin excitar: const."
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1539
+msgid "policy:"
+msgstr "política:"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1548
+msgid "Activity tracking:"
+msgstr "Seguimiento de actividad:"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1548
+msgid "on"
+msgstr "activado"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1548
+#: src/ui-imgui/debugger/dasm_window/dasm_window.cpp:556
+#: src/ui-imgui/screenshot/screenshot_ui.cpp:625
+#: src/ui-imgui/topmenu/replay_window.cpp:252
+msgid "off"
+msgstr "desactivado"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1549
+msgid "Undriven bits:"
+msgstr "Bits sin excitar:"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1549
+msgid "now"
+msgstr "ahora"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1550
+msgid "Conflict policy:"
+msgstr "Política de conflicto:"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1551
+#: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:2156
+#: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:2682
+#: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:2845
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3160
+#: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:312
+#: src/ui-imgui/topmenu/menu_replay.cpp:208
+#: src/ui-imgui/topmenu/replay_window.cpp:245
+msgid "Frame"
+msgstr "Frame"
+
 #: src/ui-imgui/debugger/callstack_window/callstack_window.cpp:63
 msgid "Callstack (experimental)###callstack_window"
 msgstr "Callstack (experimental)###callstack_window"
@@ -2659,12 +3285,6 @@ msgstr "usar sym_db###dasm_use_symdb"
 msgid "syms in range"
 msgstr "símbolos en rango"
 
-#: src/ui-imgui/debugger/dasm_window/dasm_window.cpp:556
-#: src/ui-imgui/screenshot/screenshot_ui.cpp:625
-#: src/ui-imgui/topmenu/replay_window.cpp:252
-msgid "off"
-msgstr "desactivado"
-
 #: src/ui-imgui/debugger/dasm_window/dasm_window.cpp:559
 msgid "Browse...###dasm_sym_browse"
 msgstr "Examinar...###dasm_sym_browse"
@@ -2949,7 +3569,7 @@ msgid "Hide noise"
 msgstr "Ocultar ruido"
 
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:1149
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1006
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1024
 #: src/ui-imgui/debugger/symbols/sym_window.cpp:619
 msgid "Clear filter"
 msgstr "Limpiar filtro"
@@ -3239,16 +3859,6 @@ msgstr ""
 #: src/ui-imgui/topmenu/devices/menu_unicard.cpp:320
 msgid "None"
 msgstr "Ninguno"
-
-#: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:2156
-#: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:2682
-#: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:2845
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3160
-#: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:312
-#: src/ui-imgui/topmenu/menu_replay.cpp:208
-#: src/ui-imgui/topmenu/replay_window.cpp:245
-msgid "Frame"
-msgstr "Frame"
 
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:2157
 msgid "Category"
@@ -3752,7 +4362,7 @@ msgid "Drives"
 msgstr "Unidades"
 
 #: src/ui-imgui/debugger/fdc_window.cpp:187
-#: src/ui-imgui/topmenu/menu_debugger.cpp:606
+#: src/ui-imgui/topmenu/menu_debugger.cpp:610
 msgid "FDC State"
 msgstr "Estado FDC"
 
@@ -4460,7 +5070,7 @@ msgid "Disassembler window"
 msgstr "Ventana del desensamblador"
 
 #: src/ui-imgui/debugger/ide8_window.cpp:123
-#: src/ui-imgui/topmenu/menu_debugger.cpp:624
+#: src/ui-imgui/topmenu/menu_debugger.cpp:628
 msgid "IDE8 State"
 msgstr "Estado IDE8"
 
@@ -4476,11 +5086,11 @@ msgstr "Unidad Master"
 msgid "Drive Slave"
 msgstr "Unidad Slave"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:491
+#: src/ui-imgui/debugger/ioview/io_window.cpp:509
 msgid "(no bit-level decode available)"
 msgstr "(decodificación a nivel de bit no disponible)"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:646
+#: src/ui-imgui/debugger/ioview/io_window.cpp:664
 msgid ""
 "16-bit CRTC family port. Bus addr is 0x<RR>CF (Z80 OUT (C),A pattern with "
 "B=register index, C=0xCF). MZ notation 0xCF<RR> is human-readable display."
@@ -4489,52 +5099,52 @@ msgstr ""
 "(C),A con B=índice de registro, C=0xCF). La notación MZ 0xCF<RR> es la "
 "visualización legible para humanos."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:664
+#: src/ui-imgui/debugger/ioview/io_window.cpp:682
 msgid "Add IORQ R BP##ioctx"
 msgstr "Añadir IORQ R BP##ioctx"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:667
+#: src/ui-imgui/debugger/ioview/io_window.cpp:685
 msgid "Add IORQ W BP##ioctx"
 msgstr "Añadir IORQ W BP##ioctx"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:671
+#: src/ui-imgui/debugger/ioview/io_window.cpp:689
 msgid "Add MEM R BP##ioctx"
 msgstr "Añadir MEM R BP##ioctx"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:674
+#: src/ui-imgui/debugger/ioview/io_window.cpp:692
 msgid "Add MEM W BP##ioctx"
 msgstr "Añadir MEM W BP##ioctx"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:679
+#: src/ui-imgui/debugger/ioview/io_window.cpp:697
 msgid "Reset activity counter##ioctx"
 msgstr "Restablecer contador de actividad##ioctx"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:691
+#: src/ui-imgui/debugger/ioview/io_window.cpp:709
 msgid "Show in History tab##ioctx"
 msgstr "Mostrar en pestaña Historial##ioctx"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:728
+#: src/ui-imgui/debugger/ioview/io_window.cpp:746
 msgid "Show in Memory Map##ioctx"
 msgstr "Mostrar en Memory Map##ioctx"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:823
+#: src/ui-imgui/debugger/ioview/io_window.cpp:841
 #, c-format
 msgid "Last cached value %u frames ago"
 msgstr "Último valor cacheado hace %u frames"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:830
+#: src/ui-imgui/debugger/ioview/io_window.cpp:848
 msgid "No data captured (port has no mirror and no IORQ event yet)"
 msgstr "Sin datos capturados (el puerto no tiene mirror ni evento IORQ aún)"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:859
+#: src/ui-imgui/debugger/ioview/io_window.cpp:877
 msgid "Hits per second over last 1s window (50 buckets)"
 msgstr "Aciertos por segundo en la última ventana de 1s (50 buckets)"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:865
+#: src/ui-imgui/debugger/ioview/io_window.cpp:883
 msgid "Tracking disabled (panel closed or toggled off)"
 msgstr "Seguimiento deshabilitado (panel cerrado o desactivado)"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:889
+#: src/ui-imgui/debugger/ioview/io_window.cpp:907
 msgid ""
 "MMIO events (0xE000-0xE008) are always recorded (per-port filter applies to "
 "8-bit IORQ space only)"
@@ -4542,7 +5152,7 @@ msgstr ""
 "Los eventos MMIO (0xE000-0xE008) siempre se registran (el filtro por puerto "
 "se aplica solo al espacio IORQ de 8 bits)"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:903
+#: src/ui-imgui/debugger/ioview/io_window.cpp:921
 msgid ""
 "Record IORQ events for this port into History ring buffer. Uncheck to skip "
 "high-frequency ports and preserve ring capacity for events of interest."
@@ -4551,12 +5161,12 @@ msgstr ""
 "Desmarcar para omitir puertos de alta frecuencia y preservar capacidad del "
 "buffer para eventos de interés."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:992
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1896
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1010
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1928
 msgid "Filter..."
 msgstr "Filtro..."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:998
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1016
 msgid ""
 "Filter visible ports (case-insensitive substring match on name, address hex, "
 "or direction r/w/rw)."
@@ -4564,36 +5174,36 @@ msgstr ""
 "Filtrar puertos visibles (coincidencia de subcadena sin distinguir "
 "mayúsculas en nombre, dirección hex o dirección r/w/rw)."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1002
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1020
 msgid "Clear##io_clear_filter"
 msgstr "Limpiar##io_clear_filter"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1012
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1030
 msgid "Reset Activity##io_reset_act"
 msgstr "Restablecer actividad##io_reset_act"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1019
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1037
 msgid "Clear activity counters for all 256 ports"
 msgstr "Limpiar contadores de actividad para los 256 puertos"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1025
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2010
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1043
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2042
 #: src/ui-imgui/debugger/sections/dbg_coverage.cpp:340
 msgid "Capacity:"
 msgstr "Capacidad:"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1059
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2040
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1077
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2072
 msgid "History buffer size. Resize discards existing events."
 msgstr ""
 "Tamaño del buffer de historial. Cambiar tamaño descarta eventos existentes."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1067
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1085
 msgid "Track##io_track"
 msgstr "Seguir##io_track"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1072
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2058
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1090
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2089
 msgid ""
 "Enable IORQ activity + history capture (gated). Default ON when panel is "
 "open. Toggle off to reduce overhead."
@@ -4601,77 +5211,77 @@ msgstr ""
 "Habilitar captura de actividad IORQ + historial (controlado). Predeterminado "
 "ON cuando el panel está abierto. Desactivar para reducir sobrecarga."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1087
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1105
 msgid "Heat...##io_heat_btn"
 msgstr "Heat...##io_heat_btn"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1092
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1110
 msgid "Configure activity heat coloring thresholds."
 msgstr "Configurar umbrales de coloreado heat de actividad."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1095
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1113
 msgid "Heat coloring thresholds (hits/s):"
 msgstr "Umbrales de coloreado heat (aciertos/s):"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1098
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1116
 msgid "Text active (green)##io_heat_text"
 msgstr "Texto activo (verde)##io_heat_text"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1109
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1127
 msgid "Minimum hits/s to color row text green. Default 1."
 msgstr ""
 "Mínimo de aciertos/s para colorear texto de fila en verde. Predeterminado 1."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1112
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1130
 msgid "Bg hot tint (red)##io_heat_bg"
 msgstr "Fondo caliente (rojo)##io_heat_bg"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1123
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1141
 msgid ""
 "Minimum hits/s for red row background tint (bottleneck warn). Default 10000."
 msgstr ""
 "Mínimo de aciertos/s para tinte rojo de fondo de fila (advertencia de cuello "
 "de botella). Predeterminado 10000."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1127
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1145
 msgid "Reset to defaults##io_heat_reset"
 msgstr "Restablecer a predeterminados##io_heat_reset"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1167
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1184
 msgid "No ports match filter"
 msgstr "Ningún puerto coincide con el filtro"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1655
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1687
 msgid "(no selection)"
 msgstr "(sin selección)"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1656
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1688
 msgid "Click a row to see details"
 msgstr "Haga clic en una fila para ver detalles"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1668
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1700
 msgid "Selected event:"
 msgstr "Evento seleccionado:"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1702
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1734
 msgid "Focus to primary disassembly. Right-click for additional actions."
 msgstr ""
 "Enfocar en disassembly principal. Clic derecho para acciones adicionales."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1743
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1775
 msgid "Focus to..."
 msgstr "Enfocar en..."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1762
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1794
 #: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:3387
 msgid "Add to bookmarks"
 msgstr "Añadir a marcadores"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1781
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1813
 msgid "Add breakpoint"
 msgstr "Añadir breakpoint"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1902
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1934
 msgid ""
 "Filter syntax (boolean expression):\n"
 "Atoms (leaf tokens):\n"
@@ -4723,24 +5333,24 @@ msgstr ""
 "  (port:CE pc:42) | port:CF  grupo OR grupo\n"
 "  !(in | out)                ni IN ni OUT"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1928
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1960
 msgid "Clear##io_hist_clear"
 msgstr "Limpiar##io_hist_clear"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1962
+#: src/ui-imgui/debugger/ioview/io_window.cpp:1994
 msgid "Latest##io_hist_latest"
 msgstr "Más reciente##io_hist_latest"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1968
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2000
 msgid "Re-enable auto-follow and scroll to latest event"
 msgstr ""
 "Volver a habilitar auto-seguimiento y desplazarse al evento más reciente"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1972
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2004
 msgid "Auto-follow##io_hist_af"
 msgstr "Auto-seguir##io_hist_af"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1984
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2016
 msgid ""
 "Auto-scroll History tab to latest event. User scroll up disables follow; "
 "click [Latest] re-enables."
@@ -4749,27 +5359,27 @@ msgstr ""
 "usuario hacia arriba deshabilita el seguimiento; clic en [Más reciente] lo "
 "vuelve a habilitar."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:1990
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2022
 msgid "Clear history##io_hist_purge"
 msgstr "Limpiar historial##io_hist_purge"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2001
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2033
 msgid "Discard all recorded IORQ events"
 msgstr "Descartar todos los eventos IORQ registrados"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2046
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2078
 msgid "Track##io_hist_track"
 msgstr "Seguir##io_hist_track"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2065
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2096
 msgid "Filter error"
 msgstr "Error de filtro"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2204
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2235
 msgid "Filter actions for this event:"
 msgstr "Acciones de filtro para este evento:"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2483
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2514
 msgid ""
 "Wraps the current filter in parentheses, then appends ' & token'. Use to AND-"
 "narrow an OR chain (parser precedence: & binds tighter than |)."
@@ -4778,7 +5388,7 @@ msgstr ""
 "estrechar con AND una cadena OR (precedencia del parser: & se enlaza más "
 "fuertemente que |)."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2487
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2518
 msgid ""
 "Wraps the current filter in parentheses, then appends ' | token'. Use when "
 "the current filter is itself an AND chain that should be OR-extended as a "
@@ -4788,15 +5398,15 @@ msgstr ""
 "filtro actual es en sí una cadena AND que debe extenderse con OR como un "
 "todo."
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2783
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2815
 msgid "I/O Ports###io_main"
 msgstr "Puertos I/O###io_main"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2819
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2850
 msgid "Overview##io_tab_ov"
 msgstr "Vista general##io_tab_ov"
 
-#: src/ui-imgui/debugger/ioview/io_window.cpp:2833
+#: src/ui-imgui/debugger/ioview/io_window.cpp:2864
 msgid "History##io_tab_hist"
 msgstr "Historial##io_tab_hist"
 
@@ -6731,10 +7341,6 @@ msgstr "valor"
 msgid "previous"
 msgstr "anterior"
 
-#: src/ui-imgui/debugger/memsearch_window/memsearch_window.cpp:673
-msgid "first"
-msgstr "primera"
-
 #: src/ui-imgui/debugger/memsearch_window/memsearch_window.cpp:677
 msgid "Filter"
 msgstr "Filtro"
@@ -6746,10 +7352,6 @@ msgstr "comparado con"
 #: src/ui-imgui/debugger/memsearch_window/memsearch_window.cpp:701
 msgid "Difference"
 msgstr "Diferencia"
-
-#: src/ui-imgui/debugger/memsearch_window/memsearch_window.cpp:706
-msgid "and"
-msgstr "y"
 
 #: src/ui-imgui/debugger/memsearch_window/memsearch_window.cpp:711
 msgid "Mask"
@@ -7819,7 +8421,7 @@ msgid "PSG (chip 0)###PSGMonoHdr"
 msgstr "PSG (chip 0)###PSGMonoHdr"
 
 #: src/ui-imgui/debugger/qdisk_window.cpp:147
-#: src/ui-imgui/topmenu/menu_debugger.cpp:612
+#: src/ui-imgui/topmenu/menu_debugger.cpp:616
 msgid "QDisk State"
 msgstr "Estado QDisk"
 
@@ -7846,7 +8448,7 @@ msgid "Virtual mode"
 msgstr "Modo virtual"
 
 #: src/ui-imgui/debugger/ramdisk_window.cpp:139
-#: src/ui-imgui/topmenu/menu_debugger.cpp:618
+#: src/ui-imgui/topmenu/menu_debugger.cpp:622
 msgid "Memory Disk State"
 msgstr "Estado del disco de memoria"
 
@@ -8822,10 +9424,6 @@ msgstr "T-states:"
 #: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1599
 msgid "taken/not taken"
 msgstr "tomado/no tomado"
-
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1614
-msgid "Flags:"
-msgstr "Flags:"
 
 #: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1685
 msgid "Symbol:"
@@ -11092,7 +11690,7 @@ msgstr "Volver a escanear dispositivos"
 msgid "Joystick"
 msgstr "Joystick"
 
-#: src/ui-imgui/main_window.cpp:117
+#: src/ui-imgui/main_window.cpp:118
 msgid "No audio device - running without sound"
 msgstr "No hay dispositivo de audio - funcionando sin sonido"
 
@@ -11701,10 +12299,6 @@ msgstr "Monitor K&P de 80 columnas###KP80Monitor"
 #: src/ui-imgui/mz700/devices/kp80/kp80_window.cpp:193
 msgid "The K&P 80 column card is not connected."
 msgstr "La tarjeta K&P de 80 columnas no está conectada."
-
-#: src/ui-imgui/mz700/devices/kp80/kp80_window.cpp:194
-msgid "Connect"
-msgstr "Conectar"
 
 #: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:41
 msgid "PCG-700 (HAL)"
@@ -12473,9 +13067,13 @@ msgstr "Activar verificación de tamaño MZF"
 msgid "Fix FNAME Terminator"
 msgstr "Corregir terminador FNAME"
 
-#: src/ui-imgui/topmenu/devices/menu_devices.cpp:24
+#: src/ui-imgui/topmenu/devices/menu_devices.cpp:26
 msgid "HW & Devices"
 msgstr "HW y dispositivos"
+
+#: src/ui-imgui/topmenu/devices/menu_devices.cpp:36
+msgid "Bus Map"
+msgstr "Mapa del bus"
 
 #: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:72
 #: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:74
@@ -13468,32 +14066,32 @@ msgid "Variables"
 msgstr "Variables"
 
 #: src/ui-imgui/topmenu/menu_debugger.cpp:202
-#: src/ui-imgui/topmenu/menu_debugger.cpp:557
+#: src/ui-imgui/topmenu/menu_debugger.cpp:561
 msgid "CTC State"
 msgstr "Estado CTC"
 
 #: src/ui-imgui/topmenu/menu_debugger.cpp:207
-#: src/ui-imgui/topmenu/menu_debugger.cpp:561
+#: src/ui-imgui/topmenu/menu_debugger.cpp:565
 msgid "PPI State"
 msgstr "Estado PPI"
 
 #: src/ui-imgui/topmenu/menu_debugger.cpp:215
-#: src/ui-imgui/topmenu/menu_debugger.cpp:566
+#: src/ui-imgui/topmenu/menu_debugger.cpp:570
 msgid "Z80 PIO State"
 msgstr "Estado del PIO Z80"
 
 #: src/ui-imgui/topmenu/menu_debugger.cpp:224
-#: src/ui-imgui/topmenu/menu_debugger.cpp:572
+#: src/ui-imgui/topmenu/menu_debugger.cpp:576
 msgid "PSG State"
 msgstr "Estado PSG"
 
 #: src/ui-imgui/topmenu/menu_debugger.cpp:231
-#: src/ui-imgui/topmenu/menu_debugger.cpp:579
+#: src/ui-imgui/topmenu/menu_debugger.cpp:583
 msgid "PSG Audio Scope"
 msgstr "Osciloscopio de audio PSG"
 
 #: src/ui-imgui/topmenu/menu_debugger.cpp:238
-#: src/ui-imgui/topmenu/menu_debugger.cpp:586
+#: src/ui-imgui/topmenu/menu_debugger.cpp:590
 msgid "GDG State"
 msgstr "Estado del GDG"
 
@@ -13533,16 +14131,16 @@ msgstr "Otro disassembly"
 msgid "I/O Ports"
 msgstr "Puertos I/O"
 
-#: src/ui-imgui/topmenu/menu_debugger.cpp:536
+#: src/ui-imgui/topmenu/menu_debugger.cpp:540
 #: src/ui-imgui/topmenu/replay_window.cpp:248
 msgid "Events"
 msgstr "Eventos"
 
-#: src/ui-imgui/topmenu/menu_debugger.cpp:555
+#: src/ui-imgui/topmenu/menu_debugger.cpp:559
 msgid "Chips"
 msgstr "Chips"
 
-#: src/ui-imgui/topmenu/menu_debugger.cpp:603
+#: src/ui-imgui/topmenu/menu_debugger.cpp:607
 msgid "Storage"
 msgstr "Almacenamiento"
 
@@ -13922,10 +14520,6 @@ msgstr "mensualmente"
 #: src/ui-imgui/version_check/imgui_version_check.cpp:145
 msgid "sometimes"
 msgstr "a veces"
-
-#: src/ui-imgui/version_check/imgui_version_check.cpp:169
-msgid "none"
-msgstr "ninguno"
 
 #: src/ui-imgui/version_check/imgui_version_check.cpp:170
 msgid "from system environment"
@@ -14408,6 +15002,260 @@ msgstr "Teclado virtual MZ-800"
 #, c-format
 #~ msgid "Range %u - %u, press Enter to apply"
 #~ msgstr "Rango %u - %u, pulse Intro para aplicar"
+
+#~ msgid "Last write -"
+#~ msgstr "Última escritura -"
+
+#~ msgid "Last IN -        Last OUT -"
+#~ msgstr "Último IN -      Último OUT -"
+
+#~ msgid "none (write only)"
+#~ msgstr "ninguno (solo escritura)"
+
+#~ msgid "unknown (not documented)"
+#~ msgstr "desconocido (no documentado)"
+
+#~ msgid "AND (model)"
+#~ msgstr "AND (modelo)"
+
+#~ msgid "first connected (model)"
+#~ msgstr "primero conectado (modelo)"
+
+#~ msgid "no owner: a read returns the undriven bus"
+#~ msgstr "sin propietario: una lectura devuelve el bus sin excitar"
+
+#~ msgid "Add IORQ read breakpoint##bus_ctx_bpr"
+#~ msgstr "Añadir breakpoint de lectura IORQ##bus_ctx_bpr"
+
+#~ msgid "Add IORQ write breakpoint##bus_ctx_bpw"
+#~ msgstr "Añadir breakpoint de escritura IORQ##bus_ctx_bpw"
+
+#~ msgid "no access"
+#~ msgstr "sin acceso"
+
+#~ msgid "active (hits/s above the text threshold)"
+#~ msgstr "activo (accesos/s por encima del umbral de texto)"
+
+#~ msgid "hot (hits/s above the hot threshold)"
+#~ msgstr "caliente (accesos/s por encima del umbral caliente)"
+
+#~ msgid "unknown"
+#~ msgstr "desconocido"
+
+#~ msgid "board chip"
+#~ msgstr "chip de la placa"
+
+#~ msgid "expansion device, connected"
+#~ msgstr "dispositivo de expansión, conectado"
+
+#~ msgid "registered, not connected (hatched)"
+#~ msgstr "registrado, no conectado (rayado)"
+
+#~ msgid "unmapped (undriven bus)"
+#~ msgstr "sin mapear (bus sin excitar)"
+
+#~ msgid ""
+#~ "Marks: ! conflict (red = seen at run time)   ? drive not documented   ~ "
+#~ "different owners for IN and OUT   . ghost access seen"
+#~ msgstr ""
+#~ "Marcas: ! conflicto (rojo = visto en ejecución)   ? driver no "
+#~ "documentado   ~ propietarios distintos para IN y OUT   . acceso fantasma "
+#~ "visto"
+
+#~ msgid "Inspector"
+#~ msgstr "Inspector"
+
+#~ msgid "Lock##bus_insp_lock"
+#~ msgstr "Bloquear##bus_insp_lock"
+
+#~ msgid "none (unmapped)"
+#~ msgstr "ninguno (sin mapear)"
+
+#~ msgid "static"
+#~ msgstr "estático"
+
+#~ msgid "drive"
+#~ msgstr "driver"
+
+#~ msgid " mapped"
+#~ msgstr " mapeado"
+
+#~ msgid " dram"
+#~ msgstr " DRAM"
+
+#~ msgid "source"
+#~ msgstr "fuente"
+
+#~ msgid "mirror"
+#~ msgstr "espejo"
+
+#, c-format
+#~ msgid "Peek (no side effects): %02Xh, %s"
+#~ msgstr "Peek (sin efectos secundarios): %02Xh, %s"
+
+#, c-format
+#~ msgid "Peek (no side effects): %02Xh, driven bits %02Xh, %s"
+#~ msgstr "Peek (sin efectos secundarios): %02Xh, bits excitados %02Xh, %s"
+
+#~ msgid "Peek: press the button (automatic while paused)"
+#~ msgstr "Peek: pulse el botón (automático en pausa)"
+
+#~ msgid "Peek now##bus_insp_peek"
+#~ msgstr "Leer ahora##bus_insp_peek"
+
+#, c-format
+#~ msgid "Last IN : %02Xh, %u frames ago"
+#~ msgstr "Último IN : %02Xh, hace %u fotogramas"
+
+#~ msgid "Last IN : -"
+#~ msgstr "Último IN : -"
+
+#, c-format
+#~ msgid "Last OUT: %02Xh, %u frames ago"
+#~ msgstr "Último OUT: %02Xh, hace %u fotogramas"
+
+#~ msgid "Last OUT: -"
+#~ msgstr "Último OUT: -"
+
+#, c-format
+#~ msgid "IN %u/s  OUT %u/s  total %llu / %llu"
+#~ msgstr "IN %u/s  OUT %u/s  total %llu / %llu"
+
+#, c-format
+#~ msgid "ghost %llu  conflicts %llu"
+#~ msgstr "fantasma %llu  conflictos %llu"
+
+#, c-format
+#~ msgid "Last write: %02Xh, %u frames ago"
+#~ msgstr "Última escritura: %02Xh, hace %u fotogramas"
+
+#~ msgid "Last write: -"
+#~ msgstr "Última escritura: -"
+
+#, c-format
+#~ msgid "writes %u/s"
+#~ msgstr "escrituras %u/s"
+
+#~ msgid "(activity tracking is off)"
+#~ msgstr "(el seguimiento de actividad está desactivado)"
+
+#~ msgid "UNMAPPED "
+#~ msgstr "SIN-MAPEAR "
+
+#~ msgid "DIR-SPLIT "
+#~ msgstr "DIRECCIÓN-DIVIDIDA "
+
+#~ msgid "POTENTIAL-CONFLICT "
+#~ msgstr "CONFLICTO-POTENCIAL "
+
+#~ msgid "CONFLICT-SEEN "
+#~ msgstr "CONFLICTO-VISTO "
+
+#~ msgid "GHOST-SEEN "
+#~ msgstr "FANTASMA-VISTO "
+
+#~ msgid ""
+#~ "Two drivers on the same bits: the result on real hardware is not "
+#~ "modelled; policy decides the emulated value."
+#~ msgstr ""
+#~ "Dos drivers en los mismos bits: el resultado en hardware real no está "
+#~ "modelado; la política decide el valor emulado."
+
+#, c-format
+#~ msgid "Conflict policy: %s   Undriven bits: %s (%02Xh now)"
+#~ msgstr "Política de conflicto: %s   Bits sin excitar: %s (ahora %02Xh)"
+
+#~ msgid "Show in I/O Ports##bus_insp_io"
+#~ msgstr "Mostrar en I/O Ports##bus_insp_io"
+
+#~ msgid "Add IORQ R BP##bus_insp_bpr"
+#~ msgstr "Añadir IORQ R BP##bus_insp_bpr"
+
+#~ msgid "Add IORQ W BP##bus_insp_bpw"
+#~ msgstr "Añadir IORQ W BP##bus_insp_bpw"
+
+#~ msgid "Reset activity##bus_insp_rst"
+#~ msgstr "Reiniciar actividad##bus_insp_rst"
+
+#~ msgid "Show in I/O Ports##bus_insp_io_m"
+#~ msgstr "Mostrar en I/O Ports##bus_insp_io_m"
+
+#~ msgid "Reset activity##bus_insp_rst_m"
+#~ msgstr "Reiniciar actividad##bus_insp_rst_m"
+
+#~ msgid "Kind"
+#~ msgstr "Tipo"
+
+#~ msgid "MMIO"
+#~ msgstr "MMIO"
+
+#~ msgid "Regions"
+#~ msgstr "Regiones"
+
+#~ msgid "Outputs"
+#~ msgstr "Salidas"
+
+#~ msgid "Action"
+#~ msgstr "Acción"
+
+#~ msgid "Disconnect##bus_dev_act"
+#~ msgstr "Desconectar##bus_dev_act"
+
+#~ msgid "Connect##bus_dev_act"
+#~ msgstr "Conectar##bus_dev_act"
+
+#~ msgid "Devices menu"
+#~ msgstr "menú Devices"
+
+#~ msgid "Owners##bus_col_own"
+#~ msgstr "Propietarios##bus_col_own"
+
+#~ msgid "Activity##bus_col_act"
+#~ msgstr "Actividad##bus_col_act"
+
+#~ msgid "Drive##bus_col_drv"
+#~ msgstr "Driver##bus_col_drv"
+
+#~ msgid "Legend##bus_legend"
+#~ msgstr "Leyenda##bus_legend"
+
+#~ msgid "Static owner table is available on the MZ-700 core only."
+#~ msgstr ""
+#~ "La tabla estática de propietarios solo existe para el núcleo MZ-700."
+
+#~ msgid "MMIO 0E0xxh##bus_tab_mmio"
+#~ msgstr "MMIO 0E0xxh##bus_tab_mmio"
+
+#~ msgid "Upper area mapped: the cells are reachable now."
+#~ msgstr "Área superior mapeada: las celdas son accesibles ahora."
+
+#~ msgid ""
+#~ "DRAM at 0E000h now: only owners decoding in the DRAM state react (cells "
+#~ "dimmed)."
+#~ msgstr ""
+#~ "Ahora DRAM en 0E000h: solo reaccionan los propietarios que decodifican en "
+#~ "el estado DRAM (celdas atenuadas)."
+
+#~ msgid "Cell halves: left = mapped state, right = DRAM state."
+#~ msgstr ""
+#~ "Mitades de celda: izquierda = estado mapeado, derecha = estado DRAM."
+
+#~ msgid "Devices##bus_tab_dev"
+#~ msgstr "Dispositivos##bus_tab_dev"
+
+#, c-format
+#~ msgid ""
+#~ "MZ-%u | devices: %u registered, %u connected | tracking %s | undriven "
+#~ "bits: %s (%02Xh) | policy: %s | frame %u"
+#~ msgstr ""
+#~ "MZ-%u | dispositivos: %u registrados, %u conectados | seguimiento %s | "
+#~ "bits sin excitar: %s (%02Xh) | política: %s | fotograma %u"
+
+#~ msgid "ON"
+#~ msgstr "ON"
+
+#~ msgid "latch"
+#~ msgstr "latch"
 
 #~ msgid "Restart emulator to apply change."
 #~ msgstr "Reinicie el emulador para aplicar el cambio."

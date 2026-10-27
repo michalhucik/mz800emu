@@ -25,6 +25,7 @@ st_IORQLOG_CONFIG g_iorqlog_config;
 int g_iorqlog_active = 0;
 
 uint8_t g_tracelog_iorq_unconnected = 0;
+uint8_t g_tracelog_iorq_conflict = 0;
 
 static st_TLOG_WRITER s_writer;
 static int s_writer_open = 0;

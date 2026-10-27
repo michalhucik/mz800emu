@@ -104,6 +104,8 @@ typedef struct st_IO_PORT_ACTIVITY
     uint32_t last_write_frame;
     uint8_t  last_read_value;
     uint32_t last_read_frame;
+    uint32_t ghost_hits;     /**< Přístupy bez vlastníka (IN i OUT na nemapovaný port; saturuje). Bus Map. */
+    uint32_t conflict_hits;  /**< Čtení s kolizí dvou budičů devbus (saturuje). Bus Map. */
 } st_IO_PORT_ACTIVITY;
 
 
@@ -135,9 +137,9 @@ extern st_IO_PORT_ACTIVITY g_io_activity[ IO_ACTIVITY_TABLE_SIZE ];
  * @brief UI tracking flag - default 0 (= zero overhead).
  *
  * Lifecycle:
- *  - UI vrstva (io_window) sets na 1 při otevření panelu + tracking
- *    enabled (= user opt-in).
- *  - UI sets na 0 při zavření panelu nebo při vypnutí tracking.
+ *  - UI vrstva (okno I/O Ports, okno Bus Map) ho zapíná a vypíná přes
+ *    io_activity_tracking_set_client(): flag = aspoň jeden klient chce
+ *    sledovat (zavření jednoho okna nevypne sledování druhému).
  *
  * Hot-path hook v port_*_with_logging_cb dělá `if (g_io_window_tracking_active)`
  * - default 0 = branch predictor friendly skip.
@@ -146,6 +148,58 @@ extern st_IO_PORT_ACTIVITY g_io_activity[ IO_ACTIVITY_TABLE_SIZE ];
  * (nejhorší dopad = jeden frame zpoždění zapnutí/vypnutí trackingu).
  */
 extern uint8_t g_io_window_tracking_active;
+
+/** @brief Klient sledování: okno I/O Ports. */
+#define IO_TRACKING_CLIENT_IO_WINDOW  0u
+/** @brief Klient sledování: okno Bus Map. */
+#define IO_TRACKING_CLIENT_BUS_MAP    1u
+
+/**
+ * @brief Zapne nebo vypne sledování za jednoho klienta (sdílený čítač).
+ *
+ * g_io_window_tracking_active = 1 právě tehdy, když aspoň jeden klient
+ * sleduje. Volající po změně návratu true zavolá přepočet callbacků CPU
+ * (dbg_ui_debugger_state_recompute()).
+ *
+ * @param client IO_TRACKING_CLIENT_*.
+ * @param on     true = klient chce sledovat.
+ * @return true = hodnota g_io_window_tracking_active se změnila.
+ * @pre UI vlákno (jediný zapisovatel masky klientů).
+ */
+bool io_activity_tracking_set_client ( unsigned client, bool on );
+
+/**
+ * @brief Sleduje právě klient @p client?
+ * @param client IO_TRACKING_CLIENT_*.
+ */
+bool io_activity_tracking_client_active ( unsigned client );
+
+/**
+ * @brief Zaznamená přístup bez vlastníka (ghost) na adresu @p port.
+ *
+ * Volat z port_*_with_logging_cb uvnitř `if (g_io_window_tracking_active)`
+ * po záznamu hitu, když statický switch ani devbus adresu neobsloužily
+ * (g_tracelog_iorq_unconnected). Čítač saturuje.
+ */
+void io_activity_record_ghost ( uint16_t port );
+
+/**
+ * @brief Zaznamená čtení s kolizí dvou budičů devbus na adrese @p port.
+ *
+ * Volat jako io_activity_record_ghost() podle g_tracelog_iorq_conflict.
+ */
+void io_activity_record_conflict ( uint16_t port );
+
+/**
+ * @brief Součet ghost (a kolizních) přístupů přes všech 256 horních bajtů adresy.
+ * @param low_byte      Dolní bajt portu.
+ * @param out_ghost     Výstup součtu ghost přístupů (smí být NULL).
+ * @param out_conflict  Výstup součtu kolizí (smí být NULL).
+ * @param out_total_in  Výstup součtu všech IN (smí být NULL).
+ * @param out_total_out Výstup součtu všech OUT (smí být NULL).
+ */
+void io_activity_get_totals_8bit ( uint8_t low_byte, uint64_t *out_ghost, uint64_t *out_conflict,
+                                   uint64_t *out_total_in, uint64_t *out_total_out );
 
 
 /**

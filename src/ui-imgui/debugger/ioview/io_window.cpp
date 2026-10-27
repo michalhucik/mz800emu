@@ -322,6 +322,24 @@ struct IoUiState {
 /** Globalní UI state instance. */
 static IoUiState g_io_ui;
 
+/** @brief Požadovaný skok na port (-1 = žádný); konzumuje render řádku. */
+static int s_jump_port = -1;
+
+
+extern "C" void io_window_heat_thresholds ( int *text_active, int *bg_hot )
+{
+    if ( text_active ) *text_active = g_io_ui.heat_text_active_threshold;
+    if ( bg_hot ) *bg_hot = g_io_ui.heat_bg_hot_threshold;
+}
+
+
+extern "C" void io_window_request_show_port ( uint16_t addr )
+{
+    g_gui->showIoWindow = true;
+    g_io_ui.want_switch_to_overview = true;
+    s_jump_port = (int) addr;
+}
+
 
 /* ========================================================================= */
 /*  Helpers                                                                  */
@@ -1145,9 +1163,8 @@ static void io_window_render_overview_tab ( void )
      * Volat jen na edge change, ne každý frame (= zbytečné z80_set_pread
      * každých 16 ms). */
     {
-        uint8_t want = g_io_ui.tracking_enable ? 1u : 0u;
-        if ( g_io_window_tracking_active != want ) {
-            g_io_window_tracking_active = want;
+        if ( io_activity_tracking_set_client ( IO_TRACKING_CLIENT_IO_WINDOW,
+                                               g_io_ui.tracking_enable != 0 ) ) {
             dbg_ui_debugger_state_recompute ( );
         }
     }
@@ -1228,6 +1245,17 @@ static void io_window_render_overview_tab ( void )
         }
         ImGui::PopID ( );
 
+        /* Skok na port (Bus Map): sekce s hledaným portem se rozbalí. */
+        if ( s_jump_port >= 0 && g_io_ui.section_collapsed[ s ] ) {
+            for ( size_t i = 0, n_cat = io_catalog_count ( ); i < n_cat; i++ ) {
+                const st_IO_PORT_DESC *p = io_catalog_at ( i );
+                if ( io_catalog_present ( i ) && p->name && p->addr == (uint16_t) s_jump_port
+                     && io_port_in_section ( p, sec ) ) {
+                    g_io_ui.section_collapsed[ s ] = 0;
+                    break;
+                }
+            }
+        }
         if ( g_io_ui.section_collapsed[ s ] ) continue;
 
         /* Render port rows v této section */
@@ -1240,6 +1268,10 @@ static void io_window_render_overview_tab ( void )
             if ( !io_port_in_section ( p, sec ) ) continue;
             if ( !io_filter_match ( p, g_io_ui.filter ) ) continue;
             io_window_render_port_row ( i, p );
+            if ( s_jump_port >= 0 && p->addr == (uint16_t) s_jump_port ) {
+                ImGui::SetScrollHereY ( 0.3f );
+                s_jump_port = -1;
+            }
         }
     }
 
@@ -2046,9 +2078,8 @@ static void io_window_render_history_tab ( void )
     if ( ImGui::Checkbox ( _L ( "Track##io_hist_track" ), &track_h_b ) ) {
         g_io_ui.tracking_enable = track_h_b ? 1 : 0;
         /* Edge change → propagate hot-path flag (stejne jako Overview). */
-        uint8_t want = g_io_ui.tracking_enable ? 1u : 0u;
-        if ( g_io_window_tracking_active != want ) {
-            g_io_window_tracking_active = want;
+        if ( io_activity_tracking_set_client ( IO_TRACKING_CLIENT_IO_WINDOW,
+                                               g_io_ui.tracking_enable != 0 ) ) {
             dbg_ui_debugger_state_recompute ( );
         }
         g_io_ui.cfg_tracking_active = g_io_ui.tracking_enable;
@@ -2757,8 +2788,9 @@ void io_window_render ( bool *p_open )
         /* Panel closed - vypni tracking flag (zero overhead).
          * Při skutečné změně 1→0 musíme volat debugger_state_changed,
          * aby se CPU callbacks vrátily na default (bez logging overhead). */
-        if ( g_io_window_tracking_active ) {
-            g_io_window_tracking_active = 0;
+        /* Sdílený čítač s oknem Bus Map: flag padne na 0, až když nesleduje
+         * ani druhé okno. */
+        if ( io_activity_tracking_set_client ( IO_TRACKING_CLIENT_IO_WINDOW, false ) ) {
             dbg_ui_debugger_state_recompute ( );
         }
         g_io_ui.was_open_last_frame = false;
@@ -2798,9 +2830,8 @@ void io_window_render ( bool *p_open )
      * na emu vlákně), jinak hooky v port_*_with_logging_cb nikdy neběží. */
     if ( !g_io_ui.was_open_last_frame ) {
         g_io_ui.tracking_enable = g_io_ui.cfg_tracking_active;
-        uint8_t want = g_io_ui.cfg_tracking_active ? 1u : 0u;
-        if ( g_io_window_tracking_active != want ) {
-            g_io_window_tracking_active = want;
+        if ( io_activity_tracking_set_client ( IO_TRACKING_CLIENT_IO_WINDOW,
+                                               g_io_ui.cfg_tracking_active != 0 ) ) {
             dbg_ui_debugger_state_recompute ( );
         }
     }

@@ -35,8 +35,10 @@ disconnected by default:
         {"key": "fill", "label": "RAM after power on", "type": "unsigned",
          "value": 0, "default": 0, "apply": "connect", "min": 0, "max": 255}
       ],
-      "ports": [{"first": 112, "last": 115, "read": true, "write": true}],
-      "mmio": [{"first": 57360, "last": 57362, "when": ["mapped"]}],
+      "ports": [{"first": 112, "last": 115, "read": true, "write": true,
+                 "drive": "tristate", "drive_mask": 255}],
+      "mmio": [{"first": 57360, "last": 57362, "when": ["mapped"],
+                "read": false, "write": true, "drive": "none", "drive_mask": 0}],
       "regions": [{"name": "Example RAM (2 KB)", "kind": "device",
                    "sub_id": 0, "size": 2048, "writable": true}],
       "video": {"glyph_source": true, "render_row": false},
@@ -47,11 +49,20 @@ disconnected by default:
 ```
 
 - `ports`: I/O ports by the low byte of the address (as on the board).
-  Numbers are decimal in JSON.
-- `mmio`: memory writes the device observes in the page 0E000h-0EFFFh.
+  Numbers are decimal in JSON. `drive` is the output stage of the device
+  on the data bus when read (`none` = write-only, never drives;
+  `tristate` = all 8 bits while decoded; `partial` = only the bits in
+  `drive_mask`; `open_collector`), declared from the schematic of the
+  card. Two devices may share a port when at most one of them drives it;
+  two drivers are a conflict (policy `DEVBUS/conflict`, default `refuse`).
+  Bits nobody drives return the undriven-bus model (`DEVBUS/bus_idle`).
+  The whole map with board chips: `emulator://docs/bus_map`.
+- `mmio`: memory accesses the device sees in the page 0E000h-0EFFFh.
   `when`: `mapped` = the upper area is mapped (after reset, `OUT (0E3h)`,
-  `OUT (0E4h)`), `dram` = DRAM is there (after `OUT (0E1h)`). The device
-  only watches the write, the board behaves as without the device.
+  `OUT (0E4h)`), `dram` = DRAM is there (after `OUT (0E1h)`). With
+  `drive: "none"` the device only watches the write, the board behaves as
+  without the device; a range with another `drive` also answers reads
+  (none of the built-in devices does).
 - `video`: `glyph_source` = the device supplies the character generator,
   `render_row` = the device draws the screen rows itself (e.g. 80 columns).
 - `outputs`: secondary video outputs (a second monitor) of the device;

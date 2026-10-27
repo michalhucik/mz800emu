@@ -113,6 +113,7 @@ typedef struct MyImGui
      */
     bool showMembrowserCharInserter;
     bool showIoWindow;              /**< I/O Ports viewer panel (D.7) */
+    bool showBusMapWindow;          /**< Bus Map - vlastníci portů a MMIO adres (menu HW & Devices, všechny platformy) */
     bool showSymbolsWindow;         /**< Symbol Browser panel (D.8.6) */
     bool showBookmarksWindow;       /**< Bookmarks panel (pojmenované adresové záložky) */
     bool showCpuWindow;             /**< CPU Registers - Variant B samostatné plovoucí okno */

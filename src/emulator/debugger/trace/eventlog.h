@@ -152,6 +152,7 @@ typedef enum en_EVENTLOG_IORQ_SUB
 {
     EVENTLOG_IORQ_SUB_NORMAL      = 0, /**< Port mapován, periferie vrátila / přijala data. */
     EVENTLOG_IORQ_SUB_UNCONNECTED = 1, /**< Ghost cyklus - port nemapován, sběrnice plovoucí. */
+    EVENTLOG_IORQ_SUB_CONFLICT    = 2, /**< Kolize: dva budiče devbus na témže bitu (politika AND / FIRST), hodnota je model. */
 } en_EVENTLOG_IORQ_SUB;
 
 /* ===========================================================================

@@ -29,6 +29,10 @@ const uint8_t devbus_mz700_colormap[8] = {0, 9, 10, 11, 12, 13, 14, 15};
 /*                           Pomocné kontroly                                */
 /* ------------------------------------------------------------------------- */
 
+/** @brief Přepočet aktivních MMIO rozsahů a souhrnu háčků (definice níže). */
+static bool devbus_recompute(void);
+
+
 st_DEVBUS_SLOT *devbus_slot_get(int slot)
 {
     if (slot < 0 || (unsigned) slot >= g_devbus.count) return NULL;
@@ -134,6 +138,33 @@ static bool devbus_arch_has_mmio(void)
 
 
 /**
+ * @brief Je deklarace budiče rozsahu konzistentní?
+ *
+ * read != NULL právě tehdy, když drive != NONE; UNKNOWN deskriptor mít
+ * nesmí; PARTIAL vyžaduje nenulovou masku.
+ *
+ * @param drive    Výstupní stupeň.
+ * @param mask     drive_mask z deskriptoru.
+ * @param has_read read != NULL.
+ */
+static bool devbus_drive_valid(en_DEVBUS_DRIVE drive, uint8_t mask, bool has_read)
+{
+    switch (drive) {
+    case DEVBUS_DRIVE_NONE:
+        return !has_read;
+    case DEVBUS_DRIVE_TRISTATE:
+    case DEVBUS_DRIVE_OPEN_COLLECTOR:
+        return has_read;
+    case DEVBUS_DRIVE_PARTIAL:
+        return has_read && mask != 0;
+    case DEVBUS_DRIVE_UNKNOWN:
+    default:
+        return false;
+    }
+}
+
+
+/**
  * @brief Ověří deskriptor proti pravidlům devbus.h a adaptéru.
  * @return DEVBUS_OK, DEVBUS_ERR_INVALID, DEVBUS_ERR_UNSUPPORTED.
  */
@@ -180,6 +211,7 @@ static int devbus_validate_desc(const st_DEVBUS_DEVICE_DESC *d)
     for (unsigned i = 0; i < d->port_count; i++) {
         const st_DEVBUS_PORT_RANGE *r = &d->ports[i];
         if (r->first > r->last) return DEVBUS_ERR_INVALID;
+        if (!devbus_drive_valid(r->drive, r->drive_mask, r->read != NULL)) return DEVBUS_ERR_INVALID;
         for (unsigned p = r->first; p <= r->last; p++) {
             if (g_devbus.arch->port_is_static && g_devbus.arch->port_is_static((uint8_t) p))
                 return DEVBUS_ERR_INVALID;
@@ -195,7 +227,8 @@ static int devbus_validate_desc(const st_DEVBUS_DEVICE_DESC *d)
     if (d->mmio_count && !devbus_arch_has_mmio()) return DEVBUS_ERR_UNSUPPORTED;
     for (unsigned i = 0; i < d->mmio_count; i++) {
         const st_DEVBUS_MMIO_RANGE *r = &d->mmio[i];
-        if (r->first > r->last || !r->write) return DEVBUS_ERR_INVALID;
+        if (r->first > r->last || (!r->write && !r->read)) return DEVBUS_ERR_INVALID;
+        if (!devbus_drive_valid(r->drive, r->drive_mask, r->read != NULL)) return DEVBUS_ERR_INVALID;
         if (!devbus_mmio_range_fits(r->first, r->last, r->when_default)) return DEVBUS_ERR_INVALID;
         for (unsigned j = 0; j < i; j++) {
             if (!(r->last < d->mmio[j].first || r->first > d->mmio[j].last)) return DEVBUS_ERR_INVALID;
@@ -235,6 +268,10 @@ void devbus_init(const st_DEVBUS_ARCH_OPS *ops)
     }
     g_devbus.arch = ops;
     g_devbus.initialized = true;
+    g_devbus.conflict_policy = DEVBUS_CONFLICT_REFUSE;
+    g_devbus.bus_idle = DEVBUS_IDLE_LATCH;
+    g_devbus.bus_idle_value = 0xFFu;
+    devbus_cfg_register_core();
 }
 
 
@@ -295,6 +332,8 @@ void devbus_start(void)
                     g_devbus.slot[i].desc->id, rc);
         }
     }
+    /* Bez připojeného zařízení, ale s modelem CONST z INI: obálka portů. */
+    if (devbus_recompute()) g_devbus.arch->hooks_changed();
 }
 
 
@@ -386,9 +425,11 @@ static bool devbus_recompute(void)
             a->first = d->mmio[m].first;
             a->last = d->mmio[m].last;
             a->when = s->mmio_when[m];
-            a->write = d->mmio[m].write;
+            a->range = &d->mmio[m];
             a->ctx = s->ctx;
+            a->slot = (uint8_t) i;
             h.mmio = true;
+            if (d->mmio[m].drive != DEVBUS_DRIVE_NONE) h.mmio_read = true;
         }
         if (d->video) {
             if (d->video->glyph_source) {
@@ -402,6 +443,9 @@ static bool devbus_recompute(void)
         }
         if (d->ops->frame_done) g_devbus.frame_done_count++;
     }
+    /* Model nebuzené sběrnice CONST platí i pro porty bez zařízení: obálka
+     * portů musí být nainstalovaná vždy (statický switch sám vrací latch). */
+    if (g_devbus.bus_idle == DEVBUS_IDLE_CONST) h.ports = true;
     g_devbus_hooks = h;
     return memcmp(&old, &h, sizeof(h)) != 0;
 }
@@ -409,22 +453,40 @@ static bool devbus_recompute(void)
 
 /**
  * @brief Koliduje zařízení @p s s některým jiným připojeným zařízením?
+ *
+ * Porty: plný slot (DEVBUS_MAX_PORT_OWNERS) je kolize vždy; dva budiče
+ * s překrývajícími se maskami (devbus_drive_overlaps()) jen s politikou
+ * REFUSE. Vlastníci s drive NONE se vždy přidají. MMIO: překryv adres je
+ * kolize jen mezi dvěma budiči (opět podle politiky). Dva glyph_source
+ * nebo dva render_row jsou kolize vždy.
  */
 static bool devbus_conflicts(const st_DEVBUS_SLOT *s)
 {
     const st_DEVBUS_DEVICE_DESC *d = s->desc;
+    bool refuse = (g_devbus.conflict_policy == DEVBUS_CONFLICT_REFUSE);
     for (unsigned i = 0; i < d->port_count; i++) {
-        for (unsigned p = d->ports[i].first; p <= d->ports[i].last; p++) {
-            if (g_devbus_ports[p].range) return true;
+        const st_DEVBUS_PORT_RANGE *r = &d->ports[i];
+        for (unsigned p = r->first; p <= r->last; p++) {
+            const st_DEVBUS_PORT_SLOT *ps = &g_devbus_ports[p];
+            if (ps->count >= DEVBUS_MAX_PORT_OWNERS) return true;
+            if (!refuse) continue;
+            for (unsigned k = 0; k < ps->count; k++) {
+                const st_DEVBUS_PORT_RANGE *o = ps->owner[k].range;
+                if (devbus_drive_overlaps(r->drive, r->drive_mask, o->drive, o->drive_mask)) return true;
+            }
         }
     }
     for (unsigned i = 0; i < g_devbus.count; i++) {
         const st_DEVBUS_SLOT *o = &g_devbus.slot[i];
         if (o == s || !o->connected) continue;
         const st_DEVBUS_DEVICE_DESC *od = o->desc;
-        for (unsigned a = 0; a < d->mmio_count; a++) {
-            for (unsigned b = 0; b < od->mmio_count; b++) {
-                if (!(d->mmio[a].last < od->mmio[b].first || d->mmio[a].first > od->mmio[b].last)) return true;
+        if (refuse) {
+            for (unsigned a = 0; a < d->mmio_count; a++) {
+                for (unsigned b = 0; b < od->mmio_count; b++) {
+                    if (d->mmio[a].last < od->mmio[b].first || d->mmio[a].first > od->mmio[b].last) continue;
+                    if (devbus_drive_overlaps(d->mmio[a].drive, d->mmio[a].drive_mask,
+                                              od->mmio[b].drive, od->mmio[b].drive_mask)) return true;
+                }
             }
         }
         if (d->video && od->video) {
@@ -447,8 +509,12 @@ int devbus_connect(int slot)
     const st_DEVBUS_DEVICE_DESC *d = s->desc;
     for (unsigned i = 0; i < d->port_count; i++) {
         for (unsigned p = d->ports[i].first; p <= d->ports[i].last; p++) {
-            g_devbus_ports[p].ctx = s->ctx;
-            g_devbus_ports[p].range = &d->ports[i];
+            st_DEVBUS_PORT_SLOT *ps = &g_devbus_ports[p];
+            st_DEVBUS_PORT_OWNER *o = &ps->owner[ps->count];
+            o->range = &d->ports[i];
+            o->ctx = s->ctx;
+            o->slot = (uint8_t) slot;
+            ps->count++;
         }
     }
     __atomic_store_n(&s->connected, 1u, __ATOMIC_RELEASE);
@@ -468,8 +534,16 @@ int devbus_disconnect(int slot)
     const st_DEVBUS_DEVICE_DESC *d = s->desc;
     for (unsigned i = 0; i < d->port_count; i++) {
         for (unsigned p = d->ports[i].first; p <= d->ports[i].last; p++) {
-            g_devbus_ports[p].range = NULL;
-            g_devbus_ports[p].ctx = NULL;
+            st_DEVBUS_PORT_SLOT *ps = &g_devbus_ports[p];
+            unsigned w = 0;
+            for (unsigned k = 0; k < ps->count; k++) {
+                /* Podle slotu, ne podle rozsahu: dvě zařízení smějí sdílet
+                 * tutéž statickou tabulku rozsahů (testovací dummy). */
+                if (ps->owner[k].slot == (uint8_t) slot) continue;
+                ps->owner[w++] = ps->owner[k];
+            }
+            for (unsigned k = w; k < ps->count; k++) memset(&ps->owner[k], 0, sizeof(ps->owner[k]));
+            ps->count = (uint8_t) w;
         }
     }
     __atomic_store_n(&s->connected, 0u, __ATOMIC_RELEASE);
@@ -664,12 +738,12 @@ void devbus_mmio_dispatch(uint16_t addr, uint8_t value, unsigned flags)
     if (debugger) devbus_debugger_access_begin();
     for (unsigned i = 0; i < g_devbus.mmio_active_count; i++) {
         const st_DEVBUS_MMIO_ACTIVE *a = &g_devbus.mmio_active[i];
-        if (addr < a->first || addr > a->last || !(a->when & state)) continue;
+        if (addr < a->first || addr > a->last || !(a->when & state) || !a->range->write) continue;
         if ((flags & DEVBUS_ACC_CPU) && !synced) {
             if (g_devbus.arch->mmio_sync) g_devbus.arch->mmio_sync();
             synced = true;
         }
-        a->write(a->ctx, addr, value, flags);
+        a->range->write(a->ctx, addr, value, flags);
     }
     if (debugger) devbus_debugger_access_end();
 }
@@ -688,17 +762,292 @@ bool devbus_mmio_claims(uint16_t addr)
 }
 
 
+/**
+ * @brief Společné tělo čtení MMIO (read nebo peek) nad aktivními rozsahy.
+ * @param use_peek true = volat peek a kolizi nehlásit.
+ * @return Počet příspěvků zařízení (bez desky).
+ */
+static unsigned devbus_mmio_collect(uint16_t addr, uint8_t board_value, bool board_driven, unsigned flags,
+                                    bool use_peek, st_DEVBUS_RESOLVED *out, st_DEVBUS_CONFLICT_INFO *info)
+{
+    st_DEVBUS_CONTRIB c[DEVBUS_MAX_PORT_OWNERS + 1];
+    unsigned n = 0;
+    unsigned state = flags & DEVBUS_MMIO_WHEN_MASK;
+    c[n].drive = DEVBUS_DRIVE_TRISTATE;
+    c[n].value = board_value;
+    c[n].driven = board_driven ? 0xFFu : 0u;
+    info->part[n].slot = -1;
+    info->part[n].value = board_value;
+    info->part[n].driven = c[n].driven;
+    n++;
+    unsigned devices = 0;
+    for (unsigned i = 0; i < g_devbus.mmio_active_count && n < DEVBUS_MAX_PORT_OWNERS + 1; i++) {
+        const st_DEVBUS_MMIO_ACTIVE *a = &g_devbus.mmio_active[i];
+        const st_DEVBUS_MMIO_RANGE *r = a->range;
+        if (addr < a->first || addr > a->last || !(a->when & state) || r->drive == DEVBUS_DRIVE_NONE) continue;
+        uint8_t (*fn)(void *, uint16_t, unsigned, uint8_t *) = use_peek ? r->peek : r->read;
+        if (!fn) continue;
+        uint8_t mask = devbus_drive_mask(r->drive, r->drive_mask);
+        uint8_t driven = mask;
+        uint8_t v = fn(a->ctx, addr, flags, &driven);
+        c[n].drive = r->drive;
+        c[n].value = v;
+        c[n].driven = (uint8_t) (driven & mask);
+        info->part[n].slot = (int8_t) a->slot;
+        info->part[n].value = v;
+        info->part[n].driven = c[n].driven;
+        n++;
+        devices++;
+    }
+    info->count = n;
+    devbus_resolve(c, n, devbus_idle_byte(), (en_DEVBUS_CONFLICT) g_devbus.conflict_policy, out);
+    return devices;
+}
+
+
+/**
+ * @brief Zaznamená kolizi čtení: čítač portu, poslední kolize, adaptér.
+ * @param info     Vyplněné příspěvky (addr, mmio, part, count).
+ * @param out      Výsledek rezoluce s nenulovou maskou kolize.
+ * @param port_lsb Dolní bajt adresy pro čítač (u MMIO dolní bajt adresy).
+ */
+static void devbus_conflict_report(st_DEVBUS_CONFLICT_INFO *info, const st_DEVBUS_RESOLVED *out, uint8_t port_lsb)
+{
+    info->result = out->value;
+    info->conflict = out->conflict;
+    info->driven = out->driven;
+    info->policy = (en_DEVBUS_CONFLICT) g_devbus.conflict_policy;
+    info->ticks = devbus_time_ticks();
+    if (info->mmio) {
+        if (info->addr >= 0xE000u && info->addr <= 0xE0FFu) {
+            uint32_t *c = &g_devbus.mmio_conflict_hits[info->addr - 0xE000u];
+            if (*c != UINT32_MAX) (*c)++;
+        }
+    } else if (g_devbus.conflict_hits[port_lsb] != UINT32_MAX) {
+        g_devbus.conflict_hits[port_lsb]++;
+    }
+    g_devbus.last_conflict = *info;
+    g_devbus.has_last_conflict = true;
+    if (g_devbus.arch && g_devbus.arch->bus_conflict) g_devbus.arch->bus_conflict(info);
+}
+
+
+uint8_t devbus_mmio_read_resolve(uint16_t addr, uint8_t board_value, bool board_driven,
+                                 unsigned flags, uint8_t *driven_out)
+{
+    st_DEVBUS_RESOLVED out;
+    st_DEVBUS_CONFLICT_INFO info;
+    info.addr = addr;
+    info.mmio = 1;
+    devbus_mmio_collect(addr, board_value, board_driven, flags, false, &out, &info);
+    if (out.conflict) devbus_conflict_report(&info, &out, (uint8_t) (addr & 0xffu));
+    if (driven_out) *driven_out = out.driven;
+    return out.value;
+}
+
+
+bool devbus_mmio_peek(uint16_t addr, uint8_t board_value, bool board_driven, unsigned flags,
+                      uint8_t *value, uint8_t *driven)
+{
+    st_DEVBUS_RESOLVED out;
+    st_DEVBUS_CONFLICT_INFO info;
+    info.addr = addr;
+    info.mmio = 1;
+    unsigned devices = devbus_mmio_collect(addr, board_value, board_driven, flags, true, &out, &info);
+    if (value) *value = out.value;
+    if (driven) *driven = out.driven;
+    return devices > 0;
+}
+
+
 /* ------------------------------------------------------------------------- */
 /*                                  Porty                                    */
 /* ------------------------------------------------------------------------- */
 
-bool devbus_port_peek(uint16_t port, uint8_t *out)
+/**
+ * @brief Společné tělo čtení portu (read nebo peek) nad seznamem vlastníků.
+ *
+ * Deska je první příspěvek (TRISTATE, budí jen při @p board_driven), pak
+ * vlastníci v pořadí připojení. Vlastník bez handleru nepřispívá.
+ *
+ * @param use_peek true = volat peek.
+ * @param out      Výsledek rezoluce.
+ * @param info     Příspěvky pro případné hlášení kolize.
+ */
+static void devbus_port_collect(uint16_t port, uint8_t board_value, bool board_driven, bool use_peek,
+                                st_DEVBUS_RESOLVED *out, st_DEVBUS_CONFLICT_INFO *info)
 {
     const st_DEVBUS_PORT_SLOT *ps = &g_devbus_ports[port & 0xff];
-    if (!ps->range || !ps->range->peek || !out) return false;
-    *out = ps->range->peek(ps->ctx, port);
+    st_DEVBUS_CONTRIB c[DEVBUS_MAX_PORT_OWNERS + 1];
+    unsigned n = 0;
+    c[n].drive = DEVBUS_DRIVE_TRISTATE;
+    c[n].value = board_value;
+    c[n].driven = board_driven ? 0xFFu : 0u;
+    info->part[n].slot = -1;
+    info->part[n].value = board_value;
+    info->part[n].driven = c[n].driven;
+    n++;
+    for (unsigned k = 0; k < ps->count; k++) {
+        const st_DEVBUS_PORT_OWNER *o = &ps->owner[k];
+        const st_DEVBUS_PORT_RANGE *r = o->range;
+        uint8_t (*fn)(void *, uint16_t, uint8_t *) = use_peek ? r->peek : r->read;
+        if (!fn || r->drive == DEVBUS_DRIVE_NONE) continue;
+        uint8_t mask = devbus_drive_mask(r->drive, r->drive_mask);
+        uint8_t driven = mask;
+        uint8_t v = fn(o->ctx, port, &driven);
+        c[n].drive = r->drive;
+        c[n].value = v;
+        c[n].driven = (uint8_t) (driven & mask);
+        info->part[n].slot = (int8_t) o->slot;
+        info->part[n].value = v;
+        info->part[n].driven = c[n].driven;
+        n++;
+    }
+    info->count = n;
+    devbus_resolve(c, n, devbus_idle_byte(), (en_DEVBUS_CONFLICT) g_devbus.conflict_policy, out);
+}
+
+
+uint8_t devbus_port_read_resolve(uint16_t port, uint8_t board_value, bool board_driven, uint8_t *driven_out)
+{
+    const st_DEVBUS_PORT_SLOT *ps = &g_devbus_ports[port & 0xff];
+    /* Rychlá cesta: jediný vlastník budící všech 8 bitů bez desky (K&P). */
+    if (ps->count == 1 && !board_driven) {
+        const st_DEVBUS_PORT_OWNER *o = &ps->owner[0];
+        const st_DEVBUS_PORT_RANGE *r = o->range;
+        if (r->read) {
+            uint8_t mask = devbus_drive_mask(r->drive, r->drive_mask);
+            uint8_t driven = mask;
+            uint8_t v = r->read(o->ctx, port, &driven);
+            driven &= mask;
+            if (driven == 0xFFu) {
+                if (driven_out) *driven_out = 0xFFu;
+                return v;
+            }
+            uint8_t idle = devbus_idle_byte();
+            if (driven_out) *driven_out = driven;
+            return (uint8_t) ((v & driven) | (idle & (uint8_t) ~driven));
+        }
+        if (driven_out) *driven_out = 0;
+        return devbus_idle_byte();
+    }
+    st_DEVBUS_RESOLVED out;
+    st_DEVBUS_CONFLICT_INFO info;
+    info.addr = port;
+    info.mmio = 0;
+    devbus_port_collect(port, board_value, board_driven, false, &out, &info);
+    if (out.conflict) devbus_conflict_report(&info, &out, (uint8_t) (port & 0xffu));
+    if (driven_out) *driven_out = out.driven;
+    return out.value;
+}
+
+
+void devbus_port_write_all(uint16_t port, uint8_t value)
+{
+    const st_DEVBUS_PORT_SLOT *ps = &g_devbus_ports[port & 0xff];
+    for (unsigned k = 0; k < ps->count; k++) {
+        const st_DEVBUS_PORT_OWNER *o = &ps->owner[k];
+        if (o->range->write) o->range->write(o->ctx, port, value);
+    }
+}
+
+
+bool devbus_port_peek_ex(uint16_t port, uint8_t *value, uint8_t *driven)
+{
+    const st_DEVBUS_PORT_SLOT *ps = &g_devbus_ports[port & 0xff];
+    if (!ps->count || !value) return false;
+    st_DEVBUS_RESOLVED out;
+    st_DEVBUS_CONFLICT_INFO info;
+    info.addr = port;
+    info.mmio = 0;
+    devbus_port_collect(port, 0, false, true, &out, &info);
+    *value = out.value;
+    if (driven) *driven = out.driven;
     return true;
 }
+
+
+bool devbus_port_peek(uint16_t port, uint8_t *out)
+{
+    return devbus_port_peek_ex(port, out, NULL);
+}
+
+
+uint32_t devbus_port_conflict_hits(uint8_t port_lsb)
+{
+    return g_devbus.conflict_hits[port_lsb];
+}
+
+
+uint32_t devbus_mmio_conflict_hits(uint16_t addr)
+{
+    if (addr < 0xE000u || addr > 0xE0FFu) return 0;
+    return g_devbus.mmio_conflict_hits[addr - 0xE000u];
+}
+
+
+void devbus_conflict_hits_reset(void)
+{
+    memset(g_devbus.conflict_hits, 0, sizeof(g_devbus.conflict_hits));
+    memset(g_devbus.mmio_conflict_hits, 0, sizeof(g_devbus.mmio_conflict_hits));
+    g_devbus.has_last_conflict = false;
+}
+
+
+const st_DEVBUS_CONFLICT_INFO *devbus_last_conflict(void)
+{
+    return g_devbus.has_last_conflict ? &g_devbus.last_conflict : NULL;
+}
+
+
+/* ------------------------------------------------------------------------- */
+/*                 Konfigurace sběrnice (politika, nebuzená sběrnice)         */
+/* ------------------------------------------------------------------------- */
+
+void devbus_set_conflict_policy(en_DEVBUS_CONFLICT policy)
+{
+    if (policy != DEVBUS_CONFLICT_REFUSE && policy != DEVBUS_CONFLICT_AND && policy != DEVBUS_CONFLICT_FIRST) return;
+    g_devbus.conflict_policy = (unsigned) policy;
+}
+
+
+en_DEVBUS_CONFLICT devbus_conflict_policy(void)
+{
+    return (en_DEVBUS_CONFLICT) g_devbus.conflict_policy;
+}
+
+
+void devbus_set_bus_idle(en_DEVBUS_IDLE mode, uint8_t value)
+{
+    if (mode != DEVBUS_IDLE_LATCH && mode != DEVBUS_IDLE_CONST) return;
+    bool changed = (g_devbus.bus_idle != (unsigned) mode);
+    g_devbus.bus_idle = (unsigned) mode;
+    g_devbus.bus_idle_value = value;
+    /* Změna modelu mění potřebu obálky portů (CONST = vždy). */
+    if (changed && g_devbus.initialized && g_devbus.started && devbus_recompute()) g_devbus.arch->hooks_changed();
+}
+
+
+en_DEVBUS_IDLE devbus_bus_idle(void)
+{
+    return (en_DEVBUS_IDLE) g_devbus.bus_idle;
+}
+
+
+uint8_t devbus_bus_idle_value(void)
+{
+    return (uint8_t) g_devbus.bus_idle_value;
+}
+
+
+uint8_t devbus_idle_byte(void)
+{
+    if (g_devbus.bus_idle == DEVBUS_IDLE_CONST) return (uint8_t) g_devbus.bus_idle_value;
+    if (g_devbus.arch && g_devbus.arch->bus_latch) return g_devbus.arch->bus_latch();
+    return 0;
+}
+
+
 
 
 /* ------------------------------------------------------------------------- */

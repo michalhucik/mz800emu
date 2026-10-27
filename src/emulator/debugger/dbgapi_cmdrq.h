@@ -790,6 +790,12 @@ typedef enum en_DBGAPI_CMD
      * Čte emu vlákno přes devbus_vout_read_last(). Na KONCI enumu. */
     DBGAPI_CMD_DEVBUS_VOUT_READ,     /* Snímek výstupu zařízení - data_ptr: st_DBGAPI_DEVBUS_VOUT_READ_PARAM* */
 
+    /* bus-model (D6 mz700-devices) - snímek Bus Map (vlastníci adres,
+     * příznaky, aktivita; bus_map.h) a čtení adresy bez vedlejších efektů
+     * s rezolucí sběrnice. Čte emu vlákno. Na KONCI enumu. */
+    DBGAPI_CMD_BUS_MAP,              /* Snímek Bus Map - data_ptr: st_DBGAPI_BUS_MAP_PARAM* */
+    DBGAPI_CMD_BUS_PEEK,             /* Peek portu / MMIO adresy s maskou buzených bitů - data_ptr: st_DBGAPI_BUS_PEEK_PARAM* */
+
     /* Zarážka: počet příkazů, sama není příkaz. Nové příkazy patří PŘED
      * ni. Každý příkaz musí mít řádek v tabulce vlastností
      * (dbgapi_cmd_props.c: druh pro revizi stavu, třída záznamu vstupů);
@@ -5687,6 +5693,44 @@ typedef struct st_DBGAPI_DEVBUS_VOUT_READ_PARAM
     uint32_t seq;                       /**< (OUT) Pořadí snímku (available = 1). */
     uint8_t *pixels;                    /**< (OUT) Indexy palety po řádcích (available = 1), uvolní odesílatel. */
 } st_DBGAPI_DEVBUS_VOUT_READ_PARAM;
+
+/**
+ * @brief Parametr DBGAPI_CMD_BUS_MAP (čtení bez vedlejších efektů).
+ *
+ * Snímek alokuje odesílatel (st_BUS_MAP_SNAPSHOT je velký, cca 140 kB:
+ * g_new0 nebo statická instance); emu vlákno ho vyplní bus_map_snapshot().
+ */
+typedef struct st_DBGAPI_BUS_MAP_PARAM
+{
+    unsigned want;              /**< (IN) Maska BUS_WANT_* (bus_map.h). */
+    struct st_BUS_MAP_SNAPSHOT *snap; /**< (IN) Cíl snímku (alokuje odesílatel). */
+} st_DBGAPI_BUS_MAP_PARAM;
+
+/** @brief Zdroj hodnoty peeku: nikdo nebudí, hodnota je model nebuzené sběrnice. */
+#define DBGAPI_BUS_PEEK_SRC_IDLE    0
+/** @brief Zdroj hodnoty peeku: zrcadlo statického čipu (katalog I/O nebo peek paměti). */
+#define DBGAPI_BUS_PEEK_SRC_BOARD   1
+/** @brief Zdroj hodnoty peeku: zařízení devbus (složené s deskou a idle). */
+#define DBGAPI_BUS_PEEK_SRC_DEVBUS  2
+
+/**
+ * @brief Parametr DBGAPI_CMD_BUS_PEEK (čtení bez vedlejších efektů).
+ *
+ * Port: zařízení devbus přes peek handlery s rezolucí sběrnice, jinak
+ * zrcadlo katalogu I/O, jinak hodnota nebuzené sběrnice. MMIO (jen okno
+ * 0E000h-0E0FFh na MZ-700): peek desky (memory_read_byte_no_se) složený
+ * s aktivními rozsahy devbus s čtecí cestou. Nemění stav stroje ani
+ * čítače kolizí.
+ */
+typedef struct st_DBGAPI_BUS_PEEK_PARAM
+{
+    uint16_t addr;      /**< (IN) Adresa portu (celá, dekód podle dolního bajtu) nebo MMIO adresa. */
+    int      mmio;      /**< (IN) 1 = MMIO adresa, 0 = port. */
+    uint8_t  value;     /**< (OUT) Hodnota, kterou by CPU přečetl. */
+    uint8_t  driven;    /**< (OUT) Maska bitů, které někdo budí (0 = celá hodnota je model nebuzené sběrnice). */
+    int      source;    /**< (OUT) DBGAPI_BUS_PEEK_SRC_*. */
+    int      supported; /**< (OUT) 0 = MMIO peek na této platformě není (jen MZ-700). */
+} st_DBGAPI_BUS_PEEK_PARAM;
 
 #ifdef __cplusplus
 } /* extern "C" */

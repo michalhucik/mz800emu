@@ -351,6 +351,46 @@ mz_add_test(io_catalog
     LABELS   "emu;debugger"
 )
 
+# Bus Map: statická tabulka vlastníků MZ-700 (mz700_bus_owners.c) proti
+# referenčnímu seznamu větví switche mz700_iorq.c; port_is_static nad
+# tabulkou; tvar řádků. Bez emulátoru (tabulka závisí jen na mz700_config.h).
+mz_add_test(bus_map_static
+    TYPE     STANDALONE
+    SOURCES  test_bus_map_static.c
+             ${CMAKE_SOURCE_DIR}/src/emulator/mzarch/mz700/mz700_bus_owners.c
+             ${CMAKE_SOURCE_DIR}/src/emulator/hw-generic/devbus/bus_owners.c
+             ${CMAKE_SOURCE_DIR}/src/emulator/hw-generic/devbus/devbus_resolve.c
+    LABELS   "standalone;debugger;devbus"
+)
+
+# Totéž pro MZ-800 (mz800_bus_owners.c proti mz800_iorq.c a mz800_memory.c)
+# a MZ-1500 (mz1500_bus_owners.c proti mz1500_iorq.c a mz1500_memory.c).
+mz_add_test(bus_map_static_mz800
+    TYPE     STANDALONE
+    SOURCES  test_bus_map_static_mz800.c
+             ${CMAKE_SOURCE_DIR}/src/emulator/mzarch/mz800/mz800_bus_owners.c
+             ${CMAKE_SOURCE_DIR}/src/emulator/hw-generic/devbus/bus_owners.c
+             ${CMAKE_SOURCE_DIR}/src/emulator/hw-generic/devbus/devbus_resolve.c
+    LABELS   "standalone;debugger;devbus"
+)
+
+mz_add_test(bus_map_static_mz1500
+    TYPE     STANDALONE
+    SOURCES  test_bus_map_static_mz1500.c
+             ${CMAKE_SOURCE_DIR}/src/emulator/mzarch/mz1500/mz1500_bus_owners.c
+             ${CMAKE_SOURCE_DIR}/src/emulator/hw-generic/devbus/bus_owners.c
+             ${CMAKE_SOURCE_DIR}/src/emulator/hw-generic/devbus/devbus_resolve.c
+    LABELS   "standalone;debugger;devbus"
+)
+
+# Bus Map: snímek vlastníků nad zařízeními devbus (falešný adaptér, dummy):
+# vlastníci portů a MMIO, příznaky, zařízení, aktivita, sdílený čítač sledování.
+mz_add_test(bus_map
+    TYPE     EMU
+    SOURCES  test_bus_map.c ${CMAKE_CURRENT_SOURCE_DIR}/../peripherals/devbus_dummy.c
+    LABELS   "emu;debugger;devbus"
+)
+
 mz_add_test(io_activity
     TYPE     EMU
     SOURCES  test_io_activity.c

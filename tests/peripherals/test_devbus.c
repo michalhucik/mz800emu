@@ -46,11 +46,20 @@ static uint64_t fake_time_ticks(void) { return 123456789ull; }
 static void fake_invalidate(void) { s_invalidate++; }
 static void fake_mmio_sync(void) { s_mmio_sync++; }
 
-/** @brief Falešný adaptér (okna MMIO jako MZ-700). */
+/** @brief Latch datové sběrnice falešné platformy (model nebuzené sběrnice LATCH). */
+static uint8_t s_latch = 0x00;
+static uint8_t fake_bus_latch(void) { return s_latch; }
+/** @brief Počet hlášených kolizí a kopie poslední. */
+static unsigned s_conflicts;
+static st_DEVBUS_CONFLICT_INFO s_last_conflict;
+static void fake_bus_conflict(const st_DEVBUS_CONFLICT_INFO *info) { s_conflicts++; s_last_conflict = *info; }
+
+/** @brief Falešný adaptér (okna MMIO jako MZ-700, latch, hlášení kolizí). */
 static const st_DEVBUS_ARCH_OPS s_fake_ops = {
     DEVBUS_PLATFORM_MZ700, fake_port_is_static, fake_hooks_changed, fake_cpu_wait,
     fake_time_ticks, fake_invalidate, fake_mmio_sync,
     0xE009, 0xEFFF, 0xE000, 0xEFFF,
+    fake_bus_latch, NULL, fake_bus_conflict,
 };
 
 /** @brief Dummy zařízení A, B (B koliduje s A porty i MMIO). */
@@ -90,6 +99,8 @@ static void drop_tmp_ini(void)
 void setUp(void)
 {
     s_hooks_changed = s_wait_sum = s_mmio_sync = s_invalidate = 0;
+    s_conflicts = 0;
+    s_latch = 0;
     memset(&s_a, 0, sizeof(s_a));
     memset(&s_b, 0, sizeof(s_b));
     devbus_dummy_make_desc(&s_desc_a, "dummy", "DUMMY", 0);
@@ -226,13 +237,13 @@ void test_registry_invalid_desc(void)
 
 void test_registry_static_ports_rejected(void)
 {
-    static const st_DEVBUS_PORT_RANGE p_static[] = { { 0x4f, 0x50, NULL, NULL, NULL } };
+    static const st_DEVBUS_PORT_RANGE p_static[] = { { .first = 0x4f, .last = 0x50 } };
     s_desc_tmp = s_desc_a;
     s_desc_tmp.ports = p_static;
     TEST_ASSERT_EQUAL_INT(DEVBUS_ERR_INVALID, devbus_register(&s_desc_tmp, &s_a));
     /* Překryv rozsahů téhož zařízení */
     static const st_DEVBUS_PORT_RANGE p_overlap[] = {
-        { 0x70, 0x72, NULL, NULL, NULL }, { 0x72, 0x73, NULL, NULL, NULL } };
+        { .first = 0x70, .last = 0x72 }, { .first = 0x72, .last = 0x73 } };
     s_desc_tmp.ports = p_overlap;
     s_desc_tmp.port_count = 2;
     TEST_ASSERT_EQUAL_INT(DEVBUS_ERR_INVALID, devbus_register(&s_desc_tmp, &s_a));
@@ -243,11 +254,11 @@ static void nop_mmio(void *c, uint16_t a, uint8_t v, unsigned f) { (void) c; (vo
 void test_registry_mmio_window(void)
 {
     /* MAPPED nesmí zasahovat do 0E000h-0E008h (8255, 8253, GDG) */
-    static const st_DEVBUS_MMIO_RANGE m_low[] = { { 0xE008, 0xE009, DEVBUS_MMIO_MAPPED, nop_mmio } };
+    static const st_DEVBUS_MMIO_RANGE m_low[] = { { .first = 0xE008, .last = 0xE009, .when_default = DEVBUS_MMIO_MAPPED, .write = nop_mmio } };
     /* DRAM smí od 0E000h */
-    static const st_DEVBUS_MMIO_RANGE m_dram[] = { { 0xE000, 0xE001, DEVBUS_MMIO_DRAM, nop_mmio } };
+    static const st_DEVBUS_MMIO_RANGE m_dram[] = { { .first = 0xE000, .last = 0xE001, .when_default = DEVBUS_MMIO_DRAM, .write = nop_mmio } };
     /* Mimo stránku 0E000h */
-    static const st_DEVBUS_MMIO_RANGE m_out[] = { { 0xEFFF, 0xF000, DEVBUS_MMIO_DRAM, nop_mmio } };
+    static const st_DEVBUS_MMIO_RANGE m_out[] = { { .first = 0xEFFF, .last = 0xF000, .when_default = DEVBUS_MMIO_DRAM, .write = nop_mmio } };
     s_desc_tmp = s_desc_a;
     s_desc_tmp.mmio_count = 1;
     s_desc_tmp.mmio = m_low;
@@ -271,9 +282,11 @@ void test_connect_disconnect(void)
     TEST_ASSERT_EQUAL_UINT(1, s_hooks_changed);
     TEST_ASSERT_TRUE(g_devbus_hooks.ports);
     TEST_ASSERT_TRUE(g_devbus_hooks.mmio);
-    TEST_ASSERT_EQUAL_PTR(&s_desc_a.ports[0], g_devbus_ports[0x74].range);
-    TEST_ASSERT_EQUAL_PTR(&s_a, g_devbus_ports[0x75].ctx);
-    TEST_ASSERT_NULL(g_devbus_ports[0x76].range);
+    TEST_ASSERT_EQUAL_UINT(1, g_devbus_ports[0x74].count);
+    TEST_ASSERT_EQUAL_PTR(&s_desc_a.ports[0], g_devbus_ports[0x74].owner[0].range);
+    TEST_ASSERT_EQUAL_PTR(&s_a, g_devbus_ports[0x75].owner[0].ctx);
+    TEST_ASSERT_EQUAL_UINT(0, g_devbus_ports[0x75].owner[0].slot);
+    TEST_ASSERT_EQUAL_UINT(0, g_devbus_ports[0x76].count);
     /* RAM podle volby "fill" (výchozí 0AAh) */
     TEST_ASSERT_EQUAL_HEX8(0xAA, s_a.ram[17]);
 
@@ -288,7 +301,7 @@ void test_connect_disconnect(void)
     TEST_ASSERT_EQUAL_UINT(2, s_hooks_changed);
     TEST_ASSERT_FALSE(g_devbus_hooks.ports);
     TEST_ASSERT_FALSE(g_devbus_hooks.mmio);
-    TEST_ASSERT_NULL(g_devbus_ports[0x74].range);
+    TEST_ASSERT_EQUAL_UINT(0, g_devbus_ports[0x74].count);
     TEST_ASSERT_EQUAL_INT(DEVBUS_OK, devbus_disconnect(0));
     TEST_ASSERT_EQUAL_UINT(2, s_hooks_changed);
 
@@ -306,16 +319,61 @@ void test_connect_conflicts(void)
     TEST_ASSERT_EQUAL_UINT(1, s_hooks_changed);
     devbus_disconnect(0);
     TEST_ASSERT_EQUAL_INT(DEVBUS_OK, devbus_connect(1));
-    TEST_ASSERT_EQUAL_PTR(&s_b, g_devbus_ports[0x74].ctx);
+    TEST_ASSERT_EQUAL_PTR(&s_b, g_devbus_ports[0x74].owner[0].ctx);
+}
+
+/** @brief Čtení MMIO testovacího budiče (0E013h): konstanta. */
+static uint8_t mmio_rd_const(void *c, uint16_t a, unsigned f, uint8_t *driven)
+{
+    (void) c; (void) a; (void) f; (void) driven;
+    return 0x12;
 }
 
 void test_connect_conflict_mmio_only(void)
 {
+    /* Dva pozorovatelé zápisu (drive NONE) na týchž adresách: překryv není
+     * kolize (model sběrnice D6: kolizní jsou jen dva budiče). */
     s_desc_b.ports = NULL;
     s_desc_b.port_count = 0;
     reg_ab(true);
     TEST_ASSERT_EQUAL_INT(DEVBUS_OK, devbus_connect(0));
+    TEST_ASSERT_EQUAL_INT(DEVBUS_OK, devbus_connect(1));
+    devbus_mmio_dispatch(0xE013, 0x77, DEVBUS_MMIO_MAPPED | DEVBUS_ACC_CPU);
+    TEST_ASSERT_EQUAL_UINT(1, s_a.n_mmio);
+    TEST_ASSERT_EQUAL_UINT(1, s_b.n_mmio);
+    devbus_exit();
+    devbus_init(&s_fake_ops);
+
+    /* Dva budiče (TRISTATE s read) na překrývající se adrese: kolize s REFUSE. */
+    static const st_DEVBUS_MMIO_RANGE m_drv[] = {
+        { .first = 0xE013, .last = 0xE013, .when_default = DEVBUS_MMIO_MAPPED,
+          .drive = DEVBUS_DRIVE_TRISTATE, .write = nop_mmio, .read = mmio_rd_const } };
+    static st_DEVBUS_DEVICE_DESC da, db;
+    static st_DEVBUS_DUMMY ca, cb;
+    devbus_dummy_make_desc(&da, "drva", "DRVA", 0);
+    devbus_dummy_make_desc(&db, "drvb", "DRVB", 0);
+    da.ports = db.ports = NULL;
+    da.port_count = db.port_count = 0;
+    da.mmio = db.mmio = m_drv;
+    da.mmio_count = db.mmio_count = 1;
+    TEST_ASSERT_EQUAL_INT(0, devbus_register(&da, &ca));
+    TEST_ASSERT_EQUAL_INT(1, devbus_register(&db, &cb));
+    TEST_ASSERT_EQUAL_INT(DEVBUS_OK, devbus_connect(0));
+    TEST_ASSERT_TRUE(g_devbus_hooks.mmio_read);
     TEST_ASSERT_EQUAL_INT(DEVBUS_ERR_CONFLICT, devbus_connect(1));
+    /* Budič + pozorovatel (NONE) smějí sdílet adresu. */
+    static const st_DEVBUS_MMIO_RANGE m_snoop[] = {
+        { .first = 0xE013, .last = 0xE013, .when_default = DEVBUS_MMIO_MAPPED,
+          .drive = DEVBUS_DRIVE_NONE, .write = nop_mmio } };
+    static st_DEVBUS_DEVICE_DESC dc;
+    static st_DEVBUS_DUMMY cc;
+    devbus_dummy_make_desc(&dc, "snoop", "SNOOP", 0);
+    dc.ports = NULL;
+    dc.port_count = 0;
+    dc.mmio = m_snoop;
+    dc.mmio_count = 1;
+    TEST_ASSERT_EQUAL_INT(2, devbus_register(&dc, &cc));
+    TEST_ASSERT_EQUAL_INT(DEVBUS_OK, devbus_connect(2));
 }
 
 void test_connect_conflict_video(void)
@@ -352,7 +410,7 @@ void test_connect_failure_keeps_tables_clean(void)
     s_a.fail_connect = true;
     TEST_ASSERT_EQUAL_INT(DEVBUS_ERR_DEVICE, devbus_connect(0));
     TEST_ASSERT_FALSE(devbus_is_connected(0));
-    TEST_ASSERT_NULL(g_devbus_ports[0x74].range);
+    TEST_ASSERT_EQUAL_UINT(0, g_devbus_ports[0x74].count);
     TEST_ASSERT_FALSE(g_devbus_hooks.ports);
     TEST_ASSERT_EQUAL_UINT(0, s_hooks_changed);
     TEST_ASSERT_EQUAL_UINT(0, devbus_connected_count());
@@ -365,22 +423,24 @@ void test_dispatch_ports(void)
 {
     reg_ab(false);
     devbus_connect(0);
-    const st_DEVBUS_PORT_SLOT *ps = &g_devbus_ports[0x74];
+    const st_DEVBUS_PORT_OWNER *ps = &g_devbus_ports[0x74].owner[0];
+    uint8_t driven = 0xFF;
     ps->range->write(ps->ctx, 0x1274, 0x5C);
     TEST_ASSERT_EQUAL_HEX8(0x5C, s_a.reg);
-    TEST_ASSERT_EQUAL_HEX8(0x5C, ps->range->read(ps->ctx, 0x0074));
+    TEST_ASSERT_EQUAL_HEX8(0x5C, ps->range->read(ps->ctx, 0x0074, &driven));
+    TEST_ASSERT_EQUAL_HEX8(0xFF, driven);
     /* peek bez vedlejšího efektu, read s ním */
     uint8_t v = 0;
     TEST_ASSERT_TRUE(devbus_port_peek(0x0075, &v));
     TEST_ASSERT_EQUAL_HEX8(0, v);
-    ps = &g_devbus_ports[0x75];
-    TEST_ASSERT_EQUAL_HEX8(1, ps->range->read(ps->ctx, 0x75));
+    ps = &g_devbus_ports[0x75].owner[0];
+    TEST_ASSERT_EQUAL_HEX8(1, ps->range->read(ps->ctx, 0x75, &driven));
     TEST_ASSERT_TRUE(devbus_port_peek(0xAB75, &v));
     TEST_ASSERT_EQUAL_HEX8(1, v);
     TEST_ASSERT_FALSE(devbus_port_peek(0x0076, &v));
     /* WAIT přes adaptér */
     s_a.wait_on_write = 3;
-    g_devbus_ports[0x74].range->write(&s_a, 0x74, 1);
+    g_devbus_ports[0x74].owner[0].range->write(&s_a, 0x74, 1);
     TEST_ASSERT_EQUAL_UINT(3, s_wait_sum);
     TEST_ASSERT_EQUAL_UINT64(123456789ull, devbus_time_ticks());
     devbus_video_invalidate();
@@ -398,7 +458,7 @@ void test_debugger_access_no_wait(void)
 {
     reg_ab(false);
     devbus_connect(0);
-    const st_DEVBUS_PORT_SLOT *ps = &g_devbus_ports[0x74];
+    const st_DEVBUS_PORT_OWNER *ps = &g_devbus_ports[0x74].owner[0];
     s_a.wait_on_write = 5;
     TEST_ASSERT_FALSE(devbus_access_is_debugger());
     devbus_debugger_access_begin();
@@ -486,7 +546,7 @@ void test_dispatch_mmio_set_when(void)
 void test_dispatch_mmio_when_window(void)
 {
     /* Rozsah 0E000h smí jen DRAM; přepnutí do MAPPED je mimo okno */
-    static const st_DEVBUS_MMIO_RANGE m[] = { { 0xE000, 0xE000, DEVBUS_MMIO_DRAM, nop_mmio } };
+    static const st_DEVBUS_MMIO_RANGE m[] = { { .first = 0xE000, .last = 0xE000, .when_default = DEVBUS_MMIO_DRAM, .write = nop_mmio } };
     s_desc_tmp = s_desc_a;
     s_desc_tmp.mmio = m;
     s_desc_tmp.mmio_count = 1;
@@ -644,7 +704,7 @@ void test_exit_disconnects_and_destroys(void)
     TEST_ASSERT_EQUAL_UINT(1, s_a.n_disconnect);
     TEST_ASSERT_EQUAL_UINT(1, s_a.n_destroy);
     TEST_ASSERT_FALSE(devbus_is_initialized());
-    TEST_ASSERT_NULL(g_devbus_ports[0x74].range);
+    TEST_ASSERT_EQUAL_UINT(0, g_devbus_ports[0x74].count);
     /* Bez inicializace okamžitý návrat */
     devbus_rom_changed();
     devbus_after_load();
@@ -728,6 +788,329 @@ void test_vout_present_fetch(void)
 }
 
 
+/* ===================== 8. model sběrnice (D6) ===================== */
+
+/** @brief Čtení MMIO pro testy budiče: vrátí 12h, nebo sníží masku podle kontextu dummy. */
+static uint8_t mmio_rd_dummy(void *c, uint16_t a, unsigned f, uint8_t *driven)
+{
+    st_DEVBUS_DUMMY *d = c;
+    (void) a; (void) f;
+    if (d->driven_override_valid) *driven = d->driven_override;
+    return d->reg;
+}
+
+static uint8_t port_rd_none(void *c, uint16_t p, uint8_t *driven) { (void) c; (void) p; (void) driven; return 0; }
+
+void test_bus_drive_validation(void)
+{
+    /* read bez budiče */
+    static const st_DEVBUS_PORT_RANGE p_read_none[] = {
+        { .first = 0x74, .last = 0x74, .drive = DEVBUS_DRIVE_NONE, .read = port_rd_none } };
+    /* budič bez read */
+    static const st_DEVBUS_PORT_RANGE p_drive_noread[] = {
+        { .first = 0x74, .last = 0x74, .drive = DEVBUS_DRIVE_TRISTATE } };
+    /* PARTIAL bez masky */
+    static const st_DEVBUS_PORT_RANGE p_partial0[] = {
+        { .first = 0x74, .last = 0x74, .drive = DEVBUS_DRIVE_PARTIAL, .drive_mask = 0, .read = port_rd_none } };
+    /* UNKNOWN v deskriptoru */
+    static const st_DEVBUS_PORT_RANGE p_unknown[] = {
+        { .first = 0x74, .last = 0x74, .drive = DEVBUS_DRIVE_UNKNOWN, .read = port_rd_none } };
+    /* platné: PARTIAL s maskou, OC */
+    static const st_DEVBUS_PORT_RANGE p_ok[] = {
+        { .first = 0x74, .last = 0x74, .drive = DEVBUS_DRIVE_PARTIAL, .drive_mask = 0x3F, .read = port_rd_none },
+        { .first = 0x75, .last = 0x75, .drive = DEVBUS_DRIVE_OPEN_COLLECTOR, .read = port_rd_none } };
+    s_desc_tmp = s_desc_a;
+    s_desc_tmp.port_count = 1;
+    s_desc_tmp.ports = p_read_none;
+    TEST_ASSERT_EQUAL_INT(DEVBUS_ERR_INVALID, devbus_register(&s_desc_tmp, &s_a));
+    s_desc_tmp.ports = p_drive_noread;
+    TEST_ASSERT_EQUAL_INT(DEVBUS_ERR_INVALID, devbus_register(&s_desc_tmp, &s_a));
+    s_desc_tmp.ports = p_partial0;
+    TEST_ASSERT_EQUAL_INT(DEVBUS_ERR_INVALID, devbus_register(&s_desc_tmp, &s_a));
+    s_desc_tmp.ports = p_unknown;
+    TEST_ASSERT_EQUAL_INT(DEVBUS_ERR_INVALID, devbus_register(&s_desc_tmp, &s_a));
+    s_desc_tmp.ports = p_ok;
+    s_desc_tmp.port_count = 2;
+    TEST_ASSERT_EQUAL_INT(0, devbus_register(&s_desc_tmp, &s_a));
+    devbus_exit();
+    devbus_init(&s_fake_ops);
+
+    /* MMIO: read bez budiče, budič bez read, ani write ani read */
+    static const st_DEVBUS_MMIO_RANGE m_read_none[] = {
+        { .first = 0xE013, .last = 0xE013, .when_default = DEVBUS_MMIO_MAPPED, .write = nop_mmio, .read = mmio_rd_dummy } };
+    static const st_DEVBUS_MMIO_RANGE m_drive_noread[] = {
+        { .first = 0xE013, .last = 0xE013, .when_default = DEVBUS_MMIO_MAPPED, .drive = DEVBUS_DRIVE_TRISTATE, .write = nop_mmio } };
+    static const st_DEVBUS_MMIO_RANGE m_empty[] = {
+        { .first = 0xE013, .last = 0xE013, .when_default = DEVBUS_MMIO_MAPPED } };
+    static const st_DEVBUS_MMIO_RANGE m_read_only[] = {
+        { .first = 0xE013, .last = 0xE013, .when_default = DEVBUS_MMIO_MAPPED, .drive = DEVBUS_DRIVE_TRISTATE, .read = mmio_rd_dummy } };
+    s_desc_tmp = s_desc_a;
+    s_desc_tmp.mmio_count = 1;
+    s_desc_tmp.mmio = m_read_none;
+    TEST_ASSERT_EQUAL_INT(DEVBUS_ERR_INVALID, devbus_register(&s_desc_tmp, &s_a));
+    s_desc_tmp.mmio = m_drive_noread;
+    TEST_ASSERT_EQUAL_INT(DEVBUS_ERR_INVALID, devbus_register(&s_desc_tmp, &s_a));
+    s_desc_tmp.mmio = m_empty;
+    TEST_ASSERT_EQUAL_INT(DEVBUS_ERR_INVALID, devbus_register(&s_desc_tmp, &s_a));
+    s_desc_tmp.mmio = m_read_only;
+    TEST_ASSERT_EQUAL_INT(0, devbus_register(&s_desc_tmp, &s_a));
+}
+
+void test_bus_owners_list_and_broadcast(void)
+{
+    /* A: 74h-75h TRISTATE; C: 74h-75h jen zápis (NONE, snoop) -> oba připojeni. */
+    static const st_DEVBUS_PORT_RANGE p_snoop[] = {
+        { .first = 0x74, .last = 0x75, .drive = DEVBUS_DRIVE_NONE, .write = NULL } };
+    static st_DEVBUS_DEVICE_DESC dc;
+    static st_DEVBUS_DUMMY cc;
+    reg_ab(false);
+    devbus_dummy_make_desc(&dc, "snoop", "SNOOP", 0);
+    /* snoop používá handlery dummy, ale s drive NONE musí být read NULL:
+     * použijeme vlastní rozsah jen se zápisem dummy. */
+    static st_DEVBUS_PORT_RANGE p_snoop_w[1];
+    p_snoop_w[0] = p_snoop[0];
+    p_snoop_w[0].write = s_desc_a.ports[0].write;
+    dc.ports = p_snoop_w;
+    dc.port_count = 1;
+    dc.mmio = NULL;
+    dc.mmio_count = 0;
+    TEST_ASSERT_EQUAL_INT(1, devbus_register(&dc, &cc));
+    TEST_ASSERT_EQUAL_INT(DEVBUS_OK, devbus_connect(0));
+    TEST_ASSERT_EQUAL_INT(DEVBUS_OK, devbus_connect(1));
+    TEST_ASSERT_EQUAL_UINT(2, g_devbus_ports[0x74].count);
+    TEST_ASSERT_EQUAL_UINT(0, g_devbus_ports[0x74].owner[0].slot);
+    TEST_ASSERT_EQUAL_UINT(1, g_devbus_ports[0x74].owner[1].slot);
+    /* broadcast zápisu: oba registry */
+    devbus_port_write_all(0x0074, 0x5C);
+    TEST_ASSERT_EQUAL_HEX8(0x5C, s_a.reg);
+    TEST_ASSERT_EQUAL_HEX8(0x5C, cc.reg);
+    /* čtení: jen A budí */
+    uint8_t driven = 0;
+    TEST_ASSERT_EQUAL_HEX8(0x5C, devbus_port_read_resolve(0x0074, 0x00, false, &driven));
+    TEST_ASSERT_EQUAL_HEX8(0xFF, driven);
+    TEST_ASSERT_EQUAL_UINT(0, s_conflicts);
+    /* odpojení A nechá C na místě (pořadí) */
+    devbus_disconnect(0);
+    TEST_ASSERT_EQUAL_UINT(1, g_devbus_ports[0x74].count);
+    TEST_ASSERT_EQUAL_UINT(1, g_devbus_ports[0x74].owner[0].slot);
+    /* bez budiče: idle (latch) a driven 0 */
+    s_latch = 0x9A;
+    TEST_ASSERT_EQUAL_HEX8(0x9A, devbus_port_read_resolve(0x0074, 0x00, false, &driven));
+    TEST_ASSERT_EQUAL_HEX8(0x00, driven);
+    /* plný slot: 4 vlastníci maximum */
+    static st_DEVBUS_DEVICE_DESC dd[3];
+    static st_DEVBUS_DUMMY cd[3];
+    static const char *ids[3] = { "s1", "s2", "s3" }, *secs[3] = { "S1", "S2", "S3" };
+    for (int i = 0; i < 3; i++) {
+        devbus_dummy_make_desc(&dd[i], ids[i], secs[i], 0);
+        dd[i].ports = p_snoop_w;
+        dd[i].port_count = 1;
+        dd[i].mmio = NULL;
+        dd[i].mmio_count = 0;
+        TEST_ASSERT_EQUAL_INT(2 + i, devbus_register(&dd[i], &cd[i]));
+    }
+    TEST_ASSERT_EQUAL_INT(DEVBUS_OK, devbus_connect(2));
+    TEST_ASSERT_EQUAL_INT(DEVBUS_OK, devbus_connect(3));
+    TEST_ASSERT_EQUAL_INT(DEVBUS_OK, devbus_connect(0));
+    TEST_ASSERT_EQUAL_UINT(4, g_devbus_ports[0x74].count);
+    TEST_ASSERT_EQUAL_INT(DEVBUS_ERR_CONFLICT, devbus_connect(4));
+}
+
+void test_bus_conflict_policy(void)
+{
+    reg_ab(true);
+    devbus_connect(0);
+    /* REFUSE (výchozí): druhý budič se nepřipojí */
+    TEST_ASSERT_EQUAL_INT(DEVBUS_CONFLICT_REFUSE, devbus_conflict_policy());
+    TEST_ASSERT_EQUAL_INT(DEVBUS_ERR_CONFLICT, devbus_connect(1));
+    /* AND: připojí se, čtení = AND, událost a čítač */
+    devbus_set_conflict_policy(DEVBUS_CONFLICT_AND);
+    TEST_ASSERT_EQUAL_INT(DEVBUS_OK, devbus_connect(1));
+    TEST_ASSERT_EQUAL_UINT(2, g_devbus_ports[0x74].count);
+    s_a.reg = 0xF0;
+    s_b.reg = 0x3C;
+    uint8_t driven = 0;
+    TEST_ASSERT_EQUAL_HEX8(0x30, devbus_port_read_resolve(0x1274, 0x00, false, &driven));
+    TEST_ASSERT_EQUAL_HEX8(0xFF, driven);
+    TEST_ASSERT_EQUAL_UINT(1, s_conflicts);
+    TEST_ASSERT_EQUAL_UINT32(1, devbus_port_conflict_hits(0x74));
+    TEST_ASSERT_EQUAL_UINT32(0, devbus_port_conflict_hits(0x75));
+    const st_DEVBUS_CONFLICT_INFO *lc = devbus_last_conflict();
+    TEST_ASSERT_NOT_NULL(lc);
+    TEST_ASSERT_EQUAL_HEX16(0x1274, lc->addr);
+    TEST_ASSERT_EQUAL_UINT8(0, lc->mmio);
+    TEST_ASSERT_EQUAL_HEX8(0x30, lc->result);
+    TEST_ASSERT_EQUAL_HEX8(0xFF, lc->conflict);
+    TEST_ASSERT_EQUAL_INT(DEVBUS_CONFLICT_AND, lc->policy);
+    TEST_ASSERT_EQUAL_UINT64(123456789ull, lc->ticks);
+    TEST_ASSERT_EQUAL_UINT(3, lc->count); /* deska + A + B */
+    TEST_ASSERT_EQUAL_INT(-1, lc->part[0].slot);
+    TEST_ASSERT_EQUAL_HEX8(0x00, lc->part[0].driven);
+    TEST_ASSERT_EQUAL_INT(0, lc->part[1].slot);
+    TEST_ASSERT_EQUAL_HEX8(0xF0, lc->part[1].value);
+    TEST_ASSERT_EQUAL_INT(1, lc->part[2].slot);
+    TEST_ASSERT_EQUAL_HEX8(0x3C, lc->part[2].value);
+    TEST_ASSERT_EQUAL_HEX8(0x30, s_last_conflict.result);
+    /* FIRST: vyhrává dříve připojené (A) */
+    devbus_set_conflict_policy(DEVBUS_CONFLICT_FIRST);
+    TEST_ASSERT_EQUAL_HEX8(0xF0, devbus_port_read_resolve(0x0074, 0x00, false, &driven));
+    TEST_ASSERT_EQUAL_UINT(2, s_conflicts);
+    TEST_ASSERT_EQUAL_UINT32(2, devbus_port_conflict_hits(0x74));
+    /* peek nehlásí ani nepočítá */
+    uint8_t v = 0, dm = 0;
+    TEST_ASSERT_TRUE(devbus_port_peek_ex(0x0074, &v, &dm));
+    TEST_ASSERT_EQUAL_HEX8(0xF0, v);
+    TEST_ASSERT_EQUAL_HEX8(0xFF, dm);
+    TEST_ASSERT_EQUAL_UINT(2, s_conflicts);
+    /* zpět na REFUSE: připojená zůstávají, čtení se chová jako FIRST */
+    devbus_set_conflict_policy(DEVBUS_CONFLICT_REFUSE);
+    TEST_ASSERT_TRUE(devbus_is_connected(1));
+    TEST_ASSERT_EQUAL_HEX8(0xF0, devbus_port_read_resolve(0x0074, 0x00, false, &driven));
+    TEST_ASSERT_EQUAL_UINT(3, s_conflicts); /* kolize za běhu se hlásí i s REFUSE */
+    /* reset čítačů */
+    devbus_conflict_hits_reset();
+    TEST_ASSERT_EQUAL_UINT32(0, devbus_port_conflict_hits(0x74));
+    TEST_ASSERT_NULL(devbus_last_conflict());
+    /* deska jako budič proti A: kolize (AND) */
+    devbus_disconnect(1);
+    devbus_set_conflict_policy(DEVBUS_CONFLICT_AND);
+    TEST_ASSERT_EQUAL_HEX8(0xF0 & 0x5A, devbus_port_read_resolve(0x0074, 0x5A, true, &driven));
+    TEST_ASSERT_EQUAL_UINT(4, s_conflicts);
+    TEST_ASSERT_EQUAL_HEX8(0xFF, devbus_last_conflict()->part[0].driven);
+    /* neplatná politika se ignoruje */
+    devbus_set_conflict_policy((en_DEVBUS_CONFLICT) 7);
+    TEST_ASSERT_EQUAL_INT(DEVBUS_CONFLICT_AND, devbus_conflict_policy());
+}
+
+void test_bus_idle_and_partial(void)
+{
+    reg_ab(false);
+    devbus_connect(0);
+    s_a.reg = 0x15;
+    uint8_t driven = 0;
+    /* LATCH: nebuzené bity z latch platformy */
+    s_latch = 0xC3;
+    s_a.driven_override_valid = true;
+    s_a.driven_override = 0x3F;
+    TEST_ASSERT_EQUAL_INT(DEVBUS_IDLE_LATCH, devbus_bus_idle());
+    TEST_ASSERT_EQUAL_HEX8(0xC3, devbus_idle_byte());
+    TEST_ASSERT_EQUAL_HEX8(0xD5, devbus_port_read_resolve(0x0074, 0x00, false, &driven));
+    TEST_ASSERT_EQUAL_HEX8(0x3F, driven);
+    /* CONST 00h */
+    devbus_set_bus_idle(DEVBUS_IDLE_CONST, 0x00);
+    TEST_ASSERT_EQUAL_HEX8(0x00, devbus_idle_byte());
+    TEST_ASSERT_EQUAL_HEX8(0x15, devbus_port_read_resolve(0x0074, 0x00, false, &driven));
+    /* CONST FFh, zařízení nebudí vůbec (K&P R31): celé idle, driven 0 */
+    devbus_set_bus_idle(DEVBUS_IDLE_CONST, 0xFF);
+    s_a.driven_override = 0x00;
+    TEST_ASSERT_EQUAL_HEX8(0xFF, devbus_port_read_resolve(0x0074, 0x00, false, &driven));
+    TEST_ASSERT_EQUAL_HEX8(0x00, driven);
+    uint8_t v = 0, dm = 0xEE;
+    TEST_ASSERT_TRUE(devbus_port_peek_ex(0x0074, &v, &dm));
+    TEST_ASSERT_EQUAL_HEX8(0xFF, v);
+    TEST_ASSERT_EQUAL_HEX8(0x00, dm);
+    /* zpět LATCH */
+    devbus_set_bus_idle(DEVBUS_IDLE_LATCH, 0xFF);
+    s_latch = 0x78;
+    TEST_ASSERT_EQUAL_HEX8(0x78, devbus_port_read_resolve(0x0074, 0x00, false, &driven));
+    TEST_ASSERT_EQUAL_UINT(0, s_conflicts);
+    s_a.driven_override_valid = false;
+    /* neplatný režim se ignoruje */
+    devbus_set_bus_idle((en_DEVBUS_IDLE) 5, 0x11);
+    TEST_ASSERT_EQUAL_INT(DEVBUS_IDLE_LATCH, devbus_bus_idle());
+    TEST_ASSERT_EQUAL_HEX8(0xFF, devbus_bus_idle_value());
+}
+
+void test_bus_mmio_read_resolve(void)
+{
+    static const st_DEVBUS_MMIO_RANGE m_drv[] = {
+        { .first = 0xE013, .last = 0xE013, .when_default = DEVBUS_MMIO_MAPPED,
+          .drive = DEVBUS_DRIVE_TRISTATE, .write = nop_mmio, .read = mmio_rd_dummy, .peek = mmio_rd_dummy } };
+    s_desc_tmp = s_desc_a;
+    s_desc_tmp.mmio = m_drv;
+    s_desc_tmp.mmio_count = 1;
+    TEST_ASSERT_EQUAL_INT(0, devbus_register(&s_desc_tmp, &s_a));
+    TEST_ASSERT_FALSE(g_devbus_hooks.mmio_read);
+    devbus_connect(0);
+    TEST_ASSERT_TRUE(g_devbus_hooks.mmio_read);
+    s_a.reg = 0x12;
+    uint8_t driven = 0;
+    /* deska nebudí (0E013h nikdo): zařízení */
+    TEST_ASSERT_EQUAL_HEX8(0x12, devbus_mmio_read_resolve(0xE013, 0x99, false, DEVBUS_MMIO_MAPPED | DEVBUS_ACC_CPU, &driven));
+    TEST_ASSERT_EQUAL_HEX8(0xFF, driven);
+    /* jiný stav mapy (DRAM): rozsah neaktivní -> deska */
+    TEST_ASSERT_EQUAL_HEX8(0x99, devbus_mmio_read_resolve(0xE013, 0x99, true, DEVBUS_MMIO_DRAM | DEVBUS_ACC_CPU, &driven));
+    TEST_ASSERT_EQUAL_HEX8(0xFF, driven);
+    /* mimo rozsah bez desky: idle */
+    s_latch = 0x44;
+    TEST_ASSERT_EQUAL_HEX8(0x44, devbus_mmio_read_resolve(0xE014, 0x99, false, DEVBUS_MMIO_MAPPED | DEVBUS_ACC_CPU, &driven));
+    TEST_ASSERT_EQUAL_HEX8(0x00, driven);
+    /* deska i zařízení budí: kolize, AND */
+    devbus_set_conflict_policy(DEVBUS_CONFLICT_AND);
+    TEST_ASSERT_EQUAL_HEX8(0x10, devbus_mmio_read_resolve(0xE013, 0x99, true, DEVBUS_MMIO_MAPPED | DEVBUS_ACC_CPU, &driven));
+    TEST_ASSERT_EQUAL_UINT(1, s_conflicts);
+    TEST_ASSERT_EQUAL_UINT8(1, devbus_last_conflict()->mmio);
+    TEST_ASSERT_EQUAL_HEX16(0xE013, devbus_last_conflict()->addr);
+    TEST_ASSERT_EQUAL_UINT32(1, devbus_mmio_conflict_hits(0xE013));
+    TEST_ASSERT_EQUAL_UINT32(0, devbus_port_conflict_hits(0x13));
+    TEST_ASSERT_EQUAL_UINT32(0, devbus_mmio_conflict_hits(0xE014));
+    /* peek: bez události */
+    uint8_t v = 0, dm = 0;
+    TEST_ASSERT_TRUE(devbus_mmio_peek(0xE013, 0x99, false, DEVBUS_MMIO_MAPPED, &v, &dm));
+    TEST_ASSERT_EQUAL_HEX8(0x12, v);
+    TEST_ASSERT_EQUAL_HEX8(0xFF, dm);
+    TEST_ASSERT_FALSE(devbus_mmio_peek(0xE014, 0x99, false, DEVBUS_MMIO_MAPPED, &v, &dm));
+    TEST_ASSERT_EQUAL_UINT(1, s_conflicts);
+    /* vypnutí masky rozsahu zruší potřebu obálky čtení */
+    TEST_ASSERT_EQUAL_INT(DEVBUS_OK, devbus_mmio_set_when(0, 0, 0));
+    TEST_ASSERT_FALSE(g_devbus_hooks.mmio_read);
+}
+
+void test_bus_core_cfg(void)
+{
+    /* výchozí */
+    TEST_ASSERT_EQUAL_INT(DEVBUS_CONFLICT_REFUSE, devbus_conflict_policy());
+    TEST_ASSERT_EQUAL_INT(DEVBUS_IDLE_LATCH, devbus_bus_idle());
+    TEST_ASSERT_EQUAL_HEX8(0xFF, devbus_bus_idle_value());
+    TEST_ASSERT_TRUE(devbus_cfg_is_core_section("devbus"));
+    TEST_ASSERT_FALSE(devbus_cfg_is_core_section("DUMMY"));
+    TEST_ASSERT_FALSE(devbus_cfg_is_core_section(NULL));
+    /* settings_set cesta */
+    TEST_ASSERT_EQUAL_INT(DEVBUS_OK, devbus_cfg_set_core("conflict", "and"));
+    TEST_ASSERT_EQUAL_INT(DEVBUS_CONFLICT_AND, devbus_conflict_policy());
+    TEST_ASSERT_EQUAL_INT(DEVBUS_ERR_INVALID, devbus_cfg_set_core("conflict", "maybe"));
+    TEST_ASSERT_EQUAL_INT(DEVBUS_OK, devbus_cfg_set_core("bus_idle", "CONST"));
+    TEST_ASSERT_EQUAL_INT(DEVBUS_IDLE_CONST, devbus_bus_idle());
+    TEST_ASSERT_EQUAL_INT(DEVBUS_OK, devbus_cfg_set_core("bus_idle_value", "0x7e"));
+    TEST_ASSERT_EQUAL_HEX8(0x7E, devbus_bus_idle_value());
+    TEST_ASSERT_EQUAL_HEX8(0x7E, devbus_idle_byte());
+    TEST_ASSERT_EQUAL_INT(DEVBUS_ERR_INVALID, devbus_cfg_set_core("bus_idle_value", "300"));
+    TEST_ASSERT_EQUAL_INT(DEVBUS_ERR_INVALID, devbus_cfg_set_core("bus_idle_value", "7x"));
+    TEST_ASSERT_EQUAL_INT(DEVBUS_ERR_NOT_FOUND, devbus_cfg_set_core("nope", "1"));
+    /* uložení INI nese sekci [DEVBUS] */
+    cfgroot_save(g_cfgmain);
+    char *txt = NULL;
+    TEST_ASSERT_TRUE(g_file_get_contents(s_ini_path, &txt, NULL, NULL));
+    TEST_ASSERT_NOT_NULL(strstr(txt, "[DEVBUS]"));
+    TEST_ASSERT_NOT_NULL(strstr(txt, "conflict = and"));
+    TEST_ASSERT_NOT_NULL(strstr(txt, "bus_idle = const"));
+    TEST_ASSERT_NOT_NULL(strstr(txt, "bus_idle_value = 0x7e"));
+    g_free(txt);
+    /* načtení z INI */
+    devbus_exit();
+    drop_tmp_ini();
+    use_tmp_ini("[DEVBUS]\nconflict = first\nbus_idle = const\nbus_idle_value = 0x12\n\n");
+    devbus_init(&s_fake_ops);
+    TEST_ASSERT_EQUAL_INT(DEVBUS_CONFLICT_FIRST, devbus_conflict_policy());
+    TEST_ASSERT_EQUAL_INT(DEVBUS_IDLE_CONST, devbus_bus_idle());
+    TEST_ASSERT_EQUAL_HEX8(0x12, devbus_bus_idle_value());
+    /* bez inicializace */
+    devbus_exit();
+    TEST_ASSERT_EQUAL_INT(DEVBUS_ERR_UNSUPPORTED, devbus_cfg_set_core("conflict", "and"));
+    devbus_init(&s_fake_ops);
+}
+
+
 /* === MAIN === */
 
 int main(int argc, char *argv[])
@@ -762,6 +1145,12 @@ int main(int argc, char *argv[])
     RUN_TEST(test_events_only_connected);
     RUN_TEST(test_exit_disconnects_and_destroys);
     RUN_TEST(test_vout_present_fetch);
+    RUN_TEST(test_bus_drive_validation);
+    RUN_TEST(test_bus_owners_list_and_broadcast);
+    RUN_TEST(test_bus_conflict_policy);
+    RUN_TEST(test_bus_idle_and_partial);
+    RUN_TEST(test_bus_mmio_read_resolve);
+    RUN_TEST(test_bus_core_cfg);
 
     int result = UNITY_END();
     mztest_teardown();

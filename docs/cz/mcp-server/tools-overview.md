@@ -150,6 +150,8 @@ dokumentu [Resources overview](resources-overview.md).
 | `emu_periph_detach` | **ANO** | Odpojí periferii za běhu (jako menu Devices) |
 | `emu_get_devices` | ne | Rozšiřující zařízení jádra MZ-700: id, volby, porty, MMIO, regiony, výstupy |
 | `emu_device_screenshot` | ne | Obraz vlastního monitoru rozšiřujícího zařízení (sekundární výstup) jako PNG nebo indexy palety |
+| `emu_get_bus_map` | ne | Kdo vlastní který port a MMIO adresu (čipy desky i rozšiřující zařízení), výstupní stupeň, příznaky, aktivita; model sběrnice (politika kolize, nebuzená sběrnice) |
+| `emu_bus_peek` | ne | Čtení portu nebo MMIO adresy bez vedlejších efektů s rezolucí sběrnice (`driven_mask`, `source`) |
 | `emu_stop` | **ANO** | Hot-swap stop (pipe-only); ukončí emu, Python wrapper běží dál |
 | `emu_start` | **ANO** | Hot-swap start (pipe-only); spawne nový mz800emu.exe child |
 | `emu_input_send_key` | **ANO** | Press klávesy + N framů hold + release |
@@ -2456,6 +2458,62 @@ emu_device_screenshot(output="kp80", format="indexed", want_data=False)
 `lit_pixels` počet bodů s nenulovým indexem palety, `seq` roste s každým
 snímkem, který zařízení nakreslí. Odpojené zařízení vrátí
 `{"available": false, "reason": ...}`; neznámý `output` je chyba.
+
+### `emu_get_bus_map`
+
+Jen čtení: mapa sběrnice Z80 (MZ-700, MZ-800, MZ-1500). Pro každý port
+00h-0FFh a každou adresu okna MMIO 0E000h-0E0FFh vlastníci (čipy desky ze
+statické tabulky platformy, na MZ-700 i rozšiřující zařízení z deskriptorů), směr, výstupní stupeň (`drive`:
+`none` = sběrnici nikdy nebudí, `tristate`, `partial` s `drive_mask`,
+`open_collector`, `unknown` = v bázi znalostí nedoloženo), přítomnost
+a příznaky: `unmapped`, `dir_split`, `potential_conflict`,
+`conflict_seen`, `ghost_seen`. Hlavička nese model sběrnice: politiku
+kolize (`refuse` / `and` / `first`) a model nebuzené sběrnice (`bus_idle`
+`latch` = poslední bajt přečtený z paměti, `const` = `bus_idle_value`);
+obojí jsou klíče INI sekce `[DEVBUS]` nastavitelné přes
+`emu_settings_set`. Hodnota nebuzené sběrnice je model emulátoru, na
+skutečném HW neměřená.
+
+| Parametr | Výchozí | Význam |
+|----------|---------|--------|
+| `include` | vše | některé z `ports`, `mmio`, `devices`, `activity` (čítače a poslední hodnoty, živé jen při otevřeném okně I/O Ports nebo Bus Map) |
+| `only_mapped` | false | vynechat porty a buňky bez vlastníka |
+
+```
+emu_get_bus_map(include=["ports"], only_mapped=True)
+-> {"platform": "mz700", "supported": true, "devbus_supported": true,
+    "conflict_policy": "refuse", "bus_idle": "latch", "bus_idle_value": 255,
+    "idle_byte": 112, "tracking_active": false, "mmio_mapped_now": true,
+    "frame": 1234, "devbus": {"registered": 3, "connected": 1},
+    "ports": [{"port": 112, "owners": [{"id": "kp80", "name": "K&P 80 Column Card",
+      "kind": "devbus", "slot": 2, "dir": "rw", "drive": "tristate",
+      "drive_mask": 255, "connected": true, "range": [112, 115]}],
+      "flags": [], "conflict_hits": 0}, ...]}
+```
+
+`supported` je true na všech platformách (statická tabulka čipů desky),
+`devbus_supported` (rozšiřující zařízení, politika kolize, `bus_idle`) jen
+na jádře MZ-700. Podrobnosti
+a recepty: `emulator://docs/bus_map`; protějškem v GUI je okno Bus Map
+debuggeru ([debugger/bus-map.md](../debugger/bus-map.md)).
+
+### `emu_bus_peek`
+
+Jen čtení: přečte jednu adresu **bez vedlejších efektů** přes rezoluci
+sběrnice: rozšiřující zařízení odpoví svými `peek` handlery, čipy desky
+zrcadly registrů z katalogu I/O (porty) nebo peekem paměti (MMIO),
+nebuzené bity doplní model nebuzené sběrnice. Právě jeden z `port`
+(0-65535, dekód podle dolního bajtu) nebo `addr` (okno MMIO 0E000h-0E0FFh,
+všechny platformy).
+
+```
+emu_bus_peek(port=0x72)   -> {"port": 114, "value": 128, "driven_mask": 255, "source": "devbus"}
+emu_bus_peek(port=0x74)   -> {"port": 116, "value": 112, "driven_mask": 0, "source": "idle"}
+emu_bus_peek(addr=0xE000) -> {"addr": 57344, "value": 255, "driven_mask": 255, "source": "board"}
+```
+
+`driven_mask` 0 = nikdo nebudí, `value` je model nebuzené sběrnice. Oproti
+`emu_io_read` se ve stroji nic nezmění.
 
 ### Příklad workflow - vložení Quick Disk obrazu
 

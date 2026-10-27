@@ -94,6 +94,24 @@ extern "C"
      */
     extern void io_window_register_persistence(void *cmod_void);
 
+    /**
+     * @brief Prahy obarvení aktivity (hits/s) sdílené s oknem Bus Map.
+     * @param text_active Výstup prahu "aktivní" (smí být NULL).
+     * @param bg_hot      Výstup prahu "horký" (smí být NULL).
+     */
+    extern void io_window_heat_thresholds(int *text_active, int *bg_hot);
+
+    /**
+     * @brief Otevře okno I/O Ports na záložce Overview a sroluje na port.
+     *
+     * Křížový skok z Bus Map (a dalších oken). Řádek se najde podle adresy
+     * položky katalogu (8bitový port, nebo MMIO adresa 0E0xxh); je-li jeho
+     * sekce sbalená, rozbalí se. Jen UI vlákno.
+     *
+     * @param addr Adresa portu (dolní bajt) nebo MMIO adresa.
+     */
+    extern void io_window_request_show_port(uint16_t addr);
+
 #ifdef __cplusplus
 }
 #endif

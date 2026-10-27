@@ -140,8 +140,10 @@
  * cmd_map[]) = 223 + 1 = 224.
  * kp80 doplnil device_screenshot (obraz sekundárního výstupu zařízení,
  * na KONEC cmd_map[]) = 224 + 1 = 225.
+ * bus-model doplnil get_bus_map a bus_peek (mapa vlastníků sběrnice,
+ * peek s rezolucí, na KONEC cmd_map[]) = 225 + 2 = 227.
  */
-#define MCP_EXPECTED_CMD_COUNT 225
+#define MCP_EXPECTED_CMD_COUNT 227
 
 
 /* ====================================================================== */

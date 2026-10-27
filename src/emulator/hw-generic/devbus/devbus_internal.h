@@ -48,8 +48,9 @@ typedef struct st_DEVBUS_MMIO_ACTIVE {
     uint16_t first;  /**< První adresa. */
     uint16_t last;   /**< Poslední adresa. */
     unsigned when;   /**< Maska stavů mapy. */
-    void (*write)(void *ctx, uint16_t addr, uint8_t value, unsigned flags); /**< Handler. */
+    const st_DEVBUS_MMIO_RANGE *range; /**< Rozsah deskriptoru (write, read, peek, drive). */
     void *ctx;       /**< Kontext zařízení. */
+    uint8_t slot;    /**< Slot zařízení. */
 } st_DEVBUS_MMIO_ACTIVE;
 
 /**
@@ -67,6 +68,14 @@ typedef struct st_DEVBUS {
     unsigned frame_done_count;              /**< Počet připojených zařízení s frame_done(). */
     st_DEVBUS_MMIO_ACTIVE mmio_active[DEVBUS_MAX_DEVICES * DEVBUS_MAX_MMIO_RANGES]; /**< Aktivní MMIO rozsahy. */
     unsigned mmio_active_count;             /**< Počet aktivních MMIO rozsahů. */
+    unsigned conflict_policy;               /**< en_DEVBUS_CONFLICT (INI [DEVBUS] conflict; unsigned kvůli vazbě cfgfile). */
+    unsigned bus_idle;                      /**< en_DEVBUS_IDLE (INI [DEVBUS] bus_idle). */
+    unsigned bus_idle_value;                /**< Hodnota pro DEVBUS_IDLE_CONST (INI [DEVBUS] bus_idle_value). */
+    struct st_CFGMODULE *core_cfg_module;   /**< Sekce INI [DEVBUS] (NULL bez g_cfgmain). */
+    uint32_t conflict_hits[256];            /**< Čítače kolizí čtení per dolní bajt portu (ladicí stav). */
+    uint32_t mmio_conflict_hits[256];       /**< Čítače kolizí čtení MMIO 0E000h-0E0FFh (index = adresa - 0E000h). */
+    st_DEVBUS_CONFLICT_INFO last_conflict;  /**< Poslední kolize (platná při has_last_conflict). */
+    bool has_last_conflict;                 /**< true = last_conflict platí. */
 } st_DEVBUS;
 
 /** @brief Stav jádra (emu vlákno; registr čitelný odkudkoli po devbus_start()). */
@@ -100,6 +109,18 @@ unsigned devbus_option_keyword_count(const st_DEVBUS_OPTION *o);
  * @post s->opt[] a s->ini_connected mají hodnoty z INI, jinak výchozí.
  */
 int devbus_cfg_register(st_DEVBUS_SLOT *s);
+
+/**
+ * @brief Založí (nebo znovu použije) sekci INI [DEVBUS] jádra a načte ji.
+ *
+ * Elementy: "conflict" (KEYWORD refuse | and | first), "bus_idle" (KEYWORD
+ * latch | const), "bus_idle_value" (UNSIGNED 0-255, výchozí 0FFh), navázané
+ * na g_devbus.conflict_policy / bus_idle / bus_idle_value (propagate i save).
+ * Bez g_cfgmain nic nedělá (výchozí hodnoty zůstávají).
+ *
+ * @post g_devbus.core_cfg_module ukazuje na sekci, nebo je NULL.
+ */
+void devbus_cfg_register_core(void);
 
 /**
  * @brief Uvolní sekundární výstupy slotu (devbus_exit()).

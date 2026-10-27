@@ -45,6 +45,7 @@
 /* No-op definice pro release/non-debug build. */
 #define TRACELOG_IORQ_MARK_UNCONNECTED()  do { } while (0)
 #define TRACELOG_IORQ_MARK_HANDLED()      do { } while (0)
+#define TRACELOG_IORQ_MARK_CONFLICT()     do { } while (0)
 #endif
 
 uint8_t port_read_cb(z80_t *cpu, uint16_t addr, void *user_data)
@@ -442,25 +443,51 @@ void port_write_cb(z80_t *cpu, uint16_t addr, uint8_t value, void *user_data)
 uint8_t port_read_cb_devbus(z80_t *cpu, uint16_t addr, void *user_data)
 {
     const st_DEVBUS_PORT_SLOT *s = &g_devbus_ports[addr & 0xff];
-    if (!s->range)
-        return port_read_cb(cpu, addr, user_data);
-    mzarch_main_insideop_iorq();
+    if (!s->count)
+    {
+        /* Port bez zařízení: statický switch. S modelem nebuzené sběrnice
+         * CONST (obálka je pak nainstalovaná i bez zařízení) dostane
+         * nedekódovaný port konstantu místo latch; zda deska nedekódovala,
+         * říká příznak UNCONNECTED (jen build s debuggerem, bez něj platí
+         * konstanta jen pro porty zařízení). */
+        TRACELOG_IORQ_MARK_HANDLED();
+        uint8_t v = port_read_cb(cpu, addr, user_data);
+#ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
+        if (g_tracelog_iorq_unconnected && devbus_bus_idle() == DEVBUS_IDLE_CONST)
+            v = devbus_bus_idle_value();
+#endif
+        return v;
+    }
+    /* Deska první: statický switch (insideop, u nedekódovaného portu latch
+     * a značka UNCONNECTED). Zda deska budila, říká příznak po návratu;
+     * v buildu bez debuggeru platí invariant validace devbus (port
+     * zařízení není statický), takže deska nebudí. */
     TRACELOG_IORQ_MARK_HANDLED();
-    return s->range->read ? s->range->read(s->ctx, addr) : g_mzarch_main.regDBUS_latch;
+    uint8_t board = port_read_cb(cpu, addr, user_data);
+#ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
+    bool board_driven = (g_tracelog_iorq_unconnected == 0);
+#else
+    bool board_driven = false;
+#endif
+    uint8_t driven = 0;
+    uint8_t v = devbus_port_read_resolve(addr, board, board_driven, &driven);
+    if (driven)
+        TRACELOG_IORQ_MARK_HANDLED();
+    else
+        TRACELOG_IORQ_MARK_UNCONNECTED();
+    return v;
 }
 
 void port_write_cb_devbus(z80_t *cpu, uint16_t addr, uint8_t value, void *user_data)
 {
     const st_DEVBUS_PORT_SLOT *s = &g_devbus_ports[addr & 0xff];
-    if (!s->range)
-    {
-        port_write_cb(cpu, addr, value, user_data);
+    /* Deska první (insideop, pre-set UNCONNECTED, dekódovaný port = HANDLED),
+     * pak všichni vlastníci v pořadí připojení. */
+    port_write_cb(cpu, addr, value, user_data);
+    if (!s->count)
         return;
-    }
-    mzarch_main_insideop_iorq();
+    devbus_port_write_all(addr, value);
     TRACELOG_IORQ_MARK_HANDLED();
-    if (s->range->write)
-        s->range->write(s->ctx, addr, value);
 }
 
 
@@ -484,13 +511,16 @@ uint8_t port_read_with_logging_cb(z80_t *cpu, uint16_t addr, void *user_data)
         mhmap_inc(MHMAP_REGION_IORQ_8BIT, addr & 0xff, MHMAP_ACCESS_R);
     };
     g_tracelog_iorq_unconnected = 0;
+    g_tracelog_iorq_conflict = 0;
     g_dbg_in_cpu_path = 1;
     /* Čisté čtení (port_read_cb, nebo obálka devbus se zařízením). */
     uint8_t value = g_mz700_cpu_ops.pread(cpu, addr, user_data);
     g_dbg_in_cpu_path = 0;
     if (TEST_TRACE_IORQLOG_ACTIVE) {
         uint16_t bc = z80_get_reg(cpu, Z80_REG_BC);
-        en_IORQLOG_EVENT_TYPE etype = g_tracelog_iorq_unconnected
+        en_IORQLOG_EVENT_TYPE etype = g_tracelog_iorq_conflict
+            ? IORQLOG_EVENT_IORQ_CONFLICT
+            : g_tracelog_iorq_unconnected
             ? IORQLOG_EVENT_IORQ_UNCONNECTED
             : IORQLOG_EVENT_IORQ;
         iorqlog_record(etype, IORQLOG_DIR_IN, bc, addr, value, 0u);
@@ -500,6 +530,9 @@ uint8_t port_read_with_logging_cb(z80_t *cpu, uint16_t addr, void *user_data)
         uint32_t frame_n = (uint32_t) g_gdg.total_elapsed.screens;
         io_activity_record_hit ( addr, value,
                                   true /* is_in */, frame_n );
+        /* Bus Map: ghost (nikdo neodpověděl) a kolize budičů devbus. */
+        if ( g_tracelog_iorq_conflict ) io_activity_record_conflict ( addr );
+        else if ( g_tracelog_iorq_unconnected ) io_activity_record_ghost ( addr );
         io_history_record ( true /* is_in */, addr, value,
                             g_mzarch_main.instruction_addr,
                             frame_n,
@@ -513,7 +546,9 @@ uint8_t port_read_with_logging_cb(z80_t *cpu, uint16_t addr, void *user_data)
      * pro detailní popis g_tracelog_iorq_unconnected pre/post stavu). */
     if ( TEST_TRACE_EVENTLOG_ACTIVE
          && ( g_eventlog_active_mask & ( 1ULL << EVENTLOG_CAT_IORQ_IN ) ) ) {
-        uint8_t sub = g_tracelog_iorq_unconnected
+        uint8_t sub = g_tracelog_iorq_conflict
+                          ? EVENTLOG_IORQ_SUB_CONFLICT
+                          : g_tracelog_iorq_unconnected
                           ? EVENTLOG_IORQ_SUB_UNCONNECTED
                           : EVENTLOG_IORQ_SUB_NORMAL;
         uint32_t pl = (uint32_t) addr | ( (uint32_t) value << 16 );
@@ -553,6 +588,8 @@ void port_write_with_logging_cb(z80_t *cpu, uint16_t addr, uint8_t value, void *
         uint32_t frame_n = (uint32_t) g_gdg.total_elapsed.screens;
         io_activity_record_hit ( addr, value,
                                   false /* is_in */, frame_n );
+        /* Bus Map: ghost zápis (nikdo port nedekóduje). */
+        if ( g_tracelog_iorq_unconnected ) io_activity_record_ghost ( addr );
         io_history_record ( false /* is_in */, addr, value,
                             g_mzarch_main.instruction_addr,
                             frame_n,

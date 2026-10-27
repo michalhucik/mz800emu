@@ -215,6 +215,16 @@ mz_add_test(devbus
     LABELS   "emu;peripherals"
 )
 
+# devbus: čistá rezoluce čtení sdílené sběrnice (devbus_resolve.c): pravidla
+# 1-5 (nebudící, jediný budič + idle, PARTIAL, otevřený kolektor, kolize
+# s politikou AND / FIRST / REFUSE), jména a parsování. Bez závislostí.
+mz_add_test(devbus_resolve
+    TYPE     STANDALONE
+    SOURCES  test_devbus_resolve.c
+             ${CMAKE_SOURCE_DIR}/src/emulator/hw-generic/devbus/devbus_resolve.c
+    LABELS   "standalone;peripherals;devbus"
+)
+
 # devbus: komponenta snapshotu "devbus" (round-trip, starší snapshot odpojí,
 # neznámé id a vyšší verze stavu = varování, pin INI), hash periph beze změny
 # bez připojeného zařízení, zásahy GUI přes device_request (replay odmítne).

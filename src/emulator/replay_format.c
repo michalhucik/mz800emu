@@ -133,6 +133,8 @@ void replay_data_free(st_REPLAY_DATA *d)
     g_ptr_array_unref(d->media);
     g_free(d->rtc_base);
     g_free(d->cmt_json);
+    g_free(d->devbus_conflict);
+    g_free(d->devbus_bus_idle);
     g_free(d);
 }
 
@@ -808,6 +810,20 @@ static char *replay_manifest_to_json(const st_REPLAY_DATA *d)
     for (int i = 0; i < REPLAY_JOY_PORTS; i++) json_builder_add_int_value(b, d->joy_type[i]);
     json_builder_end_array(b);
 
+    /* Model sběrnice devbus (konfigurace, ne stav stroje): jiná politika
+     * nebo model nebuzené sběrnice při přehrání dá na sporném portu jinou
+     * hodnotu; přehrání při neshodě varuje. Chybějící = neuloženo. */
+    if (d->devbus_conflict)
+    {
+        json_builder_set_member_name(b, "devbus_conflict");
+        json_builder_add_string_value(b, d->devbus_conflict);
+    };
+    if (d->devbus_bus_idle)
+    {
+        json_builder_set_member_name(b, "devbus_bus_idle");
+        json_builder_add_string_value(b, d->devbus_bus_idle);
+    };
+
     if (d->media_known)
     {
         json_builder_set_member_name(b, "media");
@@ -917,6 +933,8 @@ static bool replay_manifest_from_json(st_REPLAY_DATA *d, const char *text, char 
             };
         };
         if ((s = replay_json_get_str(o, "rtc_base"))) d->rtc_base = g_strdup(s);
+        if ((s = replay_json_get_str(o, "devbus_conflict"))) d->devbus_conflict = g_strdup(s);
+        if ((s = replay_json_get_str(o, "devbus_bus_idle"))) d->devbus_bus_idle = g_strdup(s);
         JsonNode *jt = json_object_get_member(o, "joystick_types");
         if (jt && JSON_NODE_HOLDS_ARRAY(jt))
         {

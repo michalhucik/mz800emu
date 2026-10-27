@@ -18,6 +18,7 @@
 #include "devbus_internal.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <strings.h>
 
@@ -125,4 +126,108 @@ int devbus_cfg_register(st_DEVBUS_SLOT *s)
     }
     if (s->ini_connected > 1) s->ini_connected = 1;
     return DEVBUS_OK;
+}
+
+
+/* ------------------------------------------------------------------------- */
+/*                      Sekce jádra [DEVBUS] (model sběrnice)                  */
+/* ------------------------------------------------------------------------- */
+
+/** @brief Klíčová slova prvku conflict (index = en_DEVBUS_CONFLICT). */
+static const char *const s_conflict_words[] = { "refuse", "and", "first", NULL };
+/** @brief Klíčová slova prvku bus_idle (index = en_DEVBUS_IDLE). */
+static const char *const s_idle_words[] = { "latch", "const", NULL };
+
+
+/**
+ * @brief Založí (nebo najde) KEYWORD element jádra se všemi slovy.
+ * @param m     Modul [DEVBUS].
+ * @param name  Klíč.
+ * @param words Slova zakončená NULL (index = hodnota).
+ * @param def   Výchozí index.
+ */
+static CFGELM *devbus_cfg_core_keyword(CFGMOD *m, const char *name, const char *const *words, unsigned def)
+{
+    CFGELM *e = cfgmodule_get_element_by_name(m, (char *) name);
+    if (e) return e;
+    e = cfgmodule_register_new_element(m, (char *) name, CFGENTYPE_KEYWORD, (int) def,
+                                       (int) def, (char *) words[def], -1);
+    for (unsigned k = 0; words[k]; k++) {
+        if (k == def) continue;
+        cfgelement_property_add_keyword(e->pkw, (int) k, (char *) words[k]);
+    }
+    return e;
+}
+
+
+void devbus_cfg_register_core(void)
+{
+    g_devbus.core_cfg_module = NULL;
+    if (!g_cfgmain) return;
+    CFGMOD *m = cfgroot_get_module_by_name(g_cfgmain, (char *) DEVBUS_CORE_INI_SECTION);
+    if (m && !devbus_cfg_is_known(m)) {
+        fprintf(stderr, "devbus: INI section [%s] already exists, bus settings not loaded\n",
+                DEVBUS_CORE_INI_SECTION);
+        return;
+    }
+    if (!m) {
+        m = cfgroot_register_new_module(g_cfgmain, (char *) DEVBUS_CORE_INI_SECTION);
+        if (!m) return;
+        cfgmodule_set_save_cb(m, devbus_cfg_save_mark, (void *) s_devbus_cfg_mark);
+    }
+    g_devbus.core_cfg_module = m;
+
+    CFGELM *e = devbus_cfg_core_keyword(m, "conflict", s_conflict_words, DEVBUS_CONFLICT_REFUSE);
+    cfgelement_bind(e, &g_devbus.conflict_policy);
+    e = devbus_cfg_core_keyword(m, "bus_idle", s_idle_words, DEVBUS_IDLE_LATCH);
+    cfgelement_bind(e, &g_devbus.bus_idle);
+    e = cfgmodule_get_element_by_name(m, (char *) "bus_idle_value");
+    if (!e) e = cfgmodule_register_new_element(m, (char *) "bus_idle_value", CFGENTYPE_UNSIGNED, 0xFF, 0, 0xFF);
+    cfgelement_bind(e, &g_devbus.bus_idle_value);
+
+    cfgmodule_parse(m);
+    cfgmodule_propagate(m);
+
+    /* propagate nekontroluje rozsah: neplatné hodnoty vrátit na výchozí. */
+    if (g_devbus.conflict_policy > DEVBUS_CONFLICT_FIRST) g_devbus.conflict_policy = DEVBUS_CONFLICT_REFUSE;
+    if (g_devbus.bus_idle > DEVBUS_IDLE_CONST) g_devbus.bus_idle = DEVBUS_IDLE_LATCH;
+    if (g_devbus.bus_idle_value > 0xFFu) g_devbus.bus_idle_value = 0xFFu;
+}
+
+
+bool devbus_cfg_is_core_section(const char *module)
+{
+    return module && strcasecmp(module, DEVBUS_CORE_INI_SECTION) == 0;
+}
+
+
+int devbus_cfg_set_core(const char *key, const char *text)
+{
+    if (!g_devbus.initialized) return DEVBUS_ERR_UNSUPPORTED;
+    if (!key || !text) return DEVBUS_ERR_INVALID;
+    CFGMOD *m = g_devbus.core_cfg_module;
+    CFGELM *e = m ? cfgmodule_get_element_by_name(m, (char *) key) : NULL;
+    if (strcasecmp(key, "conflict") == 0) {
+        en_DEVBUS_CONFLICT v;
+        if (!devbus_conflict_parse(text, &v)) return DEVBUS_ERR_INVALID;
+        devbus_set_conflict_policy(v);
+        if (e) cfgelement_set_keyword_value(e, (int) v);
+        return DEVBUS_OK;
+    }
+    if (strcasecmp(key, "bus_idle") == 0) {
+        en_DEVBUS_IDLE v;
+        if (!devbus_idle_parse(text, &v)) return DEVBUS_ERR_INVALID;
+        devbus_set_bus_idle(v, (uint8_t) g_devbus.bus_idle_value);
+        if (e) cfgelement_set_keyword_value(e, (int) v);
+        return DEVBUS_OK;
+    }
+    if (strcasecmp(key, "bus_idle_value") == 0) {
+        char *end = NULL;
+        unsigned long ul = strtoul(text, &end, 0);
+        if (!text[0] || !end || *end != '\0' || ul > 0xFFul) return DEVBUS_ERR_INVALID;
+        devbus_set_bus_idle((en_DEVBUS_IDLE) g_devbus.bus_idle, (uint8_t) ul);
+        if (e) cfgelement_set_unsigned_value(e, (unsigned) ul);
+        return DEVBUS_OK;
+    }
+    return DEVBUS_ERR_NOT_FOUND;
 }

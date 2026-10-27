@@ -668,6 +668,7 @@ static const char *iorq_type_name ( unsigned v )
         case 0: return "iorq";
         case 1: return "mreq_mapped";
         case 2: return "iorq_unconnected";
+        case 3: return "iorq_conflict";
         default: return "unknown";
     }
 }

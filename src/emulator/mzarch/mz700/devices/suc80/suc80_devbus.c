@@ -111,7 +111,10 @@ static void suc80_mmio_write(void *ctx, uint16_t addr, uint8_t value, unsigned f
 
 /** @brief MMIO rozsah latche, jen s mapovanou horní oblastí. */
 static const st_DEVBUS_MMIO_RANGE s_mmio[] = {
-    { 0xE00C, 0xE00F, DEVBUS_MMIO_MAPPED, suc80_mmio_write },
+    /* Latch 7474 nemá žádnou cestu na datovou sběrnici (schéma kitu):
+     * čtení neovlivňuje, DEVBUS_DRIVE_NONE. */
+    { .first = 0xE00C, .last = 0xE00F, .when_default = DEVBUS_MMIO_MAPPED,
+      .drive = DEVBUS_DRIVE_NONE, .write = suc80_mmio_write },
 };
 
 

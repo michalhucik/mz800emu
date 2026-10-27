@@ -25,16 +25,18 @@ static const st_DEVBUS_OPTION s_options[] = {
 };
 
 
-static uint8_t dummy_port_read(void *ctx, uint16_t port)
+static uint8_t dummy_port_read(void *ctx, uint16_t port, uint8_t *driven)
 {
     st_DEVBUS_DUMMY *d = ctx;
+    if (d->driven_override_valid) *driven = d->driven_override;
     if ((port & 0xff) == 0x75) return ++d->reads;
     return d->reg;
 }
 
-static uint8_t dummy_port_peek(void *ctx, uint16_t port)
+static uint8_t dummy_port_peek(void *ctx, uint16_t port, uint8_t *driven)
 {
     st_DEVBUS_DUMMY *d = ctx;
+    if (d->driven_override_valid) *driven = d->driven_override;
     if ((port & 0xff) == 0x75) return d->reads;
     return d->reg;
 }
@@ -48,9 +50,10 @@ static void dummy_port_write(void *ctx, uint16_t port, uint8_t v)
     }
 }
 
-/** @brief Porty dummy zařízení: 74h-75h. */
+/** @brief Porty dummy zařízení: 74h-75h (třístavový budič). */
 static const st_DEVBUS_PORT_RANGE s_ports[] = {
-    { 0x74, 0x75, dummy_port_read, dummy_port_peek, dummy_port_write },
+    { .first = 0x74, .last = 0x75, .drive = DEVBUS_DRIVE_TRISTATE,
+      .read = dummy_port_read, .peek = dummy_port_peek, .write = dummy_port_write },
 };
 
 
@@ -65,10 +68,10 @@ static void dummy_mmio_write(void *ctx, uint16_t addr, uint8_t value, unsigned f
     if (d->wait_on_write) devbus_cpu_wait(d->wait_on_write);
 }
 
-/** @brief MMIO dummy zařízení: 0E013h (MAPPED), 0E014h (DRAM). */
+/** @brief MMIO dummy zařízení: 0E013h (MAPPED), 0E014h (DRAM); jen snoop zápisu. */
 static const st_DEVBUS_MMIO_RANGE s_mmio[] = {
-    { 0xE013, 0xE013, DEVBUS_MMIO_MAPPED, dummy_mmio_write },
-    { 0xE014, 0xE014, DEVBUS_MMIO_DRAM, dummy_mmio_write },
+    { .first = 0xE013, .last = 0xE013, .when_default = DEVBUS_MMIO_MAPPED, .drive = DEVBUS_DRIVE_NONE, .write = dummy_mmio_write },
+    { .first = 0xE014, .last = 0xE014, .when_default = DEVBUS_MMIO_DRAM, .drive = DEVBUS_DRIVE_NONE, .write = dummy_mmio_write },
 };
 
 
@@ -252,8 +255,12 @@ void devbus_dummy_reset_counters(st_DEVBUS_DUMMY *d)
 {
     int slot = d->slot;
     bool fc = d->fail_connect, fi = d->fail_init;
+    bool dov = d->driven_override_valid;
+    uint8_t dom = d->driven_override;
     memset(d, 0, sizeof(*d));
     d->fail_connect = fc;
     d->fail_init = fi;
     d->slot = slot;
+    d->driven_override_valid = dov;
+    d->driven_override = dom;
 }

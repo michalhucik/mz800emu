@@ -327,6 +327,22 @@ bool dbg_ui_io_activity_reset_port(uint16_t port, bool is_8bit)
 }
 
 
+bool dbg_ui_bus_peek(uint16_t addr, bool mmio, uint8_t *value, uint8_t *driven, int *source)
+{
+    st_DBGAPI_BUS_PEEK_PARAM p;
+    memset(&p, 0, sizeof(p));
+    p.addr = addr;
+    p.mmio = mmio ? 1 : 0;
+    if (!dbgapi_ui_submit_cmd_sync(&g_dbgapi_cmdrq_queue, DBGAPI_CMD_BUS_PEEK, &p, NULL,
+                                   DBG_UI_IO_CMD_TIMEOUT_MS)) return false;
+    if (!p.supported) return false;
+    if (value) *value = p.value;
+    if (driven) *driven = p.driven;
+    if (source) *source = p.source;
+    return true;
+}
+
+
 bool dbg_ui_bp_clear_all(void)
 {
     /* Uvolnění stringů/AST BP a vyčištění bptmap musí běžet na emu

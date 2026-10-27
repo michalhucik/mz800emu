@@ -243,35 +243,58 @@ static void kp80_dev_apply_all_options(st_KP80_DEV *d)
 /* ========================================================================= */
 
 /**
+ * @brief Budí karta sběrnici při čtení portu @p p (bity 0 - 1)?
+ *
+ * Budič 74LS245 je otevřen při každém vlastním dekódu; výjimkou je čtení
+ * vybraného registru R31 (update strobe) na 71h / 73h, kdy CRTC data
+ * nedodá a karta nechá sběrnici plavat (model, viz devdoc/kp80.md).
+ * Hodnotu nebuzené sběrnice dodá jádro devbus (dřív si karta brala latch
+ * sama).
+ */
+static bool kp80_dev_port_drives(const st_KP80_DEV *d, unsigned p)
+{
+    if (p != KP80_PORT_DATA && p != KP80_PORT_REG) return true;
+    return d->kp.ar != KP80_REG_DUMMY;
+}
+
+
+/**
  * @brief IN z portu 70h - 73h.
  *
- * Nebuzená sběrnice (čtení R31) vrací latch datové sběrnice. Čtení nemění
- * obraz (jen update adresu a update cyklus), proto výstup neoznačuje.
+ * Čtení R31 sběrnici nebudí (`*driven = 0`), hodnotu doplní jádro z modelu
+ * nebuzené sběrnice. Čtení nemění obraz (jen update adresu a update
+ * cyklus), proto výstup neoznačuje.
  *
- * @param ctx  Zařízení.
- * @param port Adresa portu (jádro bere bity 0 - 1).
- * @return Hodnota portu.
+ * @param ctx    Zařízení.
+ * @param port   Adresa portu (jádro bere bity 0 - 1).
+ * @param driven Vstup 0FFh (TRISTATE); výstup 0 při čtení R31.
+ * @return Hodnota portu (při `*driven = 0` se ignoruje).
  * @note Volba WAIT prodlouží přístup na 71h - 73h o `wait` T-stavů.
  */
-static uint8_t kp80_dev_port_read(void *ctx, uint16_t port)
+static uint8_t kp80_dev_port_read(void *ctx, uint16_t port, uint8_t *driven)
 {
     st_KP80_DEV *d = ctx;
-    uint8_t v = kp80_read(&d->kp, port & 0x03u, kp80_dev_now(), g_mzarch_main.regDBUS_latch);
-    if (d->wait && kp80_port_has_wait(port & 0x03u)) devbus_cpu_wait(d->wait);
+    unsigned p = port & 0x03u;
+    if (!kp80_dev_port_drives(d, p)) *driven = 0;
+    uint8_t v = kp80_read(&d->kp, p, kp80_dev_now(), 0);
+    if (d->wait && kp80_port_has_wait(p)) devbus_cpu_wait(d->wait);
     return v;
 }
 
 
 /**
  * @brief Čtení portu bez vedlejších účinků (debugger, BP `port[N]`).
- * @param ctx  Zařízení.
- * @param port Adresa portu.
+ * @param ctx    Zařízení.
+ * @param port   Adresa portu.
+ * @param driven Jako u kp80_dev_port_read().
  * @return Totéž co kp80_dev_port_read() bez změny stavu a bez WAIT.
  */
-static uint8_t kp80_dev_port_peek(void *ctx, uint16_t port)
+static uint8_t kp80_dev_port_peek(void *ctx, uint16_t port, uint8_t *driven)
 {
     st_KP80_DEV *d = ctx;
-    return kp80_peek(&d->kp, port & 0x03u, kp80_dev_now(), g_mzarch_main.regDBUS_latch);
+    unsigned p = port & 0x03u;
+    if (!kp80_dev_port_drives(d, p)) *driven = 0;
+    return kp80_peek(&d->kp, p, kp80_dev_now(), 0);
 }
 
 
@@ -290,9 +313,16 @@ static void kp80_dev_port_write(void *ctx, uint16_t port, uint8_t v)
     kp80_dev_touch(d);
 }
 
-/** @brief Porty karty: 70h - 73h (úplný dekód A7 - A2, bez zrcadel). */
+/**
+ * @brief Porty karty: 70h - 73h (úplný dekód A7 - A2, bez zrcadel).
+ *
+ * Budič: IC1 74LS245 s /G od /BS (plný dekód adresy a /RD nebo /WR), tedy
+ * třístavový budič všech 8 bitů jen při vlastním portu (kusovník a schéma
+ * karty, viz devdoc/kp80.md).
+ */
 static const st_DEVBUS_PORT_RANGE s_ports[] = {
-    { 0x70, 0x73, kp80_dev_port_read, kp80_dev_port_peek, kp80_dev_port_write },
+    { .first = 0x70, .last = 0x73, .drive = DEVBUS_DRIVE_TRISTATE,
+      .read = kp80_dev_port_read, .peek = kp80_dev_port_peek, .write = kp80_dev_port_write },
 };
 
 
@@ -367,22 +397,37 @@ static const st_DEVBUS_REGION s_regions[] = {
 /*                              Katalog I/O                                  */
 /* ========================================================================= */
 
+/**
+ * @brief Hodnota portu pro okno I/O: peek složený s modelem nebuzené sběrnice.
+ *
+ * Při čtení R31 karta nebudí; zrcadlo katalogu pak ukáže hodnotu nebuzené
+ * sběrnice (devbus_idle_byte()), stejně jako by ji dostal CPU.
+ */
+static uint8_t kp80_dev_cat_peek(uint16_t port)
+{
+    uint8_t driven = 0xFFu;
+    uint8_t v = kp80_dev_port_peek(&s_kp80, port, &driven);
+    if (driven == 0xFFu) return v;
+    uint8_t idle = devbus_idle_byte();
+    return (uint8_t) ((v & driven) | (idle & (uint8_t) ~driven));
+}
+
 /** @brief Hodnota 70h pro okno I/O (bajt VRAM na update adrese, bez autoinkrementu). */
 static uint8_t kp80_dev_cat_70(void)
 {
-    return kp80_dev_port_peek(&s_kp80, 0x70);
+    return kp80_dev_cat_peek(0x70);
 }
 
 /** @brief Hodnota 71h / 73h pro okno I/O (vybraný registr podle čtení). */
 static uint8_t kp80_dev_cat_reg(void)
 {
-    return kp80_dev_port_peek(&s_kp80, 0x73);
+    return kp80_dev_cat_peek(0x73);
 }
 
 /** @brief Hodnota 72h pro okno I/O (status). */
 static uint8_t kp80_dev_cat_status(void)
 {
-    return kp80_dev_port_peek(&s_kp80, 0x72);
+    return kp80_dev_cat_peek(0x72);
 }
 
 /** @brief Bity portu 72h: čtení = status, zápis = výběr registru. */

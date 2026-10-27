@@ -6,7 +6,7 @@
  *
  * | Soubor | Obsah |
  * |--------|-------|
- * | `manifest.json` | formát, verze, platforma, délka, interval hashů, varování, média, kazeta, RTC, joystick |
+ * | `manifest.json` | formát, verze, platforma, délka, interval hashů, varování, média, kazeta, RTC, joystick, model sběrnice devbus |
  * | `start.mzs`     | startovní snapshot (kompletní, vždy s RAMdiskem) |
  * | `inputs.jsonl`  | události (jeden řádek = jedna událost), poslední řádek `end` |
  * | `hashes.csv`    | periodické hashe částí stavu (sloupce podle hlavičky) |
@@ -196,6 +196,8 @@ extern "C"
         char *rtc_base;           /**< Místní čas startu záznamu pro RTC (`YYYY-MM-DDTHH:MM:SS`), NULL = neuložen. */
         char *cmt_json;           /**< Stav kazety při startu jako JSON objekt (text, obsah sestavuje replay.c), NULL = bez pásky. */
         int joy_type[REPLAY_JOY_PORTS]; /**< Typ joysticku portu při záznamu (en_JOY_TYPE), REPLAY_JOY_TYPE_UNKNOWN = neuložen. */
+        char *devbus_conflict;    /**< Politika kolize sběrnice devbus při záznamu (`refuse`, `and`, `first`), NULL = neuložena (starší záznam, platforma bez devbus). */
+        char *devbus_bus_idle;    /**< Model nebuzené sběrnice při záznamu (`latch`, nebo `const:0xNN`), NULL = neuložen. */
     } st_REPLAY_DATA;
 
     /**

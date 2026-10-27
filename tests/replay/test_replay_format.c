@@ -310,6 +310,8 @@ void test_file_media_roundtrip(void)
     d->cmt_json = g_strdup("{\"block\":2,\"speed\":1}");
     d->joy_type[0] = 2;
     d->joy_type[1] = 0;
+    d->devbus_conflict = g_strdup("and");
+    d->devbus_bus_idle = g_strdup("const:0x7e");
 
     uint8_t dsk[1000];
     for (int i = 0; i < 1000; i++) dsk[i] = (uint8_t)(i * 13);
@@ -335,6 +337,8 @@ void test_file_media_roundtrip(void)
     TEST_ASSERT_NOT_NULL(strstr(r->cmt_json, "\"block\":2"));
     TEST_ASSERT_EQUAL_INT(2, r->joy_type[0]);
     TEST_ASSERT_EQUAL_INT(0, r->joy_type[1]);
+    TEST_ASSERT_EQUAL_STRING("and", r->devbus_conflict);
+    TEST_ASSERT_EQUAL_STRING("const:0x7e", r->devbus_bus_idle);
     TEST_ASSERT_TRUE(r->media_known);
     TEST_ASSERT_EQUAL_UINT(3, r->media->len);
 
@@ -502,6 +506,8 @@ void test_read_old_layout(void)
     TEST_ASSERT_FALSE(r->media_known);
     TEST_ASSERT_NULL(r->rtc_base);
     TEST_ASSERT_NULL(r->cmt_json);
+    TEST_ASSERT_NULL(r->devbus_conflict);
+    TEST_ASSERT_NULL(r->devbus_bus_idle);
     TEST_ASSERT_EQUAL_INT(REPLAY_JOY_TYPE_UNKNOWN, r->joy_type[0]);
     replay_data_free(r);
     g_free(csv);

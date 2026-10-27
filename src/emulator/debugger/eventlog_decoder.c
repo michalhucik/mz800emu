@@ -209,8 +209,8 @@ static void decode_iorq ( uint8_t subtype, uint32_t payload,
     const unsigned port  = (unsigned) ( payload & 0xFFFFu );
     const unsigned value = (unsigned) ( ( payload >> 16 ) & 0xFFu );
     const char *name = decoder_lookup_port_name ( (uint16_t) port );
-    const char *unc = ( subtype == EVENTLOG_IORQ_SUB_UNCONNECTED )
-                      ? " [unconnected]" : "";
+    const char *unc = ( subtype == EVENTLOG_IORQ_SUB_UNCONNECTED ) ? " [unconnected]"
+                      : ( subtype == EVENTLOG_IORQ_SUB_CONFLICT ) ? " [bus conflict]" : "";
     if ( name ) {
         snprintf ( buf, buf_len, "port=0x%04X (%s) val=0x%02X%s",
                    port, name, value, unc );
@@ -1111,6 +1111,8 @@ void eventlog_decode_subtype_short ( uint8_t category, uint8_t subtype,
                     sub_copy ( buf, buf_len, "NORMAL" ); return;
                 case EVENTLOG_IORQ_SUB_UNCONNECTED:
                     sub_copy ( buf, buf_len, "UNCONN" ); return;
+                case EVENTLOG_IORQ_SUB_CONFLICT:
+                    sub_copy ( buf, buf_len, "CONFLICT" ); return;
             }
             break;
 
@@ -1337,6 +1339,8 @@ void eventlog_decode_subtype_full ( uint8_t category, uint8_t subtype,
                     sub_copy ( buf, buf_len, "IN from mapped port" ); return;
                 case EVENTLOG_IORQ_SUB_UNCONNECTED:
                     sub_copy ( buf, buf_len, "IN from unmapped port (ghost read)" ); return;
+                case EVENTLOG_IORQ_SUB_CONFLICT:
+                    sub_copy ( buf, buf_len, "IN with two bus drivers (conflict, value is a model)" ); return;
             }
             break;
 
@@ -1346,6 +1350,8 @@ void eventlog_decode_subtype_full ( uint8_t category, uint8_t subtype,
                     sub_copy ( buf, buf_len, "OUT to mapped port" ); return;
                 case EVENTLOG_IORQ_SUB_UNCONNECTED:
                     sub_copy ( buf, buf_len, "OUT to unmapped port (ghost write)" ); return;
+                case EVENTLOG_IORQ_SUB_CONFLICT:
+                    sub_copy ( buf, buf_len, "OUT with bus conflict (not produced)" ); return;
             }
             break;
 

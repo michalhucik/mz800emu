@@ -88,6 +88,7 @@
 #if ( MZARCH == 800 ) || ( MZARCH == 1500 ) || ( MZARCH == 700 )
 #include "ui-imgui/debugger/heatmap/mhmap_window.h"
 #include "ui-imgui/debugger/ioview/io_window.h"
+#include "ui-imgui/debugger/busmap/bus_window.h"
 #include "ui-imgui/debugger/memmap/memmap_window.h"
 #include "ui-imgui/debugger/memsearch_window/memsearch_window.h"
 #include "ui-imgui/debugger/dasm_window/dasm_window.h"
@@ -606,6 +607,20 @@ void debugger_init ( void ) {
 #endif
             cfgmodule_parse ( iomod );
             cfgmodule_propagate ( iomod );
+        }
+    }
+
+    /* Bus Map (D6): samostatná sekce [BUS_MAP_PANEL] (režim obarvení,
+     * záložka, šířka inspektoru, legenda, sledování). Klíče registruje okno,
+     * mimo headless test build. */
+    {
+        CFGMOD *bmod = cfgroot_register_new_module ( g_cfgmain, "BUS_MAP_PANEL" );
+        if ( bmod ) {
+#ifndef MZTEST_HEADLESS
+            bus_window_register_persistence ( bmod );
+#endif
+            cfgmodule_parse ( bmod );
+            cfgmodule_propagate ( bmod );
         }
     }
 

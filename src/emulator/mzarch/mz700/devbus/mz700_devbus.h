@@ -63,9 +63,12 @@ void mz700_install_cpu_callbacks(void);
 /**
  * @brief Obálka port_read_cb() pro porty zařízení devbus (mz700_iorq.c).
  *
- * Port bez zařízení (g_devbus_ports[].range == NULL) předá port_read_cb()
- * beze změny. Port zařízení: mzarch_main_insideop_iorq(), značka
- * "obslouženo" pro trace, handler read() (bez něj latch sběrnice).
+ * Port bez zařízení (g_devbus_ports[].count == 0) předá port_read_cb()
+ * beze změny. Port zařízení: nejdřív statický switch port_read_cb()
+ * (insideop; zda deska budila, říká příznak UNCONNECTED po návratu), pak
+ * rezoluce čtení devbus_port_read_resolve() přes všechny vlastníky portu
+ * s hodnotou nebuzené sběrnice platformy. Značka pro trace: HANDLED, když
+ * někdo budil, jinak UNCONNECTED; kolize značí adaptér (CONFLICT).
  *
  * @param cpu CPU.
  * @param addr Adresa portu (dekód podle dolního bajtu).
@@ -78,8 +81,10 @@ uint8_t port_read_cb_devbus(z80_t *cpu, uint16_t addr, void *user_data);
 /**
  * @brief Obálka port_write_cb() pro porty zařízení devbus (mz700_iorq.c).
  *
- * Port bez zařízení předá port_write_cb() beze změny; port zařízení:
- * mzarch_main_insideop_iorq(), značka "obslouženo", handler write().
+ * Vždy nejdřív statický switch port_write_cb() (deska první, insideop),
+ * pak u portu se zařízením broadcast devbus_port_write_all() všem
+ * vlastníkům v pořadí připojení (i těm, kteří sběrnici nebudí) a značka
+ * "obslouženo".
  *
  * @param cpu CPU.
  * @param addr Adresa portu.
@@ -146,6 +151,18 @@ void mz700_devbus_start(void);
  * @post Kreslení řádku je výchozí, registr devbus prázdný.
  */
 void mz700_devbus_exit(void);
+
+/**
+ * @brief Je statický vlastník druhu @p kind (en_MZ700_BUS_PRESENT) právě přítomný?
+ *
+ * Lepidlo tabulky mz700_bus_owners.c pro vrstvu bus_map: čte stav
+ * periferií (Unicard, FDC, IDE8, RAM disk, Quick Disk, MemExt, CMT hack).
+ *
+ * @param kind Druh přítomnosti (en_MZ700_BUS_PRESENT).
+ * @return true = na sběrnici je; neznámý druh = false.
+ * @pre Emu vlákno, nebo UI pod device_state_lock() (jen čtení příznaků).
+ */
+bool mz700_bus_owner_present(unsigned kind);
 
 /**
  * @brief Je adresa sledovaná oknem I/O a Event Viewerem jako MMIO zápis?

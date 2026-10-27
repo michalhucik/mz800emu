@@ -33,6 +33,59 @@ st_IO_PORT_ACTIVITY g_io_activity[ IO_ACTIVITY_TABLE_SIZE ];
  */
 uint8_t g_io_window_tracking_active = 0;
 
+/** @brief Maska klientů sledování (bit = IO_TRACKING_CLIENT_*); jen UI vlákno. */
+static unsigned s_tracking_clients = 0;
+
+
+bool io_activity_tracking_set_client ( unsigned client, bool on )
+{
+    if ( client >= 32 ) return false;
+    if ( on ) s_tracking_clients |= ( 1u << client );
+    else s_tracking_clients &= ~( 1u << client );
+    uint8_t want = s_tracking_clients ? 1u : 0u;
+    if ( g_io_window_tracking_active == want ) return false;
+    g_io_window_tracking_active = want;
+    return true;
+}
+
+
+bool io_activity_tracking_client_active ( unsigned client )
+{
+    return client < 32 && ( s_tracking_clients & ( 1u << client ) ) != 0;
+}
+
+
+void io_activity_record_ghost ( uint16_t port )
+{
+    st_IO_PORT_ACTIVITY *a = &g_io_activity[ port ];
+    if ( a->ghost_hits != UINT32_MAX ) a->ghost_hits++;
+}
+
+
+void io_activity_record_conflict ( uint16_t port )
+{
+    st_IO_PORT_ACTIVITY *a = &g_io_activity[ port ];
+    if ( a->conflict_hits != UINT32_MAX ) a->conflict_hits++;
+}
+
+
+void io_activity_get_totals_8bit ( uint8_t low_byte, uint64_t *out_ghost, uint64_t *out_conflict,
+                                   uint64_t *out_total_in, uint64_t *out_total_out )
+{
+    uint64_t g = 0, c = 0, ti = 0, to = 0;
+    for ( unsigned hb = 0; hb < 256; hb++ ) {
+        const st_IO_PORT_ACTIVITY *a = &g_io_activity[ ( hb << 8 ) | low_byte ];
+        g += a->ghost_hits;
+        c += a->conflict_hits;
+        ti += a->total_hits_in;
+        to += a->total_hits_out;
+    }
+    if ( out_ghost ) *out_ghost = g;
+    if ( out_conflict ) *out_conflict = c;
+    if ( out_total_in ) *out_total_in = ti;
+    if ( out_total_out ) *out_total_out = to;
+}
+
 
 void io_activity_init ( void )
 {

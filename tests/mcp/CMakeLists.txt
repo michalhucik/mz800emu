@@ -72,6 +72,8 @@ mz_add_test(mcp_dispatch
         ${CMAKE_SOURCE_DIR}/src/emulator/debugger/dbgapi_cmd_props.c
         # device_screenshot (kp80 D4) kóduje PNG
         ${CMAKE_SOURCE_DIR}/src/emulator/debugger/png_encode.c
+        # get_devices: jména budičů sběrnice (čistý modul bez závislostí)
+        ${CMAKE_SOURCE_DIR}/src/emulator/hw-generic/devbus/devbus_resolve.c
     LABELS   "standalone;mcp"
 )
 
@@ -656,6 +658,24 @@ if(Python3_FOUND)
         SKIP_RETURN_CODE 77
     )
     message(STATUS "  tests/mcp: registered mcp_kp80_e2e "
+                   "(Python ${Python3_VERSION})")
+
+    # Mapa vlastníků sběrnice (plán D6 bus-model): get_bus_map před a po
+    # připojení K&P / PCG-700 / SUC, statická tabulka MZ-700, include a
+    # only_mapped, bus_peek (devbus, deska, idle, chyby), settings_set
+    # DEVBUS/conflict a DEVBUS/bus_idle; na mz800emu supported false.
+    add_test(
+        NAME    mcp_bus_map_e2e
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_bus_map_e2e.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_bus_map_e2e PROPERTIES
+        LABELS  "e2e;mcp;pipe;devbus"
+        TIMEOUT 300
+        SKIP_RETURN_CODE 77
+    )
+    message(STATUS "  tests/mcp: registered mcp_bus_map_e2e "
                    "(Python ${Python3_VERSION})")
 
     # Přístup debuggeru k portu zařízení devbus bez WAIT (plán D5, N-D5-5):

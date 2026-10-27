@@ -9,6 +9,7 @@
 #include "hw-generic/memory/memext.h"
 #include "hw-generic/cmt/cmthack.h"
 #include "hw-generic/psg/psg.h"
+#include "mzarch/mz1500/mz1500_bus_owners.h"
 
 #if HAVE_PIOZ80
 #include "hw-generic/pioz80/pioz80.h"
@@ -483,6 +484,9 @@ uint8_t port_read_with_logging_cb(z80_t *cpu, uint16_t addr, void *user_data)
         uint32_t frame_n = (uint32_t) g_gdg.total_elapsed.screens;
         io_activity_record_hit ( addr, value,
                                   true /* is_in */, frame_n );
+        /* Bus Map: ghost čtení (nikdo port nedekódoval nebo nebudil).
+         * Kolize budičů jsou jen s devbus (MZ-700), tady být nemohou. */
+        if ( g_tracelog_iorq_unconnected ) io_activity_record_ghost ( addr );
         io_history_record ( true /* is_in */, addr, value,
                             g_mzarch_main.instruction_addr,
                             frame_n,
@@ -535,6 +539,8 @@ void port_write_with_logging_cb(z80_t *cpu, uint16_t addr, uint8_t value, void *
         uint32_t frame_n = (uint32_t) g_gdg.total_elapsed.screens;
         io_activity_record_hit ( addr, value,
                                   false /* is_in */, frame_n );
+        /* Bus Map: ghost zápis (nikdo port nedekóduje). */
+        if ( g_tracelog_iorq_unconnected ) io_activity_record_ghost ( addr );
         io_history_record ( false /* is_in */, addr, value,
                             g_mzarch_main.instruction_addr,
                             frame_n,
@@ -571,6 +577,32 @@ void port_write_with_logging_cb(z80_t *cpu, uint16_t addr, uint8_t value, void *
         event_bus_emit ( "io_write", payload );
     }
 #endif
+}
+
+
+bool mz1500_bus_owner_present(unsigned kind)
+{
+    switch ((en_MZ1500_BUS_PRESENT) kind) {
+    case MZ1500_BUS_PRESENT_ALWAYS:      return true;
+    case MZ1500_BUS_PRESENT_CMTHACK:     return CMTHACK_TEST_IS_INSTALLED != 0;
+    case MZ1500_BUS_PRESENT_UNICARD:     return UNICARD_TEST_IS_CONNECTED;
+#if CFG_HWEXT_HAVE_RAMDISK
+    case MZ1500_BUS_PRESENT_PEZIK68:     return g_ramdisk.pezik[RAMDISK_PEZIK_68].connected != 0;
+    case MZ1500_BUS_PRESENT_RAMDISK_STD: return g_ramdisk.std.connected != 0;
+#endif
+#if CFG_HWEXT_HAVE_IDE8
+    case MZ1500_BUS_PRESENT_IDE8:        return IDE8_TEST_CONNECTED;
+#endif
+#if CFG_HWEXT_HAVE_FDC
+    case MZ1500_BUS_PRESENT_FDC0:        return g_fdc[FDC0].connected != 0;
+    case MZ1500_BUS_PRESENT_FDC1:        return g_fdc[FDC1].connected != 0;
+#endif
+    case MZ1500_BUS_PRESENT_MEMEXT:      return MEMEXT_TEST_CONNECTED;
+#if CFG_HWEXT_HAVE_QDISK
+    case MZ1500_BUS_PRESENT_QDISK:       return g_qdisk.connected != 0;
+#endif
+    default:                             return false;
+    }
 }
 
 

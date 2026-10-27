@@ -47,6 +47,10 @@
 #include "hw-generic/cmt/cmtext.h"
 #include "hw-generic/cmt/cmtext_block.h"
 #include "hw-generic/cmt/cmtext_container.h"
+#include "hw-generic/devbus/devbus.h"
+
+/** @brief Dopředná deklarace (definice u přehrání). */
+static void replay_devbus_idle_text(char *buf, size_t size);
 #include "automation.h"
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
@@ -1294,6 +1298,13 @@ static const char *replay_rec_start(const st_REPLAY_REQ *r, char *errbuf, size_t
     s_rec->hash_interval = r->hash_interval ? r->hash_interval : REPLAY_DEFAULT_HASH_INTERVAL;
     s_rec->start_snapshot = snap;
     s_rec->start_snapshot_size = snap_size;
+    if (devbus_is_initialized())
+    {
+        char idle[16];
+        replay_devbus_idle_text(idle, sizeof(idle));
+        s_rec->devbus_conflict = g_strdup(devbus_conflict_name(devbus_conflict_policy()));
+        s_rec->devbus_bus_idle = g_strdup(idle);
+    };
     replay_media_capture(s_rec);
     s_cmthack_count = 0;
 
@@ -1775,6 +1786,60 @@ static const char *replay_play_load_start(const st_REPLAY_DATA *d, char *errbuf,
 }
 
 
+/**
+ * @brief Text modelu nebuzené sběrnice devbus pro manifest (`latch`, nebo `const:0xNN`).
+ * @param buf  Výstup (nejméně 16 B).
+ * @param size Velikost @p buf.
+ */
+static void replay_devbus_idle_text(char *buf, size_t size)
+{
+    if (devbus_bus_idle() == DEVBUS_IDLE_CONST)
+    {
+        g_snprintf(buf, size, "const:0x%02x", devbus_bus_idle_value());
+    }
+    else
+    {
+        g_strlcpy(buf, "latch", size);
+    };
+}
+
+
+/**
+ * @brief Varování při přehrání, když se model sběrnice devbus liší od záznamu.
+ *
+ * Politika kolize a model nebuzené sběrnice jsou konfigurace mimo
+ * snapshot; při jiné hodnotě dá čtení sporného nebo nebuzeného portu jinou
+ * hodnotu než při záznamu. Neblokuje: přidá varování k záznamu (počet ve
+ * stavu replay) a vypíše ho na stderr. Záznam bez údaje (starší, jiná
+ * platforma) se nekontroluje.
+ *
+ * @param d Načtený záznam.
+ */
+static void replay_play_check_devbus(st_REPLAY_DATA *d)
+{
+    if (!devbus_is_initialized()) return;
+    char idle[16];
+    replay_devbus_idle_text(idle, sizeof(idle));
+    const char *pol = devbus_conflict_name(devbus_conflict_policy());
+    if (d->devbus_conflict && strcmp(d->devbus_conflict, pol) != 0)
+    {
+        char *w = g_strdup_printf("the replay was recorded with devbus conflict policy '%s', this emulator uses '%s'; "
+                                  "reads of a port with two bus drivers may differ", d->devbus_conflict, pol);
+        fprintf(stderr, "[REPLAY] warning: %s\n", w);
+        replay_data_add_warning(d, w);
+        g_free(w);
+    };
+    if (d->devbus_bus_idle && strcmp(d->devbus_bus_idle, idle) != 0)
+    {
+        char *w = g_strdup_printf("the replay was recorded with devbus bus_idle '%s', this emulator uses '%s'; "
+                                  "reads of an undriven port may differ", d->devbus_bus_idle, idle);
+        fprintf(stderr, "[REPLAY] warning: %s\n", w);
+        replay_data_add_warning(d, w);
+        g_free(w);
+    };
+}
+
+
 /** @brief Start přehrávání (paused smyčka). @return NULL = v pořádku, jinak chyba. */
 static const char *replay_play_start(const st_REPLAY_REQ *r, char *errbuf, size_t errsize)
 {
@@ -1826,6 +1891,7 @@ static const char *replay_play_start(const st_REPLAY_REQ *r, char *errbuf, size_
         };
     };
 #endif
+    replay_play_check_devbus(d);
     const char *lerr = replay_play_load_start(d, errbuf, errsize);
     if (lerr)
     {

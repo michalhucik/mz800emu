@@ -528,6 +528,10 @@ void imgui_menu_debugger(en_DBG_MENU_CALLER caller)
             g_gui->showIoWindow = !g_gui->showIoWindow;
         };
         /*
+         * Bus Map (plán D6 bus-model) je v menu HW & Devices (menu_devices.cpp):
+         * je to přehled "co je kde" na sběrnici, ne ladicí nástroj.
+         */
+        /*
          * Events - real-time pohled na eventlog ring (Vlna 1 = Log tab,
          * Vlna 2 = Strip tab). V módu WHEN_WINDOW_OPEN otevírá ring
          * recording, zavírá ho zase při zavření okna.
