@@ -1107,6 +1107,7 @@ const char *dbgapi_cmd_to_str(en_DBGAPI_CMD cmd)
         case DBGAPI_CMD_RUN_UNTIL_TICKS:           return "run_until_ticks";
         case DBGAPI_CMD_MACHINE_HASH:              return "machine_hash";
         case DBGAPI_CMD_DEVBUS_LIST:               return "devbus_list";
+        case DBGAPI_CMD_DEVBUS_VOUT_READ:          return "devbus_vout_read";
         case DBGAPI_CMD_MEMSEARCH_SAMPLE:          return "memsearch_sample";
         case DBGAPI_CMD_FREEZE_LIST:               return "freeze_list";
         /* V1.D.1 - Core + CPU extras Resources */
@@ -5944,6 +5945,71 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                     p->dev[ i ].opt[ o ] = devbus_option_get ( (int) i, o );
                 for ( unsigned m = 0; m < d->mmio_count; m++ )
                     p->dev[ i ].mmio_when[ m ] = devbus_mmio_get_when ( (int) i, m );
+            };
+            rq->success = true;
+            break;
+        }
+
+        /* --- Snímek sekundárního výstupu zařízení devbus (kp80 D4) ---
+         * Kopie posledního předaného snímku přes devbus_vout_read_last()
+         * (druhý čtecí kanál emu vlákna, okno GUI čte nezávisle přes
+         * fetch). Neznámý výstup = found 0; odpojené zařízení nebo zatím
+         * žádný snímek = available 0. */
+        case DBGAPI_CMD_DEVBUS_VOUT_READ:
+        {
+            st_DBGAPI_DEVBUS_VOUT_READ_PARAM *p = (st_DBGAPI_DEVBUS_VOUT_READ_PARAM *) rq->data_ptr;
+            if ( !p )
+            {
+                rq->success = false;
+                break;
+            };
+            p->output[ sizeof ( p->output ) - 1 ] = '\0';
+            p->found = 0;
+            p->connected = 0;
+            p->available = 0;
+            p->slot = -1;
+            p->out_vout = NULL;
+            p->seq = 0;
+            p->pixels = NULL;
+            st_DEVBUS_VOUT *o = NULL;
+            for ( unsigned i = 0; i < devbus_vout_count ( ); i++ )
+            {
+                st_DEVBUS_VOUT *c = devbus_vout_at ( i );
+                if ( p->output[ 0 ] )
+                {
+                    if ( strcmp ( devbus_vout_desc ( c )->id, p->output ) == 0 )
+                    {
+                        o = c;
+                        break;
+                    };
+                }
+                else if ( devbus_is_connected ( devbus_vout_slot ( c ) ) )
+                {
+                    o = c;
+                    break;
+                };
+            };
+            if ( o )
+            {
+                const st_DEVBUS_VOUT_DESC *vd = devbus_vout_desc ( o );
+                size_t size = (size_t) vd->width * vd->height;
+                p->found = 1;
+                p->out_vout = o;
+                p->slot = devbus_vout_slot ( o );
+                p->connected = devbus_is_connected ( p->slot ) ? 1 : 0;
+                if ( p->connected )
+                {
+                    p->pixels = g_malloc ( size );
+                    if ( devbus_vout_read_last ( o, p->pixels, size, &p->seq ) )
+                    {
+                        p->available = 1;
+                    }
+                    else
+                    {
+                        g_free ( p->pixels );
+                        p->pixels = NULL;
+                    };
+                };
             };
             rq->success = true;
             break;

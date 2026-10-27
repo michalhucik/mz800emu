@@ -70,6 +70,8 @@ mz_add_test(mcp_dispatch
         ${CMAKE_SOURCE_DIR}/src/emulator/debugger/memsearch/memsearch.c
         ${CMAKE_SOURCE_DIR}/src/emulator/debugger/run_control/run_log.c
         ${CMAKE_SOURCE_DIR}/src/emulator/debugger/dbgapi_cmd_props.c
+        # device_screenshot (kp80 D4) kóduje PNG
+        ${CMAKE_SOURCE_DIR}/src/emulator/debugger/png_encode.c
     LABELS   "standalone;mcp"
 )
 
@@ -636,6 +638,24 @@ if(Python3_FOUND)
         SKIP_RETURN_CODE 77
     )
     message(STATUS "  tests/mcp: registered mcp_suc80_e2e "
+                   "(Python ${Python3_VERSION})")
+
+    # 80sloupcová karta K&P (zařízení devbus kp80, plán D4): porty 70h-73h,
+    # program v RAM, VRAM karty, device_screenshot druhého monitoru, fosfor,
+    # překreslení v pauze, snapshot, reset; MZ-700 PAL a NTSC. Navíc všechna
+    # tři zařízení MZ-700 naráz (PCG-700 + SUC + K&P) se snapshot round-trip.
+    add_test(
+        NAME    mcp_kp80_e2e
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_kp80_e2e.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_kp80_e2e PROPERTIES
+        LABELS  "e2e;mcp;pipe;kp80"
+        TIMEOUT 300
+        SKIP_RETURN_CODE 77
+    )
+    message(STATUS "  tests/mcp: registered mcp_kp80_e2e "
                    "(Python ${Python3_VERSION})")
 
     # Postupné hledání proměnných (memsearch) a Freeze Bytes přes MCP:

@@ -138,8 +138,10 @@
  * KONEC cmd_map[]) = 222 + 1 = 223.
  * dev-api doplnil get_devices (volitelná zařízení devbus, na KONEC
  * cmd_map[]) = 223 + 1 = 224.
+ * kp80 doplnil device_screenshot (obraz sekundárního výstupu zařízení,
+ * na KONEC cmd_map[]) = 224 + 1 = 225.
  */
-#define MCP_EXPECTED_CMD_COUNT 224
+#define MCP_EXPECTED_CMD_COUNT 225
 
 
 /* ====================================================================== */
@@ -4904,6 +4906,38 @@ void test_get_devices_empty_registry(void) {
     TEST_ASSERT_EQUAL_UINT(0, json_array_get_length(json_object_get_array_member(d, "devices")));
     g_object_unref(parser);
     free(resp);
+}
+
+
+void test_device_screenshot_params(void) {
+    /* kp80 (D4): bez zařízení s výstupem (stub = prázdný registr) a
+     * s neplatnými parametry vrací device_screenshot chybu parametrů. */
+    static const struct { const char *json; const char *msg; } cases[] = {
+        { "{\"type\":\"request\",\"req_id\":1350,\"cmd\":\"device_screenshot\"}",
+          "no connected device has a video output" },
+        { "{\"type\":\"request\",\"req_id\":1351,\"cmd\":\"device_screenshot\",\"data\":{\"output\":\"kp80\"}}",
+          "unknown 'output'" },
+        { "{\"type\":\"request\",\"req_id\":1352,\"cmd\":\"device_screenshot\",\"data\":{\"format\":\"bmp\"}}",
+          "'format' must be" },
+        { "{\"type\":\"request\",\"req_id\":1353,\"cmd\":\"device_screenshot\",\"data\":{\"format\":\"indexed\",\"path\":\"x.png\"}}",
+          "only with format 'png'" },
+        { "{\"type\":\"request\",\"req_id\":1354,\"cmd\":\"device_screenshot\",\"data\":{\"want_data\":1}}",
+          "want_data must be a boolean" },
+        { "{\"type\":\"request\",\"req_id\":1355,\"cmd\":\"device_screenshot\",\"data\":{\"output\":\"a_very_long_output_id\"}}",
+          "unknown 'output'" },
+    };
+    for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+        dispatch_stub_reset();
+        st_JSONL_MESSAGE *req = _make_request(cases[i].json);
+        TEST_ASSERT_NOT_NULL(req);
+        char *resp = NULL;
+        en_MCP_DISPATCH_RESULT rc = mcp_dispatch_request(req, &resp);
+        TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_INVALID_PARAMS, rc);
+        TEST_ASSERT_NOT_NULL(resp);
+        TEST_ASSERT_TRUE_MESSAGE(strstr(resp, cases[i].msg) != NULL, resp);
+        free(resp);
+        jsonl_msg_free(req);
+    }
 }
 
 
@@ -10161,6 +10195,7 @@ int main(void) {
     RUN_TEST(test_periph_attach_empty_kind);
     RUN_TEST(test_periph_attach_device_id_conflict);
     RUN_TEST(test_get_devices_empty_registry);
+    RUN_TEST(test_device_screenshot_params);
     RUN_TEST(test_machine_hash_invalid_params);
 
     /* observe-cas (M10) - podmíněné zápisy (3 testy) */

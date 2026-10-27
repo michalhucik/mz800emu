@@ -9,6 +9,10 @@
  * (Plán D1 počítal s krátkým mutexem jako iface_video.h; atomická výměna
  * splní totéž bez čekání.)
  *
+ * Druhý, nezávislý čtenář je emu vlákno: devbus_vout_read_last() kopíruje
+ * buffer posledního předaného snímku (`last`) bez výměny bufferů, takže
+ * nesahá do kanálu fetch() (okno GUI) a smí ho použít např. MCP screenshot.
+ *
  * Výstup patří hostiteli: není ve snapshotu ani v hashi stavu, po načtení
  * snapshotu ho zařízení překreslí v after_load().
  *
@@ -31,6 +35,7 @@
  * @brief Sekundární výstup.
  * @invariant draw, read a (mid & DEVBUS_VOUT_MID_IDX) jsou navzájem různé
  *            indexy 0..2; buf[i] má width * height bajtů.
+ *            last != draw (po prvním present()); bufseq[last] = seq.
  */
 struct st_DEVBUS_VOUT {
     const st_DEVBUS_VOUT_DESC *desc; /**< Popis (statický). */
@@ -41,6 +46,7 @@ struct st_DEVBUS_VOUT {
     unsigned draw;                   /**< Buffer emu vlákna. */
     unsigned mid;                    /**< Prostřední buffer | DEVBUS_VOUT_MID_NEW (atomicky). */
     unsigned read;                   /**< Buffer čtenáře. */
+    unsigned last;                   /**< Buffer posledního předaného snímku (pro devbus_vout_read_last(), emu vlákno). */
     uint32_t seq;                    /**< Pořadí posledního předaného snímku (emu vlákno). */
 };
 
@@ -73,6 +79,7 @@ st_DEVBUS_VOUT *devbus_vout_create(int slot, const st_DEVBUS_VOUT_DESC *d)
     o->draw = 0;
     o->mid = 1;
     o->read = 2;
+    o->last = 0; /* bufseq[0] = 0: zatím žádný snímek */
     s->vout[s->vout_count++] = o;
     return o;
 }
@@ -103,6 +110,7 @@ void devbus_vout_present(st_DEVBUS_VOUT *o)
     o->seq++;
     if (o->seq == 0) o->seq = 1; /* 0 je vyhrazená pro "žádný snímek" */
     o->bufseq[presented] = o->seq;
+    o->last = presented;
     unsigned old = __atomic_exchange_n(&o->mid, presented | DEVBUS_VOUT_MID_NEW, __ATOMIC_ACQ_REL);
     o->draw = old & DEVBUS_VOUT_MID_IDX;
     /* Nový buffer kreslení začne s obsahem právě předaného snímku (jen čtení
@@ -153,4 +161,18 @@ const st_DEVBUS_VOUT_DESC *devbus_vout_desc(const st_DEVBUS_VOUT *o)
 int devbus_vout_slot(const st_DEVBUS_VOUT *o)
 {
     return o ? o->slot : DEVBUS_ERR_NOT_FOUND;
+}
+
+
+bool devbus_vout_read_last(const st_DEVBUS_VOUT *o, uint8_t *dst, size_t dst_size, uint32_t *seq_out)
+{
+    if (!o || !dst || dst_size < o->size) return false;
+    /* Buffer `last` emu vlákno do příštího present() nepřepisuje (kreslí do
+     * `draw`, který je od něj různý) a čtenář fetch() z bufferů jen čte;
+     * kopie je tedy bez závodu, pokud ji dělá emu vlákno. */
+    uint32_t seq = o->bufseq[o->last];
+    if (seq == 0) return false;
+    memcpy(dst, o->buf[o->last], o->size);
+    if (seq_out) *seq_out = seq;
+    return true;
 }

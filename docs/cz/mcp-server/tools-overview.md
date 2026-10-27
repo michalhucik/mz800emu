@@ -149,6 +149,7 @@ dokumentu [Resources overview](resources-overview.md).
 | `emu_periph_attach` | **ANO** | Připojí periferii za běhu (jako menu Devices) |
 | `emu_periph_detach` | **ANO** | Odpojí periferii za běhu (jako menu Devices) |
 | `emu_get_devices` | ne | Rozšiřující zařízení jádra MZ-700: id, volby, porty, MMIO, regiony, výstupy |
+| `emu_device_screenshot` | ne | Obraz vlastního monitoru rozšiřujícího zařízení (sekundární výstup) jako PNG nebo indexy palety |
 | `emu_stop` | **ANO** | Hot-swap stop (pipe-only); ukončí emu, Python wrapper běží dál |
 | `emu_start` | **ANO** | Hot-swap start (pipe-only); spawne nový mz800emu.exe child |
 | `emu_input_send_key` | **ANO** | Press klávesy + N framů hold + release |
@@ -2413,13 +2414,48 @@ a sekundární výstupy `outputs`.
 emu_get_devices()
 -> {"platform_supported": true, "devices": [
      {"id": "pcg700", "name": "PCG-700 (HAL)", "connected": false,
-      "ini_section": "PCG700", "options": [...], ...}]}
+      "ini_section": "PCG700", "options": [...], ...},
+     {"id": "suc80", "name": "SUC 80-column kit", "connected": false, ...},
+     {"id": "kp80", "name": "K&P 80 Column Card", "connected": false, ...,
+      "outputs": [{"id": "kp80", "title": "K&P 80 Column Monitor",
+      "width": 640, "height": 250}]}]}
 ```
 
 Na MZ-800 a MZ-1500 je `platform_supported` false a `devices` prázdné.
 Jádro MZ-700 má zařízení `pcg700` (PCG-700 od HAL,
-[devices/pcg700.md](../devices/pcg700.md)). Podrobnosti a úplný příklad:
+[devices/pcg700.md](../devices/pcg700.md)), `suc80` (80sloupcový kit SUC,
+[devices/suc80.md](../devices/suc80.md)) a `kp80` (80sloupcová karta K&P,
+[devices/kp80.md](../devices/kp80.md)). Podrobnosti a úplný příklad:
 `emulator://docs/devices`.
+
+### `emu_device_screenshot`
+
+Jen čtení: obraz vlastního video výstupu rozšiřujícího zařízení (druhý
+monitor, například 80sloupcová karta K&P, výstup `kp80`). Nástroje
+screenshotu výše ukazují jen obraz počítače. Obraz je poslední snímek,
+který zařízení nakreslilo; v pauze se změna přes debugger nebo MCP
+(`emu_io_write`, `emu_region_write`) překreslí hned.
+
+| Parametr | Výchozí | Význam |
+|----------|---------|--------|
+| `output` | první výstup připojeného zařízení | id výstupu z `emu_get_devices` (`outputs[].id`) |
+| `format` | `png` | `png`, nebo `indexed` = bajt na bod (index palety, řádky shora) a pole `palette` |
+| `path` | - | zapsat PNG do souboru na disku serveru místo `data_b64` (jen `png`) |
+| `want_data` | true | false = jen otisky a počty |
+
+```
+emu_device_screenshot(output="kp80", format="indexed", want_data=False)
+-> {"available": true, "output": "kp80", "device": "kp80", "width": 640,
+    "height": 250, "pixel_aspect": 0.52, "seq": 12,
+    "image_sha256": "...", "lit_pixels": 1874, "format": "indexed",
+    "byte_size": 160000, "palette": ["#000000", "#F0F0F0", "#33FF66",
+    "#FFB000"]}
+```
+
+`image_sha256` je otisk obrazu RGBA (počítá se i barva fosforu),
+`lit_pixels` počet bodů s nenulovým indexem palety, `seq` roste s každým
+snímkem, který zařízení nakreslí. Odpojené zařízení vrátí
+`{"available": false, "reason": ...}`; neznámý `output` je chyba.
 
 ### Příklad workflow - vložení Quick Disk obrazu
 

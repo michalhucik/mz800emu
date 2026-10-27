@@ -785,6 +785,11 @@ typedef enum en_DBGAPI_CMD
      * startu neměnný, dynamický stav čte emu vlákno). Na KONCI enumu. */
     DBGAPI_CMD_DEVBUS_LIST,          /* Zařízení devbus a jejich stav - data_ptr: st_DBGAPI_DEVBUS_LIST_PARAM* */
 
+    /* kp80 (D4 mz700-devices) - kopie posledního snímku sekundárního video
+     * výstupu zařízení devbus (druhý monitor) pro MCP device_screenshot.
+     * Čte emu vlákno přes devbus_vout_read_last(). Na KONCI enumu. */
+    DBGAPI_CMD_DEVBUS_VOUT_READ,     /* Snímek výstupu zařízení - data_ptr: st_DBGAPI_DEVBUS_VOUT_READ_PARAM* */
+
     /* Zarážka: počet příkazů, sama není příkaz. Nové příkazy patří PŘED
      * ni. Každý příkaz musí mít řádek v tabulce vlastností
      * (dbgapi_cmd_props.c: druh pro revizi stavu, třída záznamu vstupů);
@@ -5658,6 +5663,30 @@ typedef struct st_DBGAPI_DEVBUS_LIST_PARAM
     unsigned count;                                        /**< (OUT) Počet registrovaných zařízení. */
     st_DBGAPI_DEVBUS_DEV dev[DEVBUS_MAX_DEVICES];   /**< (OUT) Stav zařízení 0 .. count - 1. */
 } st_DBGAPI_DEVBUS_LIST_PARAM;
+
+/**
+ * @brief Parametr DBGAPI_CMD_DEVBUS_VOUT_READ (čtení bez vedlejších efektů).
+ *
+ * Vstup `output` vybere sekundární výstup podle id (st_DEVBUS_VOUT_DESC::id);
+ * prázdný řetězec = první výstup připojeného zařízení. Handler v emu vlákně
+ * zkopíruje poslední předaný snímek (indexy palety, width * height B).
+ *
+ * @note Strukturu alokuje odesílatel (synchronní submit). `pixels` alokuje
+ *       handler přes g_malloc() jen při available = 1, uvolní ho odesílatel
+ *       přes g_free(). Popis výstupu (paleta, rozměry) je statický, odesílatel
+ *       ho čte přes devbus_vout_desc(out_vout).
+ */
+typedef struct st_DBGAPI_DEVBUS_VOUT_READ_PARAM
+{
+    char     output[DEVBUS_ID_MAX + 1]; /**< (IN) Id výstupu, "" = první výstup připojeného zařízení. */
+    int      found;                     /**< (OUT) 1 = výstup existuje. */
+    int      connected;                 /**< (OUT) 1 = zařízení výstupu je připojené. */
+    int      available;                 /**< (OUT) 1 = snímek zkopírován do pixels. */
+    int      slot;                      /**< (OUT) Slot zařízení výstupu (found = 1). */
+    const st_DEVBUS_VOUT *out_vout;     /**< (OUT) Výstup (found = 1); žije do devbus_exit(). */
+    uint32_t seq;                       /**< (OUT) Pořadí snímku (available = 1). */
+    uint8_t *pixels;                    /**< (OUT) Indexy palety po řádcích (available = 1), uvolní odesílatel. */
+} st_DBGAPI_DEVBUS_VOUT_READ_PARAM;
 
 #ifdef __cplusplus
 } /* extern "C" */

@@ -149,6 +149,7 @@ documented separately in [Resources overview](resources-overview.md).
 | `emu_periph_attach` | **YES** | Attaches a peripheral at runtime (like the Devices menu) |
 | `emu_periph_detach` | **YES** | Detaches a peripheral at runtime (like the Devices menu) |
 | `emu_get_devices` | no | Expansion devices of the MZ-700 core: id, options, ports, MMIO, regions, outputs |
+| `emu_device_screenshot` | no | Picture of an expansion device's own monitor (secondary output) as PNG or palette indices |
 | `emu_stop` | **YES** | Hot-swap stop (pipe-only); terminates emu, Python wrapper keeps running |
 | `emu_start` | **YES** | Hot-swap start (pipe-only); spawns fresh mz800emu.exe child |
 | `emu_input_send_key` | **YES** | Press key + hold N frames + release |
@@ -2484,13 +2485,48 @@ cards of the real MZ-700) and their state: `id` (the `kind` for
 emu_get_devices()
 -> {"platform_supported": true, "devices": [
      {"id": "pcg700", "name": "PCG-700 (HAL)", "connected": false,
-      "ini_section": "PCG700", "options": [...], ...}]}
+      "ini_section": "PCG700", "options": [...], ...},
+     {"id": "suc80", "name": "SUC 80-column kit", "connected": false, ...},
+     {"id": "kp80", "name": "K&P 80 Column Card", "connected": false, ...,
+      "outputs": [{"id": "kp80", "title": "K&P 80 Column Monitor",
+      "width": 640, "height": 250}]}]}
 ```
 
 On MZ-800 and MZ-1500 `platform_supported` is false and `devices` is
-empty. The MZ-700 core has the device `pcg700` (PCG-700 by HAL,
-[devices/pcg700.md](../devices/pcg700.md)). Details and a full example:
+empty. The MZ-700 core has the devices `pcg700` (PCG-700 by HAL,
+[devices/pcg700.md](../devices/pcg700.md)), `suc80` (SUC 80-column kit,
+[devices/suc80.md](../devices/suc80.md)) and `kp80` (K&P 80 column card,
+[devices/kp80.md](../devices/kp80.md)). Details and a full example:
 `emulator://docs/devices`.
+
+### `emu_device_screenshot`
+
+Read-only picture of the own video output of an expansion device (a
+second monitor, for example the K&P 80 column card, output `kp80`). The
+screenshot tools above show only the computer's picture. The picture is
+the last frame the device drew; when paused, a change made through the
+debugger or MCP (`emu_io_write`, `emu_region_write`) is drawn at once.
+
+| Parameter | Default | Meaning |
+|-----------|---------|---------|
+| `output` | first output of a connected device | output id from `emu_get_devices` (`outputs[].id`) |
+| `format` | `png` | `png`, or `indexed` = one byte per dot (palette index, rows from the top) plus `palette` |
+| `path` | - | write the PNG to this file on the server host instead of `data_b64` (only `png`) |
+| `want_data` | true | false = only hashes and counts |
+
+```
+emu_device_screenshot(output="kp80", format="indexed", want_data=False)
+-> {"available": true, "output": "kp80", "device": "kp80", "width": 640,
+    "height": 250, "pixel_aspect": 0.52, "seq": 12,
+    "image_sha256": "...", "lit_pixels": 1874, "format": "indexed",
+    "byte_size": 160000, "palette": ["#000000", "#F0F0F0", "#33FF66",
+    "#FFB000"]}
+```
+
+`image_sha256` hashes the RGBA picture (the phosphor colour counts),
+`lit_pixels` counts dots with a non-zero palette index, `seq` grows with
+every frame the device draws. A disconnected device returns
+`{"available": false, "reason": ...}`; an unknown `output` is an error.
 
 ### Example workflow - mounting a Quick Disk image
 

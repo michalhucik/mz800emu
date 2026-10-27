@@ -125,11 +125,12 @@ void memory_write_byte_raw_devbus(uint16_t addr, uint8_t value);
 void mz700_devbus_init(void);
 
 /**
- * @brief Zaregistruje zařízení MZ-700 (PCG-700, SUC 80 sloupců) a ukončí
- *        registraci: devbus_start() (připojení podle INI).
+ * @brief Zaregistruje zařízení MZ-700 (PCG-700, SUC 80 sloupců, karta K&P 80)
+ *        a ukončí registraci: devbus_start() (připojení podle INI).
  *
  * Registruje v tomto pořadí: PCG-700 (pcg700_devbus_register()),
- * SUC 80 sloupců (suc80_devbus_register()).
+ * SUC 80 sloupců (suc80_devbus_register()), karta K&P 80
+ * (kp80_devbus_register()).
  * @pre Emu vlákno na konci mzarch_platform_fn_init(), po memory_init()
  *      (CG-ROM je nainstalovaná, připojení z INI z ní staví generátor).
  */

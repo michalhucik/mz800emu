@@ -630,6 +630,7 @@ void test_vout_present_fetch(void)
     uint32_t seen = 0;
     /* Zatím žádný snímek */
     TEST_ASSERT_FALSE(devbus_vout_fetch(o, dst, sizeof(dst), &seen));
+    TEST_ASSERT_FALSE(devbus_vout_read_last(o, dst, sizeof(dst), &seen));
     uint8_t *p = devbus_vout_draw_buffer(o);
     memset(p, 1, 32);
     devbus_vout_present(o);
@@ -650,9 +651,33 @@ void test_vout_present_fetch(void)
     TEST_ASSERT_TRUE(devbus_vout_fetch(o, dst, sizeof(dst), &seen));
     TEST_ASSERT_EQUAL_UINT32(3, seen);
     TEST_ASSERT_EQUAL_HEX8(3, dst[0]);
+    /* Čtení v emu vlákně (read_last) vidí poslední snímek a čtenáři fetch()
+     * nový snímek neubere */
+    devbus_vout_draw_buffer(o)[0] = 4;
+    devbus_vout_present(o);
+    uint8_t last[32];
+    uint32_t lseq = 0;
+    TEST_ASSERT_TRUE(devbus_vout_read_last(o, last, sizeof(last), &lseq));
+    TEST_ASSERT_EQUAL_UINT32(4, lseq);
+    TEST_ASSERT_EQUAL_HEX8(4, last[0]);
+    TEST_ASSERT_EQUAL_HEX8(1, last[31]);
+    TEST_ASSERT_TRUE(devbus_vout_read_last(o, last, sizeof(last), NULL));
+    TEST_ASSERT_TRUE(devbus_vout_fetch(o, dst, sizeof(dst), &seen));
+    TEST_ASSERT_EQUAL_UINT32(4, seen);
+    TEST_ASSERT_EQUAL_HEX8(4, dst[0]);
+    /* Po fetch() (výměna bufferů) a dalším snímku dál poslední */
+    devbus_vout_draw_buffer(o)[0] = 5;
+    devbus_vout_present(o);
+    TEST_ASSERT_TRUE(devbus_vout_read_last(o, last, sizeof(last), &lseq));
+    TEST_ASSERT_EQUAL_UINT32(5, lseq);
+    TEST_ASSERT_EQUAL_HEX8(5, last[0]);
     /* Malý cíl */
     seen = 0;
     TEST_ASSERT_FALSE(devbus_vout_fetch(o, dst, 31, &seen));
+    seen = 3;
+    TEST_ASSERT_FALSE(devbus_vout_read_last(o, dst, 31, &seen));
+    TEST_ASSERT_FALSE(devbus_vout_read_last(NULL, dst, sizeof(dst), &seen));
+    TEST_ASSERT_EQUAL_UINT32(3, seen);
     /* Neplatný popis */
     static const st_DEVBUS_VOUT_DESC bad = { "Bad", "x", 8, 4, 1.0f, s_pal, 2 };
     TEST_ASSERT_NULL(devbus_vout_create(0, &bad));

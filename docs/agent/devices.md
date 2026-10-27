@@ -14,6 +14,7 @@ disconnected by default:
 |----|--------|---------------|
 | `pcg700` | PCG-700 by HAL Laboratory, programmable character generator | [PCG-700](#pcg-700-pcg700) |
 | `suc80` | Sharp Users Club UK 80-column kit (80 x 25 from the existing VRAM) | [SUC 80-column kit](#suc-80-column-kit-suc80) |
+| `kp80` | K&P 80 column card (Kersten & Partner): CRTC SY6845E, own VRAM and font, second monitor | [K&P 80 column card](#kp-80-column-card-kp80) |
 
 ## Discover the devices
 
@@ -53,7 +54,8 @@ disconnected by default:
   only watches the write, the board behaves as without the device.
 - `video`: `glyph_source` = the device supplies the character generator,
   `render_row` = the device draws the screen rows itself (e.g. 80 columns).
-- `outputs`: secondary video outputs (a second monitor) of the device.
+- `outputs`: secondary video outputs (a second monitor) of the device;
+  read the picture with `emu_device_screenshot` (see below).
 
 ## Connect and disconnect
 
@@ -103,6 +105,32 @@ older snapshot (from a version without devices) gives a machine without
 devices. The user's choice in the INI file stays. A recorded replay starts
 from a snapshot, therefore devices are part of the recorded state; with no
 device connected the replay hashes are the same as in older versions.
+
+## Secondary outputs (a second monitor)
+
+A device with its own monitor has an entry in `outputs` (`id`, `title`,
+`width`, `height`). Its picture is separate from the computer's picture:
+`emu_screenshot_save_to_file`, `emu_frame_hash` and the screenshot
+resources do not contain it. Read it with `emu_device_screenshot`:
+
+```
+emu_device_screenshot(output="kp80", format="indexed")
+-> {"available": true, "output": "kp80", "device": "kp80",
+    "width": 640, "height": 250, "pixel_aspect": 0.52, "seq": 12,
+    "image_sha256": "...", "lit_pixels": 1874, "format": "indexed",
+    "byte_size": 160000, "palette": ["#000000", "#F0F0F0", "#33FF66",
+    "#FFB000"], "data_b64": "..."}
+```
+
+- `format="png"` (default) returns a PNG in `data_b64`; with `path` the PNG
+  is written to a file on the server host instead.
+- `format="indexed"`: one byte per dot, rows from the top, value = index
+  into `palette`.
+- The picture is the last frame the device drew. While running, the device
+  redraws at the end of an emulated frame when something changed; when
+  paused, changes through `emu_io_write` or `emu_region_write` are drawn at
+  once. `seq` grows with every drawn frame.
+- A disconnected device returns `available: false`.
 
 ## PCG-700 (`pcg700`)
 
@@ -193,3 +221,53 @@ options. Disconnected by default.
 - In 40 columns the image with the kit connected is byte-identical to the
   image without it; with the kit disconnected, writes to 0E00Ch behave as
   in versions without devices.
+
+## K&P 80 column card (`kp80`)
+
+80-column card of Kersten & Partner for the MZ-700: CRTC SY6845E, own 2 KB
+video RAM, own font and **its own video output for a second monitor**
+(80 x 25 characters of 8 x 10 dots, 640 x 250, monochrome). The MZ-700
+picture does not change. The model is based on research only (a period
+article with the schematic, the CRTC datasheet, a description by an owner
+of the card); it was not measured on real hardware. Disputed details are
+options, not verified hardware behaviour.
+
+- Connect: `emu_periph_attach(kind="kp80")`, INI `[KP80] connected = 1`.
+- Ports (full decode, no mirrors): `70h` IN = byte of card VRAM at the
+  update address; `71h` OUT = byte to card VRAM at the update address
+  (address + 1), IN = selected CRTC register; `72h` OUT = select register
+  (5 bits), IN = status (bit 7 update ready, bit 6 light pen = 0, bit 5
+  vertical blanking); `73h` = selected register. VRAM is reached only
+  through the transparent update address R18/R19, which takes effect on an
+  access to R31 (select it with `OUT (72h),31`).
+- After power on the registers are 0 (blank picture) and VRAM is 00h
+  (shown as `@` once the program initialises the CRTC). `emu_reset`
+  keeps registers and VRAM.
+
+Options (`KP80/<key>`, all `applies: now`):
+
+| Key | Default | Meaning |
+|-----|---------|---------|
+| `read_autoinc` | true | IN 70h increments the update address |
+| `data_to_reg` | true | OUT 71h also writes the selected CRTC register |
+| `addr_on_r31` | true | R18/R19 take effect on an access to R31 (false = at once) |
+| `update_delay` | 0 | status bit 7 stays 0 this many character clocks (2 MHz) after an update |
+| `wait` | 0 | extra WAIT T-states on IN/OUT 71h-73h |
+| `phosphor` | white | colour of the second monitor: white, green, amber |
+
+Note: numbers in the INI file are read as hexadecimal (`wait = 10` is 16).
+
+Regions (`kind: "device"`, while connected):
+
+| Name | Size | Writable | Content |
+|------|------|----------|---------|
+| `K&P 80 VRAM (2 KB)` | 2048 | yes | character codes, address = CRTC address AND 7FFh |
+| `K&P 80 font (2 KB)` | 2048 | no | 128 glyphs x 16 bytes (address = (code AND 7Fh) * 16 + row), left dot = bit 7 |
+| `K&P 80 CRTC registers` | 32 | no | 0-19 R0-R19, 20 AR, 21 flags (bit 0 address waits for R31, bit 1 update ready, bit 2 vertical blanking), 22-23 update address, 24-25 display start R12:R13, 26-27 cursor R14:R15 (little-endian) |
+
+Text of the screen without decoding the picture: read the register region
+for the display start (bytes 24-25), the characters per row R1 (byte 1)
+and the rows R6 (byte 6); character of row `y`, column `x` = VRAM byte at
+`(start + y * R1 + x) AND 7FFh`. Codes 00h-7Fh follow the German ASCII
+variant of the font (5Bh-5Dh = Ä Ö Ü, 7Bh-7Eh = ä ö ü ß); bit 7 shows the
+character inverted.

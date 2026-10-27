@@ -58,6 +58,7 @@
 #endif
 
 #include "../debugger/dbgapi_cmdrq.h"
+#include "../debugger/png_encode.h"   /* device_screenshot (kp80 D4) */
 /* mcp-trace-read: čtenář proudu záznamů (kurzor, stránka) */
 #include "../debugger/trace/trace_reader.h"
 #include "../audio_capture.h"
@@ -464,6 +465,9 @@ static en_MCP_DISPATCH_RESULT _handle_machine_hash(const st_JSONL_MESSAGE *req,
 /* dev-api (D1) - volitelná zařízení devbus */
 static en_MCP_DISPATCH_RESULT _handle_get_devices(const st_JSONL_MESSAGE *req,
                                                   char **out_response);
+/* kp80 (D4) - snímek sekundárního výstupu zařízení devbus (druhý monitor) */
+static en_MCP_DISPATCH_RESULT _handle_device_screenshot(const st_JSONL_MESSAGE *req,
+                                                        char **out_response);
 /* V0.B.7 - resource backing pro emulator://config/mcp */
 static en_MCP_DISPATCH_RESULT _handle_get_mcp_config(const st_JSONL_MESSAGE *req,
                                                      char **out_response);
@@ -1332,6 +1336,9 @@ static const st_MCP_CMD_MAP_ENTRY g_cmd_map[] = {
     /* dev-api (D1 mz700-devices): volitelná zařízení devbus (id, volby,
      * porty, MMIO, regiony, výstupy). Na KONEC tabulky. */
     { "get_devices",              DBGAPI_CMD_DEVBUS_LIST,             _handle_get_devices              },
+    /* kp80 (D4 mz700-devices): obraz sekundárního výstupu zařízení devbus
+     * (druhý monitor karty K&P 80) jako PNG nebo indexy palety. */
+    { "device_screenshot",        DBGAPI_CMD_DEVBUS_VOUT_READ,        _handle_device_screenshot        },
     /* sentinel */
     { NULL,              DBGAPI_CMD_NONE,              NULL                  },
 };
@@ -20848,6 +20855,196 @@ static en_MCP_DISPATCH_RESULT _handle_get_devices(const st_JSONL_MESSAGE *req,
     }
     json_object_set_array_member(resp, "devices", devs);
     g_free(p);
+    return _ok_response(req_id, resp, out_response);
+}
+
+
+/* ------------------------------------------------------------------ */
+/* device_screenshot (kp80 D4): obraz sekundárního výstupu zařízení    */
+/* ------------------------------------------------------------------ */
+
+/**
+ * @brief `device_screenshot` handler - obraz sekundárního výstupu zařízení devbus.
+ *
+ * Sekundární výstup je vlastní obraz zařízení (druhý monitor karty K&P 80),
+ * nezávislý na obrazu počítače. Handler pošle DBGAPI_CMD_DEVBUS_VOUT_READ
+ * (emu vlákno zkopíruje poslední předaný snímek přes
+ * devbus_vout_read_last()) a obraz převede podle neměnné palety výstupu.
+ *
+ * Parametry (data, všechny volitelné):
+ *   - `output`    (string) - id výstupu z get_devices (`outputs[].id`);
+ *                 chybí nebo "" = první výstup připojeného zařízení,
+ *   - `format`    (string) - "png" (výchozí) nebo "indexed" (bajt na bod =
+ *                 index palety, po řádcích shora; plus pole `palette`),
+ *   - `path`      (string) - zapsat PNG do souboru na disku serveru místo
+ *                 `data_b64` (jen s formátem "png"),
+ *   - `want_data` (bool, výchozí true) - false = bez `data_b64`.
+ *
+ * Response (available = true):
+ *   {"available": true, "output": str, "device": str, "width": N,
+ *    "height": N, "pixel_aspect": float, "seq": N, "image_sha256": str,
+ *    "lit_pixels": N, "format": "png" | "indexed", "byte_size": N,
+ *    "data_b64": str | "path": str, "palette": ["#RRGGBB", ...] (indexed)}
+ *   `image_sha256` = SHA-256 obrazu RGBA (4 B na bod po řádcích), tedy
+ *   i barvy palety; `lit_pixels` = počet bodů s indexem palety různým od 0;
+ *   `seq` = pořadí snímku výstupu (roste s každým nakresleným snímkem).
+ * Response (available = false): {"available": false, "output": str,
+ *   "device": str, "reason": str} - zařízení není připojené nebo výstup
+ *   zatím nemá snímek.
+ *
+ * Chyby: neznámý výstup, žádné připojené zařízení s výstupem (bez
+ * `output`), neplatný formát = INVALID_PARAMS; zápis souboru = EMU_ERROR.
+ *
+ * @param req          Požadavek.
+ * @param out_response Výstup: JSON odpovědi (vlastní volající).
+ * @return Výsledek dispatch.
+ */
+static en_MCP_DISPATCH_RESULT _handle_device_screenshot(const st_JSONL_MESSAGE *req,
+                                                        char **out_response) {
+    int64_t req_id = jsonl_msg_get_req_id(req);
+    JsonNode *data_node = (JsonNode *)jsonl_msg_get_data_node(req);
+    JsonObject *data_obj = (data_node && json_node_get_node_type(data_node) == JSON_NODE_OBJECT)
+                           ? json_node_get_object(data_node) : NULL;
+
+    bool want_data = true;
+    if (!_parse_want_data(data_obj, &want_data)) {
+        return _err_response(req_id, "want_data must be a boolean",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+    char *output = data_obj ? _obj_str_dup(data_obj, "output") : NULL;
+    char *format = data_obj ? _obj_str_dup(data_obj, "format") : NULL;
+    char *path = data_obj ? _obj_str_dup(data_obj, "path") : NULL;
+    bool indexed = false;
+    if (format && format[0] && g_ascii_strcasecmp(format, "png") != 0) {
+        if (g_ascii_strcasecmp(format, "indexed") == 0) {
+            indexed = true;
+        } else {
+            g_free(output); g_free(format); g_free(path);
+            return _err_response(req_id, "'format' must be 'png' or 'indexed'",
+                                 MCP_DISPATCH_INVALID_PARAMS, out_response);
+        }
+    }
+    g_free(format);
+    if (path && !path[0]) { g_free(path); path = NULL; }
+    if (path && indexed) {
+        g_free(output); g_free(path);
+        return _err_response(req_id, "'path' is supported only with format 'png'",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+    if (output && strlen(output) > DEVBUS_ID_MAX) {
+        g_free(output); g_free(path);
+        return _err_response(req_id, "unknown 'output' (see get_devices outputs)",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+
+    st_DBGAPI_DEVBUS_VOUT_READ_PARAM *p = g_new0(st_DBGAPI_DEVBUS_VOUT_READ_PARAM, 1);
+    if (output) g_strlcpy(p->output, output, sizeof(p->output));
+    bool had_output = output && output[0];
+    g_free(output);
+    if (!_submit_dbgapi(DBGAPI_CMD_DEVBUS_VOUT_READ, p, NULL)) {
+        g_free(p->pixels); g_free(p); g_free(path);
+        return _err_response(req_id, "device_screenshot failed", MCP_DISPATCH_EMU_ERROR, out_response);
+    }
+    if (!p->found || !p->out_vout) {
+        g_free(p->pixels); g_free(p); g_free(path);
+        return _err_response(req_id, had_output
+                             ? "unknown 'output' (see get_devices outputs)"
+                             : "no connected device has a video output (see get_devices)",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+
+    const st_DEVBUS_VOUT_DESC *vd = devbus_vout_desc(p->out_vout);
+    const st_DEVBUS_DEVICE_DESC *dd = devbus_desc(p->slot);
+    JsonObject *resp = json_object_new();
+    json_object_set_string_member(resp, "output", vd->id);
+    json_object_set_string_member(resp, "device", dd ? dd->id : "");
+    if (!p->available) {
+        json_object_set_boolean_member(resp, "available", FALSE);
+        json_object_set_string_member(resp, "reason", p->connected
+                                      ? "the output has no frame yet"
+                                      : "the device is not connected");
+        g_free(p->pixels); g_free(p); g_free(path);
+        return _ok_response(req_id, resp, out_response);
+    }
+
+    /* Indexy -> RGBA podle palety (index mimo paletu = černá). */
+    size_t npix = (size_t)vd->width * vd->height;
+    uint8_t *rgba = g_malloc(npix * 4);
+    gint64 lit = 0;
+    for (size_t i = 0; i < npix; i++) {
+        uint8_t ix = p->pixels[i];
+        uint32_t c = (ix < vd->palette_size) ? vd->palette[ix] : 0x000000FFu;
+        if (ix) lit++;
+        rgba[i * 4 + 0] = (uint8_t)(c >> 24);
+        rgba[i * 4 + 1] = (uint8_t)(c >> 16);
+        rgba[i * 4 + 2] = (uint8_t)(c >> 8);
+        rgba[i * 4 + 3] = (uint8_t)c;
+    }
+    gchar *sha = g_compute_checksum_for_data(G_CHECKSUM_SHA256, rgba, npix * 4);
+    json_object_set_boolean_member(resp, "available", TRUE);
+    json_object_set_int_member(resp, "width", vd->width);
+    json_object_set_int_member(resp, "height", vd->height);
+    json_object_set_double_member(resp, "pixel_aspect", (double)vd->pixel_aspect);
+    json_object_set_int_member(resp, "seq", (gint64)p->seq);
+    json_object_set_string_member(resp, "image_sha256", sha);
+    json_object_set_int_member(resp, "lit_pixels", lit);
+    g_free(sha);
+
+    if (indexed) {
+        json_object_set_string_member(resp, "format", "indexed");
+        json_object_set_int_member(resp, "byte_size", (gint64)npix);
+        JsonArray *pal = json_array_new();
+        for (unsigned i = 0; i < vd->palette_size; i++) {
+            char hex[8];
+            g_snprintf(hex, sizeof(hex), "#%06X", (unsigned)(vd->palette[i] >> 8));
+            json_array_add_string_element(pal, hex);
+        }
+        json_object_set_array_member(resp, "palette", pal);
+        if (want_data) {
+            gchar *b64 = g_base64_encode(p->pixels, npix);
+            json_object_set_string_member(resp, "data_b64", b64);
+            g_free(b64);
+        }
+        g_free(rgba); g_free(p->pixels); g_free(p);
+        return _ok_response(req_id, resp, out_response);
+    }
+
+    size_t png_len = 0;
+    uint8_t *png = png_encode_rgba(rgba, vd->width, vd->height, &png_len);
+    g_free(rgba);
+    g_free(p->pixels);
+    g_free(p);
+    if (!png) {
+        json_object_unref(resp);
+        g_free(path);
+        return _err_response(req_id, "PNG encoding failed", MCP_DISPATCH_EMU_ERROR, out_response);
+    }
+    json_object_set_string_member(resp, "format", "png");
+    json_object_set_int_member(resp, "byte_size", (gint64)png_len);
+    if (path) {
+        GError *werr = NULL;
+        gboolean wrote = g_file_set_contents(path, (const gchar *)png, (gssize)png_len, &werr);
+        g_free(png);
+        if (!wrote) {
+            char *msg = g_strdup_printf("Cannot write screenshot to '%s': %s",
+                                        path, werr ? werr->message : "unknown");
+            if (werr) g_error_free(werr);
+            g_free(path);
+            json_object_unref(resp);
+            en_MCP_DISPATCH_RESULT r = _err_response(req_id, msg, MCP_DISPATCH_EMU_ERROR, out_response);
+            g_free(msg);
+            return r;
+        }
+        json_object_set_string_member(resp, "path", path);
+        g_free(path);
+        return _ok_response(req_id, resp, out_response);
+    }
+    if (want_data) {
+        gchar *b64 = g_base64_encode(png, png_len);
+        json_object_set_string_member(resp, "data_b64", b64);
+        g_free(b64);
+    }
+    g_free(png);
     return _ok_response(req_id, resp, out_response);
 }
 #endif /* MZ800EMU_CFG_MCP_SERVER_ENABLED */

@@ -311,6 +311,7 @@ výchozí stav je žádná nepřipojená.
 |----------|-------|
 | PCG-700 (HAL) | programovatelný generátor znaků, 2 kB RAM pro znaky 80h-FFh, viz [devices/pcg700.md](devices/pcg700.md) |
 | SUC 80-column kit | 80 sloupců x 25 řádků z existující VRAM (kit klubu Sharp Users Club UK), viz [devices/suc80.md](devices/suc80.md) |
+| K&P 80 Column Card | 80sloupcová karta Kersten & Partner s vlastní videopamětí a výstupem na druhý monitor (okno K&P 80 Column Monitor), viz [devices/kp80.md](devices/kp80.md) |
 
 ## MAX SPEED benchmark
 

@@ -7,9 +7,11 @@
 
 #include "devices_ui.h"
 #include "pcg700/pcg700_ui.h"
+#include "kp80/kp80_window.h"
 
 
 void mz700_devices_ui_register(void)
 {
     pcg700_ui_register();
+    kp80_ui_register();
 }

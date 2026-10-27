@@ -25,6 +25,7 @@
 #include "hw-generic/devbus/devbus.h"
 #include "mzarch/mz700/devices/pcg700/pcg700_devbus.h"
 #include "mzarch/mz700/devices/suc80/suc80_devbus.h"
+#include "mzarch/mz700/devices/kp80/kp80_devbus.h"
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
 #include "debugger/bptmap.h"
@@ -274,6 +275,7 @@ void mz700_devbus_start(void)
      * Selhání registrace vypíše zařízení samo, emulátor běží bez něj. */
     (void) pcg700_devbus_register();
     suc80_devbus_register();
+    kp80_devbus_register();
     devbus_start();
 }
 

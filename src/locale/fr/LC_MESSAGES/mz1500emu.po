@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mz800emu 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-27 01:27+0100\n"
+"POT-Creation-Date: 2026-10-27 01:38+0100\n"
 "PO-Revision-Date: 2026-03-11 21:00+0100\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -11688,6 +11688,64 @@ msgstr "(prend effet après reconnexion)"
 msgid "Connected"
 msgstr "Connecté"
 
+#: src/ui-imgui/mz700/devices/kp80/kp80_window.cpp:48
+msgid "K&P 80 Column Card"
+msgstr "Carte K&P 80 colonnes"
+
+#: src/ui-imgui/mz700/devices/kp80/kp80_window.cpp:49
+msgid "Read from 70h increments the address"
+msgstr "La lecture de 70h incrémente l'adresse"
+
+#: src/ui-imgui/mz700/devices/kp80/kp80_window.cpp:50
+msgid "Write to 71h also writes the selected CRTC register"
+msgstr "L'écriture sur 71h écrit aussi le registre CRTC sélectionné"
+
+#: src/ui-imgui/mz700/devices/kp80/kp80_window.cpp:51
+msgid "Update address (R18/R19) takes effect on R31 access"
+msgstr "L'adresse de mise à jour (R18/R19) prend effet à l'accès à R31"
+
+#: src/ui-imgui/mz700/devices/kp80/kp80_window.cpp:52
+msgid "Update cycle length (character clocks)"
+msgstr "Durée du cycle de mise à jour (horloges caractère)"
+
+#: src/ui-imgui/mz700/devices/kp80/kp80_window.cpp:53
+msgid "WAIT on ports 71h - 73h (T-states)"
+msgstr "WAIT sur les ports 71h - 73h (états T)"
+
+#: src/ui-imgui/mz700/devices/kp80/kp80_window.cpp:54
+msgid "Monitor phosphor color"
+msgstr "Couleur du phosphore du moniteur"
+
+#: src/ui-imgui/mz700/devices/kp80/kp80_window.cpp:55
+msgid "White"
+msgstr "Blanc"
+
+#: src/ui-imgui/mz700/devices/kp80/kp80_window.cpp:56
+#: src/ui-imgui/plotter/plotter_window.cpp:110
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:38
+msgid "Green"
+msgstr "Vert"
+
+#: src/ui-imgui/mz700/devices/kp80/kp80_window.cpp:57
+msgid "Amber"
+msgstr "Ambre"
+
+#: src/ui-imgui/mz700/devices/kp80/kp80_window.cpp:112
+msgid "Show 80 Column Monitor"
+msgstr "Afficher le moniteur 80 colonnes"
+
+#: src/ui-imgui/mz700/devices/kp80/kp80_window.cpp:186
+msgid "K&P 80 Column Monitor###KP80Monitor"
+msgstr "Moniteur K&P 80 colonnes###KP80Monitor"
+
+#: src/ui-imgui/mz700/devices/kp80/kp80_window.cpp:193
+msgid "The K&P 80 column card is not connected."
+msgstr "La carte K&P 80 colonnes n'est pas connectée."
+
+#: src/ui-imgui/mz700/devices/kp80/kp80_window.cpp:194
+msgid "Connect"
+msgstr "Connecter"
+
 #: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:41
 msgid "PCG-700 (HAL)"
 msgstr "PCG-700 (HAL)"
@@ -11857,11 +11915,6 @@ msgstr "Noir"
 #: src/ui-imgui/plotter/plotter_window.cpp:109
 msgid "Red"
 msgstr "Rouge"
-
-#: src/ui-imgui/plotter/plotter_window.cpp:110
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:38
-msgid "Green"
-msgstr "Vert"
 
 #: src/ui-imgui/plotter/plotter_window.cpp:111
 msgid "Blue"

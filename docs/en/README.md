@@ -299,6 +299,7 @@ options); by default none is connected.
 |------|-------------|
 | PCG-700 (HAL) | programmable character generator, 2 KB RAM for the characters 80h-FFh, see [devices/pcg700.md](devices/pcg700.md) |
 | SUC 80-column kit | 80 columns x 25 rows from the existing VRAM (kit of the Sharp Users Club UK), see [devices/suc80.md](devices/suc80.md) |
+| K&P 80 Column Card | 80-column card of Kersten & Partner with its own video RAM and an output for a second monitor (window K&P 80 Column Monitor), see [devices/kp80.md](devices/kp80.md) |
 
 ## MAX SPEED benchmark
 

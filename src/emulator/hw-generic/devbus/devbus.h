@@ -734,10 +734,29 @@ void devbus_vout_present(st_DEVBUS_VOUT *o);
  * @param io_seen  Vstup: pořadí naposledy viděného snímku; výstup: pořadí
  *                 zkopírovaného snímku (0 = zatím žádný).
  * @return true = zkopírován novější snímek.
- * @note Jeden čtenář na výstup (UI vlákno, nebo MCP v emu vlákně pod zámkem
- *       stavu zařízení); vlastní buffer čtenáře emu vlákno nepřepisuje.
+ * @note Jeden čtenář na výstup (typicky okno GUI v UI vlákně); vlastní buffer
+ *       čtenáře emu vlákno nepřepisuje. Emu vlákno čte nezávisle přes
+ *       devbus_vout_read_last().
  */
 bool devbus_vout_fetch(st_DEVBUS_VOUT *o, uint8_t *dst, size_t dst_size, uint32_t *io_seen);
+
+/**
+ * @brief Zkopíruje poslední předaný snímek pro čtenáře v emu vlákně.
+ *
+ * Druhý čtecí kanál vedle devbus_vout_fetch(): nemění výměnu bufferů, takže
+ * čtenáři fetch() (okno GUI) nic neubere. Slouží např. MCP screenshotu
+ * výstupu, který běží v emu vlákně (dbgapi).
+ *
+ * @param o        Výstup.
+ * @param dst      Cíl (nejméně width * height B).
+ * @param dst_size Velikost @p dst.
+ * @param seq_out  Pořadí zkopírovaného snímku (smí být NULL).
+ * @return true = zkopírováno; false = neplatný argument, malý cíl nebo zatím
+ *         žádný předaný snímek (pak se @p dst ani @p seq_out nemění).
+ * @pre Emu vlákno (stejné, které volá devbus_vout_present()), mimo kreslení
+ *      zařízení.
+ */
+bool devbus_vout_read_last(const st_DEVBUS_VOUT *o, uint8_t *dst, size_t dst_size, uint32_t *seq_out);
 
 /** @brief Počet sekundárních výstupů všech registrovaných zařízení. */
 unsigned devbus_vout_count(void);

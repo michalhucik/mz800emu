@@ -5562,6 +5562,54 @@ async def emu_get_devices() -> str:
     return json.dumps(_data_or_error(resp))
 
 
+@mcp.tool()
+async def emu_device_screenshot(output: str = "", path: str = "",
+                                format: str = "png",
+                                want_data: bool = True) -> str:
+    """Picture of an expansion device's own video output (a second monitor).
+
+    Read-only. Some expansion devices drive their own monitor, separate
+    from the computer's picture (for example the K&P 80 column card,
+    output ``kp80``, 640x250 dots); ``emu_screenshot_save_to_file`` and
+    the ``emulator://frame/screenshot`` resources show only the
+    computer's picture. The output ids are listed in ``emu_get_devices``
+    (``outputs[].id``). The picture is the last frame the device drew
+    (the emulator redraws it at the end of an emulated frame, and at once
+    when paused).
+
+    Args:
+        output: output id; empty = the first output of a connected device.
+        path: write the PNG to this file on the server host instead of
+            returning ``data_b64`` (only with ``format="png"``).
+        format: ``png`` (default) or ``indexed`` - one byte per dot (the
+            palette index, row by row from the top) plus ``palette``.
+        want_data: false = omit ``data_b64`` (hash and counts only).
+
+    Returns:
+        JSON ``{"available": true, "output": str, "device": str, "width":
+        int, "height": int, "pixel_aspect": float, "seq": int,
+        "image_sha256": str, "lit_pixels": int, "format": "png" |
+        "indexed", "byte_size": int, "data_b64": str | "path": str,
+        "palette": ["#RRGGBB", ...] (indexed)}``. ``image_sha256`` hashes
+        the RGBA picture (so the phosphor colour counts); ``lit_pixels``
+        counts dots with a non-zero palette index; ``seq`` grows with
+        every frame the device draws. ``{"available": false, "reason":
+        str}`` when the device is not connected or has not drawn yet. An
+        unknown ``output`` or no connected device with an output is an
+        error. For the text on the K&P 80 screen read the region
+        ``K&P 80 VRAM (2 KB)`` (see ``emulator://docs/devices``).
+    """
+    data: dict[str, Any] = {"want_data": bool(want_data)}
+    if output:
+        data["output"] = output
+    if path:
+        data["path"] = path
+    if format:
+        data["format"] = format
+    resp = await _send_request("device_screenshot", data)
+    return json.dumps(_data_or_error(resp))
+
+
 # === V1.C.1 - HID input Tools ========================================
 # Simulace klávesnice + joysticku přes PIO8255 VKBD matrix (= virtual
 # keyboard matrix paralelní s fyzickou SDL scan). Klíčové pro user

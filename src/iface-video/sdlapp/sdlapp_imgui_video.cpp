@@ -20,6 +20,9 @@
 #include "ui-imgui/topmenu/topmenu.h"
 #include "ui-imgui/screenshot/screenshot_ui.h"
 #include "ui-imgui/audiocap/audio_capture_ui.h"
+#if MZARCH == 700
+#include "ui-imgui/mz700/devices/kp80/kp80_window.h"
+#endif
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
 #include "ui-imgui/debugger/eventview/event_viewer_window.h"
 #include "ui-imgui/debugger/profiler/profiler_window.h"
@@ -202,6 +205,11 @@ static gboolean sdlapp_myimgui_video_init(void)
      * Control ([AUDIOCAP_UI]). */
     imgui_screenshot_window_cfg_init();
     imgui_audio_capture_window_cfg_init();
+#if MZARCH == 700
+    /* Persistence okna druhého monitoru karty K&P 80 ([KP80_UI]); položku
+     * menu a okno registruje mz700_devices_ui_register() (myimgui_init_cb). */
+    kp80_ui_init();
+#endif
 
     /* Headless režim: žádné SDL okno se nevytváří, žádný ImGui kontext.
      * Alokujeme:

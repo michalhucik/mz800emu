@@ -15,7 +15,7 @@ extern "C" {
 /**
  * @brief Zaregistruje specifické UI všech zařízení MZ-700 (devbus_ui_register_extra()).
  *
- * Jediné místo, kam zařízení přidávají svou registraci UI (PCG-700, další
+ * Jediné místo, kam zařízení přidávají svou registraci UI (PCG-700, K&P 80, další
  * karty). Zařízení bez specifického UI sem nepatří, generické menu je
  * zobrazí samo.
  *
