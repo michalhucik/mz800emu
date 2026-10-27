@@ -13,6 +13,7 @@ disconnected by default:
 | id | Device | Section below |
 |----|--------|---------------|
 | `pcg700` | PCG-700 by HAL Laboratory, programmable character generator | [PCG-700](#pcg-700-pcg700) |
+| `suc80` | Sharp Users Club UK 80-column kit (80 x 25 from the existing VRAM) | [SUC 80-column kit](#suc-80-column-kit-suc80) |
 
 ## Discover the devices
 
@@ -155,3 +156,40 @@ Notes for agents:
   `emu_frame_hash` / a screenshot.
 - `emu_frame_hash` with the PCG off (bit 3 = 1, `hsw` = `nom`) equals the
   picture without the card.
+
+## SUC 80-column kit (`suc80`)
+
+Sharp Users Club UK "MZ-700 80 Column Kit": 80 x 25 characters from the
+existing VRAM, no own memory. Model from research only (period article with
+the circuit diagram), never measured on hardware; undecided details are
+options. Disconnected by default.
+
+| Item | Value |
+|------|-------|
+| `id` / INI section | `suc80` / `[SUC80]` |
+| `mmio` | 57356 - 57359 (0E00Ch - 0E00Fh), `when: ["mapped"]` |
+| `video` | `render_row: true`, `glyph_source: false` |
+| `regions`, `ports`, `outputs` | none |
+| option `attributes` | keyword `per_char` (default) / `per_pair`, `apply: live` |
+| I/O catalog | `Device - SUC latch` at 0E00Ch (value = mode mirror, 10h = 80 columns) |
+
+- Mode latch: any write to 0E00Ch - 0E00Fh stores data bit D4 (28h = 40,
+  50h = 80 columns). Only while the upper area is mapped, not after
+  `OUT (0E1h)`. Reads do not change it, the latch cannot be read. The
+  write still reaches the board unchanged. `emu_reset` -> 40 columns;
+  connecting -> 40 columns. `emu_mem_write` refuses the page 0E000h while
+  the I/O area is mapped, so switch with a CPU program (e.g. `LD A,50h;
+  LD (0E00Ch),A` in RAM, `emu_set_register PC`, `emu_run`).
+- 80-column layout, row r = 0 - 24, column c = 0 - 79, `k = 40 * r + c div 2`:
+  even c = char 0D000h + k, attribute 0D800h + k; odd c = char 0D401h + k,
+  attribute 0DC01h + k (`per_pair`: 0D800h + k). 0D400h / 0DC00h are never
+  shown. Glyphs are 8 dots wide in the 640-dot canvas; the character
+  generator is the one the machine uses (CG-ROM, or the generator of a
+  connected device that supplies glyphs).
+- A mode change applies from the next drawn display line.
+- `emu_frame_hash`, `emu_get_frame_screenshot*`, `emu_screenshot_save_to_file`
+  and video recording see the 80-column picture (the framebuffer size does
+  not change: 704 x 232 with borders, canvas 640 x 200 at 32, 16).
+- In 40 columns the image with the kit connected is byte-identical to the
+  image without it; with the kit disconnected, writes to 0E00Ch behave as
+  in versions without devices.

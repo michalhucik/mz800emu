@@ -298,6 +298,7 @@ options); by default none is connected.
 | Unit | Description |
 |------|-------------|
 | PCG-700 (HAL) | programmable character generator, 2 KB RAM for the characters 80h-FFh, see [devices/pcg700.md](devices/pcg700.md) |
+| SUC 80-column kit | 80 columns x 25 rows from the existing VRAM (kit of the Sharp Users Club UK), see [devices/suc80.md](devices/suc80.md) |
 
 ## MAX SPEED benchmark
 

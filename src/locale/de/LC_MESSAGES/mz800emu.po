@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mz800emu 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-26 23:48+0100\n"
+"POT-Creation-Date: 2026-10-27 01:27+0100\n"
 "PO-Revision-Date: 2026-03-11 22:00+0100\n"
 "Last-Translator: Claude Code\n"
 "Language-Team: Deutsch\n"
@@ -11744,6 +11744,22 @@ msgstr "Zeichensatz 1, Codes 80h-FFh"
 #: src/ui-imgui/mz700/devices/pcg700/pcg700_ui.cpp:138
 msgid "Character set 2, codes 80h-FFh"
 msgstr "Zeichensatz 2, Codes 80h-FFh"
+
+#: src/ui-imgui/mz700/devices/suc80/suc80_ui_strings.cpp:22
+msgid "SUC 80-column kit"
+msgstr "SUC-80-Spalten-Kit"
+
+#: src/ui-imgui/mz700/devices/suc80/suc80_ui_strings.cpp:23
+msgid "Attributes in 80 columns"
+msgstr "Attribute bei 80 Spalten"
+
+#: src/ui-imgui/mz700/devices/suc80/suc80_ui_strings.cpp:24
+msgid "Per character"
+msgstr "Pro Zeichen"
+
+#: src/ui-imgui/mz700/devices/suc80/suc80_ui_strings.cpp:25
+msgid "Per pair of characters"
+msgstr "Pro Zeichenpaar"
 
 #: src/ui-imgui/mz800/topmenu/devices/menu_mz800_hw_compat.cpp:23
 msgid "HW Compatibility Experiments"

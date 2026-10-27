@@ -621,6 +621,23 @@ if(Python3_FOUND)
     message(STATUS "  tests/mcp: registered mcp_pcg700_e2e "
                    "(Python ${Python3_VERSION})")
 
+    # 80sloupcový kit SUC (zařízení devbus suc80) na MZ-700 PAL a NTSC:
+    # latch 0E00Ch, obraz 80 sloupců z get_frame_screenshot_raw, volba
+    # atributů, reset, snapshot round-trip, chování bez zařízení.
+    add_test(
+        NAME    mcp_suc80_e2e
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_suc80_e2e.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_suc80_e2e PROPERTIES
+        LABELS  "e2e;mcp;pipe;suc80"
+        TIMEOUT 300
+        SKIP_RETURN_CODE 77
+    )
+    message(STATUS "  tests/mcp: registered mcp_suc80_e2e "
+                   "(Python ${Python3_VERSION})")
+
     # Postupné hledání proměnných (memsearch) a Freeze Bytes přes MCP:
     # pauza i běžící program, undo/redo, ruční vyřazení, MemExt PEHU (128
     # kusů, bp_hint MMEXT_BANK), VRAM plane bez adresy, BCD, MZ-700/1500.

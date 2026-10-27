@@ -24,6 +24,7 @@
 #include "hw-generic/gdg/video.h"
 #include "hw-generic/devbus/devbus.h"
 #include "mzarch/mz700/devices/pcg700/pcg700_devbus.h"
+#include "mzarch/mz700/devices/suc80/suc80_devbus.h"
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
 #include "debugger/bptmap.h"
@@ -272,6 +273,7 @@ void mz700_devbus_start(void)
     /* Registrace zařízení MZ-700 (pořadí = pořadí v menu a get_devices).
      * Selhání registrace vypíše zařízení samo, emulátor běží bez něj. */
     (void) pcg700_devbus_register();
+    suc80_devbus_register();
     devbus_start();
 }
 
