@@ -282,14 +282,19 @@ ifneq ($(CTEST_REGEX),)
 endif
 
 # Helper - postavi vsechny testy a spusti CTest.
-# MCP e2e testy (tests/mcp/test_pipe.py, test_mcp_server_stdio.py) spouštějí
-# mz800emu z rootu repozitáře. cmake --build ho staví jen do build/; kopii do
-# rootu dělá jinak až target `mz800emu`, takže bez následujícího cp by tyto e2e
-# testy padaly po `make mrproper` (binárka v rootu chybí).
+# MCP e2e testy spouštějí binárky emulátoru z rootu repozitáře (mz800emu,
+# u testů MZ-700 / MZ-1500 i mz700emu-pal, mz700emu-ntsc a mz1500emu).
+# cmake --build je staví jen do build/; kopii do rootu dělají jinak až
+# targety mz800emu, mz1500emu, mz700emu-pal a mz700emu-ntsc. Bez
+# následujícího cp by e2e testy padaly po `make mrproper` (binárka v rootu
+# chybí), nebo by po samotném `make test` běžely proti staré binárce
+# v rootu. Platforma vypnutá v CMake (MZ_BUILD_*) se tiše přeskočí.
+MZ_EMU_TARGETS := mz800emu mz1500emu mz700emu-pal mz700emu-ntsc
+
 .PHONY: test
 test: $(CMAKE_CACHE)
 	$(QUIET)$(MZ_CMAKE) --build $(BUILD_DIR) -j$(JOBS)
-	$(QUIET)cp -f $(BUILD_DIR)/build-mz800emu/mz800emu* . 2>/dev/null || true
+	$(QUIET)for t in $(MZ_EMU_TARGETS); do cp -f $(BUILD_DIR)/build-$$t/$$t* . 2>/dev/null || true; done
 	$(QUIET)ctest $(CTEST_ARGS)
 
 # Per-skupina shortcuts

@@ -9,7 +9,11 @@
 #   proto se registrují jako pět testů build_revision_gen_<skupina>
 #   (volba --scenarios), které při paralelním ctest běží souběžně; jeden
 #   test se všemi scénáři trval sériově 71 s a pod zátěží až 123 s a byl
-#   nejdelším testem celé sady.
+#   nejdelším testem celé sady. Skupiny ale sdílí RESOURCE_LOCK
+#   msys_bash_git: běží po jedné (souběžně s ostatními testy). Pět skupin
+#   naráz spouštělo souběžně stovky procesů bash a git MSYS2, které se
+#   vzájemně brzdí; v jednom běhu `make test` (2026-10-28) skupina chains
+#   překročila limit 300 s a v remotes jeden běh generátoru 120 s.
 #
 # version_cli - volba --version všech postavených binárek (exit 0, verze,
 #   platforma, shoda s vygenerovaným build_revision.c). Cesty binárek
@@ -42,6 +46,7 @@ if(Python3_FOUND)
             LABELS           "tools;buildinfo;python"
             TIMEOUT          300
             SKIP_RETURN_CODE 77
+            RESOURCE_LOCK    msys_bash_git
         )
     endforeach()
 
