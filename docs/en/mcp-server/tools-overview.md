@@ -405,7 +405,9 @@ frame-bounded stop), not via an asynchronous pause from the dispatch
 thread. Running the same number of frames from the same state is therefore
 bit-reproducible - important when tracing timing-sensitive programs. For
 PAL (= 50 Hz) `emu_run(frames=100)` blocks for ~2 s; for NTSC (= 60 Hz)
-~1.67 s.
+~1.67 s. When a breakpoint or a pause stops the run earlier, the tool
+returns as soon as the emulator stops, and the stop is already in
+`emu_get_stop_history`.
 
 Response contains:
 

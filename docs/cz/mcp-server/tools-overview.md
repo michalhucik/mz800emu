@@ -397,7 +397,9 @@ hranici (emu-side frame-bounded stop), ne asynchronní pauzou z dispatch
 vlákna. Běh stejného počtu framů ze stejného stavu je proto bitově
 reprodukovatelný - důležité při trasování časově citlivých programů.
 Pro PAL frame=50 Hz znamená `emu_run(frames=100)` cca 2 s blokování,
-pro NTSC (60 Hz) cca 1.67 s.
+pro NTSC (60 Hz) cca 1.67 s. Když běh dřív zastaví breakpoint nebo pauza,
+tool se vrátí hned po zastavení emulátoru a zastavení už je
+v `emu_get_stop_history`.
 
 Response obsahuje:
 

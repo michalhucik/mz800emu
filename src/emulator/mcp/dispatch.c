@@ -195,14 +195,6 @@ en_DBGAPI_SUBMIT_STATUS dbgapi_ui_submit_cmd_sync_watched(st_DBGAPI_CMDRQ_QUEUE 
 #else
 #include "../debugger/dbgapi_ui.h"
 #include "../debugger/dbgapi_cmd_props.h"
-/* V1.E.7 - blokující emu_run potřebuje sledovat inkrement framebuffer
- * counteru (wakeup čekání; HID nástroje od mcp-inbox-fixes čtou čítač
- * snímků emulace g_gdg.total_elapsed.screens). iface_video.h vystavuje
- * g_iface_video->fbsnapshot_screen_id + fbsnapshot_pixels_mutex/cond,
- * což je per-frame signalizace publikovaná emu vláknem v
- * iface_video_framebuffer_screen_done(). V test buildu (= bez emu
- * vlákna) je wait no-op. */
-#include "../../iface/iface_video.h"
 #include "../emulator.h"      /* EMULATOR_TEST_PAUSED, emulator_pause */
 #endif
 
@@ -350,7 +342,7 @@ static _Thread_local const st_MCP_DISPATCH_STALL_WATCH *s_stall_watch;
 #define MCP_DISPATCH_BP_FWD_MIN_INTERVAL_MS_MAX (24u * 60u * 60u * 1000u)
 
 /* Forward declarations - implementace dále v souboru. */
-static bool _dispatch_wait_run_frames_done(int frames, int *out_actual);
+static bool _dispatch_wait_run_frames_done(int frames, uint64_t run_seq);
 
 /** @brief Protokolová verze hello payload. */
 #define MCP_DISPATCH_PROTOCOL_VERSION "1.0"
@@ -2105,21 +2097,24 @@ static en_MCP_DISPATCH_RESULT _handle_run(const st_JSONL_MESSAGE *req,
      * mezi čtením a zpracováním příkazu proběhne ještě jeden snímek a delta
      * by vyšla N+1. Přímé čtení zůstává jen jako výchozí hodnota pro případ,
      * že handler result_ptr nevyplní (testovací stub dbgapi). */
-    uint32_t start_screens = (uint32_t)g_gdg.total_elapsed.screens;
+    st_DBGAPI_RUN_FRAMES_RESULT rf;
+    rf.start_screens = (uint32_t)g_gdg.total_elapsed.screens;
+    rf.run_seq = 0;
 #ifndef MZ800EMU_MCP_TEST_BUILD
     /* Vynuluj důvod pauzy - po doběhnutí ho přečteme do stopped_by. Emu je
      * zde paused (stojí), takže zápis g_emulator.pause_reason je bezpečný.
      * (V testovacím buildu g_emulator/emulator.h není dostupné.) */
     g_emulator.pause_reason = EMU_PAUSE_REASON_NONE;
 #endif
-    if (!_submit_dbgapi(DBGAPI_CMD_RUN_FRAMES, &frames_int, &start_screens)) {
+    if (!_submit_dbgapi(DBGAPI_CMD_RUN_FRAMES, &frames_int, &rf)) {
         return _err_response(req_id, "Run failed",
                              MCP_DISPATCH_EMU_ERROR, out_response);
     }
+    uint32_t start_screens = rf.start_screens;
 
-    /* Počkej, až emu sám doběhne N framů a pausne se. Vrací true pokud
-     * emu doběhl deterministicky (= je paused), false při safety timeoutu. */
-    bool done = _dispatch_wait_run_frames_done(frames_int, NULL);
+    /* Počkej na konec běhu (cílová hranice snímku, breakpoint, pauza).
+     * Vrací true, když běh skončil a emu stojí, false při safety timeoutu. */
+    bool done = _dispatch_wait_run_frames_done(frames_int, rf.run_seq);
 
     /* Fallback: pokud wait skončil safety timeoutem, emu možná stále běží
      * s aktivním frame-bounded runem (run_frames_active=1). Pošleme PAUSE
@@ -11038,6 +11033,16 @@ static bool _hid_submit_key(en_DBGAPI_CMD cmd,
 
 
 /**
+ * @brief Délka jednoho úseku čekání `_dispatch_wait_run_frames_done` [ms].
+ *
+ * Určuje jen, jak brzy se pozná běh, který vůbec nezačal (pauza zrušená
+ * ve stejném drainu fronty). Konec běhu probudí čekání hned, bez ohledu
+ * na tuto hodnotu.
+ */
+#define RUN_FRAMES_WAIT_SLICE_MS 50
+
+
+/**
  * @brief Počká, až emu vlákno samo deterministicky doběhne frame-bounded run.
  *
  * Použití výhradně z `_handle_run` blokující path po submitu
@@ -11052,13 +11057,22 @@ static bool _hid_submit_key(en_DBGAPI_CMD cmd,
  * a helper by ho pak znovu unpausnul a emu by běžel za cílovou hranici
  * (= ztráta determinismu).
  *
- * Synchronizace: čeká na `g_iface_video->fbsnapshot_pixels_cond` (signál
- * per dokončený video frame) pro výpočet actual_frames a wakeup. Primární
- * exit podmínka je ale `EMULATOR_TEST_PAUSED` (= emu se sám deterministicky
- * pausnul po N framech), takže funkce skončí i kdyby se video frame counter
- * (`fbsnapshot_screen_id`) rozcházel s emu frame counterem
- * (`g_gdg.total_elapsed.screens`) - video frame se v MAX SPEED nemusí
- * vykreslit každý snímek, ale screens se inkrementuje vždy.
+ * Synchronizace: čeká na konec běhu @p run_seq přes run_log_wait(), tedy
+ * na záznam zastavení, který emu vlákno zapíše na vstupu do pauzy
+ * (run_control_on_stop()) - stejná cesta jako `wait_stop`. Probudí ji každé
+ * zastavení běhu (cílová hranice snímku, breakpoint, pauza zvenku, exit)
+ * hned, bez čekání na další snímek. Dřívější čekání na podmínku zveřejnění
+ * snímku (`fbsnapshot_pixels_cond`) s krokem 50 ms pauza nesignalizovala,
+ * takže odpověď po zastavení uprostřed snímku (a v režimu bez okna i po
+ * doběhu) přišla až po dalším snímku nebo po 50 ms (N106).
+ *
+ * Běh, který nezačal: zruší-li pauzu ve stejném drainu fronty dřív, než emu
+ * vlákno pauzu opustí, příkaz PAUSE (jiný klient, GUI), běh @p run_seq
+ * nezačne a run_log_wait() by čekal na budoucí běh. Proto se čeká po
+ * úsecích RUN_FRAMES_WAIT_SLICE_MS a po každém se zkontroluje: emu stojí,
+ * běh neprobíhá a aktuální číslo běhu je menší než @p run_seq = běh nezačal,
+ * funkce vrátí true (emu stojí, důvod pauzy přečte volající). Za normálního
+ * běhu úseky nic nezdržují, konec běhu probudí čekání hned.
  *
  * Safety timeout: 2x očekávaný wallclock + 100 ms (= konzervativní).
  * Pokud emu thread havaroval / je v deadlocku, dispatch se nezavěsí navždy.
@@ -11067,37 +11081,35 @@ static bool _hid_submit_key(en_DBGAPI_CMD cmd,
  * @param[in] frames  očekávaný počet framů (pro výpočet safety timeoutu).
  *                    <= 0 = no-op, return true. Bez HID_FRAMES_MAX clampu -
  *                    emu_run rozsah je 0..1000 framů.
- * @param[out] out_actual  pokud != NULL, naplní počet proběhlých video framů
- *                    (= delta `fbsnapshot_screen_id`, může být < frames při
- *                    MAX SPEED nevykreslení nebo timeoutu).
- * @return true pokud se emu deterministicky pausnul (= EMULATOR_TEST_PAUSED).
- *         false při safety timeoutu (= emu stále běží, caller musí PAUSE) nebo
- *         když `g_iface_video` není dostupný.
+ * @param[in] run_seq číslo běhu z výsledku DBGAPI_CMD_RUN_FRAMES
+ *                    (st_DBGAPI_RUN_FRAMES_RESULT::run_seq).
+ * @return true, když běh skončil (emu stojí, záznam zastavení existuje)
+ *         nebo vůbec nezačal (emu stojí). false při safety timeoutu (= emu
+ *         stále běží, caller musí PAUSE) nebo při ukončování emulátoru
+ *         (run_log_shutdown()).
  *
- * @note V test buildu (= MZ800EMU_MCP_TEST_BUILD) je no-op (vrací true,
- *       out_actual = frames). V testu neexistuje emu thread ani g_iface_video.
+ * @pre Volat po úspěšném submitu DBGAPI_CMD_RUN_FRAMES s @p run_seq z jeho
+ *      výsledku.
+ * @post Při true: run_log_current() vrací @p run_seq (nebo menší číslo, když
+ *       běh nezačal) a běh neprobíhá; pokud mezitím nerozběhl emulaci jiný
+ *       příkaz.
  *
- * @note Nesmí být volána z emu vlákna (deadlock - emu sám signalizuje cond).
+ * @note V test buildu (= MZ800EMU_MCP_TEST_BUILD) je no-op (vrací true).
+ *       V testu neexistuje emu thread.
+ *
+ * @note Nesmí být volána z emu vlákna (run_log_wait() by čekal na sebe).
  *       Dispatch běží v MCP I/O vlákně, takže to platí.
  */
-static bool _dispatch_wait_run_frames_done(int frames, int *out_actual) {
+static bool _dispatch_wait_run_frames_done(int frames, uint64_t run_seq) {
 #ifdef MZ800EMU_MCP_TEST_BUILD
     /* Test build: žádný emu thread, žádné frame ticks. No-op s úspěchem. */
-    if (out_actual) *out_actual = (frames > 0) ? frames : 0;
     (void)frames;
+    (void)run_seq;
     return true;
 #else
     if (frames <= 0) {
-        if (out_actual) *out_actual = 0;
         return true;
     }
-    if (!g_iface_video) {
-        if (out_actual) *out_actual = 0;
-        return false;
-    }
-
-    APP_MUTEX_LOCK(g_iface_video->fbsnapshot_pixels_mutex);
-    uint32_t start = g_iface_video->fbsnapshot_screen_id;
 
     /* Safety: 2x očekávaný wallclock + 100 ms. PAL frame = 20 ms,
      * bereme 40 ms/frame jako konzervativní horní odhad. emu_run rozsah je
@@ -11106,27 +11118,23 @@ static bool _dispatch_wait_run_frames_done(int frames, int *out_actual) {
     gint64 deadline_us = g_get_monotonic_time()
                        + ((gint64)frames * 40 + 100) * 1000;
 
-    bool emu_paused = false;
     while (1) {
-        /* Primární exit: emu se sám deterministicky pausnul po N framech
-         * (frame-bounded check v mzarch.c). */
-        if (EMULATOR_TEST_PAUSED) { emu_paused = true; break; }
-
         gint64 now_us = g_get_monotonic_time();
-        if (now_us >= deadline_us) break;   /* safety timeout */
-        gint32 remaining_ms = (gint32)((deadline_us - now_us) / 1000);
-        if (remaining_ms < 1) remaining_ms = 1;
-        if (remaining_ms > 50) remaining_ms = 50;
-        APP_COND_WAIT_TIMEOUT_MS(g_iface_video->fbsnapshot_pixels_cond,
-                                  g_iface_video->fbsnapshot_pixels_mutex,
-                                  remaining_ms);
+        if (now_us >= deadline_us) return false;   /* safety timeout */
+        gint64 remaining_ms = (deadline_us - now_us + 999) / 1000;
+        if (remaining_ms > RUN_FRAMES_WAIT_SLICE_MS) remaining_ms = RUN_FRAMES_WAIT_SLICE_MS;
+
+        en_RUN_LOG_WAIT w = run_log_wait(run_seq, (int)remaining_ms, NULL, NULL);
+        if (w == RUN_LOG_WAIT_DONE) return true;
+        if (w == RUN_LOG_WAIT_SHUTDOWN) return false;
+
+        /* Běh nezačal (PAUSE ve stejném drainu, viz Doxygen). Před
+         * run_log_begin() je emu po RUN_FRAMES vždy odpauzované, takže
+         * "stojí a číslo běhu je menší" nastane jen tehdy. */
+        bool running = false;
+        uint64_t cur = run_log_current(&running);
+        if (EMULATOR_TEST_PAUSED && !running && cur < run_seq) return true;
     }
-
-    uint32_t delta = g_iface_video->fbsnapshot_screen_id - start;
-    APP_MUTEX_UNLOCK(g_iface_video->fbsnapshot_pixels_mutex);
-
-    if (out_actual) *out_actual = (int)delta;
-    return emu_paused;
 #endif
 }
 

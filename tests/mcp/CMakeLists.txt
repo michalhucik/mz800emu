@@ -150,6 +150,19 @@ if(Python3_FOUND)
         TIMEOUT 60
     )
 
+    # Blokující run(frames) odpoví hned po zastavení breakpointem uprostřed
+    # snímku (čeká na záznam zastavení, ne na další snímek).
+    add_test(
+        NAME    mcp_run_frames_wake
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_run_frames_wake.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_run_frames_wake PROPERTIES
+        LABELS  "e2e;mcp;pipe"
+        TIMEOUT 60
+    )
+
     # Hlavní vlákno v --headless se netočí naprázdno (spotřeba CPU procesu).
     add_test(
         NAME    mcp_headless_cpu
@@ -1018,6 +1031,20 @@ if(Python3_FOUND)
     )
     message(STATUS "  tests/mcp: registered mcp_bp_addr_range "
                    "(Python ${Python3_VERSION})")
+
+    # PC_EXEC breakpoint s RANGE / MASK nastaveným po vytvoření
+    # (bp_create_with_init, bp_update) a po vypnutí a zapnutí opravdu
+    # zastaví (přestavba bptmap).
+    add_test(
+        NAME    mcp_bp_pc_range_hit
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_bp_pc_range_hit.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_bp_pc_range_hit PROPERTIES
+        LABELS  "e2e;mcp;pipe;breakpoints"
+        TIMEOUT 60
+    )
 
     # -----------------------------------------------------------
     # Událost paused po zastavení na dočasném breakpointu (pipe)

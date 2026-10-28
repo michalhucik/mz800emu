@@ -2929,13 +2929,16 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
              * run je krátkodobá operace (N <= 1000), takže to není praktický
              * problém.
              *
-             * result_ptr (volitelný, uint32_t*): handler do něj zapíše
-             * výchozí hodnotu screens, od které se cíl počítá. Volající
-             * (MCP run) z ní počítá actual_frames. Výchozí hodnotu nesmí
-             * číst sám na svém vlákně před submitem: za běhu emulace se
-             * mezi jeho čtením a tímto drainem (až po uzavření snímku
-             * a inkrementu screens) dokončí ještě jeden snímek a delta by
-             * vyšla N+1. */
+             * result_ptr (volitelný, st_DBGAPI_RUN_FRAMES_RESULT*): handler
+             * do něj zapíše výchozí hodnotu screens, od které se cíl
+             * počítá, a číslo běhu. Volající (MCP run) z výchozí hodnoty
+             * počítá actual_frames a na konec běhu čeká přes
+             * run_log_wait(). Výchozí hodnotu nesmí číst sám na svém
+             * vlákně před submitem: za běhu emulace se mezi jeho čtením
+             * a tímto drainem (až po uzavření snímku a inkrementu screens)
+             * dokončí ještě jeden snímek a delta by vyšla N+1. Číslo běhu
+             * se čte před emulator_pause(false), stejně jako u
+             * DBGAPI_CMD_RUN. */
             if ( !rq->data_ptr )
             {
                 rq->success = false;
@@ -2953,7 +2956,9 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                 g_debugger.run_frames_active = 1;
                 if ( rq->result_ptr )
                 {
-                    *((uint32_t *)rq->result_ptr) = start_screens;
+                    st_DBGAPI_RUN_FRAMES_RESULT *r = (st_DBGAPI_RUN_FRAMES_RESULT *) rq->result_ptr;
+                    r->start_screens = start_screens;
+                    r->run_seq = run_control_seq_for_start ( );
                 };
             }
             emulator_pause ( false );

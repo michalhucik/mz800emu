@@ -603,7 +603,10 @@ struct st_BP_ACTION;
      */
     extern int breakpoints_find_all_by_addr ( uint16_t addr, GArray *out_ids );
 
-    /* Nastaví enabled/disabled a synchronizuje s bptmap. */
+    /* Nastaví enabled/disabled a synchronizuje s bptmap. PC_EXEC SINGLE se
+     * registruje na addr (false při kolizi s jiným BP na téže adrese),
+     * PC_EXEC RANGE / MASK přestaví celou bptmap (breakpoints_sync_bptmap;
+     * kolizní adresy rozsahu se přeskočí s varováním). */
     extern bool breakpoints_set_enabled ( int bpt_id, bool enabled );
 
     extern bool breakpoints_set_name ( int bpt_id, const char *name );
@@ -674,12 +677,14 @@ struct st_BP_ACTION;
     extern bool breakpoints_set_bank_id ( int bpt_id, uint8_t bank_id );
 
     /* Nastaví range konec (addr_end). Vrátí true při úspěchu.
-     * Pokud end < addr, hodnota se uloží beze změny (validace je věcí UI/parseru). */
+     * Pokud end < addr, hodnota se uloží beze změny (validace je věcí UI/parseru).
+     * Side effect: při změně u efektivně povoleného PC_EXEC BP přestaví bptmap
+     * (breakpoints_sync_bptmap), aby rozsah platil hned. */
     extern bool breakpoints_set_addr_end ( int bpt_id, uint16_t addr_end );
 
     /* Nastaví range najednou (addr i addr_end). Vrátí true při úspěchu.
-     * NEsynchronizuje bptmap pro non-PC typy - addr stále jde přes
-     * breakpoints_set_addr (pro PC-exec backend). */
+     * addr jde přes breakpoints_set_addr (přestaví bptmap); při změně addr_end
+     * u efektivně povoleného PC_EXEC BP se bptmap přestaví ještě jednou. */
     extern bool breakpoints_set_addr_range ( int bpt_id, uint16_t addr, uint16_t addr_end );
 
     /* Nastaví I/O port (pro IORQ types). Vrátí true při úspěchu. */
@@ -749,6 +754,12 @@ struct st_BP_ACTION;
 
     /**
      * @brief Nastaví addr_match_mode (PC_EXEC / MEM_R / MEM_W).
+     *
+     * Side effect: při změně u efektivně povoleného PC_EXEC BP přestaví
+     * bptmap (breakpoints_sync_bptmap) - RANGE se registruje na každou
+     * adresu rozsahu, MASK do listu PC_EXEC_NONSINGLE. Typy MEM_R / MEM_W
+     * porovnávají režim až při dispatchi, přestavbu nepotřebují.
+     *
      * @return false pokud BP neexistuje nebo mode mimo BP_MATCH_COUNT.
      */
     extern bool breakpoints_set_addr_match_mode ( int bpt_id, en_BP_MATCH_MODE mode );

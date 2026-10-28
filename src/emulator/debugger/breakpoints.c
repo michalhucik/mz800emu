@@ -1924,10 +1924,18 @@ bool breakpoints_set_enabled ( int bpt_id, bool enabled ) {
      * - PC_EXEC: legacy bpmap[] s O(1) lookup (a kolizní detekce per addr).
      * - non-PC (D.2): per-typ list, žádná addr kolize (více BP na stejné
      *   adrese je v pořádku - rozliší je condition).
+     * - PC_EXEC RANGE / MASK: registrace na víc adres (RANGE) nebo do listu
+     *   PC_EXEC_NONSINGLE (MASK) umí jen breakpoints_sync_bptmap(), proto
+     *   se po změně příznaku přestaví celá mapa (níže). Ruční add/clear na
+     *   bpt->addr by rozsah zaregistroval jen na addr a při vypnutí nechal
+     *   zbytek rozsahu v mapě.
      */
     int idx = breakpoints_bpt_type_to_idx ( bpt->type );
+    bool pc_multi = ( bpt->type == BPT_TYPE_PC_EXEC && bpt->addr_match_mode != BP_MATCH_SINGLE );
 
-    if ( enabled && breakpoints_is_group_enabled ( bpt->parent ) ) {
+    if ( pc_multi ) {
+        /* Mapa se přestaví až po nastavení bpt->enabled. */
+    } else if ( enabled && breakpoints_is_group_enabled ( bpt->parent ) ) {
         if ( bpt->type == BPT_TYPE_PC_EXEC ) {
             int conflict = bptmap_event_add ( bpt->addr, bpt->id );
             if ( conflict > 0 ) {
@@ -1948,6 +1956,7 @@ bool breakpoints_set_enabled ( int bpt_id, bool enabled ) {
     };
 
     bpt->enabled = enabled;
+    if ( pc_multi ) breakpoints_sync_bptmap ( );
 
     /* 0019 vrstva 2: při (re-)enable BP vynuluj runtime stav rate-limitu, aby
      * max_fires nezůstal trvale "vyčerpaný" napříč session (= disable_self po
@@ -2120,11 +2129,35 @@ bool breakpoints_set_bank_id ( int bpt_id, uint8_t bank_id ) {
 }
 
 
+/**
+ * @brief Přestaví bptmap po změně adresního rozsahu efektivně povoleného PC_EXEC BP.
+ *
+ * PC_EXEC breakpointy hledá hlavní smyčka v mapě adres (bpmap[]), RANGE je
+ * v ní zaregistrovaný na každé adrese rozsahu, MASK v listu
+ * PC_EXEC_NONSINGLE. Registraci podle addr_end a addr_match_mode umí jen
+ * breakpoints_sync_bptmap(), proto ji setter těchto polí musí zavolat;
+ * jinak BP zůstane zaregistrovaný podle stavu z poslední přestavby (typicky
+ * jen na addr). MEM_R / MEM_W / IORQ a ostatní typy porovnávají rozsah až
+ * při dispatchi z aktuálních polí BP, přestavbu nepotřebují.
+ *
+ * @param bpt BP po změně (nesmí být NULL).
+ * @pre Voláno z vlákna, které smí měnit bptmap (emu vlákno, dbgapi handler).
+ * @post Pro efektivně povolený PC_EXEC BP odpovídá bptmap aktuálnímu rozsahu.
+ */
+static void breakpoints_resync_pc_exec_range ( const st_BPT *bpt ) {
+    if ( bpt->type != BPT_TYPE_PC_EXEC ) return;
+    if ( !( bpt->enabled && breakpoints_is_group_enabled ( bpt->parent ) ) ) return;
+    breakpoints_sync_bptmap ( );
+}
+
+
 bool breakpoints_set_addr_end ( int bpt_id, uint16_t addr_end ) {
     st_BPT *bpt = breakpoints_find_by_id ( bpt_id );
     if ( !bpt ) return false;
+    bool changed = ( bpt->addr_end != addr_end );
     bpt->addr_end = addr_end;
     g_breakpoints.version++;
+    if ( changed ) breakpoints_resync_pc_exec_range ( bpt );
     return true;
 }
 
@@ -2139,8 +2172,11 @@ bool breakpoints_set_addr_range ( int bpt_id, uint16_t addr, uint16_t addr_end )
     breakpoints_set_addr ( bpt_id, addr );
     bpt = breakpoints_find_by_id ( bpt_id ); /* defensive: GArray může re-allocovat */
     if ( !bpt ) return false;
+    bool changed = ( bpt->addr_end != addr_end );
     bpt->addr_end = addr_end;
     g_breakpoints.version++;
+    /* set_addr přestavěl mapu ještě se starým addr_end. */
+    if ( changed ) breakpoints_resync_pc_exec_range ( bpt );
     return true;
 }
 
@@ -2321,8 +2357,10 @@ bool breakpoints_set_addr_match_mode ( int bpt_id, en_BP_MATCH_MODE mode ) {
     st_BPT *bpt = breakpoints_find_by_id ( bpt_id );
     if ( !bpt ) return false;
     if ( mode < 0 || mode >= BP_MATCH_COUNT ) return false;
+    bool changed = ( bpt->addr_match_mode != mode );
     bpt->addr_match_mode = mode;
     g_breakpoints.version++;
+    if ( changed ) breakpoints_resync_pc_exec_range ( bpt );
     return true;
 }
 

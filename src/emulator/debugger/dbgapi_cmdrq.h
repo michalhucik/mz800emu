@@ -506,10 +506,11 @@ typedef enum en_DBGAPI_CMD
      *
      * Handler nastaví g_debugger.run_frames_target = screens + N a
      * run_frames_active = 1, pak unpausne emulaci. Volitelný result_ptr
-     * (uint32_t*) dostane výchozí hodnotu screens, od které se cíl počítá
-     * (= základ pro actual_frames u volajícího). Přidáno na KONEC enumu kvůli
-     * stabilitě číselných hodnot existujících příkazů. */
-    DBGAPI_CMD_RUN_FRAMES,                     /* Frame-bounded run (deterministický stop po N framech) - data_ptr: int* (N >= 1), result_ptr: uint32_t* výchozí screens nebo NULL */
+     * (st_DBGAPI_RUN_FRAMES_RESULT*) dostane výchozí hodnotu screens, od
+     * které se cíl počítá (= základ pro actual_frames u volajícího), a číslo
+     * běhu, na jehož konec volající čeká (run_log_wait()). Přidáno na KONEC
+     * enumu kvůli stabilitě číselných hodnot existujících příkazů. */
+    DBGAPI_CMD_RUN_FRAMES,                     /* Frame-bounded run (deterministický stop po N framech) - data_ptr: int* (N >= 1), result_ptr: st_DBGAPI_RUN_FRAMES_RESULT* nebo NULL */
 
     /* Přepočet debugger callbacků + active flagů (= mzarch_platform_fn_debugger_state_changed)
      * na EMU vlákně (per-frame safe-point), aby ho UI vlákno nevolalo přímo.
@@ -3892,6 +3893,24 @@ typedef struct st_DBGAPI_RUN_START_RESULT
                         *      příkazem fronty); false = běh (rozběh, dočasný BP). */
     uint64_t run_seq;  /* OUT: číslo běhu (viz invariant). */
 } st_DBGAPI_RUN_START_RESULT;
+
+
+/**
+ * @brief Výsledek DBGAPI_CMD_RUN_FRAMES (volitelný result_ptr).
+ *
+ * Invariant: `run_seq` je číslo běhu, který frame-bounded run provede:
+ * z pauzy číslo běhu, který začne opuštěním pauzy, za běhu číslo běžícího
+ * běhu (run_control_seq_for_start()). Běh skončí zastavením na cílové
+ * hranici snímku nebo dřívější pauzou (breakpoint, pauza zvenku); konec
+ * ohlásí run_log_wait() na toto číslo. Výjimka: zruší-li pauzu ze stejného
+ * drainu fronty příkaz PAUSE dřív, než emu vlákno pauzu opustí, běh
+ * s tímto číslem nezačne (emulace zůstane v pauze). Viz run_control/run_log.h.
+ */
+typedef struct st_DBGAPI_RUN_FRAMES_RESULT
+{
+    uint32_t start_screens; /* OUT: hodnota g_gdg.total_elapsed.screens, od které se počítá cíl. */
+    uint64_t run_seq;       /* OUT: číslo běhu (viz invariant). */
+} st_DBGAPI_RUN_FRAMES_RESULT;
 
 
 /**
