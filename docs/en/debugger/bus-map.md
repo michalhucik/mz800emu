@@ -29,12 +29,12 @@ both can be open side by side.
 
 ```
 [Ports] [MMIO]   Color by [Owners v] (?)   [x] Track activity
-+-- status strip above the grid ---+||+-- Owner   Ports    Drive      State -------+
-|     0  1  2  3 ... F             ||||[CH] CMT hack  01h-02h  none       present   |
-| 00  .  CH CH  .  ...             ||||[U]  Unicard   50h-51h  tri-state  present   |
-| 50  U  U  .   .  ... F1 F1 F1 F1 ||||[K8] K&P 80... 70h-73h  tri-state  [Connect] |
++-- status strip above the grid ---+||+-- Owner   Ports    Drive     (?) -------------+
+|     0  1  2  3 ... F             ||||[CH] CMT hack  01h-02h  none       (*)        |
+| 00  .  CH CH  .  ...             ||||[U]  Unicard   50h-51h  tri-state  (*)        |
+| 50  U  U  .   .  ... F1 F1 F1 F1 ||||[K8] K&P 80... 70h-73h  tri-state  (/) [Connect]
 | 70  K8 K8 K8 K8  ...             ||||  ...  (ScrollY, sorted by the first port)    |
-| F0  G  G  .   .  Q  Q  Q  Q  RD  |||+-- [K8] Port 70h  K&P 80 Column Card -------+
+| F0  G  G  .   .  Q  Q  Q  Q  RD  |||+-v [K8] Port 70h  K&P 80 Column Card ------+
 +----------------------------------+||| IN/s 0  OUT/s 0  ghost 0  conflicts 0       |
                                     ||| Last IN -   Last OUT -                       |
                                     ||| Peek: -  [Peek now]                          |
@@ -46,7 +46,11 @@ MZ-700 | 3 devices, 0 connected (?)
 
 On the left a 16 x 16 grid (row = high nibble, column = low nibble of the
 low address byte); the cell size follows the font, so the abbreviation
-always fits. On the right the list of owners of the active grid and,
+always fits. When the window is too low for the whole grid, the cells
+shrink down to the size where the widest abbreviation still has 2 px of
+air on each side (the badges shrink with them); below that the grid part
+scrolls vertically. With the default font (28 px) the whole grid needs a
+window of about 880 px height. On the right the list of owners of the active grid and,
 below it, the detail of the selected address. Each cell carries the
 abbreviation of its owner (`U` Unicard, `F0` FDC 0, `M` memory mapper,
 `K8` K&P 80 card, `P7` PCG-700, ...), a colour by the chosen mode and
@@ -128,27 +132,43 @@ The right panel: one row per board chip or expansion device of the active
 grid, sorted by the first port. Columns: a mini cell with the
 abbreviation in the colour of the cell (the legend), name, address ranges
 (at most three, more as "+N"; all of them in the tooltip), output stage,
-state (present / not present / connected / not connected) and, for
-expansion devices, a **Connect** / **Disconnect** button (the same action
+a state icon and, for expansion devices, a **Connect** / **Disconnect**
+button (the same action
 as the HW & Devices menu; board chips are attached in that menu).
 Hovering a row highlights its cells in the grid with a yellow frame,
 clicking a row selects its first address, clicking a cell selects the row
-of its owner. The row tooltip: full name, direction, all ranges, the
+of its owner. The state icon tells the state by its shape, not by its
+colour:
+
+| Icon | State |
+|------|-------|
+| filled circle | present (board chip) or connected (expansion device) |
+| empty circle | not present (a board chip disconnected in the HW & Devices menu or not decoding in the current mode) |
+| crossed circle | not connected (an expansion device that is registered but not connected) |
+
+Hovering the icon shows the state in words ("State: not connected"); the
+column header carries a **(?)** whose tooltip draws all three shapes with
+the meaning next to each. On the MMIO tab the range column is called
+**Addresses** (the columns have the same width on both tabs). The row
+tooltip: full
+name, direction, all ranges, the output stage, the state in words, the
 source of the output stage declaration, the mirror note (the emulator
 decodes a port by the low address byte only, not measured on the real
 machine; no note on the MZ-700) and, for devices, the number of ports,
 MMIO addresses, memory regions and outputs. The list scrolls and the
-selected row is always visible. On the MZ-800 and MZ-1500 (no expansion
+selected row is always visible: when it is not fully visible (a selection
+in the grid, a change of the window height) the list scrolls to it; a row
+that is visible does not move when it gets selected. On the MZ-800 and MZ-1500 (no expansion
 devices) the button column is absent.
 
 ## Detail of the selected address
 
 Below the list a panel of constant height (the list above it does not
-move when the selection or the state changes): a title with the mini
-cell and the owner name ("Port 70h  K&P 80 Column Card"; without an owner
+move when the selection or the state changes): a title with an arrow,
+the mini cell and the owner name ("Port 70h  K&P 80 Column Card"; without an owner
 "Port 20h - no owner"; the title tooltip lists all owners), a line about
-the owner (direction and output stage, with partial drive also the driven
-bits; other owners of the same address after **Also:**; without an owner
+the owner (direction, output stage and state in words, e.g. "IN/OUT,
+tri-state, not connected"; with partial drive also the driven bits; other owners of the same address after **Also:**; without an owner
 instead what a read returns: "A read returns the undriven bus: bus latch
 5Ah"), an activity line in a monospaced font (IN/s, OUT/s, ghost,
 conflicts; writes/s for an MMIO address), the last IN and OUT values with
@@ -164,6 +184,16 @@ rather than wrapped; its tooltip has the full text. With tracking off
 the numbers are dashes and the line "Activity tracking is off" replaces
 the last values.
 
+The arrow in the title collapses the detail to the title line alone and
+gives its height to the owner list; another click expands it again. The
+state is kept in the INI file, the default is expanded.
+
+In a low window, where the list (header and three rows) and the expanded
+detail do not fit one above the other, the right part gets a vertical
+scrollbar: the list keeps three rows and the detail buttons are reached
+with the scrollbar, the mouse wheel over the detail or the Tab key. With
+enough height there is no scrollbar.
+
 Status line: platform and the number of expansion devices ("MZ-700 |
 3 devices, 0 connected"; on the MZ-800 and MZ-1500 the platform only); a
 non-default undriven-bus model (`const`) and conflict policy (`and`,
@@ -173,8 +203,9 @@ number.
 
 ## Keyboard
 
-Tab moves between the toolbar, the grid, the list and the detail
-buttons; arrows in the grid move the selection (the focused cell has a
+Tab moves between the toolbar, the grid, the list, the arrow of the
+detail and the detail buttons (Space or Enter on the arrow collapses or
+expands the detail); arrows in the grid move the selection (the focused cell has a
 frame), Space or Enter on a cell selects it, Enter on the row of an
 expansion device connects or disconnects it. Below its natural width
 (grid + list) the window does not reflow, it gets a horizontal scrollbar;
@@ -231,7 +262,8 @@ owners, flags and the conflict counters of the bus core.
 ## Settings (INI)
 
 The window keeps `color_mode`, `active_tab`, `list_width` (list width in
-px, 0 = automatic) and `tracking_active` in the section `[BUS_MAP_PANEL]`. The
+px, 0 = automatic), `tracking_active` and `detail_open` (detail of the
+selected address expanded, default 1) in the section `[BUS_MAP_PANEL]`. The
 bus model lives in the section `[DEVBUS]` of the MZ-700 emulator (the only
 platform with expansion devices) and has no switch in the GUI (it is also reachable through MCP `emu_settings_set`,
 keys `DEVBUS/conflict`, `DEVBUS/bus_idle`, `DEVBUS/bus_idle_value`):

@@ -5,30 +5,41 @@
  * Rozložení (reference v2 návrhu 3, emu-experiments/mz700-devices/gui/bus-map):
  *
  *   [Ports] [MMIO]   Color by [Owners v] (?)   [x] Track activity
- *   +-- pruh stavu nad mřížkou -------------+||+-- Owners -----------------------------+
- *   |     0  1  2 ... F                     ||||[CH] CMT hack   01h-02h  none  present |
- *   | 00 [. ][CH][CH] ...                   ||||[K8] K&P 80 ... 70h-73h  tri.. [Connect]|
- *   | ...                                   ||||  ... (ScrollY, clipper, zebra)        |
- *   | F0 [G ][G ] ...                       |||+-- [K8] Port 70h  K&P 80 Column Card --+
- *   +---------------------------------------+||| IN/s 0  OUT/s 0  ghost 0  conflicts 0 |
- *                                           ||| Last IN -   Last OUT -                 |
- *                                           ||| Peek: - (automatic while paused)       |
- *                                           ||| Flags: potential conflict              |
- *                                           ||| [Show in I/O Ports] [Reset activity]   |
- *                                           ||| [Break on IN]       [Break on OUT]     |
+ *   +-- pruh stavu nad mřížkou -------------+||+-- Owners ---------------------------+
+ *   |     0  1  2 ... F                     ||||[CH] CMT hack   01h-02h  none   (*)  |
+ *   | 00 [. ][CH][CH] ...                   ||||[K8] K&P 80 ... 70h-73h  tri.. (/) [Connect]
+ *   | ...                                   ||||  ... (ScrollY, clipper, zebra)      |
+ *   | F0 [G ][G ] ...                       |||+-v [K8] Port 70h  K&P 80 Column Card -+
+ *   +---------------------------------------+||| IN/s 0  OUT/s 0  ghost 0  conflicts 0|
+ *                                           ||| Last IN -   Last OUT -                |
+ *                                           ||| Peek: - (automatic while paused)      |
+ *                                           ||| Flags: potential conflict             |
+ *                                           ||| [Show in I/O Ports] [Reset activity]  |
+ *                                           ||| [Break on IN]       [Break on OUT]    |
  *   MZ-700 | 3 devices, 0 connected (?)
  *
  * Rozměry z GetFontSize() / GetFrameHeight(): buňka = nejširší zkratka
- * + vzduch (nejméně 2 px), řádek seznamu = výška rámečku. Pravá část má
- * minimum z nejdelších textů sloupců a tlačítek (stejné pro obě záložky,
- * aby přepnutí Ports / MMIO nic neposunulo); pod součtem minim dostane
- * tělo okna vodorovný posuvník a nic se nepřeskládává. Okno samo nikdy
- * neroluje (NoScrollbar), rolují jen tělo a seznam. Detail má pevný počet
- * řádků ve všech stavech, aby seznam nad ním neposkakoval. Stav nikdy jen
- * barvou: zkratka v buňce, šrafování nepřítomných, odznaky (tmavý kruh
- * s bílým glyfem, sedí na rohu buňky z větší části uvnitř, kreslí se až
- * po všech buňkách) pro kolizi, nedoložený budič, rozdělení směru a ghost
- * přístup; význam slovy v tooltipu buňky a v detailu.
+ * + vzduch, řádek seznamu = výška rámečku. Přirozená velikost počítá
+ * s buňkou cell_min (vzduch 0,1 em, nejméně 2 px); když okno nemá výšku
+ * na celou mřížku, buňka se zmenší až k mezi čitelnosti cell_floor
+ * (nejširší zkratka obou záložek a popisek řádku + 2 px z každé strany,
+ * svisle výška písma + 2 px), pod ní levá část roluje. Odznaky se zmenšují
+ * s buňkou. Pravá část má minimum z nejdelších textů sloupců a tlačítek
+ * (stejné pro obě záložky, aby přepnutí Ports / MMIO nic neposunulo;
+ * MMIO má ve sloupci rozsahů záhlaví Addresses); pod součtem minim
+ * dostane tělo okna vodorovný posuvník a nic se nepřeskládává. Okno samo
+ * nikdy neroluje (NoScrollbar), rolují jen tělo, levá část, seznam a v nízkém
+ * okně pravá část (když se seznam se záhlavím a 3 řádky a detail nevejdou).
+ * Stav vlastníka v seznamu nese ikona rozlišená tvarem (plný kruh
+ * přítomný / připojený, prázdný kruh nepřítomný, přeškrtnutý kruh
+ * nepřipojené zařízení) s tooltipem; záhlaví sloupce nese "(?)" s tooltipem
+ * tvarů, slovem je stav v tooltipu řádku a v detailu. Detail jde sbalit šipkou v titulku (persistence
+ * detail_open); rozbalený i sbalený má pevný počet řádků ve všech stavech,
+ * aby seznam nad ním neposkakoval. Stav nikdy jen barvou: zkratka
+ * v buňce, šrafování nepřítomných, odznaky (tmavý kruh s bílým glyfem,
+ * sedí na rohu buňky z větší části uvnitř, kreslí se až po všech
+ * buňkách) pro kolizi, nedoložený budič, rozdělení směru a ghost přístup;
+ * význam slovy v tooltipu buňky a v detailu.
  *
  * @par Licence: GPLv3
  */
@@ -44,6 +55,7 @@
 #include <float.h>
 
 #include "libs/imgui/imgui.h"
+#include "libs/imgui/imgui_internal.h" /* ImGuiWindow::ScrollbarY pro ladicí stav (testy P01) */
 #include "i18n.h"
 
 #include "bus_window.h"
@@ -114,11 +126,14 @@ struct Metrics {
     float frame = 22.0f;   /**< GetFrameHeight(). */
     float margin = 2.0f;   /**< Vzduch kolem zkratky v buňce (>= 2 px). */
     float gap = 3.0f;      /**< Mezera mezi buňkami. */
-    float cell_min = 24.0f;/**< Minimální buňka: nejširší zkratka + 2 x margin, nejméně řádek textu. */
-    float badge_r = 5.0f;  /**< Poloměr odznaku (0,2 em, nejméně 5 px). */
-    float badge_off = 2.0f;/**< Posun středu odznaku z rohu buňky dovnitř (r / 3); odznak tak nesahá na zkratku a jen zlehka přes mezeru. */
+    float cell_min = 24.0f;/**< Buňka přirozené velikosti okna: nejširší zkratka obou záložek (a "F0") + 2 x margin, nejméně řádek textu a 24 px. */
+    float cell_floor = 24.0f;/**< Mez čitelnosti (V1) při nedostatku výšky: max(nejširší zkratka obou záložek, popisek řádku "x0", výška řádku) + 2 x 2 px, nejméně 24 px; vždy <= cell_min. Z obou záložek, aby přepnutí záložky ani v nízkém okně nic neposunulo (R05). */
+    float badge_r = 5.0f;  /**< Poloměr odznaku při buňce cell_min (0,2 em, nejméně 5 px); menší buňka ho zmenší úměrně. */
+    float badge_off = 2.0f;/**< Posun středu odznaku z rohu buňky dovnitř při cell_min (r / 3); odznak tak nesahá na zkratku a jen zlehka přes mezeru. */
     float mini = 22.0f;    /**< Mini buňka v seznamu (= výška řádku). */
     float split = 6.0f;    /**< Šířka tažného oddělovače. */
+    float icon_r = 7.0f;   /**< Poloměr ikony stavu v seznamu (0,35 em, nejméně 5 px; průměr ~ výška verzálky). */
+    float icon_t = 1.5f;   /**< Tloušťka čáry ikony stavu (prázdný a přeškrtnutý kruh). */
     /** @brief Šířka (= výška) mřížky včetně záhlaví při buňce @p c. */
     float grid_w(float c) const { return 17.0f * c + 15.0f * gap; }
 };
@@ -129,6 +144,7 @@ struct BusUiState {
     int active_tab = BUS_TAB_PORTS;      /**< Persist: active_tab. */
     int list_width = 0;                  /**< Persist: list_width (0 = automaticky). */
     int cfg_tracking = 1;                /**< Persist: tracking_active (preference při otevření). */
+    int detail_open = 1;                 /**< Persist: detail_open (1 = detail vybrané adresy rozbalený, výchozí). */
     bool tracking = true;                /**< Aktuální přání sledovat (checkbox). */
     bool was_open = false;               /**< Okno bylo otevřené v minulém snímku. */
     bool want_tab[2] = { false, false }; /**< Jednorázové přepnutí záložky (persistence, skok). */
@@ -159,6 +175,19 @@ struct BusUiState {
     float row_y[MAX_ROWS];               /**< Střed řádku y z posledního kreslení (testy). */
     bool row_drawn[MAX_ROWS];            /**< Řádek se kreslil (clipper). */
     float row_x = 0.0f;                  /**< Střed sloupce Owner x. */
+    float icon_x = 0.0f;                 /**< Střed ikony stavu x (všechny řádky; y = row_y). */
+    ImVec2 fold_center;                  /**< Střed šipky sbalení detailu z posledního kreslení (testy). */
+    ImVec2 hdr_state_center;             /**< Střed záhlaví sloupce ikony stavu z posledního kreslení (testy). */
+    bool list_drawn = false;             /**< Seznam se v posledním snímku kreslil (hdr_state_center platí). */
+    float natural_h = 0.0f;              /**< Přirozená výška okna (testy). */
+    float min_win_h = 0.0f;              /**< Nejmenší výška okna z omezení (testy). */
+    float cell_fit_h = 0.0f;             /**< Buňka, se kterou by se mřížka celá vešla do výšky těla (testy). */
+    bool grid_full = false;              /**< Mřížka celá ve výšce levé části, bez rolování (testy). */
+    float min_full_h = 0.0f;             /**< Nejmenší výška okna, při které se mřížka s buňkou cell_floor vejde celá. */
+    float badge_r_now = 0.0f;            /**< Poloměr odznaku posledního kreslení mřížky (po zmenšení s buňkou). */
+    float badge_off_now = 0.0f;          /**< Posun středu odznaku z rohu posledního kreslení. */
+    char state_tip[96] = "";             /**< Tooltip ikony stavu zobrazený v posledním snímku ("" = žádný; testy). */
+    char row_tip_state[96] = "";         /**< Řádek stavu z tooltipu řádku seznamu v posledním snímku ("" = žádný; testy). */
     Metrics m;                           /**< Rozměry tohoto snímku. */
     bool grid_drawn = false;             /**< Mřížka se v posledním snímku kreslila (geometrie níže platí). */
     bool grid_mmio = false;              /**< Kreslená mřížka byla MMIO. */
@@ -168,6 +197,19 @@ struct BusUiState {
     float list_w = 0.0f;                 /**< Šířka pravé části posledního kreslení. */
     float list_min_w = 0.0f;             /**< Minimum pravé části z textů. */
     float detail_h = 0.0f;               /**< Výška detailu změřená v minulém snímku (kontrola proti detail_height(), testy). */
+    float list_h = 0.0f;                 /**< Výška tabulky seznamu posledního kreslení (testy). */
+    float list_need_h = 0.0f;            /**< Nejmenší výška seznamu (list_min_height()) posledního kreslení (testy). */
+    float list_scroll_y = 0.0f;          /**< Odrolování tabulky seznamu posledního kreslení (testy). */
+    float right_bottom = 0.0f;           /**< Spodní hrana viditelné plochy ##bus_right (testy). */
+    float right_scroll_y = 0.0f;         /**< Odrolování ##bus_right (testy). */
+    float right_scroll_max_y = 0.0f;     /**< Nejvyšší odrolování ##bus_right (testy; > 0 = obsah přesahuje). */
+    bool right_scrollbar = false;        /**< ##bus_right má viditelný svislý posuvník (testy). */
+    float btn_bottom = 0.0f;             /**< Spodní hrana tlačítka Break on OUT (testy; 0 = sbalený detail). */
+    float owner_text_w = 0.0f;           /**< Nejdelší zobrazený název vlastníka obou záložek (list_min_width(), testy). */
+    float owner_col_x = 0.0f;            /**< Začátek obsahu sloupce Owner x (testy). */
+    float ports_col_x = 0.0f;            /**< Začátek obsahu sloupce Ports / Addresses x (testy). */
+    float hdr_tip_w = 0.0f;              /**< Šířka tooltipu záhlaví sloupce ikony v tomto snímku (0 = nezobrazen; testy). */
+    char ports_header[32] = "";          /**< Text záhlaví sloupce rozsahů posledního kreslení (testy). */
     ImVec2 split_center;                 /**< Střed oddělovače mřížka / seznam z posledního kreslení (testy). */
     int hover_cells = 0;                 /**< Buňky zvýrazněné hoverem řádku (testy). */
     int visible_rows = 0;                /**< Řádky vykreslené clipperem (testy). */
@@ -247,11 +289,39 @@ const char *dir_word(uint8_t dirs)
     return dirs == BUS_DIR_RW ? "IN/OUT" : (dirs & BUS_DIR_R) ? "IN" : "OUT";
 }
 
-/** @brief Slovo pro stav vlastníka (sloupec State). */
+/** @brief Slovo pro stav vlastníka (tooltip ikony stavu, tooltip řádku, detail). */
 const char *state_word(uint8_t kind, bool connected)
 {
     if (kind == BUS_OWNER_DEVBUS) return connected ? _("connected") : _("not connected");
     return connected ? _("present") : _("not present");
+}
+
+/**
+ * @brief Ikona stavu vlastníka v seznamu; význam nese tvar, ne barva.
+ *
+ * Plný kruh = přítomný čip desky / připojené zařízení, prázdný kruh =
+ * nepřítomný čip desky, přeškrtnutý kruh (prstenec s úhlopříčkou zleva
+ * dole doprava nahoru) = registrované, ale nepřipojené zařízení devbus.
+ * Barva je vždy bílá (kontrast vůči zebra pruhům i vybranému řádku).
+ * @param dl        Draw list okna.
+ * @param c         Střed ikony (souřadnice obrazovky).
+ * @param r         Vnější poloměr (Metrics::icon_r).
+ * @param t         Tloušťka čáry prstence a úhlopříčky (Metrics::icon_t).
+ * @param kind      en_BUS_OWNER_KIND vlastníka.
+ * @param connected Přítomný / připojený.
+ */
+void draw_state_icon(ImDrawList *dl, ImVec2 c, float r, float t, uint8_t kind, bool connected)
+{
+    if (connected) {
+        dl->AddCircleFilled(c, r, COL_TEXT);
+        return;
+    }
+    const float rr = r - t * 0.5f;
+    dl->AddCircle(c, rr, COL_TEXT, 0, t);
+    if (kind == BUS_OWNER_DEVBUS) {
+        const float k = rr * 0.7071f;
+        dl->AddLine(ImVec2(c.x - k, c.y + k), ImVec2(c.x + k, c.y - k), COL_TEXT, t);
+    }
 }
 
 /** @brief Nejsilnější budič čtení vlastníků buňky (UNKNOWN má přednost). */
@@ -705,6 +775,12 @@ void render_strip(bool mmio, float width)
 
 /**
  * @brief Mřížka 16 x 16 (porty nebo MMIO okno) s buňkou @p cell.
+ *
+ * Odznaky se s buňkou menší než cell_min zmenšují úměrně (poloměr i posun
+ * z rohu), aby u buňky na mezi čitelnosti nezasáhly zkratku (R02).
+ * @param mmio true = mřížka MMIO 0E000h-0E0FFh, false = porty.
+ * @param cell Velikost buňky v px (>= Metrics::cell_floor).
+ * @post g_bus_ui.grid_origin, cell, badge_r_now, badge_off_now platí pro testy.
  */
 void render_grid(bool mmio, float cell)
 {
@@ -719,6 +795,11 @@ void render_grid(bool mmio, float cell)
     g_bus_ui.grid_mmio = mmio;
     g_bus_ui.grid_origin = origin;
     g_bus_ui.cell = cell;
+    const float badge_k = fminf(1.0f, cell / m.cell_min);
+    const float badge_r = fmaxf(3.0f, m.badge_r * badge_k);
+    const float bo = fmaxf(1.0f, roundf(m.badge_off * badge_k));
+    g_bus_ui.badge_r_now = badge_r;
+    g_bus_ui.badge_off_now = bo;
     g_bus_ui.hover_cell = -1;
     g_bus_ui.hover_cells = 0;
     unsigned sel = g_bus_ui.sel_addr[mmio ? BUS_TAB_MMIO : BUS_TAB_PORTS];
@@ -813,7 +894,6 @@ void render_grid(bool mmio, float cell)
              * Střed sedí badge_off od rohu buňky, takže odznak zasahuje jen do
              * rohu (mimo zkratku) a zlehka přes mezeru; kreslí se až po všech
              * buňkách (R02). */
-            const float bo = m.badge_off;
             if (flags & (BUS_PORT_POTENTIAL_CONFLICT | BUS_PORT_CONFLICT_SEEN)) {
                 badge(ImVec2(b.x - bo, a.y + bo), "!", (flags & BUS_PORT_CONFLICT_SEEN) ? COL_BAD : COL_WARN);
             }
@@ -834,7 +914,7 @@ void render_grid(bool mmio, float cell)
         }
     }
     /* Druhý průchod: odznaky nad všemi buňkami (přesahují do mezery, soused je nesmí překreslit). */
-    for (unsigned i = 0; i < badge_count; i++) draw_badge(dl, badges[i].c, m.badge_r, badges[i].glyph, badges[i].outline);
+    for (unsigned i = 0; i < badge_count; i++) draw_badge(dl, badges[i].c, badge_r, badges[i].glyph, badges[i].outline);
     /* Kontextové menu (jeden popup pro celou mřížku, adresa v g_bus_ui.ctx_*). */
     if (ImGui::BeginPopup("##bus_cell_ctx")) {
         ImGui::Text(g_bus_ui.ctx_mmio ? "%04Xh" : "%02Xh", g_bus_ui.ctx_addr);
@@ -846,7 +926,10 @@ void render_grid(bool mmio, float cell)
     ImGui::Dummy(ImVec2(m.grid_w(cell), 0.0f));
 }
 
-/** @brief Tooltip řádku seznamu: úplný název, směr, všechny rozsahy, zdroje, zrcadla, údaje devbus. */
+/**
+ * @brief Tooltip řádku seznamu: úplný název, směr, všechny rozsahy, budič, stav slovem, zdroje, zrcadla, údaje devbus.
+ * @post Při zobrazení zapíše řádek stavu do g_bus_ui.row_tip_state (testy).
+ */
 void row_tooltip(const OwnerRow &r, bool mmio)
 {
     const st_BUS_MAP_SNAPSHOT *s = &g_bus_ui.snap;
@@ -858,6 +941,9 @@ void row_tooltip(const OwnerRow &r, bool mmio)
     ImGui::Text("%s  %s", dir_word(r.dirs), rg);
     if (r.drive == DEVBUS_DRIVE_PARTIAL) ImGui::Text(_("Drive: %s, driven bits %02Xh"), drive_word(r.drive), r.drive_mask);
     else ImGui::Text(_("Drive: %s"), drive_word((r.dirs & BUS_DIR_R) ? r.drive : DEVBUS_DRIVE_NONE));
+    /* Stav slovem: ve sloupci je jen ikona, klávesnice a čtečka ho mají tady a v detailu. */
+    snprintf(g_bus_ui.row_tip_state, sizeof(g_bus_ui.row_tip_state), "%s %s", _("State:"), state_word(r.kind, r.connected));
+    ImGui::TextUnformatted(g_bus_ui.row_tip_state);
     for (unsigned i = 0; i < r.range_count; i++) {
         if (r.src[i]) ImGui::TextDisabled("%s %s", _("Source:"), r.src[i]);
     }
@@ -878,58 +964,188 @@ void row_tooltip(const OwnerRow &r, bool mmio)
     ImGui::EndTooltip();
 }
 
+/** @brief Značka nápovědy v záhlaví sloupce ikony stavu (stejná jako help_marker()). */
+constexpr const char *STATE_HDR_MARK = "(?)";
+
 /**
- * @brief Šířka sloupce Ports: z delší referenční hodnoty obou záložek (R05: přepnutí záložky nic neposune).
+ * @brief Šířky sloupců seznamu vlastníků, jeden zdroj pro render_owner_list() i list_min_width().
+ *
+ * Hodnoty jsou šířky předávané TableSetupColumn() jako WidthFixed, tedy šířky
+ * obsahu buňky. Tabulka nemá BordersInnerV, takže ImGui mezi každé dva
+ * sousední sloupce přidá ještě mezeru spacing = CellSpacingX1 + CellSpacingX2
+ * = 2 x CellPadding.x (imgui_tables.cpp: BeginTableEx nastaví mezery,
+ * TableUpdateLayout footprint sloupce = WidthGiven + CellSpacingX1 +
+ * CellSpacingX2; vnější okraje tabulky 0). Pevné sloupce mají v šířce
+ * navíc vlastní rezervu cp = 2 x CellPadding.x, sloupec Owner je zbytek.
+ * Dřívější list_min_width() mezery spacing nepočítala (a přičítala
+ * nepoužitý WindowPadding pravé části), proto za nejdelším názvem zbylo
+ * jen 0,5 em + 2 x WindowPadding.x - (ncol - 3) x cp (6 sloupců při 28 px:
+ * 6 px) místo 0,5 em + spacing (P04).
+ * @invariant ncol je 5 (bez zařízení devbus) nebo 6 (sloupec Action).
  */
-float ports_column_width(void)
+struct ListCols {
+    float mini = 0.0f;    /**< Mini buňka + cp. */
+    float ports = 0.0f;   /**< Rozsahy: delší referenční hodnota obou záložek + cp (R05: přepnutí záložky nic neposune). */
+    float drive = 0.0f;   /**< Nejdelší slovo budiče nebo záhlaví "Drive" + cp. */
+    float state = 0.0f;   /**< Ikona stavu + cp; nejméně šířka značky "(?)" záhlaví (P02), která smí zabrat i rezervu cp. */
+    float action = 0.0f;  /**< Tlačítko Connect / Disconnect + cp; 0 při ncol == 5. */
+    float spacing = 0.0f; /**< Mezera, kterou ImGui přidá mezi dva sousední sloupce (2 x CellPadding.x). */
+    int ncol = 5;         /**< Počet sloupců tabulky. */
+    /** @brief Součet šířek pevných sloupců (bez Owner, bez mezer spacing). */
+    float fixed_sum() const { return mini + ports + drive + state + action; }
+    /** @brief Součet mezer mezi sloupci. */
+    float spacings() const { return spacing * (float) (ncol - 1); }
+};
+
+/**
+ * @brief Spočítá šířky sloupců seznamu z písma a stylu aktuálního snímku.
+ * @return Šířky sloupců (ListCols); sloupec Owner volající dopočítá ze zbytku.
+ * @pre Uvnitř snímku ImGui, compute_metrics() a build_rows() už proběhly (rows_devbus).
+ */
+ListCols list_columns(void)
 {
-    float cp = ImGui::GetStyle().CellPadding.x * 2.0f;
-    return fmaxf(ImGui::CalcTextSize("E000h-E003h, E008h +2").x, ImGui::CalcTextSize("CCh-CEh, CFh, F0h +2").x) + cp;
+    const Metrics &m = g_bus_ui.m;
+    const ImGuiStyle &st = ImGui::GetStyle();
+    const float cp = st.CellPadding.x * 2.0f;
+    ListCols c;
+    c.spacing = cp;
+    c.ncol = g_bus_ui.rows_devbus ? 6 : 5;
+    c.mini = m.mini + cp;
+    c.ports = fmaxf(ImGui::CalcTextSize("E000h-E003h, E008h +2").x, ImGui::CalcTextSize("CCh-CEh, CFh, F0h +2").x) + cp;
+    float dmax = ImGui::CalcTextSize(_("Drive")).x;
+    const en_DEVBUS_DRIVE drives[] = { DEVBUS_DRIVE_NONE, DEVBUS_DRIVE_TRISTATE, DEVBUS_DRIVE_PARTIAL, DEVBUS_DRIVE_OPEN_COLLECTOR, DEVBUS_DRIVE_UNKNOWN };
+    for (en_DEVBUS_DRIVE d : drives) dmax = fmaxf(dmax, ImGui::CalcTextSize(drive_word(d)).x);
+    c.drive = dmax + cp;
+    /* Značka "(?)" (28 px: 26 px) se vejde do obsahu ikona + cp (28 px), sloupec se tím nerozšíří. */
+    c.state = fmaxf(m.icon_r * 2.0f + cp, ImGui::CalcTextSize(STATE_HDR_MARK).x);
+    c.action = c.ncol == 6 ? fmaxf(ImGui::CalcTextSize(_("Connect")).x, ImGui::CalcTextSize(_("Disconnect")).x) + st.FramePadding.x * 2.0f + cp : 0.0f;
+    return c;
+}
+
+/**
+ * @brief Nejmenší výška tabulky seznamu: záhlaví a 3 celé řádky (P01).
+ *
+ * Řádek záhlaví má výšku řádku textu + 2 x CellPadding.y, řádek vlastníka
+ * výšku mini buňky + 2 x CellPadding.y (ImGui TableNextRow s min_row_height).
+ * Když se pod tuto výšku seznam s detailem do pravé části nevejde, pravá část
+ * roluje svisle (seznam zůstává na této výšce a roluje sám).
+ * @return Výška v px.
+ */
+float list_min_height(void)
+{
+    const Metrics &m = g_bus_ui.m;
+    const ImGuiStyle &st = ImGui::GetStyle();
+    return ceilf((m.line + st.CellPadding.y * 2.0f) + 3.0f * (m.mini + st.CellPadding.y * 2.0f));
+}
+
+/**
+ * @brief Tooltip záhlaví sloupce ikony stavu: tři řádky "tvar = slovo" s nakreslenými tvary (P03).
+ *
+ * Zalomení 35 em jako ostatní tooltipy okna. Před každým řádkem je tvar
+ * nakreslený draw_state_icon() ve velikosti ikony seznamu.
+ * @post g_bus_ui.hdr_tip_w = šířka okna tooltipu (testy, měření snímku).
+ */
+void state_header_tooltip(void)
+{
+    if (!ImGui::BeginItemTooltip()) return;
+    const Metrics &m = g_bus_ui.m;
+    const ImGuiStyle &st = ImGui::GetStyle();
+    ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+    ImGui::TextUnformatted(_("State of the owner:"));
+    struct { uint8_t kind; bool connected; const char *text; } lines[3] = {
+        { BUS_OWNER_STATIC, true, _("filled circle = present or connected") },
+        { BUS_OWNER_STATIC, false, _("empty circle = not present") },
+        { BUS_OWNER_DEVBUS, false, _("crossed circle = not connected") },
+    };
+    ImDrawList *dl = ImGui::GetWindowDrawList();
+    const float side = fmaxf(m.icon_r * 2.0f, m.line);
+    for (const auto &l : lines) {
+        ImVec2 p = ImGui::GetCursorScreenPos();
+        ImGui::Dummy(ImVec2(side, m.line));
+        draw_state_icon(dl, ImVec2(p.x + side * 0.5f, p.y + m.line * 0.5f), m.icon_r, m.icon_t, l.kind, l.connected);
+        ImGui::SameLine(0.0f, st.ItemSpacing.x);
+        ImGui::TextUnformatted(l.text);
+    }
+    ImGui::PopTextWrapPos();
+    g_bus_ui.hdr_tip_w = ImGui::GetWindowWidth();
+    ImGui::EndTooltip();
 }
 
 /**
  * @brief Seznam vlastníků: ImGui tabulka se zebra pruhy, ScrollY, clipper, řazení podle prvního portu.
+ *
+ * Sloupec stavu nese jen ikonu (draw_state_icon()); záhlaví má značku "(?)"
+ * s tooltipem tvarů (state_header_tooltip()), tooltip ikony řekne stav
+ * slovem. Ikona je InvisibleButton bez navigace (klik vybere řádek jako klik
+ * na řádek). Sloupec rozsahů se na záložce MMIO jmenuje Addresses (P05),
+ * šířky sloupců jsou z list_columns() (stejné jako v list_min_width()).
+ * Požadavek want_scroll_row odroluje seznam jen k vybranému řádku, který
+ * celý vidět není (vystředí ho); viditelný řádek se nehýbe.
+ * @param mmio   true = záložka MMIO (formát rozsahů, záhlaví Addresses).
  * @param height Výška tabulky.
+ * @post g_bus_ui.state_tip = text tooltipu ikony, je-li v tomto snímku zobrazený, jinak "";
+ *       g_bus_ui.hdr_tip_w, list_h, list_scroll_y, owner_col_x, ports_col_x, ports_header platí pro testy.
  */
 void render_owner_list(bool mmio, float height)
 {
     const Metrics &m = g_bus_ui.m;
     const ImGuiStyle &st = ImGui::GetStyle();
     const float row_h = m.mini;
-    const float cp = st.CellPadding.x * 2.0f;
-    float col_mini = m.mini + cp;
-    float col_ports = ports_column_width();
-    float col_drive = 0.0f, col_state = 0.0f;
-    const en_DEVBUS_DRIVE drives[] = { DEVBUS_DRIVE_NONE, DEVBUS_DRIVE_TRISTATE, DEVBUS_DRIVE_PARTIAL, DEVBUS_DRIVE_OPEN_COLLECTOR, DEVBUS_DRIVE_UNKNOWN };
-    for (en_DEVBUS_DRIVE d : drives) col_drive = fmaxf(col_drive, ImGui::CalcTextSize(drive_word(d)).x);
-    col_drive = fmaxf(col_drive, ImGui::CalcTextSize(_("Drive")).x) + cp;
-    for (int k = 0; k < 4; k++) col_state = fmaxf(col_state, ImGui::CalcTextSize(state_word(k & 1 ? BUS_OWNER_DEVBUS : BUS_OWNER_STATIC, (k & 2) != 0)).x);
-    col_state = fmaxf(col_state, ImGui::CalcTextSize(_("State")).x) + cp;
-    float col_action = fmaxf(ImGui::CalcTextSize(_("Connect")).x, ImGui::CalcTextSize(_("Disconnect")).x) + st.FramePadding.x * 2.0f + cp;
-    int ncol = g_bus_ui.rows_devbus ? 6 : 5;
+    const ListCols lc = list_columns();
+    const int ncol = lc.ncol;
     /* Sloupec Owner pevný: zbytek šířky po odečtení posuvníku (vždy, i když tabulka zrovna neroluje)
-     * a mezer mezi sloupci (bez vnitřních rámečků = 2 x CellPadding.x na mezeru); roztažný sloupec
-     * by se s objevením posuvníku zúžil a posunul sloupce vpravo (R05). */
-    float fixed_sum = col_mini + col_ports + col_drive + col_state + (ncol == 6 ? col_action : 0.0f);
-    float col_owner = ImGui::GetContentRegionAvail().x - st.ScrollbarSize - cp * (float) (ncol - 1) - fixed_sum;
+     * a mezer mezi sloupci (ListCols::spacing); roztažný sloupec by se s objevením posuvníku zúžil
+     * a posunul sloupce vpravo (R05). Při posuvníku celé pravé části (nízké okno, P01) je sloupec
+     * Owner o jeho šířku užší. */
+    float col_owner = ImGui::GetContentRegionAvail().x - st.ScrollbarSize - lc.spacings() - lc.fixed_sum();
     if (col_owner < m.fs * 2.0f) col_owner = m.fs * 2.0f;
     char tid[64];
-    snprintf(tid, sizeof(tid), "##bus_owners_%c_%d", mmio ? 'm' : 'p', (int) (col_ports + col_drive + col_state + col_action + m.mini));
+    snprintf(tid, sizeof(tid), "##bus_owners_%c_%d", mmio ? 'm' : 'p', (int) (lc.ports + lc.drive + lc.state + lc.action + m.mini));
+    /* Záložka MMIO má ve sloupci adresy, ne porty (P05); šířka sloupce je pro obě záložky stejná (R05). */
+    const char *ports_hdr = mmio ? _("Addresses") : _("Ports");
+    snprintf(g_bus_ui.ports_header, sizeof(g_bus_ui.ports_header), "%s", ports_hdr);
     ImGuiTableFlags tf = ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_NoSavedSettings;
     g_bus_ui.visible_rows = 0;
     g_bus_ui.hover_row_id_now = NULL;
+    g_bus_ui.state_tip[0] = '\0';
+    g_bus_ui.row_tip_state[0] = '\0';
+    g_bus_ui.hdr_tip_w = 0.0f;
+    g_bus_ui.list_h = height;
     for (unsigned i = 0; i < MAX_ROWS; i++) g_bus_ui.row_drawn[i] = false;
     if (!ImGui::BeginTable(tid, ncol, tf, ImVec2(0.0f, height))) return;
     ImGui::TableSetupScrollFreeze(0, 1);
-    ImGui::TableSetupColumn("##mini", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoResize, col_mini);
+    ImGui::TableSetupColumn("##mini", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoResize, lc.mini);
     ImGui::TableSetupColumn(_("Owner"), ImGuiTableColumnFlags_WidthFixed, col_owner);
-    ImGui::TableSetupColumn(_("Ports"), ImGuiTableColumnFlags_WidthFixed, col_ports);
-    ImGui::TableSetupColumn(_("Drive"), ImGuiTableColumnFlags_WidthFixed, col_drive);
-    ImGui::TableSetupColumn(_("State"), ImGuiTableColumnFlags_WidthFixed, col_state);
-    if (ncol == 6) ImGui::TableSetupColumn("##action", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoResize, col_action);
-    ImGui::TableHeadersRow();
-
+    ImGui::TableSetupColumn(ports_hdr, ImGuiTableColumnFlags_WidthFixed, lc.ports);
+    ImGui::TableSetupColumn(_("Drive"), ImGuiTableColumnFlags_WidthFixed, lc.drive);
+    ImGui::TableSetupColumn("##state", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoResize, lc.state);
+    if (ncol == 6) ImGui::TableSetupColumn("##action", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoResize, lc.action);
+    /* Záhlaví ručně (jako TableHeadersRow()), aby záhlaví ikony stavu neslo značku "(?)" s tooltipem tvarů (P02, P03). */
     ImDrawList *dl = ImGui::GetWindowDrawList();
+    float hdr_bottom = ImGui::GetCursorScreenPos().y; /* spodní hrana zmrazeného záhlaví = horní hrana viditelných řádků */
+    ImGui::TableNextRow(ImGuiTableRowFlags_Headers);
+    ImGui::PushID("##bus_hdr"); /* vlastní prostor ID: PushID(c) záhlaví by se jinak potkal s PushID(i) řádku i */
+    for (int c = 0; c < ncol; c++) {
+        if (!ImGui::TableSetColumnIndex(c)) continue;
+        ImGui::PushID(c);
+        const float hy = ImGui::GetCursorScreenPos().y;
+        ImGui::TableHeader(ImGui::TableGetColumnName(c));
+        ImGui::PopID();
+        hdr_bottom = fmaxf(hdr_bottom, ImGui::GetItemRectMax().y);
+        if (c == 4) {
+            /* Značka nápovědy jako help_marker() (barva TextDisabled), vystředěná nad ikonami sloupce;
+             * při hoveru je pod ní modré HeaderHovered, šedá by tam zanikla, proto bílá. */
+            const bool hdr_hot = ImGui::IsItemHovered();
+            ImVec2 a = ImGui::GetItemRectMin(), b = ImGui::GetItemRectMax();
+            ImVec2 ts = ImGui::CalcTextSize(STATE_HDR_MARK);
+            g_bus_ui.hdr_state_center = ImVec2((a.x + b.x) * 0.5f, (a.y + b.y) * 0.5f);
+            g_bus_ui.list_drawn = true;
+            dl->AddText(ImVec2(floorf((a.x + b.x - ts.x) * 0.5f), hy), ImGui::GetColorU32(hdr_hot ? ImGuiCol_Text : ImGuiCol_TextDisabled), STATE_HDR_MARK);
+            state_header_tooltip();
+        }
+    }
+    ImGui::PopID();
+
     ImGuiListClipper clipper;
     clipper.Begin((int) g_bus_ui.row_count, row_h + st.CellPadding.y * 2.0f);
     if (g_bus_ui.sel_row >= 0) clipper.IncludeItemByIndex(g_bus_ui.sel_row);
@@ -957,7 +1173,13 @@ void render_owner_list(bool mmio, float height)
             }
             row_tooltip(r, mmio);
             if (selected && g_bus_ui.want_scroll_row) {
-                ImGui::SetScrollHereY(0.5f);
+                /* Odrolovat jen k řádku, který celý vidět není (pod zmrazeným záhlavím nebo pod spodní
+                 * hranou); viditelný řádek (klik do seznamu) se nehýbe. Dřív SetScrollHereY(0.5)
+                 * vystředil i viditelný řádek a odrolování zůstalo i po zvětšení okna. */
+                const float top = p.y - st.CellPadding.y;
+                const float bot = p.y + row_h + st.CellPadding.y;
+                const float vis_bot = ImGui::GetWindowPos().y + ImGui::GetWindowHeight();
+                if (top < hdr_bottom - 0.5f || bot > vis_bot + 0.5f) ImGui::SetScrollHereY(0.5f);
                 g_bus_ui.want_scroll_row = false;
             }
             /* Mini buňka = legenda: barva sleduje režim obarvení, zkratka jako v mřížce. */
@@ -969,9 +1191,11 @@ void render_owner_list(bool mmio, float height)
             g_bus_ui.row_x = np.x + ImGui::GetContentRegionAvail().x * 0.5f;
             g_bus_ui.row_y[i] = p.y + row_h * 0.5f;
             g_bus_ui.row_drawn[i] = true;
+            g_bus_ui.owner_col_x = np.x;
             ImGui::TextUnformatted(r.name);
             ImGui::TableNextColumn();
             ImGui::AlignTextToFramePadding();
+            g_bus_ui.ports_col_x = ImGui::GetCursorScreenPos().x;
             char rg[64];
             ranges_text(r, mmio, SHOWN_RANGES, rg, sizeof(rg));
             ImGui::TextUnformatted(rg);
@@ -979,8 +1203,24 @@ void render_owner_list(bool mmio, float height)
             ImGui::AlignTextToFramePadding();
             ImGui::TextUnformatted(drive_word((r.dirs & BUS_DIR_R) ? r.drive : DEVBUS_DRIVE_NONE));
             ImGui::TableNextColumn();
-            ImGui::AlignTextToFramePadding();
-            ImGui::TextUnformatted(state_word(r.kind, r.connected));
+            {
+                /* Ikona stavu: tvar nese význam, tooltip slovo; hover drží zvýraznění buněk řádku. */
+                ImVec2 ip = ImGui::GetCursorScreenPos();
+                float iw = ImGui::GetContentRegionAvail().x;
+                if (ImGui::InvisibleButton("##state_icon", ImVec2(fmaxf(iw, 1.0f), row_h))) {
+                    select_cell(r.first_addr, mmio);
+                    set_sel_owner(r.id, r.kind);
+                }
+                ImVec2 ic(ip.x + iw * 0.5f, ip.y + row_h * 0.5f);
+                g_bus_ui.icon_x = ic.x;
+                draw_state_icon(dl, ic, m.icon_r, m.icon_t, r.kind, r.connected);
+                if (ImGui::IsItemHovered()) { g_bus_ui.hover_row_id_now = r.id; g_bus_ui.hover_row_kind_now = r.kind; }
+                if (ImGui::BeginItemTooltip()) {
+                    snprintf(g_bus_ui.state_tip, sizeof(g_bus_ui.state_tip), "%s %s", _("State:"), state_word(r.kind, r.connected));
+                    ImGui::TextUnformatted(g_bus_ui.state_tip);
+                    ImGui::EndTooltip();
+                }
+            }
             if (ncol == 6) {
                 ImGui::TableNextColumn();
                 if (r.kind == BUS_OWNER_DEVBUS) {
@@ -1001,18 +1241,26 @@ void render_owner_list(bool mmio, float height)
             ImGui::PopID();
         }
     }
+    g_bus_ui.list_scroll_y = ImGui::GetScrollY(); /* vnitřní okno tabulky (ScrollY) */
     ImGui::EndTable();
 }
 
 /**
  * @brief Detail vybrané adresy pod seznamem (nízký panel, K07, K10, K17, K21).
  *
- * Pevný počet řádků ve všech stavech (R04): oddělovač, titulek, řádek
- * o vlastníkovi (směr a budič, další vlastníci; bez vlastníka co vrátí
- * čtení), dva řádky aktivity (bez sledování pomlčky a "Activity tracking
- * is off" místo posledních hodnot), peek, příznaky, 2 x 2 tlačítka.
- * Dlouhé řádky se neořezávají zalomením, ale oříznutím s úplným zněním
- * v tooltipu. Skutečnou výšku si změří pro kontrolu detail_height().
+ * Pevný počet řádků ve všech stavech (R04): oddělovač, titulek se šipkou
+ * sbalení, řádek o vlastníkovi (směr, budič a stav slovem, další vlastníci;
+ * bez vlastníka co vrátí čtení), dva řádky aktivity (bez sledování pomlčky
+ * a "Activity tracking is off" místo posledních hodnot), peek, příznaky,
+ * 2 x 2 tlačítka. Sbalený detail (detail_open = 0) má jen oddělovač
+ * a titulek; automatický peek v pauze se pak nedělá a texty pro testy
+ * (activity_line, peek_line, flags_line) zůstávají z posledního
+ * rozbaleného kreslení. Dlouhé řádky se neořezávají zalomením, ale
+ * oříznutím s úplným zněním v tooltipu. Skutečnou výšku si změří pro
+ * kontrolu detail_height().
+ * @param mmio true = vybraná adresa je z mřížky MMIO.
+ * @post Šipka může přepnout g_bus_ui.detail_open (projeví se v příštím snímku);
+ *       g_bus_ui.btn_bottom = spodní hrana Break on OUT (0 u sbaleného detailu).
  */
 void render_detail(bool mmio)
 {
@@ -1038,6 +1286,15 @@ void render_detail(bool mmio)
     }
 
     ImGui::Separator();
+    /* Šipka sbalení (záhlaví detailu); stav se ukládá do INI (detail_open). */
+    const bool open = g_bus_ui.detail_open != 0;
+    if (ImGui::ArrowButton("##bus_det_fold", open ? ImGuiDir_Down : ImGuiDir_Right)) g_bus_ui.detail_open = open ? 0 : 1;
+    {
+        ImVec2 fa = ImGui::GetItemRectMin(), fb = ImGui::GetItemRectMax();
+        g_bus_ui.fold_center = ImVec2((fa.x + fb.x) * 0.5f, (fa.y + fb.y) * 0.5f);
+    }
+    ImGui::SetItemTooltip("%s", open ? _("Hide the detail of the address") : _("Show the detail of the address"));
+    ImGui::SameLine(0.0f, st.ItemSpacing.x);
     ImDrawList *dl = ImGui::GetWindowDrawList();
     ImVec2 p = ImGui::GetCursorScreenPos();
     if (o) draw_mini(dl, p, m.mini, g_bus_ui.color_mode == BUS_COLOR_ACTIVITY ? heat_color(bp ? bp->hits_in_per_sec + bp->hits_out_per_sec : mc->hits_out_per_sec, true)
@@ -1062,7 +1319,12 @@ void render_detail(bool mmio)
         ImGui::PopTextWrapPos();
         ImGui::EndTooltip();
     }
-    /* Řádek o vlastníkovi (vždy jeden): směr a budič vybraného vlastníka, další vlastníci
+    if (!open) {
+        g_bus_ui.detail_h = ImGui::GetCursorPosY() - y0 - st.ItemSpacing.y;
+        g_bus_ui.btn_bottom = 0.0f;
+        return;
+    }
+    /* Řádek o vlastníkovi (vždy jeden): směr, budič a stav vybraného vlastníka, další vlastníci
      * téže adresy (dva statické téhož směru, rozdělení podle směru); bez vlastníka co
      * čtení vrátí (K21), přímo v detailu, ne jen v tooltipu. */
     char info[320];
@@ -1070,7 +1332,7 @@ void render_detail(bool mmio)
         snprintf(info, sizeof(info), _("A read returns the undriven bus: %s %02Xh"),
                  s->bus_idle == DEVBUS_IDLE_CONST ? _("constant") : _("bus latch"), s->idle_byte);
     } else {
-        size_t used = (size_t) snprintf(info, sizeof(info), "%s, %s", dir_word(o->dirs), drive_word(o->drive));
+        size_t used = (size_t) snprintf(info, sizeof(info), "%s, %s, %s", dir_word(o->dirs), drive_word(o->drive), state_word(o->kind, o->connected != 0));
         if (o->drive == DEVBUS_DRIVE_PARTIAL && used < sizeof(info)) {
             char bits[48];
             snprintf(bits, sizeof(bits), _("Driven bits: %02Xh"), o->drive_mask);
@@ -1173,20 +1435,26 @@ void render_detail(bool mmio)
     if (mmio) ImGui::SetItemTooltip("%s", _("IORQ breakpoints apply to ports only"));
     ImGui::SameLine();
     if (ImGui::Button(_L("Break on OUT##bus_det_bpw"), ImVec2(bw, 0.0f))) bpt_edit_panel_open_new_iorq((uint16_t) addr, true);
+    g_bus_ui.btn_bottom = ImGui::GetItemRectMax().y;
     if (mmio) ImGui::SetItemTooltip("%s", _("IORQ breakpoints apply to ports only"));
     ImGui::EndDisabled();
     g_bus_ui.detail_h = ImGui::GetCursorPosY() - y0 - st.ItemSpacing.y;
 }
 
 /**
- * @brief Výška detailu, stejná ve všech stavech (R04): oddělovač (1 px čára v layoutu bez výšky, jen
- *        mezera), titulek, 4 řádky textu, řádek peeku a 2 řady tlačítek ve výšce rámečku, 8 mezer;
- *        bez mezery za poslední řadou. Test hlídá shodu se změřenou výškou.
+ * @brief Výška detailu, stejná ve všech stavech výběru a sledování (R04).
+ *
+ * Rozbalený: oddělovač (1 px čára v layoutu bez výšky, jen mezera),
+ * titulek, 4 řádky textu, řádek peeku a 2 řady tlačítek ve výšce rámečku,
+ * 8 mezer. Sbalený: oddělovač a titulek (rámeček + 1 mezera). Bez mezery
+ * za poslední řadou. Test hlídá shodu se změřenou výškou v obou stavech.
+ * @return Výška v px pro aktuální g_bus_ui.detail_open.
  */
 float detail_height(void)
 {
     const Metrics &m = g_bus_ui.m;
     const ImGuiStyle &st = ImGui::GetStyle();
+    if (!g_bus_ui.detail_open) return m.frame + st.ItemSpacing.y;
     return m.frame * 4.0f + m.line * 4.0f + st.ItemSpacing.y * 8.0f;
 }
 
@@ -1195,15 +1463,21 @@ float detail_height(void)
  *
  * Nezávisí na záložce (R05): názvy vlastníků se berou z obou mřížek
  * (každý název jednou, podle ukazatele), sloupec Ports z delší referenční
- * hodnoty, sloupec Action podle registrovaných zařízení.
+ * hodnoty, sloupec Action podle registrovaných zařízení. Sloupec stavu
+ * má šířku ikony nebo značky "(?)" záhlaví, ne nejdelšího slova stavu
+ * (D8, P02). Šířky sloupců a mezery mezi nimi jsou tytéž jako
+ * v render_owner_list() (list_columns()); sloupec Owner = nejdelší název
+ * + 0,5 em, takže mezi koncem nejdelšího názvu a začátkem rozsahů zůstane
+ * 0,5 em + ListCols::spacing (při 28 px 14 + 8 = 22 px, P04). Pravá část
+ * je dítě bez WindowPadding, okraje se nepřičítají (seznam).
+ * @return Minimální šířka pravé části v px (zaokrouhlená nahoru).
+ * @post g_bus_ui.owner_text_w = šířka nejdelšího názvu (testy).
  */
 float list_min_width(void)
 {
     const Metrics &m = g_bus_ui.m;
     const ImGuiStyle &st = ImGui::GetStyle();
     const st_BUS_MAP_SNAPSHOT *s = &g_bus_ui.snap;
-    float cp = st.CellPadding.x * 2.0f;
-    float w = m.mini + cp;
     float owner_w = ImGui::CalcTextSize("K&P 80 Column Card").x;
     const char *seen[2 * MAX_ROWS];
     unsigned seen_n = 0;
@@ -1223,15 +1497,10 @@ float list_min_width(void)
         measure(s->ports[i].owners, s->ports[i].owner_count);
         measure(s->mmio[i].owners, s->mmio[i].owner_count);
     }
-    w += owner_w + cp + m.fs * 0.5f;
-    w += ports_column_width();
-    float dmax = ImGui::CalcTextSize(_("Drive")).x, smax = ImGui::CalcTextSize(_("State")).x;
-    const en_DEVBUS_DRIVE drives[] = { DEVBUS_DRIVE_NONE, DEVBUS_DRIVE_TRISTATE, DEVBUS_DRIVE_PARTIAL, DEVBUS_DRIVE_OPEN_COLLECTOR, DEVBUS_DRIVE_UNKNOWN };
-    for (en_DEVBUS_DRIVE d : drives) dmax = fmaxf(dmax, ImGui::CalcTextSize(drive_word(d)).x);
-    for (int k = 0; k < 4; k++) smax = fmaxf(smax, ImGui::CalcTextSize(state_word(k & 1 ? BUS_OWNER_DEVBUS : BUS_OWNER_STATIC, (k & 2) != 0)).x);
-    w += dmax + cp + smax + cp;
-    if (g_bus_ui.rows_devbus) w += fmaxf(ImGui::CalcTextSize(_("Connect")).x, ImGui::CalcTextSize(_("Disconnect")).x) + st.FramePadding.x * 2.0f + cp;
-    w += st.ScrollbarSize + st.WindowPadding.x * 2.0f;
+    g_bus_ui.owner_text_w = owner_w;
+    const ListCols lc = list_columns();
+    /* Stejný součet jako v render_owner_list(): pevné sloupce, Owner, mezery ImGui mezi sloupci, posuvník tabulky. */
+    float w = lc.fixed_sum() + owner_w + m.fs * 0.5f + lc.spacings() + st.ScrollbarSize;
     float bmin = 0.0f;
     const char *labels[] = { _("Show in I/O Ports"), _("Reset activity"), _("Break on IN"), _("Break on OUT") };
     for (const char *l : labels) bmin = fmaxf(bmin, ImGui::CalcTextSize(l).x + st.FramePadding.x * 2.0f);
@@ -1239,7 +1508,16 @@ float list_min_width(void)
     return ceilf(fmaxf(w, dw));
 }
 
-/** @brief Rozměry z písma a ze zkratek snímku. */
+/**
+ * @brief Rozměry z písma a ze zkratek snímku.
+ *
+ * cell_min (přirozená velikost, vzduch 0,1 em) i cell_floor (mez
+ * čitelnosti V1 při nedostatku výšky, vzduch 2 px z každé strany) berou
+ * zkratky obou záložek, aby přepnutí Ports / MMIO nic neposunulo ani
+ * v nízkém okně (R05; mez jen podle aktivní záložky dávala při výšce
+ * 720 px a písmu 28 px Ports 38 px, MMIO 35 px a posun oddělovače
+ * o 51 px). cell_floor navíc zahrnuje popisky řádků mřížky "00".."F0".
+ */
 void compute_metrics(void)
 {
     Metrics &m = g_bus_ui.m;
@@ -1250,17 +1528,28 @@ void compute_metrics(void)
     m.margin = fmaxf(2.0f, roundf(m.fs * 0.1f));
     m.gap = fmaxf(2.0f, roundf(m.fs * 0.1f));
     float abbr_w = ImGui::CalcTextSize("F0").x;
+    float floor_w = ImGui::CalcTextSize(".").x;
+    for (int r = 0; r < 16; r++) {
+        char lbl[8];
+        snprintf(lbl, sizeof(lbl), "%X0", r);
+        floor_w = fmaxf(floor_w, ImGui::CalcTextSize(lbl).x);
+    }
     for (unsigned i = 0; i < 256; i++) {
         for (unsigned k = 0; k < s->ports[i].owner_count; k++) abbr_w = fmaxf(abbr_w, ImGui::CalcTextSize(s->ports[i].owners[k].abbrev).x);
         for (unsigned k = 0; k < s->mmio[i].owner_count; k++) abbr_w = fmaxf(abbr_w, ImGui::CalcTextSize(s->mmio[i].owners[k].abbrev).x);
     }
+    floor_w = fmaxf(floor_w, abbr_w);
     m.cell_min = fmaxf(24.0f, ceilf(fmaxf(abbr_w, m.line) + 2.0f * m.margin)); /* 24 px = cíl myši */
+    /* Mez čitelnosti V1: zkratka i popisek řádku s 2 px vzduchu, svisle výška písma + 2 x 2 px. */
+    m.cell_floor = fminf(m.cell_min, fmaxf(24.0f, ceilf(fmaxf(floor_w, m.line) + 4.0f)));
     /* Odznak 0,2 em na rohu buňky (R02): zasahuje dovnitř badge_off + r + 0,5 px prstence, zkratka
      * s výškou řádku vycentrovaná má k okraji buňky víc než to (28 px: 8,5 px vs. 11 px). */
     m.badge_r = fmaxf(5.0f, roundf(m.fs * 0.2f));
     m.badge_off = fmaxf(1.0f, roundf(m.badge_r / 3.0f));
     m.mini = m.frame;
     m.split = fmaxf(6.0f, roundf(m.fs * 0.25f));
+    m.icon_r = fmaxf(5.0f, roundf(m.fs * 0.35f)); /* průměr ~ výška verzálky */
+    m.icon_t = fmaxf(1.5f, roundf(m.fs / 14.0f));
 }
 
 /** @brief Pomocník "(?)" s tooltipem (vzor HelpMarker z imgui_demo). */
@@ -1330,6 +1619,33 @@ extern "C" bool bus_window_row_center(int row, float *x, float *y)
 }
 
 
+extern "C" bool bus_window_state_icon_center(int row, float *x, float *y)
+{
+    if (row < 0 || row >= (int) g_bus_ui.row_count || !g_bus_ui.row_drawn[row]) return false;
+    if (x) *x = g_bus_ui.icon_x;
+    if (y) *y = g_bus_ui.row_y[row];
+    return true;
+}
+
+
+extern "C" bool bus_window_detail_toggle_center(float *x, float *y)
+{
+    if (!g_bus_ui.grid_drawn) return false;
+    if (x) *x = g_bus_ui.fold_center.x;
+    if (y) *y = g_bus_ui.fold_center.y;
+    return true;
+}
+
+
+extern "C" bool bus_window_state_header_center(float *x, float *y)
+{
+    if (!g_bus_ui.grid_drawn || !g_bus_ui.list_drawn) return false;
+    if (x) *x = g_bus_ui.hdr_state_center.x;
+    if (y) *y = g_bus_ui.hdr_state_center.y;
+    return true;
+}
+
+
 extern "C" void bus_window_show_tab(int tab)
 {
     g_bus_ui.want_tab[tab == BUS_TAB_MMIO ? BUS_TAB_MMIO : BUS_TAB_PORTS] = true;
@@ -1339,8 +1655,21 @@ extern "C" void bus_window_show_tab(int tab)
 extern "C" void bus_window_debug_get(st_BUS_WINDOW_DEBUG *out)
 {
     memset(out, 0, sizeof(*out));
+    out->font_size = g_bus_ui.m.fs;
     out->cell = g_bus_ui.cell;
     out->cell_min = g_bus_ui.m.cell_min;
+    out->cell_floor = g_bus_ui.m.cell_floor;
+    out->cell_fit_h = g_bus_ui.cell_fit_h;
+    out->grid_full = g_bus_ui.grid_full;
+    out->min_full_h = g_bus_ui.min_full_h;
+    out->natural_win_w = g_bus_ui.natural_w + ImGui::GetStyle().WindowPadding.x * 2.0f;
+    out->natural_h = g_bus_ui.natural_h;
+    out->min_win_h = g_bus_ui.min_win_h;
+    out->gap = g_bus_ui.m.gap;
+    out->grid_x = g_bus_ui.grid_origin.x + g_bus_ui.cell;
+    out->grid_y = g_bus_ui.grid_origin.y + g_bus_ui.cell;
+    out->badge_r = g_bus_ui.badge_r_now;
+    out->badge_off = g_bus_ui.badge_off_now;
     out->natural_w = g_bus_ui.natural_w;
     out->list_w = g_bus_ui.list_w;
     out->list_min_w = g_bus_ui.list_min_w;
@@ -1349,16 +1678,32 @@ extern "C" void bus_window_debug_get(st_BUS_WINDOW_DEBUG *out)
     out->detail_fixed_h = detail_height();
     out->split_x = g_bus_ui.split_center.x;
     out->split_y = g_bus_ui.split_center.y;
+    out->list_h = g_bus_ui.list_h;
+    out->list_need_h = g_bus_ui.list_need_h;
+    out->list_scroll_y = g_bus_ui.list_scroll_y;
+    out->right_bottom = g_bus_ui.right_bottom;
+    out->right_scroll_y = g_bus_ui.right_scroll_y;
+    out->right_scroll_max_y = g_bus_ui.right_scroll_max_y;
+    out->right_scrollbar = g_bus_ui.right_scrollbar;
+    out->btn_bottom = g_bus_ui.btn_bottom;
+    out->owner_text_w = g_bus_ui.owner_text_w;
+    out->owner_col_x = g_bus_ui.owner_col_x;
+    out->ports_col_x = g_bus_ui.ports_col_x;
+    out->hdr_tip_w = g_bus_ui.hdr_tip_w;
+    snprintf(out->ports_header, sizeof(out->ports_header), "%s", g_bus_ui.ports_header);
     out->color_mode = g_bus_ui.color_mode;
     out->active_tab = g_bus_ui.active_tab;
     out->row_count = (int) g_bus_ui.row_count;
     out->selected_row = g_bus_ui.sel_row;
     out->hover_cells = g_bus_ui.hover_cells;
     out->visible_rows = g_bus_ui.visible_rows;
+    out->detail_open = g_bus_ui.detail_open != 0;
     snprintf(out->activity_line, sizeof(out->activity_line), "%s", g_bus_ui.activity_line);
     snprintf(out->peek_line, sizeof(out->peek_line), "%s", g_bus_ui.peek_line);
     snprintf(out->flags_line, sizeof(out->flags_line), "%s", g_bus_ui.flags_line);
     snprintf(out->status_line, sizeof(out->status_line), "%s", g_bus_ui.status_line);
+    snprintf(out->state_tip, sizeof(out->state_tip), "%s", g_bus_ui.state_tip);
+    snprintf(out->row_tip_state, sizeof(out->row_tip_state), "%s", g_bus_ui.row_tip_state);
 }
 
 
@@ -1384,6 +1729,7 @@ extern "C" void bus_window_render(bool *p_open)
     }
 
     g_bus_ui.grid_drawn = false;
+    g_bus_ui.list_drawn = false;
     /* Snímek pod zámkem stavu zařízení (jen čtení tabulek a deskriptorů). */
     device_state_lock();
     bus_map_snapshot(&g_bus_ui.snap, BUS_WANT_ALL);
@@ -1431,13 +1777,18 @@ extern "C" void bus_window_render(bool *p_open)
     float natural_w = left_min_w + m.split + list_min_w;
     float status_h = m.frame + st.ItemSpacing.y * 2.0f + 1.0f;
     float natural_h = m.frame * 3.0f + status_h + m.grid_w(m.cell_min) + st.ItemSpacing.y * 5.0f + st.WindowPadding.y * 4.0f;
+    /* Nejmenší výška okna s celou mřížkou na mezi čitelnosti: titulek, toolbar a pruh (3 rámečky), 2 mezery,
+     * status, 4 okraje (okno nahoře a dole, rezerva levé části v cell_fit_h níže) a mřížka s cell_floor. */
+    g_bus_ui.min_full_h = ceilf(m.frame * 3.0f + status_h + m.grid_w(m.cell_floor) + st.ItemSpacing.y * 2.0f + st.WindowPadding.y * 4.0f);
     g_bus_ui.natural_w = natural_w;
+    g_bus_ui.natural_h = natural_h;
+    g_bus_ui.min_win_h = m.fs * 13.0f;
     g_bus_ui.list_min_w = list_min_w;
 
     ImVec2 work = ImGui::GetMainViewport()->WorkSize;
     ImVec2 first(fminf(natural_w + st.WindowPadding.x * 2.0f, work.x * 0.95f), fminf(natural_h, work.y * 0.95f));
     ImGui::SetNextWindowSize(first, ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSizeConstraints(ImVec2(m.fs * 18.0f, m.fs * 13.0f), ImVec2(FLT_MAX, FLT_MAX));
+    ImGui::SetNextWindowSizeConstraints(ImVec2(m.fs * 18.0f, g_bus_ui.min_win_h), ImVec2(FLT_MAX, FLT_MAX));
     if (!g_bus_ui.was_open) ImGui::SetNextWindowFocus();
     const char *title = _L("Bus Map###bus_map");
     auto_layout_first_use_portrait(title, first.x, first.y);
@@ -1493,24 +1844,29 @@ extern "C" void bus_window_render(bool *p_open)
         float body_h = ImGui::GetContentRegionAvail().y;
         float grid_avail_h = body_h - m.frame - st.ItemSpacing.y - st.WindowPadding.y * 2.0f;
         float cell_fit_h = floorf((grid_avail_h - 15.0f * m.gap) / 17.0f);
+        /* Buňka podle výšky: při nedostatku výšky smí klesnout pod cell_min až k mezi čitelnosti
+         * cell_floor (D8); pod ní levá část roluje. Šířka ji pod cell_min nestlačí (inner_w >= natural_w). */
+        const float cell_h = fmaxf(m.cell_floor, cell_fit_h);
         float cell, left_w, list_w;
         if (g_bus_ui.list_width <= 0) {
-            cell = fmaxf(m.cell_min, cell_fit_h);
+            cell = cell_h;
             left_w = m.grid_w(cell) + st.WindowPadding.x * 2.0f;
             list_w = inner_w - left_w - m.split;
             if (list_w < list_min_w) {
                 list_w = list_min_w;
                 left_w = inner_w - list_w - m.split;
                 float fit_w = floorf((left_w - st.WindowPadding.x * 2.0f - 15.0f * m.gap) / 17.0f);
-                cell = fmaxf(m.cell_min, fminf(fit_w, fmaxf(m.cell_min, cell_fit_h)));
+                cell = fmaxf(m.cell_floor, fminf(fit_w, cell_h));
             }
         } else {
             list_w = fminf(fmaxf((float) g_bus_ui.list_width, list_min_w), inner_w - left_min_w - m.split);
             left_w = inner_w - list_w - m.split;
             float fit_w = floorf((left_w - st.WindowPadding.x * 2.0f - 15.0f * m.gap) / 17.0f);
-            cell = fmaxf(m.cell_min, fminf(fit_w, cell_fit_h));
+            cell = fmaxf(m.cell_floor, fminf(fit_w, cell_h));
         }
         g_bus_ui.list_w = list_w;
+        g_bus_ui.cell_fit_h = cell_fit_h;
+        g_bus_ui.grid_full = cell <= cell_fit_h;
 
         if (ImGui::BeginChild("##bus_left", ImVec2(left_w, body_h), ImGuiChildFlags_NavFlattened)) {
             render_strip(mmio, m.grid_w(cell));
@@ -1538,13 +1894,29 @@ extern "C" void bus_window_render(bool *p_open)
             ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(split_hot ? x - 1.0f : x, sa.y), ImVec2(x + 1.0f, sb.y), ImGui::GetColorU32(c4));
         }
         ImGui::SameLine(0.0f, 0.0f);
-        /* Pravá část: seznam dostane vše nad detailem pevné výšky; bez posuvníku dítěte (obsah = přesně jeho výška). */
-        if (ImGui::BeginChild("##bus_right", ImVec2(list_w, body_h), ImGuiChildFlags_NavFlattened, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
-            float dh = detail_height();
-            float lh = ImGui::GetContentRegionAvail().y - dh;
-            if (lh < m.mini * 3.0f) lh = m.mini * 3.0f;
+        /* Pravá část: seznam dostane vše nad detailem pevné výšky (obsah = přesně výška dítěte, bez posuvníku).
+         * Mezi tabulkou a detailem je ItemSpacing.y (EndTable je položka layoutu); dřív se neodečítal, obsah
+         * přetekl o tuto mezeru a NoScrollbar ji tiše ořízl ze spodku tlačítek. Když se seznam s nejmenší
+         * výškou (záhlaví + 3 řádky) a detail nevejdou, pravá část roluje svisle (P01): seznam zůstane
+         * na nejmenší výšce, k tlačítkům detailu se dojede posuvníkem, kolečkem nebo klávesnicí.
+         * Při dostatečné výšce zůstávají NoScrollbar | NoScrollWithMouse (žádný posuvník, nic se neposune). */
+        const float dh = detail_height();
+        const float list_need = list_min_height();
+        const float right_sp = st.ItemSpacing.y;
+        const bool right_scroll = body_h < list_need + right_sp + dh;
+        g_bus_ui.list_need_h = list_need;
+        ImGuiWindowFlags rflags = right_scroll ? ImGuiWindowFlags_None : (ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+        if (ImGui::BeginChild("##bus_right", ImVec2(list_w, body_h), ImGuiChildFlags_NavFlattened, rflags)) {
+            float lh = right_scroll ? list_need : floorf(ImGui::GetContentRegionAvail().y - dh - right_sp);
+            /* Změna výšky seznamu (okno, sbalení detailu): vybraný řádek se dorovná do pohledu, pokud
+             * celý vidět není (render_owner_list() viditelný řádek nehýbe). */
+            if (fabsf(lh - g_bus_ui.list_h) > 0.5f && g_bus_ui.sel_row >= 0) g_bus_ui.want_scroll_row = true;
             render_owner_list(mmio, lh);
             render_detail(mmio);
+            g_bus_ui.right_bottom = ImGui::GetWindowPos().y + ImGui::GetWindowHeight();
+            g_bus_ui.right_scroll_y = ImGui::GetScrollY();
+            g_bus_ui.right_scroll_max_y = ImGui::GetScrollMaxY();
+            g_bus_ui.right_scrollbar = ImGui::GetCurrentWindow()->ScrollbarY;
         }
         ImGui::EndChild();
     }
@@ -1592,6 +1964,8 @@ extern "C" void bus_window_register_persistence(void *cmod_void)
     cfgelement_set_handlers(elm, (void *) &g_bus_ui.list_width, (void *) &g_bus_ui.list_width);
     elm = cfgmodule_register_new_element(cmod, (char *) "tracking_active", CFGENTYPE_BOOL, 1);
     cfgelement_set_handlers(elm, (void *) &g_bus_ui.cfg_tracking, (void *) &g_bus_ui.cfg_tracking);
+    elm = cfgmodule_register_new_element(cmod, (char *) "detail_open", CFGENTYPE_BOOL, 1);
+    cfgelement_set_handlers(elm, (void *) &g_bus_ui.detail_open, (void *) &g_bus_ui.detail_open);
 }
 
 #endif /* MZ800EMU_CFG_DEBUGGER_ENABLED */

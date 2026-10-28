@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mz800emu 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-27 15:33+0100\n"
+"POT-Creation-Date: 2026-10-27 20:36+0100\n"
 "PO-Revision-Date: 2026-03-11 22:00+0100\n"
 "Last-Translator: Claude Code\n"
 "Language-Team: Slovenčina\n"
@@ -565,9 +565,6 @@ msgid "Audio Capture Control"
 msgstr "Ovládanie zachytenia zvuku"
 
 #: src/ui-imgui/audiocap/audio_capture_ui.cpp:376
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:889
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:910
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1206
 #: src/ui-imgui/topmenu/replay_window.cpp:201
 #: src/ui-imgui/videorec/videorec_remote_window.cpp:171
 msgid "State"
@@ -1175,8 +1172,8 @@ msgid "Label"
 msgstr "Názov"
 
 #: src/ui-imgui/debugger/bookmarks/bm_window.cpp:981
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1030
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1031
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1307
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1308
 #: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1188
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:314
 msgid "Address"
@@ -2343,245 +2340,245 @@ msgstr "Rôzne###bpt_tab_misc"
 msgid "Groups###bpt_tab_groups"
 msgstr "Skupiny###bpt_tab_groups"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:217
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:266
 #: src/ui-imgui/version_check/imgui_version_check.cpp:169
 msgid "none"
 msgstr "žiadny"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:218
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:267
 msgid "tri-state"
 msgstr "trojstavový"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:219
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:268
 msgid "partial"
 msgstr "čiastočný"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:220
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:269
 msgid "open collector"
 msgstr "otvorený kolektor"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:222
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:271
 msgid "not documented"
 msgstr "nedoložené"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:230
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:279
 #: src/ui-imgui/debugger/memsearch_window/memsearch_window.cpp:706
 msgid "and"
 msgstr "a"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:231
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:280
 #: src/ui-imgui/debugger/memsearch_window/memsearch_window.cpp:673
 msgid "first"
 msgstr "prvou"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:233
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:282
 msgid "refuse"
 msgstr "odmietnuť"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:246
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1536
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:295
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1930
 msgid "connected"
 msgstr "pripojené"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:246
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:295
 msgid "not connected"
 msgstr "nepripojené"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:247
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:296
 msgid "present"
 msgstr "prítomné"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:247
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:296
 msgid "not present"
 msgstr "neprítomné"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:566
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:643
 msgid "Show in I/O Ports##bus_ctx_io"
 msgstr "Ukázať v I/O Ports##bus_ctx_io"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:567
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:644
 msgid "Break on IN##bus_ctx_bpr"
 msgstr "Zastaviť na IN##bus_ctx_bpr"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:568
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:645
 msgid "Break on OUT##bus_ctx_bpw"
 msgstr "Zastaviť na OUT##bus_ctx_bpw"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:569
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:646
 msgid "Reset activity of this port##bus_ctx_rst"
 msgstr "Vynulovať aktivitu tohto portu##bus_ctx_rst"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:571
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:648
 msgid "Show in I/O Ports##bus_ctx_io_m"
 msgstr "Ukázať v I/O Ports##bus_ctx_io_m"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:572
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:649
 msgid "Reset activity of this address##bus_ctx_rst_m"
 msgstr "Vynulovať aktivitu tejto adresy##bus_ctx_rst_m"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:574
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:651
 msgid "Peek now (no side effects)##bus_ctx_peek"
 msgstr "Prečítať teraz (bez vedľajších efektov)##bus_ctx_peek"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:588
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:676
 msgid "no present owner"
 msgstr "žiadny prítomný vlastník"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:589
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:677
 msgid "different owners for IN and OUT"
 msgstr "rôzni vlastníci pre IN a OUT"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:590
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:678
 msgid "potential conflict"
 msgstr "potenciálna kolízia"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:591
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:679
 msgid "conflict seen at run time"
 msgstr "kolízia videná za behu"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:592
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:680
 msgid "ghost access seen"
 msgstr "videný ghost prístup"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:593
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:681
 msgid "drive not documented"
 msgstr "budič nedoložený"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:604
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1031
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:692
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1308
 msgid "no owner"
 msgstr "bez vlastníka"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:610
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1037
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1107
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:698
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1314
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1389
 msgid "device"
 msgstr "zariadenie"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:610
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1037
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1108
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:698
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1314
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1390
 msgid "board"
 msgstr "doska"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:611
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1038
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:699
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1315
 msgid ", not connected"
 msgstr ", nepripojené"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:611
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1038
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:699
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1315
 msgid ", not present"
 msgstr ", neprítomný"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:613
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1055
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:701
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1337
 #, c-format
 msgid "Driven bits: %02Xh"
 msgstr "Budené bity: %02Xh"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:614
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:702
 msgid "Decodes IN but does not drive the bus (reads count as ghost accesses)"
 msgstr ""
 "Dekóduje IN, ale zbernicu nebudí (čítania sa počítajú ako ghost prístupy)"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:616
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:704
 #, c-format
 msgid "Range %04Xh-%04Xh, decodes when: %s%s"
 msgstr "Rozsah %04Xh-%04Xh, dekóduje keď: %s%s"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:617
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:705
 msgid "upper area mapped"
 msgstr "horná oblasť mapovaná"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:618
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:706
 msgid ", DRAM at 0E000h"
 msgstr ", DRAM na 0E000h"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:618
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:706
 msgid "DRAM at 0E000h"
 msgstr "DRAM na 0E000h"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:620
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:708
 #, c-format
 msgid "Range %02Xh-%02Xh"
 msgstr "Rozsah %02Xh-%02Xh"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:622
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:844
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:710
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:948
 msgid "Source:"
 msgstr "Zdroj:"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:623
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:846
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:711
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:950
 msgid "Mirrors:"
 msgstr "Zrkadlá:"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:623
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:846
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:711
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:950
 msgid "not verified"
 msgstr "neoverené"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:625
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1040
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1049
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:713
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1317
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1331
 #, c-format
 msgid "A read returns the undriven bus: %s %02Xh"
 msgstr "Čítanie vráti nebudenú zbernicu: %s %02Xh"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:626
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1040
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1050
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1549
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:714
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1317
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1332
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1943
 msgid "constant"
 msgstr "konštanta"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:626
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1040
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1050
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1549
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:714
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1317
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1332
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1943
 msgid "bus latch"
 msgstr "latch zbernice"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:629
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:717
 msgid "Marks:"
 msgstr "Značky:"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:631
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1093
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:719
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1375
 msgid "Activity tracking is off"
 msgstr "Sledovanie aktivity je vypnuté"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:634
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:722
 #, c-format
 msgid "Last IN %02Xh (%u frames ago)"
 msgstr "Posledný IN %02Xh (pred %u snímkami)"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:635
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:723
 #, c-format
 msgid "Last OUT %02Xh (%u frames ago)"
 msgstr "Posledný OUT %02Xh (pred %u snímkami)"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:636
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:724
 #, c-format
 msgid "IN/s %u, OUT/s %u"
 msgstr "IN/s %u, OUT/s %u"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:639
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:727
 #, c-format
 msgid "Last write %02Xh (%u frames ago)"
 msgstr "Posledný zápis %02Xh (pred %u snímkami)"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:640
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:728
 #, c-format
 msgid "Writes/s %u"
 msgstr "Zápisov/s %u"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:659
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:747
 msgid "DRAM at 0E000h now: dimmed cells do not decode"
 msgstr "Teraz DRAM na 0E000h: stlmené bunky nedekódujú"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:660
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:748
 msgid ""
 "The upper area 0E000h+ is not mapped at the moment (OUT (0E1h)); only owners "
 "decoding in the DRAM state react. Left half of a cell = upper area mapped, "
@@ -2591,11 +2588,11 @@ msgstr ""
 "vlastníci dekódujúci v stave DRAM. Ľavá polovica bunky = horná oblasť "
 "mapovaná, pravá = DRAM na 0E000h."
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:663
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:751
 msgid "Activity tracking is off: enable Track activity"
 msgstr "Sledovanie aktivity je vypnuté: zapnite Track activity"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:664
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:752
 msgid ""
 "Without tracking the grid shows owners, marks and conflict counters of the "
 "bus core; IN/OUT rates, last values and ghost accesses are not collected."
@@ -2603,11 +2600,11 @@ msgstr ""
 "Bez sledovania mriežka ukazuje vlastníkov, značky a počítadlá kolízií jadra "
 "zbernice; početnosti IN/OUT, posledné hodnoty a ghost prístupy sa nezbierajú."
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:666
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:754
 msgid "Left half: upper area mapped, right half: DRAM"
 msgstr "Ľavá polovica: horná oblasť mapovaná, pravá: DRAM"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:667
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:755
 msgid ""
 "Addresses 0E000h-0E0FFh (row + column = low byte). Each cell has two halves: "
 "left = owner when the upper area is mapped, right = owner with DRAM at "
@@ -2617,11 +2614,11 @@ msgstr ""
 "polovice: ľavá = vlastník pri mapovanej hornej oblasti, pravá = vlastník s "
 "DRAM na 0E000h; sivá polovica = v tom stave nikto nedekóduje."
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:669
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:757
 msgid "Ports 00h-0FFh (low address byte)"
 msgstr "Porty 00h-0FFh (dolný bajt adresy)"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:670
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:758
 msgid ""
 "Row + column = low byte of the port address; the emulator decodes the low "
 "byte only. Left click selects, right click opens actions, arrows move the "
@@ -2630,151 +2627,181 @@ msgstr ""
 "Riadok + stĺpec = dolný bajt adresy portu; emulátor dekóduje len dolný bajt. "
 "Ľavý klik vyberá, pravý klik otvorí akcie, šípky posúvajú výber."
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:841
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:942
 #, c-format
 msgid "Drive: %s, driven bits %02Xh"
 msgstr "Budič: %s, budené bity %02Xh"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:842
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:943
 #, c-format
 msgid "Drive: %s"
 msgstr "Budič: %s"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:851
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:945
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1218
+msgid "State:"
+msgstr "Stav:"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:955
 #, c-format
 msgid "Ports %u, MMIO addresses %u, memory regions %u, outputs %u%s%s"
 msgstr "Portov %u, MMIO adries %u, pamäťových regiónov %u, výstupov %u%s%s"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:852
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:956
 msgid ", glyph source"
 msgstr ", zdroj glyfov"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:852
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:956
 msgid ", render row"
 msgstr ", kreslenie riadku"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:855
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:959
 msgid "Enter or the button disconnects the device"
 msgstr "Enter alebo tlačidlo zariadenie odpojí"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:855
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:959
 msgid "Enter or the button connects the device"
 msgstr "Enter alebo tlačidlo zariadenie pripojí"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:857
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:961
 msgid "Board chips are attached in the HW & Devices menu"
 msgstr "Čipy dosky sa pripájajú v menu HW & Devices"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:887
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:909
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1206
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1439
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1014
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1119
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1812
 msgid "Drive"
 msgstr "Budič"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:890
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1211
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1020
 #: src/ui-imgui/mz700/devices/kp80/kp80_window.cpp:194
 msgid "Connect"
 msgstr "Pripojiť"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:890
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1211
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1020
 msgid "Disconnect"
 msgstr "Odpojiť"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:907
-msgid "Owner"
-msgstr "Vlastník"
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1053
+msgid "State of the owner:"
+msgstr "Stav vlastníka:"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:908
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1055
+msgid "filled circle = present or connected"
+msgstr "plný kruh = prítomné alebo pripojené"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1056
+msgid "empty circle = not present"
+msgstr "prázdny kruh = neprítomné"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1057
+msgid "crossed circle = not connected"
+msgstr "prečiarknutý kruh = nepripojené"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1104
+msgid "Addresses"
+msgstr "Adresy"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1104
 msgid "Ports"
 msgstr "Porty"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:973
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1117
+msgid "Owner"
+msgstr "Vlastník"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1233
 msgid "Disconnect##bus_row_act"
 msgstr "Odpojiť##bus_row_act"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:973
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1233
 msgid "Connect##bus_row_act"
 msgstr "Pripojiť##bus_row_act"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1030
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1031
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1295
+msgid "Hide the detail of the address"
+msgstr "Skryť detail adresy"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1295
+msgid "Show the detail of the address"
+msgstr "Zobraziť detail adresy"
+
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1307
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1308
 msgid "Port"
 msgstr "Port"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1058
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1340
 msgid "Also:"
 msgstr "Ďalej:"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1071
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1075
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1353
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1357
 msgid "IN/s"
 msgstr "IN/s"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1071
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1075
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1353
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1357
 msgid "OUT/s"
 msgstr "OUT/s"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1071
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1076
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1353
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1358
 msgid "ghost"
 msgstr "ghost"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1071
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1076
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1353
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1358
 msgid "conflicts"
 msgstr "kolízie"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1072
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1082
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1354
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1364
 msgid "writes/s"
 msgstr "zápisov/s"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1080
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1362
 msgid "Last IN"
 msgstr "Posl. IN"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1080
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1362
 msgid "Last OUT"
 msgstr "Posl. OUT"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1083
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1084
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1365
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1366
 msgid "Last write"
 msgstr "Posledný zápis"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1090
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1372
 msgid "Last value and its age in frames; rates are per second of emulated time"
 msgstr ""
 "Posledná hodnota a jej vek v snímkach; početnosti sú za sekundu emulovaného "
 "času"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1108
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1390
 msgid "undriven bus"
 msgstr "nebudená zbernica"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1109
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1391
 #, c-format
 msgid "Peek: %02Xh, %s"
 msgstr "Peek: %02Xh, %s"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1110
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1392
 #, c-format
 msgid "Peek: %02Xh, driven bits %02Xh, %s"
 msgstr "Peek: %02Xh, budené bity %02Xh, %s"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1112
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1394
 msgid "Peek: -"
 msgstr "Peek: -"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1116
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1398
 msgid "(automatic while paused)"
 msgstr "(v pauze automaticky)"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1121
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1403
 msgid ""
 "The value the CPU would read now, without side effects (device peek "
 "handlers, board register mirrors, undriven bus model)"
@@ -2782,16 +2809,16 @@ msgstr ""
 "Hodnota, ktorú by CPU práve prečítal, bez vedľajších efektov (peek handlery "
 "zariadení, zrkadlá registrov dosky, model nebudenej zbernice)"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1124
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1406
 msgid "Peek now##bus_det_peek"
 msgstr "Peek teraz##bus_det_peek"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1129
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1411
 #: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1614
 msgid "Flags:"
 msgstr "Príznaky:"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1135
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1418
 msgid ""
 "Two drivers on the same bits: the result on real hardware is not modelled; "
 "the conflict policy decides the emulated value."
@@ -2799,72 +2826,72 @@ msgstr ""
 "Dva budiče na tých istých bitoch: výsledok na skutočnom hardvéri nie je "
 "modelovaný; emulovanú hodnotu určuje politika kolízie."
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1143
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1214
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1426
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1504
 msgid "Show in I/O Ports"
 msgstr "Ukázať v I/O Ports"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1143
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1214
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1426
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1504
 msgid "Reset activity"
 msgstr "Vynulovať aktivitu"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1143
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1214
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1426
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1504
 msgid "Break on IN"
 msgstr "Zastaviť na IN"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1143
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1214
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1426
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1504
 msgid "Break on OUT"
 msgstr "Zastaviť na OUT"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1146
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1429
 msgid "Show in I/O Ports##bus_det_io"
 msgstr "Ukázať v I/O Ports##bus_det_io"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1148
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1431
 msgid "Reset activity##bus_det_rst"
 msgstr "Vynulovať aktivitu##bus_det_rst"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1150
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1433
 msgid "Break on IN##bus_det_bpr"
 msgstr "Zastaviť na IN##bus_det_bpr"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1151
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1154
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1434
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1438
 msgid "IORQ breakpoints apply to ports only"
 msgstr "Breakpointy IORQ platia len pre porty"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1153
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1436
 msgid "Break on OUT##bus_det_bpw"
 msgstr "Zastaviť na OUT##bus_det_bpw"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1419
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1792
 msgid "Bus Map###bus_map"
 msgstr "Mapa zbernice###bus_map"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1429
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1802
 msgid "Ports##bus_tab_ports"
 msgstr "Porty##bus_tab_ports"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1431
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1804
 msgid "MMIO##bus_tab_mmio"
 msgstr "MMIO##bus_tab_mmio"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1434
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1807
 msgid "Color by"
 msgstr "Farbiť podľa"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1439
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1812
 msgid "Owners"
 msgstr "Vlastníci"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1439
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1812
 msgid "Activity"
 msgstr "Aktivita"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1451
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1824
 msgid ""
 "Owners: blue = board chip, green = expansion device; dark and hatched = not "
 "present or not connected; grey = no owner."
@@ -2872,7 +2899,7 @@ msgstr ""
 "Owners: modrá = čip dosky, zelená = rozširujúce zariadenie; tmavá šrafovaná "
 "= neprítomné alebo nepripojené; sivá = bez vlastníka."
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1452
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1825
 msgid ""
 "Drive: how the owner drives the data bus when read: tri-state, partial (some "
 "bits), open collector, none (write only), not documented (no schematic in "
@@ -2882,7 +2909,7 @@ msgstr ""
 "(časť bitov), open collector, none (len zápis), not documented (báza "
 "znalostí nemá schému)."
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1453
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1826
 msgid ""
 "Activity: grey = no access, green = active, red = hot; the thresholds are "
 "shared with the I/O Ports window:"
@@ -2890,19 +2917,19 @@ msgstr ""
 "Activity: sivá = bez prístupu, zelená = aktívny, červená = horúci; prahy sú "
 "spoločné s oknom I/O Ports:"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1455
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1828
 msgid "active above"
 msgstr "aktívny nad"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1455
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1828
 msgid "hot above"
 msgstr "horúci nad"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1459
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1832
 msgid "Track activity##bus_track"
 msgstr "Sledovať aktivitu##bus_track"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1463
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1836
 msgid ""
 "Shared with the I/O Ports window: counts IN / OUT per port, ghost and "
 "conflict accesses (logging CPU callbacks)."
@@ -2910,46 +2937,46 @@ msgstr ""
 "Zdieľané s oknom I/O Ports: počíta IN / OUT na port, ghost a kolízne "
 "prístupy (logovacie callbacky CPU)."
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1536
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1930
 msgid "devices"
 msgstr "zariadenia"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1538
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1932
 msgid "undriven: const"
 msgstr "nebudené: konšt."
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1539
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1933
 msgid "policy:"
 msgstr "politika:"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1548
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1942
 msgid "Activity tracking:"
 msgstr "Sledovanie aktivity:"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1548
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1942
 msgid "on"
 msgstr "zapnuté"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1548
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1942
 #: src/ui-imgui/debugger/dasm_window/dasm_window.cpp:556
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:625
 #: src/ui-imgui/topmenu/replay_window.cpp:252
 msgid "off"
 msgstr "vypnuté"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1549
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1943
 msgid "Undriven bits:"
 msgstr "Nebudené bity:"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1549
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1943
 msgid "now"
 msgstr "teraz"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1550
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1944
 msgid "Conflict policy:"
 msgstr "Politika kolízie:"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1551
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1945
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:2156
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:2682
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:2845
@@ -14899,6 +14926,13 @@ msgstr "MZ-1500 Virtuálna klávesnica"
 #: src/ui-imgui/vkbd_window.cpp:229
 msgid "MZ-800 Virtual Keyboard"
 msgstr "MZ-800 Virtuálna klávesnica"
+
+#~ msgid ""
+#~ "State: filled circle = present or connected, empty circle = not present, "
+#~ "crossed circle = not connected"
+#~ msgstr ""
+#~ "Stav: plný kruh = prítomné alebo pripojené, prázdny kruh = neprítomné, "
+#~ "prečiarknutý kruh = nepripojené"
 
 #, c-format
 #~ msgid "Range %u - %u, press Enter to apply"

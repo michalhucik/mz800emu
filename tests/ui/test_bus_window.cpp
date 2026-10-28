@@ -18,7 +18,25 @@
  * - persistence: klíče color_mode, active_tab, list_width, tracking_active,
  *   bez show_legend a inspector_width; po parse + propagate bez INI zůstává
  *   Owners (V6);
- * - MZ-800: seznam má víc řádků než se vejde, vybraný poslední řádek je vidět.
+ * - MZ-800: seznam má víc řádků než se vejde, vybraný poslední řádek je vidět;
+ * - ikona stavu: tooltip ikony i tooltip řádku říkají stav slovem;
+ * - sbalení detailu šipkou: pevná výška sbaleného detailu, seznam dostane
+ *   víc řádků, persistence detail_open (výchozí rozbaleno, uložení a načtení);
+ * - s písmem aplikace (DroidSans 28 px z ui_resources, chybí-li, test se
+ *   přeskočí): přirozená šířka okna <= 1824 px (95 % FullHD), při výšce
+ *   720 px buňka na mezi čitelnosti V1 (zkratka + 2 x 2 px) a shodná na
+ *   obou záložkách, mřížka celá právě od min_full_h; za nejdelším názvem
+ *   vlastníka >= 22 px do sloupce Ports (P04);
+ * - pravá část pro výšky okna od minima do přirozené výšky (100 % i 175 %):
+ *   tlačítko Break on OUT je celé vidět, nebo má pravá část viditelný
+ *   posuvník a kolečkem se k němu dojede (P01);
+ * - výběr adresy s viditelným řádkem seznam neodroluje, řádek mimo pohled
+ *   (i po zmenšení okna) se dorovná;
+ * - záhlaví sloupce ikony: značka "(?)" nad ikonami, tooltip <= 35 em (P02,
+ *   P03); záložka MMIO má sloupec Addresses (P05).
+ *   Druhá registrace CTest (ui-bus-window-de) spustí
+ *   s MZ_BUS_TEST_LANG=de jen test šířky v němčině (bez katalogu de se
+ *   přeskočí).
  *
  * Režim smoke screenshotů (mimo CTest): proměnná MZ_BUS_SHOT_DIR = adresář
  * pro BMP snímky stavů okna; volitelně MZ_BUS_SHOT_FONT (TTF hlavního
@@ -37,8 +55,11 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <math.h>
+#include <locale.h>
 
 #include "libs/imgui/imgui.h"
+#include "libs/imgui/imgui_internal.h"
 #include "libs/imgui/backends/imgui_impl_sdl3.h"
 #include "libs/imgui/backends/imgui_impl_opengl3.h"
 
@@ -51,12 +72,20 @@ extern "C" {
 #include "hw-generic/devbus/devbus.h"
 #include "debugger/io_activity.h"
 #include "debugger/dbgapi_cmdrq.h"
+#include "debugger/bus_map.h"
 #include "../peripherals/devbus_dummy.h"
 }
 
 #include "ui-imgui/bootstrap/myimgui.h"
 #include "ui-imgui/debugger/busmap/bus_window.h"
 #include "i18n.h"
+
+#ifndef MZTEST_FONT_DIR
+#define MZTEST_FONT_DIR ""
+#endif
+#ifndef MZTEST_LOCALE_DIR
+#define MZTEST_LOCALE_DIR ""
+#endif
 
 /* UI globál, který jinak vytváří sdlapp_imgui_video.cpp. */
 static MyImGui s_gui;
@@ -103,6 +132,14 @@ static SDL_GLContext s_gl = NULL;
 static ImGuiContext *s_ctx = NULL;
 static bool s_ui_ok = false;
 static int s_canvas_w = 1280, s_canvas_h = 800;
+/** Písmo aplikace pro testy geometrie (DroidSans 28 px); NULL = výchozí písmo ImGui. */
+static ImFont *s_app_font = NULL;
+/** Písmo, které frame_begin() pushne pro celý snímek (NULL = žádné). */
+static ImFont *s_frame_font = NULL;
+/** Počet snímků, po kterých ImGui hlásí kolizi ID položky pod myší (ConfigDebugHighlightIdConflicts). */
+static int s_id_conflicts = 0;
+/** Jazyk běhu (MZ_BUS_TEST_LANG), "" = angličtina. */
+static const char *s_test_lang = "";
 
 /* FBO pro režim screenshotů (funkce GL 3.0 přes SDL_GL_GetProcAddress). */
 typedef void (APIENTRY *fn_gen_fb)(GLsizei, GLuint *);
@@ -153,10 +190,13 @@ static void frame_begin(void)
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
+    if (GImGui->DebugDrawIdConflictsId != 0) s_id_conflicts++;
+    if (s_frame_font) ImGui::PushFont(s_frame_font, 28.0f);
 }
 
 static void frame_end(void)
 {
+    if (s_frame_font) ImGui::PopFont();
     ImGui::Render();
     if (s_bind_fb && s_fbo) {
         s_bind_fb(TEST_GL_FRAMEBUFFER, s_fbo);
@@ -217,6 +257,7 @@ void setUp(void)
 void tearDown(void)
 {
     bool closed = false;
+    s_frame_font = NULL;
     frame_with_window(&closed);
     devbus_exit();
     g_cfgmain = s_saved_root;
@@ -236,6 +277,30 @@ static void click_at(bool *open, float x, float y)
     io.AddMouseButtonEvent(0, false);
     frame_with_window(open);
     frame_with_window(open);
+}
+
+/** Klik levým tlačítkem při vynucené velikosti okna (vzor click_at()). */
+static void click_at_sized(bool *open, float x, float y, float w, float h)
+{
+    ImGuiIO &io = ImGui::GetIO();
+    io.AddMousePosEvent(x, y);
+    frame_with_window_sized(open, w, h);
+    io.AddMouseButtonEvent(0, true);
+    frame_with_window_sized(open, w, h);
+    io.AddMouseButtonEvent(0, false);
+    frame_with_window_sized(open, w, h);
+    frame_with_window_sized(open, w, h);
+}
+
+/** Načte písmo aplikace (DroidSans 28 px) jednou; false = soubor není (test se přeskočí). */
+static bool app_font_ready(void)
+{
+    if (s_app_font) return true;
+    if (!MZTEST_FONT_DIR[0]) return false;
+    char *path = g_build_filename(MZTEST_FONT_DIR, "DroidSans.ttf", NULL);
+    if (g_file_test(path, G_FILE_TEST_EXISTS)) s_app_font = ImGui::GetIO().Fonts->AddFontFromFileTTF(path, 28.0f);
+    g_free(path);
+    return s_app_font != NULL;
 }
 
 /* ================================================================
@@ -422,11 +487,14 @@ static void test_mmio_tab(void)
     bus_window_debug_get(&d);
     TEST_ASSERT_EQUAL_INT(1, d.active_tab);
     TEST_ASSERT_TRUE(d.row_count >= 1);
+    /* sloupec rozsahů se v MMIO jmenuje Addresses (P05) */
+    TEST_ASSERT_EQUAL_STRING("Addresses", d.ports_header);
     float mmio_natural = d.natural_w, mmio_list = d.list_min_w, mmio_cell = d.cell, mmio_split = d.split_x;
     bus_window_show_tab(2);
     for (int i = 0; i < 2; i++) frame_with_window(&open);
     bus_window_debug_get(&d);
     TEST_ASSERT_EQUAL_INT(0, d.active_tab);
+    TEST_ASSERT_EQUAL_STRING("Ports", d.ports_header);
     /* šířka seznamu, buňka a oddělovač jsou pro obě záložky stejné (R05) */
     TEST_ASSERT_FLOAT_WITHIN(0.5f, mmio_natural, d.natural_w);
     TEST_ASSERT_FLOAT_WITHIN(0.5f, mmio_list, d.list_min_w);
@@ -474,6 +542,382 @@ static void test_mz800_list_scroll_selected_visible(void)
     float x = 0, y = 0;
     TEST_ASSERT_TRUE(bus_window_row_center(d.selected_row, &x, &y));
     TEST_ASSERT_TRUE(y > 0.0f && y < 520.0f);
+}
+
+/* Tooltip ikony stavu i tooltip řádku říkají stav slovem (ve sloupci je jen ikona). */
+static void test_state_icon_tooltip(void)
+{
+    if (!s_ui_ok) TEST_IGNORE_MESSAGE("SDL/GL not available");
+    ImGuiStyle &st = ImGui::GetStyle();
+    float sd = st.HoverStationaryDelay, ds = st.HoverDelayShort, dn = st.HoverDelayNormal;
+    st.HoverStationaryDelay = 0.0f; st.HoverDelayShort = 0.0f; st.HoverDelayNormal = 0.0f;
+    bool open = true;
+    bus_window_select(0x74, false);
+    for (int i = 0; i < 2; i++) frame_with_window(&open);
+    st_BUS_WINDOW_DEBUG d;
+    bus_window_debug_get(&d);
+    int row = d.selected_row;
+    TEST_ASSERT_TRUE(row >= 0);
+    TEST_ASSERT_EQUAL_STRING("", d.state_tip);
+    float x = 0, y = 0;
+    TEST_ASSERT_TRUE(bus_window_state_icon_center(row, &x, &y));
+    ImGui::GetIO().AddMousePosEvent(x, y);
+    for (int i = 0; i < 4; i++) frame_with_window(&open);
+    bus_window_debug_get(&d);
+    TEST_ASSERT_EQUAL_STRING("State: connected", d.state_tip);
+    /* hover ikony drží zvýraznění buněk řádku (dummy 74h-75h) */
+    TEST_ASSERT_EQUAL_INT(2, d.hover_cells);
+    /* tooltip řádku (sloupec Owner) má stav slovem, tooltip ikony tam není */
+    TEST_ASSERT_TRUE(bus_window_row_center(row, &x, &y));
+    ImGui::GetIO().AddMousePosEvent(x, y);
+    for (int i = 0; i < 4; i++) frame_with_window(&open);
+    bus_window_debug_get(&d);
+    TEST_ASSERT_EQUAL_STRING("State: connected", d.row_tip_state);
+    TEST_ASSERT_EQUAL_STRING("", d.state_tip);
+    /* hover každé vykreslené ikony i řádku: žádná kolize ID (ikona řádku i vs. záhlaví sloupce i) */
+    s_id_conflicts = 0;
+    for (int r = 0; r < d.row_count; r++) {
+        if (!bus_window_state_icon_center(r, &x, &y)) continue;
+        ImGui::GetIO().AddMousePosEvent(x, y);
+        for (int i = 0; i < 3; i++) frame_with_window(&open);
+        TEST_ASSERT_TRUE(bus_window_row_center(r, &x, &y));
+        ImGui::GetIO().AddMousePosEvent(x, y);
+        for (int i = 0; i < 3; i++) frame_with_window(&open);
+    }
+    TEST_ASSERT_EQUAL_INT(0, s_id_conflicts);
+    ImGui::GetIO().AddMousePosEvent(-1.0f, -1.0f);
+    for (int i = 0; i < 2; i++) frame_with_window(&open);
+    st.HoverStationaryDelay = sd; st.HoverDelayShort = ds; st.HoverDelayNormal = dn;
+}
+
+/* Sbalení detailu šipkou: pevná výška, víc řádků seznamu; persistence detail_open (výchozí 1, uložení, načtení). */
+static void test_detail_collapse_persistence(void)
+{
+    if (!s_ui_ok) TEST_IGNORE_MESSAGE("SDL/GL not available");
+    CFGMOD *m = cfgroot_register_new_module(g_cfgmain, (char *) "BUS_MAP_PANEL");
+    TEST_ASSERT_NOT_NULL(m);
+    bus_window_register_persistence(m);
+    TEST_ASSERT_NOT_NULL(cfgmodule_get_element_by_name(m, (char *) "detail_open"));
+    cfgmodule_parse(m);
+    cfgmodule_propagate(m);
+    bool open = true;
+    const float W = 1100.0f, H = 520.0f;
+    bus_window_select(0x74, false);
+    for (int i = 0; i < 3; i++) frame_with_window_sized(&open, W, H);
+    st_BUS_WINDOW_DEBUG d;
+    bus_window_debug_get(&d);
+    TEST_ASSERT_TRUE(d.detail_open);
+    float h_open = d.detail_h;
+    int rows_open = d.visible_rows;
+    TEST_ASSERT_FLOAT_WITHIN(0.5f, d.detail_fixed_h, h_open);
+
+    float x = 0, y = 0;
+    TEST_ASSERT_TRUE(bus_window_detail_toggle_center(&x, &y));
+    click_at_sized(&open, x, y, W, H);
+    ImGui::GetIO().AddMousePosEvent(-1.0f, -1.0f);
+    for (int i = 0; i < 2; i++) frame_with_window_sized(&open, W, H);
+    bus_window_debug_get(&d);
+    TEST_ASSERT_FALSE(d.detail_open);
+    TEST_ASSERT_FLOAT_WITHIN(0.5f, d.detail_fixed_h, d.detail_h);
+    TEST_ASSERT_TRUE(d.detail_h < h_open);
+    TEST_ASSERT_TRUE(d.visible_rows > rows_open);
+    /* sbalený detail má stejnou výšku i bez vlastníka */
+    float h_closed = d.detail_h;
+    bus_window_select(0x20, false);
+    for (int i = 0; i < 2; i++) frame_with_window_sized(&open, W, H);
+    bus_window_debug_get(&d);
+    TEST_ASSERT_FLOAT_WITHIN(0.5f, h_closed, d.detail_h);
+
+    /* uložení do INI, rozbalení a načtení uloženého sbaleného stavu */
+    cfgroot_save(g_cfgmain);
+    gchar *ini = NULL;
+    TEST_ASSERT_TRUE(g_file_get_contents(s_ini_path, &ini, NULL, NULL));
+    TEST_ASSERT_NOT_NULL(strstr(ini, "detail_open"));
+    g_free(ini);
+    TEST_ASSERT_TRUE(bus_window_detail_toggle_center(&x, &y));
+    click_at_sized(&open, x, y, W, H);
+    bus_window_debug_get(&d);
+    TEST_ASSERT_TRUE(d.detail_open);
+    struct st_CFGROOT *r2 = cfgroot_new(s_ini_path);
+    CFGMOD *m2 = cfgroot_register_new_module(r2, (char *) "BUS_MAP_PANEL");
+    bus_window_register_persistence(m2);
+    cfgmodule_parse(m2);
+    cfgmodule_propagate(m2);
+    bus_window_debug_get(&d);
+    TEST_ASSERT_FALSE(d.detail_open);
+    cfgroot_destroy(r2);
+
+    /* zpět rozbaleno pro další testy */
+    for (int i = 0; i < 2; i++) frame_with_window_sized(&open, W, H);
+    TEST_ASSERT_TRUE(bus_window_detail_toggle_center(&x, &y));
+    click_at_sized(&open, x, y, W, H);
+    ImGui::GetIO().AddMousePosEvent(-1.0f, -1.0f);
+    frame_with_window_sized(&open, W, H);
+    bus_window_debug_get(&d);
+    TEST_ASSERT_TRUE(d.detail_open);
+}
+
+/* Písmo aplikace 28 px: přirozená šířka okna se vejde do 95 % FullHD (1824 px) bez vodorovného posuvníku. */
+static void test_natural_width_fullhd(void)
+{
+    if (!s_ui_ok) TEST_IGNORE_MESSAGE("SDL/GL not available");
+    if (!app_font_ready()) TEST_IGNORE_MESSAGE("application font DroidSans.ttf not found");
+    if (s_test_lang[0] && strcmp(_("Connect"), "Connect") == 0) TEST_IGNORE_MESSAGE("translation catalog not active");
+    s_frame_font = s_app_font;
+    bool open = true;
+    bus_window_select(0x70, false);
+    for (int i = 0; i < 3; i++) frame_with_window_sized(&open, 2000.0f, 1000.0f);
+    st_BUS_WINDOW_DEBUG d;
+    bus_window_debug_get(&d);
+    fprintf(stderr, "natural width (%s): content %.1f px, window %.1f px\n", s_test_lang[0] ? s_test_lang : "en", d.natural_w, d.natural_win_w);
+    TEST_ASSERT_FLOAT_WITHIN(0.5f, 28.0f, d.font_size);
+    TEST_ASSERT_TRUE(d.natural_win_w <= 1824.0f);
+    /* P04: za nejdelším názvem ve sloupci Owner zbude při přirozené šířce aspoň 0,5 em + mezera sloupců
+     * (2 x CellPadding.x) = 22 px při 28 px (2 x největší mezera mezi slovy názvu, 11 px) */
+    for (int i = 0; i < 3; i++) frame_with_window_sized(&open, d.natural_win_w, 1000.0f);
+    bus_window_debug_get(&d);
+    float gap = d.ports_col_x - d.owner_col_x - d.owner_text_w;
+    fprintf(stderr, "owner gap (%s): name %.1f px, owner x %.1f, ports x %.1f, gap %.1f px\n", s_test_lang[0] ? s_test_lang : "en",
+            d.owner_text_w, d.owner_col_x, d.ports_col_x, gap);
+    TEST_ASSERT_TRUE(gap >= 22.0f - 0.5f);
+    s_frame_font = NULL;
+}
+
+/* Písmo aplikace 28 px, výška 720: buňka na mezi čitelnosti V1, mřížka celá právě od min_full_h. */
+static void test_cell_shrinks_with_height(void)
+{
+    if (!s_ui_ok) TEST_IGNORE_MESSAGE("SDL/GL not available");
+    if (!app_font_ready()) TEST_IGNORE_MESSAGE("application font DroidSans.ttf not found");
+    s_frame_font = s_app_font;
+    bool open = true;
+    bus_window_select(0x70, false);
+    for (int i = 0; i < 3; i++) frame_with_window_sized(&open, 2000.0f, 1400.0f);
+    st_BUS_WINDOW_DEBUG d;
+    bus_window_debug_get(&d);
+    float W = d.natural_win_w;
+    float r_full = d.badge_r;
+    /* mez V1: nejširší zkratka portů a popisek řádku + 2 x 2 px, svisle výška písma + 2 x 2 px */
+    static st_BUS_MAP_SNAPSHOT snap;
+    bus_map_snapshot(&snap, BUS_WANT_ALL);
+    frame_begin();
+    float widest = ImGui::CalcTextSize("F0").x;
+    for (unsigned i = 0; i < 256; i++)
+        for (unsigned k = 0; k < snap.ports[i].owner_count; k++) widest = fmaxf(widest, ImGui::CalcTextSize(snap.ports[i].owners[k].abbrev).x);
+    float line = ImGui::GetTextLineHeight();
+    frame_end();
+    TEST_ASSERT_TRUE(d.cell_floor >= widest + 4.0f);
+    TEST_ASSERT_TRUE(d.cell_floor >= line + 4.0f);
+    TEST_ASSERT_TRUE(d.cell_floor <= d.cell_min);
+
+    for (int i = 0; i < 3; i++) frame_with_window_sized(&open, W, 720.0f);
+    bus_window_debug_get(&d);
+    fprintf(stderr, "h720: cell %.1f floor %.1f min %.1f fit_h %.1f grid_full %d min_full_h %.1f badge_r %.2f\n",
+            d.cell, d.cell_floor, d.cell_min, d.cell_fit_h, (int) d.grid_full, d.min_full_h, d.badge_r);
+    TEST_ASSERT_TRUE(d.cell >= d.cell_floor);
+    TEST_ASSERT_TRUE(d.cell < d.cell_min);
+    TEST_ASSERT_TRUE(d.badge_r <= r_full);
+    TEST_ASSERT_EQUAL_INT(d.min_full_h <= 720.0f, d.grid_full);
+    /* přepnutí záložky při zmenšené buňce nic neposune (R05): mez je ze zkratek obou záložek */
+    float ports_cell = d.cell, ports_split = d.split_x;
+    bus_window_select(0xE004, true);
+    for (int i = 0; i < 3; i++) frame_with_window_sized(&open, W, 720.0f);
+    bus_window_debug_get(&d);
+    TEST_ASSERT_EQUAL_INT(1, d.active_tab);
+    TEST_ASSERT_FLOAT_WITHIN(0.5f, ports_cell, d.cell);
+    TEST_ASSERT_FLOAT_WITHIN(0.5f, ports_split, d.split_x);
+    bus_window_select(0x70, false);
+    for (int i = 0; i < 3; i++) frame_with_window_sized(&open, W, 720.0f);
+
+    /* mřížka celá právě od min_full_h */
+    float hmin = d.min_full_h;
+    for (int i = 0; i < 3; i++) frame_with_window_sized(&open, W, hmin);
+    bus_window_debug_get(&d);
+    TEST_ASSERT_TRUE(d.grid_full);
+    TEST_ASSERT_FLOAT_WITHIN(0.5f, d.cell_floor, d.cell);
+    for (int i = 0; i < 3; i++) frame_with_window_sized(&open, W, hmin - 1.0f);
+    bus_window_debug_get(&d);
+    TEST_ASSERT_FALSE(d.grid_full);
+    TEST_ASSERT_FLOAT_WITHIN(0.5f, d.cell_floor, d.cell);
+    s_frame_font = NULL;
+}
+
+/* P01: pravá část dojede k celému detailu. Pro výšky okna od minima do přirozené výšky (písmo 28 px, 100 % i 175 %):
+ * spodní hrana Break on OUT <= spodní hrana ##bus_right, nebo má pravá část viditelný posuvník (scroll_max_y > 0;
+ * samotné scroll_max_y nestačí, s NoScrollbar je > 0 i bez posuvníku) a kolečko nad detailem ji odroluje tak,
+ * že tlačítko je celé vidět. Při přirozené výšce posuvník není. */
+static void test_right_part_reaches_detail_buttons(void)
+{
+    if (!s_ui_ok) TEST_IGNORE_MESSAGE("SDL/GL not available");
+    if (!app_font_ready()) TEST_IGNORE_MESSAGE("application font DroidSans.ttf not found");
+    s_frame_font = s_app_font;
+    const ImGuiStyle saved = ImGui::GetStyle();
+    const float scales[2] = { 1.0f, 1.75f };
+    bool open = true;
+    st_BUS_WINDOW_DEBUG d;
+    for (float scale : scales) {
+        ImGui::GetStyle() = saved;
+        if (scale != 1.0f) {
+            ImGui::GetStyle().ScaleAllSizes(scale);
+            ImGui::GetStyle().FontScaleMain = scale;
+        }
+        bus_window_select(0x70, false);
+        for (int i = 0; i < 3; i++) frame_with_window_sized(&open, 2000.0f * scale, 1400.0f * scale);
+        bus_window_debug_get(&d);
+        TEST_ASSERT_FLOAT_WITHIN(0.5f, 28.0f * scale, d.font_size);
+        TEST_ASSERT_TRUE(d.detail_open);
+        const float W = d.natural_win_w, h_min = d.min_win_h, h_nat = d.natural_h;
+        TEST_ASSERT_TRUE(h_min > 0.0f && h_nat > h_min);
+        const float step = roundf(5.0f * scale);
+        int scrolled = 0, checked = 0, failures = 0;
+        float first_fit = -1.0f;
+        for (float h = h_min; h <= h_nat + 0.5f; h += step) {
+            for (int i = 0; i < 3; i++) frame_with_window_sized(&open, W, h);
+            bus_window_debug_get(&d);
+            const bool fits = d.btn_bottom <= d.right_bottom + 0.5f;
+            const bool scrollbar = d.right_scrollbar && d.right_scroll_max_y > 0.0f;
+            if (!fits && !scrollbar) {
+                if (failures++ < 3) {
+                    fprintf(stderr, "P01 fail: scale %.2f h %.0f btn_bottom %.1f right_bottom %.1f scrollbar %d scroll_max %.1f list_h %.1f\n",
+                            scale, h, d.btn_bottom, d.right_bottom, (int) d.right_scrollbar, d.right_scroll_max_y, d.list_h);
+                }
+                continue;
+            }
+            if (scrollbar) {
+                scrolled++;
+                /* seznam zůstává na nejmenší výšce (záhlaví + 3 řádky) */
+                TEST_ASSERT_FLOAT_WITHIN(0.5f, d.list_need_h, d.list_h);
+                /* kolečkem nad detailem (šipka v titulku) se dojede k tlačítkům */
+                float x = 0, y = 0;
+                if ((checked++ % 8) == 0 && bus_window_detail_toggle_center(&x, &y) && y < d.right_bottom) {
+                    ImGui::GetIO().AddMousePosEvent(x, y);
+                    frame_with_window_sized(&open, W, h);
+                    ImGui::GetIO().AddMouseWheelEvent(0.0f, -100.0f);
+                    for (int i = 0; i < 3; i++) frame_with_window_sized(&open, W, h);
+                    bus_window_debug_get(&d);
+                    TEST_ASSERT_FLOAT_WITHIN(0.5f, d.right_scroll_max_y, d.right_scroll_y);
+                    TEST_ASSERT_TRUE(d.btn_bottom <= d.right_bottom + 0.5f);
+                    ImGui::GetIO().AddMouseWheelEvent(0.0f, 100.0f);
+                    ImGui::GetIO().AddMousePosEvent(-1.0f, -1.0f);
+                    for (int i = 0; i < 2; i++) frame_with_window_sized(&open, W, h);
+                }
+            } else if (first_fit < 0.0f) {
+                first_fit = h;
+            }
+        }
+        fprintf(stderr, "P01 scale %.2f: window h %.0f..%.0f, scrollbar at %d heights, failures %d, no scrollbar from h %.0f\n",
+                scale, h_min, h_nat, scrolled, failures, first_fit);
+        for (int i = 0; i < 3; i++) frame_with_window_sized(&open, W, h_nat);
+        bus_window_debug_get(&d);
+        fprintf(stderr, "P01 scale %.2f at natural height: btn_bottom %.1f right_bottom %.1f scrollbar %d\n",
+                scale, d.btn_bottom, d.right_bottom, (int) d.right_scrollbar);
+        TEST_ASSERT_EQUAL_INT(0, failures);
+        /* při minimu okna se seznam s detailem nevejde (jinak test nic nezkouší), při přirozené výšce ano a bez posuvníku */
+        TEST_ASSERT_TRUE(scrolled > 0);
+        TEST_ASSERT_FALSE(d.right_scrollbar);
+        TEST_ASSERT_EQUAL_FLOAT(0.0f, d.right_scroll_max_y);
+        TEST_ASSERT_TRUE(d.btn_bottom <= d.right_bottom + 0.5f);
+    }
+    ImGui::GetStyle() = saved;
+    for (int i = 0; i < 2; i++) frame_with_window(&open);
+    s_frame_font = NULL;
+}
+
+/* Výběr adresy, jejíž řádek seznamu je celý vidět (klik do mřížky, křížový skok, klik na řádek), seznam
+ * neodroluje; řádek mimo pohled se dorovná do pohledu. Dřív SetScrollHereY(0.5) vystředilo i viditelný řádek
+ * a odrolování zůstalo i po zvětšení okna (posudek D8, seznam o 32 px v nižším okně). */
+static void test_select_visible_row_keeps_list_scroll(void)
+{
+    if (!s_ui_ok) TEST_IGNORE_MESSAGE("SDL/GL not available");
+    bool open = true;
+    const float W = 1100.0f, H = 640.0f;
+    for (int i = 0; i < 3; i++) frame_with_window_sized(&open, W, H);
+    st_BUS_WINDOW_DEBUG d;
+    bus_window_debug_get(&d);
+    TEST_ASSERT_TRUE(d.visible_rows < d.row_count);
+    /* seznam nahoru kolečkem (stav tabulky přetrvává z předchozích testů) */
+    float x = 0, y = 0;
+    int first = -1, last = -1;
+    for (int r = 0; r < d.row_count; r++) if (bus_window_row_center(r, NULL, NULL)) { if (first < 0) first = r; last = r; }
+    TEST_ASSERT_TRUE(first >= 0);
+    TEST_ASSERT_TRUE(bus_window_row_center(first, &x, &y));
+    ImGui::GetIO().AddMousePosEvent(x, y);
+    frame_with_window_sized(&open, W, H);
+    ImGui::GetIO().AddMouseWheelEvent(0.0f, 100.0f);
+    ImGui::GetIO().AddMousePosEvent(-1.0f, -1.0f);
+    for (int i = 0; i < 3; i++) frame_with_window_sized(&open, W, H);
+    bus_window_debug_get(&d);
+    TEST_ASSERT_EQUAL_FLOAT(0.0f, d.list_scroll_y);
+    first = last = -1;
+    for (int r = 0; r < d.row_count; r++) if (bus_window_row_center(r, NULL, NULL)) { if (first < 0) first = r; last = r; }
+    /* řádek v dolní polovině seznamu, celý vidět (poslední vykreslený může být useknutý) */
+    const int target = last - 1;
+    TEST_ASSERT_TRUE(target > first + 2);
+    /* adresa řádku: klik na řádek vybere jeho první adresu */
+    float y0 = 0, y1 = 0;
+    TEST_ASSERT_TRUE(bus_window_row_center(target, &x, &y0));
+    click_at_sized(&open, x, y0, W, H);
+    unsigned addr = bus_window_selected(NULL);
+    TEST_ASSERT_TRUE(bus_window_row_center(first, &x, &y));
+    click_at_sized(&open, x, y, W, H);
+    ImGui::GetIO().AddMousePosEvent(-1.0f, -1.0f);
+    for (int i = 0; i < 2; i++) frame_with_window_sized(&open, W, H);
+    bus_window_debug_get(&d);
+    TEST_ASSERT_EQUAL_INT(first, d.selected_row);
+    TEST_ASSERT_EQUAL_FLOAT(0.0f, d.list_scroll_y);
+    /* výběr adresy viditelného řádku (jako klik do mřížky): seznam se nehýbe */
+    bus_window_select(addr, false);
+    for (int i = 0; i < 3; i++) frame_with_window_sized(&open, W, H);
+    bus_window_debug_get(&d);
+    TEST_ASSERT_EQUAL_INT(target, d.selected_row);
+    TEST_ASSERT_TRUE(bus_window_row_center(target, &x, &y1));
+    fprintf(stderr, "select visible row: list_h %.1f, row %d, scroll %.1f, row y %.1f -> %.1f\n", d.list_h, target, d.list_scroll_y, y0, y1);
+    TEST_ASSERT_EQUAL_FLOAT(0.0f, d.list_scroll_y);
+    TEST_ASSERT_FLOAT_WITHIN(0.5f, y0, y1);
+    /* vybraný řádek mimo pohled (poslední) se dorovná do pohledu */
+    bus_window_select(0xFC, false);
+    for (int i = 0; i < 3; i++) frame_with_window_sized(&open, W, H);
+    bus_window_debug_get(&d);
+    TEST_ASSERT_EQUAL_INT(d.row_count - 1, d.selected_row);
+    TEST_ASSERT_TRUE(d.list_scroll_y > 0.0f);
+    TEST_ASSERT_TRUE(bus_window_row_center(d.selected_row, &x, &y1));
+    TEST_ASSERT_TRUE(y1 > 0.0f && y1 < H);
+    /* nižší okno = kratší seznam: vybraný poslední řádek se dorovná (seznam odroluje dál), ne zůstane pod hranou */
+    const float scroll_tall = d.list_scroll_y, list_tall = d.list_h;
+    for (int i = 0; i < 3; i++) frame_with_window_sized(&open, W, H - 120.0f);
+    bus_window_debug_get(&d);
+    fprintf(stderr, "shrink: list_h %.1f -> %.1f, scroll %.1f -> %.1f\n", list_tall, d.list_h, scroll_tall, d.list_scroll_y);
+    TEST_ASSERT_TRUE(d.list_h < list_tall);
+    TEST_ASSERT_TRUE(d.list_scroll_y > scroll_tall + 0.5f);
+}
+
+/* P02, P03: záhlaví sloupce ikony má značku "(?)" s tooltipem tvarů zalomeným na 35 em. */
+static void test_state_header_tooltip(void)
+{
+    if (!s_ui_ok) TEST_IGNORE_MESSAGE("SDL/GL not available");
+    ImGuiStyle &st = ImGui::GetStyle();
+    float sd = st.HoverStationaryDelay, ds = st.HoverDelayShort, dn = st.HoverDelayNormal;
+    st.HoverStationaryDelay = 0.0f; st.HoverDelayShort = 0.0f; st.HoverDelayNormal = 0.0f;
+    bool open = true;
+    bus_window_select(0x74, false);
+    for (int i = 0; i < 2; i++) frame_with_window(&open);
+    st_BUS_WINDOW_DEBUG d;
+    bus_window_debug_get(&d);
+    TEST_ASSERT_EQUAL_FLOAT(0.0f, d.hdr_tip_w);
+    float x = 0, y = 0, ix = 0;
+    TEST_ASSERT_TRUE(bus_window_state_header_center(&x, &y));
+    TEST_ASSERT_TRUE(bus_window_state_icon_center(d.selected_row, &ix, NULL));
+    TEST_ASSERT_FLOAT_WITHIN(1.0f, ix, x); /* značka nad ikonami */
+    s_id_conflicts = 0;
+    ImGui::GetIO().AddMousePosEvent(x, y);
+    for (int i = 0; i < 4; i++) frame_with_window(&open);
+    bus_window_debug_get(&d);
+    fprintf(stderr, "header tooltip: width %.1f px, limit %.1f px\n", d.hdr_tip_w, d.font_size * 35.0f + st.WindowPadding.x * 2.0f);
+    TEST_ASSERT_TRUE(d.hdr_tip_w > 0.0f);
+    TEST_ASSERT_TRUE(d.hdr_tip_w <= d.font_size * 35.0f + st.WindowPadding.x * 2.0f);
+    TEST_ASSERT_EQUAL_INT(0, s_id_conflicts);
+    ImGui::GetIO().AddMousePosEvent(-1.0f, -1.0f);
+    for (int i = 0; i < 2; i++) frame_with_window(&open);
+    st.HoverStationaryDelay = sd; st.HoverDelayShort = ds; st.HoverDelayNormal = dn;
 }
 
 /* ================================================================
@@ -532,6 +976,13 @@ static int shots_run(const char *dir)
     auto settle = [&](int n, float w, float h) { for (int i = 0; i < n; i++) frame_with_window_sized(&open, w, h); };
     auto take = [&](const char *name) { if (!shot_save(dir, name)) failed++; };
     st_BUS_WINDOW_DEBUG d;
+    /* Geometrie mřížky pro měřicí skript nad snímkem (okno je v (0, 0), souřadnice = pixely snímku). */
+    auto geo = [&](const char *name) {
+        bus_window_debug_get(&d);
+        fprintf(stderr, "geo: %s font %.1f cell %.1f gap %.1f grid_x %.1f grid_y %.1f badge_r %.2f badge_off %.1f cell_min %.1f cell_floor %.1f grid_full %d min_full_h %.1f natural_w %.1f natural_win_w %.1f detail_open %d detail_h %.1f visible_rows %d rows %d\n",
+                name, d.font_size, d.cell, d.gap, d.grid_x, d.grid_y, d.badge_r, d.badge_off, d.cell_min, d.cell_floor, (int) d.grid_full,
+                d.min_full_h, d.natural_w, d.natural_win_w, (int) d.detail_open, d.detail_h, d.visible_rows, d.row_count);
+    };
 
     bus_window_select(0x70, false);
     settle(4, W, H);
@@ -541,6 +992,7 @@ static int shots_run(const char *dir)
     float nat_h = H;
     settle(3, natural, nat_h);
     take("01-default.bmp");
+    geo("01-default");
 
     float x = 0, y = 0;
     if (bus_window_row_center(d.selected_row, &x, &y)) {
@@ -586,6 +1038,11 @@ static int shots_run(const char *dir)
     take("12-wide.bmp");
     settle(3, natural, 720.0f);
     take("13-h720.bmp");
+    geo("13-h720");
+    /* totéž při šířce 1885 bodů (kritérium plánu D8; buňka závisí jen na výšce) */
+    settle(3, 1885.0f, 720.0f);
+    geo("h720-w1885");
+    settle(3, natural, 720.0f);
     bus_window_debug_get(&d);
     fprintf(stderr, "metrics: font %.1f cell %.1f cell_min %.1f natural_w %.1f list_min_w %.1f row_h %.1f rows %d visible_rows@720 %d detail_h %.1f fixed %.1f window_w %.1f\n",
             ImGui::GetFontSize(), d.cell, d.cell_min, d.natural_w, d.list_min_w, d.row_h, d.row_count, d.visible_rows, d.detail_h, d.detail_fixed_h, natural);
@@ -595,6 +1052,103 @@ static int shots_run(const char *dir)
     settle(3, natural, nat_h);
     take("14-splitter-hover.bmp");
     ImGui::GetIO().AddMousePosEvent(-1.0f, -1.0f);
+
+    /* D8: sbalený detail při výšce 720 (klik na šipku), pak zpět rozbalit */
+    auto click = [&](float cx, float cy, float w, float h) {
+        ImGuiIO &io = ImGui::GetIO();
+        io.AddMousePosEvent(cx, cy);
+        settle(1, w, h);
+        io.AddMouseButtonEvent(0, true);
+        settle(1, w, h);
+        io.AddMouseButtonEvent(0, false);
+        settle(1, w, h);
+        io.AddMousePosEvent(-1.0f, -1.0f);
+        settle(3, w, h);
+    };
+    bus_window_select(0x70, false);
+    settle(3, natural, 720.0f);
+    if (bus_window_detail_toggle_center(&x, &y)) {
+        click(x, y, natural, 720.0f);
+        take("15-h720-collapsed.bmp");
+        geo("15-h720-collapsed");
+        if (bus_window_detail_toggle_center(&x, &y)) click(x, y, natural, 720.0f);
+    }
+    /* D8: nejmenší výška s celou mřížkou (min_full_h) a o 1 px méně */
+    settle(3, natural, nat_h);
+    bus_window_debug_get(&d);
+    float hmin = d.min_full_h;
+    settle(3, natural, hmin);
+    take("16-min-full-h.bmp");
+    geo("16-min-full-h");
+    settle(3, natural, hmin - 1.0f);
+    geo("min-full-h-minus-1");
+    /* D8: ikony stavu, hover ikony nepřipojeného zařízení (K&P-like) s tooltipem */
+    bus_window_select(0x70, false);
+    settle(3, natural, nat_h);
+    bus_window_debug_get(&d);
+    if (bus_window_state_icon_center(d.selected_row, &x, &y)) {
+        ImGui::GetIO().AddMousePosEvent(x, y);
+        settle(40, natural, nat_h); /* tooltip po prodlevě */
+        take("17-state-icons.bmp");
+        bus_window_debug_get(&d);
+        fprintf(stderr, "state_tip: '%s'\n", d.state_tip);
+        ImGui::GetIO().AddMousePosEvent(-1.0f, -1.0f);
+    }
+    /* Opravná vlna D8: tooltip záhlaví sloupce ikony (P03) */
+    settle(3, natural, nat_h);
+    if (bus_window_state_header_center(&x, &y)) {
+        ImGui::GetIO().AddMousePosEvent(x, y);
+        settle(40, natural, nat_h);
+        take("18-header-tooltip.bmp");
+        bus_window_debug_get(&d);
+        fprintf(stderr, "hdr_tip: width %.1f px (35 em = %.1f px)\n", d.hdr_tip_w, d.font_size * 35.0f);
+        ImGui::GetIO().AddMousePosEvent(-1.0f, -1.0f);
+    }
+    /* Opravná vlna D8: rozložení seznamu (P04) při přirozené šířce */
+    settle(3, natural, nat_h);
+    bus_window_debug_get(&d);
+    fprintf(stderr, "cols: owner_x %.1f owner_text_w %.1f ports_x %.1f gap %.1f header '%s'\n",
+            d.owner_col_x, d.owner_text_w, d.ports_col_x, d.ports_col_x - d.owner_col_x - d.owner_text_w, d.ports_header);
+    /* Opravná vlna D8: nízké okno (P01) - výška 720 a minimum okna, posuvník pravé části nahoře a dole */
+    auto right_state = [&](const char *name) {
+        bus_window_debug_get(&d);
+        fprintf(stderr, "right: %s natural_h %.0f list_h %.1f list_need %.1f scrollbar %d scroll %.1f / %.1f btn_bottom %.1f right_bottom %.1f\n",
+                name, d.natural_h, d.list_h, d.list_need_h, (int) d.right_scrollbar, d.right_scroll_y, d.right_scroll_max_y, d.btn_bottom, d.right_bottom);
+    };
+    auto wheel_down = [&](float w, float h) {
+        if (!bus_window_detail_toggle_center(&x, &y)) return;
+        ImGui::GetIO().AddMousePosEvent(x, y);
+        settle(1, w, h);
+        ImGui::GetIO().AddMouseWheelEvent(0.0f, -100.0f);
+        settle(2, w, h);
+        ImGui::GetIO().AddMousePosEvent(-1.0f, -1.0f);
+        settle(3, w, h);
+    };
+    auto wheel_up = [&](float w, float h) {
+        if (!bus_window_detail_toggle_center(&x, &y)) return;
+        ImGui::GetIO().AddMousePosEvent(x, y);
+        settle(1, w, h);
+        ImGui::GetIO().AddMouseWheelEvent(0.0f, 100.0f);
+        settle(2, w, h);
+        ImGui::GetIO().AddMousePosEvent(-1.0f, -1.0f);
+        settle(3, w, h);
+    };
+    bus_window_select(0x70, false);
+    settle(3, natural, 720.0f);
+    right_state("h720");
+    wheel_down(natural, 720.0f);
+    take("19-h720-right-scrolled.bmp");
+    right_state("h720-scrolled");
+    wheel_up(natural, 720.0f);
+    bus_window_debug_get(&d);
+    float hwin = d.min_win_h;
+    settle(3, natural, hwin);
+    take("20-min-h.bmp");
+    right_state("min-h");
+    wheel_down(natural, hwin);
+    take("21-min-h-scrolled.bmp");
+    right_state("min-h-scrolled");
+    wheel_up(natural, hwin);
     tearDown();
     return failed;
 }
@@ -659,6 +1213,28 @@ int main(int argc, char *argv[])
         return failed ? 1 : 0;
     }
 
+    /* Běh v jiném jazyce (registrace ui-bus-window-de): jen test šířky, ostatní testy čtou anglické texty. */
+    const char *tl = getenv("MZ_BUS_TEST_LANG");
+    if (tl && *tl) {
+        static char lang_env[64];
+        snprintf(lang_env, sizeof(lang_env), "LANGUAGE=%s", tl);
+        putenv(lang_env);
+        setlocale(LC_ALL, "");
+        if (MZTEST_LOCALE_DIR[0]) {
+            bindtextdomain(I18N_TEXTDOMAIN, MZTEST_LOCALE_DIR);
+            bind_textdomain_codeset(I18N_TEXTDOMAIN, "UTF-8");
+            textdomain(I18N_TEXTDOMAIN);
+        }
+        s_test_lang = tl;
+        s_ui_ok = ui_setup();
+        UNITY_BEGIN();
+        RUN_TEST(test_natural_width_fullhd);
+        int lres = UNITY_END();
+        ui_teardown();
+        mztest_teardown();
+        return lres;
+    }
+
     s_ui_ok = ui_setup();
 
     UNITY_BEGIN();
@@ -671,6 +1247,13 @@ int main(int argc, char *argv[])
     RUN_TEST(test_mmio_tab);
     RUN_TEST(test_persistence_keys);
     RUN_TEST(test_mz800_list_scroll_selected_visible);
+    RUN_TEST(test_state_icon_tooltip);
+    RUN_TEST(test_detail_collapse_persistence);
+    RUN_TEST(test_natural_width_fullhd);
+    RUN_TEST(test_cell_shrinks_with_height);
+    RUN_TEST(test_right_part_reaches_detail_buttons);
+    RUN_TEST(test_select_visible_row_keeps_list_scroll);
+    RUN_TEST(test_state_header_tooltip);
     int result = UNITY_END();
 
     ui_teardown();

@@ -25,6 +25,29 @@ mz_add_test(ui-bus-window
     LIBS     mzlib_imgui mzlib_igfd mzlib_imwidgets
     LABELS   "ui;debugger;devbus"
 )
+# D8: písmo aplikace (testy geometrie s 28 px) a katalogy překladů (běh v němčině).
+if(TARGET test_ui-bus-window)
+    target_compile_definitions(test_ui-bus-window PRIVATE
+        MZTEST_FONT_DIR="${CMAKE_SOURCE_DIR}/ui_resources/imgui/fonts"
+        MZTEST_LOCALE_DIR="${CMAKE_SOURCE_DIR}/src/locale"
+    )
+    # Druhý běh téže binárky: jen test přirozené šířky v němčině (nejdelší
+    # dostupný překlad). Bez katalogu de nebo bez podpory LANGUAGE se test
+    # uvnitř přeskočí (Unity IGNORE).
+    add_test(NAME ui-bus-window-de
+        COMMAND test_ui-bus-window
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/build-tests
+    )
+    if(WIN32)
+        get_filename_component(_bw_cc_dir "${CMAKE_C_COMPILER}" DIRECTORY)
+        set_tests_properties(ui-bus-window-de PROPERTIES
+            ENVIRONMENT "MZ_BUS_TEST_LANG=de;PATH=${_bw_cc_dir};$ENV{PATH}"
+        )
+    else()
+        set_tests_properties(ui-bus-window-de PROPERTIES ENVIRONMENT "MZ_BUS_TEST_LANG=de")
+    endif()
+    set_tests_properties(ui-bus-window-de PROPERTIES LABELS "ui;debugger;devbus;i18n")
+endif()
 
 # Funkční testy UI logiky - video záznam (menu, dialog nastavení, REC indikátor,
 # notifikace událostí, okno dálkového ovládání a tabulka zkratek), okno Replay

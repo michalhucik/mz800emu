@@ -27,12 +27,12 @@ MZ-700; na MZ-800 a MZ-1500 okno ukazuje čipy a periferie desky. Panel I/O Port
 
 ```
 [Ports] [MMIO]   Color by [Owners v] (?)   [x] Track activity
-+-- pruh stavu nad mřížkou --------+||+-- Owner   Ports    Drive      State -------+
-|     0  1  2  3 ... F             ||||[CH] CMT hack  01h-02h  none       present   |
-| 00  .  CH CH  .  ...             ||||[U]  Unicard   50h-51h  tri-state  present   |
-| 50  U  U  .   .  ... F1 F1 F1 F1 ||||[K8] K&P 80... 70h-73h  tri-state  [Connect] |
++-- pruh stavu nad mřížkou --------+||+-- Owner   Ports    Drive     (?) -------------+
+|     0  1  2  3 ... F             ||||[CH] CMT hack  01h-02h  none       (*)        |
+| 00  .  CH CH  .  ...             ||||[U]  Unicard   50h-51h  tri-state  (*)        |
+| 50  U  U  .   .  ... F1 F1 F1 F1 ||||[K8] K&P 80... 70h-73h  tri-state  (/) [Connect]
 | 70  K8 K8 K8 K8  ...             ||||  ...  (ScrollY, řazení podle prvního portu) |
-| F0  G  G  .   .  Q  Q  Q  Q  RD  |||+-- [K8] Port 70h  K&P 80 Column Card -------+
+| F0  G  G  .   .  Q  Q  Q  Q  RD  |||+-v [K8] Port 70h  K&P 80 Column Card ------+
 +----------------------------------+||| IN/s 0  OUT/s 0  ghost 0  conflicts 0       |
                                     ||| Last IN -   Last OUT -                       |
                                     ||| Peek: -  [Peek now]                          |
@@ -44,7 +44,10 @@ MZ-700 | 3 devices, 0 connected (?)
 
 Vlevo mřížka 16 x 16 (řádek = horní, sloupec = dolní polovina dolního
 bajtu adresy); velikost buňky se odvozuje z písma, takže zkratka se vždy
-vejde. Vpravo seznam vlastníků aktivní mřížky a pod ním detail vybrané
+vejde. Když okno nemá výšku na celou mřížku, buňky se zmenší až na
+velikost, kdy má nejširší zkratka ještě 2 px vzduchu z každé strany
+(odznaky se zmenší s nimi); pod touto mezí levá část roluje svisle.
+S výchozím písmem (28 px) potřebuje celá mřížka okno vysoké asi 880 px. Vpravo seznam vlastníků aktivní mřížky a pod ním detail vybrané
 adresy. Každá buňka nese zkratku vlastníka (`U` Unicard, `F0` FDC 0, `M`
 paměťový mapper, `K8` karta K&P 80, `P7` PCG-700, ...), barvu podle
 zvoleného režimu a odznaky (tmavý kroužek s bílým glyfem, sedí na rohu
@@ -118,25 +121,41 @@ to říká.
 Pravý panel: jeden řádek na čip desky nebo rozšiřující zařízení aktivní
 mřížky, řazený podle prvního portu. Sloupce: mini buňka se zkratkou
 v barvě buňky (legenda), název, rozsahy adres (nejvýš tři, další jako
-"+N"; všechny v tooltipu), výstupní stupeň, stav (present / not present /
-connected / not connected) a u rozšiřujících zařízení tlačítko
-**Connect** / **Disconnect** (stejná akce jako menu HW & Devices; čipy
+"+N"; všechny v tooltipu), výstupní stupeň, ikona stavu a u rozšiřujících
+zařízení tlačítko **Connect** / **Disconnect** (stejná akce jako menu HW & Devices; čipy
 desky se připojují v tom menu). Najetí na řádek zvýrazní jeho buňky
 v mřížce žlutým rámečkem, klik na řádek vybere jeho první adresu, klik na
-buňku vybere řádek jejího vlastníka. Tooltip řádku: úplný název, směr,
-všechny rozsahy, zdroj deklarace výstupního stupně, poznámka o zrcadlech
+buňku vybere řádek jejího vlastníka. Ikona stavu říká stav tvarem, ne
+barvou:
+
+| Ikona | Stav |
+|-------|------|
+| plný kruh | přítomný (čip desky) nebo připojené (rozšiřující zařízení) |
+| prázdný kruh | nepřítomný (čip desky odpojený v menu HW & Devices nebo nedekódující v aktuálním režimu) |
+| přeškrtnutý kruh | nepřipojené (rozšiřující zařízení registrované, ale nepřipojené) |
+
+Najetí na ikonu ukáže stav slovy ("State: not connected"); záhlaví
+sloupce nese značku **(?)**, jejíž tooltip ukáže všechny tři tvary
+nakreslené a vedle každého jeho význam. Na záložce MMIO se sloupec
+rozsahů jmenuje **Addresses** (šířka sloupců je pro obě záložky stejná).
+Tooltip řádku: úplný název, směr,
+všechny rozsahy, výstupní stupeň, stav slovy, zdroj deklarace výstupního
+stupně, poznámka o zrcadlech
 (emulátor dekóduje port jen dolním bajtem adresy, na skutečném stroji
 neměřeno; pro MZ-700 bez poznámky), u zařízení počet portů, MMIO adres,
-regionů a výstupů. Seznam roluje, vybraný řádek je vždy vidět. Na MZ-800
+regionů a výstupů. Seznam roluje a vybraný řádek je vždy vidět: když
+není celý vidět (výběr v mřížce, změna výšky okna), seznam se k němu
+posune; řádek, který vidět je, se při výběru nehýbe. Na MZ-800
 a MZ-1500 (bez rozšiřujících zařízení) sloupec s tlačítkem není.
 
 ## Detail vybrané adresy
 
 Pod seznamem panel stálé výšky (seznam nad ním se při změně výběru ani
-stavu neposouvá): titulek s mini buňkou a názvem vlastníka ("Port 70h
+stavu neposouvá): titulek se šipkou, mini buňkou a názvem vlastníka ("Port 70h
 K&P 80 Column Card"; bez vlastníka "Port 20h - no owner"; tooltip titulku
-vypíše všechny vlastníky), řádek o vlastníkovi (směr a výstupní stupeň,
-u částečného i buzené bity; další vlastníci téže adresy za **Also:**; bez
+vypíše všechny vlastníky), řádek o vlastníkovi (směr, výstupní stupeň
+a stav slovy, např. "IN/OUT, tri-state, not connected"; u částečného
+i buzené bity; další vlastníci téže adresy za **Also:**; bez
 vlastníka místo toho, co čtení vrátí: "A read returns the undriven bus:
 bus latch 5Ah"), řádek aktivity v neproporcionálním písmu (IN/s, OUT/s,
 ghost, conflicts; u MMIO adresy writes/s), poslední IN a OUT se stářím ve
@@ -151,6 +170,15 @@ stejné šířky: **Show in I/O Ports**, **Reset activity**, **Break on IN**,
 tooltipu. S vypnutým sledováním jsou místo čísel pomlčky a místo
 posledních hodnot řádek "Activity tracking is off".
 
+Šipka v titulku sbalí detail na samotný řádek titulku a uvolněnou výšku
+dostane seznam vlastníků; další klik detail zase rozbalí. Stav se ukládá
+do INI, výchozí je rozbaleno.
+
+V nízkém okně, kde se seznam (záhlaví a tři řádky) a rozbalený detail
+nevejdou pod sebe, dostane pravá část svislý posuvník: seznam zůstane na
+třech řádcích a k tlačítkům detailu se dojede posuvníkem, kolečkem myši
+nad detailem nebo klávesou Tab. Při dostatečné výšce posuvník není.
+
 Stavový řádek: platforma a počet rozšiřujících zařízení ("MZ-700 |
 3 devices, 0 connected"; na MZ-800 a MZ-1500 jen platforma); nestandardní
 model nebuzené sběrnice (`const`) a politika kolize (`and`, `first`) se
@@ -159,7 +187,8 @@ nebuzených bitů s aktuální hodnotou, politiku a číslo snímku.
 
 ## Klávesnice
 
-Tab přechází mezi toolbarem, mřížkou, seznamem a tlačítky detailu; šipky
+Tab přechází mezi toolbarem, mřížkou, seznamem, šipkou detailu
+a tlačítky detailu (Space nebo Enter na šipce detail sbalí nebo rozbalí); šipky
 v mřížce posouvají výběr (zaměřená buňka má rámeček), Space nebo Enter na
 buňce ji vybere, Enter na řádku rozšiřujícího zařízení ho připojí nebo
 odpojí. Okno se pod přirozenou šířkou (mřížka + seznam) nepřeskládává,
@@ -215,7 +244,8 @@ příznaky a čítače kolizí z jádra sběrnice.
 ## Nastavení (INI)
 
 Okno ukládá `color_mode`, `active_tab`, `list_width` (šířka seznamu v px,
-0 = automaticky) a `tracking_active` v sekci `[BUS_MAP_PANEL]`. Model sběrnice je v sekci
+0 = automaticky), `tracking_active` a `detail_open` (detail vybrané adresy
+rozbalený, výchozí 1) v sekci `[BUS_MAP_PANEL]`. Model sběrnice je v sekci
 `[DEVBUS]` emulátoru MZ-700 (jediná platforma s rozšiřujícími
 zařízeními) a v GUI přepínač nemá (je dostupný i přes MCP
 `emu_settings_set`, klíče `DEVBUS/conflict`, `DEVBUS/bus_idle`,
