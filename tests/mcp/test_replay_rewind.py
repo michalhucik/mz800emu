@@ -45,9 +45,15 @@ ADDR = 0x2000
 WAIT_MS = 20000
 
 
-def _wait(emu, reason):
-    """Počká na zastavení a ověří jeho důvod."""
-    w = emu.call("wait_stop", {"timeout_ms": WAIT_MS}, timeout=WAIT_MS / 1000 + 10)
+def _wait(emu, reason, run_seq):
+    """Počká na konec běhu `run_seq` a ověří důvod zastavení.
+
+    Bez `run_seq` by wait_stop v pauze před rozběhem seeku vrátil
+    předchozí zastavení (N108).
+    """
+    check(run_seq is not None, f"run_seq to wait for {reason}")
+    w = emu.call("wait_stop", {"run_seq": run_seq, "timeout_ms": WAIT_MS},
+                 timeout=WAIT_MS / 1000 + 10)
     rec = w.get("record") or {}
     check(w.get("done") is True and rec.get("reason") == reason, f"stopped with reason {reason} ({rec.get('reason')})")
 
@@ -131,25 +137,26 @@ def seek(exe, tmp, rec):
 
         st = emu.call("replay_seek", {"frame": 180})
         check(st.get("seeking") is True and st.get("seek_target") == 180, f"seek 180 started ({st.get('seeking')})")
-        _wait(emu, "replay_seek")
+        _wait(emu, "replay_seek", st.get("run_seq"))
         st = emu.call("replay_status")
         check(st.get("frame") == 180 and st.get("seeking") is False, f"at frame 180 ({st.get('frame')})")
         at180 = _state(emu)
 
         st = emu.call("replay_seek", {"frame": 130})
         check(st.get("seeking") is True, "seek back to 130 runs from a checkpoint")
-        _wait(emu, "replay_seek")
+        _wait(emu, "replay_seek", st.get("run_seq"))
         check(emu.call("replay_status").get("frame") == 130, "at frame 130")
 
-        emu.call("replay_seek", {"frame": 180})
-        _wait(emu, "replay_seek")
+        st = emu.call("replay_seek", {"frame": 180})
+        _wait(emu, "replay_seek", st.get("run_seq"))
         check(_state(emu) == at180, "the same frame after another seek gives the same machine state")
 
         st = emu.call("replay_rewind")
         check(st.get("frame") == 150 and st.get("seeking") is False, f"rewind in playback: frame 150 ({st.get('frame')})")
+        check("run_seq" not in st, "rewind to a checkpoint without a run has no run_seq")
 
-        emu.call("run")
-        _wait(emu, "replay_end")
+        r = emu.call("run")
+        _wait(emu, "replay_end", r.get("run_seq"))
         st = emu.call("replay_status")
         check(st.get("outcome") == "ended" and st.get("deviated") is False,
               f"playback ends without desync ({st.get('outcome_message')})")

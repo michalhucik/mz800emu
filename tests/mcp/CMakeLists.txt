@@ -139,6 +139,7 @@ if(Python3_FOUND)
 
     # Krok a rozběh z pauzy bez zbytečného 20ms čekání smyčky pauzy
     # (klient čeká jen na událost step_done / paused přes event_poll).
+    # RUN_SERIAL: měří latenci odpovědi, souběh s jinými testy ji zkresluje.
     add_test(
         NAME    mcp_pipe_resume_latency
         COMMAND ${Python3_EXECUTABLE}
@@ -148,10 +149,12 @@ if(Python3_FOUND)
     set_tests_properties(mcp_pipe_resume_latency PROPERTIES
         LABELS  "e2e;mcp;pipe"
         TIMEOUT 60
+        RUN_SERIAL TRUE
     )
 
     # Blokující run(frames) odpoví hned po zastavení breakpointem uprostřed
     # snímku (čeká na záznam zastavení, ne na další snímek).
+    # RUN_SERIAL: měří latenci odpovědi, souběh s jinými testy ji zkresluje.
     add_test(
         NAME    mcp_run_frames_wake
         COMMAND ${Python3_EXECUTABLE}
@@ -161,9 +164,12 @@ if(Python3_FOUND)
     set_tests_properties(mcp_run_frames_wake PROPERTIES
         LABELS  "e2e;mcp;pipe"
         TIMEOUT 60
+        RUN_SERIAL TRUE
     )
 
     # Hlavní vlákno v --headless se netočí naprázdno (spotřeba CPU procesu).
+    # RUN_SERIAL: poměr CPU času ku reálnému času pod zátěží jiných testů
+    # neodpovídá (ctest -j8: 0,84 proti limitu 0,5).
     add_test(
         NAME    mcp_headless_cpu
         COMMAND ${Python3_EXECUTABLE}
@@ -174,6 +180,7 @@ if(Python3_FOUND)
         LABELS  "e2e;mcp"
         TIMEOUT 60
         SKIP_RETURN_CODE 77
+        RUN_SERIAL TRUE
     )
 
     # -----------------------------------------------------------

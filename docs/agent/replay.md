@@ -55,8 +55,8 @@ settings tools are refused while recording.
    ```
    emu_replay_play(path="bug.mzr", pause_after_load=true)
    emu_bp_add(...)            # or emu_ramlog_start, emu_trace_start ...
-   emu_resume()
-   emu_wait_stop()            # a breakpoint, or reason "replay_end"
+   r = emu_resume()
+   emu_wait_stop(run_seq=r["run_seq"])   # a breakpoint, or reason "replay_end"
    ```
    Breakpoints that only observe (`log`, `mark`, trace, ramlog, CDL)
    keep the replay valid. A breakpoint `poke` / `set`, `emu_mem_write`
@@ -90,8 +90,8 @@ runs or the tape records.
 
 ```
 emu_replay_play(path="bug.mzr", pause_after_load=true)
-emu_replay_seek(frame=12000)     # runs at MAX SPEED, seeking: true
-emu_wait_stop()                  # reason "replay_seek", paused at frame 12000
+s = emu_replay_seek(frame=12000) # runs at MAX SPEED, seeking: true, run_seq
+emu_wait_stop(run_seq=s["run_seq"])  # reason "replay_seek", paused at frame 12000
 emu_bp_add(...); emu_resume()    # investigate from there
 emu_replay_seek(frame=11500)     # back: from a checkpoint of this playback
 ```
@@ -105,6 +105,13 @@ early (then `seeking` stays true and the seek goes on after
 previous checkpoint. Checkpoints are not in the `.mzr` file: a new
 process collects its own while it plays.
 
+Wait with the `run_seq` from the answer of `emu_replay_seek` /
+`emu_replay_rewind`: the seek starts only after the answer, so
+`emu_wait_stop()` without `run_seq` may still return the previous stop.
+No `run_seq` in the answer = no run, the emulator already stands at the
+target. The same holds for `emu_replay_play` without `pause_after_load`:
+take `run_seq` from `emu_get_state` before it and wait for that number + 1.
+
 Typical use after a desync: the playback ends at the desync frame N;
 play again with `pause_after_load`, `emu_replay_seek(frame=N-50)`, then
 step with trace or ramlog to the difference.
@@ -117,7 +124,7 @@ then ask about any instruction as often as you like:
 
 ```
 emu_replay_play(path="bug.mzr", pause_after_load=true)
-emu_replay_seek(frame=900); emu_wait_stop()
+s = emu_replay_seek(frame=900); emu_wait_stop(run_seq=s["run_seq"])
 emu_trace_start("cputrack", regs=True)     # trace of the part you study,
 emu_run(frames=20)                         # recorded during playback
 emu_trace_stop("cputrack")
@@ -165,7 +172,7 @@ breakpoint and a deadline:
 emu_replay_goto(t=t_from)
 emu_bp_create_with_init(fields=["type","expr","enabled"],
                         type="GLOBAL", expr="HL == 0xC000", enabled=True)
-emu_resume(deadline_ticks=t_to - t_from); emu_wait_stop()
+r = emu_resume(deadline_ticks=t_to - t_from); emu_wait_stop(run_seq=r["run_seq"])
 # reason "breakpoint" = first instruction start with HL == C000h;
 # "deadline" = the condition did not hold in the interval
 ```

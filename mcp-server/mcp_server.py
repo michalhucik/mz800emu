@@ -8769,7 +8769,8 @@ async def emu_replay_rewind(frames: int = 0) -> str:
 
     Returns:
         JSON status (``frame`` = checkpoint frame, ``rerecord_count``,
-        ``checkpoints``), or an error (``checkpoints are off``, ``no
+        ``checkpoints``; while playing and the seek runs also ``run_seq``
+        for ``emu_wait_stop``), or an error (``checkpoints are off``, ``no
         checkpoint at or before frame N``, ``a disk or the tape was written
         or ejected after frame N``, ``nothing is recording or playing``).
     """
@@ -8795,8 +8796,11 @@ async def emu_replay_seek(frame: int) -> str:
 
     Returns:
         JSON status right after the start: ``seeking: true`` = running to
-        ``seek_target``, ``false`` = already standing at the frame; or an
-        error (``seek works only during playback``).
+        ``seek_target``, ``false`` = already standing at the frame; when
+        the seek runs also ``run_seq`` - wait with
+        ``emu_wait_stop(run_seq=...)`` (without it the previous stop may
+        come back before the seek starts); or an error (``seek works only
+        during playback``).
     """
     resp = await _send_request("replay_seek", {"frame": frame}, timeout_s=_REPLAY_TIMEOUT_S)
     return json.dumps(_data_or_error(resp))

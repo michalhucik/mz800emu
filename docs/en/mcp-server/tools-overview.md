@@ -1591,7 +1591,8 @@ newest checkpoint at least N frames back. While recording the machine
 returns to the checkpoint, the inputs and hashes after it are dropped,
 `rerecord_count` grows by one and the recording goes on from there; the
 emulation stays paused at the frame boundary of the checkpoint. While
-playing it is a seek back to that checkpoint (see `emu_replay_seek`).
+playing it is a seek back to that checkpoint (see `emu_replay_seek`;
+when it runs, the answer carries its `run_seq`).
 
 Checkpoints do not hold the contents of the media. A checkpoint after
 which a disk (FDC, Quick Disk, IDE8) or the tape was written, or the tape
@@ -1614,8 +1615,10 @@ starts again from the beginning with clean copies of the media) and the
 rest is played at MAX SPEED. Hashes are checked all the way; breakpoints
 stay active and may stop the seek early. The reply comes right after the
 start: `seeking: true` = running to `seek_target`, `false` = already
-standing at the frame. Error: `seek works only during playback`.
-Returns the status.
+standing at the frame. When the seek runs, the answer also carries
+`run_seq`; wait with `emu_wait_stop(run_seq=...)`, because without it
+the call may return the previous stop before the seek starts. Error:
+`seek works only during playback`. Returns the status.
 
 ### `emu_replay_goto` (sensitive - replaces the emulator state)
 

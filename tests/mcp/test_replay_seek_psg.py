@@ -45,9 +45,15 @@ FRAMES = 300
 WAIT_MS = 20000
 
 
-def _wait(emu, reason):
-    """Počká na zastavení a ověří jeho důvod."""
-    w = emu.call("wait_stop", {"timeout_ms": WAIT_MS}, timeout=WAIT_MS / 1000 + 10)
+def _wait(emu, reason, run_seq):
+    """Počká na konec běhu `run_seq` a ověří důvod zastavení.
+
+    Bez `run_seq` by wait_stop v pauze před rozběhem seeku vrátil
+    předchozí zastavení (N108).
+    """
+    check(run_seq is not None, f"run_seq to wait for {reason}")
+    w = emu.call("wait_stop", {"run_seq": run_seq, "timeout_ms": WAIT_MS},
+                 timeout=WAIT_MS / 1000 + 10)
     rec = w.get("record") or {}
     check(w.get("done") is True and rec.get("reason") == reason,
           f"stopped with reason {reason} ({rec.get('reason')})")
@@ -83,25 +89,25 @@ def run(tmp):
         st = emu.call("replay_play", {"path": str(rec), "pause_after_load": True,
                                       "checkpoint_interval": CKPT})
         check(st.get("mode") == "playing", f"playback loaded ({st.get('frames')} frames)")
-        emu.call("replay_seek", {"frame": 280})
-        _wait(emu, "replay_seek")
+        st = emu.call("replay_seek", {"frame": 280})
+        _wait(emu, "replay_seek", st.get("run_seq"))
         _no_desync(emu, "seek forward to 280")
         ck_before = emu.call("replay_status")["checkpoints"]
-        emu.call("replay_seek", {"frame": 130})
-        _wait(emu, "replay_seek")
+        st = emu.call("replay_seek", {"frame": 130})
+        _wait(emu, "replay_seek", st.get("run_seq"))
         _no_desync(emu, "seek back to 130 from checkpoint 100")
         # Opětovný průchod checkpointem 150 nesmí smazat novější 200 a 250
         # (přehrávání je deterministické).
-        emu.call("replay_seek", {"frame": 160})
-        _wait(emu, "replay_seek")
+        st = emu.call("replay_seek", {"frame": 160})
+        _wait(emu, "replay_seek", st.get("run_seq"))
         _no_desync(emu, "seek forward to 160 again")
         ck_after = emu.call("replay_status")["checkpoints"]
         check(ck_after.get("count") == ck_before.get("count")
               and ck_after.get("last_frame") == ck_before.get("last_frame"),
               f"checkpoints kept after passing them again ({ck_before} -> {ck_after})")
 
-        emu.call("run")
-        _wait(emu, "replay_end")
+        r = emu.call("run")
+        _wait(emu, "replay_end", r.get("run_seq"))
         st = emu.call("replay_status")
         check(st.get("outcome") == "ended" and st.get("deviated") is False,
               f"playback ends without desync ({st.get('outcome_message')})")

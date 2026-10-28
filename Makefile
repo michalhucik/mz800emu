@@ -261,10 +261,19 @@ run: mz800emu
 # Test suite (CTest přes CMake)
 # Build executables a spuštění registrovaných testů. Filtrování přes
 # CTEST_LABEL (např. "lib", "emu", "ui") nebo CTEST_REGEX.
+#
+# Testy běží paralelně (ctest -j): CTEST_JOBS = počet jader (JOBS), nejvýš
+# CTEST_JOBS_MAX. Nad 16 souběžných testů se celkový čas už nezkracuje
+# (určuje ho nejdelší test, změřeno na 32 jádrech: -j16 179 s, -j24 174 s,
+# sériově 849 s), roste jen zátěž. Testy, které měří reálný čas nebo
+# spotřebu CPU, mají v CMake RUN_SERIAL a běží samy. Sériový běh (ladění
+# testu, který padá jen v souběhu): make test CTEST_JOBS=1.
 # ----------------------------------------------------------------------------
 CTEST_LABEL ?=
 CTEST_REGEX ?=
-CTEST_ARGS  := --test-dir $(BUILD_DIR) --output-on-failure
+CTEST_JOBS_MAX := 16
+CTEST_JOBS ?= $(shell n=$(JOBS); [ $$n -gt $(CTEST_JOBS_MAX) ] && n=$(CTEST_JOBS_MAX); echo $$n)
+CTEST_ARGS  := --test-dir $(BUILD_DIR) --output-on-failure -j$(CTEST_JOBS)
 ifneq ($(CTEST_LABEL),)
     CTEST_ARGS += -L $(CTEST_LABEL)
 endif
@@ -592,6 +601,7 @@ help:
 	@echo "  make test-i18n-completeness  i18n translation completeness statistics"
 	@echo "  CTEST_LABEL=<label>          Filter by label (lib, emu, ui, libs, peripherals, ...)"
 	@echo "  CTEST_REGEX=<regex>          Filter by test name regex"
+	@echo "  CTEST_JOBS=<n>               Parallel tests (default: CPU cores, max $(CTEST_JOBS_MAX); 1 = serial)"
 	@echo ""
 	@echo "DISTRIBUTION"
 	@echo "  make dist                    Release build + DLL + locale + docs into dist/"

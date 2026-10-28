@@ -5,7 +5,11 @@
 # build_revision_gen - generátor tools/generate_build_revision_git.sh ve
 #   scénářích bez gitu, bez remotů, s nas1 remotem, s řetězem lokálních
 #   klonů, s GitHub upstreamem (revize 250 + počet commitů) a s escapováním
-#   jména větve. Bez bash nebo git vrací 77 (SKIP).
+#   jména větve. Bez bash nebo git vrací 77 (SKIP). Scénáře jsou nezávislé,
+#   proto se registrují jako pět testů build_revision_gen_<skupina>
+#   (volba --scenarios), které při paralelním ctest běží souběžně; jeden
+#   test se všemi scénáři trval sériově 71 s a pod zátěží až 123 s a byl
+#   nejdelším testem celé sady.
 #
 # version_cli - volba --version všech postavených binárek (exit 0, verze,
 #   platforma, shoda s vygenerovaným build_revision.c). Cesty binárek
@@ -16,17 +20,30 @@
 
 find_package(Python3 COMPONENTS Interpreter)
 if(Python3_FOUND)
-    add_test(
-        NAME    build_revision_gen
-        COMMAND ${Python3_EXECUTABLE}
-                ${CMAKE_CURRENT_SOURCE_DIR}/test_build_revision_gen.py
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    )
-    set_tests_properties(build_revision_gen PROPERTIES
-        LABELS           "tools;buildinfo;python"
-        TIMEOUT          300
-        SKIP_RETURN_CODE 77
-    )
+    # Skupina scénářů: jméno a čísla (viz docstring testu).
+    set(_mz_brgen_groups
+        "basic=1,2,3,4"
+        "remotes=5"
+        "chains=6"
+        "github=7"
+        "misc=8,9,10")
+    foreach(_g IN LISTS _mz_brgen_groups)
+        string(REPLACE "=" ";" _gl "${_g}")
+        list(GET _gl 0 _gname)
+        list(GET _gl 1 _gnums)
+        add_test(
+            NAME    build_revision_gen_${_gname}
+            COMMAND ${Python3_EXECUTABLE}
+                    ${CMAKE_CURRENT_SOURCE_DIR}/test_build_revision_gen.py
+                    --scenarios ${_gnums}
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        )
+        set_tests_properties(build_revision_gen_${_gname} PROPERTIES
+            LABELS           "tools;buildinfo;python"
+            TIMEOUT          300
+            SKIP_RETURN_CODE 77
+        )
+    endforeach()
 
     set(_mz_version_exes "")
     if(MZ_BUILD_MZ800)
@@ -55,7 +72,7 @@ if(Python3_FOUND)
             TIMEOUT 180
         )
     endif()
-    message(STATUS "  tests/buildinfo: registered build_revision_gen, version_cli "
+    message(STATUS "  tests/buildinfo: registered build_revision_gen_*, version_cli "
                    "(Python ${Python3_VERSION})")
 else()
     message(STATUS "  tests/buildinfo: SKIPPED (Python3 interpreter not found)")

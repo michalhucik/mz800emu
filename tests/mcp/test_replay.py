@@ -131,9 +131,13 @@ def play_pipe(exe, tmp, rec, want):
     try:
         emu.call("pause")
         emu.call("set_speed", {"mode": "max"})
+        # Přehrání je další běh po pauze; wait_stop bez run_seq by před jeho
+        # rozběhem vrátil zastavení z pause (N108).
+        play_run = emu.call("get_state")["run_seq"] + 1
         st = emu.call("replay_play", {"path": str(rec)})
         check(st.get("mode") == "playing", f"playback started ({st.get('frames')} frames)")
-        w = emu.call("wait_stop", {"timeout_ms": WAIT_MS}, timeout=WAIT_MS / 1000 + 10)
+        w = emu.call("wait_stop", {"run_seq": play_run, "timeout_ms": WAIT_MS},
+                     timeout=WAIT_MS / 1000 + 10)
         rec_ = w.get("record") or {}
         check(w.get("done") is True and rec_.get("reason") == "replay_end", f"wait_stop reason replay_end ({rec_.get('reason')})")
         st = emu.call("replay_status")
@@ -208,8 +212,9 @@ def deviation(exe, tmp, rec):
         emu.call("mem_write", {"addr": 0x2030, "data_hex": "77"})
         st = emu.call("replay_status")
         check(st.get("deviated") is True and "mem_write" in st.get("deviation", ""), f"deviated ({st.get('deviation')})")
-        emu.call("run")
-        w = emu.call("wait_stop", {"timeout_ms": WAIT_MS}, timeout=WAIT_MS / 1000 + 10)
+        r = emu.call("run")
+        w = emu.call("wait_stop", {"run_seq": r["run_seq"], "timeout_ms": WAIT_MS},
+                     timeout=WAIT_MS / 1000 + 10)
         check((w.get("record") or {}).get("reason") == "replay_end", "deviated playback still ends")
         st = emu.call("replay_status")
         check(st.get("outcome") == "ended", f"outcome ended ({st.get('outcome_message')})")

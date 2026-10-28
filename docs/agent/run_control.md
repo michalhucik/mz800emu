@@ -22,6 +22,7 @@ then grows by one). Tools that start a run return its number:
 | `emu_run_until_addr`, `emu_step_out` | `run_seq` (plus `deadline_ticks`) |
 | `emu_step_into`, `emu_step_over` | `run_seq`, `completed`, `running` |
 | `emu_run(frames)` | `run_seq` of the run that just ended |
+| `emu_replay_seek`, `emu_replay_rewind` | `run_seq` of the seek run (only when the seek runs) |
 | `emu_pause`, `emu_get_state` | `run_seq` of the current (or last) run |
 
 Each stop writes a **stop record** and sends exactly one event `paused`

@@ -207,9 +207,13 @@ def play_pipe(exe, tmp, rec, mzf, dsk):
     try:
         emu.call("pause")
         emu.call("set_speed", {"mode": "max"})
+        # Přehrání je další běh po pauze; wait_stop bez run_seq by před jeho
+        # rozběhem vrátil zastavení z pause (N108).
+        play_run = emu.call("get_state")["run_seq"] + 1
         st = emu.call("replay_play", {"path": str(rec)})
         check(st.get("mode") == "playing", "playback started")
-        w = emu.call("wait_stop", {"timeout_ms": WAIT_MS}, timeout=WAIT_MS / 1000 + 10)
+        w = emu.call("wait_stop", {"run_seq": play_run, "timeout_ms": WAIT_MS},
+                     timeout=WAIT_MS / 1000 + 10)
         check((w.get("record") or {}).get("reason") == "replay_end",
               f"playback ended ({(w.get('record') or {}).get('reason')})")
         st = emu.call("replay_status")

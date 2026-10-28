@@ -19535,6 +19535,45 @@ static en_MCP_DISPATCH_RESULT _replay_finish_request(int64_t req_id, uint32_t se
 }
 
 
+/**
+ * @brief Počká na vyřízení seeku přehrávání a do odpovědi doplní číslo jeho běhu.
+ *
+ * Pro `replay_seek` a `replay_rewind`. Požadavek se vyřizuje v pauze
+ * (běžící emulace se pro něj nejdřív zastaví), takže dohrávání seeku je
+ * vždy běh @p seq0 + 1. Vyřízení se ohlásí ještě v pauze, před rozběhem;
+ * běh se pozná podle `seeking` (dohrávání běží) nebo podle toho, že už
+ * začal (rychlé dohrávání mohlo i skončit). Pak odpověď nese `run_seq`
+ * a klient na konec čeká přes `wait_stop(run_seq)`. Bez běhu (cíl hned,
+ * rewind při záznamu) `run_seq` chybí. `wait_stop` bez `run_seq` by
+ * v pauze před rozběhem vrátil předchozí zastavení (N108).
+ *
+ * @param req_id ID požadavku.
+ * @param seq0 run_log_current() přečtené PŘED odesláním požadavku.
+ * @param seq Číslo požadavku replay (replay_request_seek / _rewind).
+ * @param[out] out_response Odpověď.
+ * @return Jako _replay_finish_request().
+ */
+static en_MCP_DISPATCH_RESULT _replay_finish_seek(int64_t req_id, uint64_t seq0, uint32_t seq,
+                                                  char **out_response) {
+    if (!replay_wait_request(seq, MCP_REPLAY_REQUEST_TIMEOUT_MS)) {
+        return _err_response(req_id, "replay request was not processed in time",
+                             MCP_DISPATCH_EMU_ERROR, out_response);
+    }
+    st_REPLAY_STATUS st;
+    replay_get_status(&st);
+    if (!st.request_ok) {
+        return _err_response(req_id, st.request_message[0] ? st.request_message : "replay request failed",
+                             MCP_DISPATCH_EMU_ERROR, out_response);
+    }
+    JsonObject *o = _replay_status_to_json(&st);
+    uint64_t seek_run = seq0 + 1;
+    if (st.seeking || run_log_current(NULL) >= seek_run) {
+        json_object_set_int_member(o, "run_seq", (gint64)seek_run);
+    }
+    return _ok_response(req_id, o, out_response);
+}
+
+
 /** @brief Datový objekt požadavku nebo NULL. */
 static JsonObject *_replay_data_obj(const st_JSONL_MESSAGE *req) {
     JsonNode *data_node = (JsonNode *)jsonl_msg_get_data_node(req);
@@ -19712,7 +19751,8 @@ static en_MCP_DISPATCH_RESULT _handle_replay_play_stop(const st_JSONL_MESSAGE *r
  * po checkpointu zahodí (`rerecord_count` + 1) a emulace zůstane stát na
  * hranici snímku checkpointu; při přehrávání jde o seek zpět (viz
  * replay_seek). Odmítnutí (žádný checkpoint, zápis na médium po
- * checkpointu, nic neběží) = EMU_ERROR s vysvětlením. Response: stav.
+ * checkpointu, nic neběží) = EMU_ERROR s vysvětlením. Response: stav,
+ * při dohrávání navíc `run_seq` (_replay_finish_seek()).
  */
 static en_MCP_DISPATCH_RESULT _handle_replay_rewind(const st_JSONL_MESSAGE *req,
                                                     char **out_response) {
@@ -19722,7 +19762,9 @@ static en_MCP_DISPATCH_RESULT _handle_replay_rewind(const st_JSONL_MESSAGE *req,
     if (frames < 0 || frames > G_MAXUINT32) {
         return _err_response(req_id, "frames must be >= 0", MCP_DISPATCH_INVALID_PARAMS, out_response);
     }
-    return _replay_finish_request(req_id, replay_request_rewind((uint32_t)frames), out_response);
+    uint64_t seq0 = run_log_current(NULL);
+    uint32_t rseq = replay_request_rewind((uint32_t)frames);
+    return _replay_finish_seek(req_id, seq0, rseq, out_response);
 }
 
 
@@ -19734,7 +19776,9 @@ static en_MCP_DISPATCH_RESULT _handle_replay_rewind(const st_JSONL_MESSAGE *req,
  * začátku; dopředu (nebo od checkpointu) dohraje v MAX SPEED a zastaví na
  * hranici cílového snímku s důvodem pauzy `replay_seek` (událost `paused`,
  * emu_wait_stop). Odpověď přijde hned po spuštění: `seeking` true =
- * dohrávání běží, false = emulace už stojí na cíli. Response: stav.
+ * dohrávání běží, false = emulace už stojí na cíli. Response: stav,
+ * při dohrávání navíc `run_seq` = číslo jeho běhu pro `wait_stop`
+ * (_replay_finish_seek()).
  */
 static en_MCP_DISPATCH_RESULT _handle_replay_seek(const st_JSONL_MESSAGE *req,
                                                   char **out_response) {
@@ -19747,7 +19791,9 @@ static en_MCP_DISPATCH_RESULT _handle_replay_seek(const st_JSONL_MESSAGE *req,
     if (frame < 0 || frame > G_MAXUINT32) {
         return _err_response(req_id, "frame must be >= 0", MCP_DISPATCH_INVALID_PARAMS, out_response);
     }
-    return _replay_finish_request(req_id, replay_request_seek((uint32_t)frame), out_response);
+    uint64_t seq0 = run_log_current(NULL);
+    uint32_t rseq = replay_request_seek((uint32_t)frame);
+    return _replay_finish_seek(req_id, seq0, rseq, out_response);
 }
 
 

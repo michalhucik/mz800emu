@@ -1544,7 +1544,7 @@ checkpoint aspoň o N snímků zpět. Při záznamu se stroj vrátí na
 checkpoint, vstupy a hashe po něm se zahodí, `rerecord_count` se zvýší
 o jedna a záznam pokračuje odtud; emulace zůstane stát na hranici snímku
 checkpointu. Při přehrávání jde o seek zpět na ten checkpoint (viz
-`emu_replay_seek`).
+`emu_replay_seek`; když dohrávání běží, odpověď nese jeho `run_seq`).
 
 Checkpointy nenesou obsah médií. Checkpoint, po kterém se zapsalo na
 disk (FDC, Quick Disk, IDE8) nebo na kazetu nebo se páska vysunula, použít
@@ -1566,7 +1566,10 @@ znovu od začátku s čistými kopiemi médií) a zbytek se dohraje v MAX
 SPEED. Hashe se ověřují celou dobu; breakpointy zůstávají aktivní a mohou
 seek zastavit dřív. Odpověď přijde hned po spuštění: `seeking: true` =
 dohrávání na `seek_target` běží, `false` = emulace už stojí na snímku.
-Chyba: `seek works only during playback`. Vrací stav.
+Když dohrávání běží, odpověď nese i `run_seq`; čekejte přes
+`emu_wait_stop(run_seq=...)`, bez něj může volání vrátit předchozí
+zastavení ještě před rozběhem seeku. Chyba: `seek works only during
+playback`. Vrací stav.
 
 ### `emu_replay_goto` (sensitive - nahradí stav emulátoru)
 

@@ -62,9 +62,12 @@ FRAMES = 200
 WAIT_MS = 20000
 
 
-def wait(emu, reason):
-    """Počká na zastavení s daným důvodem."""
-    w = emu.call("wait_stop", {"timeout_ms": WAIT_MS}, timeout=WAIT_MS / 1000 + 10)
+def wait(emu, reason, run_seq=None):
+    """Počká na zastavení s daným důvodem (s `run_seq` na konec toho běhu)."""
+    data = {"timeout_ms": WAIT_MS}
+    if run_seq is not None:
+        data["run_seq"] = run_seq
+    w = emu.call("wait_stop", data, timeout=WAIT_MS / 1000 + 10)
     rec = w.get("record") or {}
     check(w.get("done") is True and rec.get("reason") == reason,
           f"stopped with reason {reason} ({rec.get('reason')})")
@@ -130,8 +133,9 @@ def run(tmp):
         st = emu.call("replay_play", {"path": str(rec), "pause_after_load": True,
                                       "checkpoint_interval": CKPT})
         check(st.get("mode") == "playing", f"playback loaded ({st.get('frames')} frames)")
-        emu.call("replay_seek", {"frame": 100})
-        wait(emu, "replay_seek")
+        st = emu.call("replay_seek", {"frame": 100})
+        check("run_seq" in st, f"replay_seek returns run_seq ({st.get('run_seq')})")
+        wait(emu, "replay_seek", st["run_seq"])
         emu.call("trace_start", {"channel": "cputrack", "regs": True})
         emu.call("run", {"frames": 20})
         wait(emu, "frames")

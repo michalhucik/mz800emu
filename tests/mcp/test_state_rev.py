@@ -191,8 +191,12 @@ def run(emu, tmp):
     check(e.startswith("Precondition failed"), f"5: stale write refused while recording ({e})")
     emu.call("run", {"frames": 5})
     emu.call("replay_record_stop")
+    # Přehrání je další běh po pauze; wait_stop bez run_seq by před jeho
+    # rozběhem vrátil předchozí zastavení (N108).
+    play_run = emu.call("get_state")["run_seq"] + 1
     emu.call("replay_play", {"path": str(rec), "pause_after_load": False})
-    w = emu.call("wait_stop", {"timeout_ms": WAIT_MS}, timeout=WAIT_MS / 1000 + 10)
+    w = emu.call("wait_stop", {"run_seq": play_run, "timeout_ms": WAIT_MS},
+                 timeout=WAIT_MS / 1000 + 10)
     st = emu.call("replay_status")
     check(st.get("outcome") == "ended" and st.get("deviated") is False,
           f"5: playback ends without desync ({st.get('outcome')}, {st.get('outcome_message')!r})")

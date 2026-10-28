@@ -25,10 +25,17 @@ ověří i escapování). Ověřované scénáře:
      escapovaný literál,
  10. opakovaný běh beze změny nepřepíše výstupní soubor.
 
+Volba ``--scenarios 5,6`` spustí jen vybrané scénáře (čísla podle seznamu
+výše); bez ní běží všechny. CTest je registruje v několika skupinách, aby
+při paralelním ``make test`` běžely souběžně (scénáře na sobě nezávisí,
+každý proces má vlastní dočasný adresář).
+
 Bez interpretu bash nebo programu git test skončí kódem 77 (SKIP).
-Výstup anglicky. Exit code: 0 = PASS, 1 = FAIL, 77 = SKIP.
+Výstup anglicky. Exit code: 0 = PASS, 1 = FAIL, 2 = neplatná volba,
+77 = SKIP.
 """
 
+import argparse
 import os
 import re
 import shutil
@@ -168,8 +175,26 @@ def _origin(vals):
     return vals.get("build_revision_get_repo_origin_name")
 
 
-def main():
+def _parse_args(argv):
+    """Zpracuje volby; vrátí seznam čísel scénářů (vše bez --scenarios)."""
+    ap = argparse.ArgumentParser(description="Test of tools/generate_build_revision_git.sh")
+    ap.add_argument("--scenarios", default="",
+                    help="comma separated scenario numbers (default: all)")
+    args = ap.parse_args(argv)
+    if not args.scenarios:
+        return sorted(_SCENARIOS)
+    nums = []
+    for part in args.scenarios.split(","):
+        part = part.strip()
+        if not part.isdigit() or int(part) not in _SCENARIOS:
+            ap.error(f"unknown scenario '{part}' (valid: 1-{len(_SCENARIOS)})")
+        nums.append(int(part))
+    return nums
+
+
+def main(argv=None):
     """Vstupní bod testu."""
+    nums = _parse_args(sys.argv[1:] if argv is None else argv)
     if not _BASH or not _GIT:
         print("SKIP: bash or git not found")
         return 77
@@ -181,7 +206,8 @@ def main():
     _ENV["GIT_CEILING_DIRECTORIES"] = str(tmp_root.parent)
     _ENV["GIT_CONFIG_NOSYSTEM"] = "1"
     try:
-        _scenarios(tmp_root)
+        for n in nums:
+            _SCENARIOS[n](tmp_root)
     finally:
         shutil.rmtree(tmp_root, ignore_errors=True)
 
@@ -192,16 +218,17 @@ def main():
     return 0
 
 
-def _scenarios(tmp):
-    """Projde všechny scénáře (viz docstring modulu)."""
-    # 1) strom bez .git
+def _scenario_1(tmp):
+    """Scénář 1: strom bez .git."""
     print("[1] source tree without .git")
     rc, vals, _, _ = _run_gen(_make_tree(tmp / "nogit"))
     _expect_unknown("nogit", rc, vals)
     check(vals.get("build_revision_get_build_msystem") == os.environ.get("MSYSTEM", ""),
           "nogit: MSYSTEM recorded")
 
-    # 2) git není v PATH: PATH jen s adresářem, kde leží bash (coreutils).
+
+def _scenario_2(tmp):
+    """Scénář 2: git není v PATH (PATH jen s adresářem, kde leží bash)."""
     print("[2] git not in PATH")
     bash_dir = str(Path(_BASH).parent)
     if any((Path(bash_dir) / n).exists() for n in ("git", "git.exe")):
@@ -211,7 +238,9 @@ def _scenarios(tmp):
         rc, vals, _, _ = _run_gen(repo, path_override=bash_dir)
         _expect_unknown("no git binary", rc, vals)
 
-    # 3) git vždy selhává
+
+def _scenario_3(tmp):
+    """Scénář 3: git vždy selhává (falešný git)."""
     print("[3] git always fails")
     fake = tmp / "fakegit"
     fake.mkdir()
@@ -221,7 +250,9 @@ def _scenarios(tmp):
     rc, vals, _, _ = _run_gen(repo, path_override=str(fake) + os.pathsep + _ENV.get("PATH", ""))
     _expect_unknown("failing git", rc, vals)
 
-    # 4) repozitář bez remotů: větev, commit, dirty, detached
+
+def _scenario_4(tmp):
+    """Scénář 4: repozitář bez remotů (větev, commit, dirty, detached)."""
     print("[4] repository without remotes")
     repo = _make_repo(tmp / "noremote", commits=2)
     head = _git(repo, "rev-parse", "HEAD")
@@ -247,7 +278,9 @@ def _scenarios(tmp):
     check(vals.get("build_revision_is_detached") == 1, "detached: flag 1")
     check(vals.get("build_revision_get_commit") == _git(repo, "rev-parse", "HEAD"), "detached: commit hash")
 
-    # 5) přímé remoty
+
+def _scenario_5(tmp):
+    """Scénář 5: přímé remoty."""
     print("[5] direct remote URLs")
     cases = [
         ("ssh://michal@nas1/volume1/git-repositories/mz800new.git", "NAS1"),
@@ -266,7 +299,9 @@ def _scenarios(tmp):
         if expected == "NAS1":
             check(vals.get("build_revision_get_int") == -1, f"remote '{url}': revision stays -1")
 
-    # 6) řetěz lokálních klonů
+
+def _scenario_6(tmp):
+    """Scénář 6: řetěz lokálních klonů, cyklus, příliš dlouhý řetěz."""
     print("[6] local-path remote chains")
     base = _make_repo(tmp / "chain_a", remotes=[("origin", "ssh://michal@nas1/x.git")])
     mid = _make_repo(tmp / "chain_b", remotes=[("origin", base.as_posix())])
@@ -297,7 +332,9 @@ def _scenarios(tmp):
         expected = "NAS1" if d <= 4 else "unknown"
         check(_origin(vals) == expected, f"chain depth {d} -> {expected}")
 
-    # 7) GitHub upstream: revize 250 + počet commitů (beze změny)
+
+def _scenario_7(tmp):
+    """Scénář 7: GitHub upstream (revize 250 + počet commitů, beze změny)."""
     print("[7] GitHub upstream revision")
     gh_urls = [
         "https://github.com/michalhucik/mz800emu.git",
@@ -318,14 +355,18 @@ def _scenarios(tmp):
     check(_origin(vals) == "GitHub" and vals.get("build_revision_get_int") == 252,
           "upstream + nas1 remotes -> GitHub, revision 252")
 
-    # 8) strom uvnitř cizího repozitáře
+
+def _scenario_8(tmp):
+    """Scénář 8: strom uvnitř cizího repozitáře s nas1 remotem."""
     print("[8] source tree nested in a foreign repository")
     outer = _make_repo(tmp / "outer", remotes=[("origin", "ssh://michal@nas1/x.git")])
     nested = _make_tree(outer / "sub" / "unpacked")
     rc, vals, _, _ = _run_gen(nested)
     _expect_unknown("nested tree", rc, vals)
 
-    # 9) escapování jména větve
+
+def _scenario_9(tmp):
+    """Scénář 9: escapování jména větve a funkce c_escape."""
     print("[9] branch name escaping")
     repo = _make_repo(tmp / "escape", remotes=[("origin", "ssh://michal@nas1/x.git")])
     # Uvozovku Windows v názvu souboru (loose ref) nedovolí - ta se ověří
@@ -359,7 +400,9 @@ def _scenarios(tmp):
         decoded = None
     check(decoded == sample, "c_escape round-trips quote, backslash, ?, tab and UTF-8")
 
-    # 10) beze změny se výstup nepřepisuje
+
+def _scenario_10(tmp):
+    """Scénář 10: beze změny se výstup nepřepisuje."""
     print("[10] unchanged output is not rewritten")
     repo = _make_repo(tmp / "stable")
     rc, vals, _, out = _run_gen(repo)
@@ -369,6 +412,13 @@ def _scenarios(tmp):
     check(rc == 0 and out.stat().st_mtime_ns == mtime, "second run keeps the file untouched")
     check("Output unchanged." in log, "second run reports 'Output unchanged.'")
 
+
+#: Scénáře podle čísla (docstring modulu, volba --scenarios).
+_SCENARIOS = {
+    1: _scenario_1, 2: _scenario_2, 3: _scenario_3, 4: _scenario_4,
+    5: _scenario_5, 6: _scenario_6, 7: _scenario_7, 8: _scenario_8,
+    9: _scenario_9, 10: _scenario_10,
+}
 
 _ENV = dict(os.environ)
 
