@@ -8,13 +8,16 @@ mz700emu-pal.exe
 mz700emu-ntsc.exe
 
 # Build artefakty
-/dist/
+/dist*/
 /build/
 /doxygen/
 /src/build_revision/build_revision.c
 # Testovací dočasné soubory
 /tests/data/tmp/
 /tests/data/visual_refs/
+# Python bytecode (např. docs/tools/__pycache__ po spuštění testů exportu)
+__pycache__/
+*.pyc
 # Zkompilované lokalizační soubory (generované z .po)
 *.mo
 
@@ -45,8 +48,11 @@ mz700emu-ntsc.exe
 /mz1500*.watch
 
 # Virtuální tiskárna - capture soubory (per session)
-/printer-mz-*.bin
-/printer-centronics-*.bin
+/printer-*.bin
+/centronics-*.bin
+
+# MZ-1P16 harness - vykreslené PNG výstupy
+/tools/mz1p16-harness/out/
 
 # Testovací dočasné soubory
 /MZdata/
