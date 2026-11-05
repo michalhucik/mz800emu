@@ -1,3 +1,5 @@
+	- Display: CRT scanlines emulation (menu Display -> CRT Scanlines). Darkens the gap between raster lines in the main window like a CRT screen, with adjustable intensity 10-100 % (default 50 %). Display only - the emulator framebuffer, screenshots and video recordings stay unchanged. Off by default, stored in INI [DISPLAY] scanlines and scanlines_intensity.
+
 	- BUGFIX: Debugger - an execution (PC) breakpoint with an address range (RANGE) or mask (MASK) set through MCP emu_bp_create_with_init or emu_bp_update did not stop: with a range at most on the start address, with a mask not at all. The same happened after disabling and enabling such a breakpoint. It now stops on the whole range or mask right after it is set.
 
 	- BUGFIX: MCP - emu_run with a frame count answered late: after a breakpoint or a pause stopped it in the middle of a frame only after about 50 ms, and even without a stop emu_run(frames=1) took about 50 ms (70 ms in the GUI) instead of 20 ms. It now answers as soon as the emulator stops, and the stop is already in emu_get_stop_history.

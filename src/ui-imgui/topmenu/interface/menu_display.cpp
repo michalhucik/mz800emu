@@ -141,6 +141,34 @@ void imgui_menu_display(void)
 
         ImGui::Separator();
 
+        /* Scanlines CRT - jen vrstva zobrazení (scanlines_overlay.h). */
+        if (ImGui::BeginMenu(_L("CRT Scanlines")))
+        {
+            if (ImGui::MenuItem(_L("Enable Scanlines"), NULL, DISPLAY_TEST_SCANLINES))
+            {
+                display_set_scanlines(!DISPLAY_TEST_SCANLINES);
+            };
+            ImGui::SetItemTooltip(_("Darkens the gaps between raster lines like a CRT screen.\nDisplay only - screenshots and video recordings are not affected."));
+
+            bool is_disabled = (!DISPLAY_TEST_SCANLINES);
+            if (is_disabled)
+                ImGui::BeginDisabled();
+
+            int intensity = g_display.scanlines_intensity;
+            if (ImGui::SliderInt(_L("Intensity"), &intensity, DISPLAY_SCANLINES_INTENSITY_MIN, DISPLAY_SCANLINES_INTENSITY_MAX, "%d %%", ImGuiSliderFlags_AlwaysClamp))
+            {
+                display_set_scanlines_intensity(intensity);
+            };
+            ImGui::SetItemTooltip(_("How much the gap between raster lines is darkened (100 %% = black)."));
+
+            if (is_disabled)
+                ImGui::EndDisabled();
+
+            ImGui::EndMenu();
+        };
+
+        ImGui::Separator();
+
         if (ImGui::BeginMenu(_L("Frame Rate Control")))
         {
             char slave_label[64];

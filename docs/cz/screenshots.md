@@ -12,7 +12,9 @@ a NTSC, MZ-1500). Menu **Tools -> Screenshot**:
 | Settings... | | Oblast, měřítko a výstupní složka (viz níže). |
 | Open Output Folder | | Otevře výstupní složku ve správci souborů. |
 
-Screenshot je přesně ten obraz, který okno v tu chvíli zobrazuje.
+Screenshot je přesně ten obraz, který okno v tu chvíli zobrazuje, bez
+scanlines CRT (menu **Display -> CRT Scanlines**), které jen ztmavují obraz
+v okně.
 
 **Screenshot Control** je plovoucí okno, které může zůstat otevřené i při
 hraní: ukazuje oblast, měřítko, výstupní složku, poslední screenshot

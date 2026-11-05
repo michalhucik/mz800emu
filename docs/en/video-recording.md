@@ -54,7 +54,8 @@ Menu **Tools -> Video Recording**:
 While recording, an **REC** indicator with the recording time and the current
 time base is shown in the top right corner of the emulator picture, e.g.
 `REC 00:12:34 · real-time` or `REC 00:01:05 · emulated` (**PAUSE** while the
-recording is paused). The indicator is not written into the video. The emulator announces start, save,
+recording is paused). The indicator is not written into the video, nor are the CRT scanlines (menu
+**Display -> CRT Scanlines**). The emulator announces start, save,
 failure, retake and seam with a notification.
 
 If you start recording while emulation is paused (`Alt + P`), recording begins

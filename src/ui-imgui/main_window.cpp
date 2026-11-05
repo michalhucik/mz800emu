@@ -52,6 +52,7 @@
 #include "message/message_window.h"
 #include "ui-imgui/videorec/videorec_menu.h"
 #include "ui-imgui/screenshot/screenshot_ui.h"
+#include "ui-imgui/scanlines/scanlines_overlay.h"
 #include "ui-imgui/audiocap/audio_capture_ui.h"
 #include "iface/iface_audio.h"
 #include "device_request.h"
@@ -247,6 +248,8 @@ static void ShowFullScreenImageEmulatorWindow(GLuint texture)
     };
 
     ImGui::Image(texture, ImVec2(viewport->Size.x, viewport->Size.y));
+    /* Scanlines CRT přes obraz (jen zobrazení; indikátory níže i ostatní okna zůstávají nad nimi) */
+    imgui_scanlines_overlay();
     /* REC indikátor v pravém horním rohu obrazu (jen UI, do nahrávky se nedostane) */
     imgui_videorec_overlay();
     /* Indikátor série snímků v levém horním rohu obrazu (jen UI) */

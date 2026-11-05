@@ -53,7 +53,8 @@ Při nahrávání se v pravém horním rohu obrazu emulátoru zobrazuje indikát
 **REC** s časem nahrávky a aktuální časovou základnou, např.
 `REC 00:12:34 · real-time` nebo `REC 00:01:05 · emulated` (při pozastavení
 nahrávání **PAUSE**; v českém prostředí je režim přeložený). Indikátor se do
-videa nezapisuje. Zahájení, uložení, selhání, retake a šev ohlásí emulátor
+videa nezapisuje, stejně jako scanlines CRT (menu **Display -> CRT
+Scanlines**). Zahájení, uložení, selhání, retake a šev ohlásí emulátor
 oznámením.
 
 Pokud zahájíte nahrávání při pozastavené emulaci (`Alt + P`), nahrávání se

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mz800emu 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-27 20:36+0100\n"
+"POT-Creation-Date: 2026-11-05 10:30+0100\n"
 "PO-Revision-Date: 2026-03-11 21:00+0100\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -1150,8 +1150,8 @@ msgid "Label"
 msgstr "Etichetta"
 
 #: src/ui-imgui/debugger/bookmarks/bm_window.cpp:981
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1307
 #: src/ui-imgui/debugger/busmap/bus_window.cpp:1308
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1309
 #: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:1188
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:314
 msgid "Address"
@@ -2361,7 +2361,7 @@ msgid "refuse"
 msgstr "rifiuta"
 
 #: src/ui-imgui/debugger/busmap/bus_window.cpp:295
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1930
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1931
 msgid "connected"
 msgstr "collegato"
 
@@ -2430,34 +2430,34 @@ msgid "drive not documented"
 msgstr "driver non documentato"
 
 #: src/ui-imgui/debugger/busmap/bus_window.cpp:692
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1308
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1309
 msgid "no owner"
 msgstr "nessun proprietario"
 
 #: src/ui-imgui/debugger/busmap/bus_window.cpp:698
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1314
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1389
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1315
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1390
 msgid "device"
 msgstr "dispositivo"
 
 #: src/ui-imgui/debugger/busmap/bus_window.cpp:698
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1314
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1390
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1315
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1391
 msgid "board"
 msgstr "scheda"
 
 #: src/ui-imgui/debugger/busmap/bus_window.cpp:699
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1315
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1316
 msgid ", not connected"
 msgstr ", non collegato"
 
 #: src/ui-imgui/debugger/busmap/bus_window.cpp:699
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1315
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1316
 msgid ", not present"
 msgstr ", non presente"
 
 #: src/ui-imgui/debugger/busmap/bus_window.cpp:701
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1337
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1338
 #, c-format
 msgid "Driven bits: %02Xh"
 msgstr "Bit pilotati: %02Xh"
@@ -2505,23 +2505,23 @@ msgid "not verified"
 msgstr "non verificato"
 
 #: src/ui-imgui/debugger/busmap/bus_window.cpp:713
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1317
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1331
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1318
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1332
 #, c-format
 msgid "A read returns the undriven bus: %s %02Xh"
 msgstr "Una lettura restituisce il bus non pilotato: %s %02Xh"
 
 #: src/ui-imgui/debugger/busmap/bus_window.cpp:714
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1317
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1332
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1943
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1318
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1333
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1944
 msgid "constant"
 msgstr "costante"
 
 #: src/ui-imgui/debugger/busmap/bus_window.cpp:714
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1317
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1332
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1943
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1318
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1333
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1944
 msgid "bus latch"
 msgstr "latch del bus"
 
@@ -2530,7 +2530,7 @@ msgid "Marks:"
 msgstr "Segni:"
 
 #: src/ui-imgui/debugger/busmap/bus_window.cpp:719
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1375
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1376
 msgid "Activity tracking is off"
 msgstr "Il tracciamento dell'attività è disattivato"
 
@@ -2625,7 +2625,7 @@ msgid "Drive: %s"
 msgstr "Driver: %s"
 
 #: src/ui-imgui/debugger/busmap/bus_window.cpp:945
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1218
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1219
 msgid "State:"
 msgstr "Stato:"
 
@@ -2654,140 +2654,140 @@ msgstr "Invio o il pulsante collega il dispositivo"
 msgid "Board chips are attached in the HW & Devices menu"
 msgstr "I chip della scheda si collegano dal menu HW & Devices"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1014
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1119
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1812
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1015
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1120
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1813
 msgid "Drive"
 msgstr "Driver"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1020
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1021
 #: src/ui-imgui/mz700/devices/kp80/kp80_window.cpp:194
 msgid "Connect"
 msgstr "Collega"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1020
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1021
 msgid "Disconnect"
 msgstr "Scollega"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1053
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1054
 msgid "State of the owner:"
 msgstr "Stato del proprietario:"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1055
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1056
 msgid "filled circle = present or connected"
 msgstr "cerchio pieno = presente o collegato"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1056
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1057
 msgid "empty circle = not present"
 msgstr "cerchio vuoto = assente"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1057
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1058
 msgid "crossed circle = not connected"
 msgstr "cerchio barrato = non collegato"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1104
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1105
 msgid "Addresses"
 msgstr "Indirizzi"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1104
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1105
 msgid "Ports"
 msgstr "Porte"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1117
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1118
 msgid "Owner"
 msgstr "Proprietario"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1233
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1234
 msgid "Disconnect##bus_row_act"
 msgstr "Scollega##bus_row_act"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1233
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1234
 msgid "Connect##bus_row_act"
 msgstr "Collega##bus_row_act"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1295
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1296
 msgid "Hide the detail of the address"
 msgstr "Nascondi il dettaglio dell'indirizzo"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1295
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1296
 msgid "Show the detail of the address"
 msgstr "Mostra il dettaglio dell'indirizzo"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1307
 #: src/ui-imgui/debugger/busmap/bus_window.cpp:1308
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1309
 msgid "Port"
 msgstr "Porta"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1340
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1341
 msgid "Also:"
 msgstr "Inoltre:"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1353
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1357
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1354
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1358
 msgid "IN/s"
 msgstr "IN/s"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1353
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1357
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1354
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1358
 msgid "OUT/s"
 msgstr "OUT/s"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1353
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1358
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1354
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1359
 msgid "ghost"
 msgstr "fantasma"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1353
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1358
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1354
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1359
 msgid "conflicts"
 msgstr "conflitti"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1354
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1364
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1355
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1365
 msgid "writes/s"
 msgstr "scritt./s"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1362
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1363
 msgid "Last IN"
 msgstr "Ultimo IN"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1362
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1363
 msgid "Last OUT"
 msgstr "Ultimo OUT"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1365
 #: src/ui-imgui/debugger/busmap/bus_window.cpp:1366
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1367
 msgid "Last write"
 msgstr "Ultima scrittura"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1372
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1373
 msgid "Last value and its age in frames; rates are per second of emulated time"
 msgstr ""
 "Ultimo valore e sua età in fotogrammi; frequenze per secondo di tempo emulato"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1390
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1391
 msgid "undriven bus"
 msgstr "bus non pilotato"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1391
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1392
 #, c-format
 msgid "Peek: %02Xh, %s"
 msgstr "Peek: %02Xh, %s"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1392
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1393
 #, c-format
 msgid "Peek: %02Xh, driven bits %02Xh, %s"
 msgstr "Peek: %02Xh, bit pilotati %02Xh, %s"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1394
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1395
 msgid "Peek: -"
 msgstr "Peek: -"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1398
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1399
 msgid "(automatic while paused)"
 msgstr "(automatico in pausa)"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1403
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1404
 msgid ""
 "The value the CPU would read now, without side effects (device peek "
 "handlers, board register mirrors, undriven bus model)"
@@ -2796,16 +2796,16 @@ msgstr ""
 "dei dispositivi, specchi dei registri della scheda, modello di bus non "
 "pilotato)"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1406
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1407
 msgid "Peek now##bus_det_peek"
 msgstr "Peek adesso##bus_det_peek"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1411
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1412
 #: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1614
 msgid "Flags:"
 msgstr "Flag:"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1418
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1419
 msgid ""
 "Two drivers on the same bits: the result on real hardware is not modelled; "
 "the conflict policy decides the emulated value."
@@ -2813,72 +2813,72 @@ msgstr ""
 "Due driver sugli stessi bit: il risultato sull'hardware reale non è "
 "modellato; la politica di conflitto decide il valore emulato."
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1426
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1504
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1427
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1505
 msgid "Show in I/O Ports"
 msgstr "Mostra in I/O Ports"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1426
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1504
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1427
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1505
 msgid "Reset activity"
 msgstr "Azzera attività"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1426
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1504
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1427
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1505
 msgid "Break on IN"
 msgstr "Interrompi su IN"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1426
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1504
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1427
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1505
 msgid "Break on OUT"
 msgstr "Interrompi su OUT"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1429
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1430
 msgid "Show in I/O Ports##bus_det_io"
 msgstr "Mostra in I/O Ports##bus_det_io"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1431
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1432
 msgid "Reset activity##bus_det_rst"
 msgstr "Azzera attività##bus_det_rst"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1433
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1434
 msgid "Break on IN##bus_det_bpr"
 msgstr "Interrompi su IN##bus_det_bpr"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1434
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1438
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1435
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1439
 msgid "IORQ breakpoints apply to ports only"
 msgstr "I breakpoint IORQ valgono solo per le porte"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1436
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1437
 msgid "Break on OUT##bus_det_bpw"
 msgstr "Interrompi su OUT##bus_det_bpw"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1792
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1793
 msgid "Bus Map###bus_map"
 msgstr "Mappa del bus###bus_map"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1802
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1803
 msgid "Ports##bus_tab_ports"
 msgstr "Porte##bus_tab_ports"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1804
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1805
 msgid "MMIO##bus_tab_mmio"
 msgstr "MMIO##bus_tab_mmio"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1807
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1808
 msgid "Color by"
 msgstr "Colora per"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1812
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1813
 msgid "Owners"
 msgstr "Proprietari"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1812
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1813
 msgid "Activity"
 msgstr "Attività"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1824
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1825
 msgid ""
 "Owners: blue = board chip, green = expansion device; dark and hatched = not "
 "present or not connected; grey = no owner."
@@ -2886,7 +2886,7 @@ msgstr ""
 "Owners: blu = chip della scheda, verde = dispositivo di espansione; scuro "
 "tratteggiato = assente o non collegato; grigio = nessun proprietario."
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1825
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1826
 msgid ""
 "Drive: how the owner drives the data bus when read: tri-state, partial (some "
 "bits), open collector, none (write only), not documented (no schematic in "
@@ -2896,7 +2896,7 @@ msgstr ""
 "partial (alcuni bit), open collector, none (sola scrittura), not documented "
 "(nessuno schema nella base di conoscenza)."
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1826
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1827
 msgid ""
 "Activity: grey = no access, green = active, red = hot; the thresholds are "
 "shared with the I/O Ports window:"
@@ -2904,19 +2904,19 @@ msgstr ""
 "Activity: grigio = nessun accesso, verde = attivo, rosso = caldo; le soglie "
 "sono condivise con la finestra I/O Ports:"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1828
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1829
 msgid "active above"
 msgstr "attivo sopra"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1828
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1829
 msgid "hot above"
 msgstr "caldo sopra"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1832
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1833
 msgid "Track activity##bus_track"
 msgstr "Traccia attività##bus_track"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1836
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1837
 msgid ""
 "Shared with the I/O Ports window: counts IN / OUT per port, ghost and "
 "conflict accesses (logging CPU callbacks)."
@@ -2924,46 +2924,46 @@ msgstr ""
 "Condiviso con la finestra I/O Ports: conta IN / OUT per porta, accessi ghost "
 "e in conflitto (callback CPU di registrazione)."
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1930
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1931
 msgid "devices"
 msgstr "dispositivi"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1932
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1933
 msgid "undriven: const"
 msgstr "non pilotato: cost."
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1933
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1934
 msgid "policy:"
 msgstr "politica:"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1942
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1943
 msgid "Activity tracking:"
 msgstr "Tracciamento attività:"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1942
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1943
 msgid "on"
 msgstr "attivo"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1942
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1943
 #: src/ui-imgui/debugger/dasm_window/dasm_window.cpp:556
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:625
 #: src/ui-imgui/topmenu/replay_window.cpp:252
 msgid "off"
 msgstr "off"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1943
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1944
 msgid "Undriven bits:"
 msgstr "Bit non pilotati:"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1943
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1944
 msgid "now"
 msgstr "ora"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1944
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1945
 msgid "Conflict policy:"
 msgstr "Politica di conflitto:"
 
-#: src/ui-imgui/debugger/busmap/bus_window.cpp:1945
+#: src/ui-imgui/debugger/busmap/bus_window.cpp:1946
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:2156
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:2682
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:2845
@@ -11726,7 +11726,7 @@ msgstr "Riscansiona dispositivi"
 msgid "Joystick"
 msgstr "Joystick"
 
-#: src/ui-imgui/main_window.cpp:118
+#: src/ui-imgui/main_window.cpp:119
 msgid "No audio device - running without sound"
 msgstr "Nessun dispositivo audio - esecuzione senza audio"
 
@@ -13916,16 +13916,41 @@ msgstr "Fissa rapporto d'aspetto per altezza"
 msgid "Lock Window Aspect Ratio"
 msgstr "Blocca rapporto d'aspetto finestra"
 
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:144
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:145
+msgid "CRT Scanlines"
+msgstr "Scanline CRT"
+
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:147
+msgid "Enable Scanlines"
+msgstr "Attiva scanline"
+
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:151
+msgid ""
+"Darkens the gaps between raster lines like a CRT screen.\n"
+"Display only - screenshots and video recordings are not affected."
+msgstr ""
+"Scurisce gli spazi tra le linee di scansione come su uno schermo CRT.\n"
+"Solo visualizzazione - screenshot e registrazioni video non cambiano."
+
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:158
+msgid "Intensity"
+msgstr "Intensità"
+
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:162
+#, c-format
+msgid "How much the gap between raster lines is darkened (100 %% = black)."
+msgstr "Quanto viene scurito lo spazio tra le linee di scansione (100 %% = nero)."
+
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:172
 msgid "Frame Rate Control"
 msgstr "Controllo frequenza fotogrammi"
 
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:147
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:175
 #, c-format
 msgid "Slave (%dHz)"
 msgstr "Slave (%dHz)"
 
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:152
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:180
 msgid ""
 "The interface will attempt to refresh the image at the frequency set by the "
 "emulator."
@@ -13933,19 +13958,19 @@ msgstr ""
 "L'interfaccia tenterà di aggiornare l'immagine alla frequenza impostata "
 "dall'emulatore."
 
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:154
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:182
 msgid "Swap With V-Sync"
 msgstr "Scambio con V-Sync"
 
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:158
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:186
 msgid "Synchronized swap interval with the vertical retrace."
 msgstr "Intervallo di scambio sincronizzato con il ritracciamento verticale."
 
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:160
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:188
 msgid "Swap With V-Sync (Adaptive)"
 msgstr "Scambio con V-Sync (adattivo)"
 
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:164
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:192
 msgid ""
 "Adaptive vsync works the same as Vsync, but if is already missed the "
 "vertical retrace for a given frame,\n"
@@ -13959,21 +13984,21 @@ msgstr ""
 "durante cali occasionali di FPS.\n"
 "Questa funzione deve essere supportata dal sistema."
 
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:166
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:194
 msgid "Immediate Swap"
 msgstr "Scambio immediato"
 
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:170
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:198
 msgid "Immediate swap interval using a maximum available refresh rate."
 msgstr ""
 "Intervallo di scambio immediato usando la massima frequenza di aggiornamento "
 "disponibile."
 
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:172
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:200
 msgid "Custom FPS"
 msgstr "FPS personalizzato"
 
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:176
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:204
 msgid ""
 "The interface will attempt to refresh the image at the frequency set by the "
 "user."
@@ -13981,11 +14006,11 @@ msgstr ""
 "L'interfaccia tenterà di aggiornare l'immagine alla frequenza impostata "
 "dall'utente."
 
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:203
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:231
 msgid "Forced Redraw Every Screen"
 msgstr "Ridisegno forzato ad ogni schermata"
 
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:207
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:235
 msgid ""
 "A frame redraw will be forced regardless of whether the framebuffer has "
 "changed.\n"
@@ -13997,7 +14022,7 @@ msgstr ""
 "Questa modalità caricherà un po' di più la GPU e ridurrà gli FPS "
 "dell'interfaccia."
 
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:211
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:239
 msgid "FPS Measurement..."
 msgstr "Misurazione FPS..."
 

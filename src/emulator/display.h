@@ -62,6 +62,16 @@ typedef enum en_DISPLAY_FRAMERATE_MODE
 } en_DISPLAY_FRAMERATE_MODE;
 
 
+/**
+ * @brief Nastavení zobrazení obrazu emulátoru v hlavním okně (sekce INI [DISPLAY]).
+ *
+ * Hodnoty plní cfgmain v display_init() a mění je setter funkce display_set_*()
+ * z menu Display (UI vlákno). Čte je hlavně UI vlákno při vykreslování.
+ *
+ * @invariant scanlines_intensity je v rozsahu DISPLAY_SCANLINES_INTENSITY_MIN až
+ *            DISPLAY_SCANLINES_INTENSITY_MAX (zajišťuje display_init() a
+ *            display_set_scanlines_intensity()).
+ */
 typedef struct st_DISPLAY
 {
     en_DISPLAY_COLOR_SCHEMA color_schema;
@@ -72,6 +82,8 @@ typedef struct st_DISPLAY
     en_DISPLAY_FRAMERATE_MODE framerate_mode;
     int custom_fps;
     en_DISPLAY_STARTUP_SIZE startup_window_size;
+    int scanlines;           /**< Emulace scanlines CRT zapnuta (0/1, klíč INI `scanlines`). */
+    int scanlines_intensity; /**< Ztmavení mezery mezi rastrovými řádky v procentech (klíč INI `scanlines_intensity`). */
 } st_DISPLAY;
 
 extern st_DISPLAY g_display;
@@ -86,6 +98,13 @@ extern st_DISPLAY g_display;
 #define DISPLAY_CUSTOM_FPS_MIN 50
 #define DISPLAY_CUSTOM_FPS_MAX 1000
 #define DISPLAY_CUSTOM_FPS_DEFAULT 100
+
+/** @brief Nejmenší povolená intenzita scanlines v procentech (slabší efekt už není vidět). */
+#define DISPLAY_SCANLINES_INTENSITY_MIN 10
+/** @brief Největší intenzita scanlines v procentech (100 = mezera mezi řádky úplně černá). */
+#define DISPLAY_SCANLINES_INTENSITY_MAX 100
+/** @brief Výchozí intenzita scanlines v procentech (zvoleno od oka, neodvozeno z měření CRT). */
+#define DISPLAY_SCANLINES_INTENSITY_DEFAULT 50
 
 #define DISPLAY_DEFAULT_COLOR_SCHEMA DISPLAY_NORMAL
 #define DISPLAY_DEFAULT_STARTUP_SIZE DISPLAY_STARTUP_SIZE_NORMAL
@@ -108,6 +127,8 @@ extern st_DISPLAY g_display;
 
 #define DISPLAY_TEST_LOCKED_ASPECT_RATIO (g_display.locked_window_aspect_ratio)
 #define DISPLAY_TEST_FORCED_FULL_SCREEN_REDRAWING (g_display.forced_full_screen_redrawing)
+/** @brief Nenulové, pokud je zapnutá emulace scanlines CRT. */
+#define DISPLAY_TEST_SCANLINES (g_display.scanlines)
 
 #define DISPLAY_TEST_FRAMERATE_MODE_ADAPTIVE (g_display.framerate_mode == DISPLAY_FRAMERATE_MODE_ADAPTIVE)
 #define DISPLAY_TEST_FRAMERATE_MODE_IMMEDIATE (g_display.framerate_mode == DISPLAY_FRAMERATE_MODE_IMMEDIATE)
@@ -133,6 +154,33 @@ extern "C"
     void display_set_forced_redrawing(int value);
     void display_set_locked_aspect_ratio(int value);
     void display_set_framerate_mode(en_DISPLAY_FRAMERATE_MODE mode);
+
+    /**
+     * @brief Zapne nebo vypne emulaci scanlines CRT v hlavním okně.
+     *
+     * Efekt je jen vrstva nad obrazem v hlavním okně; framebuffer emulátoru,
+     * snímky obrazovky ani nahrávání videa se nemění. Hodnota se uloží do INI
+     * spolu s ostatním nastavením [DISPLAY].
+     *
+     * @param value Nenulové = zapnout, 0 = vypnout.
+     * @pre display_init() už proběhl.
+     * @post g_display.scanlines je 0 nebo 1; aktuální nastavení vypsáno na stdout.
+     * @par Vlákna Volá UI vlákno (menu Display).
+     */
+    void display_set_scanlines(int value);
+
+    /**
+     * @brief Nastaví intenzitu scanlines CRT (ztmavení mezery mezi rastrovými řádky).
+     *
+     * @param percent Intenzita v procentech; hodnota mimo rozsah
+     *                DISPLAY_SCANLINES_INTENSITY_MIN až DISPLAY_SCANLINES_INTENSITY_MAX
+     *                se ořízne na nejbližší mez.
+     * @pre display_init() už proběhl.
+     * @post g_display.scanlines_intensity je v povoleném rozsahu. Na stdout nic
+     *       nevypisuje (volá se při každém posunu posuvníku).
+     * @par Vlákna Volá UI vlákno (menu Display).
+     */
+    void display_set_scanlines_intensity(int percent);
 
 #ifdef __cplusplus
 }

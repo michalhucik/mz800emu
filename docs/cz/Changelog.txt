@@ -1,3 +1,5 @@
+	- Display: emulace scanlines obrazovky CRT (menu Display -> CRT Scanlines). Ztmaví mezeru mezi rastrovými řádky v hlavním okně jako na obrazovce CRT, s nastavitelnou intenzitou 10-100 % (výchozí 50 %). Jen zobrazení - framebuffer emulátoru, snímky obrazovky ani nahrávání videa se nemění. Výchozí stav vypnuto, ukládá se do INI [DISPLAY] scanlines a scanlines_intensity.
+
 	- BUGFIX: Debugger - breakpoint na provedení instrukce (PC) s rozsahem adres (RANGE) nebo maskou (MASK) nastaveným přes MCP emu_bp_create_with_init nebo emu_bp_update nezastavil: s rozsahem nejvýš na počáteční adrese, s maskou vůbec. Totéž platilo po vypnutí a zapnutí takového breakpointu. Teď zastaví na celém rozsahu i masce hned po nastavení.
 
 	- BUGFIX: MCP - emu_run s počtem snímků odpovídal se zpožděním: po zastavení breakpointem nebo pauzou uprostřed snímku až asi po 50 ms a i bez zastavení trval emu_run(frames=1) asi 50 ms (v GUI 70 ms) místo 20 ms. Teď odpoví hned po zastavení emulátoru a zastavení už je v emu_get_stop_history.

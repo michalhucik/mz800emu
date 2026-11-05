@@ -87,6 +87,14 @@ static void display_print_current_settings(void)
     g_print("         Locked Aspect Ratio: %s\n", g_display.locked_window_aspect_ratio ? "Yes" : "No");
     g_print("         Color Schema:        %s\n", display_color_schema_name[g_display.color_schema]);
     g_print("         Forced Redrawing:    %s\n", g_display.forced_full_screen_redrawing ? "Yes" : "No");
+    if (g_display.scanlines)
+    {
+        g_print("         CRT Scanlines:       Yes (%d %%)\n", g_display.scanlines_intensity);
+    }
+    else
+    {
+        g_print("         CRT Scanlines:       No\n");
+    };
     g_print("         Framerate mode:      %s", display_predef_framerate_mode_name[g_display.framerate_mode]);
     if (g_display.framerate_mode == DISPLAY_FRAMERATE_MODE_CUSTOM)
     {
@@ -161,8 +169,19 @@ void display_init(void)
     elm = cfgmodule_register_new_element(cmod, "windows_forced_reset_hdr_on_return_from_fullscreen", CFGENTYPE_BOOL, 0);
     cfgelement_set_handlers(elm, (void *)&g_display.windows_forced_reset_hdr_on_return_from_fullscreen, (void *)&g_display.windows_forced_reset_hdr_on_return_from_fullscreen);
 
+    elm = cfgmodule_register_new_element(cmod, "scanlines", CFGENTYPE_BOOL, 0);
+    cfgelement_set_handlers(elm, (void *)&g_display.scanlines, (void *)&g_display.scanlines);
+
+    elm = cfgmodule_register_new_element(cmod, "scanlines_intensity", CFGENTYPE_UNSIGNED, DISPLAY_SCANLINES_INTENSITY_DEFAULT,
+                                         DISPLAY_SCANLINES_INTENSITY_MIN, DISPLAY_SCANLINES_INTENSITY_MAX);
+    cfgelement_set_handlers(elm, (void *)&g_display.scanlines_intensity, (void *)&g_display.scanlines_intensity);
+
     cfgmodule_parse(cmod);
     cfgmodule_propagate(cmod);
+
+    /* Hodnotu mimo min/max knihovna cfgfile nepřijme a ponechá výchozí
+     * (ověřeno: scanlines_intensity = 0xC8 -> 50 %); ořez je jen pojistka. */
+    display_set_scanlines_intensity(g_display.scanlines_intensity);
 
     if (g_iface_video_callbacks->set_colors)
     {
@@ -338,4 +357,22 @@ void display_set_framerate_mode(en_DISPLAY_FRAMERATE_MODE mode)
     {
         g_print("Display custom FPS: %d Hz\n", g_display.custom_fps);
     };
+}
+void display_set_scanlines(int value)
+{
+    g_display.scanlines = (value) ? 1 : 0;
+    display_print_current_settings();
+}
+
+void display_set_scanlines_intensity(int percent)
+{
+    if (percent < DISPLAY_SCANLINES_INTENSITY_MIN)
+    {
+        percent = DISPLAY_SCANLINES_INTENSITY_MIN;
+    }
+    else if (percent > DISPLAY_SCANLINES_INTENSITY_MAX)
+    {
+        percent = DISPLAY_SCANLINES_INTENSITY_MAX;
+    };
+    g_display.scanlines_intensity = percent;
 }

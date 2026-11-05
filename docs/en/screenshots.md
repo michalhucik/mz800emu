@@ -12,7 +12,9 @@ and NTSC, MZ-1500). Menu **Tools -> Screenshot**:
 | Settings... | | Area, scale and output folder (see below). |
 | Open Output Folder | | Opens the output folder in the file manager. |
 
-The screenshot is exactly the picture the window shows at that moment.
+The screenshot is exactly the picture the window shows at that moment, without
+the CRT scanlines (menu **Display -> CRT Scanlines**), which only darken the
+picture in the window.
 
 **Screenshot Control** is a floating window that can stay open while you
 play: it shows the area, the scale, the output folder, the last
