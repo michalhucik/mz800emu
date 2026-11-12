@@ -100,11 +100,53 @@ extern "C"
      * @param addr
      * @param value
      */
+    /**
+     * Hodnota zapisu do MZ-700 VRAM podle registru WF: GDG ji zpracuje jako rovinu I.
+     *
+     * SM800 (tabulka WF): v rezimu MZ-700 ma byt WF = 01h (SINGLE, rovina I) - "Writes WD into the DATA, ATB,
+     * and CG area". Skutecne MZ-800 s WF ponechanym v rezimu XOR (posledni kresleni programu v rezimu MZ-800)
+     * nove znaky do stareho obsahu prixoruje a smazani nulou nic nezmeni (foto autora UC-UniMgr, 2026-11-12).
+     * SINGLE, XOR, OR, RESET zapisuji jen s vybranou rovinou I; REPLACE a PSET s nevybranou rovinou I zapisuji
+     * 0 (REPLACE), resp. VRAM AND NOT data (PSET), jako nevybrane roviny v rezimu MZ-800.
+     *
+     * @param old   Puvodni bajt VRAM.
+     * @param value Bajt od CPU.
+     * @param out   Vystup: bajt k zapisu.
+     * @return 1 = zapsat, 0 = beze zmeny.
+     */
+    static inline int vramctrl_mz700_wf_value(uint8_t old, uint8_t value, uint8_t *out)
+    {
+        int p1 = (g_vramctrl.regWF_PLANE & 0x01) ? 1 : 0;
+        switch (g_vramctrl.regWF_MODE) {
+            case GDG_WF_MODE_SINGLE:
+                *out = value;
+                return p1;
+            case GDG_WF_MODE_EXOR:
+                *out = (uint8_t) (old ^ value);
+                return p1;
+            case GDG_WF_MODE_OR:
+                *out = (uint8_t) (old | value);
+                return p1;
+            case GDG_WF_MODE_RESET:
+                *out = (uint8_t) (old & ~value);
+                return p1;
+            case GDG_WF_MODE_REPLACE:
+                *out = p1 ? value : 0x00;
+                return 1;
+            default: /* PSET */
+                *out = p1 ? (uint8_t) (old | value) : (uint8_t) (old & ~value);
+                return 1;
+        }
+    }
+
 #define vramctrl_mz700_memop_write_byte_internal(addr, value)                                                     \
     {                                                                                                             \
         /* TODO: meli by jsme nastavovat jen pokud se zapisuje do CG-RAM, nebo do VRAM, ktera je opravdu videt */ \
-        g_framebuffer.screen_changes = SCRSTS_THIS_IS_CHANGED;                                                    \
-        g_memory.VRAM[addr] = value;                                                                              \
+        uint8_t wf_out_;                                                                                          \
+        if (vramctrl_mz700_wf_value(g_memory.VRAM[addr], (value), &wf_out_)) {                                    \
+            g_framebuffer.screen_changes = SCRSTS_THIS_IS_CHANGED;                                                \
+            g_memory.VRAM[addr] = wf_out_;                                                                        \
+        }                                                                                                         \
         VRAMCTRL_DBG_NOTIFY_VRAM_TOUCH();                                                                         \
     }
 
