@@ -110,10 +110,17 @@ void do_write_track_setup(st_WD279X *chip, uint8_t command)
  *  7. Update tsize byte v DSK hlavičce na offset 0x34+track*2+side
  *  8. Update track count na offset 0x30 (= max(track) + 1 nebo + side)
  *
+ * Velikost sektoru se bere z kódu N v ID poli (128 << N, N = 0..3), stejně
+ * jako ji při čtení dekóduje libs/dsk. Každý sektor dostane v Sector Info
+ * i skutečnou délku dat, kterou formát Extended CPC DSK vyžaduje.
+ *
  * @param chip ukazatel na chip.
  * @param drv mechanika (musí být ready a not readonly).
  *
- * @return 1 = OK, 0 = chyba (write fail).
+ * @return 1 = OK, 0 = chyba: stopu nelze do DSK uložit (žádný sektor, víc
+ *         než DSK_MAX_SECTORS sektorů, kód N mimo 0..3, stopa delší než
+ *         255 bloků po 256 B) nebo selhal zápis do obrazu. Při chybě
+ *         zápisu může být obraz změněný jen zčásti.
  */
 static int write_track_flush(st_WD279X *chip, struct st_FDDrive *drv)
 {
@@ -121,8 +128,8 @@ static int write_track_flush(st_WD279X *chip, struct st_FDDrive *drv)
      *   buffer[0] = TRACK (z chip->regTRACK při ID marker)
      *   buffer[1] = SIDE
      *   buffer[2] = (rezerva)
-     *   buffer[3] = (rezerva po flush: sector_size code z původní pozice [4])
-     *   buffer[4] = SECTOR_SIZE (256B blocks per sector)
+     *   buffer[3] = (rezerva)
+     *   buffer[4] = kód velikosti sektoru N z ID pole (0=128, 1=256, 2=512, 3=1024 B)
      *   buffer[5] = sectors count
      *   buffer[6] = GAP3 length = 0x4E (default)
      *   buffer[7] = filler = 0xE5 (default)
@@ -132,24 +139,29 @@ static int write_track_flush(st_WD279X *chip, struct st_FDDrive *drv)
     uint8_t side = chip->buffer[1] & 0x01;
     uint8_t track = chip->buffer[0];
     uint8_t sectors = chip->buffer[5];
-    uint8_t ssize_blocks = chip->buffer[4]; /* sector size v 256B blocks */
+    uint8_t ssize_code = chip->buffer[4]; /* kód N z ID pole */
     uint8_t fill_byte = chip->buffer[WD279X_BUFFER_SIZE - 1];
 
-    if (sectors == 0 || ssize_blocks == 0)
+    if (sectors == 0 || sectors > DSK_MAX_SECTORS || ssize_code > DSK_SECTOR_SIZE_1024)
     {
 #ifdef FDC_DIAG
-        fprintf(stderr, "fdc: WRITE TRACK flush ABORT - sectors=%u ssize=%u "
+        fprintf(stderr, "fdc: WRITE TRACK flush ABORT - sectors=%u ssize_code=%u "
                         "(track=%u side=%u)\n",
-                sectors, ssize_blocks, track, side);
+                sectors, ssize_code, track, side);
 #endif
-        /* Bez sektorů nebo s nulovou velikostí - nemá smysl flushovat. */
+        /* Bez sektorů, s více sektory, než pojme hlavička stopy DSK,
+         * nebo s kódem velikosti mimo 0..3 - stopu nelze do DSK uložit. */
         return 0;
     }
 
+    /* Velikost sektoru v bajtech podle kódu N (128 << N), stejně jako ji
+     * při čtení dekóduje libs/dsk. */
+    uint16_t sec_bytes = dsk_decode_sector_size((en_DSK_SECTOR_SIZE)ssize_code);
+
 #ifdef FDC_DIAG
     fprintf(stderr, "fdc: WRITE TRACK flush START - track=%u side=%u "
-                    "sectors=%u ssize_blocks=%u fill=0x%02X\n",
-            track, side, sectors, ssize_blocks, fill_byte);
+                    "sectors=%u ssize_code=%u fill=0x%02X\n",
+            track, side, sectors, ssize_code, fill_byte);
 #endif
 
     /* Image info kvůli tsize array. Reload z disku - tsize se může změnit
@@ -196,8 +208,11 @@ static int write_track_flush(st_WD279X *chip, struct st_FDDrive *drv)
         }
     }
 
-    /* Velikost nové stopy v 256B blocích = 1 (Track-Info block) + sectors × ssize_blocks. */
-    uint16_t new_tsize_blocks = (uint16_t)(1 + sectors * ssize_blocks);
+    /* Velikost nové stopy v 256B blocích = 1 (Track-Info block) + data
+     * sektorů zaokrouhlená nahoru na celý blok (lichý počet sektorů 128 B).
+     * Odpovídá dsk_encode_track_size(), ale bez ořezu na 8 bitů. */
+    uint32_t sectors_bytes = (uint32_t)sectors * sec_bytes;
+    uint32_t new_tsize_blocks = 1 + (sectors_bytes + 0xFF) / 0x100;
     if (new_tsize_blocks > 0xFF)
     {
         /* Nevejde se do 8-bit tsize - selhání. */
@@ -215,7 +230,7 @@ static int write_track_flush(st_WD279X *chip, struct st_FDDrive *drv)
      * každém kroku konverguje k velikosti odpovídající nejnovějšímu
      * formátovanému tracku. Po dokončení formátu = velikost odpovídá
      * skutečné formátované geometrii. */
-    uint32_t need_size = track_offset + (uint32_t)new_tsize_blocks * 0x100;
+    uint32_t need_size = track_offset + new_tsize_blocks * 0x100;
     {
         /* Pro memory handler můžeme check vynechat pokud size sedí.
          * Pro file handler vždy zavolej truncate - file_driver_truncate
@@ -247,9 +262,8 @@ static int write_track_flush(st_WD279X *chip, struct st_FDDrive *drv)
      *   [0] track number
      *   [1] side
      *   [2..3] unused / data rate / recording mode
-     *   [4] sector size (WD279x code: 0=128, 1=256, 2=512, 3=1024)
-     *       Sharp DSK ukládá BLOCK count (= bytes/0x100), takže pro 256B = 1,
-     *       512B = 2. Tj. ssize_blocks přímo, ne datasheet kód.
+     *   [4] kód velikosti sektoru N (0=128, 1=256, 2=512, 3=1024 B),
+     *       tedy bajt z ID pole beze změny
      *   [5] number of sectors
      *   [6] GAP#3 length
      *   [7] filler byte
@@ -259,7 +273,7 @@ static int write_track_flush(st_WD279X *chip, struct st_FDDrive *drv)
     tinfo_header[1] = side;
     tinfo_header[2] = 0x00;
     tinfo_header[3] = 0x00;
-    tinfo_header[4] = ssize_blocks;
+    tinfo_header[4] = ssize_code;
     tinfo_header[5] = sectors;
     tinfo_header[6] = chip->buffer[6]; /* GAP3 = 0x4E */
     tinfo_header[7] = chip->buffer[7]; /* filler = 0xE5 */
@@ -273,10 +287,11 @@ static int write_track_flush(st_WD279X *chip, struct st_FDDrive *drv)
      *     [0] track
      *     [1] side
      *     [2] sector ID (z chip->buffer[8 + i])
-     *     [3] sector size code (= ssize_blocks)
+     *     [3] kód velikosti sektoru N
      *     [4] FDC status reg 1 = 0
      *     [5] FDC status reg 2 = 0
-     *     [6..7] reálná velikost sektoru v bytech (little-endian, ssize_blocks * 0x100)
+     *     [6..7] skutečná délka dat sektoru v bajtech (little-endian, 128 << N);
+     *            Extended CPC DSK ji vyžaduje
      *   Zbylé entries (sectors..28) vyplníme nulami.
      */
     for (int i = 0; i < 29; i++)
@@ -287,10 +302,9 @@ static int write_track_flush(st_WD279X *chip, struct st_FDDrive *drv)
             sinfo[0] = track;
             sinfo[1] = side;
             sinfo[2] = chip->buffer[8 + i];
-            sinfo[3] = ssize_blocks;
+            sinfo[3] = ssize_code;
             sinfo[4] = 0x00;
             sinfo[5] = 0x00;
-            uint16_t sec_bytes = (uint16_t)(ssize_blocks * 0x100);
             sinfo[6] = (uint8_t)(sec_bytes & 0xFF);
             sinfo[7] = (uint8_t)((sec_bytes >> 8) & 0xFF);
         }
@@ -301,10 +315,11 @@ static int write_track_flush(st_WD279X *chip, struct st_FDDrive *drv)
         }
     }
 
-    /* 4. Fyzická data sektorů (sectors × ssize_blocks × 0x100 bytes)
-     *    na offset track_offset + 0x100. Vyplníme fill_byte. */
+    /* 4. Fyzická data sektorů na offset track_offset + 0x100. Vyplníme
+     *    fill_byte celou datovou část stopy, tedy i případné zarovnání
+     *    na celý 256B blok za posledním sektorem. */
     uint32_t data_offset = track_offset + 0x100;
-    uint32_t data_total = (uint32_t)sectors * ssize_blocks * 0x100;
+    uint32_t data_total = (new_tsize_blocks - 1) * 0x100;
     uint8_t fillbuf[0x100];
     memset(fillbuf, fill_byte, sizeof(fillbuf));
     while (data_total > 0)
@@ -364,7 +379,7 @@ static int write_track_flush(st_WD279X *chip, struct st_FDDrive *drv)
         (void)dsk_read_on_offset(&drv->handler, track_offset + 20, &verify_ssize, 1);
         fprintf(stderr, "fdc: WRITE TRACK flush VERIFY - track_offset=0x%X "
                         "ssize_byte_written=%u ssize_byte_readback=%u\n",
-                track_offset, ssize_blocks, verify_ssize);
+                track_offset, ssize_code, verify_ssize);
     }
 #endif
 
@@ -500,19 +515,21 @@ void do_write_track_byte(st_WD279X *chip, uint8_t io_data)
             }
             else if (chip->write_track_counter == 4)
             {
-                /* Sector size code. Předpokládáme stejnou velikost
-                 * pro všechny sektory na stopě. */
+                /* Kód velikosti sektoru N (0=128, 1=256, 2=512, 3=1024 B).
+                 * Předpokládáme stejnou velikost pro všechny sektory
+                 * na stopě. */
                 chip->buffer[4] = io_data;
             }
         }
         else if (io_data == 0xFB || io_data == 0xF8)
         {
             /* Data Address Mark (0xFB = data, 0xF8 = deleted data).
-             * Spočítáme bytes datového bloku = ssize_code × 0x100
-             * (Sharp ukládá block count, ne datasheet kód). */
+             * Počet bajtů datového bloku je dán kódem N z ID pole
+             * (128 << N). Kód mimo 0..3 dsk_decode_sector_size() ořízne
+             * na 1024 B a write_track_flush() takovou stopu odmítne. */
             chip->write_track_stage = 3;
             chip->write_track_counter = 0;
-            chip->data_counter = (uint16_t)chip->buffer[4] * 0x100;
+            chip->data_counter = dsk_decode_sector_size((en_DSK_SECTOR_SIZE)chip->buffer[4]);
         }
         else if (chip->write_track_counter > 100)
         {

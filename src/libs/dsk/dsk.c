@@ -30,7 +30,7 @@
 #include <string.h>
 
 #include "dsk.h"
-#include "../generic_driver/generic_driver.h"
+#include "libs/generic_driver/generic_driver.h"
 
 
 /**
@@ -138,13 +138,25 @@ int dsk_read_short_image_info ( st_HANDLER *h, st_DSK_SHORT_IMAGE_INFO *short_im
 
     short_image_info->sides = ( buffer[1] <= 1 ) ? 1 : 2;
     short_image_info->tracks = buffer[0];
+    short_image_info->header_tracks = buffer[0]; /* raw hodnota před ořezem (audit H-11) */
 
-    uint8_t total_tracks = short_image_info->tracks * short_image_info->sides;
+    /* Tichá redukce na DSK_MAX_TOTAL_TRACKS je záměrná - umožňuje
+     * vyšším vrstvám (dsk_tools_diagnose/repair) detekovat a opravit
+     * TRACKCOUNT_EXCEEDED v malformované hlavičce. Rozdíl
+     * `header_tracks > tracks` signalizuje, že vrstvy nad driverem
+     * mají situaci reportovat a nabídnout repair.
+     *
+     * Výpočet dělám v uint16_t, aby nedošlo k uint8_t overflow
+     * (např. tracks=128, sides=2 → 256 → ořez na 0 = nulová
+     * geometrie). Audit MSYS2 M-31. */
+    uint16_t total_tracks_u16 = (uint16_t) short_image_info->tracks * short_image_info->sides;
 
-    if ( total_tracks > DSK_MAX_TOTAL_TRACKS ) {
-        total_tracks = DSK_MAX_TOTAL_TRACKS;
-        short_image_info->tracks = DSK_MAX_TOTAL_TRACKS / short_image_info->sides;
+    if ( total_tracks_u16 > DSK_MAX_TOTAL_TRACKS ) {
+        total_tracks_u16 = DSK_MAX_TOTAL_TRACKS;
+        short_image_info->tracks = (uint8_t) ( DSK_MAX_TOTAL_TRACKS / short_image_info->sides );
     }
+
+    uint8_t total_tracks = (uint8_t) total_tracks_u16;
 
     offset += 4;
 
@@ -189,6 +201,14 @@ int dsk_read_short_track_info_on_offset ( st_HANDLER *h, uint32_t track_offset, 
     short_track_info->side = buffer[1];
     short_track_info->ssize = buffer[4];
     short_track_info->sectors = buffer[5];
+
+    /* Ochrana proti malformovanému DSK: `sectors` je uint8_t (0..255), ale
+     * `short_track_info->sinfo[]` a `sector_sizes[]` mají jen DSK_MAX_SECTORS
+     * prvků. Bez této kontroly by cyklus níže zapsal OOB do struktury. */
+    if ( short_track_info->sectors > DSK_MAX_SECTORS ) {
+        h->err = (en_HANDLER_ERROR) DSK_ERROR_INVALID_PARAM;
+        return EXIT_FAILURE;
+    }
 
     /* Inicializovat per-sector sizes na 0 (= použij společnou velikost) */
     memset ( short_track_info->sector_sizes, 0, sizeof ( short_track_info->sector_sizes ) );
@@ -430,4 +450,13 @@ int dsk_get_geometry ( st_HANDLER *h, st_DSK_GEOMETRY *geom ) {
     }
 
     return EXIT_SUCCESS;
+}
+
+
+/**
+ * @brief Vrátí řetězec s verzí knihovny dsk.
+ * @return Statický řetězec s verzí (např. "2.0.0").
+ */
+const char* dsk_version ( void ) {
+    return DSK_VERSION;
 }

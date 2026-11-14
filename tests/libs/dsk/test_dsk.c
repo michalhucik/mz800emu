@@ -9,7 +9,8 @@
  *          sector mapy (normal, interlaced, custom), identifikace formátu,
  *          validace (check_dsk), modifikace (change_track, add_tracks, shrink),
  *          geometrie (dsk_get_geometry), iterace (for_each_track/sector),
- *          logovací callback, regresní testy opravených bugů.
+ *          logovací callback, regresní testy opravených bugů,
+ *          délka dat sektoru v Sector Info (vytvoření, diagnostika, repair).
  *
  * Test vyžaduje emulátorový kontext (memory_driver_realloc).
  * Linkuje se s TEST_ALL_OBJS + Unity.
@@ -875,6 +876,272 @@ void test_short_track_info_has_sector_sizes ( void ) {
 
 
 /* ========================================================================
+ * TESTY — délka dat sektoru v Sector Info (offset 6-7)
+ *
+ * Extended CPC DSK vyžaduje u každého sektoru skutečnou délku dat.
+ * Knihovna dsk_tools < 3.4.0 pole nechávala nulové. Testy převzaty
+ * z projektu mzdisk (tests/libs/test_dsk_tools.c).
+ * ======================================================================== */
+
+/**
+ * @brief Vytvoří DSK obraz s jedním pravidlem geometrie pro všechny stopy.
+ *
+ * @param tracks  Počet stop na stranu.
+ * @param sides   Počet stran (1 nebo 2).
+ * @param sectors Počet sektorů na stopě.
+ * @param ssize   Kódovaná velikost sektoru.
+ * @param filler  Bajt, kterým se vyplní data sektorů.
+ * @return Ukazatel na handler s vytvořeným obrazem, nebo NULL při chybě.
+ *         Handler zavírá tearDown().
+ */
+static st_HANDLER* create_uniform_image ( uint8_t tracks, uint8_t sides, uint8_t sectors, en_DSK_SECTOR_SIZE ssize, uint8_t filler ) {
+    st_HANDLER *h = open_memory_handler ( 1024 );
+    if ( h == NULL ) return NULL;
+
+    size_t desc_size = dsk_tools_compute_description_size ( 1 );
+    st_DSK_DESCRIPTION *desc = (st_DSK_DESCRIPTION *) malloc ( desc_size );
+    if ( desc == NULL ) return NULL;
+    memset ( desc, 0, desc_size );
+    desc->tracks = tracks;
+    desc->sides = sides;
+    desc->count_rules = 1;
+
+    dsk_tools_assign_description ( desc, 0, 0, sectors, ssize, DSK_SEC_ORDER_NORMAL, NULL, filler );
+
+    int ret = dsk_tools_create_image ( h, desc );
+    free ( desc );
+
+    if ( ret != EXIT_SUCCESS ) return NULL;
+    return h;
+}
+
+
+/**
+ * @brief Vynuluje pole délky dat u všech sektorů jedné stopy.
+ *
+ * Napodobuje obraz vytvořený knihovnou dsk_tools < 3.4.0.
+ *
+ * @param h        Handler s DSK obrazem.
+ * @param abstrack Absolutní číslo stopy.
+ * @return EXIT_SUCCESS / EXIT_FAILURE
+ */
+static int zero_track_data_lengths ( st_HANDLER *h, uint8_t abstrack ) {
+    st_DSK_SHORT_IMAGE_INFO iinfo;
+    if ( EXIT_SUCCESS != dsk_read_short_image_info ( h, &iinfo ) ) return EXIT_FAILURE;
+    uint32_t offset = dsk_compute_track_offset ( abstrack, iinfo.tsize );
+
+    st_DSK_TRACK_INFO trk;
+    if ( EXIT_SUCCESS != dsk_read_on_offset ( h, offset, &trk, sizeof ( trk ) ) ) return EXIT_FAILURE;
+    int i;
+    for ( i = 0; i < trk.sectors; i++ ) {
+        dsk_sector_info_set_data_length ( &trk.sinfo[i], 0 );
+    }
+    return dsk_write_on_offset ( h, offset, &trk, sizeof ( trk ) );
+}
+
+
+/**
+ * @brief Ověří délku dat u všech sektorů nově vytvořeného obrazu.
+ *
+ * Vytvoří oboustranný obraz se dvěma stopami na stranu a zkontroluje
+ * pole délky dat přes API i jeho uložení v souboru (little-endian).
+ *
+ * @param sectors Počet sektorů na stopě.
+ * @param ssize   Kódovaná velikost sektoru.
+ * @param bytes   Očekávaná délka dat sektoru v bajtech.
+ */
+static void check_created_data_length ( uint8_t sectors, en_DSK_SECTOR_SIZE ssize, uint16_t bytes ) {
+    st_HANDLER *h = create_uniform_image ( 2, 2, sectors, ssize, 0xE5 );
+    TEST_ASSERT_NOT_NULL ( h );
+
+    int t, i;
+    for ( t = 0; t < 4; t++ ) {
+        st_DSK_TRACK_HEADER_INFO info;
+        TEST_ASSERT_EQUAL_INT ( EXIT_SUCCESS, dsk_tools_read_track_header_info ( h, (uint8_t) t, &info ) );
+        for ( i = 0; i < sectors; i++ ) {
+            TEST_ASSERT_EQUAL_UINT16 ( bytes, dsk_sector_info_get_data_length ( &info.sinfo[i] ) );
+        }
+    }
+
+    /* Uložení je little-endian: nižší bajt na offsetu 6, vyšší na 7 */
+    st_DSK_TRACK_INFO trk;
+    TEST_ASSERT_EQUAL_INT ( EXIT_SUCCESS, dsk_read_on_offset ( h, sizeof ( st_DSK_HEADER ), &trk, sizeof ( trk ) ) );
+    const uint8_t *raw = (const uint8_t *) &trk.sinfo[0];
+    TEST_ASSERT_EQUAL_UINT8 ( bytes & 0xff, raw[6] );
+    TEST_ASSERT_EQUAL_UINT8 ( bytes >> 8, raw[7] );
+}
+
+/** @brief Nový obraz se sektory 128 B má vyplněnou délku dat */
+void test_create_sets_data_length_128 ( void ) {
+    check_created_data_length ( 9, DSK_SECTOR_SIZE_128, 128 );
+}
+
+/** @brief Nový obraz se sektory 256 B má vyplněnou délku dat */
+void test_create_sets_data_length_256 ( void ) {
+    check_created_data_length ( 16, DSK_SECTOR_SIZE_256, 256 );
+}
+
+/** @brief Nový obraz se sektory 512 B má vyplněnou délku dat */
+void test_create_sets_data_length_512 ( void ) {
+    check_created_data_length ( 9, DSK_SECTOR_SIZE_512, 512 );
+}
+
+/** @brief Nový obraz se sektory 1024 B má vyplněnou délku dat */
+void test_create_sets_data_length_1024 ( void ) {
+    check_created_data_length ( 5, DSK_SECTOR_SIZE_1024, 1024 );
+}
+
+
+/** @brief dsk_tools_change_track zapíše délku dat podle nové velikosti sektoru */
+void test_change_track_sets_data_length ( void ) {
+    st_HANDLER *h = create_uniform_image ( 4, 1, 9, DSK_SECTOR_SIZE_512, 0xE5 );
+    TEST_ASSERT_NOT_NULL ( h );
+
+    uint8_t map[16];
+    int i;
+    for ( i = 0; i < 16; i++ ) map[i] = (uint8_t) ( i + 1 );
+    TEST_ASSERT_EQUAL_INT ( EXIT_SUCCESS, dsk_tools_change_track ( h, NULL, 1, 16, DSK_SECTOR_SIZE_256, map, 0xFF ) );
+
+    st_DSK_TRACK_HEADER_INFO info;
+    TEST_ASSERT_EQUAL_INT ( EXIT_SUCCESS, dsk_tools_read_track_header_info ( h, 1, &info ) );
+    for ( i = 0; i < 16; i++ ) {
+        TEST_ASSERT_EQUAL_UINT16 ( 256, dsk_sector_info_get_data_length ( &info.sinfo[i] ) );
+    }
+
+    /* Sousední stopa zůstává 512 B */
+    TEST_ASSERT_EQUAL_INT ( EXIT_SUCCESS, dsk_tools_read_track_header_info ( h, 2, &info ) );
+    TEST_ASSERT_EQUAL_UINT16 ( 512, dsk_sector_info_get_data_length ( &info.sinfo[0] ) );
+}
+
+
+/** @brief Diagnostika nově vytvořeného obrazu nehlásí žádný problém */
+void test_diag_new_image_is_clean ( void ) {
+    st_HANDLER *h = create_uniform_image ( 5, 2, 9, DSK_SECTOR_SIZE_512, 0xE5 );
+    TEST_ASSERT_NOT_NULL ( h );
+
+    st_DSK_DIAG_RESULT *diag = dsk_tools_diagnose ( h );
+    TEST_ASSERT_NOT_NULL ( diag );
+    TEST_ASSERT_EQUAL_HEX16 ( DSK_DIAG_IMAGE_OK, diag->image_flags );
+    TEST_ASSERT_EQUAL_INT ( 0, dsk_tools_diag_has_repairable_errors ( diag ) );
+    dsk_tools_destroy_diag_result ( diag );
+}
+
+
+/**
+ * @brief Nulová délka dat sektoru je detekována jako opravitelná chyba.
+ *
+ * Nesmí být fatální a nesmí nastavit souhrnný flag TRACK_ERRORS.
+ */
+void test_diag_detects_zero_data_length ( void ) {
+    st_HANDLER *h = create_uniform_image ( 5, 2, 9, DSK_SECTOR_SIZE_512, 0xE5 );
+    TEST_ASSERT_NOT_NULL ( h );
+    TEST_ASSERT_EQUAL_INT ( EXIT_SUCCESS, zero_track_data_lengths ( h, 3 ) );
+
+    st_DSK_DIAG_RESULT *diag = dsk_tools_diagnose ( h );
+    TEST_ASSERT_NOT_NULL ( diag );
+    TEST_ASSERT_EQUAL_HEX16 ( DSK_DIAG_IMAGE_ZERO_DATALEN, diag->image_flags );
+    TEST_ASSERT_EQUAL_INT ( 1, diag->zero_datalen_tracks );
+    int t;
+    for ( t = 0; t < diag->count_tracks; t++ ) {
+        TEST_ASSERT_EQUAL_HEX16 ( ( t == 3 ) ? DSK_DIAG_TRACK_ZERO_DATALEN : DSK_DIAG_TRACK_OK, diag->tracks[t].flags );
+    }
+    TEST_ASSERT_EQUAL_INT ( 1, dsk_tools_diag_has_repairable_errors ( diag ) );
+    TEST_ASSERT_EQUAL_INT ( 0, dsk_tools_diag_has_fatal_errors ( diag ) );
+    dsk_tools_destroy_diag_result ( diag );
+}
+
+
+/**
+ * @brief Repair doplní nulové délky dat a nic jiného nezmění.
+ *
+ * Po opravě musí být obraz bajt po bajtu shodný s kopií pořízenou před
+ * vynulováním délek (včetně vlastního FDC statusu, ID sektoru a dat).
+ */
+void test_repair_fills_zero_data_length ( void ) {
+    st_HANDLER *h = create_uniform_image ( 5, 2, 9, DSK_SECTOR_SIZE_512, 0xE5 );
+    TEST_ASSERT_NOT_NULL ( h );
+
+    /* Vlastní FDC status, ID sektoru a data, aby bylo co poškodit */
+    TEST_ASSERT_EQUAL_INT ( EXIT_SUCCESS, dsk_tools_set_sector_fdc_status ( h, 3, 2, 0x40, 0x20 ) );
+    TEST_ASSERT_EQUAL_INT ( EXIT_SUCCESS, dsk_tools_set_sector_id ( h, 3, 4, 77 ) );
+    uint8_t marker[512];
+    memset ( marker, 0xAB, sizeof ( marker ) );
+    st_DSK_SHORT_IMAGE_INFO iinfo;
+    TEST_ASSERT_EQUAL_INT ( EXIT_SUCCESS, dsk_read_short_image_info ( h, &iinfo ) );
+    uint32_t t3 = dsk_compute_track_offset ( 3, iinfo.tsize );
+    TEST_ASSERT_EQUAL_INT ( EXIT_SUCCESS, dsk_write_on_offset ( h, t3 + sizeof ( st_DSK_TRACK_INFO ), marker, sizeof ( marker ) ) );
+
+    /* Referenční kopie správného obrazu */
+    uint32_t size = (uint32_t) h->spec.memspec.size;
+    uint8_t *reference = (uint8_t *) malloc ( size );
+    TEST_ASSERT_NOT_NULL ( reference );
+    memcpy ( reference, h->spec.memspec.ptr, size );
+
+    /* Poškození: nulové délky na dvou stopách */
+    TEST_ASSERT_EQUAL_INT ( EXIT_SUCCESS, zero_track_data_lengths ( h, 0 ) );
+    TEST_ASSERT_EQUAL_INT ( EXIT_SUCCESS, zero_track_data_lengths ( h, 3 ) );
+    int damaged = ( 0 != memcmp ( reference, h->spec.memspec.ptr, size ) );
+
+    st_DSK_DIAG_RESULT *diag = dsk_tools_diagnose ( h );
+    int diag_ok = ( diag != NULL ) && ( diag->zero_datalen_tracks == 2 );
+    int repair_ret = ( diag != NULL ) ? dsk_tools_repair ( h, diag ) : EXIT_FAILURE;
+    dsk_tools_destroy_diag_result ( diag );
+
+    /* Po opravě je obraz bajt po bajtu shodný s referencí */
+    int same_size = ( size == (uint32_t) h->spec.memspec.size );
+    int same = same_size && ( 0 == memcmp ( reference, h->spec.memspec.ptr, size ) );
+    free ( reference );
+
+    TEST_ASSERT_TRUE ( damaged );
+    TEST_ASSERT_TRUE ( diag_ok );
+    TEST_ASSERT_EQUAL_INT ( EXIT_SUCCESS, repair_ret );
+    TEST_ASSERT_TRUE ( same_size );
+    TEST_ASSERT_TRUE ( same );
+
+    diag = dsk_tools_diagnose ( h );
+    TEST_ASSERT_NOT_NULL ( diag );
+    TEST_ASSERT_EQUAL_HEX16 ( DSK_DIAG_IMAGE_OK, diag->image_flags );
+    dsk_tools_destroy_diag_result ( diag );
+}
+
+
+/**
+ * @brief Nenulová délka dat se při opravě nepřepisuje.
+ *
+ * Délka odlišná od velikosti dané polem N není diagnostikou hlášena
+ * a repair se jí nedotkne, ani když na téže stopě opravuje jiný sektor.
+ */
+void test_repair_keeps_nonzero_data_length ( void ) {
+    st_HANDLER *h = create_uniform_image ( 2, 1, 9, DSK_SECTOR_SIZE_512, 0xE5 );
+    TEST_ASSERT_NOT_NULL ( h );
+
+    st_DSK_TRACK_INFO trk;
+    TEST_ASSERT_EQUAL_INT ( EXIT_SUCCESS, dsk_read_on_offset ( h, sizeof ( st_DSK_HEADER ), &trk, sizeof ( trk ) ) );
+    dsk_sector_info_set_data_length ( &trk.sinfo[1], 300 );
+    TEST_ASSERT_EQUAL_INT ( EXIT_SUCCESS, dsk_write_on_offset ( h, sizeof ( st_DSK_HEADER ), &trk, sizeof ( trk ) ) );
+
+    st_DSK_DIAG_RESULT *diag = dsk_tools_diagnose ( h );
+    TEST_ASSERT_NOT_NULL ( diag );
+    TEST_ASSERT_EQUAL_HEX16 ( DSK_DIAG_IMAGE_OK, diag->image_flags );
+    dsk_tools_destroy_diag_result ( diag );
+
+    TEST_ASSERT_EQUAL_INT ( EXIT_SUCCESS, dsk_read_on_offset ( h, sizeof ( st_DSK_HEADER ), &trk, sizeof ( trk ) ) );
+    dsk_sector_info_set_data_length ( &trk.sinfo[5], 0 );
+    TEST_ASSERT_EQUAL_INT ( EXIT_SUCCESS, dsk_write_on_offset ( h, sizeof ( st_DSK_HEADER ), &trk, sizeof ( trk ) ) );
+
+    diag = dsk_tools_diagnose ( h );
+    TEST_ASSERT_NOT_NULL ( diag );
+    TEST_ASSERT_EQUAL_INT ( EXIT_SUCCESS, dsk_tools_repair ( h, diag ) );
+    dsk_tools_destroy_diag_result ( diag );
+
+    st_DSK_TRACK_HEADER_INFO info;
+    TEST_ASSERT_EQUAL_INT ( EXIT_SUCCESS, dsk_tools_read_track_header_info ( h, 0, &info ) );
+    TEST_ASSERT_EQUAL_UINT16 ( 300, dsk_sector_info_get_data_length ( &info.sinfo[1] ) );
+    TEST_ASSERT_EQUAL_UINT16 ( 512, dsk_sector_info_get_data_length ( &info.sinfo[5] ) );
+}
+
+
+/* ========================================================================
  * main
  * ======================================================================== */
 
@@ -952,6 +1219,17 @@ int main ( int argc, char *argv[] ) {
 
     /* Per-sector size */
     RUN_TEST ( test_short_track_info_has_sector_sizes );
+
+    /* Délka dat sektoru v Sector Info */
+    RUN_TEST ( test_create_sets_data_length_128 );
+    RUN_TEST ( test_create_sets_data_length_256 );
+    RUN_TEST ( test_create_sets_data_length_512 );
+    RUN_TEST ( test_create_sets_data_length_1024 );
+    RUN_TEST ( test_change_track_sets_data_length );
+    RUN_TEST ( test_diag_new_image_is_clean );
+    RUN_TEST ( test_diag_detects_zero_data_length );
+    RUN_TEST ( test_repair_fills_zero_data_length );
+    RUN_TEST ( test_repair_keeps_nonzero_data_length );
 
     int result = UNITY_END ();
     mztest_teardown ();
