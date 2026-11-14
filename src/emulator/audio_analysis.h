@@ -41,8 +41,9 @@ extern "C" {
  * @param divider     10bitový dělič tónu 0..1023.
  * @param gdg_hz      Takt GDG [Hz] (GDGCLK_BASE platformy).
  * @param cpu_divider Takty GDG na takt CPU (GDGCLK2CPU_DIVIDER).
- * @return Frekvence [Hz]; 0 pro divider < 2 (stejnosměrný výstup, žádná
- *         oscilace) nebo nulový cpu_divider.
+ * @return Frekvence [Hz]; divider 0 se počítá jako 1024 (chování SN76489AN);
+ *         0 pro divider 1 (emulátor drží stejnosměrný výstup) nebo nulový
+ *         cpu_divider.
  */
 double audio_psg_tone_hz(unsigned divider, uint64_t gdg_hz, unsigned cpu_divider);
 

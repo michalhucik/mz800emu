@@ -44,7 +44,9 @@ The memory stays readable after the capture ends, until the next
   at the capture start. `psg_state_incomplete: true` = the ring dropped
   the oldest writes, notes at the beginning may be wrong. The pitch is the
   emulator's PSG formula (same as the PSG Audio Scope), not a measurement
-  of real hardware.
+  of real hardware. Tone divider 0 counts as 1024 (the lowest tone, as on
+  the real chip); divider 1 is a constant level in the emulator and makes
+  no note.
 - `ctc0.likely` (`tone`, `pcm`, `irregular`, `silent`) is a heuristic
   estimate from the histogram of intervals between speaker edges
   (`likely_rule`). Check `edge_interval_hist_us` before relying on it.

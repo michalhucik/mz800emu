@@ -2,7 +2,8 @@
  * test_psg.c — unit testy pro PSG (Programmable Sound Generator SN76489AN)
  *
  * Testuje: inicializaci, zápis do registrů, nastavení frekvence,
- *          atenuace, noise generátor, step processing
+ *          atenuace, noise generátor (rychlost posunu, 15bitový registr,
+ *          nulování zápisem), dělič tónu 0 a 1, step processing
  *
  * Licence: GPLv3
  */
@@ -397,6 +398,188 @@ void test_psg_write_log_stereo_broadcast(void)
     psg_init(false); /* vrátit do mono pro následující testy */
 }
 
+/* ================================================================
+ * ŠUM A DĚLIČ TÓNU PODLE MĚŘENÍ NA HW (2026-11-14)
+ * ================================================================ */
+
+/** @brief Počet kroků PSG na jeden posun registru šumu při pevné rychlosti NF = 0. */
+#define NOISE_SHIFT_STEPS_NF0 32
+
+/**
+ * @brief Krokuje PSG a vrátí počet kroků do první změny výstupu kanálu na `level`.
+ *
+ * @param ch    Kanál.
+ * @param level Hledaná úroveň výstupu (0 nebo 1).
+ * @param limit Nejvyšší počet kroků.
+ * @return Počet provedených kroků; `limit + 1`, když změna nenastala.
+ */
+static unsigned steps_until_level(unsigned ch, unsigned level, unsigned limit)
+{
+    for (unsigned n = 1; n <= limit; n++) {
+        psg_instance_step(&g_psg);
+        if (g_psg.channel[ch].output_signal == level) return n;
+    }
+    return limit + 1;
+}
+
+/**
+ * @brief Uvede PSG do čistého stavu včetně čítačů a výstupů kanálů.
+ *
+ * psg_init() nastavuje jen typy kanálů, hlasitost a registr šumu; čítače
+ * z předchozího testu nechává být. Testy časování potřebují čítače na nule.
+ */
+static void psg_clean_init(void)
+{
+    memset(&g_psg_module, 0, sizeof(g_psg_module));
+    psg_init(false);
+}
+
+/* PSG - výchozí stav registru šumu je 15bitový (jen bit 14) */
+void test_psg_noise_reset_value(void)
+{
+    MZTEST_REQUIRE_LEVEL(MZTEST_LEVEL_UNIT);
+
+    psg_clean_init();
+    TEST_ASSERT_EQUAL_HEX16(PSG_NOISE_SR_RESET, g_psg.channel[PSG_CHANNEL_3].noise.shiftregister);
+    TEST_ASSERT_EQUAL_HEX16(0x4000, PSG_NOISE_SR_RESET);
+}
+
+/* PSG - periodický šum: perioda 15 posunů, pulz jeden posun, posun 512 T (32 kroků) */
+void test_psg_noise_periodic_fixed_rate(void)
+{
+    MZTEST_REQUIRE_LEVEL(MZTEST_LEVEL_UNIT);
+
+    psg_clean_init();
+    psg_write_byte(PSG_CH_LEFT, 0xF0);   /* hlasitost šumu na maximum */
+    psg_write_byte(PSG_CH_LEFT, 0xE0);   /* periodický šum, NF = 0 */
+
+    /* První jednička je na výstupu po 14 posunech. Čítač posunu se zápisem
+     * nenuluje (a zápis sám může PSG dokrokovat), první posun proto přijde
+     * za 1 až 32 kroků. */
+    unsigned first = steps_until_level(PSG_CHANNEL_3, 1, 100000);
+    TEST_ASSERT_GREATER_THAN_UINT(13 * NOISE_SHIFT_STEPS_NF0, first);
+    TEST_ASSERT_LESS_OR_EQUAL_UINT(14 * NOISE_SHIFT_STEPS_NF0, first);
+    /* pulz trvá jeden posun, perioda 15 posunů */
+    TEST_ASSERT_EQUAL_UINT(NOISE_SHIFT_STEPS_NF0, steps_until_level(PSG_CHANNEL_3, 0, 100000));
+    TEST_ASSERT_EQUAL_UINT(14 * NOISE_SHIFT_STEPS_NF0, steps_until_level(PSG_CHANNEL_3, 1, 100000));
+    TEST_ASSERT_EQUAL_UINT(NOISE_SHIFT_STEPS_NF0, steps_until_level(PSG_CHANNEL_3, 0, 100000));
+    TEST_ASSERT_EQUAL_UINT(14 * NOISE_SHIFT_STEPS_NF0, steps_until_level(PSG_CHANNEL_3, 1, 100000));
+}
+
+/* PSG - pevné rychlosti šumu: posun po 32, 64 a 128 krocích (512, 1024, 2048 T) */
+void test_psg_noise_fixed_rates(void)
+{
+    MZTEST_REQUIRE_LEVEL(MZTEST_LEVEL_UNIT);
+
+    for (unsigned nf = 0; nf < 3; nf++) {
+        unsigned shift = NOISE_SHIFT_STEPS_NF0 << nf;
+        psg_clean_init();
+        psg_write_byte(PSG_CH_LEFT, 0xF0);
+        psg_write_byte(PSG_CH_LEFT, (uint8_t)(0xE0 | nf));
+        (void) steps_until_level(PSG_CHANNEL_3, 1, 100000);
+        TEST_ASSERT_EQUAL_UINT(shift, steps_until_level(PSG_CHANNEL_3, 0, 100000));
+        TEST_ASSERT_EQUAL_UINT(14 * shift, steps_until_level(PSG_CHANNEL_3, 1, 100000));
+    }
+}
+
+/* PSG - šum řízený tónem 2: posun jednou za celou periodu tónu (2 x dělič kroků) */
+void test_psg_noise_tone2_rate(void)
+{
+    MZTEST_REQUIRE_LEVEL(MZTEST_LEVEL_UNIT);
+
+    psg_clean_init();
+    psg_write_byte(PSG_CH_LEFT, 0xC0);   /* tón 2: dolní 4 bity děliče = 0 */
+    psg_write_byte(PSG_CH_LEFT, 0x01);   /* horní bity: dělič 010h */
+    psg_write_byte(PSG_CH_LEFT, 0xF0);
+    psg_write_byte(PSG_CH_LEFT, 0xE3);   /* periodický šum, NF = 3 */
+
+    (void) steps_until_level(PSG_CHANNEL_3, 1, 100000);
+    /* dělič 16: posun po 32 krocích (512 T), perioda 15 posunů = 7680 T */
+    TEST_ASSERT_EQUAL_UINT(32, steps_until_level(PSG_CHANNEL_3, 0, 100000));
+    TEST_ASSERT_EQUAL_UINT(14 * 32, steps_until_level(PSG_CHANNEL_3, 1, 100000));
+}
+
+/* PSG - bílý šum: 15bitový registr, zpětná vazba bit 0 xor bit 1, perioda 32767 posunů */
+void test_psg_noise_white_sequence(void)
+{
+    MZTEST_REQUIRE_LEVEL(MZTEST_LEVEL_UNIT);
+
+    enum { BITS = 32767 + 64 };
+    static uint8_t bits[BITS];
+
+    psg_clean_init();
+    psg_write_byte(PSG_CH_LEFT, 0xF0);
+    psg_write_byte(PSG_CH_LEFT, 0xE4);   /* bílý šum, NF = 0 */
+
+    for (unsigned i = 0; i < BITS; i++) {
+        for (unsigned k = 0; k < NOISE_SHIFT_STEPS_NF0; k++) psg_instance_step(&g_psg);
+        bits[i] = (uint8_t) g_psg.channel[PSG_CHANNEL_3].output_signal;
+    }
+    unsigned ones = 0;
+    for (unsigned i = 0; i + 15 < BITS; i++) {
+        TEST_ASSERT_EQUAL_UINT8(bits[i] ^ bits[i + 1], bits[i + 15]);
+    }
+    for (unsigned i = 0; i < 32767; i++) ones += bits[i];
+    TEST_ASSERT_EQUAL_UINT(16384, ones);                 /* maximální sekvence: 2^14 jedniček */
+    for (unsigned i = 0; i < 64; i++) {
+        TEST_ASSERT_EQUAL_UINT8(bits[i], bits[i + 32767]);
+    }
+}
+
+/* PSG - registr šumu nuluje řídicí i datový bajt, zápis hlasitosti ne */
+void test_psg_noise_reset_on_write(void)
+{
+    MZTEST_REQUIRE_LEVEL(MZTEST_LEVEL_UNIT);
+
+    st_PSG_NOISE *noise = &g_psg.channel[PSG_CHANNEL_3].noise;
+
+    psg_clean_init();
+    psg_write_byte(PSG_CH_LEFT, 0xF0);
+    psg_write_byte(PSG_CH_LEFT, 0xE0);
+    for (unsigned k = 0; k < 5 * NOISE_SHIFT_STEPS_NF0; k++) psg_instance_step(&g_psg);
+    TEST_ASSERT_NOT_EQUAL(PSG_NOISE_SR_RESET, noise->shiftregister);
+
+    /* zápis hlasitosti šumu registr nenuluje */
+    uint16_t before = noise->shiftregister;
+    psg_write_byte(PSG_CH_LEFT, 0xF0);
+    TEST_ASSERT_EQUAL_HEX16(before, noise->shiftregister);
+
+    /* řídicí bajt se stejnou hodnotou nuluje */
+    psg_write_byte(PSG_CH_LEFT, 0xE0);
+    TEST_ASSERT_EQUAL_HEX16(PSG_NOISE_SR_RESET, noise->shiftregister);
+    TEST_ASSERT_EQUAL_UINT(0, g_psg.channel[PSG_CHANNEL_3].output_signal);
+
+    /* datový bajt do registru šumu nuluje také */
+    for (unsigned k = 0; k < 5 * NOISE_SHIFT_STEPS_NF0; k++) psg_instance_step(&g_psg);
+    TEST_ASSERT_NOT_EQUAL(PSG_NOISE_SR_RESET, noise->shiftregister);
+    psg_write_byte(PSG_CH_LEFT, 0x00);
+    TEST_ASSERT_EQUAL_HEX16(PSG_NOISE_SR_RESET, noise->shiftregister);
+    TEST_ASSERT_EQUAL_INT(NOISE_TYPE_PERIODIC, noise->type);
+    TEST_ASSERT_EQUAL_INT(NOISE_DIV_TYPE0, noise->div_type);
+}
+
+/* PSG - dělič tónu 000h se chová jako 1024, dělič 001h drží výstup v 1 */
+void test_psg_tone_divider_zero_and_one(void)
+{
+    MZTEST_REQUIRE_LEVEL(MZTEST_LEVEL_UNIT);
+
+    psg_clean_init();
+    psg_write_byte(PSG_CH_LEFT, 0x80);   /* tón 0: dělič 000h */
+    psg_write_byte(PSG_CH_LEFT, 0x00);
+    psg_write_byte(PSG_CH_LEFT, 0x90);   /* hlasitost na maximum */
+
+    unsigned level = g_psg.channel[PSG_CHANNEL_0].output_signal;
+    (void) steps_until_level(PSG_CHANNEL_0, level ^ 1u, 5000);       /* první překlopení */
+    TEST_ASSERT_EQUAL_UINT(1024, steps_until_level(PSG_CHANNEL_0, level, 5000));
+    TEST_ASSERT_EQUAL_UINT(1024, steps_until_level(PSG_CHANNEL_0, level ^ 1u, 5000));
+
+    psg_write_byte(PSG_CH_LEFT, 0x81);   /* dělič 001h */
+    psg_write_byte(PSG_CH_LEFT, 0x00);
+    psg_instance_step(&g_psg);
+    TEST_ASSERT_EQUAL_UINT(1, g_psg.channel[PSG_CHANNEL_0].output_signal);
+    TEST_ASSERT_EQUAL_UINT(5001, steps_until_level(PSG_CHANNEL_0, 0, 5000));
+}
+
 /* === MAIN === */
 
 int main(int argc, char *argv[])
@@ -423,6 +606,15 @@ int main(int argc, char *argv[])
     RUN_TEST(test_psg_latch_mechanism);
     RUN_TEST(test_psg_stereo_broadcast);
     RUN_TEST(test_psg_stereo_individual);
+
+    /* šum a dělič tónu podle měření na HW */
+    RUN_TEST(test_psg_noise_reset_value);
+    RUN_TEST(test_psg_noise_periodic_fixed_rate);
+    RUN_TEST(test_psg_noise_fixed_rates);
+    RUN_TEST(test_psg_noise_tone2_rate);
+    RUN_TEST(test_psg_noise_white_sequence);
+    RUN_TEST(test_psg_noise_reset_on_write);
+    RUN_TEST(test_psg_tone_divider_zero_and_one);
 
     /* write log */
     RUN_TEST(test_psg_write_log_default_disabled);

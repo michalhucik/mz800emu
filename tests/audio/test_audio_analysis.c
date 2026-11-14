@@ -34,7 +34,9 @@ void tearDown(void) {}
 /** @brief Dělič -> Hz -> MIDI a jména not. */
 void test_audio_analysis_tone_and_notes(void)
 {
-    TEST_ASSERT_EQUAL_DOUBLE(0.0, audio_psg_tone_hz(0, GDG_HZ, CPU_DIV));
+    /* dělič 0 se chová jako 1024 (změřeno na HW), dělič 1 je stejnosměrný */
+    TEST_ASSERT_DOUBLE_WITHIN(1e-9, 17721600.0 / (32.0 * 1024.0 * 5.0),
+                              audio_psg_tone_hz(0, GDG_HZ, CPU_DIV));
     TEST_ASSERT_EQUAL_DOUBLE(0.0, audio_psg_tone_hz(1, GDG_HZ, CPU_DIV));
     double hz = audio_psg_tone_hz(254, GDG_HZ, CPU_DIV);
     TEST_ASSERT_DOUBLE_WITHIN(1e-9, 17721600.0 / (32.0 * 254.0 * 5.0), hz);
@@ -64,6 +66,7 @@ void test_audio_analysis_tone_and_notes(void)
     TEST_ASSERT_TRUE(audio_psg_is_playing(0, 254, false));
     TEST_ASSERT_FALSE(audio_psg_is_playing(15, 254, false));
     TEST_ASSERT_FALSE(audio_psg_is_playing(0, 1, false));
+    TEST_ASSERT_TRUE(audio_psg_is_playing(0, 0, false));
     TEST_ASSERT_TRUE(audio_psg_is_playing(3, 0, true));
 }
 

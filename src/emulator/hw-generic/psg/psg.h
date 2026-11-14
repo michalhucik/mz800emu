@@ -84,10 +84,10 @@ extern "C"
 
     typedef enum en_NOISE_DIV_TYPE
     {
-        NOISE_DIV_TYPE0 = 0, /* noise divider 0x10, 6.928 kHz pri CPUDIV = 5 */
-        NOISE_DIV_TYPE1,     /* noise divider 0x20, 3.464 kHz pri CPUDIV = 5 */
-        NOISE_DIV_TYPE2,     /* noise divider 0x40, 1.732 kHz pri CPUDIV = 5 */
-        NOISE_DIV_TYPE3,     /* noise divider nastavit podle channel 2 */
+        NOISE_DIV_TYPE0 = 0, /* posun jednou za 512 T CPU, 6,928 kHz při CPUDIV = 5 */
+        NOISE_DIV_TYPE1,     /* posun jednou za 1024 T CPU, 3,464 kHz při CPUDIV = 5 */
+        NOISE_DIV_TYPE2,     /* posun jednou za 2048 T CPU, 1,732 kHz při CPUDIV = 5 */
+        NOISE_DIV_TYPE3,     /* posun jednou za celou periodu tónu kanálu 2 (32 x dělič T) */
     } en_NOISE_DIV_TYPE;
 
     typedef enum en_NOISE_TYPE
@@ -96,12 +96,29 @@ extern "C"
         NOISE_TYPE_WHITE
     } en_NOISE_TYPE;
 
+/**
+ * @brief Výchozí stav posuvného registru šumu SN76489AN (15 bitů, jen bit 14).
+ *
+ * Registr se do tohoto stavu nastaví při inicializaci a při každém zápisu do
+ * registru šumu. První jednička je na výstupu (bit 0) po 14 posunech.
+ */
+#define PSG_NOISE_SR_RESET 0x4000
+
+/** @brief Maska platných bitů posuvného registru šumu (15 bitů). */
+#define PSG_NOISE_SR_MASK 0x7fff
+
+    /**
+     * @brief Stav šumového generátoru.
+     *
+     * Invarianty: `shiftregister` je nenulový a má jen bity 0 až 14
+     * (PSG_NOISE_SR_MASK); `last_noise_type == type`.
+     */
     typedef struct st_PSG_NOISE
     {
-        en_NOISE_DIV_TYPE div_type;
-        en_NOISE_TYPE type; /* periodic noise | white noise */
-        en_NOISE_TYPE last_noise_type;
-        uint16_t shiftregister;
+        en_NOISE_DIV_TYPE div_type;    /**< Rychlost posunu (NF1, NF0). */
+        en_NOISE_TYPE type;            /**< Periodický, nebo bílý šum (FB). */
+        en_NOISE_TYPE last_noise_type; /**< Nepoužívá se, drží se rovno `type`; zůstává kvůli formátu snapshotu a hwlogu. */
+        uint16_t shiftregister;        /**< 15bitový posuvný registr; výstup kanálu je bit 0. */
     } st_PSG_NOISE;
 
     typedef struct st_PSG_TONE

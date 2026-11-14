@@ -15,7 +15,8 @@
 
 double audio_psg_tone_hz(unsigned divider, uint64_t gdg_hz, unsigned cpu_divider)
 {
-    if (divider < 2u || cpu_divider == 0) return 0.0;
+    if (divider == 1u || cpu_divider == 0) return 0.0;
+    if (divider == 0u) divider = 0x400u;   /* SN76489AN: dělič 000h se chová jako 1024 */
     return (double) gdg_hz / (32.0 * (double) divider * (double) cpu_divider);
 }
 
@@ -58,7 +59,7 @@ void audio_midi_note_name(int pitch, char *buf, size_t buflen)
 bool audio_psg_is_playing(unsigned attn, unsigned divider, bool noise)
 {
     if (attn >= AUDIO_PSG_ATTN_OFF) return false;
-    return noise || divider >= 2u;
+    return noise || divider != 1u;
 }
 
 

@@ -299,8 +299,8 @@ static inline void psg_events_push(st_PSG_SCOPE_EVENTS *ev,
  * ekvivalentní `CPU_CLOCK / (32 * divider)` (standardní SN76489 formule
  * s input clock = CPU clock + interní /16 prescaler + 2x toggle).
  *
- * Pro `divider < 2` vrací 0 (DC případ, PSG drží output_signal=1, není
- * to oscilace). `GDGCLK_BASE` a `GDGCLK2CPU_DIVIDER` jsou per-arch
+ * Divider 0 se počítá jako 1024. Pro `divider == 1` vrací 0 (DC případ,
+ * PSG drží output_signal=1, není to oscilace). `GDGCLK_BASE` a `GDGCLK2CPU_DIVIDER` jsou per-arch
  * makra: MZ-800 (17 721 600 Hz, /5 → 3.5469 MHz CPU),
  * MZ-700/MZ-1500 (14 336 640 Hz, /4 → 3.5796 MHz CPU).
  *
@@ -326,7 +326,7 @@ static double psg_scope_tone_frequency_hz(unsigned divider)
  *
  * Definice pro state machine: kanál hraje pokud
  *  - `attn < 15` (= attenuator nepuštěný do silent),
- *  - a pro TONE platí `divider >= 2` (DC případ = silent),
+ *  - a pro TONE platí `divider != 1` (DC případ = silent; divider 0 = 1024),
  *  - pro NOISE druhá podmínka neplatí (= NOISE generátor hraje vždy
  *    pokud není attn=15).
  *
@@ -337,7 +337,7 @@ static inline bool psg_sample_is_playing(const st_PSG_SCOPE_SAMPLE *s)
 {
     if (s->attn >= 15u)
         return false;
-    if ((en_PSG_CHTYPE)s->channel_type == PSG_CHTYPE_TONE && s->divider < 2u)
+    if ((en_PSG_CHTYPE)s->channel_type == PSG_CHTYPE_TONE && s->divider == 1u)
         return false;
     return true;
 }
@@ -351,7 +351,7 @@ static inline bool psg_sample_is_playing(const st_PSG_SCOPE_SAMPLE *s)
  *   3) nearest MIDI = round(midi_float), cents = round((midi_float - nearest) * 100)
  *   4) clamp MIDI do 0..127, cents do -50..+50
  *
- * Pro `divider < 2` (= DC) by se sem nemělo dostat (volá se jen pokud
+ * Pro `divider == 1` (= DC) by se sem nemělo dostat (volá se jen pokud
  * `psg_sample_is_playing == true`), defenzivně vrací pitch=0, cents=0.
  * Kroky 2-4 dělá sdílená audio_hz_to_midi() (audio_analysis.h).
  *
@@ -1091,9 +1091,9 @@ static const int PSG_SCOPE_TONE_PERIODS = 4;
  * pouze pozadí + středovou čáru.
  *
  * Render dle typu kanálu:
- *  - TONE + divider >= 2: square wave 50% duty, `PSG_SCOPE_TONE_PERIODS`
+ *  - TONE + divider != 1: square wave 50% duty, `PSG_SCOPE_TONE_PERIODS`
  *    cyklů, amplituda lineárně `(15 - attn) / 15`.
- *  - TONE + divider < 2: DC (vodorovná čára na horní úrovni amplitudy
+ *  - TONE + divider == 1: DC (vodorovná čára na horní úrovni amplitudy
  *    + "DC" label).
  *  - NOISE: deterministický pseudo-random pattern (`seed ^ x` xor-shift),
  *    konzistentní mezi frame-y aby pattern neblikal.
@@ -1178,7 +1178,7 @@ static void psg_audio_scope_render_channel(unsigned chip, unsigned ch,
     {
         uint16_t divider = latest->divider;
 
-        if (divider < 2u)
+        if (divider == 1u)
         {
             float dc_y = mid_y - amp_px;
             dl->AddLine(ImVec2(p0.x + 2.0f, dc_y), ImVec2(p1.x - 2.0f, dc_y),

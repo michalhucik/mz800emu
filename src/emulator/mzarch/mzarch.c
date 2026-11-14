@@ -742,8 +742,11 @@ static inline void mzarch_main_insideop(const en_INSIDEOP insideop)
 #if MZARCH != 700
     case INSIDEOP_IORQ_PSG_WRITE:
         tstates_to_psg_sync = 16 - (gdg_get_total_ticks() / GDGCLK2CPU_DIVIDER) % 16;
-        // tohle je muj odhad, kdyz jsem to testoval s analyzerem, tak 1 cpu takt nestacil, zatimco 5 uz bylo OK
-        if (tstates_to_psg_sync < 4)
+        /* PSG uvolňuje WAIT v rastru 16 T. Bod rastru vzdálený 1 nebo 2 takty
+         * čip nestihne a čeká se o 16 T déle; 3 takty už stačí. Změřeno na
+         * MZ-800 analyzátorem 2026-11-14 (16 fází po 128 zápisech; čekání
+         * 19 až 34 T), mz800-knowledge hw-measurement/vysledky.md. */
+        if (tstates_to_psg_sync < 3)
         {
             tstates_to_psg_sync += 16;
         };

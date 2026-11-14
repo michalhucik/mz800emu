@@ -26,7 +26,8 @@
  *     = 32 * divider * GDGCLK2CPU_DIVIDER GDG ticků,
  *   - výsledek odpovídá standardní SN76489 formuli (input clock CPU,
  *     interní /16 prescaler, 2x toggle pro full period),
- *   - divider < 2 znamená PSG drží výstup na 1 (DC, viz `psg.c` řádek 188-190).
+ *   - divider 0 se chová jako 1024 (změřeno na HW), divider 1 drží v emulátoru
+ *     výstup na 1 (DC, viz `psg.c` psg_instance_step()).
  *
  * MIDI nota: `note = 12 * log2(f / 440) + 69`, A4 = 69 = 440 Hz.
  *
@@ -125,8 +126,8 @@ static void format_attn_db(unsigned attn, char *out, size_t sz)
  * @brief Vypočte frekvenci square-wave výstupu TONE kanálu.
  *
  * Vzorec: f = GDGCLK_BASE / (32 * divider * GDGCLK2CPU_DIVIDER),
- * ekvivalentně CPU_CLOCK / (32 * divider). Pro divider < 2 vrací 0
- * (PSG v `psg.c` drží output_signal=1, není to oscilace).
+ * ekvivalentně CPU_CLOCK / (32 * divider). Divider 0 se počítá jako 1024.
+ * Pro divider 1 vrací 0 (PSG v `psg.c` drží output_signal=1, není to oscilace).
  *
  * GDGCLK_BASE a GDGCLK2CPU_DIVIDER jsou per-arch makra. Výsledný CPU
  * clock: MZ-800 = 17 721 600 / 5 = 3.5469 MHz, MZ-700/MZ-1500 =
@@ -214,7 +215,7 @@ static const int PSG_WAVEFORM_TONE_PERIODS = 4;
  *  - NOISE: deterministický pseudo-random pattern (xor shift `seed ^ x_pixel`),
  *    konzistentní vzhled mezi frame-y. Rozlišení WHITE vs PERIODIC noise zatím
  *    pouze textově ve výše uvedené noise tabulce (TODO: separate pattern).
- *  - DC případ (`divider < 2`) → vodorovná čára uprostřed + "DC" label.
+ *  - DC případ (`divider == 1`) → vodorovná čára uprostřed + "DC" label.
  *  - Silent (`attn >= 15`) → vodorovná čára uprostřed (amplituda 0).
  *  - Amplituda: lineární mapování `(15 - attn) / 15.0`. Není to dB-correct,
  *    ale vizuálně intuitivní (attn 0 = max výška, attn 15 = nula).
@@ -272,7 +273,7 @@ static void render_channel_waveform(const st_PSG *psg, unsigned ch,
     {
         uint16_t divider = psg_mirror_channel_tone_divider(psg, ch);
 
-        if (divider < 2u)
+        if (divider == 1u)
         {
             /* DC - PSG drží output_signal=1, žádná oscilace. Vykreslíme horní
              * úroveň jako stálou linku a označíme "DC". */

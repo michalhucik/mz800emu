@@ -8189,10 +8189,15 @@ void test_audio_capture_summary(void) {
     JsonObject *c0 = json_object_get_object_member(json_object_get_object_member(data, "channels"), "ctc0");
     TEST_ASSERT_EQUAL_INT64(45, json_object_get_int_member(c0, "edges"));          /* 0 + 1 + ... + 9 */
     TEST_ASSERT_EQUAL_INT64(9, json_object_get_int_member(c0, "active_frames"));
-    /* nota: hlasitost ve snímku 0 (dělič 0 = nehraje), tón 254 od snímku 1 do konce */
+    /* noty: hlasitost ve snímku 0 při děliči 0 (chová se jako 1024, tedy hraje),
+     * tón 254 od snímku 1 do konce */
     JsonArray *notes = json_object_get_array_member(data, "psg_notes");
-    TEST_ASSERT_EQUAL_UINT(1, json_array_get_length(notes));
+    TEST_ASSERT_EQUAL_UINT(2, json_array_get_length(notes));
     JsonObject *n = json_array_get_object_element(notes, 0);
+    TEST_ASSERT_EQUAL_STRING("psg0_0", json_object_get_string_member(n, "ch"));
+    TEST_ASSERT_EQUAL_INT64(0, json_object_get_int_member(n, "divider"));
+    TEST_ASSERT_EQUAL_INT64(0, json_object_get_int_member(n, "from_frame"));
+    n = json_array_get_object_element(notes, 1);
     TEST_ASSERT_EQUAL_STRING("psg0_0", json_object_get_string_member(n, "ch"));
     TEST_ASSERT_EQUAL_INT64(254, json_object_get_int_member(n, "divider"));
     TEST_ASSERT_EQUAL_INT64(1, json_object_get_int_member(n, "from_frame"));

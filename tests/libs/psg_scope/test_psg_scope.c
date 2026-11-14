@@ -118,12 +118,13 @@ typedef struct {
 
 static bool test_is_playing(const test_psg_sample_t *s) {
     if (s->attn >= 15u) return false;
-    if (s->channel_type == TEST_PSG_CHTYPE_TONE && s->divider < 2u) return false;
+    if (s->channel_type == TEST_PSG_CHTYPE_TONE && s->divider == 1u) return false;
     return true;
 }
 
 static double test_tone_freq_hz(unsigned divider) {
-    if (divider < 2u) return 0.0;
+    if (divider == 1u) return 0.0;
+    if (divider == 0u) divider = 0x400u;
     return TEST_GDGCLK_BASE / (32.0 * (double)divider * TEST_GDGCLK2CPU_DIV);
 }
 
@@ -508,12 +509,15 @@ static void test_note_type_swap_splits(void) {
  * MIDI pitch detection
  * ======================================================================== */
 
-/** @brief Divider 0/1 = DC, vrací pitch=0, cents=0. */
+/** @brief Divider 1 = DC, vrací pitch=0, cents=0; divider 0 se chová jako 1024. */
 static void test_midi_dc_returns_zero(void) {
     int pitch = -123, cents = -123;
+    int pitch_1024 = -1, cents_1024 = -1;
     test_tone_to_midi(0u, &pitch, &cents);
-    TEST_ASSERT_EQUAL_INT(0, pitch);
-    TEST_ASSERT_EQUAL_INT(0, cents);
+    test_tone_to_midi(1024u, &pitch_1024, &cents_1024);
+    TEST_ASSERT_EQUAL_INT(pitch_1024, pitch);
+    TEST_ASSERT_EQUAL_INT(cents_1024, cents);
+    TEST_ASSERT_EQUAL_INT(45, pitch);   /* 108,2 Hz na MZ-800 = A2 */
 
     test_tone_to_midi(1u, &pitch, &cents);
     TEST_ASSERT_EQUAL_INT(0, pitch);

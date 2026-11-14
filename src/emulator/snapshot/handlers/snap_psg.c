@@ -87,6 +87,12 @@ static void snap_psg_load_instance(snapshot_xml_reader_t *r, st_PSG *psg)
         if (snapshot_xml_read_uint(r, "noise_type", &uval)) channel->noise.type = (en_NOISE_TYPE)uval;
         if (snapshot_xml_read_uint(r, "noise_last_type", &uval)) channel->noise.last_noise_type = (en_NOISE_TYPE)uval;
         if (snapshot_xml_read_hex16(r, "noise_shiftregister", &hval)) channel->noise.shiftregister = hval;
+        /* Snapshoty z verzí s 16bitovým registrem šumu: ořízni na 15 bitů;
+         * nulový registr by už nikdy nevydal jedničku, proto výchozí stav.
+         * last_noise_type se nepoužívá a drží se rovno type. */
+        channel->noise.shiftregister &= PSG_NOISE_SR_MASK;
+        if (channel->noise.shiftregister == 0) channel->noise.shiftregister = PSG_NOISE_SR_RESET;
+        channel->noise.last_noise_type = channel->noise.type;
 
         snapshot_xml_read_uint(r, "output_signal", &channel->output_signal);
 
