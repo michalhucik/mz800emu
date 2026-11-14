@@ -25,4 +25,3 @@
 # Bugs awaiting a fix
 
 - **topmenu**: When the user uses arrow keys for navigation, they are picked up as keyboard input to the emulation (consider whether this behavior can be suppressed)
-- **MZ-800 emulation bug**: For a very long time there has been a feeling that when the Flappy demo is playing, the music tempo speeds up during HW scroll. That would suggest that the GDG has some additional undocumented state causing CPU WAIT. This needs to be verified by measurement on real HW.

@@ -25,4 +25,3 @@
 # Chyby čekající na bugfix
 
 - **topmenu**: Když uživatel použije k navigaci kurzory, jsou načítány jako vstup z klávesnice do emulace (zvážit, zda toto chování půjde potlačit)
-- **Chyba v emulaci MZ-800**: Už velice dlouho je pocit, že když hraje Flappy demo, tak se při HW scrollu zrychluje tempo hudby. To by naznačovalo, že v GDG máme nějaký další nedokumentovaný stav vyvolávající CPU WAIT. Tohle je potřeba ověřit měřením na reálném HW.
