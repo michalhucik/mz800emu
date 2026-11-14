@@ -1,11 +1,13 @@
 /**
  * @file   wav.h
  * @author Michal Hucik <hucik@ordoz.com>
- * @version 2.0.0
+ * @version 2.1.1
  * @brief  Veřejné API knihovny pro čtení a zápis WAV souborů (RIFF WAVE).
  *
  * Knihovna pro čtení a zápis souborů ve formátu WAV (RIFF WAVE).
- * Podporuje PCM formát s 8/16/24/32/64-bit vzorky, mono i vícekanálové.
+ * Čte PCM s 8/16/24/32/64-bit vzorky, IEEE float 32/64 bit
+ * a WAVE_FORMAT_EXTENSIBLE se SubFormat PCM nebo IEEE float, mono
+ * i vícekanálové.
  *
  * Klíčové vlastnosti:
  *   - robustní chunk scanning (přeskakuje neznámé chunky jako LIST, fact, bext)
@@ -15,9 +17,15 @@
  *   - I/O přes generic_driver (soubory i paměťové buffery)
  *
  * @par Changelog:
- * - 2026-03-14: Proběhla kompletní revize a refaktorizace. Vytvořeny unit testy.
+ * - 2026-03-14: Proběhla kompletní kontrola kódu a refaktorizace. Vytvořeny unit testy.
+ * - 2026-10-18 (2.1.0): čtení IEEE float a WAVE_FORMAT_EXTENSIBLE,
+ *   pole sample_format a valid_bits_per_sample, wav_decode_sample().
  *
  * @par Licence:
+ * GNU General Public License v3 (GPLv3)
+ *
+ * Copyright (C) 2017-2026 Michal Hucik <hucik@ordoz.com>
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -25,11 +33,11 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
 
@@ -68,7 +76,7 @@ extern "C" {
         WAV_ERROR_BAD_RIFF,                 /**< chybí RIFF/WAVE identifikátor */
         WAV_ERROR_NO_FMT_CHUNK,             /**< chybí povinný "fmt " chunk */
         WAV_ERROR_NO_DATA_CHUNK,            /**< chybí povinný "data" chunk */
-        WAV_ERROR_UNSUPPORTED_CODEC,        /**< nepodporovaný formátový kód (jen PCM) */
+        WAV_ERROR_UNSUPPORTED_CODEC,        /**< nepodporovaný formátový kód (jen PCM a IEEE float, i v EXTENSIBLE) */
         WAV_ERROR_UNSUPPORTED_BPS,          /**< nepodporovaná bitová hloubka */
         WAV_ERROR_CORRUPT_HEADER,           /**< nekonzistentní hlavička (block_size=0 apod.) */
         WAV_ERROR_ALLOC,                    /**< selhání alokace paměti */
@@ -111,6 +119,21 @@ extern "C" {
         uint16_t bits_per_sample;   /**< bitová hloubka: 8, 16, 24, 32, 64 */
     } st_WAV_FMT16;
 
+    /**
+     * @brief Rozšíření formátového chunku WAVE_FORMAT_EXTENSIBLE (bajty 16..39).
+     *
+     * Následuje za st_WAV_FMT16, chunk "fmt " má pak 40 B a cb_size 22.
+     * Zdroj rozložení: mmreg.h (WAVEFORMATEXTENSIBLE), ksmedia.h (GUID
+     * KSDATAFORMAT_SUBTYPE_PCM a _IEEE_FLOAT, na disku little-endian:
+     * Data1 1 nebo 3, pak 00 00 10 00 80 00 00 AA 00 38 9B 71).
+     */
+    typedef struct __attribute__((packed)) st_WAV_FMT_EXTENSIBLE_TAIL {
+        uint16_t cb_size;               /**< délka rozšíření (pro EXTENSIBLE aspoň 22) */
+        uint16_t valid_bits_per_sample; /**< platné bity vzorku (<= bits_per_sample, 0 = celý kontejner) */
+        uint32_t channel_mask;          /**< maska reproduktorů (knihovna nepoužívá) */
+        uint8_t sub_format[16];         /**< GUID formátu dat (Data1 LE + 12 B ocas) */
+    } st_WAV_FMT_EXTENSIBLE_TAIL;
+
 /** @} */
 
 
@@ -118,6 +141,9 @@ extern "C" {
  * @brief Zjednodušená hlavička WAV — výsledek parsování RIFF struktury.
  *
  * Obsahuje všechny informace potřebné pro čtení vzorků.
+ *
+ * @invariant sample_format je PCM nebo IEEE float; u PCM bits_per_sample
+ *            8, 16, 24, 32 nebo 64, u float 32 nebo 64.
  */
     typedef struct st_WAV_SIMPLE_HEADER {
         uint16_t format_code;       /**< formátový kód (host byte-order) */
@@ -130,6 +156,10 @@ extern "C" {
         uint32_t real_data_offset;  /**< offset datové oblasti v souboru (bajty) */
         uint32_t data_size;         /**< velikost datové oblasti (bajty) */
         double count_sec;           /**< délka záznamu v sekundách */
+        uint16_t sample_format;     /**< skutečné kódování vzorků: WAVE_FORMAT_CODE_PCM nebo
+                                         WAVE_FORMAT_CODE_IEEE_FLOAT (u EXTENSIBLE ze SubFormat);
+                                         format_code zůstává surový tag ze souboru */
+        uint16_t valid_bits_per_sample; /**< platné bity vzorku (bez EXTENSIBLE = bits_per_sample) */
     } st_WAV_SIMPLE_HEADER;
 
     /** @brief Polarita při 1-bit kvantizaci */
@@ -187,6 +217,8 @@ extern "C" {
      *
      * Pro 8-bit unsigned PCM: 0→-1.0, 128→0.0, 255→+1.0.
      * Pro 16/24/32/64-bit signed PCM: normalizace rozsahem datového typu.
+     * Pro IEEE float 32/64: hodnota beze změny (může ležet mimo ±1.0),
+     * NaN = 0.0, ±Inf = ±1.0. Převod dělá wav_decode_sample().
      *
      * @param h               Otevřený handler s WAV daty
      * @param sh              Parsovaná hlavička
@@ -198,6 +230,23 @@ extern "C" {
     extern en_WAV_ERROR wav_get_sample_float ( st_HANDLER *h, const st_WAV_SIMPLE_HEADER *sh,
                                                uint32_t sample_position, uint16_t channel,
                                                double *value );
+
+    /**
+     * @brief Převede jeden vzorek z bajtů souboru na normalizovanou hodnotu.
+     *
+     * Jediný převod vzorků knihovny (používá ho wav_get_sample_float()
+     * i hromadné čtení v wav_analyzer). PCM: 8 bit unsigned, 16/24/32/64
+     * bit signed little-endian, normalizace rozsahem kontejneru. IEEE
+     * float 32/64 little-endian: hodnota beze změny, NaN = 0.0, ±Inf = ±1.0
+     * (NaN by jinak rozbil filtry předzpracování).
+     *
+     * @param sh  Hlavička (rozhoduje sample_format a bits_per_sample)
+     * @param raw Bajty vzorku (bits_per_sample / 8 bajtů)
+     * @param value Výstupní hodnota
+     * @return WAV_OK; WAV_ERROR_INVALID_PARAM (NULL); WAV_ERROR_UNSUPPORTED_BPS
+     *         (bitová hloubka nepatří ke kódování)
+     */
+    extern en_WAV_ERROR wav_decode_sample ( const st_WAV_SIMPLE_HEADER *sh, const uint8_t *raw, double *value );
 
     /**
      * @brief Přečte vzorek a provede 1-bit kvantizaci (prahování kolem nuly).
@@ -274,6 +323,15 @@ extern "C" {
 
 /** @} */
 
+
+    /** @brief Verze knihovny wav. */
+#define WAV_VERSION "2.1.1"
+
+    /**
+     * @brief Vrátí řetězec s verzí knihovny wav.
+     * @return Statický řetězec s verzí (např. "2.0.0").
+     */
+    extern const char* wav_version ( void );
 
 #ifdef __cplusplus
 }

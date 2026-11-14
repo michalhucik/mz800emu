@@ -12,7 +12,8 @@
  *  - příkaz s původem MCP ho nemění,
  *  - akce GUI mimo frontu (dbgapi_note_user_action(), zásah zařízení
  *    device_request_submit(), načtení snímku snapshot_request_submit())
- *    ho přepíše jménem akce; uložení snímku ne (N95).
+ *    ho přepíše jménem akce; uložení snímku ne (N95), zásah jen pro data
+ *    UI (device_request_submit_ui_data()) také ne.
  *
  * Příkazy se zařazují přes dbgapi_ui_submit_cmd_sync_ex() s krátkým
  * timeoutem bez emu vlákna: záznam vzniká při zařazení, výsledek čekání
@@ -193,6 +194,10 @@ void test_gui_actions_outside_queue_overwrite_last_action(void)
 
     /* Menu Devices: zásah zařízení přes frontu device_request. */
     TEST_ASSERT_TRUE(device_request_submit("memext_set_connection", dummy_device_fn, NULL) != 0);
+    TEST_ASSERT_EQUAL_STRING("memext_set_connection", last_kind());
+
+    /* Zásah jen pro data UI (délky bloků okna Virtual CMT) není akce člověka. */
+    TEST_ASSERT_TRUE(device_request_submit_ui_data("cmt_lengths", dummy_device_fn, NULL) != 0);
     TEST_ASSERT_EQUAL_STRING("memext_set_connection", last_kind());
 
     /* Quick Load z GUI. */

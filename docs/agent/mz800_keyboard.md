@@ -220,7 +220,7 @@ them. Names are case-insensitive; an unknown name is rejected with
 A key that needs SHIFT (ASCII `*`, `+`, lowercase letters, names such as
 `LIBRA`) is sent as SHIFT first and the key one frame later, both
 released together, inside the same hold (`frames` / `frame_per_key` /
-`hold_frames` >= 2; the default 3 qualifies). Total frames do not
+`hold_frames` >= 2; the defaults qualify). Total frames do not
 change. With a hold of 1 frame SHIFT and the key go down together, and
 programs that read the SHIFT column apart from the key column (K&P Disk
 BASIC) may then see the key without SHIFT. `emu_input_press_key` keeps
@@ -253,7 +253,14 @@ they are translated to the (column, bit, shift) matrix position automatically.
 
 Multi-key typing uses `emu_input_send_keys` (`encoding` = `ascii` or `key_names`;
 with `key_names` the text is a JSON array of the names above, and an unknown
-name fails the whole call before any key is sent).
+name fails the whole call before any key is sent). In `ascii`, `\n`, `\r` and
+the pair `\r\n` type the CR (Enter) key once; a character the keyboard cannot
+type is skipped and counted in the result's `skipped`, with a `warning`.
+One call types at most 256 keys (skipped characters do not count, `\r\n` is
+one key); the rest is not typed and is counted in `truncated`, with the
+`warning` `Text truncated: N character(s) after the first 256 keys were not
+typed` (`key_names`: `N key name(s) ... were not sent`). Split longer text
+into several calls.
 
 **Timing.** `frames` (`emu_input_send_key`, `emu_input_send_joystick`),
 `frame_per_key` (`emu_input_send_keys`) and `hold_frames` / `gap_frames`
@@ -291,6 +298,15 @@ of keyboard columns and not read keys aimed at other columns - that now shows as
 `landing_verified: false` (no more silent swallow). If a key does not land, hold
 it longer (`frames`), make sure the guest is at a prompt that scans the keyboard,
 or reset the emulator (which remaps the ROM monitor with a full keyboard scan).
+A landed key is a key the guest read, not necessarily one it acted on: the
+boot menu of the MZ-800 and the MZ-1500 ignores a key held for 3 frames at
+some moments although `keys_landed` is 1 (measured with `M` typed 300 to
+480 frames after the start in steps of 20: missed on the MZ-800 at 400 and
+440, on the MZ-1500 at 360, 420 and 480). Held for 6 or 10 frames
+the key was taken at every one of those moments, which is why
+`emu_input_send_key` and `emu_input_send_keys` hold a key for 6 frames by
+default (`hold_frames` of `emu_input_send_keys_with_delays` defaults to 3).
+Check the screen after typing.
 
 ---
 

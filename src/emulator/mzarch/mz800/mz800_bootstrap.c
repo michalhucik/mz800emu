@@ -170,8 +170,8 @@ void mzarch_platform_bootstrap_post_header(uint16_t fstrt)
 
 void mzarch_platform_bootstrap_entry_regs(uint16_t fexec)
 {
-    /* ]GOCMT E99Dh: LD BC,100h (zařízení = magnetofon) -> přes EXX v BC
-     * při skoku; ]GOPGM ED19h-ED41h: IX = start adresa, JP (IX). */
-    z80_set_reg ( g_mzarch_main.cpu, Z80_REG_BC, 0x0100 );
+    /* ]GOPGM ED19h-ED41h: IX = start adresa, JP (IX). BC (]GOCMT E99Dh:
+     * LD BC,100h, zařízení = magnetofon, přes EXX v BC při skoku) nastaví
+     * společná část podle bootstrap_device.h (výchozí cmt = 0100h). */
     z80_set_reg ( g_mzarch_main.cpu, Z80_REG_IX, fexec );
 }

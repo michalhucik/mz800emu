@@ -14,6 +14,7 @@
 #include "emulator/replay.h"
 #include "topmenu.h"
 #include "ui-imgui/debugger/dbgapi_helpers.h"
+#include "ui-imgui/cmt/imgui_cmt.h"
 
 extern "C"
 {
@@ -49,15 +50,53 @@ static void snapshot_pause_and_request(bool *request_flag)
     *request_flag = true;
 }
 
-/* Veřejné funkce pro spouštění snapshot akcí (z global_shortcuts).
+/* Veřejné funkce pro spouštění snapshot akcí (z global_shortcuts a menu).
  * Načtení snapshotu za záznamu / přehrávání vstupů nejde: záznam by ho
- * nezopakoval (a načtení jde přímo z UI vlákna, mimo bránu záznamu). */
+ * nezopakoval (a načtení jde přímo z UI vlákna, mimo bránu záznamu).
+ * Načtení pásku v kazetofonu nahradí: Load a Quick Load jdou přes dotaz
+ * Virtual CMT (probíhající nahrávání, neuložené změny pásky), ten po
+ * odsouhlasení zavolá variantu "_now". */
+
+/**
+ * @brief Load Snapshot (menu, klávesová zkratka): přes dotaz Virtual CMT.
+ *
+ * Při záznamu nebo přehrávání vstupů nic. Jinak zahájí automat dotazu
+ * (imgui_cmt_tape_action(IMGUI_CMT_TAPE_ACTION_SNAPSHOT_LOAD)): bez
+ * nahrávání a neuložených změn pásky, nebo po odsouhlasení, zavolá
+ * snapshot_ui_request_load_now() (pauza a dialog souboru), a to vždy až
+ * mimo device_state_lock() (pauza synchronně čeká na emu vlákno).
+ * Vybraný soubor jde zpět do automatu (SNAPSHOT_LOAD_FILE).
+ *
+ * @pre UI vlákno.
+ */
 extern "C" void snapshot_ui_request_load(void)
+{
+    if (!replay_is_active()) imgui_cmt_tape_action(IMGUI_CMT_TAPE_ACTION_SNAPSHOT_LOAD);
+}
+
+/** @brief Load Snapshot po dotazu Virtual CMT: pauza a dialog souboru (bez dalšího dotazu). */
+extern "C" void snapshot_ui_request_load_now(void)
 {
     if (!replay_is_active()) snapshot_pause_and_request(&s_snapshot_load_requested);
 }
 extern "C" void snapshot_ui_request_save(void) { snapshot_pause_and_request(&s_snapshot_save_requested); }
+/**
+ * @brief Quick Load (menu, klávesová zkratka): přes dotaz Virtual CMT.
+ *
+ * Při záznamu nebo přehrávání vstupů nic. Jinak zahájí automat dotazu
+ * (IMGUI_CMT_TAPE_ACTION_QUICK_LOAD), který po odsouhlasení (nebo bez
+ * čeho by se ptal) zavolá snapshot_ui_request_quickload_now() mimo
+ * device_state_lock().
+ *
+ * @pre UI vlákno.
+ */
 extern "C" void snapshot_ui_request_quickload(void)
+{
+    if (!replay_is_active()) imgui_cmt_tape_action(IMGUI_CMT_TAPE_ACTION_QUICK_LOAD);
+}
+
+/** @brief Quick Load po dotazu Virtual CMT: pauza a požadavek (bez dalšího dotazu). */
+extern "C" void snapshot_ui_request_quickload_now(void)
 {
     if (!replay_is_active()) snapshot_pause_and_request(&s_snapshot_quickload_requested);
 }
@@ -71,7 +110,7 @@ void imgui_menu_snapshot(void)
         bool replay_active = replay_is_active();
         if (ImGui::MenuItem(_L("Load Snapshot..."), "Alt+F7", false, !replay_active))
         {
-            snapshot_pause_and_request(&s_snapshot_load_requested);
+            snapshot_ui_request_load();
         }
         if (replay_active)
         {
@@ -87,8 +126,9 @@ void imgui_menu_snapshot(void)
 
         if (ImGui::MenuItem(_L("Quick Load"), "Alt+F9", false, !replay_active))
         {
-            snapshot_pause_and_request(&s_snapshot_quickload_requested);
+            snapshot_ui_request_quickload();
         }
+
 
         if (ImGui::MenuItem(_L("Quick Save"), "Alt+F8"))
         {

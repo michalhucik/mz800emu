@@ -49,6 +49,9 @@ extern "C"
         size_t snap_size;        /**< Velikost snapshotu v bajtech. */
         uint32_t media_writes;   /**< g_media_writes v bodě checkpointu. */
         int tape_block;          /**< Aktuální blok vložené pásky, -1 = bez pásky (snapshot blok nenese). */
+        void *aux;               /**< Doplňková data checkpointu mimo snapshot (páska, kopie nahrávání), NULL = žádná; vlastní je buffer. */
+        void (*aux_free)(void *aux); /**< Uvolní `aux` (NULL = g_free()). */
+        size_t aux_size;         /**< Velikost `aux` v bajtech (počítá se do `bytes`). */
 
         /* Stav záznamu */
         guint events_len;        /**< Počet událostí záznamu. */
@@ -72,7 +75,7 @@ extern "C"
      * @brief Kruhový buffer checkpointů seřazených podle snímku (nejstarší první).
      *
      * @invariant `count` <= `capacity`; položky `0 .. count-1` (od nejstaršího)
-     *            mají rostoucí `frame`; `bytes` = součet `snap_size`.
+     *            mají rostoucí `frame`; `bytes` = součet `snap_size` a `aux_size`.
      */
     typedef struct st_REPLAY_CKPT_RING
     {
@@ -115,7 +118,7 @@ extern "C"
      * @brief Přidá checkpoint na konec; při plném bufferu uvolní nejstarší.
      *
      * @param ring Inicializovaný buffer.
-     * @param c    Checkpoint; buffer převezme `c->snap` (volající ho neuvolňuje).
+     * @param c    Checkpoint; buffer převezme `c->snap` a `c->aux` (volající je neuvolňuje).
      * @pre `c->frame` je větší než snímek posledního checkpointu (jinak se
      *      checkpoint téhož nebo staršího snímku nejdřív odebere, aby pořadí
      *      zůstalo rostoucí).
@@ -153,7 +156,7 @@ extern "C"
      * je-li nový starší než všechny uložené v plném bufferu, zahodí nový.
      *
      * @param ring Inicializovaný buffer.
-     * @param c    Checkpoint; buffer převezme `c->snap` (i při zahození ho uvolní).
+     * @param c    Checkpoint; buffer převezme `c->snap` a `c->aux` (i při zahození je uvolní).
      * @return true = vložen, false = zahozen (plný buffer, nejstarší snímek).
      */
     bool replay_ckpt_ring_insert(st_REPLAY_CKPT_RING *ring, const st_REPLAY_CKPT *c);

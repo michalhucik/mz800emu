@@ -63,8 +63,8 @@ mají oproti Tools dvě výhody:
 | `emulator://periph/beeper` | Audio cesta CTC0 OUT přes GATE0 + PC0 (raw bity + dopočet audible) |
 | `emulator://periph/gdg` | GDG video LSI - paleta, raster state, regDMD; u MZ-800 i registry přístupu do VRAM (WF/RF) a hardwarový scroll |
 | `emulator://periph/wd1793` | WD279x FDC chip registry + 4 drive mount metadata |
-| `emulator://periph/cmt` | CMT cassette - stop/play/record state, motor, polarita, image basename, `cmthack_enabled` (ROM patch instant load) |
-| `emulator://periph/cmt/tape` | Výpis bloků naložené pásky - container_type (SINGLE/SIMPLE_TAPE), current_block, per-blok id/name/cmt_speed/type/playable/recordable |
+| `emulator://periph/cmt` | CMT cassette - stav stop/play/record, `paused`, `user_paused` (pauza uživatele), `motor_on` (motor běží; null = stav neznámý; se zapnutým CMT hackem je to jen čidlo motoru, které hack ukazuje programu, a o decku nic neříká - zda páska stojí, říká `paused`), `filled` (páska vložená), `polarity_inverted`, `cmtspeed`, `default_pulses_us`, `custom_pulses_us`, `cpu_boost`, `mzfsize_check`, `cmthack_enabled` (ROM patch instant load), `direct_save` (patch Direct Save je teď v ROM: SAVE z ROM bez nahrávání jde rovnou na pásku; při nahrávání false), `direct_save_enabled` (nastavení), `output`, `playsts`, `start_time`, `paused_time`, `image_basename` |
+| `emulator://periph/cmt/tape` | Výpis bloků naložené pásky - `container_type` (vždy 1 = páska se seznamem bloků), `current_block`, `modified` (neuložené změny), `path` (plná cesta souboru pásky, null u nové pásky), `last_recording` (výsledek posledního nahrávání), `count` a `truncated` (vypíše se nejvýš 256 bloků), `position_s` a `block_position_s` (pozice od začátku pásky a v otevřeném bloku v sekundách jako počítadlo Elapsed okna Virtual CMT; null = neznámá, také při nahrávání, kdy počítadlo okna ukazuje čas záznamu), a u bloku `block_id`, `name`, `type`, `status` (ok / not_decoded / cannot_play / control), `playable` (blok jde přehrát), `is_current`, `recordable`, `size`, `load_addr`, `exec_addr`, `file_type` (hlavička MZF bloku se souborem, jinak null), `length_s` (délka v sekundách, když je známá, jinak null), `unsaved` (blok není v souboru pásky: nahraný, importovaný), `block_speed`, `cmt_speed`, `pulses_us`, `profile` (profil zapisovače bloku souboru TMZ, jinak null) a `convertible`; `profiles` (profily zapisovače, na které jde blok převést: id, description, accepts_speed) |
 | `emulator://periph/qd` | Quick Disk - state machine, image basename |
 
 ### Vstupy a video
@@ -99,7 +99,7 @@ file-based, žádný transport call).
 | `emulator://docs/eventlog_mask` | EventLog 64-bit category mask - bit assignments + recipes |
 | `emulator://docs/sharp_display_code` | Sharp MZ ASCII vs display code vs std ASCII (decode `video/text_dump` + `mzascii` watch) |
 | `emulator://docs/mz800_keyboard` | Klávesnice MZ-800 - layout, matice, modifikátory, znakové vrstvy, jména kláves pro `emu_input_send_keys`, recepty na speciální znaky (MZ-700/1500 jako diff) |
-| `emulator://docs/cmt_workflow` | CMT workflow - reálná páska vs cmthack, transport, WAV recording, rychlostní poměry, SIMPLE_TAPE multi-blok seek + per-blok speed |
+| `emulator://docs/cmt_workflow` | CMT workflow - reálná páska vs cmthack, transport, nahrávání do pásky, bloky pásky (seek, krok, rychlost bloku), úpravy a nástroje nad páskou |
 | `emulator://docs/videorec_workflow` | Workflow nahrávání videa - nástroje `emu_videorec_*`, postup start, hraní, markery, retake ze snapshotu, stop, export do MP4 |
 | `emulator://docs/screenshot_workflow` | Workflow screenshotů - `emu_screenshot_save_to_file` s oblastí, měřítkem (framebuffer / nativní body / okno 1-4) a ořezem, rozměry obrázků podle platformy, recepty, série snímků `emu_screenshot_series_*` pro chyby v animacích |
 
@@ -377,6 +377,8 @@ pro celý seznam slouží `emulator://watch`.
   Default build všech tří platforem má oba zapnuté.
 - **Image paths jen jako basename** - FDC / CMT / QD `image_basename`
   vrací jen filename (bez adresářové cesty) - bezpečnostní omezení.
+  Výjimkou je vložená páska: `emulator://periph/cmt/tape` vrací její plnou
+  cestu v `path`.
 - **CMT bez sample stream** - Resource vrátí state + image basename
   + motor flag, ne tape signal samples.
 - **QD VIRTUAL files listing chybí** - `virt_files_count` říká kolik

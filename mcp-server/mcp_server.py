@@ -73,6 +73,7 @@ Reference design:
 
 import asyncio
 import configparser
+import contextlib
 import contextvars
 import functools
 import json
@@ -371,7 +372,27 @@ def _wire_truncate(line: str) -> str:
 
 # === FastMCP instance ================================================
 
-mcp = FastMCP("mz800emu")
+@contextlib.asynccontextmanager
+async def _lifespan(_server):
+    """Životní cyklus serveru: při konci MCP session ukončí backend.
+
+    FastMCP opustí tento kontext, když klient zavře stdin (konec session),
+    ještě uvnitř běžící smyčky událostí. Backend se proto ukončí tady
+    (``_shutdown_emu``), ne až po návratu ``mcp.run()``: čtení stdout
+    emulátoru běží v thread poolu (``_PipeTransport.read_line``) a smyčka
+    se při ukončení na jeho vlákna čeká, takže dokud emulátor běžel,
+    ``mcp.run()`` se nevrátil a obal i emulátor zůstaly viset.
+    """
+    try:
+        yield
+    finally:
+        try:
+            await _shutdown_emu()
+        except Exception as e:  # noqa: BLE001 - úklid nesmí shodit ukončení
+            log.warning("lifespan _shutdown_emu failed: %s", e)
+
+
+mcp = FastMCP("mz800emu", lifespan=_lifespan)
 
 
 #: Úložiště oznámení o restartu pro právě běžící tool call. Obal toolu
@@ -1214,7 +1235,9 @@ async def _shutdown_emu() -> None:
 
     # V pipe módu posíláme shutdown (= killne child). V TCP módu NE -
     # nechceme killnout live GUI session uživatele.
-    if isinstance(_transport, _PipeTransport):
+    # Jen živému emulátoru: po jeho pádu by _send_request přes
+    # _ensure_connected spustil nový jen proto, aby ho ukončil.
+    if isinstance(_transport, _PipeTransport) and _transport.is_alive():
         try:
             await asyncio.wait_for(_send_request("shutdown"), timeout=5.0)
         except Exception as e:
@@ -2361,9 +2384,21 @@ async def emu_cmt_play() -> str:
     (see ``emu_cmt_hack_set``). Sensitive: changes emulator state and is
     logged as an MCP action.
 
+    With the cmthack on (``cmthack_enabled`` in ``emulator://periph/cmt``,
+    the Direct loading mode; a fresh configuration has it on) the program's
+    motor commands do not start or stop the tape (the Virtual CMT window
+    disables Play there); the call is still done and, when it started the
+    tape from STOP, returns ``warning`` (a call that did nothing - no tape,
+    tape already running - returns none).
+
     Returns:
         JSON ``{"ok": true, "action": "play"}`` on success or
-        ``{"error": "..."}`` on failure.
+        ``{"error": "..."}`` on failure. With the cmthack on also
+        ``warning`` "Direct loading (CMT hack) is on: a ROM load reads the tape block
+        directly and the emulated program's motor commands do not start or
+        stop the tape. To let the program drive the motor, stop the tape and
+        call emu_cmt_hack_set(enabled=false); to run the tape regardless of
+        the motor, call emu_cmt_pause(paused=false)".
     """
     resp = await _send_request("cmt_transport", {"action": "play"})
     if not resp.get("success", False):
@@ -2373,16 +2408,23 @@ async def emu_cmt_play() -> str:
 
 @mcp.tool()
 async def emu_cmt_play_paused() -> str:
-    """Start REAL cassette tape playback but immediately paused.
+    """Start REAL cassette tape playback waiting for the motor.
 
-    Same as ``emu_cmt_play`` except the tape begins in the paused state;
-    call ``emu_cmt_pause(paused=False)`` to actually advance the tape.
-    Useful to arm playback at a precise moment. Sensitive: changes
-    emulator state (MCP action).
+    Like ``emu_cmt_play``, but the tape stands (PLAY, ``paused`` true,
+    ``user_paused`` false) until the emulated program turns the cassette
+    motor on - a ROM load does that - so the program's own load command
+    starts it, no further call is needed. ``emu_cmt_pause(paused=False)``
+    starts it without the motor. Useful to arm playback before the load
+    command. Sensitive: changes emulator state (MCP action).
+
+    With the cmthack on the program's motor command never starts the
+    waiting tape; the call returns the same ``warning`` as ``emu_cmt_play``
+    (``emu_cmt_pause(paused=False)`` still starts it).
 
     Returns:
         JSON ``{"ok": true, "action": "play_paused"}`` on success or
-        ``{"error": "..."}`` on failure.
+        ``{"error": "..."}`` on failure; ``warning`` with the cmthack on
+        when the call started the tape from STOP.
     """
     resp = await _send_request("cmt_transport", {"action": "play_paused"})
     if not resp.get("success", False):
@@ -2395,14 +2437,21 @@ async def emu_cmt_play_paused() -> str:
 async def emu_cmt_stop() -> str:
     """Stop the REAL cassette tape transport (PLAY or RECORD -> STOP).
 
-    Stops playback or recording and rewinds the transport state machine.
-    No-op if the tape is already stopped. Without a loaded tape it still
-    puts the transport into STOP (e.g. a playing state restored from a
-    snapshot). Sensitive: changes emulator state (MCP action).
+    Stops playback or recording. No-op if the tape is already stopped.
+    Without a loaded tape it still puts the transport into STOP (e.g. a
+    playing state restored from a snapshot). When the stop ends a
+    recording, the recording is decoded and appended to the end of the
+    tape (an error-free ROM-format file as an MZF block, anything else as a
+    raw signal block) and the deck stands at the first new block; the tape
+    is never ejected. Sensitive: changes emulator state (MCP action).
 
     Returns:
         JSON ``{"ok": true, "action": "stop"}`` on success or
-        ``{"error": "..."}`` on failure.
+        ``{"error": "..."}`` on failure. After a recording also
+        ``"recorded": {"blocks": int, "mzf": int, "raw": int,
+        "message": str}`` (blocks appended to the tape; ``message`` e.g.
+        ``Recorded "NAME", 1024 B``). ``recorded`` is present only when the
+        stop ended a recording.
     """
     resp = await _send_request("cmt_transport", {"action": "stop"})
     if not resp.get("success", False):
@@ -2415,15 +2464,26 @@ async def emu_cmt_pause(paused: bool = True) -> str:
     """Pause or resume the REAL cassette tape transport.
 
     Pauses (``paused=True``) or resumes (``paused=False``) the running
-    tape without resetting its position. If the tape is stopped, pausing
-    has no useful effect. Sensitive: changes emulator state (MCP action).
+    tape without resetting its position. On a stopped tape ``paused=True``
+    starts playback waiting for the motor (the program's first motor
+    command moves the tape, as ``emu_cmt_play_paused``; with the cmthack on
+    the motor command never does and the result has the same ``warning``
+    as ``emu_cmt_play``). On a running tape
+    the pause is the user's own: while it is on, the program's motor
+    commands do not move the tape (they only switch the motor).
+    ``paused=False`` clears the user's pause and leaves the motor as the
+    program set it; without a user's pause it starts the motor (a tape or
+    recording waiting for the motor starts). ``emulator://periph/cmt``
+    shows ``user_paused`` and ``motor_on``. Sensitive: changes emulator
+    state (MCP action).
 
     Args:
         paused: True = pause the tape, False = resume.
 
     Returns:
         JSON ``{"ok": true, "action": "pause"}`` on success or
-        ``{"error": "..."}`` on failure.
+        ``{"error": "..."}`` on failure; ``warning`` when ``paused=True``
+        started a stopped tape with the cmthack on.
     """
     resp = await _send_request(
         "cmt_transport", {"action": "pause", "pause": bool(paused)})
@@ -2437,13 +2497,17 @@ async def emu_cmt_eject() -> str:
     """Eject the cassette tape image from the REAL tape drive.
 
     Stops the transport (if running) and removes the loaded tape image.
-    No-op if nothing is loaded. Equivalent to ``emu_media_eject(slot=
+    No-op if nothing is loaded. A running recording is discarded (nothing
+    is appended or written). Equivalent to ``emu_media_eject(slot=
     "cmt")`` but scoped to the CMT subsystem. Sensitive: changes emulator
     state (MCP action).
 
     Returns:
         JSON ``{"ok": true, "action": "eject"}`` on success or
-        ``{"error": "..."}`` on failure.
+        ``{"error": "..."}`` on failure. ``warning`` ("Unsaved tape changes
+        were discarded") is present when the tape had unsaved changes
+        (``modified`` in ``emulator://periph/cmt/tape``) or a recording
+        was running; the eject is done anyway.
     """
     resp = await _send_request("cmt_transport", {"action": "eject"})
     if not resp.get("success", False):
@@ -2452,29 +2516,46 @@ async def emu_cmt_eject() -> str:
 
 
 @mcp.tool()
-async def emu_cmt_record(path: str) -> str:
-    """Start recording the REAL cassette tape output to a WAV file.
+async def emu_cmt_record(path: str | None = None) -> str:
+    """Start recording the REAL cassette tape output into the tape.
 
-    Opens ``path`` as a WAV file and arms the tape for recording (the
-    captured signal is whatever the program writes to the cassette
-    output). Recording starts paused; call
-    ``emu_cmt_pause(paused=False)`` to begin capturing. Only WAV output
-    is supported. The tape must be in the STOP state and the path must be
-    writable, otherwise this fails.
+    Arms the deck for recording what the program writes to the cassette
+    output. The recording goes into the inserted tape (without a tape into
+    a new empty one, see ``emu_cmt_new_tape``); ``emu_cmt_stop`` decodes it
+    and appends the blocks to the end of the tape (result in its
+    ``recorded`` field). Recording starts paused; the program's motor
+    command or ``emu_cmt_pause(paused=False)`` starts capturing. The tape
+    must be in the STOP state.
+
+    With ``path`` the stop additionally writes a file: ``.wav`` = the
+    recording as a 44.1 kHz WAV, ``.tmz``, ``.tzx``, ``.mzt``, ``.mzf``,
+    ``.m12`` = the whole tape saved (as ``emu_cmt_save``). Nothing is
+    written when nothing was recorded. With ``path`` it is refused while
+    an input replay is played ("Recording to a file is not allowed while
+    a replay is played"); without ``path`` it is allowed then.
 
     This records the real tape signal; it is unrelated to the cmthack
     instant load. Sensitive: changes emulator state (MCP action).
 
     Args:
-        path: target WAV file path (must be writable).
+        path: optional output file (must be writable).
+
+    The cmthack (loading mode Direct) does not affect recording of a
+    program's own tape routine: also with it on, the program's motor
+    command starts and stops the recording and its SAVE records onto the
+    tape. A SAVE through the ROM routines (monitor S, @WHEAD / @WDATA) is
+    recorded as signal too: while the deck records, the Direct Save patch
+    is not in ROM. Without this tool, with ``direct_save`` true in
+    ``emulator://periph/cmt``, a ROM SAVE is stored at once as a new MZF
+    block at the end of the tape instead.
 
     Returns:
-        JSON ``{"ok": true, "path": str}`` on success or
-        ``{"error": "..."}`` on failure (bad state or path not writable).
+        JSON ``{"ok": true, "path": str | null}`` on success or
+        ``{"error": "..."}`` on failure (not in STOP, path not writable,
+        unsupported extension).
     """
-    if not path:
-        return json.dumps({"error": "Missing required field: path"})
-    resp = await _send_request("cmt_record", {"path": path})
+    data = {"path": path} if path else {}
+    resp = await _send_request("cmt_record", data)
     if not resp.get("success", False):
         return json.dumps({"error": resp.get("error", "cmt_record failed")})
     return json.dumps(_data_or_error(resp))
@@ -2485,11 +2566,35 @@ async def emu_cmt_hack_set(enabled: bool) -> str:
     """Enable or disable the cmthack ROM patch (instant tape load).
 
     The cmthack is a ROM-patch shortcut, NOT the real tape: when enabled,
-    the patched Sharp ROM load routine copies a tape file directly into
-    RAM, skipping the cycle-accurate tape signal. It is faster but only
+    the patched Sharp ROM load routine copies an MZF directly into RAM,
+    skipping the cycle-accurate tape signal. With a tape inserted it reads
+    the MZF of the current tape block and then moves the tape to the next
+    block with an MZF (the transport is not started); a block without an
+    MZF, the end of the tape or no tape open the file dialog (headless:
+    Break with a warning). With the setting ``CMTHACK/direct_save`` on
+    (default) the ROM write routines are patched too while the deck does
+    not record: a ROM SAVE stores the file at once as a new block at the
+    end of the tape and the ROM VERIFY compares memory with the open block
+    (``direct_save`` in ``emulator://periph/cmt``). It is faster but only
     works for programs that load through the patched ROM entry points.
     For anything else (custom loaders, copy-protection, recording) use the
     real tape transport (``emu_cmt_play`` / ``emu_cmt_record``).
+
+    The rules of the main menu item "Use CMT Hack", shared with the
+    Loading switch of the Virtual CMT window: the patch changes only with
+    the tape stopped (otherwise the error "tape is not stopped" and nothing
+    changes); a request that changes nothing (the patch already has that
+    state) succeeds in any state. Turning the patch off forgets what it had
+    read from the tape (a header read without its body, the end of the tape
+    reached). The CPU boost is not changed. Only the window's switch
+    additionally refuses Direct when the current tape block carries no MZF
+    file; this tool does not check the block. Switching the patch on with a
+    ROM that does not support it (MZ-800 Willy, MZ-1500 MZ-NEWMON, a user
+    ROM set without the hack) is the error "The selected ROM does not
+    support the CMT hack" and nothing changes (the window cannot switch to
+    Direct then either). Refused while an input replay is recorded or
+    played. To pick a block and switch the patch on in one step use
+    ``emu_cmt_load_directly``.
 
     The current patch state is also readable as ``cmthack_enabled`` in the
     ``emulator://periph/cmt`` resource. Sensitive: changes emulator state
@@ -2500,12 +2605,88 @@ async def emu_cmt_hack_set(enabled: bool) -> str:
 
     Returns:
         JSON ``{"ok": true, "installed": bool}`` echoing the patch state
-        after the operation, or ``{"error": "..."}`` on failure.
+        after the operation, or ``{"error": "..."}`` on failure (e.g.
+        "tape is not stopped").
     """
     resp = await _send_request("cmt_hack_set", {"enabled": bool(enabled)})
     if not resp.get("success", False):
         return json.dumps(
             {"error": resp.get("error", "cmt_hack_set failed")})
+    return json.dumps(_data_or_error(resp))
+
+
+@mcp.tool()
+async def emu_cmt_load_directly(block_id: int) -> str:
+    """Pick a tape block and switch to the Direct loading mode in one step.
+
+    The same action as "Load directly" in the block list of the Virtual
+    CMT window: all or nothing. Needs the deck stopped ("tape is not
+    stopped"), a block that exists ("Block N does not exist") and carries
+    an MZF file ("Block N does not contain an MZF file"; control, raw and
+    ZX blocks do not, nor a file block whose MZF cannot be assembled - the
+    blocks with ``size`` null in ``emulator://periph/cmt/tape``); a block
+    that cannot be opened gives "Block N cannot be opened", without a tape
+    "No tape inserted", with a ROM that does not support the cmthack "The
+    selected ROM does not support the CMT hack" (nothing changes, not even
+    the block or the CPU boost). Then the block becomes the current block and the
+    cmthack ROM patch is switched on with the CPU boost off; when the patch
+    was already on, only the block changes (the boost stays). The next ROM
+    load of the program reads this block instantly. Refused while an
+    input replay is recorded or played. Sensitive: changes emulator state
+    (MCP action).
+
+    Args:
+        block_id: 0-based block number (see ``emulator://periph/cmt/tape``).
+
+    Returns:
+        JSON ``{"ok": true, "block_id": int, "mode_changed": bool,
+        "installed": bool, "current_block": int}`` (``mode_changed`` false =
+        the patch was already on) or ``{"error": "..."}``.
+    """
+    if isinstance(block_id, bool):
+        return json.dumps({"error": "block_id must be a non-negative integer"})
+    resp = await _send_request("cmt_load_directly", {"block_id": block_id})
+    if not resp.get("success", False):
+        return json.dumps(
+            {"error": resp.get("error", "cmt_load_directly failed")})
+    return json.dumps(_data_or_error(resp))
+
+
+@mcp.tool()
+async def emu_cmt_tape_step(direction: str) -> str:
+    """Move the tape to the next, previous or first playable block.
+
+    The same as the Next block, Previous block and Rewind buttons of the
+    Virtual CMT deck: ``direction`` "next", "prev" or "start". Control and
+    information blocks and blocks the player cannot play are skipped
+    (``playable`` false in ``emulator://periph/cmt/tape``). "next" and
+    "prev" keep the transport: a playing tape plays the new block from its
+    start, a paused tape stays paused. "start" opens the first playable
+    block without changing the transport (as ``emu_cmt_tape_seek``). Works
+    in the Direct mode too (it picks the block the next ROM load reads).
+    Errors (nothing changes): "No tape inserted", "The tape is empty",
+    "Not available while recording", "The tape has no playable block",
+    "There is no playable block after this one" / "before this one". An
+    input replay records it like the deck buttons; while an input replay is
+    played the step is done (the window disables the buttons then) and the
+    playback deviates, as with ``emu_cmt_tape_seek``. Sensitive: changes
+    emulator state (MCP action).
+
+    Args:
+        direction: "next", "prev" or "start".
+
+    Returns:
+        JSON ``{"ok": true, "direction": str, "block_id": int}``
+        (``block_id`` = the current block afterwards) or ``{"error":
+        "..."}``.
+    """
+    if direction not in ("next", "prev", "start"):
+        return json.dumps(
+            {"error": "direction must be one of: next, prev, start"})
+    resp = await _send_request("cmt_tape_step", {"direction": direction})
+    if not resp.get("success", False):
+        return json.dumps(
+            {"error": resp.get("error", "cmt_tape_step failed")})
     return json.dumps(_data_or_error(resp))
 
 
@@ -2555,6 +2736,20 @@ def _cmt_resolve_speed(speed, allow_custom: bool = True) -> int:
         return 0
     top = _CMT_SPEED_CUSTOM if allow_custom else 9
     return v if 1 <= v <= top else 0
+
+
+def _cmt_convert_speed_value(speed) -> int:
+    """Speed argument of emu_cmt_tape_convert_block -> the integer the emulator takes.
+
+    The emulator command ``cmt_tape_convert_block`` takes only an integer
+    1..9 (en_CMTSPEED without custom pulses). A ratio key ("2:1"), a
+    numeric string ("2") and an integer (2) all map to that integer; a bool
+    (JSON true / false would otherwise pass as 1 / 0) and anything else map
+    to 0 (invalid). Checked by tests/mcp/test_mcp_wrapper_speed.py.
+    """
+    if isinstance(speed, bool):
+        return 0
+    return _cmt_resolve_speed(speed, allow_custom=False)
 
 
 def _cmt_resolve_pulses(pulses_us):
@@ -2654,10 +2849,12 @@ async def emu_cmt_set_speed(speed=None, pulses_us=None) -> str:
 async def emu_cmt_set_polarity(inverted: bool) -> str:
     """Set the CMT rear DIP switch tape signal polarity.
 
-    Some real machines have inverted cassette wiring; this flips the bit
-    polarity used when decoding/encoding the tape signal. Reflected as
-    ``polarity_inverted`` in ``emulator://periph/cmt``. Sensitive:
-    changes emulator state (MCP action).
+    Some real machines have inverted cassette wiring. The switch inverts
+    the signal of blocks imported from a WAV file (``type`` 0 in
+    ``emulator://periph/cmt/tape``); other blocks and the recording are
+    not affected. Reflected as ``polarity_inverted`` in
+    ``emulator://periph/cmt``. Sensitive: changes emulator state (MCP
+    action).
 
     Args:
         inverted: True = inverted polarity, False = normal.
@@ -2703,16 +2900,20 @@ async def emu_cmt_set_cpu_boost(enabled: bool) -> str:
 
 @mcp.tool()
 async def emu_cmt_set_mzfsize_check(enabled: bool) -> str:
-    """Enable or disable the MZF size consistency check on tape load.
+    """Enable or disable the MZF size check when a tape file is opened.
 
-    When enabled, the emulator validates that the MZF body size matches
-    the header file size, rejecting malformed images. Disabling it allows
-    loading non-conforming tapes. Reflected as ``mzfsize_check`` in
-    ``emulator://periph/cmt``. Sensitive: changes emulator state
-    (MCP action).
+    When enabled, opening a ``.mzf`` / ``.m12`` file that is longer than
+    its header says (header file size + 128 bytes) writes the line "MZF
+    file size check: ..." to the emulator output and offers to fix the
+    file in a dialog of the emulator window; the file is opened either way
+    and nothing is refused. The same check runs when the cmthack loads an
+    MZF file chosen in its file dialog; other tape files are not checked.
+    Reflected as
+    ``mzfsize_check`` in ``emulator://periph/cmt``. Sensitive: changes
+    emulator state (MCP action).
 
     Args:
-        enabled: True = enforce the size check, False = skip it.
+        enabled: True = check the size on open, False = skip it.
 
     Returns:
         JSON ``{"ok": true, "property": "mzfsize_check", "value": 0|1}``
@@ -2731,14 +2932,18 @@ async def emu_cmt_set_mzfsize_check(enabled: bool) -> str:
 async def emu_cmt_open(path: str, play_immediately: bool = False) -> str:
     """Open a CMT tape file into the REAL tape drive (by extension).
 
-    CMT-specific open that picks the right tape backend from the file
-    extension (.mzf / .mzt / .m12 / .wav / ...). Unlike the generic
+    Accepted extensions: .tmz, .tzx, .mzf, .m12, .mzt, .tap, .wav, .wave.
+    Every file becomes a tape with a block list (a single MZF or WAV is a
+    tape with one block), see ``emulator://periph/cmt/tape``. TMZ / TZX
+    loops, jumps and calls are followed; Pause 0 and the stop-the-tape
+    block pause the deck. Unlike the generic
     ``emu_media_insert(slot="cmt")``, this can immediately start playback
     via ``play_immediately`` (= one round trip instead of open + play).
 
-    This loads the real tape image; for the cmthack instant load use
-    ``emu_cmt_hack_set`` + ``emu_media_load_mzf`` instead. Sensitive:
-    changes emulator state (MCP action).
+    This loads the real tape image. With the cmthack on, a ROM load reads
+    the MZF of the current tape block instantly instead of playing the
+    signal (see ``emu_cmt_hack_set``). Sensitive: changes emulator state
+    (MCP action).
 
     Args:
         path: tape file path. The extension selects the backend.
@@ -2747,12 +2952,21 @@ async def emu_cmt_open(path: str, play_immediately: bool = False) -> str:
     Returns:
         JSON ``{"ok": true, "path": str, "playing": bool, "state": str,
         "paused": bool}`` on success or ``{"error": "..."}`` on failure
-        (unknown extension / open error). ``playing``, ``state``
+        (unknown extension / open error). The new file is read and
+        checked first: a failed open leaves the inserted tape, its unsaved
+        changes and a running recording untouched. ``playing``, ``state``
         (``"stop"`` / ``"play"`` / ``"record"``) and ``paused`` report the
         actual transport state after the operation (same meaning as in
         ``emulator://periph/cmt``); ``playing`` is true only for PLAY
-        without pause. When ``play_immediately`` was requested but the tape
-        is not playing afterwards, the result also carries ``warning``.
+        without pause. ``warning`` is present when the import of the file
+        reported a problem (for example blocks the player cannot play;
+        also written to the log), when ``play_immediately`` was
+        requested but the tape is not playing afterwards, when
+        ``play_immediately`` started the tape with the cmthack on (the
+        text of ``emu_cmt_play``), and ("Unsaved tape changes were discarded")
+        when the previously inserted tape had unsaved changes or a
+        recording was running - the open is done anyway (several warnings
+        are separated by "; ").
     """
     if not path:
         return json.dumps({"error": "Missing required field: path"})
@@ -2765,17 +2979,474 @@ async def emu_cmt_open(path: str, play_immediately: bool = False) -> str:
 
 
 @mcp.tool()
-async def emu_cmt_tape_seek(block_id: int) -> str:
-    """Seek the REAL tape to a specific block (SIMPLE_TAPE containers).
+async def emu_cmt_save(path: str | None = None) -> str:
+    """Save the inserted tape to a file.
 
-    Multi-file tape containers (SIMPLE_TAPE: .mzt, .tap) expose
-    individual blocks; this positions the tape at block ``block_id``
-    (0-based). Single-file containers (SINGLE: a plain .mzf or .wav,
-    ``container_type`` 0 in ``emulator://periph/cmt/tape``) do NOT support
-    seeking - the call fails even for block 0. To start such a tape from
-    the beginning again, use ``emu_cmt_stop`` + ``emu_cmt_play`` (play
-    from STOP always starts at the beginning of the tape). Requires a
-    loaded tape. The list of blocks is in ``emulator://periph/cmt/tape``.
+    The extension selects the format: ``.tmz`` / ``.tzx`` = the whole tape
+    (a tape with MZ blocks saved as ``.tzx`` stays in TMZ format, with a
+    warning), ``.mzt`` = the MZF files of all blocks (every block must hold
+    an MZF; speeds of blocks with their own speed are stored as UniCMT
+    CMTSPEED headers), ``.mzf`` / ``.m12`` = a tape with a single MZF block.
+    The file is replaced atomically; on any error the old file stays
+    intact. After success the tape belongs to ``path`` and ``modified`` in
+    ``emulator://periph/cmt/tape`` is false. Refused while an input replay
+    is recorded or played (it is not part of the replay). Sensitive: writes
+    a file (MCP action).
+
+    Args:
+        path: output file; omitted = the current file of the tape (an
+            unnamed new tape needs a path).
+
+    Returns:
+        JSON ``{"ok": true, "path": str, "message": str}`` with
+        ``warning`` when something could not be stored (e.g. "Speed of
+        block N cannot be stored in MZT"), or ``{"error": "..."}`` (e.g.
+        "Tape has no file name", "Tape contains blocks that cannot be
+        stored as MZT").
+    """
+    data = {"path": path} if path else {}
+    resp = await _send_request("cmt_save", data)
+    if not resp.get("success", False):
+        return json.dumps({"error": resp.get("error", "cmt_save failed")})
+    return json.dumps(_data_or_error(resp))
+
+
+@mcp.tool()
+async def emu_cmt_export_block(block: int | None = None, path: str = "",
+                               block_id: int | None = None) -> str:
+    """Export one block of the inserted tape to a file.
+
+    ``.mzf`` / ``.m12`` = the MZF file the block carries (error for a block
+    without an MZF, e.g. a raw recording), ``.wav`` = the block signal as a
+    44.1 kHz WAV (as it would play now). The tape, its position and
+    ``modified`` do not change. The file is replaced atomically. Sensitive:
+    writes a file (MCP action).
+
+    Args:
+        block: 0-based block index (see ``emulator://periph/cmt/tape``).
+        path: output file (required).
+        block_id: the same as ``block`` under the name the other tape tools
+            use; pass one of them, not both.
+
+    Returns:
+        JSON ``{"ok": true, "block": int, "block_id": int, "path": str,
+        "message": str}`` (``block`` and ``block_id`` hold the same number)
+        or ``{"error": "..."}``.
+    """
+    if not path:
+        return json.dumps({"error": "Missing required field: path"})
+    if block is not None and block_id is not None:
+        return json.dumps({"error": "Pass either block or block_id, not both"})
+    if block is None and block_id is None:
+        return json.dumps({"error": "Missing required fields: block (or block_id), path"})
+    if isinstance(block, bool) or isinstance(block_id, bool):
+        return json.dumps({"error": "block and block_id must be integers"})
+    data = {"path": path}
+    if block_id is not None:
+        data["block_id"] = int(block_id)
+    else:
+        data["block"] = int(block)
+    resp = await _send_request("cmt_export_block", data)
+    if not resp.get("success", False):
+        return json.dumps(
+            {"error": resp.get("error", "cmt_export_block failed")})
+    return json.dumps(_data_or_error(resp))
+
+
+@mcp.tool()
+async def emu_cmt_new_tape() -> str:
+    """Insert a new empty tape (no file name, no blocks).
+
+    The inserted tape is ejected first; a running recording is discarded.
+    Record into the new tape with ``emu_cmt_record`` and save it with
+    ``emu_cmt_save(path)``. An input replay records it like an eject.
+    Sensitive: changes emulator state (MCP action).
+
+    Returns:
+        JSON ``{"ok": true}``; ``warning`` ("Unsaved tape changes were
+        discarded") when the previous tape had unsaved changes or a
+        recording was running.
+    """
+    resp = await _send_request("cmt_new_tape", {})
+    if not resp.get("success", False):
+        return json.dumps({"error": resp.get("error", "cmt_new_tape failed")})
+    return json.dumps(_data_or_error(resp))
+
+
+@mcp.tool()
+async def emu_cmt_tape_delete_blocks(block_ids: list[int]) -> str:
+    """Delete blocks from the inserted tape (in memory; the file changes only on save).
+
+    Only with the deck stopped (error "tape is not stopped" otherwise), not
+    while recording and not while an input replay is recorded or played
+    (the replay cannot repeat tape edits). All block numbers refer to the
+    tape before the deletion; the order does not matter, a number may not
+    repeat. On any error nothing is deleted. Block numbers of the following
+    blocks shift; the deck stands at the block that took the place of the
+    deleted current block (or the last block). The tape becomes
+    ``modified``; ``unsaved`` of the other blocks does not change. Deleting
+    loop, group or call control blocks is allowed (the player copes with an
+    unbalanced structure). Sensitive: changes emulator state (MCP action).
+
+    Args:
+        block_ids: 0-based block numbers (see ``emulator://periph/cmt/tape``).
+
+    Returns:
+        JSON ``{"ok": true, "deleted": int, "count": int, "current_block":
+        int}`` (``count`` = blocks left, ``current_block`` -1 = none) with
+        ``warning`` when the deletion changes the CPU clock other file
+        blocks play with (a deleted MZ Machine Info block 0x43: "The tape
+        clock setting now applies to different blocks; check their
+        speed."), or ``{"error": "..."}`` (e.g. "tape is not stopped",
+        "Block 7 does not exist").
+    """
+    try:
+        ids = [int(b) for b in block_ids]
+    except (TypeError, ValueError):
+        return json.dumps({"error": f"Invalid block_ids: {block_ids!r}"})
+    resp = await _send_request("cmt_tape_delete_blocks", {"block_ids": ids})
+    if not resp.get("success", False):
+        return json.dumps(
+            {"error": resp.get("error", "cmt_tape_delete_blocks failed")})
+    return json.dumps(_data_or_error(resp))
+
+
+@mcp.tool()
+async def emu_cmt_tape_move_block(block_id: int, to: int) -> str:
+    """Move one block of the inserted tape to another position.
+
+    ``to`` is the position of the block after the move (0 = first,
+    count - 1 = last). Same conditions as ``emu_cmt_tape_delete_blocks``
+    (deck stopped, no recording, no input replay). A block with a zero
+    pause (emulator profile MZ800EMU-CMT) that gets a block behind it
+    receives a 1000 ms pause. The deck follows the block it stood at;
+    the tape becomes ``modified``, ``unsaved`` flags move with the blocks.
+    Moving a block to its own place changes nothing. Sensitive: changes
+    emulator state (MCP action).
+
+    Args:
+        block_id: 0-based number of the block to move.
+        to: 0-based position of the block after the move.
+
+    Returns:
+        JSON ``{"ok": true, "block_id": int, "to": int, "count": int,
+        "current_block": int}`` with ``warning`` when the move changes the
+        CPU clock a file block plays with (a block moved across an MZ
+        Machine Info block 0x43, or that block moved: "The tape clock
+        setting now applies to different blocks; check their speed."), or
+        ``{"error": "..."}``.
+    """
+    resp = await _send_request("cmt_tape_move_block",
+                               {"block_id": int(block_id), "to": int(to)})
+    if not resp.get("success", False):
+        return json.dumps(
+            {"error": resp.get("error", "cmt_tape_move_block failed")})
+    return json.dumps(_data_or_error(resp))
+
+
+@mcp.tool()
+async def emu_cmt_tape_import(path: str, at: int | None = None) -> str:
+    """Insert all blocks of a tape file into the inserted tape.
+
+    The file (.mzf, .m12, .mzt, .tap, .wav, .tmz, .tzx) is converted like
+    ``emu_cmt_open`` does and its blocks are inserted before block ``at``
+    (omitted, None or -1 = at the end). Without a tape (deck stopped) a new
+    tape is created (``new_tape`` true) when ``at`` is omitted, None or -1;
+    a position 0 or higher with no tape is the error "no tape in the deck". Same conditions as
+    ``emu_cmt_tape_delete_blocks``. Imported blocks are ``unsaved``, the
+    tape becomes ``modified``; the deck follows the block it stood at (into
+    an empty tape it stands at the first block). An unreadable or empty
+    file is an error and the tape does not change. A large WAV is
+    converted synchronously (the emulation waits). Sensitive: changes
+    emulator state (MCP action).
+
+    Args:
+        path: file to import.
+        at: 0-based position of the first imported block (0 .. count);
+            omitted, None or -1 = after the last block.
+
+    Returns:
+        JSON ``{"ok": true, "path": str, "at": int, "imported": int,
+        "count": int, "current_block": int, "new_tape": bool}`` with
+        ``warning`` for import warnings (e.g. blocks the player cannot
+        play), or ``{"error": "..."}`` (e.g. "Can't import <path>: ...").
+    """
+    if not path:
+        return json.dumps({"error": "Missing required field: path"})
+    data = {"path": path}
+    if at is not None:
+        data["at"] = int(at)
+    resp = await _send_request("cmt_tape_import", data)
+    if not resp.get("success", False):
+        return json.dumps(
+            {"error": resp.get("error", "cmt_tape_import failed")})
+    return json.dumps(_data_or_error(resp))
+
+
+@mcp.tool()
+async def emu_cmt_export_tape(path: str) -> str:
+    """Export the whole inserted tape to a WAV file as the player plays it.
+
+    44.1 kHz, 8 bit mono: all blocks with their pauses, loops, jumps and
+    calls; blocks with their own speed at that speed. Blocks the player
+    cannot play are skipped with a warning; a tape longer than 4 hours is
+    an error. The tape, its position and ``modified`` do not change; works
+    in any transport state and during an input replay (it only writes a
+    file). A recording in progress is not part of the export (it is added
+    to the tape only when the recording stops); stop it first. The file is
+    replaced atomically. Sensitive: writes a file (MCP
+    action).
+
+    Args:
+        path: output file with the ``.wav`` extension.
+
+    Returns:
+        JSON ``{"ok": true, "path": str, "message": str}`` (``message``
+        e.g. "Tape exported: <path>, 12.3 s") with ``warning`` when
+        blocks were skipped, or ``{"error": "..."}`` (e.g. "The tape is
+        empty").
+    """
+    if not path:
+        return json.dumps({"error": "Missing required field: path"})
+    resp = await _send_request("cmt_export_tape", {"path": path})
+    if not resp.get("success", False):
+        return json.dumps(
+            {"error": resp.get("error", "cmt_export_tape failed")})
+    return json.dumps(_data_or_error(resp))
+
+
+# Čekání na emu_cmt_tape_analyze: emulátor odpoví nejpozději po
+# MCP_DISPATCH_DBGAPI_TIMEOUT_MS + MCP_DISPATCH_DBGAPI_STALL_LONG_MS (10 s + 600 s,
+# dispatch.c) "Emulator busy"; wrapper čeká déle, aby dostal odpověď emulátoru
+# a ne vlastní vypršení čekání. Samotná analýza mez nemá.
+_CMT_ANALYZE_TIMEOUT_S: float = SEND_TIMEOUT_S + 610.0
+
+
+@mcp.tool()
+async def emu_cmt_tape_analyze(block_id: int, tolerance: float = 0.20,
+                               repair_header: bool = False,
+                               repair_body: bool = False,
+                               repair_bsd: bool = False,
+                               apply: str = "none") -> str:
+    """Find files in a raw signal block of the tape and optionally add them as file blocks.
+
+    A raw block (TZX 0x18, ``type`` 0 or 4 named "Raw recording" / "WAV
+    recording" in ``emulator://periph/cmt/tape``: an imported or opened
+    WAV, or a recording the emulator could not decode) is analyzed for
+    tape files. Every file found is a row; parts of the signal without a
+    file (64 pulses or more) are ``unknown`` rows. The analysis runs
+    synchronously in the emulator: the emulation waits, the emulator window
+    keeps drawing. There is no time limit for the analysis itself; when it
+    takes longer than about 610 s the emulator answers "Emulator busy" (the
+    result is then unknown - read ``emulator://periph/cmt/tape`` again
+    before repeating ``apply``); this tool waits up to 640 s.
+
+    Only a file in the standard Sharp format (``format`` "NORMAL") with a
+    correct header and body checksum can be added (``result`` "addable"),
+    or one repaired by an enabled repair option ("addable_repaired"). A
+    NORMAL file with a checksum error stays raw ("stays_raw"); turbo, FSK,
+    BSD, CP/M and other formats cannot be added ("cannot_add"); ``reason``
+    says why (or that a repair was used; "" for "addable").
+
+    ``apply``: "none" only analyzes (the tape does not change; allowed in
+    any transport state and during an input replay); "add" inserts every
+    addable file as a new block right after the raw block (the raw block
+    stays); "replace" replaces the raw block by the file blocks and keeps
+    every part of the signal that is not added in raw blocks, in the
+    original order (unknown parts shorter than 64 pulses next to a file are
+    dropped, as when recording). "add" and "replace" need the deck stopped
+    ("tape is not stopped" otherwise) and are refused while an input
+    replay is recorded or played. New blocks are ``unsaved`` and the tape
+    becomes ``modified``; block numbers after the raw block shift. The
+    file blocks use the emulator profile MZ800EMU-CMT at the default tape
+    speed (as a recording would).
+
+    Args:
+        block_id: 0-based number of the raw block.
+        tolerance: leader detection tolerance, 0.02 .. 0.35 (default 0.20);
+            a value outside the range is an error.
+        repair_header: keep a file with a valid header but no body (body
+            filled with 00h).
+        repair_body: keep an incomplete body (rest filled with 00h) and
+            merge two damaged copies.
+        repair_bsd: keep incomplete BSD files (BSD cannot be added as a
+            block; it only changes what the analysis finds).
+        apply: "none", "add" or "replace".
+
+    Returns:
+        JSON ``{"ok": true, "block_id": int, "apply": str, "sample_rate":
+        int, "pulse_count": int, "length_s": float, "rows": [{"row": int,
+        "kind": "file" | "unknown", "name": str, "type": int | null,
+        "format": str, "start_s": float, "length_s": float, "size": int,
+        "header": "ok" | "checksum_error" | "not_available", "body": ...,
+        "result": "addable" | "addable_repaired" | "stays_raw" |
+        "cannot_add", "reason": str, "recovery": str}], "applied": int,
+        "first_added": int | null, "count": int, "current_block": int}``
+        (``analysis_error`` when the analysis found no signal, ``applied``
+        = file blocks added, ``first_added`` = number of the first of them;
+        ``warning`` after "add" or "replace" when an MZ Machine Info block
+        0x43 with another CPU clock lies before the raw block, so the new
+        file blocks play with that clock: "The tape clock setting now
+        applies to different blocks; check their speed.") or ``{"error":
+        "..."}`` (e.g. "Block 0 is not a raw signal block (CSW recording)").
+    """
+    if apply not in ("none", "add", "replace"):
+        return json.dumps(
+            {"error": f"Invalid apply: {apply!r} (use none, add or replace)"})
+    for name, flag in (("repair_header", repair_header),
+                       ("repair_body", repair_body),
+                       ("repair_bsd", repair_bsd)):
+        if not isinstance(flag, bool):
+            return json.dumps({"error": f"{name} must be a boolean"})
+    if isinstance(tolerance, bool):
+        return json.dumps({"error": "tolerance must be a number"})
+    try:
+        tol = float(tolerance)
+        bid = int(block_id)
+    except (TypeError, ValueError):
+        return json.dumps({"error": "Invalid block_id or tolerance"})
+    resp = await _send_request("cmt_tape_analyze", {
+        "block_id": bid, "tolerance": tol,
+        "repair_header": repair_header, "repair_body": repair_body,
+        "repair_bsd": repair_bsd, "apply": apply},
+        timeout_s=_CMT_ANALYZE_TIMEOUT_S)
+    if not resp.get("success", False):
+        return json.dumps(
+            {"error": resp.get("error", "cmt_tape_analyze failed")})
+    return json.dumps(_data_or_error(resp))
+
+
+@mcp.tool()
+async def emu_cmt_tape_info(set: dict | None = None) -> str:
+    """Read or change the tape information (TZX Archive Info and the target machine).
+
+    Without ``set`` the information is only read (any state, also during
+    an input replay). With ``set`` the given fields are written in one
+    step (read, merge, write; fields not given keep their value):
+    ``title``, ``publisher``, ``author``, ``year``, ``language``,
+    ``type``, ``price``, ``protection``, ``origin``, ``comment`` (strings;
+    "" removes the entry; at most 255 characters; ISO 8859-1 - other
+    characters are replaced with "?" and reported in ``warning``; a new
+    line in ``comment`` is allowed) and ``machine`` ("generic", "mz700",
+    "mz800", "mz1500", "mz80b" or null to remove the Machine Info block).
+    The Archive Info block is the first block of the tape and Machine Info
+    follows it; they are inserted when missing and removed when empty
+    (entries the emulator does not know are kept). Writing needs the deck
+    stopped, no recording and no input replay; a write that changes
+    nothing leaves the tape untouched (``changed`` false). A tape opened
+    from .mzf / .m12 / .mzt (``storable`` false) can be saved with the
+    information only as .tmz or .tzx. A real change renumbers the
+    following blocks when blocks are inserted or removed and marks the
+    tape ``modified``.
+
+    Args:
+        set: fields to write, e.g. ``{"title": "Game", "machine": "mz800"}``.
+
+    Returns:
+        JSON ``{"ok": true, "title": str, ..., "comment": str, "machine":
+        str | null, "machine_code": int, "storable": bool,
+        "other_entries": int, "other_archive_blocks": int,
+        "other_archive_block": int | null}``; with ``set`` also
+        ``changed`` and ``warning`` (when characters were replaced or the
+        CPU clock of some blocks changed), or ``{"error": "..."}``.
+    """
+    data = {}
+    if set is not None:
+        if not isinstance(set, dict):
+            return json.dumps({"error": "set must be an object"})
+        data["set"] = set
+    resp = await _send_request("cmt_tape_info", data)
+    if not resp.get("success", False):
+        return json.dumps(
+            {"error": resp.get("error", "cmt_tape_info failed")})
+    return json.dumps(_data_or_error(resp))
+
+
+@mcp.tool()
+async def emu_cmt_tape_check() -> str:
+    """Check the structure of the inserted tape (read only).
+
+    Reports problems that can make playback or loading fail: unbalanced
+    loops and groups, jumps and calls outside the tape, call sequences
+    without a return block, unknown block IDs, MZ file blocks that cannot
+    be parsed, a file header without the 0Dh name terminator, an unknown
+    file type, a body length different from the header size, and (as
+    information) TMZ profiles the emulator does not know. The body
+    checksum is not checked. At most 500 findings are listed.
+
+    Returns:
+        JSON ``{"ok": true, "blocks_checked": int, "count": int,
+        "findings": [{"block_id": int, "severity": "warning" | "info",
+        "text": str}]}`` (``block_id`` -1 = note about the limit) or
+        ``{"error": "No tape inserted"}``.
+    """
+    resp = await _send_request("cmt_tape_check", {})
+    if not resp.get("success", False):
+        return json.dumps(
+            {"error": resp.get("error", "cmt_tape_check failed")})
+    return json.dumps(_data_or_error(resp))
+
+
+@mcp.tool()
+async def emu_cmt_tape_convert_block(block_id: int, profile: str,
+                                     speed: str | int | None = None) -> str:
+    """Rebuild a TMZ file block with another writer profile.
+
+    The MZ file of block ``block_id`` (TMZ 0x46 with ``convertible`` true
+    in ``emulator://periph/cmt/tape``) is rebuilt with ``profile`` (an
+    ``id`` from ``profiles`` there); the file bytes stay the same, the
+    signal changes. Settings of the old profile that the new one accepts
+    are carried over (pause, machine, speed, ...); those that are not are
+    listed in ``warning``. ``speed`` - a ratio key ("2:1", "3:1", ...) or
+    the integer 1..9 as for ``emu_cmt_set_speed`` (no custom pulses; the
+    emulator command itself takes only the integer) - only for profiles
+    with ``accepts_speed``. The emulator answers within about 20 s.
+    Converting to the block's own profile without a speed changes nothing
+    (``changed`` false). After converting to a
+    profile other than MZ800EMU-CMT the block speed cannot be set with
+    ``emu_cmt_tape_set_block_speed``; convert back to change it. Needs the
+    deck stopped, no recording and no input replay; the block becomes
+    ``unsaved`` and the tape ``modified``.
+
+    Args:
+        block_id: 0-based block number.
+        profile: writer profile ID, e.g. "ROM-800-NOMINAL", "TC-1.21",
+            "MZ800EMU-CMT".
+        speed: optional speed: ratio key ("2:1") or integer 1..9 (2).
+
+    Returns:
+        JSON ``{"ok": true, "block_id": int, "profile": str, "changed":
+        bool, "count": int, "current_block": int}`` with ``warning`` when
+        settings were not carried over, or ``{"error": "..."}`` (e.g.
+        "Unknown profile: X", "Profile X does not accept a speed").
+    """
+    if not profile:
+        return json.dumps({"error": "Missing required field: profile"})
+    data = {"block_id": int(block_id), "profile": profile}
+    if speed is not None and speed != "":
+        value = _cmt_convert_speed_value(speed)
+        if value == 0:
+            return json.dumps(
+                {"error": f"Invalid CMT speed: {speed!r} (use a ratio key or 1..9)"})
+        data["speed"] = value
+    resp = await _send_request("cmt_tape_convert_block", data)
+    if not resp.get("success", False):
+        return json.dumps(
+            {"error": resp.get("error", "cmt_tape_convert_block failed")})
+    return json.dumps(_data_or_error(resp))
+
+
+@mcp.tool()
+async def emu_cmt_tape_seek(block_id: int) -> str:
+    """Seek the REAL tape to a specific block.
+
+    Positions the tape at block ``block_id`` (0-based). Works for every
+    tape, including a single .mzf or .wav (a tape with one block). A
+    CONTROL block (``type`` 5) or a block the player cannot play cannot
+    be opened. The transport state is not changed; while playing or
+    paused the block plays from its start. Requires a loaded
+    tape. The list of blocks is in ``emulator://periph/cmt/tape``. With
+    the cmthack on, the next ROM load reads the MZF of this block.
     Sensitive: changes emulator state (MCP action).
 
     Args:
@@ -2783,8 +3454,8 @@ async def emu_cmt_tape_seek(block_id: int) -> str:
 
     Returns:
         JSON ``{"ok": true, "block_id": int}`` on success or
-        ``{"error": "..."}`` on failure (no tape, SINGLE container or
-        block out of range).
+        ``{"error": "..."}`` on failure (no tape, block out of range or
+        a block that cannot be opened).
     """
     resp = await _send_request("cmt_tape_seek", {"block_id": int(block_id)})
     if not resp.get("success", False):
@@ -2798,7 +3469,11 @@ async def emu_cmt_tape_set_block_speed(block_id: int, speed=None,
                                        pulses_us=None) -> str:
     """Set the playback speed of a single tape block (cmt speed only).
 
-    Per-block speed override for SIMPLE_TAPE containers. Only the cmt
+    Per-block speed override. Only blocks imported from MZF, MZT and TAP
+    files and TMZ 0x46 blocks of the emulator's own profile MZ800EMU-CMT
+    can change speed (other TMZ / TZX blocks and WAV play as recorded,
+    ``block_speed`` "none"); TAP blocks accept ratios only. Custom pulse
+    lengths are stored in whole microseconds. Only the cmt
     speed is adjustable per block (no other per-block parameters): pass
     either ``speed`` (the same ratio string keys or int 1..9 as
     ``emu_cmt_set_speed``) or ``pulses_us`` (custom pulse lengths in
@@ -2806,7 +3481,9 @@ async def emu_cmt_tape_set_block_speed(block_id: int, speed=None,
     of the UniCMT CMTSPEED header; MZ blocks only). Requires a loaded
     tape. The speed applies from the next opening of the block (advancing
     to it during playback, ``emu_cmt_tape_seek``); the currently open
-    block is not changed. Sensitive: changes emulator state (MCP action).
+    block is not changed. A real change of the speed marks the tape
+    ``modified``; saving the tape (.tmz, .tzx, .mzt) writes the block at
+    its new speed. Sensitive: changes emulator state (MCP action).
 
     Args:
         block_id: 0-based block index.
@@ -4936,7 +5613,7 @@ def _parse_mzf_header(raw: bytes) -> dict:
 
 @mcp.tool()
 async def emu_media_run_mzf(path: str = "", bytes_b64: str = "",
-                            bootstrap: bool = True) -> str:
+                            bootstrap: bool = True, device: str = "") -> str:
     """Load an MZF program AND start executing it from the MZF EXEC
     address.
 
@@ -4945,8 +5622,12 @@ async def emu_media_run_mzf(path: str = "", bytes_b64: str = "",
     machine is put into the state the ROM leaves it in after loading a
     program from tape (CPU registers incl. IM 1, DI and SP=0x10F0, 8255,
     8253 CTC, Z80 PIO, PSG, GDG, VRAM, monitor work area in RAM, the
-    entry registers the platform ROM passes to the program), then PC =
-    exec address. The reset is the same as ``emu_reset``, so the result
+    jump register the platform ROM passes to the program, BC = device
+    code), then PC = exec address. Of the CPU registers only these are
+    set like the ROM: BC, the jump register (HL on MZ-700 and MZ-1500,
+    IX on MZ-800), SP, IM 1 and DI; the others are not (a comparison
+    found AF, and on MZ-800 HL and the alternate DE' and HL', on MZ-700
+    DE, different from the ROM). The reset is the same as ``emu_reset``, so the result
     does not depend on what ran in the emulator before. The pause state
     is kept: if the emulation was paused, the program waits at its first
     instruction. The file is checked before the reset - a missing,
@@ -4963,6 +5644,12 @@ async def emu_media_run_mzf(path: str = "", bytes_b64: str = "",
     WARNING: Both variants are destructive. Save a snapshot beforehand if
     you need to recover the previous state.
 
+    BC is the code of the device the program was "loaded" from (a ROM
+    passes it; some programs, for example the BASIC 1Z-016, choose their
+    default device by it): the setting 'CMT/run_mzf_device' (default
+    cmt: 0100h, on MZ-700 0000h, as the ROM leaves it after a tape load),
+    or ``device`` for this call only.
+
     Provide exactly one of ``path`` or ``bytes_b64``. The MZF header is
     parsed client-side (Python) to report the header fields.
 
@@ -4971,12 +5658,21 @@ async def emu_media_run_mzf(path: str = "", bytes_b64: str = "",
         bytes_b64: Inline base64-encoded MZF content.
         bootstrap: True = reset + ``--run-mzf`` bootstrap (defined state),
             False = load into the running machine and jump (no reset).
+        device: Only with ``bootstrap=True``: the device code in BC for
+            this start, without changing the setting - cmt (0100h, on
+            MZ-700 0000h), fd (0200h), qd (0300h), rd or sram (0000h),
+            case-insensitive, or a number 0-65535 ("512", "0x0200",
+            "0200h"; a decimal number without leading zeros, "0200" is
+            an error). Empty = the setting. An invalid value is an error
+            and the machine is not reset.
 
     Returns on success:
       ``{"loaded": true, "header": {file_type, filename, file_size,
          load_addr, exec_addr}, "bootstrap": bool, "reset": bool,
-         "pc_set_to": int}``; with ``bootstrap=False`` also
-         ``"rom_disconnected": true``.
+         "pc_set_to": int}``; with ``bootstrap=True`` also ``"device"``
+         (the choice used: ``device`` normalised, or the setting) and
+         ``"bc"`` (BC the program starts with); with ``bootstrap=False``
+         also ``"rom_disconnected": true``.
 
     Returns on error:
       ``{"error": "..."}``. With ``bootstrap=False`` the partial
@@ -5004,21 +5700,29 @@ async def emu_media_run_mzf(path: str = "", bytes_b64: str = "",
         return json.dumps(hdr)
     exec_addr = hdr["exec_addr"]
     args = {"path": path} if has_path else {"bytes_b64": bytes_b64}
+    if device and not bootstrap:
+        return json.dumps(
+            {"error": "device applies only with bootstrap=True"})
 
     if bootstrap:
         # Reset + bootstrap jako CLI --run-mzf, celé v emulátoru v jednom
-        # příkazu (soubor ověří emulátor před resetem).
+        # příkazu (soubor i device ověří emulátor před resetem).
+        if device:
+            args["device"] = device
         resp = await _send_request("media_run_mzf", args)
         if not resp.get("success", False):
             return json.dumps(
                 {"error": resp.get("error", "media_run_mzf failed"),
                  "header": hdr})
+        data = resp.get("data") or {}
         return json.dumps({
             "loaded": True,
             "header": hdr,
             "bootstrap": True,
             "reset": True,
             "pc_set_to": exec_addr,
+            "device": data.get("device"),
+            "bc": data.get("bc"),
         })
 
     # Varianta bez resetu: 1. Load MZF body do RAM
@@ -5104,7 +5808,7 @@ async def emu_media_insert(
     the new image is attached (no prompt - silent replace).
 
     Slot values:
-        cmt          - CMT cassette tape (.mzf, .mzt, ...)
+        cmt          - CMT cassette tape (.tmz, .tzx, .mzf, .m12, .mzt, .tap, .wav, .wave)
         fdc0_fd0..3  - WD279x FDC0 (standard, ports 0xD8-0xDF) drive 0..3 (.dsk)
         fdc1_fd0..3  - WD279x FDC1 (secondary, ports 0x58-0x5F) drive 0..3 (.dsk)
         qd           - MZ-1F11 Quick Disk image (.mzq); the file must
@@ -5137,7 +5841,11 @@ async def emu_media_insert(
     Returns:
         JSON ``{"ok": true, "slot": str, "result_code": int}`` on
         success (slot 'qd' adds ``"switched_to_mz1f11": bool``) or
-        ``{"error": "..."}`` on failure.
+        ``{"error": "..."}`` on failure. Slot 'cmt' works like
+        ``emu_cmt_open``: a file that cannot be opened leaves the inserted
+        tape untouched, and ``warning`` is present with "Unsaved tape
+        changes were discarded" (when the previous tape had unsaved changes
+        or a recording was running) and the tape open warnings.
     """
     valid_slots = (
         "cmt",
@@ -5183,7 +5891,10 @@ async def emu_media_eject(slot: str,
 
     Returns:
         JSON ``{"ok": true, "slot": str}`` on success or
-        ``{"error": "..."}`` on failure.
+        ``{"error": "..."}`` on failure. Slot 'cmt' works like
+        ``emu_cmt_eject``: ``warning`` "Unsaved tape changes were
+        discarded" is present when the tape had unsaved changes or a
+        recording was running.
     """
     valid_slots = (
         "cmt",
@@ -5244,6 +5955,9 @@ _VALID_SETTINGS_KEYS = (
     "DISPLAY/custom_fps",
     "TRACE_CPUTRACK/pc_range_lo",
     "TRACE_CPUTRACK/pc_range_hi",
+    "CMT/rec_autostop_s",
+    "CMT/run_mzf_device",
+    "CMTHACK/direct_save",
 )
 
 _VALID_PLATFORM_KINDS = ("mz700", "mz800", "mz1500")
@@ -5273,6 +5987,34 @@ async def emu_settings_set(key: str, value: str) -> str:
                                                frame rate mode)
         TRACE_CPUTRACK/pc_range_lo - cputrack PC-range filter low bound (0..65535)
         TRACE_CPUTRACK/pc_range_hi - cputrack PC-range filter high bound (0..65535)
+        CMT/rec_autostop_s         - stop a tape recording automatically after
+                                     that many seconds of silence while the
+                                     motor runs (0..600, 0 = off; applies
+                                     from the next frame; set while an input
+                                     replay is played, it holds only until
+                                     the playback ends, then the value from
+                                     before the playback is back)
+        CMT/run_mzf_device         - device code in register BC when an MZF
+                                     is started directly (emu_media_run_mzf,
+                                     --run-mzf): cmt (default), fd, qd, rd /
+                                     sram, or a number 0-65535 ("512",
+                                     "0x0200", "0200h"; decimal without
+                                     leading zeros, "0200" is an error);
+                                     a name is stored in
+                                     lower case, a number as written; applies
+                                     from the next start
+        CMTHACK/direct_save        - bool (default true): with the CMT hack
+                                     on (Direct loading) and the deck not
+                                     recording, a ROM SAVE stores the file
+                                     at once as a new MZF block at the end
+                                     of the tape and the ROM VERIFY compares
+                                     memory with the open block; false = a
+                                     ROM SAVE needs ``emu_cmt_record``.
+                                     Only with the tape stopped and not
+                                     during an input replay (else an
+                                     error); applies at once (``direct_save``
+                                     and ``direct_save_enabled`` in
+                                     ``emulator://periph/cmt``)
         <ini_section>/<key>        - option of an MZ-700 expansion device
                                      (``emu_get_devices``); a keyword
                                      option takes the keyword, the
@@ -5326,7 +6068,7 @@ async def emu_settings_get(key: str) -> str:
     only when the INI file is saved. ``live`` is the value the emulator
     is working with right now, present only for keys bound directly to
     a numeric variable (device connections and types, display
-    settings). Example: after switching the Quick Disk drive,
+    settings) and for 'CMT/run_mzf_device'. Example: after switching the Quick Disk drive,
     'QDISK/mz1f11_type' keeps ``value`` 'UNICARD' while ``live`` is
     'STANDARD'.
 
@@ -5474,7 +6216,7 @@ async def emu_periph_attach(
 ) -> str:
     """Attach a peripheral to the running emulator. WARNING: this
     changes the emulated machine immediately, the same way as the
-    Devices menu (the choice is saved to the INI file on exit). Refused
+    HW & Devices menu (the choice is saved to the INI file on exit). Refused
     while a replay is being recorded or played back.
 
     Supported kinds and ``options.type`` values (first = default):
@@ -5528,7 +6270,7 @@ async def emu_periph_detach(
 ) -> str:
     """Detach a peripheral from the running emulator. WARNING: same as
     ``emu_periph_attach`` - the change applies immediately like the
-    Devices menu and is saved to the INI file on exit.
+    HW & Devices menu and is saved to the INI file on exit.
 
     Args:
         kind: Peripheral kind or device id (same set as
@@ -5740,7 +6482,7 @@ async def emu_bus_peek(port: int = -1, addr: int = -1) -> str:
 
 
 @mcp.tool()
-async def emu_input_send_key(key: str, frames: int = 3) -> str:
+async def emu_input_send_key(key: str, frames: int = 6) -> str:
     """Send a single keypress (press + hold N frames + release).
     WARNING: User input simulation can cause unexpected emulator
     behavior (= triggers BASIC commands, modifies running program
@@ -5761,8 +6503,10 @@ async def emu_input_send_key(key: str, frames: int = 3) -> str:
             ASCII fallback: single-char string ("A", "1", "?") or
             explicit "ASCII:<char>" prefix. An unknown name returns
             "Unknown key '<name>'. Closest valid names: ...".
-        frames: Number of EMULATED frames to hold the key (default 3 =
-            60 ms of emulated time at 50 Hz PAL). Maximum 600 frames.
+        frames: Number of EMULATED frames to hold the key (default 6 =
+            120 ms of emulated time at 50 Hz PAL; the boot menu of the
+            MZ-800 and the MZ-1500 misses a key held for 3 frames at
+            some moments). Maximum 600 frames.
 
     Timing: ``frames`` counts emulated frames, independent of the
     emulation speed (normal, ``emu_set_speed(mode="max")``, or slower
@@ -5806,7 +6550,7 @@ async def emu_input_send_key(key: str, frames: int = 3) -> str:
 
 @mcp.tool()
 async def emu_input_send_keys(
-    text: str, encoding: str = "ascii", frame_per_key: int = 3
+    text: str, encoding: str = "ascii", frame_per_key: int = 6
 ) -> str:
     """Send a sequence of keys (= simulated typing).
     WARNING: User input simulation can cause unexpected emulator
@@ -5814,15 +6558,25 @@ async def emu_input_send_keys(
 
     Args:
         text: Text to type. Format depends on encoding.
-        encoding: ``"ascii"`` (default, plain text e.g. ``"RUN\\r"``)
+        encoding: ``"ascii"`` (default, plain text e.g. ``"RUN\\r"``;
+            ``"\\r"``, ``"\\n"`` and the pair ``"\\r\\n"`` type the CR key
+            once; a character the keyboard cannot type is skipped and
+            reported in ``skipped`` and ``warning``)
             or ``"key_names"`` (JSON array string of key names
             e.g. ``'["SHIFT","CURSOR_RIGHT","RETURN"]'``; same names
             as emu_input_send_key / emu_input_press_key, an unknown name
             fails the whole call before any key is sent).
-        frame_per_key: EMULATED frames to hold each key (default 3).
+        frame_per_key: EMULATED frames to hold each key (default 6).
             Consecutive keys are separated by 1 frame with no key
             pressed, so that repeated keys (e.g. "LL") register as two
             presses.
+
+    Limit: at most 256 keys per call (skipped characters do not count, the
+    pair ``"\\r\\n"`` is one key). The rest of the text is not typed: the
+    result field ``truncated`` counts the characters (key names) left out
+    and ``warning`` says "Text truncated: N character(s) after the first
+    256 keys were not typed" (key_names: "N key name(s) after the first 256
+    keys were not sent"). Split a longer text into several calls.
 
     Timing: frames are emulated frames, independent of the emulation
     speed; the emulator presses and releases the keys on frame
@@ -5833,8 +6587,15 @@ async def emu_input_send_keys(
         JSON ``{"keys_sent": int, "keys_landed": int,
         "total_frames": int, "encoding": str,
         "landing_verified": bool, "emu_frames": int,
-        "complete": bool, "interrupted": bool}`` or
-        ``{"error": "..."}``. ``emu_frames`` = emulated frames that
+        "complete": bool, "interrupted": bool, "skipped": int,
+        "truncated": int}`` (with
+        ``"warning": "Skipped N character(s) that cannot be typed: U+010D,
+        ..."`` when ``skipped`` > 0; at most 16 code points are named) or
+        ``{"error": "..."}``. ``skipped`` counts the characters of an
+        ``ascii`` text that were not typed (always 0 for ``key_names``,
+        where an unknown name is an error). ``truncated`` counts the
+        characters (key names) after the limit of 256 keys; several warnings
+        are joined by "; ". ``emu_frames`` = emulated frames that
         actually elapsed; ``interrupted: true`` = the sequence was cut
         short (breakpoint, pause, reset); ``keys_sent`` then counts only
         the keys that were fully pressed and released.
@@ -5857,7 +6618,7 @@ async def emu_input_send_keys(
         return json.dumps({"error": f"Invalid encoding: {encoding}"})
     if frame_per_key < 0 or frame_per_key > 600:
         return json.dumps({"error": "frame_per_key must be 0..600"})
-    # Horní odhad počtu kláves: backend bere nejvýš 256 kláves a žádná
+    # Horní odhad počtu kláves: backend napíše nejvýš 256 kláves a žádná
     # klávesa nemá méně než jeden znak textu (platí i pro key_names).
     max_keys = min(len(text), 256)
     resp = await _send_request(
@@ -8261,7 +9022,9 @@ async def resource_periph_cmt() -> str:
     Returns ``{"available": true, "state": "stop"|"play"|"record",
     "paused": bool, "filled": bool, "polarity_inverted": bool,
     "cmtspeed": int, "cpu_boost": bool, "mzfsize_check": bool,
-    "output": int, "playsts": int, "start_time": int,
+    "output": int, "playsts": int, "cmthack_enabled": bool,
+    "direct_save": bool, "direct_save_enabled": bool,
+    "user_paused": bool, "motor_on": bool | null, "start_time": int,
     "paused_time": int, "image_basename": str,
     "default_pulses_us": [4 floats], "custom_pulses_us": [4 floats]}``.
 
@@ -8273,18 +9036,35 @@ async def resource_periph_cmt() -> str:
     ``cmtspeed`` is 10.
 
     ``state`` and ``paused`` are orthogonal - PLAY + paused=true means
-    the playback is suspended. ``filled`` is true when an MZF image is
-    loaded (``g_cmt.ext != NULL``). ``output`` is the current outgoing
-    bit on the PIO line.
+    the tape stands, for any reason. ``user_paused`` is the user's own
+    pause (``emu_cmt_pause``, the deck's Pause button); ``motor_on`` is
+    the motor as the program switched it (``null`` = not known: without
+    the cmthack while the tape is stopped). With the cmthack on it is only
+    the motor sensor the hack shows to the program (each motor command
+    toggles it, true already after the start without a tape) and says
+    nothing about the deck: the tape does not follow it, ``paused`` tells
+    whether the tape stands. ``filled`` is true when a tape
+    is inserted (any tape, also a new empty one). ``output`` is the
+    current outgoing bit on the PIO line. ``cmthack_enabled`` is the state
+    of the cmthack ROM patch (``emu_cmt_hack_set``; the Direct loading
+    mode of the Virtual CMT window). ``direct_save`` is true when the
+    patch of the ROM write routines is in ROM now: a ROM SAVE then stores
+    the file at once as a new MZF block at the end of the tape (no
+    ``emu_cmt_record`` needed) and the ROM VERIFY compares memory with the
+    open block. It is false without the cmthack, with the setting off,
+    with a ROM that has no standard tape routines, and while the deck
+    records (with ``emu_cmt_record`` everything is recorded as signal).
+    ``direct_save_enabled`` is the setting ``CMTHACK/direct_save`` (see
+    ``emu_settings_set``).
 
-    ``polarity_inverted`` reflects the rear DIP switch (inverted = some
-    real machines have flipped wiring; affects bit polarity when
-    decoding). ``cpu_boost`` is the runtime acceleration flag for
-    long tape loads.
+    ``polarity_inverted`` reflects the rear DIP switch (it inverts the
+    signal of blocks imported from WAV, see ``emu_cmt_set_polarity``).
+    ``cpu_boost`` is the runtime acceleration flag for long tape loads.
 
-    ``image_basename`` is the filename only (no directory component)
-    per V1.D.1 security; for VIRTUAL / no-image states the field is an
-    empty string.
+    ``image_basename`` is the file name of the tape (or of the last opened
+    tape file) without the directory; an empty string when there is none.
+    The full path of the inserted tape is ``path`` in
+    ``emulator://periph/cmt/tape``.
 
     ``start_time`` and ``paused_time`` are GDG total ticks captured at
     the corresponding state transitions; clients computing playback
@@ -8300,18 +9080,62 @@ async def resource_periph_cmt() -> str:
 async def resource_periph_cmt_tape() -> str:
     """CMT tape block listing for the currently loaded tape.
 
-    Lists the blocks of the loaded tape image. SIMPLE_TAPE containers
-    (multi-file tapes) expose one entry per block; SINGLE containers
-    (e.g. a plain .mzf) expose one block. Returns ``{"available": true,
-    "container_type": 0|1, "current_block": int, "count": int,
-    "truncated": bool, "blocks": [...]}`` where ``container_type`` is
-    0=SINGLE, 1=SIMPLE_TAPE and ``current_block`` is the index of the
-    block being played (-1 if none).
+    Lists the blocks of the loaded tape image. Every played tape is a
+    container with blocks (a single .mzf or .wav is a tape with one
+    block). Returns ``{"available": true, "container_type": 0|1,
+    "current_block": int, "modified": bool, "path": str | null,
+    "last_recording": {...} | null, "count": int, "truncated": bool,
+    "position_s": float | null, "block_position_s": float | null,
+    "blocks": [...], "profiles": [...]}`` where
+    ``container_type`` is 1 (tape with a block list) and ``current_block``
+    is the index of the open block (-1 if none, e.g. a tape with control
+    blocks only or a new empty tape). ``count`` is the number of listed
+    blocks: at most 256 are listed, ``truncated`` is true when the tape
+    may have more. ``block_position_s`` is the position in the open block
+    in seconds; ``position_s`` the position from the start of the tape (the
+    Elapsed counter of the Virtual CMT window: the lengths of all blocks
+    before the open one plus the position in it, also for blocks beyond
+    the 256 listed). Either is ``null`` when unknown: while recording
+    (unlike the window, whose counter shows the recording time there), and
+    ``position_s`` also when the length of a playable block before the
+    open one is not known yet. ``modified`` is true when the tape
+    has changes not saved to its file (blocks appended by recording,
+    deleted, moved or imported blocks, a changed block speed);
+    ``path`` is the tape file, ``null`` for a new unnamed tape.
+    ``last_recording`` is the outcome of the most recent recording that
+    finished or was discarded since the emulator started (``null`` if
+    none; inserting or ejecting a tape does not clear it): ``{"serial": int, "blocks": int, "mzf": int, "raw": int,
+    "discarded": bool, "message": str}``. It also covers a recording that
+    ended by itself (rec_autostop_s, length limit), which ``emu_cmt_stop``
+    does not report; ``serial`` grows with every finished or discarded
+    recording, so compare it to tell a new outcome. It is filled also
+    without a tape (a recording discarded by an eject) and after a tape
+    insertion that discarded the recording (open, new tape, snapshot).
 
     Each block: ``{"block_id": int, "name": str, "cmt_speed": int,
     "type": int, "is_current": bool, "playable": bool,
-    "recordable": bool, "block_speed": "none"|"default"|"set",
-    "pulses_us": [4 floats]}``. ``block_speed`` "default" follows the
+    "recordable": bool, "status": str, "size": int | null,
+    "load_addr": int | null, "exec_addr": int | null,
+    "file_type": int | null, "length_s": float | null, "unsaved": bool,
+    "profile": str | null, "convertible": bool, "block_speed":
+    "none"|"default"|"set", "pulses_us": [4 floats]}``. ``status`` is
+    "ok", "not_decoded" (a raw signal block: WAV or an undecoded
+    recording; it plays, see ``emu_cmt_tape_analyze``), "cannot_play" (a
+    block the player cannot play; playback passes over it) or "control"
+    (a control or information block without a signal). ``playable`` is
+    true for a block that can be played and opened ("ok" and
+    "not_decoded"); ``emu_cmt_tape_seek`` and ``emu_cmt_tape_step`` reach
+    only such blocks. ``size``, ``load_addr``, ``exec_addr`` and
+    ``file_type`` are the file size, load address, execution address and
+    file type (1 = machine code, 2 = BASIC program, ...) from the MZF header of a
+    block with an MZF file, ``null`` for other blocks. ``length_s`` is the
+    length of the block signal in seconds (0 for a control block) once the
+    emulator knows it (the block was opened or recorded, or the Virtual CMT
+    window computed it), otherwise ``null``; reading the resource does not
+    compute it. ``unsaved`` is
+    true for a block that is not in the tape file (recorded or imported
+    since the tape was opened or saved); moving and deleting blocks do not
+    change it, saving the tape clears it. ``block_speed`` "default" follows the
     default tape speed, "set" has its own ``cmt_speed`` (the en_CMTSPEED
     value 1..9, or 10 = custom pulse lengths, see ``emu_cmt_set_speed``).
     ``pulses_us`` (MZ blocks only) are the effective pulse lengths in
@@ -8319,13 +9143,31 @@ async def resource_periph_cmt_tape() -> str:
     short low). Blocks that follow a UniCMT CMTSPEED header in an .mzt
     have "set" speed with the header's pulse lengths; the header itself
     is not listed. ``type`` is the block type (0=WAV, 1=MZF,
-    2=TAPHEADER, 3=TAPDATA). ``playable`` / ``recordable`` are per-tape
-    flags repeated on each block for convenience.
+    2=TAPHEADER, 3=TAPDATA, 4=TZX - other TZX / TMZ blocks with a signal,
+    5=CONTROL - blocks without a signal: control and information blocks,
+    Pause 0, stop-the-tape). Blocks the player cannot play stay in the
+    list and are passed over during playback. ``recordable`` is a per-tape
+    flag repeated on each block (always false: recording goes into the
+    tape, not into a block). ``profile`` is the writer profile ID of a TMZ 0x46 block
+    (e.g. "MZ800EMU-CMT", ``null`` for other blocks) and ``convertible``
+    tells whether ``emu_cmt_tape_convert_block`` can rebuild the block with
+    another profile.
 
-    When no tape is loaded (or the container is missing) the payload is
-    ``{"available": false, "blocks": []}``. Seek with
-    ``emu_cmt_tape_seek`` and override per-block speed with
-    ``emu_cmt_tape_set_block_speed``. See ``emulator://docs/cmt_workflow``
+    ``profiles`` (also without a tape) lists the writer profiles a block
+    can be converted to: ``[{"id": str, "description": str,
+    "accepts_speed": bool}]``; only profiles with ``accepts_speed`` take a
+    ``speed`` in ``emu_cmt_tape_convert_block``.
+
+    When no tape is loaded (or the container is missing) ``available`` is
+    false, ``blocks`` is empty, ``count`` 0, ``current_block`` -1, ``path``,
+    ``position_s`` and ``block_position_s`` null; ``modified``,
+    ``last_recording`` and ``profiles`` are filled as with a tape. Seek
+    with ``emu_cmt_tape_seek``, step over the blocks with
+    ``emu_cmt_tape_step``, override per-block speed with
+    ``emu_cmt_tape_set_block_speed``, edit the tape with
+    ``emu_cmt_tape_delete_blocks``, ``emu_cmt_tape_move_block`` and
+    ``emu_cmt_tape_import``, find files in a raw block with
+    ``emu_cmt_tape_analyze``. See ``emulator://docs/cmt_workflow``
     for the full tape workflow.
     """
     if _transport is None or not _transport.is_alive():

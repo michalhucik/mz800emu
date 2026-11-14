@@ -172,6 +172,21 @@ extern "C"
     void automation_start(void);
 
     /**
+     * @brief Zapamatuje si kód zařízení, se kterým `--run-mzf` spustil program.
+     *
+     * Hodnoty jdou do `result.json` jako `inputs.run_mzf_device` (zápis
+     * volby: `--run-mzf-device` normalizovaný, jinak nastavení
+     * `[CMT] run_mzf_device`) a `inputs.run_mzf_bc` (BC programu). Bez
+     * volání (bez `--run-mzf`) jsou obě pole null. Volá se i bez
+     * automatizačních voleb (jen uloží hodnoty).
+     *
+     * @param text Zápis volby (zkopíruje se, NULL = nic).
+     * @param bc   BC, se kterým program startuje.
+     * @pre Emu vlákno (mzarch_main()), po mzarch_bootstrap_run_mzf().
+     */
+    void automation_note_run_mzf_device(const char *text, uint16_t bc);
+
+    /**
      * @brief Háček konce snímku (emu vlákno, jen při g_automation_frame_hook).
      *
      * Volá se z mz800_main_event_callback_screen_done() po háčcích videa

@@ -496,7 +496,7 @@ static uint8_t read_ppi_pc(void)
     retval |= g_pio8255.signal_pc03 ? (1u << 3) : 0;
 
     /* IN bity 4-7 (live signals, side-effect free reading) */
-    retval |= g_pio8255.signal_pc04 ? (1u << 4) : 0;            /* CMT motor state */
+    retval |= pio8255_pc4_get() ? (1u << 4) : 0;                 /* CMT motor state, jak ho čte program */
     retval |= (g_cmt.output & 1u) << 5;                          /* CMT data in (cached) */
     retval |= (mz800_main_get_cursor_timer_state() & 1u) << 6;   /* cursor blink */
     retval |= SIGNAL_GDG_VBLNK ? (1u << 7) : 0;                  /* VBLN */
@@ -2155,7 +2155,7 @@ const st_IO_PORT_DESC g_io_ports[] = {
         MZ_AVAIL_800 | MZ_AVAIL_1500
     },
 
-    /* ===== CMT hack (0x01, 0x02 W) - emu loader trampoliny =====
+    /* ===== CMT hack (0x01 - 0x04 W) - emu loader trampoliny =====
      * ROM ve vsech 3 archech vola tyto IORQ pro trigger emu-side CMT loaderu
      * (cmthack_load_file / cmthack_read_mzf_body). Touch-triggered =
      * dispatch jen na adresu, write hodnota se ignoruje, zadny register,
@@ -2173,6 +2173,27 @@ const st_IO_PORT_DESC g_io_ports[] = {
         0x0002, "CMT hack - Read MZF body (W)",
         "Touch-triggered (write value ignored): activates emu-side "
         "MZF body read (cmthack_read_mzf_body)",
+        IO_PORT_DIR_W,
+        NULL, 0,
+        NULL, NULL,
+        MZ_AVAIL_ALL
+    },
+    /* Direct Save: patch WHEAD / WDATA (03h) a VERFY (04h), aktivní jen
+     * s patchem zápisu v ROM (CMTHACK_TEST_SAVE_INSTALLED). */
+    {
+        0x0003, "CMT hack - Save MZF block (W)",
+        "Touch-triggered (write value ignored): ROM WHEAD (E = CCh) or "
+        "WDATA (E = 53h) stores the file on the Virtual CMT tape "
+        "(cmthack_save_block)",
+        IO_PORT_DIR_W,
+        NULL, 0,
+        NULL, NULL,
+        MZ_AVAIL_ALL
+    },
+    {
+        0x0004, "CMT hack - Verify MZF body (W)",
+        "Touch-triggered (write value ignored): ROM VERFY compares memory "
+        "with the open tape block (cmthack_verify_block)",
         IO_PORT_DIR_W,
         NULL, 0,
         NULL, NULL,

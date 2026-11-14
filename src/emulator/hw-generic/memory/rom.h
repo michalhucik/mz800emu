@@ -100,8 +100,23 @@ extern "C"
      * Nakonec ohlásí změnu zařízením devbus (devbus_rom_changed(); bez
      * inicializovaného devbus nic).
      *
+     * Vedlejší účinky na CMT hack: ROM bez podpory hacku (příznak
+     * ROM_CONFIG_FLAG_CMTHACK_INCOMP, uživatelská ROM s Disabled CMT Hack
+     * Patch) zapnutý hack vypne a zapomene jeho stav nad páskou
+     * (cmthack_tape_state_clear()); vypnutí nad dřív vybranou uživatelskou
+     * ROM s variantou Custom ji při tom ještě jednou přeinstaluje (vnořené
+     * rom_reinstall() z cmthack_mzarch_load_rom_patch()). Se zapnutým hackem
+     * a ROM, která ho podporuje, dá znovu patch (cmthack_reinstall_rom_patch();
+     * u předdefinované ROM a uživatelské Default zapíše patch do paměti
+     * a zastaví kazetu cmt_stop(); u Custom je hack už v nainstalované ROM
+     * pro CMT hack).
+     *
      * @param row Řádek g_rom_config->roms; NULL = výchozí ROM.
      * @pre Emu vlákno (zásah z GUI přes rom_request.h) nebo inicializace.
+     * @post Je-li nová ROM bez podpory hacku, !CMTHACK_TEST_IS_INSTALLED;
+     *       jinak zůstane stav hacku i jeho stav nad páskou jako před voláním.
+     *       Do paměti ROM jdou jen načtená data (soubor uživatelské ROM, u
+     *       Custom se zapnutým hackem soubor ROM pro CMT hack).
      */
     void rom_reinstall(st_ROM_CONFIG_ROW *row);
     int rom_user_defined_check_filepath(char **filepath, en_ROM_BOOL clear);

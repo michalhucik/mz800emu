@@ -11,19 +11,27 @@
 
 #include <stdint.h>
 
+#include "mzarch/bootstrap_device.h"
+
 /**
  * @brief Zavede MZF soubor a připraví CPU na jeho spuštění (CLI `--run-mzf`).
  *
  * Replikuje trvalé účinky ROM (reset -> IPL/monitor -> načtení z CMT) na
  * stav stroje, nahraje hlavičku na 10F0h a tělo na fstrt přes CMT hack a
  * nastaví registry tak, jak je ROM předává programu (SP = 10F0h, IM 1,
- * DI, platformní registry viz mzarch_platform_bootstrap_entry_regs()).
+ * DI, skokový registr viz mzarch_platform_bootstrap_entry_regs()) a BC =
+ * kód zařízení (bootstrap_device.h).
  *
  * @param filename Cesta k MZF souboru (UTF-8).
+ * @param device   Volba zařízení jen pro toto spuštění (CLI
+ *                 `--run-mzf-device`, MCP `media_run_mzf` s `device`), NULL
+ *                 = nastavení `[CMT] run_mzf_device` (bootdev_setting_bc()).
+ *                 Nastavení se nemění. Vlastnictví zůstává volajícímu.
  *
  * @pre Volá se po mzarch_main_reset(), před první vykonanou instrukcí,
  *      z emulátorového vlákna.
- * @post PC = fexec; CPU zastavené před první instrukcí programu.
+ * @post PC = fexec; BC = kód zařízení (výchozí CMT: MZ-700 0000h, MZ-800
+ *       a MZ-1500 0100h); CPU zastavené před první instrukcí programu.
  *
  * Chování při chybě: v buildu bez debuggeru při nečitelném souboru zobrazí
  * chybu a ukončí emulátor (EXIT_FAILURE). S debuggerem chybu ohlásí CMT hack
@@ -32,7 +40,7 @@
  * Dolní ROM se odmapuje a CPU startuje na 0000h v RAM (ověřeno s
  * neexistujícím souborem: emulace běží dál z RAM, žádný program).
  */
-extern void mzarch_bootstrap_run_mzf(const char *filename);
+extern void mzarch_bootstrap_run_mzf(const char *filename, const st_BOOTDEV_CHOICE *device);
 
 /**
  * @brief Replikuje ROM rutinu TIMST (0308h) volanou z IPL s A = 0, DE = 0.
@@ -94,13 +102,16 @@ extern void mzarch_bootstrap_rom_monitor_init(uint8_t *text_vram, uint16_t beep_
 extern void mzarch_platform_bootstrap_init(void);
 
 /**
- * @brief Nastaví registry, které ROM předává spouštěnému programu.
+ * @brief Nastaví skokový registr, kterým ROM předává řízení programu.
  *
- * Volá se po nahrání těla MZF, před nastavením PC. Platformy podle ROM:
+ * Volá se po nahrání těla MZF, před nastavením BC a PC. Platformy podle ROM:
  *   - MZ-700 (monitor, příkaz L, 012Eh `JP (HL)`): HL = fexec,
- *   - MZ-800 (IPL ]GOCMT E99Dh, ]GOPGM ED41h `JP (IX)`): BC = 0100h
- *     (zařízení = CMT), IX = fexec,
- *   - MZ-1500 (IPL E9E6h-E9ECh `JP (HL)`): BC = 0100h, HL = fexec.
+ *   - MZ-800 (IPL ]GOPGM ED19h-ED41h `JP (IX)`): IX = fexec,
+ *   - MZ-1500 (IPL E9E9h-E9ECh `JP (HL)`): HL = fexec.
+ *
+ * BC (kód zařízení; IPL MZ-800 ]GOCMT E99Dh a MZ-1500 E9E6h `LD BC,0100h`)
+ * nastavuje společná část mzarch_bootstrap_run_mzf() podle
+ * bootstrap_device.h, aby šel zvolit.
  *
  * @param fexec Exec adresa z hlavičky MZF.
  *

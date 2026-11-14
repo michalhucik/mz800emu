@@ -10,6 +10,7 @@
 #include <SDL3/SDL.h>
 
 #include "libs/imgui/imgui.h"
+#include "ui-imgui/imgui_modal.h"
 #include "ui-imgui/bootstrap/myimgui.h"
 
 // Lokalizace
@@ -85,7 +86,8 @@ extern "C" void imgui_snapshot_notification(void)
         char popup_title[192];
         snprintf(popup_title, sizeof(popup_title), "%s###NotificationError",
                  s_notification_error_title[0] ? s_notification_error_title : _("Snapshot Error"));
-        ImGui::OpenPopup(popup_title);
+        /* jen při volnu: jinak by OpenPopup() zavřel jiný otevřený modál (imgui_modal.h) */
+        imgui_modal_open_when_free(popup_title);
 
         if (ImGui::BeginPopupModal(popup_title, NULL,
                                     ImGuiWindowFlags_AlwaysAutoResize)) {

@@ -10,6 +10,7 @@
 #include <glib.h>
 
 #include "libs/imgui/imgui.h"
+#include "ui-imgui/imgui_modal.h"
 #include "libs/igfd/ImGuiFileDialog.h"
 #include "ui-imgui/filechooser/imgui_filechooser.h"
 #include "ui-imgui/bootstrap/myimgui.h"
@@ -90,9 +91,10 @@ extern "C" void imgui_snapshot_save_dialog(void)
     }
 
     /* Fáze 3: Dialog pro popis snapshotu */
-    if (s_description_dialog_open) {
+    /* OpenPopup stačí zavolat jednou; požadavek čeká, dokud je otevřený jiný popup (imgui_modal.h) */
+    if (s_description_dialog_open && imgui_modal_can_open()) {
         ImGui::OpenPopup(_L("Save Snapshot"));
-        s_description_dialog_open = false;  /* OpenPopup stačí zavolat jednou */
+        s_description_dialog_open = false;
     }
 
     if (ImGui::BeginPopupModal(_L("Save Snapshot"), NULL, ImGuiWindowFlags_AlwaysAutoResize)) {

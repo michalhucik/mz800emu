@@ -45,7 +45,7 @@
  * mapovaná se SPEC = 0 (mz1500_memory.c), nezávisle na režimu DMD.
  */
 static const st_BUS_STATIC_OWNER s_rows[] = {
-    { 0x01, 0x02, 0, BUS_DIR_W,  "cmthack", "CMT hack (emulator trap)", "CH",
+    { 0x01, 0x04, 0, BUS_DIR_W,  "cmthack", "CMT hack (emulator trap)", "CH",
       DEVBUS_DRIVE_NONE, 0, MZ1500_BUS_PRESENT_CMTHACK, BUS_SRC_CMTHACK, MIRROR_1500 },
     { 0x50, 0x51, 0, BUS_DIR_RW, "unicard", "Unicard", "U",
       DEVBUS_DRIVE_TRISTATE, 0, MZ1500_BUS_PRESENT_UNICARD, BUS_SRC_UNICARD, MIRROR_1500 },

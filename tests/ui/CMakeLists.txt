@@ -71,3 +71,157 @@ mz_add_test(ui-functional
     LIBS     mzlib_imgui mzlib_igfd mzlib_imwidgets
     LABELS   "ui;videorec"
 )
+
+# Dotazy Virtual CMT a okno zpráv: skutečné ImGui ve skrytém
+# okně SDL + GL, dialog neuložených změn a dialog probíhajícího nahrávání se
+# zprávou zařazenou ve stejném snímku, dialog zavřený jiným modálem, návrat
+# souborového dialogu se zhoršeným stavem pásky, slučování stejných zpráv;
+# výsledky úprav pásky cestou imgui_device_request_results().
+mz_add_test(ui-cmt-dialogs
+    TYPE     UI
+    SOURCES  test_cmt_dialogs.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/cmt/cmt_tape_actions.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/devices/device_request_ui.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/cmt/cmt_view.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/message/message_window.cpp
+    LIBS     mzlib_imgui mzlib_igfd mzlib_imwidgets
+    LABELS   "ui;cmt"
+)
+# Bez SDL/GL (CI bez displeje) test vrátí 77: ctest ho ukáže jako přeskočený,
+# ne jako úspěch.
+set_tests_properties(ui-cmt-dialogs PROPERTIES SKIP_RETURN_CODE 77)
+
+# Okno Virtual CMT: kopie stavu pro okno (cmt_view.cpp) nad skutečným
+# jádrem kazety - bez pásky, MZT ve STOP / PLAY / pauze, záznam (Unsaved,
+# Recorded), značka pásky, jména (Sharp MZ ASCII -> UTF-8, prázdné, 16
+# znaků, cesta 200 znaků), vysunutí mezi plněními, sestavení seznamu jen
+# při změně, délky bloků (otevření bez výpočtu, zásahy jen ve STOP a nejvýš
+# jednou za 10 snímků, opakování odmítnutého zásahu, levná délka bloků TZX
+# a 0x18 proti streamu, otisk stroje beze změny), testovací stavy podle
+# konceptů v2, kreslení okna nad skutečným jádrem, deck, tabulka, režimy
+# načítání, zkratky a řádek zpráv. S proměnnou MZ_CMT_SHOT_DIR snímky okna
+# z testovacích stavů (mimo CTest).
+mz_add_test(ui-cmt-window
+    TYPE     UI
+    SOURCES  test_cmt_window.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/cmt/cmt_view.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/cmt/cmt_window.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/cmt/cmt_analyze_dialog.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/cmt/cmt_convert_dialog.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/cmt/cmt_check_window.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/cmt/cmt_tape_actions.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/devices/device_request_ui.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/cmt/ImGuiCmt.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui/cmt/UiCmt.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/auto_layout.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/message/message_window.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/topmenu/devices/menu_cmt.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/mywidgets/imgui_MenuRadioItem.cpp
+    LIBS     mzlib_imgui mzlib_igfd mzlib_imwidgets
+    LABELS   "ui;cmt"
+)
+# Bez SDL/GL (CI bez displeje) proběhnou jen testy kopie a test vrátí 77:
+# ctest ho ukáže jako přeskočený, ne jako úspěch (jako ui-cmt-dialogs).
+set_tests_properties(ui-cmt-window PROPERTIES SKIP_RETURN_CODE 77)
+# RUN_SERIAL: test_w3_draw_time_300_blocks měří čas kreslení na hostiteli,
+# souběh s jinými testy by ho zkresloval.
+set_tests_properties(ui-cmt-window PROPERTIES RUN_SERIAL TRUE)
+# Okno Virtual CMT (cmt_window.cpp) - geometrie decku se
+# skutečným písmem aplikace (DroidSans + Cousine 28 px) a druhý běh v němčině.
+if(TARGET test_ui-cmt-window)
+    target_compile_definitions(test_ui-cmt-window PRIVATE
+        MZTEST_FONT_DIR="${CMAKE_SOURCE_DIR}/ui_resources/imgui/fonts"
+        MZTEST_LOCALE_DIR="${CMAKE_SOURCE_DIR}/src/locale"
+    )
+    # Druhý běh téže binárky: jen geometrie nového okna v němčině (všechny
+    # testovací stavy, měřítka 1,0 a 1,75, texty běžné i o 40 % delší).
+    add_test(NAME ui-cmt-window-de
+        COMMAND test_ui-cmt-window
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/build-tests
+    )
+    if(WIN32)
+        get_filename_component(_cw_cc_dir "${CMAKE_C_COMPILER}" DIRECTORY)
+        set_tests_properties(ui-cmt-window-de PROPERTIES
+            ENVIRONMENT "MZ_CMT_TEST_LANG=de;PATH=${_cw_cc_dir};$ENV{PATH}"
+        )
+    else()
+        set_tests_properties(ui-cmt-window-de PROPERTIES ENVIRONMENT "MZ_CMT_TEST_LANG=de")
+    endif()
+    set_tests_properties(ui-cmt-window-de PROPERTIES LABELS "ui;cmt;i18n" SKIP_RETURN_CODE 77)
+    # MZ_CMT_SHOT_DIR exportovaná ve shellu vývojáře by v CTest přepnula obě
+    # registrace do režimu snímků (testy by neběžely a vrátily 0): prázdná
+    # hodnota = režim snímků vypnutý.
+    set_property(TEST ui-cmt-window ui-cmt-window-de APPEND PROPERTY ENVIRONMENT "MZ_CMT_SHOT_DIR=")
+endif()
+
+# Dialog Analyze recording okna Virtual CMT: okno nad skutečným
+# jádrem kazety a frontou zásahů, analýza v řízeném "vlákně" testu
+# (syntetický výsledek analyzátoru), vstupy a zákazy, texty a rozvržení
+# podle SPEC, Add / Replace se skutečným uplatněním, zastaralé výsledky,
+# opuštění běžící analýzy (Cancel, Escape, zavření okna, ukončení aplikace),
+# změna pásky, nic nenalezeno, chyba, histogram, data zásahu uplatnění po
+# zavření dialogu, skutečné vlákno GLib, geometrie při 100 % a 175 %.
+# S proměnnou MZ_CMT_SHOT_DIR snímky sady j4 (mimo CTest).
+mz_add_test(ui-cmt-analyze
+    TYPE     UI
+    SOURCES  test_cmt_analyze.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/cmt/cmt_analyze_dialog.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/cmt/cmt_convert_dialog.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/cmt/cmt_check_window.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/cmt/cmt_view.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/cmt/cmt_window.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/cmt/cmt_tape_actions.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/devices/device_request_ui.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/cmt/ImGuiCmt.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui/cmt/UiCmt.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/auto_layout.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/message/message_window.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/topmenu/devices/menu_cmt.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/mywidgets/imgui_MenuRadioItem.cpp
+    LIBS     mzlib_imgui mzlib_igfd mzlib_imwidgets
+    LABELS   "ui;cmt"
+)
+set_tests_properties(ui-cmt-analyze PROPERTIES SKIP_RETURN_CODE 77)
+if(TARGET test_ui-cmt-analyze)
+    target_compile_definitions(test_ui-cmt-analyze PRIVATE
+        MZTEST_FONT_DIR="${CMAKE_SOURCE_DIR}/ui_resources/imgui/fonts"
+    )
+    set_property(TEST ui-cmt-analyze APPEND PROPERTY ENVIRONMENT "MZ_CMT_SHOT_DIR=")
+endif()
+
+# Nástroje nad páskou okna Virtual CMT: modál Tape information,
+# nemodální okno Tape check, modál Convert to profile a nápověda po otevření
+# pásky s jediným surovým blokem, nad skutečným jádrem kazety a frontou
+# zásahů; vstupy a zákazy, formulář (OK beze změny nic nepošle, zápis,
+# varování, změna pásky), nálezy kontroly (klik vybere blok, zastaralé
+# nálezy), převod (rychlost jen u profilu, který ji přijímá), geometrie při
+# 100 % a 175 %. S proměnnou MZ_CMT_SHOT_DIR snímky sady j5 (mimo CTest).
+mz_add_test(ui-cmt-tools
+    TYPE     UI
+    SOURCES  test_cmt_tools.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/cmt/cmt_analyze_dialog.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/cmt/cmt_convert_dialog.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/cmt/cmt_check_window.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/cmt/cmt_view.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/cmt/cmt_window.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/cmt/cmt_tape_actions.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/devices/device_request_ui.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/cmt/ImGuiCmt.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui/cmt/UiCmt.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/auto_layout.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/message/message_window.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/topmenu/devices/menu_cmt.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/mywidgets/imgui_MenuRadioItem.cpp
+    LIBS     mzlib_imgui mzlib_igfd mzlib_imwidgets
+    LABELS   "ui;cmt"
+)
+set_tests_properties(ui-cmt-tools PROPERTIES SKIP_RETURN_CODE 77)
+if(TARGET test_ui-cmt-tools)
+    target_compile_definitions(test_ui-cmt-tools PRIVATE
+        MZTEST_FONT_DIR="${CMAKE_SOURCE_DIR}/ui_resources/imgui/fonts"
+    )
+    set_property(TEST ui-cmt-tools APPEND PROPERTY ENVIRONMENT "MZ_CMT_SHOT_DIR=")
+endif()

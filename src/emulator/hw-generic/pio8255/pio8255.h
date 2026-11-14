@@ -219,6 +219,12 @@ extern "C" {
     extern void pio8255_pc2_set ( int value );
     extern int pio8255_pc1_get ( void );
     extern int pio8255_pc2_get ( void );
+    /**
+     * @brief Stav PC4 8255 (motor kazety), jak ho čte program.
+     * @return Podvržený bit CMT hacku (signal_pc04), když hack motor
+     *         podvrhuje (CMTHACK_TEST_FAKES_MOTOR); jinak, i s hackem při
+     *         nahrávání, 1 = deck se pohybuje (není ve STOP ani v pauze), 0 = stojí.
+     */
     extern int pio8255_pc4_get ( void );
     extern int pio8255_pa4_get ( void );
     extern int pio8255_pa5_get ( void );

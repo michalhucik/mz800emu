@@ -106,7 +106,7 @@ void test_header_without_devices(void)
     TEST_ASSERT_EQUAL_INT(-1, find_device("mapper")->devbus_slot);
     /* Porty bez větve ve switchi MZ-800: žádný vlastník, UNMAPPED. */
     for (unsigned p = 0x00; p <= 0x4F; p++) {
-        if (p == 0x01 || p == 0x02) continue; /* CMT hack */
+        if (p >= 0x01 && p <= 0x04) continue; /* CMT hack (01h-02h načtení, 03h-04h uložení a ověření) */
         TEST_ASSERT_EQUAL_UINT(0, s_snap.ports[p].owner_count);
         TEST_ASSERT_EQUAL_HEX8(BUS_PORT_UNMAPPED, s_snap.ports[p].flags);
     }

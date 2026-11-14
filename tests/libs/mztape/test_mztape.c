@@ -38,7 +38,7 @@
 #include "libs/mztape/mztape.h"
 #include "libs/mzf/mzf.h"
 #include "libs/generic_driver/generic_driver.h"
-#include "generic_driver/memory_driver.h"
+#include "libs/generic_driver/memory_driver.h"
 #include "libs/cmt_stream/cmt_stream.h"
 #include "libs/cmtspeed/cmtspeed.h"
 

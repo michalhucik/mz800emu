@@ -32,6 +32,7 @@
 #include "replay_media.h"
 #include "replay_ckpt.h"
 #include "media_writes.h"
+#include "device_request.h"
 #include "state_rev.h"
 #include "state_hash.h"
 #include "emulator.h"
@@ -42,11 +43,14 @@
 #include "hw-generic/pio8255/pio8255.h"
 #include "hw-generic/joy/joy.h"
 #include "snapshot/snapshot.h"
+#include "snapshot/snapshot_mgr.h"
 #include "hw-generic/unicard/unicard.h"
 #include "hw-generic/cmt/cmt.h"
 #include "hw-generic/cmt/cmtext.h"
 #include "hw-generic/cmt/cmtext_block.h"
 #include "hw-generic/cmt/cmtext_container.h"
+#include "hw-generic/cmt/cmt_tmz.h"
+#include "hw-generic/cmt/cmt_request.h"
 #include "hw-generic/devbus/devbus.h"
 
 /** @brief Dopředná deklarace (definice u přehrání). */
@@ -134,9 +138,10 @@ static uint8_t s_off_host_joy_state = 0xFF;         /**< Stav toho joysticku. */
 /** @brief Operace kazety z UI čekající na emu vlákno. */
 typedef struct st_REPLAY_UI_CMT
 {
-    en_REPLAY_CMT_OP op; /**< Operace. */
-    int32_t arg;         /**< Hodnota. */
-    char *path;          /**< Cesta (REPLAY_CMT_RECORD) nebo NULL. */
+    en_REPLAY_CMT_OP op;       /**< Operace. */
+    int32_t arg;               /**< Hodnota. */
+    char *path;                /**< Cesta (REPLAY_CMT_RECORD) nebo NULL. */
+    st_REPLAY_CMT_GUARD guard; /**< Podmínky provedení (replay_host_cmt_guarded(); nulové = bez podmínek). */
 } st_REPLAY_UI_CMT;
 
 /* ---- emu vlákno ---- */
@@ -213,6 +218,7 @@ const char *replay_cmt_op_name(en_REPLAY_CMT_OP op)
         case REPLAY_CMT_NEXT: return "next";
         case REPLAY_CMT_PREV: return "prev";
         case REPLAY_CMT_RECORD: return "record";
+        case REPLAY_CMT_NEW_TAPE: return "new_tape";
         default: break;
     };
     return "unknown";
@@ -772,6 +778,87 @@ static void replay_ckpt_end(void)
 }
 
 
+/**
+ * @brief Nejvyšší velikost bufferu hran nahrávání, který checkpoint zkopíruje (bajty).
+ *
+ * Buffer roste o 4 B na úsek signálu. Změřeno (test_cmt_tmz, signál ROM
+ * SAVE z mztape, MZ-800, 1:1): MZF s tělem 256 B = 81 256 úseků = 325 KB,
+ * většinu dělají mezery (tape mark, gap). Odhad (hypotéza, 36 úseků na
+ * bajt: 9 pulzů, 2 úseky, 2 kopie) dává mez 1 MB kolem těla 5 KB; SAVE
+ * programu 32 KB přes 4 MB. Checkpoint během delšího nahrávání se proto
+ * vynechá (replay_ckpt_take_ex()), kratší si kopii nese v paměti (do
+ * souboru snapshotu se buffer nikdy neukládá).
+ */
+#define REPLAY_CKPT_RECORD_MAX_BYTES (1024u * 1024u)
+
+/** @brief Účinná mez kopie bufferu hran v checkpointu (REPLAY_CKPT_RECORD_MAX_BYTES, v testech menší). */
+static size_t s_ckpt_record_max = REPLAY_CKPT_RECORD_MAX_BYTES;
+
+#ifdef MZTEST_HEADLESS
+void replay_test_set_ckpt_record_max(size_t max_bytes)
+{
+    s_ckpt_record_max = max_bytes ? max_bytes : REPLAY_CKPT_RECORD_MAX_BYTES;
+}
+
+
+static void replay_ui_hook_refresh_locked(void);
+
+bool replay_test_take_ui_cmt_guard(en_REPLAY_CMT_OP *op, int32_t *arg, st_REPLAY_CMT_GUARD *guard)
+{
+    g_mutex_lock(&s_lock);
+    st_REPLAY_UI_CMT *u = (st_REPLAY_UI_CMT *)g_queue_pop_head(&s_ui_cmt);
+    replay_ui_hook_refresh_locked();
+    g_mutex_unlock(&s_lock);
+    if (!u) return false;
+    if (op) *op = u->op;
+    if (arg) *arg = u->arg;
+    if (guard) *guard = u->guard;
+    g_free(u->path);
+    g_free(u);
+    return true;
+}
+
+
+bool replay_test_take_ui_cmt(en_REPLAY_CMT_OP *op, int32_t *arg)
+{
+    return replay_test_take_ui_cmt_guard(op, arg, NULL);
+}
+#endif
+
+
+/**
+ * @brief Doplňková data checkpointu pro kazetu (st_REPLAY_CKPT::aux).
+ *
+ * Snapshot nese stav transportu a polohu, ne obsah pásky; nahrávání pásku mění
+ * jen připojením bloků na konec (a uložením po nahrávání s příponou
+ * pásky), takže návrat stačí zkrácením na značku. Značka existuje vždy:
+ * popisuje i stav "bez pásky" (present false) - návrat na takový
+ * checkpoint pásku vložené nahráváním do nové pásky vysune.
+ *
+ * Vlastnictví: mark a rec patří struktuře (replay_ckpt_tape_free()).
+ *
+ * @invariant present == false => has_mark == false.
+ */
+typedef struct st_REPLAY_CKPT_TAPE
+{
+    bool present;               /**< true = páska byla vložená */
+    bool has_mark;              /**< true = mark platí (vložená páska a značku šlo pořídit) */
+    st_CMTTMZ_TAPE_MARK mark;   /**< značka pásky (bloky, poslední blok, hlavička, Modified, cesta) */
+    st_CMT_RECORD_CKPT *rec;    /**< kopie nahrávání (checkpoint během RECORD), jinak NULL */
+} st_REPLAY_CKPT_TAPE;
+
+
+/** @brief Uvolní st_REPLAY_CKPT_TAPE (aux_free checkpointu). @param p Data. */
+static void replay_ckpt_tape_free(void *p)
+{
+    st_REPLAY_CKPT_TAPE *t = (st_REPLAY_CKPT_TAPE *)p;
+    if (!t) return;
+    cmttmz_tape_mark_free(&t->mark);
+    cmt_record_ckpt_free(t->rec);
+    g_free(t);
+}
+
+
 /** @brief Číslo aktuálního bloku vložené pásky, -1 = žádná páska nebo blok. */
 static int replay_tape_block(void)
 {
@@ -784,8 +871,10 @@ static int replay_tape_block(void)
  * @brief Uloží checkpoint aktuálního stavu (bod B_f nebo start v pauze).
  *
  * Vynechá ho, když jsou checkpointy vypnuté, běží autotype (jeho průběh
- * snapshot nenese) nebo se nahrává na kazetu (rozpracované nahrávání
- * vrátit nejde). Vynechá ho i při přehrávání bez odchýlení, když checkpoint
+ * snapshot nenese) nebo se nahrává na kazetu s bufferem hran nad
+ * REPLAY_CKPT_RECORD_MAX_BYTES (menší buffer si checkpoint zkopíruje).
+ * Checkpoint si pamatuje značku vložené pásky (počet bloků, Modified),
+ * návrat na něj pásku zkrátí. Vynechá ho i při přehrávání bez odchýlení, když checkpoint
  * téhož snímku už existuje (po seeku zpět): přehrávání je deterministické,
  * nový by byl shodný a jeho uložení by smazalo novější checkpointy (N82).
  * Snapshot je i s RAMdiskem jako start záznamu; za běhu emulace se ukládá
@@ -808,8 +897,16 @@ static void replay_ckpt_take(void)
 static void replay_ckpt_take_ex(bool keep_newer)
 {
     if (!s_ckpt.capacity || !s_ckpt_interval) return;
-    if (g_pio8255.vkbd_autotype || CMT_TEST_RECORD) return;
+    if (g_pio8255.vkbd_autotype) return;
     if (s_play && !s_deviated && replay_ckpt_ring_has_frame(&s_ckpt, replay_current_frame())) return;
+
+    /* nahrávání: kopie bufferu hran jen do meze, jinak checkpoint vynechat */
+    st_CMT_RECORD_CKPT *rec = NULL;
+    if (CMT_TEST_RECORD)
+    {
+        rec = cmt_record_ckpt_take(s_ckpt_record_max, NULL);
+        if (!rec) return;
+    };
 
     bool saved_ramdisk = g_snapshot_settings.include_ramdisk;
     bool saved_sp = g_emulator.snapshot_safepoint;
@@ -817,13 +914,16 @@ static void replay_ckpt_take_ex(bool keep_newer)
     g_emulator.snapshot_safepoint = true;
     uint8_t *snap = NULL;
     size_t size = 0;
+    snap_cmt_set_embed_tape(false);
     en_SNAPSHOT_RESULT sr = snapshot_save_to_buffer("replay checkpoint", &snap, &size);
+    snap_cmt_set_embed_tape(true);
     g_emulator.snapshot_safepoint = saved_sp;
     g_snapshot_settings.include_ramdisk = saved_ramdisk;
     if (sr != SNAPSHOT_OK)
     {
         fprintf(stderr, "[REPLAY] checkpoint at frame %u failed: %s\n", replay_current_frame(),
                 snapshot_result_to_string(sr));
+        cmt_record_ckpt_free(rec);
         return;
     };
 
@@ -835,6 +935,16 @@ static void replay_ckpt_take_ex(bool keep_newer)
     c.snap_size = size;
     c.media_writes = g_media_writes;
     c.tape_block = replay_tape_block();
+    st_REPLAY_CKPT_TAPE *tape = g_new0(st_REPLAY_CKPT_TAPE, 1);
+    tape->present = CMT_TEST_FILLED;
+    tape->has_mark = tape->present && (EXIT_SUCCESS == cmttmz_tape_mark_get(&tape->mark));
+    tape->rec = rec;
+    c.aux = tape;
+    c.aux_free = replay_ckpt_tape_free;
+    /* data posledního bloku nese značka jen u bloku, který připojení přestaví;
+     * příznaky neuloženo jeden bajt na blok */
+    c.aux_size = sizeof(*tape) + cmt_record_ckpt_bytes(rec) + (tape->mark.last_data ? tape->mark.last_len : 0)
+                 + (tape->mark.unsaved ? tape->mark.block_count : 0);
     if (s_rec)
     {
         c.events_len = s_rec->events->len;
@@ -868,11 +978,37 @@ static void replay_ckpt_on_boundary(void)
 
 
 /**
+ * @brief Načte snapshot záznamu vstupů s páskou ze záznamu.
+ *
+ * Komponenta "cmt" po dobu načtení použije vloženou pásku (kopii ze
+ * záznamu nebo pásku vloženou při startu záznamu) a soubor z cesty ve
+ * snapshotu neotevírá (snap_cmt_set_keep_inserted_tape()).
+ *
+ * @param data Snapshot (snapshot_save_to_buffer()). @param size Velikost.
+ * @return Výsledek snapshot_load_from_buffer().
+ * @pre Vlákno emulátoru, emulace v pauze.
+ */
+static en_SNAPSHOT_RESULT replay_snapshot_load(const uint8_t *data, size_t size)
+{
+    snap_cmt_set_keep_inserted_tape(true);
+    en_SNAPSHOT_RESULT sr = snapshot_load_from_buffer(data, size);
+    snap_cmt_set_keep_inserted_tape(false);
+    return sr;
+}
+
+
+/**
  * @brief Načte stav stroje z checkpointu (paused smyčka).
  *
- * Blok pásky se otevře před snapshotem (jako replay_media_prepare());
- * snapshot nenese průběh autotype ani matici VKBD, ty se vynulují (checkpoint
- * vzniká jen bez běžícího autotype).
+ * Páska se nejdřív vrátí na značku checkpointu (zkrácení o bloky připojené
+ * nahráváním, poslední blok bajtově, Modified, cesta); checkpoint bez pásky
+ * pásku vysune (cmt_eject_for_checkpoint(): bez zprávy, bez dialogu, bez
+ * zápisu souboru a bez započtení zápisu na médium). Pak se otevře blok
+ * (jako replay_media_prepare()). Checkpoint pořízený během nahrávání
+ * vrátí i buffer hran (snap_cmt_set_record_restore()); probíhající
+ * nahrávání load snapshotu zahodí bez zprávy (cmt_record_drop()).
+ * Snapshot nenese průběh autotype ani matici VKBD, ty se vynulují
+ * (checkpoint vzniká jen bez běžícího autotype).
  *
  * @return NULL = načteno, jinak chyba anglicky (stav stroje pak nemusí
  *         odpovídat žádnému snímku).
@@ -880,6 +1016,22 @@ static void replay_ckpt_on_boundary(void)
  */
 static const char *replay_ckpt_load(const st_REPLAY_CKPT *c, char *errbuf, size_t errsize)
 {
+    const st_REPLAY_CKPT_TAPE *tape = (const st_REPLAY_CKPT_TAPE *)c->aux;
+    if (tape && !tape->present)
+    {
+        /* checkpoint bez pásky: páska vložená nahráváním nebo novou páskou pryč */
+        if (CMT_TEST_FILLED)
+        {
+            device_state_lock();
+            cmt_eject_for_checkpoint();
+            device_state_unlock();
+        };
+    }
+    else if (tape && (!tape->has_mark || !CMT_TEST_FILLED || cmt_tape_mark_restore(&tape->mark) != EXIT_SUCCESS))
+    {
+        return "cannot return the tape to the checkpoint";
+    };
+
     if (c->tape_block >= 0 && CMT_TEST_FILLED && replay_tape_block() != c->tape_block)
     {
         st_CMTEXT_CONTAINER *ct = cmtext_get_container(g_cmt.ext);
@@ -888,7 +1040,9 @@ static const char *replay_ckpt_load(const st_REPLAY_CKPT *c, char *errbuf, size_
             return "cannot reopen the tape block of the checkpoint";
         };
     };
-    en_SNAPSHOT_RESULT sr = snapshot_load_from_buffer(c->snap, c->snap_size);
+    snap_cmt_set_record_restore(tape ? tape->rec : NULL);
+    en_SNAPSHOT_RESULT sr = replay_snapshot_load(c->snap, c->snap_size);
+    snap_cmt_set_record_restore(NULL);
     if (sr != SNAPSHOT_OK)
     {
         g_snprintf(errbuf, errsize, "checkpoint load failed: %s", snapshot_result_to_string(sr));
@@ -1145,7 +1299,10 @@ static void replay_ui_off_drain(bool apply)
  * @brief Vyřídí operace kazety z UI.
  *
  * Mimo záznam je hned provede (tak jako dřív UI vlákno), při záznamu je
- * zapíše s polohou @p at, při přehrávání je zahodí.
+ * zapíše s polohou @p at, při přehrávání je zahodí. Operaci s podmínkami
+ * (replay_host_cmt_guarded()), které už neplatí, zahodí i mimo přehrávání:
+ * neprovede ji ani nezapíše a zvedne čítač cmt_request_note_window_drop()
+ * (okno ukáže varování; operace zahozené při přehrávání se nepočítají).
  *
  * @param at Poloha (B_f = `b`, pauza na hranici = `p`).
  */
@@ -1158,7 +1315,13 @@ static void replay_ui_cmt_drain(en_REPLAY_EV_AT at)
         replay_ui_hook_refresh_locked();
         g_mutex_unlock(&s_lock);
         if (!u) break;
-        if (!s_play) replay_cmt_run(u->op, u->arg, u->path, at);
+        if (!s_play && !replay_media_cmt_guard_holds(&u->guard, u->arg))
+        {
+            printf("Virtual CMT: '%s' dropped, the deck changed since the request.\n", replay_cmt_op_name(u->op));
+            /* okno ohlásí jedno varování (při přehrávání se zahazuje vše a nehlásí) */
+            cmt_request_note_window_drop();
+        }
+        else if (!s_play) replay_cmt_run(u->op, u->arg, u->path, at);
         g_free(u->path);
         g_free(u);
     };
@@ -1259,20 +1422,27 @@ static const char *replay_rec_start(const st_REPLAY_REQ *r, char *errbuf, size_t
     if (freeze_count() > 0) return "Freeze Bytes are active; remove them first";
 #endif
 
+    /* Páska s neuloženými změnami nad limitem médií: odmítnout dřív, než se
+     * startovní snapshot uloží a znovu načte (odmítnutý start nic nemění). */
+    const char *fit = replay_media_check_cmt_fits(errbuf, errsize);
+    if (fit) return fit;
+
     /* Kompletní snapshot vždy s RAMdiskem (rozhodnutí 7), pak okamžité
      * načtení: záznam i přehrání vychází ze stejného načteného stavu. */
     bool saved_ramdisk = g_snapshot_settings.include_ramdisk;
     g_snapshot_settings.include_ramdisk = true;
     uint8_t *snap = NULL;
     size_t snap_size = 0;
+    snap_cmt_set_embed_tape(false);
     en_SNAPSHOT_RESULT sr = snapshot_save_to_buffer("replay start", &snap, &snap_size);
+    snap_cmt_set_embed_tape(true);
     g_snapshot_settings.include_ramdisk = saved_ramdisk;
     if (sr != SNAPSHOT_OK)
     {
         g_snprintf(errbuf, errsize, "start snapshot failed: %s", snapshot_result_to_string(sr));
         return errbuf;
     };
-    sr = snapshot_load_from_buffer(snap, snap_size);
+    sr = replay_snapshot_load(snap, snap_size);
     if (sr != SNAPSHOT_OK)
     {
         g_free(snap);
@@ -1305,7 +1475,15 @@ static const char *replay_rec_start(const st_REPLAY_REQ *r, char *errbuf, size_t
         s_rec->devbus_conflict = g_strdup(devbus_conflict_name(devbus_conflict_policy()));
         s_rec->devbus_bus_idle = g_strdup(idle);
     };
-    replay_media_capture(s_rec);
+    const char *merr = replay_media_capture(s_rec, errbuf, errsize);
+    if (merr)
+    {
+        /* záznam nezačne: startovní snapshot (týž stav) zůstane načtený */
+        replay_data_free(s_rec);
+        s_rec = NULL;
+        replay_rtc_set_base(NULL);
+        return merr;
+    };
     s_cmthack_count = 0;
 
 #ifdef HAVE_JOY
@@ -1512,13 +1690,20 @@ static void replay_play_event(const st_REPLAY_EVENT *ev)
                 break;
             };
             /* Nahrávání na kazetu při přehrání do dočasného souboru, ne
-             * do souboru uživatele. */
+             * do souboru uživatele: nahrávání bez cesty zůstane bez cesty,
+             * s cestou dočasný soubor se stejnou příponou (WAV, nebo uložení
+             * pásky po STOP); páska uložená do dočasného souboru hlásí
+             * snapshotu a otisku stroje původní cestu
+             * (replay_media_cmt_map_path()). */
             char *tmp = NULL;
-            if (op == REPLAY_CMT_RECORD)
+            if (op == REPLAY_CMT_RECORD && ev->text && ev->text[0])
             {
-                char *name = g_strdup_printf("record%d.wav", ++s_record_count);
+                char *base = g_path_get_basename(ev->text);
+                char *name = g_strdup_printf("record%d_%s", ++s_record_count, base);
                 tmp = replay_media_tmp_file(name);
+                if (tmp) replay_media_cmt_map_path(tmp, ev->text);
                 g_free(name);
+                g_free(base);
             };
             (void)replay_media_cmt_execute((en_REPLAY_CMT_OP)op, ev->arg, tmp);
             g_free(tmp);
@@ -1763,7 +1948,7 @@ static const char *replay_play_load_start(const st_REPLAY_DATA *d, char *errbuf,
     /* Obrazy médií před snapshotem: snapshot obnoví stav řadičů nad nimi. */
     const char *merr = replay_media_prepare(d, errbuf, errsize);
     if (merr) return merr;
-    en_SNAPSHOT_RESULT sr = snapshot_load_from_buffer(d->start_snapshot, d->start_snapshot_size);
+    en_SNAPSHOT_RESULT sr = replay_snapshot_load(d->start_snapshot, d->start_snapshot_size);
     if (sr != SNAPSHOT_OK)
     {
         replay_media_restore();
@@ -2525,7 +2710,12 @@ void replay_host_autotype_delays(double kd_ms, double ku_ms)
 }
 
 
-void replay_host_cmt(en_REPLAY_CMT_OP op, int32_t arg, const char *path)
+/**
+ * @brief Zařadí operaci kazety z UI (společné tělo replay_host_cmt() a replay_host_cmt_guarded()).
+ * @param op Operace. @param arg Hodnota. @param path Cesta (zkopíruje se) nebo NULL.
+ * @param guard Podmínky (zkopírují se), NULL = bez podmínek.
+ */
+static void replay_host_cmt_submit(en_REPLAY_CMT_OP op, int32_t arg, const char *path, const st_REPLAY_CMT_GUARD *guard)
 {
     if (op < 0 || op >= REPLAY_CMT_OP_COUNT) return;
     if (g_atomic_int_get(&g_replay_mode) == REPLAY_MODE_PLAYING) return;
@@ -2533,10 +2723,23 @@ void replay_host_cmt(en_REPLAY_CMT_OP op, int32_t arg, const char *path)
     u->op = op;
     u->arg = arg;
     u->path = g_strdup(path);
+    if (guard) u->guard = *guard;
     g_mutex_lock(&s_lock);
     g_queue_push_tail(&s_ui_cmt, u);
     g_atomic_int_or((guint *)&g_replay_frame_hook, REPLAY_HOOK_UI);
     g_mutex_unlock(&s_lock);
+}
+
+
+void replay_host_cmt(en_REPLAY_CMT_OP op, int32_t arg, const char *path)
+{
+    replay_host_cmt_submit(op, arg, path, NULL);
+}
+
+
+void replay_host_cmt_guarded(en_REPLAY_CMT_OP op, int32_t arg, const st_REPLAY_CMT_GUARD *guard)
+{
+    replay_host_cmt_submit(op, arg, NULL, guard);
 }
 
 

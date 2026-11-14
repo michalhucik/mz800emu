@@ -75,6 +75,7 @@
 #include <math.h>
 /* CMTSPEED_CUSTOM pro cmt_tape_block_speed s vlastními pulzy */
 #include "libs/cmtspeed/cmtspeed.h"
+#include "libs/tmz/tmz.h"
 /* history_get potřebuje st_DEBUGGER_HISTORY_ROW + g_debugger_history +
  * konstanty DEBUGGER_HISTORY_LENGTH / POSMASK / MAX_INSTR_BYTES. */
 #include "../debugger/debugger.h"
@@ -747,6 +748,32 @@ static en_MCP_DISPATCH_RESULT _handle_cmt_tape_block_speed(
     const st_JSONL_MESSAGE *req, char **out_response);
 static en_MCP_DISPATCH_RESULT _handle_cmt_tape_list(
     const st_JSONL_MESSAGE *req, char **out_response);
+static en_MCP_DISPATCH_RESULT _handle_cmt_save(
+    const st_JSONL_MESSAGE *req, char **out_response);
+static en_MCP_DISPATCH_RESULT _handle_cmt_export_block(
+    const st_JSONL_MESSAGE *req, char **out_response);
+static en_MCP_DISPATCH_RESULT _handle_cmt_new_tape(
+    const st_JSONL_MESSAGE *req, char **out_response);
+static en_MCP_DISPATCH_RESULT _handle_cmt_tape_delete_blocks(
+    const st_JSONL_MESSAGE *req, char **out_response);
+static en_MCP_DISPATCH_RESULT _handle_cmt_tape_move_block(
+    const st_JSONL_MESSAGE *req, char **out_response);
+static en_MCP_DISPATCH_RESULT _handle_cmt_tape_import(
+    const st_JSONL_MESSAGE *req, char **out_response);
+static en_MCP_DISPATCH_RESULT _handle_cmt_export_tape(
+    const st_JSONL_MESSAGE *req, char **out_response);
+static en_MCP_DISPATCH_RESULT _handle_cmt_tape_analyze(
+    const st_JSONL_MESSAGE *req, char **out_response);
+static en_MCP_DISPATCH_RESULT _handle_cmt_tape_info(
+    const st_JSONL_MESSAGE *req, char **out_response);
+static en_MCP_DISPATCH_RESULT _handle_cmt_tape_check(
+    const st_JSONL_MESSAGE *req, char **out_response);
+static en_MCP_DISPATCH_RESULT _handle_cmt_tape_convert_block(
+    const st_JSONL_MESSAGE *req, char **out_response);
+static en_MCP_DISPATCH_RESULT _handle_cmt_load_directly(
+    const st_JSONL_MESSAGE *req, char **out_response);
+static en_MCP_DISPATCH_RESULT _handle_cmt_tape_step(
+    const st_JSONL_MESSAGE *req, char **out_response);
 
 /* V1.D.3.A - IRQ chip Resource handlery (i8255 PPI + i8253 CTC +
  * Z80 PIO). Read-only snapshoty stavu chipů přes nové DBGAPI_CMD
@@ -1340,6 +1367,29 @@ static const st_MCP_CMD_MAP_ENTRY g_cmd_map[] = {
      * čipy + devbus, budiče, příznaky, aktivita) a peek s rezolucí sběrnice. */
     { "get_bus_map",              DBGAPI_CMD_BUS_MAP,                 _handle_get_bus_map              },
     { "bus_peek",                 DBGAPI_CMD_BUS_PEEK,                _handle_bus_peek                 },
+    /* Uložení pásky, export bloku, nová páska. Přidáno na
+     * KONEC tabulky (pořadí jmen v hello zůstává). */
+    { "cmt_save",                 DBGAPI_CMD_CMT_SAVE,                _handle_cmt_save                 },
+    { "cmt_export_block",         DBGAPI_CMD_CMT_EXPORT_BLOCK,        _handle_cmt_export_block         },
+    { "cmt_new_tape",             DBGAPI_CMD_CMT_NEW_TAPE,            _handle_cmt_new_tape             },
+    /* Úpravy pásky (mazání, přesun, import) a export celé
+     * pásky do WAV. Přidáno na KONEC tabulky (pořadí jmen v hello zůstává). */
+    { "cmt_tape_delete_blocks",   DBGAPI_CMD_CMT_TAPE_DELETE_BLOCKS,  _handle_cmt_tape_delete_blocks   },
+    { "cmt_tape_move_block",      DBGAPI_CMD_CMT_TAPE_MOVE_BLOCK,     _handle_cmt_tape_move_block      },
+    { "cmt_tape_import",          DBGAPI_CMD_CMT_TAPE_IMPORT,         _handle_cmt_tape_import          },
+    { "cmt_export_tape",          DBGAPI_CMD_CMT_EXPORT_TAPE,         _handle_cmt_export_tape          },
+    /* Analýza surového bloku, informace o pásce, kontrola,
+     * převod profilu. Příkaz se změnou nese v tabulce variantu
+     * se změnou (state_rev, expected_state_rev); čtení handler odešle jako
+     * samostatný příkaz třídy ALLOW. */
+    { "cmt_tape_analyze",         DBGAPI_CMD_CMT_TAPE_ANALYZE_APPLY,  _handle_cmt_tape_analyze         },
+    { "cmt_tape_info",            DBGAPI_CMD_CMT_TAPE_INFO_SET,       _handle_cmt_tape_info            },
+    { "cmt_tape_check",           DBGAPI_CMD_CMT_TAPE_CHECK,          _handle_cmt_tape_check           },
+    { "cmt_tape_convert_block",   DBGAPI_CMD_CMT_TAPE_CONVERT_BLOCK,  _handle_cmt_tape_convert_block   },
+    /* Kazeta jako okno Virtual CMT: Load directly a krok po přehratelných
+     * blocích (Rewind / Previous / Next decku). */
+    { "cmt_load_directly",        DBGAPI_CMD_CMT_LOAD_DIRECTLY,       _handle_cmt_load_directly        },
+    { "cmt_tape_step",            DBGAPI_CMD_CMT_TAPE_STEP,           _handle_cmt_tape_step            },
     /* sentinel */
     { NULL,              DBGAPI_CMD_NONE,              NULL                  },
 };
@@ -1383,6 +1433,85 @@ static gint64 _obj_int_or(JsonObject *obj, const char *key, gint64 def) {
     if (!node || json_node_is_null(node)) return def;
     if (json_node_get_node_type(node) != JSON_NODE_VALUE) return def;
     return json_node_get_int(node);
+}
+
+
+/** @brief Výsledek _obj_strict_int() - přísné čtení celého čísla z JSON objektu. */
+typedef enum en_MCP_STRICT_INT {
+    MCP_STRICT_INT_ABSENT = 0, /**< pole chybí nebo je null */
+    MCP_STRICT_INT_OK,         /**< pole je JSON celé číslo v rozsahu, *out platí */
+    MCP_STRICT_INT_INVALID,    /**< pole má jiný typ (řetězec, desetinné číslo, bool, objekt, pole) nebo je mimo rozsah */
+} en_MCP_STRICT_INT;
+
+
+/**
+ * @brief Přísně přečte celé číslo z JsonObject (čísla a pozice bloků příkazů pásky).
+ *
+ * Na rozdíl od _obj_int_or() nepřevádí jiné typy: JSON-GLib by řetězec
+ * vrátil jako 0 a desetinné číslo zaokrouhlil, takže by úprava proběhla
+ * na jiném místě. Přijme jen JSON_NODE_VALUE typu
+ * G_TYPE_INT64 v rozsahu @p min .. G_MAXINT.
+ *
+ * @param obj Objekt (smí být NULL = pole chybí). @param key Jméno pole.
+ * @param min Nejmenší přípustná hodnota.
+ * @param[out] out Hodnota (jen při MCP_STRICT_INT_OK).
+ * @return en_MCP_STRICT_INT.
+ */
+static en_MCP_STRICT_INT _obj_strict_int(JsonObject *obj, const char *key, gint64 min, gint64 *out) {
+    if (!obj || !json_object_has_member(obj, key)) return MCP_STRICT_INT_ABSENT;
+    JsonNode *node = json_object_get_member(obj, key);
+    if (!node || json_node_is_null(node)) return MCP_STRICT_INT_ABSENT;
+    if (json_node_get_node_type(node) != JSON_NODE_VALUE || json_node_get_value_type(node) != G_TYPE_INT64) {
+        return MCP_STRICT_INT_INVALID;
+    }
+    gint64 v = json_node_get_int(node);
+    if (v < min || v > G_MAXINT) return MCP_STRICT_INT_INVALID;
+    *out = v;
+    return MCP_STRICT_INT_OK;
+}
+
+
+/**
+ * @brief Přísně přečte JSON bool z JsonObject (volby nástrojů nad páskou).
+ *
+ * Číslo ani řetězec ("true", 1) se nepřevádí. Výsledek sdílí výčet
+ * en_MCP_STRICT_INT (ABSENT = chybí nebo null, OK, INVALID = jiný typ).
+ *
+ * @param obj Objekt (smí být NULL). @param key Jméno pole.
+ * @param[out] out Hodnota (jen při MCP_STRICT_INT_OK).
+ * @return en_MCP_STRICT_INT.
+ */
+static en_MCP_STRICT_INT _obj_strict_bool(JsonObject *obj, const char *key, bool *out) {
+    if (!obj || !json_object_has_member(obj, key)) return MCP_STRICT_INT_ABSENT;
+    JsonNode *node = json_object_get_member(obj, key);
+    if (!node || json_node_is_null(node)) return MCP_STRICT_INT_ABSENT;
+    if (json_node_get_node_type(node) != JSON_NODE_VALUE || json_node_get_value_type(node) != G_TYPE_BOOLEAN) {
+        return MCP_STRICT_INT_INVALID;
+    }
+    *out = json_node_get_boolean(node) ? true : false;
+    return MCP_STRICT_INT_OK;
+}
+
+
+/**
+ * @brief Přísně přečte JSON číslo (celé nebo desetinné) z JsonObject.
+ *
+ * Bool ani řetězec se nepřevádí; nekonečno a NaN JSON nezná.
+ *
+ * @param obj Objekt (smí být NULL). @param key Jméno pole.
+ * @param[out] out Hodnota (jen při MCP_STRICT_INT_OK).
+ * @return en_MCP_STRICT_INT.
+ */
+static en_MCP_STRICT_INT _obj_strict_number(JsonObject *obj, const char *key, double *out) {
+    if (!obj || !json_object_has_member(obj, key)) return MCP_STRICT_INT_ABSENT;
+    JsonNode *node = json_object_get_member(obj, key);
+    if (!node || json_node_is_null(node)) return MCP_STRICT_INT_ABSENT;
+    if (json_node_get_node_type(node) != JSON_NODE_VALUE) return MCP_STRICT_INT_INVALID;
+    GType t = json_node_get_value_type(node);
+    if (t == G_TYPE_INT64) *out = (double)json_node_get_int(node);
+    else if (t == G_TYPE_DOUBLE) *out = json_node_get_double(node);
+    else return MCP_STRICT_INT_INVALID;
+    return MCP_STRICT_INT_OK;
 }
 
 
@@ -9952,6 +10081,12 @@ static bool _b64_to_tempfile(const char *b64, char **out_path) {
  *   - `bytes_b64` (string) - inline base64 obsah .mzf (dekóduje se do
  *     dočasného souboru, který se po provedení příkazu smaže)
  *
+ * Volitelně jen u RUN_MZF: `device` (řetězec se jménem `cmt`, `fd`, `qd`,
+ * `rd`, `sram` nebo číslem podle bootdev_parse(), nebo celé číslo JSON
+ * 0..65535) = kód zařízení v BC jen pro toto spuštění; nastavení
+ * `[CMT] run_mzf_device` se nemění. Neplatná hodnota (i u LOAD_MZF, kde
+ * parametr není) = INVALID_PARAMS bez zásahu do stroje.
+ *
  * @param req          Požadavek MCP.
  * @param cmd          DBGAPI_CMD_MEDIA_LOAD_MZF nebo DBGAPI_CMD_MEDIA_RUN_MZF.
  * @param cmd_name     Jméno příkazu MCP pro obecnou chybovou zprávu.
@@ -9962,7 +10097,9 @@ static bool _b64_to_tempfile(const char *b64, char **out_path) {
  *         -4 soubor kratší než fsize (jen RUN_MZF, stroj se neresetoval).
  *
  * Při úspěchu vrací `{"ok":true, "load_addr", "exec_addr", "size",
- * "result_code"}`, pro RUN_MZF navíc `"reset":true`.
+ * "result_code"}`, pro RUN_MZF navíc `"reset":true`, `"device"` (zápis
+ * použité volby: parametr v normalizovaném tvaru, jinak text nastavení)
+ * a `"bc"` (BC, se kterým program startuje).
  */
 static en_MCP_DISPATCH_RESULT _media_mzf_common(const st_JSONL_MESSAGE *req,
                                                  en_DBGAPI_CMD cmd,
@@ -10001,11 +10138,56 @@ static en_MCP_DISPATCH_RESULT _media_mzf_common(const st_JSONL_MESSAGE *req,
         .filepath      = target,
         .load_addr     = 0,
         .read_only     = 0,
+        .has_device    = 0,
         .out_size      = 0,
         .out_load_addr = 0,
         .out_exec_addr = 0,
         .out_result    = 0,
     };
+
+    /* device (jen media_run_mzf): kód zařízení v BC pro toto spuštění,
+     * jméno nebo číslo (řetězec, nebo celé číslo JSON); ověří se před
+     * odesláním, neplatná hodnota stroj nezresetuje. */
+    char dev_text[BOOTDEV_TEXT_MAX] = "";
+    if (json_object_has_member(data_obj, "device")) {
+        JsonNode *dn = json_object_get_member(data_obj, "device");
+        bool dev_ok = false;
+        en_BOOTDEV_PARSE dev_err = BOOTDEV_PARSE_INVALID;
+        if (cmd != DBGAPI_CMD_MEDIA_RUN_MZF) {
+            if (tmp_path) { g_unlink(tmp_path); g_free(tmp_path); }
+            g_free(path); g_free(b64);
+            return _err_response(req_id,
+                                 "Parameter device is only supported by media_run_mzf",
+                                 MCP_DISPATCH_INVALID_PARAMS, out_response);
+        }
+        if (dn && JSON_NODE_HOLDS_VALUE(dn)) {
+            GType vt = json_node_get_value_type(dn);
+            if (vt == G_TYPE_STRING) {
+                const char *s = json_node_get_string(dn);
+                dev_err = bootdev_parse_ex(s, NULL);
+                dev_ok = (dev_err == BOOTDEV_PARSE_OK)
+                         && bootdev_normalize(s, dev_text, sizeof(dev_text));
+            } else if (vt == G_TYPE_INT64) {
+                gint64 iv = json_node_get_int(dn);
+                if (iv >= 0 && iv <= 0xFFFF) {
+                    g_snprintf(dev_text, sizeof(dev_text), "%" G_GINT64_FORMAT, iv);
+                    dev_ok = true;
+                }
+            }
+        }
+        if (dev_ok) dev_ok = bootdev_parse(dev_text, &param.device);
+        if (!dev_ok) {
+            if (tmp_path) { g_unlink(tmp_path); g_free(tmp_path); }
+            g_free(path); g_free(b64);
+            char *msg = g_strdup_printf("Invalid device (%s)", bootdev_parse_message(dev_err));
+            en_MCP_DISPATCH_RESULT res = _err_response(req_id, msg, MCP_DISPATCH_INVALID_PARAMS,
+                                                       out_response);
+            g_free(msg);
+            return res;
+        }
+        param.has_device = 1;
+    }
+
     bool ok = _submit_dbgapi(cmd, &param, NULL);
     if (tmp_path) {
         g_unlink(tmp_path);
@@ -10035,6 +10217,10 @@ static en_MCP_DISPATCH_RESULT _media_mzf_common(const st_JSONL_MESSAGE *req,
     json_object_set_int_member(resp, "result_code", param.out_result);
     if (cmd == DBGAPI_CMD_MEDIA_RUN_MZF) {
         json_object_set_boolean_member(resp, "reset", TRUE);
+        /* kód zařízení: zápis volby (parametr, nebo nastavení přečtené emu
+         * vláknem v okamžiku spuštění) a BC programu */
+        json_object_set_string_member(resp, "device", param.has_device ? dev_text : param.out_device);
+        json_object_set_int_member(resp, "bc", (gint64)param.out_bc);
     }
     g_free(path); g_free(b64);
     return _ok_response(req_id, resp, out_response);
@@ -10062,8 +10248,10 @@ static en_MCP_DISPATCH_RESULT _handle_media_load_mzf(const st_JSONL_MESSAGE *req
  *
  * Parametry viz _media_mzf_common(). Volá `DBGAPI_CMD_MEDIA_RUN_MZF`:
  * úplný reset a bootstrap (stav jako po zavedení programu z pásky přes
- * ROM), PC = exec adresa. Stav pauzy emulace se nemění. Soubor se ověří
- * před resetem; chybný soubor (out_result -2 nebo -4) stroj nezresetuje.
+ * ROM), PC = exec adresa, BC = kód zařízení (volitelný parametr `device`,
+ * jinak nastavení `[CMT] run_mzf_device`). Stav pauzy emulace se nemění.
+ * Soubor se ověří před resetem; chybný soubor (out_result -2 nebo -4) ani
+ * neplatný `device` stroj nezresetují.
  */
 static en_MCP_DISPATCH_RESULT _handle_media_run_mzf(const st_JSONL_MESSAGE *req,
                                                      char **out_response) {
@@ -10153,6 +10341,11 @@ static en_MCP_DISPATCH_RESULT _handle_media_load_binary(const st_JSONL_MESSAGE *
  *
  * WARNING (klient): pokud je ve slotu jíž jiné médium, dojde k jeho
  * automatickému umount (= ekvivalent eject + insert).
+ *
+ * Slot `cmt` jde stejnou cestou jako `cmt_open`: soubor pásky se nejdřív
+ * ověří (neúspěch vloženou pásku nevysune), odpověď nese `warning`
+ * ("Unsaved tape changes were discarded", když se zahodila páska Modified
+ * nebo nahrávání, a varování otevření pásky).
  */
 static en_MCP_DISPATCH_RESULT _handle_media_insert(const st_JSONL_MESSAGE *req,
                                                     char **out_response) {
@@ -10231,6 +10424,10 @@ static en_MCP_DISPATCH_RESULT _handle_media_insert(const st_JSONL_MESSAGE *req,
     json_object_set_boolean_member(resp, "ok", TRUE);
     json_object_set_string_member(resp, "slot", _media_slot_str(slot));
     json_object_set_int_member(resp, "result_code", rc);
+    if (param.out_warning[0]) {
+        /* slot cmt: zahozené neuložené změny pásky, varování otevření */
+        json_object_set_string_member(resp, "warning", param.out_warning);
+    }
     if (slot == DBGAPI_MEDIA_SLOT_QD) {
         json_object_set_boolean_member(resp, "switched_to_mz1f11",
                                        param.out_qd_switched ? TRUE : FALSE);
@@ -10247,7 +10444,9 @@ static en_MCP_DISPATCH_RESULT _handle_media_insert(const st_JSONL_MESSAGE *req,
  *   - `slot` (string, povinný) - "cmt" | "fdc0_fd0".."fdc0_fd3" |
  *     "fdc1_fd0".."fdc1_fd3" | "qd" | "ide8"
  *
- * Volá `DBGAPI_CMD_MEDIA_EJECT`.
+ * Volá `DBGAPI_CMD_MEDIA_EJECT`. Slot `cmt` jako `cmt_transport` eject:
+ * odpověď nese `warning` "Unsaved tape changes were discarded", když páska
+ * byla Modified nebo běželo nahrávání.
  */
 static en_MCP_DISPATCH_RESULT _handle_media_eject(const st_JSONL_MESSAGE *req,
                                                    char **out_response) {
@@ -10286,6 +10485,10 @@ static en_MCP_DISPATCH_RESULT _handle_media_eject(const st_JSONL_MESSAGE *req,
     JsonObject *resp = json_object_new();
     json_object_set_boolean_member(resp, "ok", TRUE);
     json_object_set_string_member(resp, "slot", _media_slot_str(slot));
+    if (param.out_warning[0]) {
+        /* slot cmt: vysunutí zahodilo neuložené změny pásky nebo nahrávání */
+        json_object_set_string_member(resp, "warning", param.out_warning);
+    }
     return _ok_response(req_id, resp, out_response);
 }
 
@@ -10368,8 +10571,26 @@ static const char *const g_settings_live_keys[] = {
     "DEVBUS/conflict",
     "DEVBUS/bus_idle",
     "DEVBUS/bus_idle_value",
+    /* CMT - automatické ukončení záznamu po N s ticha (0 = vypnuto); jádro
+     * čte g_cmt.rec_autostop_s na konci snímku, propagace ho nastaví hned.
+     * Záznam vstupů nese hodnotu v manifestu (settings_set je při záznamu
+     * odmítnutý). Rozsah hlídá _handle_settings_set(). */
+    "CMT/rec_autostop_s",
+    /* CMT - kód zařízení v BC při přímém spuštění MZF (TEXT: jméno nebo
+     * číslo, bootstrap_device.h). Platí od příštího media_run_mzf /
+     * --run-mzf; zápis ověří _handle_settings_set() i dbgapi (SETTINGS_SET). */
+    "CMT/run_mzf_device",
+    /* CMTHACK - Direct Save: jako položka menu jen ve STOP a ne při
+     * záznamu nebo přehrávání vstupů (dbgapi SETTINGS_SET, chyby
+     * DBGAPI_SETTINGS_ERR_NOT_STOPPED / _REPLAY);
+     * patch zápisových rutin ROM se srovná hned. Záznam vstupů nese
+     * nastavení v manifestu. */
+    "CMTHACK/direct_save",
     NULL,
 };
+
+/** @brief Nejvyšší hodnota CMT/rec_autostop_s v s (= CMT_REC_AUTOSTOP_MAX_S v cmt.h; shodu hlídá test mcp_cmt_parity). */
+#define MCP_CMT_REC_AUTOSTOP_MAX_S 600ul
 
 
 /**
@@ -10600,6 +10821,35 @@ static en_MCP_DISPATCH_RESULT _handle_settings_set(const st_JSONL_MESSAGE *req,
                                   MCP_DISPATCH_INVALID_PARAMS, out_response);
         }
     }
+    /* Automatické ukončení záznamu kazety: rozsah prvku INI (0 .. 600 s,
+     * registrace v cmt.c). Zápis prvku (cfgelement_set_unsigned_value())
+     * rozsah sám nehlídá, proto ho ověříme tady. */
+    if (strcmp(key, "CMT/rec_autostop_s") == 0) {
+        char *endp = NULL;
+        /* základ 0 jako zápis v dbgapi (SETTINGS_SET) a sousední klíče:
+         * kontrola i zápis čtou tutéž hodnotu (010 = 8) */
+        unsigned long sv = strtoul(value, &endp, 0);
+        if (!value[0] || !endp || *endp != '\0' || value[0] == '-'
+            || sv > MCP_CMT_REC_AUTOSTOP_MAX_S) {
+            g_free(key); g_free(value);
+            return _err_response(req_id,
+                                  "Value out of range (expected 0..600 seconds)",
+                                  MCP_DISPATCH_INVALID_PARAMS, out_response);
+        }
+    }
+    /* Kód zařízení pro přímé spuštění MZF: jméno nebo číslo 0..65535
+     * (bootdev_parse_ex(); dbgapi zápis ověří znovu a uloží normalizovaný). */
+    if (strcmp(key, "CMT/run_mzf_device") == 0) {
+        en_BOOTDEV_PARSE pr = bootdev_parse_ex(value, NULL);
+        if (pr != BOOTDEV_PARSE_OK) {
+            char *msg = g_strdup_printf("Invalid value (%s)", bootdev_parse_message(pr));
+            en_MCP_DISPATCH_RESULT res = _err_response(req_id, msg, MCP_DISPATCH_INVALID_PARAMS,
+                                                       out_response);
+            g_free(msg);
+            g_free(key); g_free(value);
+            return res;
+        }
+    }
     char *mod = NULL, *elm = NULL;
     if (!_settings_split_key(key, &mod, &elm)) {
         g_free(key); g_free(value);
@@ -10624,6 +10874,10 @@ static en_MCP_DISPATCH_RESULT _handle_settings_set(const st_JSONL_MESSAGE *req,
                        : (rc == -3) ? "Element not found in module"
                        : (rc == -4) ? "Invalid value for type "
                                       "(coerce failed)"
+                       : (rc == -5) ? "Key is not live-settable"
+                       : (rc == DBGAPI_SETTINGS_ERR_REPLAY) ? "Direct Save cannot be changed while an input "
+                                                              "replay is recorded or played."
+                       : (rc == DBGAPI_SETTINGS_ERR_NOT_STOPPED) ? "Stop the tape to switch Direct Save on or off."
                        : "settings_set failed";
         g_free(key); g_free(value); g_free(mod); g_free(elm);
         g_free(param.out_value);
@@ -10634,7 +10888,11 @@ static en_MCP_DISPATCH_RESULT _handle_settings_set(const st_JSONL_MESSAGE *req,
     json_object_set_string_member(resp, "key", key);
     json_object_set_string_member(resp, "previous_value",
                                    param.out_value ? param.out_value : "");
-    json_object_set_string_member(resp, "new_value", value);
+    /* CMT/run_mzf_device: uložený (normalizovaný) zápis, ne surový vstup */
+    char norm[BOOTDEV_TEXT_MAX];
+    bool is_bootdev = (strcmp(key, "CMT/run_mzf_device") == 0)
+                      && bootdev_normalize(value, norm, sizeof(norm));
+    json_object_set_string_member(resp, "new_value", is_bootdev ? norm : value);
     json_object_set_string_member(resp, "type",
                                    _settings_type_str(param.out_type));
     /* Volba zařízení devbus: kdy se změna projeví ("now" / "on_connect"). */
@@ -11323,7 +11581,9 @@ static void _hid_result_to_json(JsonObject *resp, const st_HID_RUN_RESULT *r) {
  * Parametry data:
  *   key      (string) - jméno klávesy (RETURN, SHIFT, ARROW_UP, ...) nebo
  *                       "ASCII:<znak>" / single-character literal
- *   frames   (int)    - počet snímků emulace držet (default 3, max 600)
+ *   frames   (int)    - počet snímků emulace držet (default 6, max 600;
+ *                       3 snímky zaváděcí nabídka MZ-800 a MZ-1500
+ *                       v některých okamžicích nepřijme)
  *
  * Klávesu stiskne a po `frames` snímcích emulace uvolní emu vlákno
  * (sekvence vstupu, _hid_run_script), nezávisle na rychlosti emulace.
@@ -11367,7 +11627,7 @@ static en_MCP_DISPATCH_RESULT _handle_input_send_key(
         return _err_response(req_id, "Invalid parameters",
                              MCP_DISPATCH_INVALID_PARAMS, out_response);
     }
-    gint64 frames = _obj_int_or(obj, "frames", 3);
+    gint64 frames = _obj_int_or(obj, "frames", 6);
     if (frames < 0) frames = 0;
     if (frames > HID_FRAMES_MAX) frames = HID_FRAMES_MAX;
 
@@ -11412,7 +11672,8 @@ static en_MCP_DISPATCH_RESULT _handle_input_send_key(
  *                            Neznámé jméno = chyba 422 "Unknown key" s návrhy
  *                            PŘED odesláním jakékoli klávesy.
  *   encoding      (string) - "ascii" (default) nebo "key_names"
- *   frame_per_key (int)    - počet snímků emulace na klávesu (default 3)
+ *   frame_per_key (int)    - počet snímků emulace na klávesu (default 6,
+ *                            viz input_send_key)
  *
  * Response: `{"keys_sent": N, "keys_landed": N, "total_frames": N,
  *            "encoding": str, "landing_verified": bool,
@@ -11434,8 +11695,22 @@ static en_MCP_DISPATCH_RESULT _handle_input_send_key(
  *
  * Implementace: parsing sestaví sekvenci událostí (klávesa za klávesou,
  * mezi uvolněním a dalším stiskem HID_KEYS_GAP_FRAMES snímků), kterou
- * provede emu vlákno (_hid_run_script). Nerezolvovatelný ASCII znak se
- * přeskočí.
+ * provede emu vlákno (_hid_run_script).
+ *
+ * encoding=ascii: klávesu CR napíše '\n' i '\r', dvojice "\r\n" jen
+ * jednou. Znak, který klávesnice nenapíše (i každý znak mimo ASCII), se
+ * přeskočí; response pak nese navíc `skipped` (počet přeskočených znaků,
+ * vždy přítomné, u key_names 0 - neznámé jméno je tam chyba) a při
+ * skipped > 0 `warning` "Skipped N character(s) that cannot be typed:
+ * U+XXXX, ..." (nejvýš 16 kódů, pak ", ...").
+ *
+ * Mez HID_TEXT_MAX_LEN (256) kláves pro oba encodingy: přeskočené znaky ji
+ * nespotřebují, dvojice "\r\n" je jedna klávesa. Zbytek textu se nenapíše;
+ * `truncated` (vždy přítomné) je počet nenapsaných znaků (u key_names
+ * jmen, ta se pak ani neověří) a `warning` nese "Text truncated: N
+ * character(s) after the first 256 keys were not typed" (u key_names "N key
+ * name(s) after the first 256 keys were not sent"), s jiným varováním
+ * spojené přes "; ".
  */
 static en_MCP_DISPATCH_RESULT _handle_input_send_keys(
     const st_JSONL_MESSAGE *req, char **out_response) {
@@ -11460,7 +11735,7 @@ static en_MCP_DISPATCH_RESULT _handle_input_send_keys(
         const char *e = json_object_get_string_member(obj, "encoding");
         if (e) encoding = e;
     }
-    gint64 frame_per_key = _obj_int_or(obj, "frame_per_key", 3);
+    gint64 frame_per_key = _obj_int_or(obj, "frame_per_key", 6);
     if (frame_per_key < 0) frame_per_key = 0;
     if (frame_per_key > HID_FRAMES_MAX) frame_per_key = HID_FRAMES_MAX;
 
@@ -11470,15 +11745,46 @@ static en_MCP_DISPATCH_RESULT _handle_input_send_keys(
         g_new0(st_DBGAPI_HID_SCRIPT_EVENT, HID_TEXT_MAX_LEN);
     int count = 0;
 
+    /* ascii: znaky, které nejdou napsat (přeskočené), do pole skipped a varování;
+     * znaky (u key_names jména) za mezí HID_TEXT_MAX_LEN kláves do pole truncated */
+    int skipped = 0;
+    int truncated = 0;
+    GString *skipped_list = NULL;
     if (strcmp(encoding, "ascii") == 0) {
-        size_t tlen = strlen(text);
-        if (tlen > HID_TEXT_MAX_LEN) tlen = HID_TEXT_MAX_LEN;
-        for (size_t i = 0; i < tlen; i++) {
+        skipped_list = g_string_new(NULL);
+        /* Po znacích UTF-8 (JSON řetězec je platné UTF-8), nejvýš
+         * HID_TEXT_MAX_LEN kláves; přeskočené znaky mez nespotřebují, znaky
+         * za mezí se jen spočítají. CR klávesy je v tabulce znak '\n';
+         * '\r' napíše totéž a dvojice "\r\n" je jedna klávesa (i na hraně
+         * meze se napíše celá). */
+        const char *s = text;
+        while (*s) {
+            gunichar c = g_utf8_get_char(s);
+            const char *next = g_utf8_next_char(s);
+            if (count >= HID_TEXT_MAX_LEN) {
+                truncated++;
+                s = next;
+                continue;
+            }
+            if (c == '\r') {
+                if (*next == '\n')
+                    next = g_utf8_next_char(next);   /* "\r\n" = jedna klávesa CR */
+                c = '\n';
+            }
             st_HID_KEYMAP_RESOLVED res;
-            if (!hid_keymap_resolve_ascii(text[i], &res)) {
-                continue; /* unresolvable char - skip, ne fail */
+            if ((c >= 0x80) || !hid_keymap_resolve_ascii((char)c, &res)) {
+                /* znak, který klávesnice nenapíše: přeskočit a ohlásit */
+                skipped++;
+                if (skipped <= 16) {
+                    g_string_append_printf(skipped_list, "%sU+%04X", skipped_list->len ? ", " : "", (unsigned)c);
+                } else if (skipped == 17) {
+                    g_string_append(skipped_list, ", ...");
+                }
+                s = next;
+                continue;
             }
             _hid_key_event(&events[count++], &res, (int)frame_per_key, 0);
+            s = next;
         }
     } else if (strcmp(encoding, "key_names") == 0) {
         /* Parsing JSON array stringu inline - vyhneme se další json-glib
@@ -11501,7 +11807,11 @@ static en_MCP_DISPATCH_RESULT _handle_input_send_keys(
         }
         JsonArray *arr = json_node_get_array(root);
         guint len = json_array_get_length(arr);
-        if (len > HID_TEXT_MAX_LEN) len = HID_TEXT_MAX_LEN;
+        if (len > HID_TEXT_MAX_LEN) {
+            /* jména za mezí se neověří ani neodešlou, jen spočítají */
+            truncated = (int)(len - HID_TEXT_MAX_LEN);
+            len = HID_TEXT_MAX_LEN;
+        }
         /* Neznámé jméno = chyba s nápovědou PŘED odesláním jakékoli
          * klávesy (dřív se tiše přeskočilo). Sekvence se odesílá až po
          * průchodu celým polem, takže stačí jeden průchod. */
@@ -11544,6 +11854,7 @@ static en_MCP_DISPATCH_RESULT _handle_input_send_keys(
         g_free(events); /* nic k odeslání (prázdný text / jen neznámé znaky) */
         run.complete = true;
     } else if (!_hid_run_script(events, count, &run)) {
+        if (skipped_list) g_string_free(skipped_list, TRUE);
         return _err_response(req_id, "input_send_keys failed: "
                              HID_SCRIPT_REJECTED_MSG,
                              MCP_DISPATCH_EMU_ERROR, out_response);
@@ -11573,6 +11884,27 @@ static en_MCP_DISPATCH_RESULT _handle_input_send_keys(
     json_object_set_boolean_member(resp, "landing_verified",
                                    all_landed ? TRUE : FALSE);
     _hid_result_to_json(resp, &run);
+    /* znaky, které klávesnice nenapíše (jen ascii; key_names neznámé jméno odmítne) */
+    json_object_set_int_member(resp, "skipped", skipped);
+    json_object_set_int_member(resp, "truncated", truncated);
+    GString *warning = g_string_new(NULL);
+    if (skipped > 0) {
+        g_string_append_printf(warning, "Skipped %d character(s) that cannot be typed: %s", skipped, skipped_list->str);
+    }
+    if (truncated > 0) {
+        if (warning->len) g_string_append(warning, "; ");
+        if (strcmp(encoding, "ascii") == 0)
+            g_string_append_printf(warning, "Text truncated: %d character(s) after the first %d keys were not typed",
+                                   truncated, HID_TEXT_MAX_LEN);
+        else
+            g_string_append_printf(warning, "Text truncated: %d key name(s) after the first %d keys were not sent",
+                                   truncated, HID_TEXT_MAX_LEN);
+    }
+    if (warning->len) {
+        json_object_set_string_member(resp, "warning", warning->str);
+    }
+    g_string_free(warning, TRUE);
+    if (skipped_list) g_string_free(skipped_list, TRUE);
     return _ok_response(req_id, resp, out_response);
 }
 
@@ -12415,7 +12747,16 @@ static en_MCP_DISPATCH_RESULT _handle_set_speed(
  * `action` (play/play_paused/stop/pause/eject). Pro `pause` lze navíc
  * předat bool `pause` (= true pauznout, false odpauzovat; default true).
  *
- * Layout response: {"ok": true, "action": str}
+ * Layout response: {"ok": true, "action": str
+ *                   [, "recorded": {"blocks": int, "mzf": int, "raw": int, "message": str}]
+ *                   [, "warning": str]}
+ *
+ * `recorded` je jen u stop, který ukončil nahrávání (bloky připojené na
+ * konec pásky, zpráva dekodéru). `warning` "Unsaved tape changes were
+ * discarded" u eject pásky Modified nebo během nahrávání (záznam se zahodí);
+ * u play, play_paused a pause (pause=true) se zapnutým CMT hackem, které ze STOP
+ * opravdu spustily přehrávání, DBGAPI_CMT_WARNING_DIRECT
+ * (příkaz motoru programu pásku nerozjede ani nezastaví; emulace beze změny).
  */
 static en_MCP_DISPATCH_RESULT _handle_cmt_transport(
     const st_JSONL_MESSAGE *req, char **out_response) {
@@ -12463,34 +12804,62 @@ static en_MCP_DISPATCH_RESULT _handle_cmt_transport(
     JsonObject *resp = json_object_new();
     json_object_set_boolean_member(resp, "ok", TRUE);
     json_object_set_string_member(resp, "action", action);
+    if (param.out_recorded) {
+        JsonObject *rec = json_object_new();
+        json_object_set_int_member(rec, "blocks", (gint64)(param.out_rec_mzf + param.out_rec_raw));
+        json_object_set_int_member(rec, "mzf", (gint64)param.out_rec_mzf);
+        json_object_set_int_member(rec, "raw", (gint64)param.out_rec_raw);
+        json_object_set_string_member(rec, "message", param.out_rec_message);
+        json_object_set_object_member(resp, "recorded", rec);
+    }
+    /* Se zapnutým CMT hackem příkaz motoru programu pásku nerozjede (Direct):
+     * PLAY, PLAY_PAUSED a PAUSE ze STOP provedené, s vysvětlením (emulace beze změny). */
+    GString *warning = g_string_new(param.out_warning);
+    if (param.out_cmthack) {
+        if (warning->len) g_string_append(warning, "; ");
+        g_string_append(warning, DBGAPI_CMT_WARNING_DIRECT);
+    }
+    if (warning->len) {
+        json_object_set_string_member(resp, "warning", warning->str);
+    }
+    g_string_free(warning, TRUE);
     g_free(action);
     return _ok_response(req_id, resp, out_response);
 }
 
 /**
- * @brief `cmt_record` handler - zahájení WAV nahrávání do souboru.
+ * @brief `cmt_record` handler - zahájení nahrávání do pásky.
  *
- * Forwarduje na DBGAPI_CMD_CMT_RECORD. Vyžaduje string `path` (cílový
- * WAV soubor). Nahrávání startuje v pauze (= klient musí následně
- * cmt_transport pause=false pro reálný zápis). Nezapisovatelná cesta
- * nebo špatný stav CMT (= není STOP) -> success=false.
+ * Forwarduje na DBGAPI_CMD_CMT_RECORD. `path` je nepovinný: bez něj se
+ * nahrává jen do vložené pásky (bez pásky do nové prázdné); s ním se po
+ * STOP navíc zapíše WAV (.wav) nebo uloží páska (.tmz, .tzx, .mzt, .mzf,
+ * .m12). Nahrávání startuje v pauze (klient pak cmt_transport
+ * pause=false, nebo motor programem). Nezapisovatelná cesta, nepodporovaná
+ * přípona nebo špatný stav CMT (není STOP) -> success=false. S cestou
+ * během přehrávání záznamu vstupů odmítnuto ("Recording to a file is not
+ * allowed while a replay is played"), bez cesty povoleno (odchýlení).
  *
- * Layout response: {"ok": true, "path": str}
+ * Layout response: {"ok": true, "path": str | null}. Varování Direct
+ * (DBGAPI_CMT_WARNING_DIRECT) nahrávání nemá: při RECORD řídí deck povel
+ * motoru programu i se zapnutým CMT hackem (CMTHACK_TEST_FAKES_MOTOR).
  */
 static en_MCP_DISPATCH_RESULT _handle_cmt_record(
     const st_JSONL_MESSAGE *req, char **out_response) {
     int64_t req_id = jsonl_msg_get_req_id(req);
     JsonNode *data_node = (JsonNode *)jsonl_msg_get_data_node(req);
-    if (!data_node || json_node_get_node_type(data_node) != JSON_NODE_OBJECT) {
-        return _err_response(req_id, "Missing required field: path",
+    /* `path` je nepovinný: request bez `data` nahrává jen do pásky */
+    if (data_node && json_node_get_node_type(data_node) != JSON_NODE_OBJECT
+        && json_node_get_node_type(data_node) != JSON_NODE_NULL) {
+        return _err_response(req_id, "Field data must be an object",
                              MCP_DISPATCH_INVALID_PARAMS, out_response);
     }
-    JsonObject *data_obj = json_node_get_object(data_node);
-    char *path = _obj_str_dup(data_obj, "path");
-    if (!path || !path[0]) {
+    char *path = NULL;
+    if (data_node && json_node_get_node_type(data_node) == JSON_NODE_OBJECT) {
+        path = _obj_str_dup(json_node_get_object(data_node), "path");
+    }
+    if (path && !path[0]) {
         g_free(path);
-        return _err_response(req_id, "Missing required field: path",
-                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+        path = NULL;
     }
 
     st_DBGAPI_CMT_RECORD_PARAM param;
@@ -12498,14 +12867,19 @@ static en_MCP_DISPATCH_RESULT _handle_cmt_record(
     param.filepath = path;
     if (!_submit_dbgapi(DBGAPI_CMD_CMT_RECORD, &param, NULL)) {
         g_free(path);
+        if (param.out_result == -3)
+            return _err_response(req_id,
+                                 "Recording to a file is not allowed while a replay is played",
+                                 MCP_DISPATCH_EMU_ERROR, out_response);
         return _err_response(req_id,
-                             "cmt_record failed (bad state or path not "
-                             "writable)",
+                             "cmt_record failed (not in STOP, path not "
+                             "writable or unsupported file type)",
                              MCP_DISPATCH_EMU_ERROR, out_response);
     }
     JsonObject *resp = json_object_new();
     json_object_set_boolean_member(resp, "ok", TRUE);
-    json_object_set_string_member(resp, "path", path);
+    if (path) json_object_set_string_member(resp, "path", path);
+    else json_object_set_null_member(resp, "path");
     g_free(path);
     return _ok_response(req_id, resp, out_response);
 }
@@ -12514,6 +12888,14 @@ static en_MCP_DISPATCH_RESULT _handle_cmt_record(
  * @brief `cmt_hack_set` handler - zapnutí/vypnutí cmthack ROM patche.
  *
  * Forwarduje na DBGAPI_CMD_CMT_HACK_SET. Vyžaduje bool `enabled`.
+ * Pravidla položky hlavního menu Use CMT Hack (cmt_loading_mode_apply(),
+ * sdílí je přepínač Loading okna Virtual CMT): změna jen ve STOP (jinak
+ * chyba "tape is not stopped", nic se nezmění), vypnutí zapomene stav hacku
+ * nad páskou, požadavek beze změny uspěje v každém stavu; CPU Boost
+ * zůstane. Přepínač okna navíc zakáže Direct, když aktuální blok nenese
+ * MZF; tuto kontrolu MCP nemá. Zapnutí s ROM bez podpory hacku = chyba
+ * DBGAPI_CMT_NO_HACK_ROM (okno tehdy Direct také nezapne). Při záznamu
+ * vstupů odmítne brána replaye, při přehrávání příkaz.
  * Response echo skutečného stavu patche po operaci (`installed`).
  *
  * Layout response: {"ok": true, "installed": bool}
@@ -12536,8 +12918,11 @@ static en_MCP_DISPATCH_RESULT _handle_cmt_hack_set(
     memset(&param, 0, sizeof(param));
     param.enabled = (uint8_t)(_obj_int_or(data_obj, "enabled", 0) ? 1 : 0);
     if (!_submit_dbgapi(DBGAPI_CMD_CMT_HACK_SET, &param, NULL)) {
-        return _err_response(req_id, "cmt_hack_set failed",
-                             MCP_DISPATCH_EMU_ERROR, out_response);
+        const char *msg = (param.out_result == -1) ? DBGAPI_CMT_EDIT_NOT_STOPPED
+                        : (param.out_result == -3) ? DBGAPI_CMT_LOADING_MODE_REPLAY
+                        : (param.out_result == -4) ? DBGAPI_CMT_NO_HACK_ROM
+                        : "cmt_hack_set failed";
+        return _err_response(req_id, msg, MCP_DISPATCH_EMU_ERROR, out_response);
     }
     JsonObject *resp = json_object_new();
     json_object_set_boolean_member(resp, "ok", TRUE);
@@ -12679,12 +13064,18 @@ static const char *_cmt_state_str(unsigned state) {
  *                   "state": "stop"|"play"|"record", "paused": bool
  *                   [, "warning": str]}
  *
+ * `warning` nese varování importu pásky (např. hlavička CMTSPEED v MZT,
+ * poškozený konec TAP; víc varování oddělených "; ") a varování
+ * o play_immediately níže, obojí odděleno "; ".
+ *
  * `playing` hlásí skutečný stav transportu po operaci (PLAY bez pauzy),
  * ne požadavek - dříve se vracelo echo `play_immediately`, takže
  * play_immediately nad páskou, která se nerozehrála, hlásil playing: true.
  * `state` / `paused` mají stejný význam jako v `get_periph_cmt`.
- * `warning` je přítomen, jen když play_immediately byl požadován, ale
- * páska po operaci nehraje. Chování openu se nemění.
+ * `warning` je přítomen, když import pásky něco hlásil, nebo když
+ * play_immediately byl požadován, ale páska po operaci nehraje, a když
+ * play_immediately se zapnutým CMT hackem pásku spustil (DBGAPI_CMT_WARNING_DIRECT);
+ * víc varování se spojí přes "; ". Chování openu se nemění.
  */
 static en_MCP_DISPATCH_RESULT _handle_cmt_open(
     const st_JSONL_MESSAGE *req, char **out_response) {
@@ -12725,11 +13116,21 @@ static en_MCP_DISPATCH_RESULT _handle_cmt_open(
                                   _cmt_state_str(param.out_state));
     json_object_set_boolean_member(resp, "paused",
                                    param.out_paused ? TRUE : FALSE);
+    GString *warning = g_string_new(param.out_warning);
     if (param.play_immediately && !playing) {
-        json_object_set_string_member(resp, "warning",
+        if (warning->len) g_string_append(warning, "; ");
+        g_string_append(warning,
             "play_immediately requested, but the tape is not playing "
             "after open (see state/paused)");
     }
+    if (param.out_cmthack) {
+        if (warning->len) g_string_append(warning, "; ");
+        g_string_append(warning, DBGAPI_CMT_WARNING_DIRECT);
+    }
+    if (warning->len) {
+        json_object_set_string_member(resp, "warning", warning->str);
+    }
+    g_string_free(warning, TRUE);
     g_free(path);
     return _ok_response(req_id, resp, out_response);
 }
@@ -12737,10 +13138,14 @@ static en_MCP_DISPATCH_RESULT _handle_cmt_open(
 /**
  * @brief `cmt_tape_seek` handler - seek na blok pásky.
  *
- * Forwarduje na DBGAPI_CMD_CMT_TAPE_SEEK. Vyžaduje int `block_id`.
- * Bez naložené pásky, u jednosouborového containeru (SINGLE: .mzf,
- * .wav - nemá cb_open_block, seek nepodporuje ani na blok 0) nebo
- * pro neplatný blok -> success = false.
+ * Forwarduje na DBGAPI_CMD_CMT_TAPE_SEEK. Vyžaduje `block_id` jako JSON
+ * celé číslo (_obj_strict_int(); řetězec, desetinné číslo, bool nebo null
+ * = INVALID_PARAMS "block_id must be an integer").
+ * Bez naložené pásky, u containeru bez indexu (SINGLE: jen nahrávání
+ * do WAV - nemá cb_open_block, seek nepodporuje ani na blok 0) nebo
+ * pro neplatný blok či řídicí blok bez signálu -> success = false.
+ * Samostatné .mzf a .wav jsou páska SIMPLE_TAPE s jedním blokem
+ * (každá přehrávaná páska včetně .tmz a .tzx je SIMPLE_TAPE).
  *
  * Layout response: {"ok": true, "block_id": int}
  */
@@ -12760,11 +13165,18 @@ static en_MCP_DISPATCH_RESULT _handle_cmt_tape_seek(
 
     st_DBGAPI_CMT_TAPE_SEEK_PARAM param;
     memset(&param, 0, sizeof(param));
-    param.block_id = (int)_obj_int_or(data_obj, "block_id", 0);
+    /* jen JSON celé číslo: řetězec "2" by _obj_int_or() přečetl jako blok 0 */
+    gint64 block_id = 0;
+    if (_obj_strict_int(data_obj, "block_id", G_MININT, &block_id) != MCP_STRICT_INT_OK) {
+        return _err_response(req_id, "block_id must be an integer",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+    param.block_id = (int)block_id;
     if (!_submit_dbgapi(DBGAPI_CMD_CMT_TAPE_SEEK, &param, NULL)) {
         return _err_response(req_id,
-                             "cmt_tape_seek failed (no tape, single-file "
-                             "tape without seek support, or bad block)",
+                             "cmt_tape_seek failed (no tape, recording, "
+                             "block out of range or a block that cannot be "
+                             "opened)",
                              MCP_DISPATCH_EMU_ERROR, out_response);
     }
     JsonObject *resp = json_object_new();
@@ -12776,7 +13188,8 @@ static en_MCP_DISPATCH_RESULT _handle_cmt_tape_seek(
 /**
  * @brief `cmt_tape_block_speed` handler - per-blok cmt rychlost.
  *
- * Forwarduje na DBGAPI_CMD_CMT_TAPE_BLOCK_SPEED. Vyžaduje int `block_id`
+ * Forwarduje na DBGAPI_CMD_CMT_TAPE_BLOCK_SPEED. Vyžaduje `block_id` jako
+ * JSON celé číslo (jiný typ = INVALID_PARAMS)
  * a buď int `speed` (en_CMTSPEED poměr 1..9), nebo `pulses_us` (pole
  * 4 čísel - vlastní délky pulzů v µs; blok pak má speed 10 =
  * CMTSPEED_CUSTOM). Bez pásky, MZ blok mimo rozsah nebo neplatná
@@ -12805,7 +13218,13 @@ static en_MCP_DISPATCH_RESULT _handle_cmt_tape_block_speed(
 
     st_DBGAPI_CMT_TAPE_BLOCK_SPEED_PARAM param;
     memset(&param, 0, sizeof(param));
-    param.block_id = (int)_obj_int_or(data_obj, "block_id", 0);
+    /* jen JSON celé číslo: jinak by se změnila rychlost (a Modified) jiného bloku */
+    gint64 block_id = 0;
+    if (_obj_strict_int(data_obj, "block_id", G_MININT, &block_id) != MCP_STRICT_INT_OK) {
+        return _err_response(req_id, "block_id must be an integer",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+    param.block_id = (int)block_id;
     if (has_pulses) {
         if (!_obj_pulses_us(data_obj, param.pulses_us)) {
             return _err_response(req_id,
@@ -12841,9 +13260,37 @@ static en_MCP_DISPATCH_RESULT _handle_cmt_tape_block_speed(
  * emulator://periph/cmt/tape. Caller alokuje pole bloků (cap
  * MCP_CMT_TAPE_LIST_CAP). Response payload:
  *   {"available": bool, "container_type": int, "current_block": int,
- *    "count": int, "truncated": bool, "blocks": [
+ *    "modified": bool, "path": str | null,
+ *    "last_recording": {"serial": int, "blocks": int, "mzf": int, "raw": int,
+ *                       "discarded": bool, "message": str} | null,
+ *    "count": int, "truncated": bool,
+ *    "position_s": float | null, "block_position_s": float | null,
+ *    "blocks": [
  *      {"block_id", "name", "cmt_speed", "type", "is_current",
- *       "playable", "recordable", "block_speed", "pulses_us"?} ... ]}
+ *       "playable", "recordable", "status", "size", "load_addr",
+ *       "exec_addr", "file_type", "length_s", "unsaved", "profile",
+ *       "convertible", "block_speed", "pulses_us"?} ... ],
+ *    "profiles": [{"id", "description", "accepts_speed"} ...]}
+ *
+ * "playable" je příznak bloku (blok jde přehrát; řídicí blok a blok, který
+ * player neumí, ne), "status" je "ok" / "not_decoded" (surový signál) /
+ * "cannot_play" / "control" (cmt_tape_block_status()). "size",
+ * "load_addr", "exec_addr", "file_type" jsou údaje hlavičky MZF bloku se
+ * souborem, jinak null. "length_s" je délka signálu bloku v s, pokud ji
+ * jádro už zná (otevřený blok, záznam, výpočet okna), řídicí blok 0, jinak
+ * null; výpis nic nepočítá. "position_s" (od začátku pásky)
+ * a "block_position_s" (v otevřeném bloku) jsou pozice jako počítadlo
+ * Elapsed okna, ze všech bloků i nad stropem výpisu; null, když je neznámá
+ * (délka některého přehratelného bloku před otevřeným neznámá, nahrávání,
+ * bez pásky).
+ *
+ * "unsaved" je true u bloku, který v souboru pásky není (nahraný,
+ * importovaný; cmttmz_block_is_unsaved()); přesun a mazání ho nemění,
+ * uložení pásky ho vynuluje.
+ *
+ * "profile" je ID profilu zapisovače bloku 0x46 (null u jiného
+ * bloku), "convertible" říká, zda blok jde převést cmt_tape_convert_block.
+ * "profiles" je nabídka převodu (cmttmz_profile_get()), i bez pásky.
  *
  * "block_speed" je "none" / "default" / "set" (en_CMTEXT_BLOCK_SPEED);
  * "cmt_speed" platí pro "set" (10 = vlastní délky pulzů). "pulses_us"
@@ -12851,7 +13298,10 @@ static en_MCP_DISPATCH_RESULT _handle_cmt_tape_block_speed(
  * přehraje (LONG high, LONG low, SHORT high, SHORT low).
  *
  * `available=false` znamená nenaloženou pásku nebo chybějící container;
- * blocks je pak prázdné. Read-only (= nemění stav), ale prochází stejným
+ * blocks je pak prázdné. `last_recording` je výsledek posledního
+ * dokončeného nebo zahozeného nahrávání od startu emulátoru (null, žádné
+ * nebylo; vložení ani vysunutí pásky ho nesmaže); nese i nahrávání ukončené samo (automatické ukončení, mez),
+ * které emu_cmt_stop nevrátí. Read-only (= nemění stav), ale prochází stejným
  * MCP_ACTION broadcast hookem jako ostatní read get_periph_* cmd.
  */
 #define MCP_CMT_TAPE_LIST_CAP 256
@@ -12876,9 +13326,29 @@ static en_MCP_DISPATCH_RESULT _handle_cmt_tape_list(
                                (gint64)param.container_type);
     json_object_set_int_member(resp, "current_block",
                                (gint64)param.current_block);
+    json_object_set_boolean_member(resp, "modified", param.modified ? TRUE : FALSE);
+    if (param.path[0]) json_object_set_string_member(resp, "path", param.path);
+    else json_object_set_null_member(resp, "path");
+    if (param.has_last_rec) {
+        JsonObject *rec = json_object_new();
+        json_object_set_int_member(rec, "serial", (gint64)param.last_rec_serial);
+        json_object_set_int_member(rec, "blocks", (gint64)param.last_rec_mzf + (gint64)param.last_rec_raw);
+        json_object_set_int_member(rec, "mzf", (gint64)param.last_rec_mzf);
+        json_object_set_int_member(rec, "raw", (gint64)param.last_rec_raw);
+        json_object_set_boolean_member(rec, "discarded", param.last_rec_discarded ? TRUE : FALSE);
+        json_object_set_string_member(rec, "message", param.last_rec_message);
+        json_object_set_object_member(resp, "last_recording", rec);
+    } else {
+        json_object_set_null_member(resp, "last_recording");
+    }
     json_object_set_int_member(resp, "count", (gint64)param.out_count);
     json_object_set_boolean_member(resp, "truncated",
         (param.out_count >= MCP_CMT_TAPE_LIST_CAP) ? TRUE : FALSE);
+    /* pozice jako počítadlo Elapsed okna; null = neznámá */
+    if (param.has_position) json_object_set_double_member(resp, "position_s", param.position_s);
+    else json_object_set_null_member(resp, "position_s");
+    if (param.has_block_position) json_object_set_double_member(resp, "block_position_s", param.block_position_s);
+    else json_object_set_null_member(resp, "block_position_s");
     JsonArray *arr = json_array_new();
     for (size_t i = 0; i < param.out_count; i++) {
         const st_DBGAPI_CMT_TAPE_BLOCK_ENTRY *e = &entries[i];
@@ -12893,6 +13363,31 @@ static en_MCP_DISPATCH_RESULT _handle_cmt_tape_list(
                                        e->playable ? TRUE : FALSE);
         json_object_set_boolean_member(item, "recordable",
                                        e->recordable ? TRUE : FALSE);
+        /* stav bloku (en_CMT_BLOCK_STATUS) jako sloupec Status okna bez Unsaved */
+        static const char *const status_txt[] = { "ok", "not_decoded", "cannot_play", "control" };
+        json_object_set_string_member(item, "status",
+            (e->status < G_N_ELEMENTS(status_txt)) ? status_txt[e->status] : "ok");
+        /* soubor MZF bloku z indexu pásky; jiný blok null */
+        if (e->has_file) {
+            json_object_set_int_member(item, "size", (gint64)e->file_size);
+            json_object_set_int_member(item, "load_addr", (gint64)e->file_load);
+            json_object_set_int_member(item, "exec_addr", (gint64)e->file_exec);
+            json_object_set_int_member(item, "file_type", (gint64)e->file_type);
+        } else {
+            json_object_set_null_member(item, "size");
+            json_object_set_null_member(item, "load_addr");
+            json_object_set_null_member(item, "exec_addr");
+            json_object_set_null_member(item, "file_type");
+        }
+        /* délka jako sloupec Length okna: známá (řídicí blok 0), jinak null */
+        if (e->has_length) json_object_set_double_member(item, "length_s", e->length_s);
+        else json_object_set_null_member(item, "length_s");
+        json_object_set_boolean_member(item, "unsaved",
+                                       e->unsaved ? TRUE : FALSE);
+        /* profil bloku 0x46 a převoditelnost (cmt_tape_convert_block) */
+        if (e->profile[0]) json_object_set_string_member(item, "profile", e->profile);
+        else json_object_set_null_member(item, "profile");
+        json_object_set_boolean_member(item, "convertible", e->convertible ? TRUE : FALSE);
         static const char *const block_speed_txt[] = { "none", "default", "set" };
         json_object_set_string_member(item, "block_speed",
             (e->block_speed < 3) ? block_speed_txt[e->block_speed] : "none");
@@ -12902,7 +13397,922 @@ static en_MCP_DISPATCH_RESULT _handle_cmt_tape_list(
         json_array_add_object_element(arr, item);
     }
     json_object_set_array_member(resp, "blocks", arr);
+    /* nabídka profilů zapisovače pro cmt_tape_convert_block (i bez pásky) */
+    JsonArray *profiles = json_array_new();
+    for (uint32_t k = 0; k < param.profile_count && k < DBGAPI_CMT_PROFILES_MAX; k++) {
+        JsonObject *po = json_object_new();
+        json_object_set_string_member(po, "id", param.profile_id[k] ? param.profile_id[k] : "");
+        json_object_set_string_member(po, "description",
+                                      param.profile_description[k] ? param.profile_description[k] : "");
+        json_object_set_boolean_member(po, "accepts_speed", param.profile_accepts_speed[k] ? TRUE : FALSE);
+        json_array_add_object_element(profiles, po);
+    }
+    json_object_set_array_member(resp, "profiles", profiles);
     g_free(entries);
+    return _ok_response(req_id, resp, out_response);
+}
+
+/**
+ * @brief `cmt_save` handler - uložení vložené pásky.
+ *
+ * Forwarduje na DBGAPI_CMD_CMT_SAVE. `path` nepovinný (bez něj dosavadní
+ * cesta pásky). Formát podle přípony (.tmz, .tzx, .mzt, .mzf, .m12). Při
+ * záznamu vstupů odmítnuto bránou replaye (dbgapi_cmd_props.c, FORBIDDEN),
+ * při přehrání samotným příkazem (dbgapi.c: "Saving the tape is not
+ * allowed while a replay is played").
+ *
+ * Layout response: {"ok": true, "path": str, "message": str [, "warning": str]}
+ * Chyba: error s textem uložení (např. "Tape has no file name",
+ * "Tape contains blocks that cannot be stored as MZT").
+ */
+static en_MCP_DISPATCH_RESULT _handle_cmt_save(
+    const st_JSONL_MESSAGE *req, char **out_response) {
+    int64_t req_id = jsonl_msg_get_req_id(req);
+    JsonNode *data_node = (JsonNode *)jsonl_msg_get_data_node(req);
+    char *path = NULL;
+    if (data_node && json_node_get_node_type(data_node) == JSON_NODE_OBJECT) {
+        path = _obj_str_dup(json_node_get_object(data_node), "path");
+    }
+    st_DBGAPI_CMT_SAVE_PARAM *param = g_new0(st_DBGAPI_CMT_SAVE_PARAM, 1);
+    param->filepath = (path && path[0]) ? path : NULL;
+    bool ok = _submit_dbgapi(DBGAPI_CMD_CMT_SAVE, param, NULL);
+    g_free(path);
+    if (!ok) {
+        char *msg = g_strdup(param->out_message[0] ? param->out_message : "cmt_save failed");
+        g_free(param);
+        en_MCP_DISPATCH_RESULT r = _err_response(req_id, msg, MCP_DISPATCH_EMU_ERROR, out_response);
+        g_free(msg);
+        return r;
+    }
+    JsonObject *resp = json_object_new();
+    json_object_set_boolean_member(resp, "ok", TRUE);
+    json_object_set_string_member(resp, "path", param->out_path);
+    json_object_set_string_member(resp, "message", param->out_message);
+    if (param->out_warning[0]) json_object_set_string_member(resp, "warning", param->out_warning);
+    g_free(param);
+    return _ok_response(req_id, resp, out_response);
+}
+
+/**
+ * @brief `cmt_export_block` handler - export bloku pásky do souboru.
+ *
+ * Forwarduje na DBGAPI_CMD_CMT_EXPORT_BLOCK. Povinné číslo bloku - `block`,
+ * nebo `block_id` (alias se jménem jako u ostatních příkazů pásky; obě
+ * naráz = INVALID_PARAMS) - jako JSON celé číslo (jiný typ =
+ * INVALID_PARAMS) a `path` (.mzf, .m12 = MZF bloku,
+ * .wav = signál bloku 44 100 Hz).
+ *
+ * Layout response: {"ok": true, "block": int, "block_id": int, "path": str,
+ *   "message": str} (`block` a `block_id` nesou totéž číslo)
+ */
+static en_MCP_DISPATCH_RESULT _handle_cmt_export_block(
+    const st_JSONL_MESSAGE *req, char **out_response) {
+    int64_t req_id = jsonl_msg_get_req_id(req);
+    JsonNode *data_node = (JsonNode *)jsonl_msg_get_data_node(req);
+    if (!data_node || json_node_get_node_type(data_node) != JSON_NODE_OBJECT) {
+        return _err_response(req_id, "Missing required fields: block (or block_id), path",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+    JsonObject *data_obj = json_node_get_object(data_node);
+    const gboolean has_block = json_object_has_member(data_obj, "block");
+    const gboolean has_block_id = json_object_has_member(data_obj, "block_id");
+    if (has_block && has_block_id) {
+        return _err_response(req_id, "Pass either block or block_id, not both",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+    const char *key = has_block_id ? "block_id" : "block";
+    char *path = _obj_str_dup(data_obj, "path");
+    if ((!has_block && !has_block_id) || !path || !path[0]) {
+        g_free(path);
+        return _err_response(req_id, "Missing required fields: block (or block_id), path",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+    /* jen JSON celé číslo: řetězec nebo desetinné číslo by se jinak převedlo na jiný blok */
+    gint64 block_id = -1;
+    if (_obj_strict_int(data_obj, key, G_MININT, &block_id) != MCP_STRICT_INT_OK) {
+        g_free(path);
+        return _err_response(req_id, has_block_id ? "block_id must be an integer" : "block must be an integer",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+    st_DBGAPI_CMT_EXPORT_BLOCK_PARAM *param = g_new0(st_DBGAPI_CMT_EXPORT_BLOCK_PARAM, 1);
+    param->block_id = (int)block_id;
+    param->filepath = path;
+    bool ok = _submit_dbgapi(DBGAPI_CMD_CMT_EXPORT_BLOCK, param, NULL);
+    if (!ok) {
+        char *msg = g_strdup(param->out_message[0] ? param->out_message : "cmt_export_block failed");
+        g_free(param);
+        g_free(path);
+        en_MCP_DISPATCH_RESULT r = _err_response(req_id, msg, MCP_DISPATCH_EMU_ERROR, out_response);
+        g_free(msg);
+        return r;
+    }
+    JsonObject *resp = json_object_new();
+    json_object_set_boolean_member(resp, "ok", TRUE);
+    json_object_set_int_member(resp, "block", (gint64)param->block_id);
+    json_object_set_int_member(resp, "block_id", (gint64)param->block_id);
+    json_object_set_string_member(resp, "path", path);
+    json_object_set_string_member(resp, "message", param->out_message);
+    g_free(param);
+    g_free(path);
+    return _ok_response(req_id, resp, out_response);
+}
+
+/**
+ * @brief `cmt_new_tape` handler - vložení nové prázdné pásky.
+ *
+ * Forwarduje na DBGAPI_CMD_CMT_NEW_TAPE. Dosavadní páska se vysune
+ * (neuložené změny a probíhající záznam se ztratí: pak `warning`
+ * "Unsaved tape changes were discarded").
+ *
+ * Layout response: {"ok": true [, "warning": str]}
+ */
+static en_MCP_DISPATCH_RESULT _handle_cmt_new_tape(
+    const st_JSONL_MESSAGE *req, char **out_response) {
+    int64_t req_id = jsonl_msg_get_req_id(req);
+    st_DBGAPI_CMT_NEW_TAPE_PARAM param;
+    memset(&param, 0, sizeof(param));
+    if (!_submit_dbgapi(DBGAPI_CMD_CMT_NEW_TAPE, &param, NULL)) {
+        return _err_response(req_id, "cmt_new_tape failed (out of memory)",
+                             MCP_DISPATCH_EMU_ERROR, out_response);
+    }
+    JsonObject *resp = json_object_new();
+    json_object_set_boolean_member(resp, "ok", TRUE);
+    if (param.out_warning[0]) json_object_set_string_member(resp, "warning", param.out_warning);
+    return _ok_response(req_id, resp, out_response);
+}
+
+/**
+ * @brief Čtecí varianta příkazu, jehož položka g_cmd_map[] nese variantu se změnou.
+ *
+ * `cmt_tape_analyze` bez uplatnění a `cmt_tape_info` bez `set` stav stroje
+ * nemění: odpověď nenese `state_rev` a parametr `expected_state_rev`
+ * odmítnou jako ostatní čtecí příkazy (podmínka by se neuplatnila).
+ *
+ * @param data_obj Data požadavku (smí být NULL).
+ * @return true = požadavek nese `expected_state_rev` (volající vrátí INVALID_PARAMS).
+ * @post s_submit_track.add_state_rev a req_pending jsou false.
+ */
+static bool _cmt_read_variant(JsonObject *data_obj) {
+    s_submit_track.add_state_rev = false;
+    s_submit_track.req_pending = false;
+    return data_obj && json_object_has_member(data_obj, "expected_state_rev");
+}
+
+/** @brief Text chyby `expected_state_rev` u čtecího příkazu (shodný s obecnou kontrolou dispatch). */
+#define MCP_CMT_READ_NO_EXPECTED_REV \
+    "Invalid parameters: expected_state_rev is accepted only by commands that change the machine state"
+
+/**
+ * @brief Chybová odpověď úpravy pásky: text z jádra, jinak "<příkaz> failed".
+ * @param req_id ID požadavku. @param message Text chyby z parametru dbgapi ("" = žádný).
+ * @param cmd Jméno příkazu. @param out_response Výstup.
+ * @return Výsledek _err_response() (MCP_DISPATCH_EMU_ERROR).
+ */
+static en_MCP_DISPATCH_RESULT _cmt_edit_err(int64_t req_id, const char *message, const char *cmd,
+                                            char **out_response) {
+    char *msg = (message && message[0]) ? g_strdup(message) : g_strdup_printf("%s failed", cmd);
+    en_MCP_DISPATCH_RESULT r = _err_response(req_id, msg, MCP_DISPATCH_EMU_ERROR, out_response);
+    g_free(msg);
+    return r;
+}
+
+/** @brief Porovnání int pro qsort() (vzestupně). */
+static int _cmt_int_cmp(const void *a, const void *b) {
+    int x = *(const int *)a, y = *(const int *)b;
+    return (x > y) - (x < y);
+}
+
+/**
+ * @brief `cmt_tape_delete_blocks` handler - smazání bloků vložené pásky.
+ *
+ * Forwarduje na DBGAPI_CMD_CMT_TAPE_DELETE_BLOCKS. Povinné `block_ids`
+ * (neprázdné pole nezáporných celých čísel bez opakování, libovolné
+ * pořadí - handler ho seřadí). Jen ve STOP (jinak "tape is not stopped");
+ * při záznamu vstupů odmítne brána replaye (FORBIDDEN), při přehrávání
+ * vstupů obal úpravy. Při chybě je páska beze změny.
+ *
+ * Layout response: {"ok": true, "deleted": int, "count": int, "current_block": int
+ *                   [, "warning": str]}
+ * (`count` = počet bloků po smazání, `current_block` = otevřený blok, -1 = žádný;
+ * `warning` = varování úpravy, např. změna taktu bloků po smazání bloku 0x43,
+ * společný kanál cmttmz_get_edit_warning()).
+ */
+static en_MCP_DISPATCH_RESULT _handle_cmt_tape_delete_blocks(
+    const st_JSONL_MESSAGE *req, char **out_response) {
+    int64_t req_id = jsonl_msg_get_req_id(req);
+    JsonNode *data_node = (JsonNode *)jsonl_msg_get_data_node(req);
+    JsonObject *data_obj = (data_node && json_node_get_node_type(data_node) == JSON_NODE_OBJECT)
+                           ? json_node_get_object(data_node) : NULL;
+    JsonNode *ids_node = (data_obj && json_object_has_member(data_obj, "block_ids"))
+                         ? json_object_get_member(data_obj, "block_ids") : NULL;
+    if (!ids_node || json_node_get_node_type(ids_node) != JSON_NODE_ARRAY) {
+        return _err_response(req_id, "Missing required field: block_ids (array of block numbers)",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+    JsonArray *arr = json_node_get_array(ids_node);
+    guint n = json_array_get_length(arr);
+    if (n == 0) {
+        return _err_response(req_id, "block_ids is empty",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+    int *ids = g_new(int, n);
+    for (guint i = 0; i < n; i++) {
+        JsonNode *el = json_array_get_element(arr, i);
+        if (!el || json_node_get_node_type(el) != JSON_NODE_VALUE
+            || json_node_get_value_type(el) != G_TYPE_INT64
+            || json_node_get_int(el) < 0 || json_node_get_int(el) > G_MAXINT) {
+            g_free(ids);
+            return _err_response(req_id, "block_ids must contain non-negative integers",
+                                 MCP_DISPATCH_INVALID_PARAMS, out_response);
+        }
+        ids[i] = (int)json_node_get_int(el);
+    }
+    qsort(ids, n, sizeof(int), _cmt_int_cmp);
+    for (guint i = 1; i < n; i++) {
+        if (ids[i] == ids[i - 1]) {
+            g_free(ids);
+            return _err_response(req_id, "block_ids must not repeat a block",
+                                 MCP_DISPATCH_INVALID_PARAMS, out_response);
+        }
+    }
+    st_DBGAPI_CMT_TAPE_DELETE_BLOCKS_PARAM *param = g_new0(st_DBGAPI_CMT_TAPE_DELETE_BLOCKS_PARAM, 1);
+    param->block_ids = ids;
+    param->count = n;
+    bool ok = _submit_dbgapi(DBGAPI_CMD_CMT_TAPE_DELETE_BLOCKS, param, NULL);
+    g_free(ids);
+    if (!ok) {
+        en_MCP_DISPATCH_RESULT r = _cmt_edit_err(req_id, param->out_message, "cmt_tape_delete_blocks", out_response);
+        g_free(param);
+        return r;
+    }
+    JsonObject *resp = json_object_new();
+    json_object_set_boolean_member(resp, "ok", TRUE);
+    json_object_set_int_member(resp, "deleted", (gint64)n);
+    json_object_set_int_member(resp, "count", (gint64)param->out_count);
+    json_object_set_int_member(resp, "current_block", (gint64)param->out_current_block);
+    if (param->out_warning[0]) json_object_set_string_member(resp, "warning", param->out_warning);
+    g_free(param);
+    return _ok_response(req_id, resp, out_response);
+}
+
+/**
+ * @brief `cmt_tape_move_block` handler - přesun bloku vložené pásky.
+ *
+ * Forwarduje na DBGAPI_CMD_CMT_TAPE_MOVE_BLOCK. Povinné `block_id` a `to`
+ * (pozice bloku po přesunu, 0 .. počet - 1), jen jako JSON celá čísla
+ * (_obj_strict_int(); řetězec, desetinné číslo, bool = INVALID_PARAMS). Podmínky jako
+ * cmt_tape_delete_blocks; přesun na vlastní místo je úspěch beze změny.
+ *
+ * Layout response: {"ok": true, "block_id": int, "to": int, "count": int, "current_block": int
+ *                   [, "warning": str]}
+ * (`warning` = varování úpravy, např. program přesunutý přes blok 0x43).
+ */
+static en_MCP_DISPATCH_RESULT _handle_cmt_tape_move_block(
+    const st_JSONL_MESSAGE *req, char **out_response) {
+    int64_t req_id = jsonl_msg_get_req_id(req);
+    JsonNode *data_node = (JsonNode *)jsonl_msg_get_data_node(req);
+    JsonObject *data_obj = (data_node && json_node_get_node_type(data_node) == JSON_NODE_OBJECT)
+                           ? json_node_get_object(data_node) : NULL;
+    gint64 block_id = -1, to = -1;
+    en_MCP_STRICT_INT rb = _obj_strict_int(data_obj, "block_id", 0, &block_id);
+    en_MCP_STRICT_INT rt = _obj_strict_int(data_obj, "to", 0, &to);
+    if (rb == MCP_STRICT_INT_ABSENT || rt == MCP_STRICT_INT_ABSENT) {
+        return _err_response(req_id, "Missing required fields: block_id, to (non-negative integers)",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+    if (rb != MCP_STRICT_INT_OK || rt != MCP_STRICT_INT_OK) {
+        return _err_response(req_id, "block_id and to must be non-negative integers",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+    st_DBGAPI_CMT_TAPE_MOVE_BLOCK_PARAM *param = g_new0(st_DBGAPI_CMT_TAPE_MOVE_BLOCK_PARAM, 1);
+    param->block_id = (int)block_id;
+    param->to = (int)to;
+    if (!_submit_dbgapi(DBGAPI_CMD_CMT_TAPE_MOVE_BLOCK, param, NULL)) {
+        en_MCP_DISPATCH_RESULT r = _cmt_edit_err(req_id, param->out_message, "cmt_tape_move_block", out_response);
+        g_free(param);
+        return r;
+    }
+    JsonObject *resp = json_object_new();
+    json_object_set_boolean_member(resp, "ok", TRUE);
+    json_object_set_int_member(resp, "block_id", block_id);
+    json_object_set_int_member(resp, "to", to);
+    json_object_set_int_member(resp, "count", (gint64)param->out_count);
+    json_object_set_int_member(resp, "current_block", (gint64)param->out_current_block);
+    if (param->out_warning[0]) json_object_set_string_member(resp, "warning", param->out_warning);
+    g_free(param);
+    return _ok_response(req_id, resp, out_response);
+}
+
+/**
+ * @brief `cmt_tape_import` handler - import souboru jako bloků pásky.
+ *
+ * Forwarduje na DBGAPI_CMD_CMT_TAPE_IMPORT. Povinné `path` (MZF, M12, MZT,
+ * TAP, WAV, TMZ, TZX), nepovinné `at` (pozice 0 .. počet bloků jako JSON celé
+ * číslo; chybí, null nebo -1 = na konec; jiný typ = INVALID_PARAMS). Bez
+ * vložené pásky (ve STOP) se importuje do nové prázdné pásky (`new_tape`
+ * true), když `at` chybí, je null nebo -1; s pozicí `at` >= 0 chyba "no tape in
+ * the deck". Podmínky jako cmt_tape_delete_blocks;
+ * nečitelný soubor = "Can't import <cesta>: <důvod>", páska beze změny.
+ *
+ * Layout response: {"ok": true, "path": str, "at": int, "imported": int,
+ *                   "count": int, "current_block": int, "new_tape": bool
+ *                   [, "warning": str]}
+ * (`at` = číslo prvního importovaného bloku).
+ */
+static en_MCP_DISPATCH_RESULT _handle_cmt_tape_import(
+    const st_JSONL_MESSAGE *req, char **out_response) {
+    int64_t req_id = jsonl_msg_get_req_id(req);
+    JsonNode *data_node = (JsonNode *)jsonl_msg_get_data_node(req);
+    JsonObject *data_obj = (data_node && json_node_get_node_type(data_node) == JSON_NODE_OBJECT)
+                           ? json_node_get_object(data_node) : NULL;
+    char *path = data_obj ? _obj_str_dup(data_obj, "path") : NULL;
+    if (!path || !path[0]) {
+        g_free(path);
+        return _err_response(req_id, "Missing required field: path",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+    gint64 at = -1;
+    /* jen JSON celé číslo (-1 = na konec) nebo null / chybí; řetězec ani desetinné číslo ne */
+    en_MCP_STRICT_INT ra = _obj_strict_int(data_obj, "at", -1, &at);
+    if (ra == MCP_STRICT_INT_INVALID) {
+        g_free(path);
+        return _err_response(req_id, "at must be a block position (0 .. number of blocks) or null",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+    st_DBGAPI_CMT_TAPE_IMPORT_PARAM *param = g_new0(st_DBGAPI_CMT_TAPE_IMPORT_PARAM, 1);
+    param->filepath = path;
+    param->at = (int)at;
+    if (!_submit_dbgapi(DBGAPI_CMD_CMT_TAPE_IMPORT, param, NULL)) {
+        en_MCP_DISPATCH_RESULT r = _cmt_edit_err(req_id, param->out_message, "cmt_tape_import", out_response);
+        g_free(param);
+        g_free(path);
+        return r;
+    }
+    JsonObject *resp = json_object_new();
+    json_object_set_boolean_member(resp, "ok", TRUE);
+    json_object_set_string_member(resp, "path", path);
+    json_object_set_int_member(resp, "at", (gint64)param->out_at);
+    json_object_set_int_member(resp, "imported", (gint64)param->out_imported);
+    json_object_set_int_member(resp, "count", (gint64)param->out_count);
+    json_object_set_int_member(resp, "current_block", (gint64)param->out_current_block);
+    json_object_set_boolean_member(resp, "new_tape", param->out_new_tape ? TRUE : FALSE);
+    if (param->out_warning[0]) json_object_set_string_member(resp, "warning", param->out_warning);
+    g_free(param);
+    g_free(path);
+    return _ok_response(req_id, resp, out_response);
+}
+
+/**
+ * @brief `cmt_export_tape` handler - export celé vložené pásky do WAV.
+ *
+ * Forwarduje na DBGAPI_CMD_CMT_EXPORT_TAPE. Povinné `path` s příponou .wav
+ * (44 100 Hz, 8 bit mono, tak, jak pásku přehraje player; nepřehratelné
+ * bloky se přeskočí s varováním, mez 4 h). Páska se nemění; jde v každém
+ * stavu transportu i při záznamu a přehrávání vstupů.
+ *
+ * Layout response: {"ok": true, "path": str, "message": str [, "warning": str]}
+ */
+static en_MCP_DISPATCH_RESULT _handle_cmt_export_tape(
+    const st_JSONL_MESSAGE *req, char **out_response) {
+    int64_t req_id = jsonl_msg_get_req_id(req);
+    JsonNode *data_node = (JsonNode *)jsonl_msg_get_data_node(req);
+    JsonObject *data_obj = (data_node && json_node_get_node_type(data_node) == JSON_NODE_OBJECT)
+                           ? json_node_get_object(data_node) : NULL;
+    char *path = data_obj ? _obj_str_dup(data_obj, "path") : NULL;
+    if (!path || !path[0]) {
+        g_free(path);
+        return _err_response(req_id, "Missing required field: path",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+    st_DBGAPI_CMT_EXPORT_TAPE_PARAM *param = g_new0(st_DBGAPI_CMT_EXPORT_TAPE_PARAM, 1);
+    param->filepath = path;
+    if (!_submit_dbgapi(DBGAPI_CMD_CMT_EXPORT_TAPE, param, NULL)) {
+        en_MCP_DISPATCH_RESULT r = _cmt_edit_err(req_id, param->out_message, "cmt_export_tape", out_response);
+        g_free(param);
+        g_free(path);
+        return r;
+    }
+    JsonObject *resp = json_object_new();
+    json_object_set_boolean_member(resp, "ok", TRUE);
+    json_object_set_string_member(resp, "path", path);
+    json_object_set_string_member(resp, "message", param->out_message);
+    if (param->out_warning[0]) json_object_set_string_member(resp, "warning", param->out_warning);
+    g_free(param);
+    g_free(path);
+    return _ok_response(req_id, resp, out_response);
+}
+
+
+/* ------------------------------------------------------------------ */
+/* Nástroje nad páskou: analýza, informace o pásce, kontrola, převod   */
+/* ------------------------------------------------------------------ */
+
+/** @brief Text stavu součtu řádku analýzy pro MCP (en_CMTTMZ_ANALYZE_CHECKSUM). */
+static const char *_cmt_checksum_text(en_CMTTMZ_ANALYZE_CHECKSUM c) {
+    switch (c) {
+        case CMTTMZ_ANALYZE_CHECKSUM_OK:    return "ok";
+        case CMTTMZ_ANALYZE_CHECKSUM_ERROR: return "checksum_error";
+        default:                            return "not_available";
+    }
+}
+
+/** @brief Text výsledku řádku analýzy pro MCP (en_CMTTMZ_ANALYZE_RESULT). */
+static const char *_cmt_analyze_result_text(en_CMTTMZ_ANALYZE_RESULT r) {
+    switch (r) {
+        case CMTTMZ_ANALYZE_ADDABLE:          return "addable";
+        case CMTTMZ_ANALYZE_ADDABLE_REPAIRED: return "addable_repaired";
+        case CMTTMZ_ANALYZE_STAYS_RAW:        return "stays_raw";
+        default:                              return "cannot_add";
+    }
+}
+
+/**
+ * @brief Přečte z MCP volitelnou bool volbu analýzy.
+ * @param obj Objekt dat. @param key Jméno. @param[out] out 1 / 0 (beze změny, když chybí).
+ * @return false = pole není JSON bool ani null.
+ */
+static bool _cmt_analyze_flag(JsonObject *obj, const char *key, int *out) {
+    bool v = false;
+    en_MCP_STRICT_INT r = _obj_strict_bool(obj, key, &v);
+    if (r == MCP_STRICT_INT_INVALID) return false;
+    if (r == MCP_STRICT_INT_OK) *out = v ? 1 : 0;
+    return true;
+}
+
+/**
+ * @brief `cmt_tape_analyze` handler - analýza surového bloku 0x18 a volitelné uplatnění.
+ *
+ * Povinné `block_id` (JSON celé číslo >= 0), nepovinné `tolerance` (JSON
+ * číslo 0,02 až 0,35, výchozí 0,20; mimo rozsah INVALID_PARAMS),
+ * `repair_header`, `repair_body`, `repair_bsd` (JSON bool, výchozí
+ * false) a `apply` ("none" výchozí / "add" / "replace"). Jiné typy =
+ * INVALID_PARAMS. Analýza běží synchronně na emu vlákně (bez zámku stavu
+ * zařízení, viz dbgapi.c). `apply` "none" = příkaz
+ * DBGAPI_CMD_CMT_TAPE_ANALYZE (jen čtení, i při záznamu vstupů a mimo
+ * STOP; odpověď bez `state_rev`, `expected_state_rev` = INVALID_PARAMS,
+ * _cmt_read_variant()), jinak DBGAPI_CMD_CMT_TAPE_ANALYZE_APPLY (jen ve
+ * STOP, záznam vstupů ho odmítne) s každým řádkem, který jde přidat.
+ *
+ * Layout response: {"ok": true, "block_id": int, "apply": str,
+ *   "sample_rate": int, "pulse_count": int, "length_s": float,
+ *   ["analysis_error": str,] "rows": [{"row", "kind", "name", "type",
+ *   "format", "start_s", "length_s", "size", "header", "body", "result",
+ *   "reason", "recovery"}], "applied": int, "first_added": int | null,
+ *   "count": int, "current_block": int [, "warning": str]}
+ * (`warning` po uplatnění: nové bloky souborů hrají jiným taktem než
+ * výchozím - blok 0x43 před surovým blokem).
+ */
+static en_MCP_DISPATCH_RESULT _handle_cmt_tape_analyze(
+    const st_JSONL_MESSAGE *req, char **out_response) {
+    int64_t req_id = jsonl_msg_get_req_id(req);
+    JsonNode *data_node = (JsonNode *)jsonl_msg_get_data_node(req);
+    JsonObject *data_obj = (data_node && json_node_get_node_type(data_node) == JSON_NODE_OBJECT)
+                           ? json_node_get_object(data_node) : NULL;
+    gint64 block_id = -1;
+    en_MCP_STRICT_INT rb = _obj_strict_int(data_obj, "block_id", 0, &block_id);
+    if (rb == MCP_STRICT_INT_ABSENT) {
+        return _err_response(req_id, "Missing required field: block_id (non-negative integer)",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+    if (rb != MCP_STRICT_INT_OK) {
+        return _err_response(req_id, "block_id must be a non-negative integer",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+    st_DBGAPI_CMT_TAPE_ANALYZE_PARAM *param = g_new0(st_DBGAPI_CMT_TAPE_ANALYZE_PARAM, 1);
+    param->block_id = (int)block_id;
+    param->tolerance = 0.20;
+    double tol = 0.0;
+    en_MCP_STRICT_INT rt = _obj_strict_number(data_obj, "tolerance", &tol);
+    if (rt == MCP_STRICT_INT_INVALID) {
+        g_free(param);
+        return _err_response(req_id, "tolerance must be a number",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+    if (rt == MCP_STRICT_INT_OK) {
+        /* mimo rozsah chyba, ne tiché oříznutí (jádro ořezává dál) */
+        if (!(tol >= CMTTMZ_ANALYZE_TOLERANCE_MIN && tol <= CMTTMZ_ANALYZE_TOLERANCE_MAX)) {
+            g_free(param);
+            return _err_response(req_id, "tolerance must be between 0.02 and 0.35",
+                                 MCP_DISPATCH_INVALID_PARAMS, out_response);
+        }
+        param->tolerance = tol;
+    }
+    if (!_cmt_analyze_flag(data_obj, "repair_header", &param->repair_header)
+        || !_cmt_analyze_flag(data_obj, "repair_body", &param->repair_body)
+        || !_cmt_analyze_flag(data_obj, "repair_bsd", &param->repair_bsd)) {
+        g_free(param);
+        return _err_response(req_id, "repair_header, repair_body and repair_bsd must be booleans",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+    param->apply = DBGAPI_CMT_ANALYZE_APPLY_NONE;
+    if (data_obj && json_object_has_member(data_obj, "apply")) {
+        JsonNode *an = json_object_get_member(data_obj, "apply");
+        const char *s = (an && json_node_get_node_type(an) == JSON_NODE_VALUE
+                         && json_node_get_value_type(an) == G_TYPE_STRING) ? json_node_get_string(an) : NULL;
+        if (s && !strcmp(s, "none")) param->apply = DBGAPI_CMT_ANALYZE_APPLY_NONE;
+        else if (s && !strcmp(s, "add")) param->apply = DBGAPI_CMT_ANALYZE_APPLY_ADD;
+        else if (s && !strcmp(s, "replace")) param->apply = DBGAPI_CMT_ANALYZE_APPLY_REPLACE;
+        else {
+            g_free(param);
+            return _err_response(req_id, "apply must be \"none\", \"add\" or \"replace\"",
+                                 MCP_DISPATCH_INVALID_PARAMS, out_response);
+        }
+    }
+    if (param->apply == DBGAPI_CMT_ANALYZE_APPLY_NONE && _cmt_read_variant(data_obj)) {
+        g_free(param);
+        return _err_response(req_id, MCP_CMT_READ_NO_EXPECTED_REV, MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+    en_DBGAPI_CMD cmd = (param->apply == DBGAPI_CMT_ANALYZE_APPLY_NONE)
+                        ? DBGAPI_CMD_CMT_TAPE_ANALYZE : DBGAPI_CMD_CMT_TAPE_ANALYZE_APPLY;
+    if (!_submit_dbgapi(cmd, param, NULL)) {
+        en_MCP_DISPATCH_RESULT r = _cmt_edit_err(req_id, param->out_message, "cmt_tape_analyze", out_response);
+        g_free(param->out_rows);
+        g_free(param);
+        return r;
+    }
+    static const char *const apply_txt[] = { "none", "add", "replace" };
+    JsonObject *resp = json_object_new();
+    json_object_set_boolean_member(resp, "ok", TRUE);
+    json_object_set_int_member(resp, "block_id", block_id);
+    json_object_set_string_member(resp, "apply", apply_txt[param->apply]);
+    json_object_set_int_member(resp, "sample_rate", (gint64)param->out_sample_rate);
+    json_object_set_int_member(resp, "pulse_count", (gint64)param->out_pulse_count);
+    json_object_set_double_member(resp, "length_s", (double)param->out_total_us / 1e6);
+    if (param->out_analysis_error[0])
+        json_object_set_string_member(resp, "analysis_error", param->out_analysis_error);
+    JsonArray *rows = json_array_new();
+    for (uint32_t i = 0; i < param->out_row_count; i++) {
+        const st_CMTTMZ_ANALYZE_ROW *r = &param->out_rows[i].row;
+        JsonObject *o = json_object_new();
+        json_object_set_int_member(o, "row", (gint64)i);
+        json_object_set_string_member(o, "kind", (r->kind == CMTTMZ_ANALYZE_FILE) ? "file" : "unknown");
+        json_object_set_string_member(o, "name", r->name);
+        if (r->kind == CMTTMZ_ANALYZE_FILE && r->ftype) json_object_set_int_member(o, "type", (gint64)r->ftype);
+        else json_object_set_null_member(o, "type");
+        json_object_set_string_member(o, "format", r->format_name ? r->format_name : "");
+        json_object_set_double_member(o, "start_s", (double)r->start_us / 1e6);
+        json_object_set_double_member(o, "length_s", (double)r->length_us / 1e6);
+        json_object_set_int_member(o, "size", (gint64)r->size);
+        json_object_set_string_member(o, "header", _cmt_checksum_text(r->header_checksum));
+        json_object_set_string_member(o, "body", _cmt_checksum_text(r->body_checksum));
+        json_object_set_string_member(o, "result", _cmt_analyze_result_text(r->result));
+        json_object_set_string_member(o, "reason", param->out_rows[i].reason_text ? param->out_rows[i].reason_text : "");
+        json_object_set_string_member(o, "recovery", r->recovery_text ? r->recovery_text : "");
+        json_array_add_object_element(rows, o);
+    }
+    json_object_set_array_member(resp, "rows", rows);
+    json_object_set_int_member(resp, "applied", (gint64)param->out_applied);
+    if (param->out_first_added >= 0) json_object_set_int_member(resp, "first_added", (gint64)param->out_first_added);
+    else json_object_set_null_member(resp, "first_added");
+    json_object_set_int_member(resp, "count", (gint64)param->out_count);
+    json_object_set_int_member(resp, "current_block", (gint64)param->out_current_block);
+    if (param->out_warning[0]) json_object_set_string_member(resp, "warning", param->out_warning);
+    g_free(param->out_rows);
+    g_free(param);
+    return _ok_response(req_id, resp, out_response);
+}
+
+
+/**
+ * @brief Jména strojů bloku Machine Info (0x43) pro MCP v pořadí en_TMZ_MACHINE (libs/tmz/tmz.h).
+ */
+static const char *const s_cmt_machine_names[] = { "generic", "mz700", "mz800", "mz1500", "mz80b" };
+G_STATIC_ASSERT(G_N_ELEMENTS(s_cmt_machine_names) == TMZ_MACHINE_COUNT);
+
+/**
+ * @brief Odpověď informací o pásce (sdílí get i set).
+ * @param info Informace. @return Nový objekt (vlastní volající).
+ */
+static JsonObject *_cmt_tape_info_json(const st_CMTTMZ_TAPE_INFO *info) {
+    JsonObject *resp = json_object_new();
+    json_object_set_boolean_member(resp, "ok", TRUE);
+    for (uint32_t k = 0; k < CMTTMZ_TAPE_INFO_FIELDS; k++)
+        json_object_set_string_member(resp, cmttmz_tape_info_key(k), cmttmz_tape_info_text_const(info, k));
+    if (info->machine >= 0 && info->machine < TMZ_MACHINE_COUNT)
+        json_object_set_string_member(resp, "machine", s_cmt_machine_names[info->machine]);
+    else
+        json_object_set_null_member(resp, "machine");
+    json_object_set_int_member(resp, "machine_code", (gint64)info->machine);
+    json_object_set_boolean_member(resp, "storable", info->storable ? TRUE : FALSE);
+    json_object_set_int_member(resp, "other_entries", (gint64)info->other_entries);
+    json_object_set_int_member(resp, "other_archive_blocks", (gint64)info->other_archive_blocks);
+    if (info->other_archive_block >= 0)
+        json_object_set_int_member(resp, "other_archive_block", (gint64)info->other_archive_block);
+    else
+        json_object_set_null_member(resp, "other_archive_block");
+    return resp;
+}
+
+/**
+ * @brief `cmt_tape_info` handler - informace o pásce: čtení, nebo sloučení a zápis.
+ *
+ * Bez `set` (nebo `set` null) jen čte (DBGAPI_CMD_CMT_TAPE_INFO_GET, třída
+ * ALLOW, v každém stavu; odpověď bez `state_rev`, `expected_state_rev` =
+ * INVALID_PARAMS, _cmt_read_variant()). S `set` (objekt) zapíše v jednom příkazu na emu
+ * vlákně (DBGAPI_CMD_CMT_TAPE_INFO_SET): přečte, nahradí uvedená pole
+ * a zapíše; neuvedená pole zůstanou. Klíče `set`: texty "title" ..
+ * "comment" (JSON řetězec UTF-8, "" = položku odstranit, nejvýš
+ * CMTTMZ_TAPE_INFO_TEXT_SIZE - 1 bajtů) a "machine" ("generic", "mz700",
+ * "mz800", "mz1500", "mz80b" nebo null = blok 0x43 odstranit). Neznámý klíč,
+ * jiný typ nebo dlouhý text = INVALID_PARAMS. Zápis jen ve STOP.
+ *
+ * Layout response: {"ok": true, "title": str, ..., "comment": str,
+ *   "machine": str | null, "machine_code": int, "storable": bool,
+ *   "other_entries": int, "other_archive_blocks": int,
+ *   "other_archive_block": int | null [, "changed": bool, "warning": str]}
+ */
+static en_MCP_DISPATCH_RESULT _handle_cmt_tape_info(
+    const st_JSONL_MESSAGE *req, char **out_response) {
+    int64_t req_id = jsonl_msg_get_req_id(req);
+    JsonNode *data_node = (JsonNode *)jsonl_msg_get_data_node(req);
+    JsonObject *data_obj = (data_node && json_node_get_node_type(data_node) == JSON_NODE_OBJECT)
+                           ? json_node_get_object(data_node) : NULL;
+    JsonNode *set_node = (data_obj && json_object_has_member(data_obj, "set"))
+                         ? json_object_get_member(data_obj, "set") : NULL;
+    if (set_node && json_node_is_null(set_node)) set_node = NULL;
+    if (set_node && json_node_get_node_type(set_node) != JSON_NODE_OBJECT) {
+        return _err_response(req_id, "set must be an object with tape information fields",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+    st_DBGAPI_CMT_TAPE_INFO_PARAM *param = g_new0(st_DBGAPI_CMT_TAPE_INFO_PARAM, 1);
+    if (set_node) {
+        JsonObject *set_obj = json_node_get_object(set_node);
+        GList *members = json_object_get_members(set_obj);
+        char *bad = NULL;
+        for (GList *l = members; l && !bad; l = l->next) {
+            const char *key = (const char *)l->data;
+            JsonNode *v = json_object_get_member(set_obj, key);
+            if (!strcmp(key, "machine")) {
+                if (json_node_is_null(v)) {
+                    param->set.machine = -1;
+                } else {
+                    const char *s = (json_node_get_node_type(v) == JSON_NODE_VALUE
+                                     && json_node_get_value_type(v) == G_TYPE_STRING) ? json_node_get_string(v) : NULL;
+                    int m = -1;
+                    for (int k = 0; s && k < TMZ_MACHINE_COUNT; k++)
+                        if (!strcmp(s, s_cmt_machine_names[k])) m = k;
+                    if (m < 0) {
+                        bad = g_strdup("machine must be \"generic\", \"mz700\", \"mz800\", \"mz1500\", \"mz80b\" or null");
+                        break;
+                    }
+                    param->set.machine = m;
+                }
+                param->set_mask |= DBGAPI_CMT_TAPE_INFO_MACHINE_BIT;
+                continue;
+            }
+            uint32_t field = CMTTMZ_TAPE_INFO_FIELDS;
+            for (uint32_t k = 0; k < CMTTMZ_TAPE_INFO_FIELDS; k++)
+                if (!strcmp(key, cmttmz_tape_info_key(k))) field = k;
+            if (field == CMTTMZ_TAPE_INFO_FIELDS) {
+                bad = g_strdup_printf("Unknown tape information field: %s", key);
+                break;
+            }
+            if (json_node_get_node_type(v) != JSON_NODE_VALUE || json_node_get_value_type(v) != G_TYPE_STRING) {
+                bad = g_strdup_printf("%s must be a string", key);
+                break;
+            }
+            const char *s = json_node_get_string(v);
+            if (strlen(s) >= CMTTMZ_TAPE_INFO_TEXT_SIZE) {
+                bad = g_strdup_printf("%s is too long", key);
+                break;
+            }
+            g_strlcpy(cmttmz_tape_info_text(&param->set, field), s, CMTTMZ_TAPE_INFO_TEXT_SIZE);
+            param->set_mask |= (1u << field);
+        }
+        g_list_free(members);
+        if (bad) {
+            g_free(param);
+            en_MCP_DISPATCH_RESULT r = _err_response(req_id, bad, MCP_DISPATCH_INVALID_PARAMS, out_response);
+            g_free(bad);
+            return r;
+        }
+    }
+    if (!set_node && _cmt_read_variant(data_obj)) {
+        g_free(param);
+        return _err_response(req_id, MCP_CMT_READ_NO_EXPECTED_REV, MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+    en_DBGAPI_CMD cmd = set_node ? DBGAPI_CMD_CMT_TAPE_INFO_SET : DBGAPI_CMD_CMT_TAPE_INFO_GET;
+    if (!_submit_dbgapi(cmd, param, NULL)) {
+        en_MCP_DISPATCH_RESULT r = _cmt_edit_err(req_id, param->out_message, "cmt_tape_info", out_response);
+        g_free(param);
+        return r;
+    }
+    JsonObject *resp = _cmt_tape_info_json(&param->out_info);
+    if (set_node) {
+        json_object_set_boolean_member(resp, "changed", param->out_changed ? TRUE : FALSE);
+        if (param->out_warning[0]) json_object_set_string_member(resp, "warning", param->out_warning);
+    }
+    g_free(param);
+    return _ok_response(req_id, resp, out_response);
+}
+
+
+/**
+ * @brief `cmt_tape_check` handler - kontrola vložené pásky, jen čtení.
+ *
+ * Layout response: {"ok": true, "blocks_checked": int, "count": int,
+ *   "findings": [{"block_id": int, "severity": "warning" | "info",
+ *   "text": str}]} (`block_id` -1 = souhrnný nález o mezi počtu).
+ */
+static en_MCP_DISPATCH_RESULT _handle_cmt_tape_check(
+    const st_JSONL_MESSAGE *req, char **out_response) {
+    int64_t req_id = jsonl_msg_get_req_id(req);
+    st_DBGAPI_CMT_TAPE_CHECK_PARAM param;
+    memset(&param, 0, sizeof(param));
+    if (!_submit_dbgapi(DBGAPI_CMD_CMT_TAPE_CHECK, &param, NULL)) {
+        g_free(param.out_items);
+        /* text z příkazu; bez něj (zrušení, zaseknutí) "cmt_tape_check failed" */
+        return _cmt_edit_err(req_id, param.out_message, "cmt_tape_check", out_response);
+    }
+    JsonObject *resp = json_object_new();
+    json_object_set_boolean_member(resp, "ok", TRUE);
+    json_object_set_int_member(resp, "blocks_checked", (gint64)param.out_blocks_checked);
+    json_object_set_int_member(resp, "count", (gint64)param.out_count);
+    JsonArray *arr = json_array_new();
+    for (uint32_t i = 0; i < param.out_count; i++) {
+        const st_CMTTMZ_CHECK_ITEM *it = &param.out_items[i];
+        JsonObject *o = json_object_new();
+        json_object_set_int_member(o, "block_id", (gint64)it->block_id);
+        json_object_set_string_member(o, "severity", (it->severity == CMTTMZ_CHECK_WARNING) ? "warning" : "info");
+        json_object_set_string_member(o, "text", it->text);
+        json_array_add_object_element(arr, o);
+    }
+    json_object_set_array_member(resp, "findings", arr);
+    g_free(param.out_items);
+    return _ok_response(req_id, resp, out_response);
+}
+
+
+/**
+ * @brief `cmt_tape_convert_block` handler - převod bloku 0x46 na profil zapisovače.
+ *
+ * Povinné `block_id` (JSON celé číslo >= 0) a `profile` (ID z nabídky
+ * `profiles` resource emulator://periph/cmt/tape), nepovinné `speed` (JSON
+ * celé číslo 1 .. 9 = en_CMTSPEED poměr; chybí / null = výchozí profilu).
+ * Jen ve STOP. Převod na tentýž profil bez rychlosti pásku nezmění
+ * (`changed` false).
+ *
+ * Layout response: {"ok": true, "block_id": int, "profile": str,
+ *   "changed": bool, "count": int, "current_block": int [, "warning": str]}
+ */
+static en_MCP_DISPATCH_RESULT _handle_cmt_tape_convert_block(
+    const st_JSONL_MESSAGE *req, char **out_response) {
+    int64_t req_id = jsonl_msg_get_req_id(req);
+    JsonNode *data_node = (JsonNode *)jsonl_msg_get_data_node(req);
+    JsonObject *data_obj = (data_node && json_node_get_node_type(data_node) == JSON_NODE_OBJECT)
+                           ? json_node_get_object(data_node) : NULL;
+    gint64 block_id = -1;
+    en_MCP_STRICT_INT rb = _obj_strict_int(data_obj, "block_id", 0, &block_id);
+    char *profile = NULL;
+    JsonNode *pn = (data_obj && json_object_has_member(data_obj, "profile"))
+                   ? json_object_get_member(data_obj, "profile") : NULL;
+    if (pn && json_node_is_null(pn)) pn = NULL;
+    if (pn && json_node_get_node_type(pn) == JSON_NODE_VALUE && json_node_get_value_type(pn) == G_TYPE_STRING)
+        profile = g_strdup(json_node_get_string(pn));
+    if (rb == MCP_STRICT_INT_ABSENT || !pn) {
+        g_free(profile);
+        return _err_response(req_id, "Missing required fields: block_id (non-negative integer), profile (string)",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+    if (!profile || !profile[0]) {
+        /* pole je, ale není neprázdný řetězec */
+        g_free(profile);
+        return _err_response(req_id, "profile must be a non-empty string",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+    if (rb != MCP_STRICT_INT_OK) {
+        g_free(profile);
+        return _err_response(req_id, "block_id must be a non-negative integer",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+    gint64 speed = CMTSPEED_NONE;
+    en_MCP_STRICT_INT rs = _obj_strict_int(data_obj, "speed", 1, &speed);
+    if (rs == MCP_STRICT_INT_INVALID || (rs == MCP_STRICT_INT_OK && speed >= CMTSPEED_CUSTOM)) {
+        g_free(profile);
+        return _err_response(req_id, "speed must be a speed ratio number (1 .. 9) or null",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+    st_DBGAPI_CMT_TAPE_CONVERT_BLOCK_PARAM *param = g_new0(st_DBGAPI_CMT_TAPE_CONVERT_BLOCK_PARAM, 1);
+    param->block_id = (int)block_id;
+    param->profile_id = profile;
+    param->speed = (int)speed;
+    if (!_submit_dbgapi(DBGAPI_CMD_CMT_TAPE_CONVERT_BLOCK, param, NULL)) {
+        en_MCP_DISPATCH_RESULT r = _cmt_edit_err(req_id, param->out_message, "cmt_tape_convert_block", out_response);
+        g_free(param);
+        g_free(profile);
+        return r;
+    }
+    JsonObject *resp = json_object_new();
+    json_object_set_boolean_member(resp, "ok", TRUE);
+    json_object_set_int_member(resp, "block_id", block_id);
+    json_object_set_string_member(resp, "profile", param->out_profile);
+    json_object_set_boolean_member(resp, "changed", param->out_changed ? TRUE : FALSE);
+    json_object_set_int_member(resp, "count", (gint64)param->out_count);
+    json_object_set_int_member(resp, "current_block", (gint64)param->out_current_block);
+    if (param->out_warning[0]) json_object_set_string_member(resp, "warning", param->out_warning);
+    g_free(param);
+    g_free(profile);
+    return _ok_response(req_id, resp, out_response);
+}
+
+
+/**
+ * @brief `cmt_load_directly` handler - Load directly okna Virtual CMT jedním příkazem.
+ *
+ * Forwarduje na DBGAPI_CMD_CMT_LOAD_DIRECTLY (cmt_load_directly_apply(),
+ * tatáž funkce jádra jako kontextové menu okna). Povinné `block_id` (JSON
+ * celé číslo >= 0; jiný typ = INVALID_PARAMS). Vše nebo nic: jen ve STOP
+ * ("tape is not stopped"), blok musí existovat ("Block N does not exist")
+ * a nést MZF ("Block N does not contain an MZF file"); bez pásky "No tape
+ * inserted", s ROM bez podpory hacku DBGAPI_CMT_NO_HACK_ROM (nic se
+ * nezmění). Při záznamu vstupů odmítne brána replaye, při přehrávání
+ * příkaz ("The loading mode cannot be changed while an input replay is
+ * recorded or played").
+ *
+ * Layout response: {"ok": true, "block_id": int, "mode_changed": bool,
+ *   "installed": bool, "current_block": int}
+ * (`mode_changed` = režim se přepnul do Direct; false = Direct už byl).
+ */
+static en_MCP_DISPATCH_RESULT _handle_cmt_load_directly(
+    const st_JSONL_MESSAGE *req, char **out_response) {
+    int64_t req_id = jsonl_msg_get_req_id(req);
+    JsonNode *data_node = (JsonNode *)jsonl_msg_get_data_node(req);
+    JsonObject *data_obj = (data_node && json_node_get_node_type(data_node) == JSON_NODE_OBJECT)
+                           ? json_node_get_object(data_node) : NULL;
+    gint64 block_id = -1;
+    en_MCP_STRICT_INT rb = _obj_strict_int(data_obj, "block_id", 0, &block_id);
+    if (rb == MCP_STRICT_INT_ABSENT) {
+        return _err_response(req_id, "Missing required field: block_id",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+    if (rb != MCP_STRICT_INT_OK) {
+        return _err_response(req_id, "block_id must be a non-negative integer",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+    st_DBGAPI_CMT_LOAD_DIRECTLY_PARAM *param = g_new0(st_DBGAPI_CMT_LOAD_DIRECTLY_PARAM, 1);
+    param->block_id = (int)block_id;
+    if (!_submit_dbgapi(DBGAPI_CMD_CMT_LOAD_DIRECTLY, param, NULL)) {
+        en_MCP_DISPATCH_RESULT r = _cmt_edit_err(req_id, param->out_message, "cmt_load_directly", out_response);
+        g_free(param);
+        return r;
+    }
+    JsonObject *resp = json_object_new();
+    json_object_set_boolean_member(resp, "ok", TRUE);
+    json_object_set_int_member(resp, "block_id", block_id);
+    json_object_set_boolean_member(resp, "mode_changed", (param->out_result == 1) ? TRUE : FALSE);
+    json_object_set_boolean_member(resp, "installed", param->out_installed ? TRUE : FALSE);
+    json_object_set_int_member(resp, "current_block", (gint64)param->out_current_block);
+    g_free(param);
+    return _ok_response(req_id, resp, out_response);
+}
+
+
+/**
+ * @brief `cmt_tape_step` handler - krok po přehratelných blocích (tlačítka Rewind / Previous / Next decku).
+ *
+ * Forwarduje na DBGAPI_CMD_CMT_TAPE_STEP. Povinné `direction` - JSON
+ * řetězec "next", "prev" nebo "start" (jiný typ nebo hodnota =
+ * INVALID_PARAMS). Řídicí bloky a bloky, které player neumí, se přeskočí.
+ * Chyby: "No tape inserted", "The tape is empty", "Not available while
+ * recording", "The tape has no playable block", "There is no playable
+ * block after this one" / "before this one"; deck se pak nemění.
+ *
+ * Layout response: {"ok": true, "direction": str, "block_id": int}
+ * (`block_id` = otevřený blok po kroku).
+ */
+static en_MCP_DISPATCH_RESULT _handle_cmt_tape_step(
+    const st_JSONL_MESSAGE *req, char **out_response) {
+    int64_t req_id = jsonl_msg_get_req_id(req);
+    JsonNode *data_node = (JsonNode *)jsonl_msg_get_data_node(req);
+    JsonObject *data_obj = (data_node && json_node_get_node_type(data_node) == JSON_NODE_OBJECT)
+                           ? json_node_get_object(data_node) : NULL;
+    JsonNode *dn = (data_obj && json_object_has_member(data_obj, "direction"))
+                   ? json_object_get_member(data_obj, "direction") : NULL;
+    if (!dn || json_node_is_null(dn)) {
+        return _err_response(req_id, "Missing required field: direction (next, prev or start)",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+    const char *dir = (json_node_get_node_type(dn) == JSON_NODE_VALUE && json_node_get_value_type(dn) == G_TYPE_STRING)
+                      ? json_node_get_string(dn) : NULL;
+    st_DBGAPI_CMT_TAPE_STEP_PARAM *param = g_new0(st_DBGAPI_CMT_TAPE_STEP_PARAM, 1);
+    if (dir && strcmp(dir, "next") == 0) param->direction = DBGAPI_CMT_STEP_NEXT;
+    else if (dir && strcmp(dir, "prev") == 0) param->direction = DBGAPI_CMT_STEP_PREV;
+    else if (dir && strcmp(dir, "start") == 0) param->direction = DBGAPI_CMT_STEP_START;
+    else {
+        g_free(param);
+        return _err_response(req_id, "direction must be one of: next, prev, start",
+                             MCP_DISPATCH_INVALID_PARAMS, out_response);
+    }
+    if (!_submit_dbgapi(DBGAPI_CMD_CMT_TAPE_STEP, param, NULL)) {
+        en_MCP_DISPATCH_RESULT r = _cmt_edit_err(req_id, param->out_message, "cmt_tape_step", out_response);
+        g_free(param);
+        return r;
+    }
+    JsonObject *resp = json_object_new();
+    json_object_set_boolean_member(resp, "ok", TRUE);
+    json_object_set_string_member(resp, "direction", dir);
+    json_object_set_int_member(resp, "block_id", (gint64)param->out_block_id);
+    g_free(param);
     return _ok_response(req_id, resp, out_response);
 }
 
@@ -14525,6 +15935,8 @@ static en_MCP_DISPATCH_RESULT _handle_get_periph_wd1793(
  *    "paused": bool, "filled": bool, "polarity_inverted": bool,
  *    "cmtspeed": int, "cpu_boost": bool, "mzfsize_check": bool,
  *    "output": int, "playsts": int, "cmthack_enabled": bool,
+ *    "direct_save": bool, "direct_save_enabled": bool,
+ *    "user_paused": bool, "motor_on": bool|null,
  *    "start_time": int, "paused_time": int,
  *    "image_basename": str, "default_pulses_us": [4],
  *    "custom_pulses_us": [4]}
@@ -14535,7 +15947,12 @@ static en_MCP_DISPATCH_RESULT _handle_get_periph_wd1793(
  * kterými se přehrají bloky bez vlastní rychlosti.
  *
  * Pole "cmthack_enabled" (CMT-A) reflektuje stav cmthack ROM patche
- * (= instant load), nezávisle na reálném stavu pásky.
+ * (= instant load), nezávisle na reálném stavu pásky. "direct_save" je
+ * true, když je v ROM i patch zápisových rutin (ROM SAVE bez Record uloží
+ * soubor rovnou jako nový blok pásky, VERIFY porovná s otevřeným blokem);
+ * v RECORD je false (s Record se nahrává signál). "direct_save_enabled"
+ * je nastavení `[CMTHACK] direct_save` (mění ho settings_set, jen ve
+ * STOP).
  */
 static en_MCP_DISPATCH_RESULT _handle_get_periph_cmt(
     const st_JSONL_MESSAGE *req, char **out_response) {
@@ -14561,6 +15978,16 @@ static en_MCP_DISPATCH_RESULT _handle_get_periph_cmt(
     /* CMT-A: stav cmthack ROM patche (instant load) - oddělený od reálné
      * páskové emulace, ale součást CMT subsystému, proto v tomto resource. */
     json_object_set_boolean_member(resp, "cmthack_enabled",   param.cmthack_enabled ? TRUE : FALSE);
+    /* Direct Save: patch zápisových rutin ROM je teď v ROM (v RECORD ne),
+     * direct_save_enabled = nastavení */
+    json_object_set_boolean_member(resp, "direct_save",       param.direct_save ? TRUE : FALSE);
+    json_object_set_boolean_member(resp, "direct_save_enabled", param.direct_save_enabled ? TRUE : FALSE);
+    /* pauza uživatele a motor (jen ke čtení): "paused" = páska stojí z kteréhokoli důvodu */
+    json_object_set_boolean_member(resp, "user_paused",       param.user_paused ? TRUE : FALSE);
+    if (param.motor_known)
+        json_object_set_boolean_member(resp, "motor_on",      param.motor_on ? TRUE : FALSE);
+    else
+        json_object_set_null_member(resp, "motor_on");
     json_object_set_int_member(resp,     "start_time",        (gint64)param.start_time);
     json_object_set_int_member(resp,     "paused_time",       (gint64)param.paused_time);
     json_object_set_string_member(resp,  "image_basename",    param.image_basename);
@@ -15397,6 +16824,10 @@ int mcp_dispatch_stall_limit_ms(int cmd) {
         case DBGAPI_CMD_MEDIA_EJECT:
         case DBGAPI_CMD_CMT_OPEN:
         case DBGAPI_CMD_CMT_RECORD:
+        case DBGAPI_CMD_CMT_TAPE_IMPORT:
+        case DBGAPI_CMD_CMT_EXPORT_TAPE:
+        case DBGAPI_CMD_CMT_TAPE_ANALYZE:
+        case DBGAPI_CMD_CMT_TAPE_ANALYZE_APPLY:
         case DBGAPI_CMD_GET_FRAME_SCREENSHOT_PNG:
             return MCP_DISPATCH_DBGAPI_STALL_LONG_MS;
         default:

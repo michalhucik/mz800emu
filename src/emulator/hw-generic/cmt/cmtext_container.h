@@ -24,6 +24,11 @@
  */
 
 
+/**
+ * @file cmtext_container.h
+ * @brief Kontejner pásky Virtual CMT: cesta, typ a index bloků.
+ */
+
 #ifndef CMTEXT_CONTAINER_H
 #define CMTEXT_CONTAINER_H
 
@@ -40,9 +45,12 @@ extern "C" {
 #include "cmtext_block_defs.h"
 
 
+    /**
+     * @brief Typ kontejneru pásky.
+     */
     typedef enum en_CMTEXT_CONTAINER_TYPE {
-        CMTEXT_CONTAINER_TYPE_SINGLE = 0,
-        CMTEXT_CONTAINER_TYPE_SIMPLE_TAPE,
+        CMTEXT_CONTAINER_TYPE_SINGLE = 0,  /**< jeden blok bez indexu (tape == NULL); dnes ho žádné rozšíření nevytváří (dřív nahrávání do WAV) */
+        CMTEXT_CONTAINER_TYPE_SIMPLE_TAPE, /**< páska s indexem bloků; každá přehrávaná páska (rozšíření cmt_tmz), i jediné MZF nebo WAV */
     } en_CMTEXT_CONTAINER_TYPE;
 
 
@@ -80,20 +88,46 @@ extern "C" {
     } st_CMTEXT_TAPE_ITEM_TAPDATA;
 
 
+    /**
+     * @brief Položka indexu pásky pro blok typu CMTEXT_BLOCK_TYPE_TZX nebo CMTEXT_BLOCK_TYPE_CONTROL.
+     *
+     * Vlastnictví: name je statický řetězec (tmz_block_id_name()), index
+     * ho neuvolňuje.
+     */
+    typedef struct st_CMTEXT_TAPE_ITEM_TZX {
+        const char *name; /**< jméno typu bloku pro UI a MCP (statický řetězec, nikdy NULL) */
+        uint8_t id;       /**< ID bloku TZX/TMZ */
+    } st_CMTEXT_TAPE_ITEM_TZX;
+
+
+    /**
+     * @brief Údaje položky indexu podle typu bloku (st_CMTEXT_TAPE_INDEX::bltype).
+     */
     typedef union un_CMTEXT_TAPE_ITEM {
-        st_CMTEXT_TAPE_ITEM_MZF mzf;
-        st_CMTEXT_TAPE_ITEM_TAPHDR taphdr;
-        st_CMTEXT_TAPE_ITEM_TAPDATA tapdata;
+        st_CMTEXT_TAPE_ITEM_MZF mzf;         /**< CMTEXT_BLOCK_TYPE_MZF */
+        st_CMTEXT_TAPE_ITEM_TAPHDR taphdr;   /**< CMTEXT_BLOCK_TYPE_TAPHEADER */
+        st_CMTEXT_TAPE_ITEM_TAPDATA tapdata; /**< CMTEXT_BLOCK_TYPE_TAPDATA */
+        st_CMTEXT_TAPE_ITEM_TZX tzx;         /**< CMTEXT_BLOCK_TYPE_TZX, CMTEXT_BLOCK_TYPE_CONTROL */
     } un_CMTEXT_TAPE_ITEM;
 
 
+    /**
+     * @brief Položka indexu pásky (jeden blok).
+     *
+     * U pásky rozšíření cmt_tmz je block_id index bloku v st_TZX_FILE
+     * (včetně řídicích bloků) a pause_after je vždy 0 (pauzu nese stream
+     * bloku).
+     *
+     * @invariant item odpovídá bltype; fname položek MZF a TAPHEADER vlastní
+     *            index (cmtext_container_tapeindex_destroy()).
+     */
     typedef struct st_CMTEXT_TAPE_INDEX {
-        int block_id;
-        uint32_t offset;
-        en_CMTEXT_BLOCK_TYPE bltype;
-        en_CMTEXT_BLOCK_SPEED blspeed;
-        un_CMTEXT_TAPE_ITEM item;
-        uint16_t pause_after;
+        int block_id;                  /**< číslo bloku na pásce */
+        uint32_t offset;               /**< poloha bloku ve zdroji (u cmt_tmz index v st_TZX_FILE) */
+        en_CMTEXT_BLOCK_TYPE bltype;   /**< typ bloku */
+        en_CMTEXT_BLOCK_SPEED blspeed; /**< režim rychlosti bloku */
+        un_CMTEXT_TAPE_ITEM item;      /**< údaje podle typu */
+        uint16_t pause_after;          /**< pauza za blokem v ms, kterou přidává přehrávání (u cmt_tmz 0) */
     } st_CMTEXT_TAPE_INDEX;
 
 
@@ -141,12 +175,32 @@ extern "C" {
 
     extern const char* cmtext_container_get_name ( st_CMTEXT_CONTAINER *container );
     extern const char* cmtext_container_get_filepath ( st_CMTEXT_CONTAINER *container );
+
+    /**
+     * @brief Změní cestu a jméno kontejneru (pásku uloženou pod jiným jménem).
+     *
+     * @param container Kontejner. @param filepath Nová cesta (UTF-8, kopíruje se);
+     *        jméno je její basename.
+     * @return EXIT_SUCCESS; EXIT_FAILURE při selhání alokace (kontejner beze změny).
+     * @pre Volající drží device_state_lock(), čte-li kontejner UI.
+     */
+    extern int cmtext_container_set_filepath ( st_CMTEXT_CONTAINER *container, const char *filepath );
     extern en_CMTEXT_CONTAINER_TYPE cmtext_container_get_type ( st_CMTEXT_CONTAINER *container );
     extern int cmtext_container_get_count_blocks ( st_CMTEXT_CONTAINER *container );
 
     extern en_CMTEXT_BLOCK_TYPE cmtext_container_get_block_type ( st_CMTEXT_CONTAINER *container, int block_id );
     extern en_CMTEXT_BLOCK_SPEED cmtext_container_get_block_speed ( st_CMTEXT_CONTAINER *container, int block_id );
     extern void cmtext_container_set_block_speed ( st_CMTEXT_CONTAINER *container, int block_id, en_CMTEXT_BLOCK_SPEED blspeed );
+    /**
+     * @brief Jméno bloku pro UI a MCP.
+     *
+     * MZF: jméno z hlavičky; TAPHEADER: jméno z hlavičky ZX; TAPDATA: "";
+     * WAV: "WAV"; TZX a CONTROL: název typu bloku (tmz_block_id_name()).
+     *
+     * @param container Kontejner s indexem (SIMPLE_TAPE).
+     * @param block_id Index bloku (v rozsahu, kontroluje jen assert).
+     * @return Řetězec vlastněný indexem nebo statický; platí do vysunutí pásky.
+     */
     extern const char* cmtext_container_get_block_fname ( st_CMTEXT_CONTAINER *container, int block_id );
     extern int cmtext_container_get_block_ftype ( st_CMTEXT_CONTAINER *container, int block_id );
     extern int cmtext_container_get_block_fsize ( st_CMTEXT_CONTAINER *container, int block_id );

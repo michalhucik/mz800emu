@@ -1,13 +1,17 @@
 /**
  * @file   cmt_bitstream.c
  * @author Michal Hucik <hucik@ordoz.com>
- * @version 2.0.0
+ * @version 2.0.1
  * @brief  Implementace bitstream formátu — kondenzovaný WAV, 1 bit = 1 vzorek.
  *
  * @par Changelog:
- * - 2026-03-14: Proběhla kompletní revize a refaktorizace. Vytvořeny unit testy.
+ * - 2026-03-14: Proběhla kompletní kontrola kódu a refaktorizace. Vytvořeny unit testy.
  *
  * @par Licence:
+ * GNU General Public License v3 (GPLv3)
+ *
+ * Copyright (C) 2017-2026 Michal Hucik <hucik@ordoz.com>
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -15,11 +19,11 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include <stdio.h>
@@ -28,7 +32,7 @@
 #include <string.h>
 #include <assert.h>
 
-#include "baseui/baseui.h"
+#include "../baseui_compat.h"
 
 #include "libs/generic_driver/generic_driver.h"
 #include "libs/wav/wav.h"
@@ -142,6 +146,7 @@ st_CMT_BITSTREAM* cmt_bitstream_new_from_vstream ( st_CMT_VSTREAM *vstream, uint
         double scan_min_limit = step / 2;
         while ( EXIT_SUCCESS == cmt_vstream_read_pulse ( vstream, &samples, &value ) ) {
 
+            if ( !samples ) continue;   /* event s délkou 0 (cmt_vstream_add_value_long) */
             double d_samples = samples;
 
             while ( ( total_samples + d_samples ) >= next_scan ) {

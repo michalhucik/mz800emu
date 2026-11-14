@@ -9,6 +9,23 @@ carries an `error` string (raw JSONL: `"success": false`, `"error"`).
 The error text tells you whether the emulator **executed** the command,
 which decides whether retrying is safe.
 
+Through the bundled MCP server there are two shapes (as observed with the
+MCP Python package 1.27; the argument check is done by that package, not
+by the emulator, so another version may differ):
+
+- **The tool ran and failed**: a normal result (`isError` false) whose
+  text is the JSON `{"error": "..."}`; `structuredContent` is
+  `{"result": "<the same JSON as a string>"}` (every tool's output is
+  one string), so parse the text or the `result` string, not the object.
+- **An argument cannot be converted to the tool's parameter type** (for
+  example `1.5` or `"abc"` where an integer is expected, a missing
+  required argument): the MCP library refuses the call before the tool
+  runs, with `isError` true and a plain text message `Error executing
+  tool <name>: ... validation error ...`, no JSON. The check is lenient:
+  it converts what it can (`true` to 1, `"2"` to 2, `2.0` to 2) and the
+  tool then runs with the converted value, so pass the exact JSON
+  types.
+
 ## How a request is processed
 
 Most tools are forwarded to the emulator thread through an internal
@@ -29,10 +46,12 @@ large data) get a much longer limit of **10 minutes** instead of 10 s:
 `snapshot_load`, `snapshot_load_buffer`, `profiler_export`, `cdl_export`,
 all `videorec_*` tools, `media_load_mzf`, `media_run_mzf`, `media_load_binary`,
 `media_insert`, `media_eject`, `cmt_open`, `cmt_record`,
+`cmt_tape_import`, `cmt_export_tape`, `cmt_tape_analyze`,
 `get_frame_screenshot`, `screenshot_save_to_file` (and the wrapper tools
 built on them). The 10 s queue limit applies to them as well. A client
 with its own shorter timeout (the bundled Python wrapper waits 30 s per
-request) may give up earlier, although the command still completes.
+request, 640 s for `emu_cmt_tape_analyze`) may give up earlier, although
+the command still completes.
 
 Pick-up is normally a few ms, but host-dependent stalls of the emulator
 thread of up to ~1-2 s have been observed. They are not an error on

@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mz800emu 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-05 10:30+0100\n"
+"POT-Creation-Date: 2026-11-14 15:20+0100\n"
 "PO-Revision-Date: 2026-03-11 22:00+0100\n"
 "Last-Translator: Claude Code\n"
 "Language-Team: 日本語\n"
@@ -80,27 +80,7 @@ msgstr "カスタム速度"
 msgid "Normal speed"
 msgstr "通常速度"
 
-#: src/emulator/hw-generic/cmt/cmt.c:593
-msgid "Create a new WAV file"
-msgstr "新しいWAVファイルを作成"
-
-#: src/emulator/hw-generic/cmt/cmt.c:593
-msgid "newfile.wav"
-msgstr "newfile.wav"
-
-#: src/emulator/hw-generic/cmt/cmt.c:1186
-msgid "All Supported CMT Files"
-msgstr "すべてのサポートされたCMTファイル"
-
-#: src/emulator/hw-generic/cmt/cmt.c:1187
-msgid "Tape Files"
-msgstr "テープファイル"
-
-#: src/emulator/hw-generic/cmt/cmt.c:1264
-msgid "Select CMT file to open"
-msgstr "開くCMTファイルを選択"
-
-#: src/emulator/hw-generic/cmt/cmthack.c:245
+#: src/emulator/hw-generic/cmt/cmthack.c:1046
 msgid "Select a MZF File"
 msgstr "MZFファイルを選択"
 
@@ -168,66 +148,6 @@ msgstr "ユーザー"
 #: src/emulator/mzarch/mz800/memory/mz800_rom.c:54
 msgid "User Defined ROM"
 msgstr "ユーザー定義ROM"
-
-#: src/ui/cmt/UiCmt.cpp:33
-msgid "Default"
-msgstr "デフォルト"
-
-#: src/ui/cmt/UiCmt.cpp:38
-msgid "Custom pulses..."
-msgstr "カスタムパルス..."
-
-#: src/ui/cmt/UiCmt.cpp:38
-msgid "Custom pulses"
-msgstr "カスタムパルス"
-
-#: src/ui/cmt/UiCmt.cpp:51
-msgid "UNKNOWN"
-msgstr "不明"
-
-#: src/ui/vkbd/ui_vkbd.c:207
-msgid "PC key: CapsLock"
-msgstr "PCキー: CapsLock"
-
-#: src/ui/vkbd/ui_vkbd.c:210
-msgid "PC key: \\"
-msgstr "PCキー: \\"
-
-#: src/ui/vkbd/ui_vkbd.c:213
-msgid "PC key: \\ or Tab"
-msgstr "PCキー: \\ または Tab"
-
-#: src/ui/vkbd/ui_vkbd.c:216
-msgid "PC key: ~"
-msgstr "PCキー: ~"
-
-#: src/ui/vkbd/ui_vkbd.c:218
-msgid "PC key: Esc or End"
-msgstr "PCキー: Esc または End"
-
-#: src/ui/vkbd/ui_vkbd.c:220
-msgid "PC key: Insert"
-msgstr "PCキー: Insert"
-
-#: src/ui/vkbd/ui_vkbd.c:222
-msgid "PC key: Backspace or Delete"
-msgstr "PCキー: Backspace または Delete"
-
-#: src/ui/vkbd/ui_vkbd.c:224
-msgid "PC key: F6"
-msgstr "PCキー: F6"
-
-#: src/ui/vkbd/ui_vkbd.c:226
-msgid "PC key: F7"
-msgstr "PCキー: F7"
-
-#: src/ui/vkbd/ui_vkbd.c:228
-msgid "PC key: F8"
-msgstr "PCキー: F8"
-
-#: src/ui/vkbd/ui_vkbd.c:230
-msgid "PC key: F9"
-msgstr "PCキー: F9"
 
 #: src/ui-imgui/about_window.cpp:258
 msgid "Come closer, my friend."
@@ -522,21 +442,32 @@ msgid "Record Audio Capture (%s) starts and stops the capture."
 msgstr "オーディオをキャプチャ (%s) でキャプチャを開始/停止します。"
 
 #: src/ui-imgui/audiocap/audio_capture_ui.cpp:249
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:175
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:186
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:862
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:753
+#: src/ui-imgui/cmt/cmt_view.cpp:172
 #: src/ui-imgui/debugger/sections/dbg_cpu_panel.cpp:2421
 #: src/ui-imgui/dsk/dsk_create_window.cpp:104
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:109
 #: src/ui-imgui/joy/joy_setup_window.cpp:584
-#: src/ui-imgui/message/message_window.cpp:139
+#: src/ui-imgui/message/message_window.cpp:222
 #: src/ui-imgui/mz700/devbus/menu_devbus.cpp:243
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:442
-#: src/ui-imgui/snapshot/snapshot_notification.cpp:95
+#: src/ui-imgui/snapshot/snapshot_notification.cpp:97
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:300
 #: src/ui-imgui/videorec/videorec_setup_dialog.cpp:338
 msgid "OK"
 msgstr "OK"
 
 #: src/ui-imgui/audiocap/audio_capture_ui.cpp:255
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:187
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:198
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2079
+#: src/ui-imgui/cmt/cmt_convert_dialog.cpp:609
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1091
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1118
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1172
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:754
+#: src/ui-imgui/cmt/cmt_window.cpp:3432
 #: src/ui-imgui/debugger/membrowser/membrowser_annot_dialog.cpp:148
 #: src/ui-imgui/debugger/membrowser/membrowser_fill_dialog.cpp:264
 #: src/ui-imgui/debugger/sections/dbg_focus_to.cpp:264
@@ -550,11 +481,12 @@ msgstr "OK"
 #: src/ui-imgui/ramdisk/pezik_settings_window.cpp:289
 #: src/ui-imgui/rom/rom_settings_window.cpp:305
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:447
-#: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:127
+#: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:129
 #: src/ui-imgui/snapshot/snapshot_setup_dialog.cpp:176
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:89
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:96
-#: src/ui-imgui/topmenu/menu_replay.cpp:217
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:303
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:91
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:98
+#: src/ui-imgui/topmenu/menu_replay.cpp:256
 #: src/ui-imgui/videorec/videorec_setup_dialog.cpp:343
 msgid "Cancel"
 msgstr "キャンセル"
@@ -681,72 +613,133 @@ msgstr "文字"
 msgid "Typed"
 msgstr "入力済み"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:177
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:179
-msgid "MZF Size Warning"
-msgstr "MZFサイズ警告"
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:117
+msgid "Custom Tape Pulses"
+msgstr "テープのカスタムパルス"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:188
-msgid "MZF file"
-msgstr "MZFファイル"
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:132
+msgid "Pulse lengths in microseconds (order of the UniCMT CMTSPEED header):"
+msgstr "パルス長（マイクロ秒、UniCMTのCMTSPEEDヘッダーと同じ順序）:"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:196
-msgid "Exceeded bytes"
-msgstr "超過バイト数"
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:136
+msgid "Long pulse high (bit 1)"
+msgstr "長パルス High（ビット1）"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:208
-msgid "This MZF file is a bit bigger than it should be."
-msgstr "このMZFファイルは本来のサイズより少し大きいです。"
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:137
+msgid "Long pulse low (bit 1)"
+msgstr "長パルス Low（ビット1）"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:210
-msgid "This could arise, for example, when the MZF file is exported from cp/m."
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:138
+msgid "Short pulse high (bit 0)"
+msgstr "短パルス High（ビット0）"
+
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:139
+msgid "Short pulse low (bit 0)"
+msgstr "短パルス Low（ビット0）"
+
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:148
+msgid "Presets:"
+msgstr "プリセット:"
+
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:161
+msgid "Revert"
+msgstr "元に戻す"
+
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:175
+#, c-format
+msgid "Equivalent speed: ~%.2f:1 (%.0f Bd)"
+msgstr "相当する速度: ~%.2f:1 (%.0f Bd)"
+
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:179
+#, c-format
+msgid "Each length must be greater than 0 and at most %.0f µs."
+msgstr "各長さは0より大きく、%.0f µs以下である必要があります。"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:742
+msgid "The tape changed. Close this dialog and analyze again."
 msgstr ""
-"これは例えば、MZFファイルがcp/mからエクスポートされた場合に発生することがあり"
-"ます。"
+"テープが変更されました。このダイアログを閉じて、もう一度解析してください。"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:211
-msgid "You can ignore it, or truncate the original file."
-msgstr "無視するか、元のファイルを切り詰めることができます。"
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:748
+msgid "Analyze again to apply the new options."
+msgstr "新しいオプションを適用するには「再解析」を押してください。"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:212
-msgid ""
-"Is recommended to use the Save as, for create truncated copy of this file."
-msgstr "切り詰めたコピーを作成するには、名前を付けて保存の使用をお勧めします。"
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:759
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:762
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:766
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:775
+msgid "Stays raw"
+msgstr "生のまま"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:219
-msgid "MZF size check enabled"
-msgstr "MZFサイズチェック有効"
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:764
+msgid "Will be added"
+msgstr "追加されます"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:233
-msgid "Ignore"
-msgstr "無視"
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:768
+msgid "Will be added (repaired)"
+msgstr "追加されます (修復済み)"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:242
-msgid "Truncate"
-msgstr "切り詰め"
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:772
+msgid "Cannot add"
+msgstr "追加不可"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:260
-msgid "Save As"
-msgstr "名前を付けて保存"
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:793
+#, c-format
+msgid "Stored as a standard tape block at speed %s."
+msgstr "速度 %s の標準テープブロックとして保存されます。"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:271
-msgid "Save MZF file as"
-msgstr "MZFファイルを名前を付けて保存"
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:821
+#, c-format
+msgid "Cannot be added. You can try \"%s\" and Analyze again."
+msgstr "追加できません。「%s」を有効にして「再解析」を試せます。"
 
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:214
-msgid "Tape Filelist"
-msgstr "テープファイル一覧"
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:821
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1997
+msgid "Repair damaged body"
+msgstr "破損した本体を修復"
 
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:252
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:276 src/ui-imgui/cmt/cmt_window.cpp:214
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:824
+msgid "Cannot be added. You can try the repair options and Analyze again."
+msgstr "追加できません。修復オプションを有効にして「再解析」を試せます。"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:825
+msgid "Cannot be added."
+msgstr "追加できません。"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:843
+msgid "Unknown signal"
+msgstr "不明な信号"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:845
+#: src/ui-imgui/cmt/cmt_check_window.cpp:252
+#: src/ui-imgui/cmt/cmt_window.cpp:762 src/ui-imgui/cmt/cmt_window.cpp:768
+msgid "(no name)"
+msgstr "(名前なし)"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:848
+msgid "Sharp standard"
+msgstr "Sharp標準"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:856
+msgid "Header error"
+msgstr "ヘッダエラー"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:859
+msgid "Body error"
+msgstr "本体エラー"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:875
+#: src/ui-imgui/cmt/cmt_window.cpp:2405
 #: src/ui-imgui/debugger/sections/dbg_stack_panel.cpp:2677
 #: src/ui-imgui/debugger/vars/vars_window.cpp:1502
 #: src/ui-imgui/debugger/watch/watch_window.cpp:1697
 msgid "Name"
 msgstr "名前"
 
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:253
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:279 src/ui-imgui/cmt/cmt_window.cpp:213
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:876
+#: src/ui-imgui/cmt/cmt_window.cpp:2406 src/ui-imgui/cmt/cmt_window.cpp:3976
+#: src/ui-imgui/cmt/cmt_window.cpp:3994 src/ui-imgui/cmt/cmt_window.cpp:4001
+#: src/ui-imgui/cmt/cmt_window.cpp:4009
 #: src/ui-imgui/debugger/memsearch_window/memsearch_window.cpp:576
 #: src/ui-imgui/debugger/watch/watch_window.cpp:1701
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:132
@@ -756,199 +749,1564 @@ msgstr "名前"
 msgid "Type"
 msgstr "タイプ"
 
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:254
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:282
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:878
+msgctxt "Analysis column"
+msgid "Format"
+msgstr "フォーマット"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:879
+msgctxt "Analysis column"
+msgid "Start"
+msgstr "開始"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:880
+#: src/ui-imgui/cmt/cmt_window.cpp:2407 src/ui-imgui/cmt/cmt_window.cpp:3977
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:133
-#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:209
-#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:211
-#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:213
+#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:210
+#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:212
+#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:214
 #: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:125
 msgid "Size"
 msgstr "サイズ"
 
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:255
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:285
-#: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:416
-msgid "Start"
-msgstr "Start"
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:881
+msgid "Checksum"
+msgstr "チェックサム"
 
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:256
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:288
-msgid "Exec"
-msgstr "Exec"
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:883
+msgid "Result"
+msgstr "結果"
 
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:257
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:291 src/ui-imgui/cmt/cmt_window.cpp:215
-#: src/ui-imgui/topmenu/menu_speed.cpp:27
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:889
+msgid "Files added from the recording."
+msgstr "録音からファイルを追加しました。"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:891
+#, c-format
+msgid "Files added from the recording: %d"
+msgstr "録音から追加したファイル数: %d"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1030
+msgid "The analysis could not be started."
+msgstr "解析を開始できませんでした。"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1044
+msgid "The analysis failed: not enough memory."
+msgstr "解析に失敗しました: メモリ不足です。"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1085
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1123
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2281
+msgid "The recording could not be read."
+msgstr "録音を読み込めませんでした。"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1116
+msgid ""
+"The recording cannot be analyzed while an input replay is recorded or played."
+msgstr "リプレイの記録中または再生中は録音を解析できません。"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1142
+#: src/ui-imgui/cmt/cmt_convert_dialog.cpp:351
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1864
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:450
+msgid "The tape cannot be edited while an input replay is recorded or played."
+msgstr "リプレイの記録中または再生中はテープを編集できません。"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1146
+#: src/ui-imgui/cmt/cmt_convert_dialog.cpp:355
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:714
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:874
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1394
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1781
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1870
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:2045
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:2147
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:2185
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:480
+#: src/ui-imgui/cmt/cmt_window.cpp:2718 src/ui-imgui/cmt/cmt_window.cpp:3125
+#: src/ui-imgui/cmt/cmt_window.cpp:3234 src/ui-imgui/cmt/cmt_window.cpp:3396
+#: src/ui-imgui/cmt/cmt_window.cpp:3724 src/ui-imgui/cmt/cmt_window.cpp:4229
+msgid "The tape changed; the action was cancelled."
+msgstr "テープが変更されたため、操作をキャンセルしました。"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1150
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2420
+#: src/ui-imgui/cmt/cmt_convert_dialog.cpp:360
+#: src/ui-imgui/cmt/cmt_convert_dialog.cpp:658
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1876
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:455
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:803
+msgid "The tape could not be edited."
+msgstr "テープを編集できませんでした。"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1814
+#, c-format
+msgid "Pulse lengths, %s"
+msgstr "パルス長、%s"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1817
+msgid "Pulse lengths, whole recording"
+msgstr "パルス長、録音全体"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1906
+#, c-format
+msgid "Pulses longer than %d µs are not shown."
+msgstr "%d µs より長いパルスは表示されません。"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1944
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2082
+msgid "Leader tolerance"
+msgstr "リーダートーンの許容差"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1945
+msgid ""
+"How much pulse lengths in the leader tone may vary. Raise it for worn or "
+"unstable recordings."
+msgstr ""
+"リーダートーン内のパルス長がどれだけ変動してよいかを指定します。摩耗した録音"
+"や不安定な録音では値を上げてください。"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1976
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2082
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:499
+#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:148
+#: src/ui-imgui/maxspeed_bench_window.cpp:156
+#: src/ui-imgui/plotter/plotter_window.cpp:432
+#: src/ui-imgui/topmenu/topmenu.cpp:62
+msgid "Reset"
+msgstr "リセット"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1982
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2083
+msgid "Analyze again"
+msgstr "再解析"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1997
+msgid "Repair damaged header"
+msgstr "破損したヘッダを修復"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1997
+msgid "Repair incomplete BSD file"
+msgstr "不完全なBSDファイルを修復"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2000
+msgid ""
+"Keeps a file whose header is intact but whose body is missing. The body is "
+"filled with 00h."
+msgstr ""
+"ヘッダは無傷で本体が欠けているファイルを残します。本体は 00h で埋められます。"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2001
+msgid ""
+"Keeps a file whose body is incomplete, or joins two damaged copies. Missing "
+"bytes are filled with 00h."
+msgstr ""
+"本体が不完全なファイルを残すか、破損した2つのコピーを結合します。欠けたバイト"
+"は 00h で埋められます。"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2002
+msgid ""
+"Keeps an incomplete BSD data file in the results. BSD files cannot be added "
+"as blocks and stay in the recording."
+msgstr ""
+"不完全なBSDデータファイルを結果に残します。BSDファイルはブロックとして追加で"
+"きず、録音に残ります。"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2054
+#, c-format
+msgid "Analyze recording - block %d"
+msgstr "録音を解析 - ブロック %d"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2077
+msgid "Add files after recording"
+msgstr "録音の後にファイルを追加"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2078
+msgid "Replace recording"
+msgstr "録音を置き換え"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2174
+msgid "Analyzing..."
+msgstr "解析中..."
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2176
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2338
+msgid "The recording could not be analyzed."
+msgstr "録音を解析できませんでした。"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2178
+msgid "No files found."
+msgstr "ファイルが見つかりませんでした。"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2182
+msgid "1 file found."
+msgstr "1 個のファイルが見つかりました。"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2183
+#, c-format
+msgid "%d files found."
+msgstr "%d 個のファイルが見つかりました。"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2185
+msgid "1 file found, 1 with a checksum error."
+msgstr "1 個のファイルが見つかりました (1 個にチェックサムエラー)。"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2187
+#, c-format
+msgid "%d files found, %d with a checksum error."
+msgstr "%d 個のファイルが見つかりました (%d 個にチェックサムエラー)。"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2209
+#, c-format
+msgid "%s, %s, %s pulses"
+msgstr "%s、%s、パルス数: %s"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2238
+#, c-format
+msgid "Elapsed time: %s"
+msgstr "経過時間: %s"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2246
+msgid "No files found in this recording."
+msgstr "この録音にはファイルが見つかりませんでした。"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2247
+msgid "Try a different leader tolerance, or check the signal details below."
+msgstr "別のリーダートーン許容差を試すか、下の信号の詳細を確認してください。"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2274
+msgid ""
+"Checked files are added as tape blocks. Everything else stays in the "
+"recording."
+msgstr ""
+"チェックしたファイルはテープブロックとして追加されます。それ以外はすべて録音"
+"に残ります。"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2281
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2337
+msgid "Wait until the analysis finishes."
+msgstr "解析が終わるまでお待ちください。"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2291
+msgid "Signal details"
+msgstr "信号の詳細"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2332
+msgid "This recording is not saved yet. Replacing it cannot be undone."
+msgstr "この録音はまだ保存されていません。置き換えは元に戻せません。"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2341
+msgid "There are no files to add."
+msgstr "追加するファイルがありません。"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2342
+msgid "Check at least one file to add it."
+msgstr "追加するファイルを少なくとも 1 つチェックしてください。"
+
+#: src/ui-imgui/cmt/cmt_check_window.cpp:258
+#, c-format
+msgid "Block %d"
+msgstr "ブロック %d"
+
+#: src/ui-imgui/cmt/cmt_check_window.cpp:350
+msgid "Tape check"
+msgstr "テープチェック"
+
+#: src/ui-imgui/cmt/cmt_check_window.cpp:363
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:310
+#: src/ui-imgui/cmt/cmt_window.cpp:805 src/ui-imgui/cmt/cmt_window.cpp:1512
+#: src/ui-imgui/cmt/cmt_window.cpp:1531 src/ui-imgui/cmt/cmt_window.cpp:1737
+#: src/ui-imgui/cmt/cmt_window.cpp:1985
+msgid "No tape inserted."
+msgstr "テープが挿入されていません。"
+
+#: src/ui-imgui/cmt/cmt_check_window.cpp:367
+#, c-format
+msgid "No problems found. Blocks checked: %d."
+msgstr "問題は見つかりませんでした。チェックしたブロック数: %d。"
+
+#: src/ui-imgui/cmt/cmt_check_window.cpp:373
+#, c-format
+msgid "Blocks checked: %d. Warnings: more than %d."
+msgstr "チェックしたブロック数: %d。警告: %d 件超。"
+
+#: src/ui-imgui/cmt/cmt_check_window.cpp:375
+#, c-format
+msgid "Blocks checked: %d. Warnings: %d."
+msgstr "チェックしたブロック数: %d。警告: %d 件。"
+
+#: src/ui-imgui/cmt/cmt_check_window.cpp:389
+msgid "The tape changed. Run the check again."
+msgstr "テープが変更されました。もう一度チェックを実行してください。"
+
+#: src/ui-imgui/cmt/cmt_check_window.cpp:408
+msgctxt "Tape check severity"
+msgid "Warning"
+msgstr "警告"
+
+#: src/ui-imgui/cmt/cmt_check_window.cpp:409
+msgctxt "Tape check severity"
+msgid "Info"
+msgstr "情報"
+
+#: src/ui-imgui/cmt/cmt_check_window.cpp:501
+msgid "Check again"
+msgstr "再チェック"
+
+#: src/ui-imgui/cmt/cmt_convert_dialog.cpp:238
+msgid "Profile default"
+msgstr "プロファイルの既定値"
+
+#: src/ui-imgui/cmt/cmt_convert_dialog.cpp:369
+#: src/ui-imgui/cmt/cmt_convert_dialog.cpp:596
+msgid "Nothing to change."
+msgstr "変更するものはありません。"
+
+#: src/ui-imgui/cmt/cmt_convert_dialog.cpp:372
+#, c-format
+msgid "Block %d converted to %s."
+msgstr "ブロック %d を %s に変換しました。"
+
+#: src/ui-imgui/cmt/cmt_convert_dialog.cpp:404
+#, c-format
+msgid "Convert to profile - block %d"
+msgstr "プロファイルに変換 - ブロック %d"
+
+#: src/ui-imgui/cmt/cmt_convert_dialog.cpp:442
+#, c-format
+msgid "Current profile: %s"
+msgstr "現在のプロファイル: %s"
+
+#: src/ui-imgui/cmt/cmt_convert_dialog.cpp:457
+msgid "(current)"
+msgstr "(現在)"
+
+#: src/ui-imgui/cmt/cmt_convert_dialog.cpp:545
+#: src/ui-imgui/cmt/cmt_window.cpp:2410 src/ui-imgui/cmt/cmt_window.cpp:3982
+#: src/ui-imgui/cmt/cmt_window.cpp:4010 src/ui-imgui/topmenu/menu_speed.cpp:27
 msgid "Speed"
 msgstr "速度"
 
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:258
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:294
-msgid "Length"
-msgstr "長さ"
+#: src/ui-imgui/cmt/cmt_convert_dialog.cpp:570
+msgid "Set by the profile"
+msgstr "プロファイルで決定"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:66
-msgid "Playing time:"
-msgstr "再生時間:"
-
-#: src/ui-imgui/cmt/cmt_window.cpp:70
-msgid "Remaining time:"
-msgstr "残り時間:"
-
-#: src/ui-imgui/cmt/cmt_window.cpp:82 src/ui-imgui/cmt/cmt_window.cpp:790
-msgid "CMT Hack"
-msgstr "CMT Hack"
-
-#: src/ui-imgui/cmt/cmt_window.cpp:91
-msgid "CPU Boost"
-msgstr "CPUブースト"
-
-#: src/ui-imgui/cmt/cmt_window.cpp:128
-msgid "Click here to change the time info mode."
-msgstr "ここをクリックして時間情報モードを変更します。"
-
-#: src/ui-imgui/cmt/cmt_window.cpp:212
-msgid "Block"
-msgstr "ブロック"
-
-#: src/ui-imgui/cmt/cmt_window.cpp:212
-msgid "of"
-msgstr "/"
-
-#: src/ui-imgui/cmt/cmt_window.cpp:213
-msgid "FSize"
-msgstr "FSize"
-
-#: src/ui-imgui/cmt/cmt_window.cpp:214
-msgid "FExec"
-msgstr "FExec"
-
-#: src/ui-imgui/cmt/cmt_window.cpp:215
-msgid "FStart"
-msgstr "FStart"
-
-#: src/ui-imgui/cmt/cmt_window.cpp:216
-msgid "Stream"
-msgstr "Stream"
-
-#: src/ui-imgui/cmt/cmt_window.cpp:217
-msgid "Rate"
-msgstr "Rate"
-
-#: src/ui-imgui/cmt/cmt_window.cpp:217
-msgid "SSize"
-msgstr "SSize"
-
-#: src/ui-imgui/cmt/cmt_window.cpp:440
-msgid "Default MZ Speed:"
-msgstr "デフォルトMZ速度:"
-
-#: src/ui-imgui/cmt/cmt_window.cpp:721
+#: src/ui-imgui/cmt/cmt_convert_dialog.cpp:578
 msgid ""
-"Recording a replay: tape control is recorded; another tape and speed "
-"settings are not available."
+"Choose the speed here. After the conversion, Set speed cannot change this "
+"block."
 msgstr ""
-"リプレイ記録中: テープ操作は記録されます。別のテープと速度設定は使用できませ"
+"ここで速度を選んでください。変換後は「速度を設定」でこのブロックを変更できま"
+"せん。"
+
+#: src/ui-imgui/cmt/cmt_convert_dialog.cpp:579
+msgid "After the conversion, Set speed cannot change this block."
+msgstr "変換後は「速度を設定」でこのブロックを変更できません。"
+
+#: src/ui-imgui/cmt/cmt_convert_dialog.cpp:593
+#: src/ui-imgui/cmt/cmt_convert_dialog.cpp:598
+msgid "The tape changed. Close this dialog and open it again."
+msgstr ""
+"テープが変更されました。このダイアログを閉じて、もう一度開いてください。"
+
+#: src/ui-imgui/cmt/cmt_convert_dialog.cpp:595
+msgid "Select a profile."
+msgstr "プロファイルを選択してください。"
+
+#: src/ui-imgui/cmt/cmt_convert_dialog.cpp:608
+msgid "Convert"
+msgstr "変換"
+
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:272
+#, c-format
+msgid "MZF file %s was truncated by %d bytes to the size in its header."
+msgstr "MZFファイル %s を %d バイト切り詰め、ヘッダーのサイズにしました。"
+
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:289
+msgid "MZF Size Warning"
+msgstr "MZFサイズ警告"
+
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:301
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:776
+msgid "MZF file"
+msgstr "MZFファイル"
+
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:309
+msgid "Exceeded bytes"
+msgstr "超過バイト数"
+
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:321
+msgid "This MZF file is a bit bigger than it should be."
+msgstr "このMZFファイルは本来のサイズより少し大きいです。"
+
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:323
+msgid "This could arise, for example, when the MZF file is exported from cp/m."
+msgstr ""
+"これは例えば、MZFファイルがcp/mからエクスポートされた場合に発生することがあり"
+"ます。"
+
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:324
+msgid "You can ignore it, or truncate the original file."
+msgstr "無視するか、元のファイルを切り詰めることができます。"
+
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:325
+msgid ""
+"Is recommended to use the Save as, for create truncated copy of this file."
+msgstr "切り詰めたコピーを作成するには、名前を付けて保存の使用をお勧めします。"
+
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:332
+msgid "MZF size check enabled"
+msgstr "MZFサイズチェック有効"
+
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:340
+msgid "Fix automatically next time"
+msgstr "次回から自動修正する"
+
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:347
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:464
+msgid ""
+"An MZF file longer than its header says is truncated\n"
+"to the right size without asking."
+msgstr ""
+"ヘッダーの記載より長いMZFファイルは、\n"
+"確認なしで正しいサイズに切り詰められます。"
+
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:360
+msgid "Ignore"
+msgstr "無視"
+
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:369
+msgid "Truncate"
+msgstr "切り詰め"
+
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:387
+msgid "Save As"
+msgstr "名前を付けて保存"
+
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:398
+msgid "Save MZF file as"
+msgstr "MZFファイルを名前を付けて保存"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:353
+msgid "The tape could not be opened: the file path is too long."
+msgstr "テープを開けません: ファイルパスが長すぎます。"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:640
+msgid "The tape could not be saved: the file path is too long."
+msgstr "テープを保存できません: ファイルパスが長すぎます。"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:776
+msgid "TMZ tape"
+msgstr "TMZテープ"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:776
+msgid "TZX tape"
+msgstr "TZXテープ"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:776
+msgid "MZT tape"
+msgstr "MZTテープ"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:805
+msgid "Save tape as"
+msgstr "名前を付けてテープを保存"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:879
+msgid "The block could not be exported: the file path is too long."
+msgstr "ブロックをエクスポートできません: ファイルパスが長すぎます。"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:925
+msgid "Export block as WAV"
+msgstr "ブロックをWAVとしてエクスポート"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:925
+msgid "Export block as MZF"
+msgstr "ブロックをMZFとしてエクスポート"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:975
+msgid "Select CMT file to open"
+msgstr "開くCMTファイルを選択"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1056
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:590
+#: src/ui-imgui/cmt/cmt_view.cpp:391 src/ui-imgui/cmt/cmt_view.cpp:400
+#: src/ui-imgui/cmt/cmt_window.cpp:1807 src/ui-imgui/cmt/cmt_window.cpp:3948
+#: src/ui-imgui/cmt/cmt_window.cpp:4298
+msgid "(new tape)"
+msgstr "(新しいテープ)"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1089
+msgid "Stopping the recording..."
+msgstr "録音を停止しています..."
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1099
+msgid "A recording is in progress. Stop and keep it, discard it, or cancel?"
+msgstr ""
+"録音中です。停止して残しますか、破棄しますか、それともキャンセルしますか?"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1101
+#: src/ui-imgui/cmt/cmt_window.cpp:2156
+msgid "Stop recording"
+msgstr "録音を停止"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1108
+msgid "Discard recording"
+msgstr "録音を破棄"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1147
+msgid "The tape has changes that are not saved to a file."
+msgstr "テープにファイルへ保存されていない変更があります。"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1149
+msgid "Save them before you continue?"
+msgstr "続行する前に保存しますか?"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1151
+msgid "The tape cannot be saved while input recording is active."
+msgstr "リプレイの記録中はテープを保存できません。"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1154
+msgid "Save tape"
+msgstr "テープを保存"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1164
+msgid "Discard changes"
+msgstr "変更を破棄"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1228
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1246
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1264
+msgid "Recording in progress"
+msgstr "録音中"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1228
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1264
+msgid "Unsaved tape changes"
+msgstr "テープの未保存の変更"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1325
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1389
+msgid ""
+"The loading mode cannot be changed while an input replay is recorded or "
+"played."
+msgstr "リプレイの記録中または再生中は読み込みモードを変更できません。"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1335
+msgid "Stop the tape to switch to or from Direct mode."
+msgstr "ダイレクトモードの切り替えはテープを停止してから行ってください。"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1352
+msgid ""
+"Direct Save cannot be changed while an input replay is recorded or played."
+msgstr "リプレイの記録中または再生中はダイレクト保存を変更できません。"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1357
+msgid "Stop the tape to switch Direct Save on or off."
+msgstr "ダイレクト保存の切り替えはテープを停止してから行ってください。"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1360
+msgid "Direct Save: on (a ROM SAVE without Record goes straight to the tape)"
+msgstr "ダイレクト保存: オン (録音なしのROMのSAVEはテープに直接保存)"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1361
+msgid "Direct Save: off (a ROM SAVE needs Record)"
+msgstr "ダイレクト保存: オフ (ROMのSAVEには録音が必要)"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1399
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1786 src/ui-imgui/cmt/cmt_view.cpp:668
+#: src/ui-imgui/cmt/cmt_window.cpp:3468
+msgid "The tape state changed; the action was cancelled."
+msgstr "テープの状態が変更されたため、操作をキャンセルしました。"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1425
+msgid ""
+"Another tape cannot be opened while an input replay is recorded or played."
+msgstr "リプレイの記録中または再生中は別のテープを開けません。"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1554
+msgid "Too many separate blocks selected."
+msgstr "離れたブロックの選択が多すぎます。"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1597
+msgid "The remaining files were not imported."
+msgstr "残りのファイルはインポートされませんでした。"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1625
+msgid "The file could not be imported: the file path is too long."
+msgstr "ファイルをインポートできません: ファイルパスが長すぎます。"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1665
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1998
+msgid "The import could not be completed."
+msgstr "インポートを完了できませんでした。"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1675
+msgid "Another import is still in progress."
+msgstr "別のインポートがまだ実行中です。"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1738
+msgid "Import file"
+msgstr "ファイルをインポート"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1791
+msgid "The tape could not be exported: the file path is too long."
+msgstr "テープをエクスポートできません: ファイルパスが長すぎます。"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1836
+msgid "Export tape as WAV"
+msgstr "テープをWAVとしてエクスポート"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1919
+#, c-format
+msgid "Deleted block %d."
+msgstr "ブロック %d を削除しました。"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1921
+#, c-format
+msgid "Deleted %d blocks."
+msgstr "削除したブロック数: %d。"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:2039
+msgid ""
+"The tape cannot be exported while an input replay is recorded or played."
+msgstr "リプレイの記録中または再生中はテープをエクスポートできません。"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:2068
+msgid "The tape was exported."
+msgstr "テープをエクスポートしました。"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:2070
+msgid "The tape could not be exported."
+msgstr "テープをエクスポートできませんでした。"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:2145
+msgid ""
+"The speed of a block cannot be changed while an input replay is recorded or "
+"played."
+msgstr "リプレイの記録中または再生中はブロックの速度を変更できません。"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:2149
+msgid "The speed of the block could not be changed."
+msgstr "ブロックの速度を変更できませんでした。"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:2156
+msgid ""
+"The signal speed cannot be changed while an input replay is recorded or "
+"played."
+msgstr "リプレイの記録中または再生中は信号速度を変更できません。"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:2158
+msgid "The signal speed could not be changed."
+msgstr "信号速度を変更できませんでした。"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:2190
+msgid "The tape cannot be saved while an input replay is recorded or played."
+msgstr "リプレイの記録中または再生中はテープを保存できません。"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:2191
+msgid "A block cannot be exported while an input replay is recorded or played."
+msgstr "リプレイの記録中または再生中はブロックをエクスポートできません。"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:2206
+msgid "The tape was saved."
+msgstr "テープを保存しました。"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:2206
+msgid "The tape could not be saved."
+msgstr "テープを保存できませんでした。"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:2208
+msgid "The block was exported."
+msgstr "ブロックをエクスポートしました。"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:2208
+msgid "The block could not be exported."
+msgstr "ブロックをエクスポートできませんでした。"
+
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:232
+msgid "Title"
+msgstr "タイトル"
+
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:233
+msgid "Publisher"
+msgstr "発行元"
+
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:234
+msgid "Author"
+msgstr "作者"
+
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:235
+msgid "Year"
+msgstr "年"
+
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:237
+msgctxt "Tape information"
+msgid "Language"
+msgstr "言語"
+
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:238
+msgctxt "Tape information"
+msgid "Type"
+msgstr "種類"
+
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:239
+msgid "Price"
+msgstr "価格"
+
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:240
+msgid "Protection"
+msgstr "プロテクト"
+
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:241
+msgid "Origin"
+msgstr "出所"
+
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:242
+#: src/ui-imgui/debugger/bookmarks/bm_window.cpp:983
+#: src/ui-imgui/debugger/vars/vars_window.cpp:1510
+msgid "Comment"
+msgstr "コメント"
+
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:257
+msgid "Not specified"
+msgstr "指定なし"
+
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:312
+msgid ""
+"A different tape is in the deck now. Press Reload to read it; your changes "
+"are kept."
+msgstr ""
+"デッキには別のテープが入っています。「再読み込み」を押すと読み込みます。変更"
+"内容は保持されます。"
+
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:313
+msgid "The tape changed. Press Reload to read it again; your changes are kept."
+msgstr ""
+"テープが変更されました。「再読み込み」を押すと読み直します。変更内容は保持さ"
+"れます。"
+
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:490
+msgid "Tape information updated."
+msgstr "テープ情報を更新しました。"
+
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:590
+#, c-format
+msgid "Tape information - %s"
+msgstr "テープ情報 - %s"
+
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:604
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:706
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:708
+msgid "Target machine"
+msgstr "対象マシン"
+
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:739
+msgid ""
+"This tape file format cannot store this information. Save the tape as TMZ to "
+"keep it."
+msgstr ""
+"このテープファイル形式ではこの情報を保存できません。保持するにはテープを TMZ "
+"として保存してください。"
+
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:743
+msgid ""
+"This tape has another information block further on; it is left unchanged."
+msgstr ""
+"このテープには後方に別の情報ブロックがあります。そのブロックは変更されませ"
 "ん。"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:725
-msgid "Tape control is not available while a replay is recorded or played."
-msgstr "入力の記録中または再生中はテープを操作できません。"
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:751
+msgid "Wait until the tape information is saved."
+msgstr "テープ情報が保存されるまでお待ちください。"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:762 src/ui-imgui/cmt/cmt_window.cpp:879
-msgid "Virtual CMT"
-msgstr "仮想CMT"
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:762
+msgid "Reload"
+msgstr "再読み込み"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:799
-msgid "CMT Hack is activated!"
-msgstr "CMT Hackが有効です！"
+#: src/ui-imgui/cmt/cmt_view.cpp:136
+msgid "machine code"
+msgstr "マシン語"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:800
-msgid "Virtual CMT is not available!"
-msgstr "仮想CMTは利用できません！"
+#: src/ui-imgui/cmt/cmt_view.cpp:137
+msgid "BASIC program"
+msgstr "BASICプログラム"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:806
-#: src/ui-imgui/version_check/imgui_version_check.cpp:390
-msgid "Close"
-msgstr "閉じる"
+#: src/ui-imgui/cmt/cmt_view.cpp:138
+msgid "data"
+msgstr "データ"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:828
-msgid "No tape loaded"
-msgstr "テープが挿入されていません"
+#: src/ui-imgui/cmt/cmt_view.cpp:139
+msgid "BASIC data"
+msgstr "BASICデータ"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:837
+#: src/ui-imgui/cmt/cmt_view.cpp:140
+msgid "CP/M file"
+msgstr "CP/Mファイル"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:158 src/ui-imgui/cmt/cmt_window.cpp:1064
+#: src/ui/cmt/UiCmt.cpp:36
+msgid "Custom pulses"
+msgstr "カスタムパルス"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:173 src/ui-imgui/cmt/cmt_window.cpp:2466
+msgid "Not decoded"
+msgstr "未デコード"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:174
+msgid "Unsaved"
+msgstr "未保存"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:175 src/ui-imgui/cmt/cmt_window.cpp:2466
+msgid "Cannot play"
+msgstr "再生不可"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:176 src/ui-imgui/cmt/cmt_window.cpp:757
+#: src/ui-imgui/cmt/cmt_window.cpp:764
+msgid "Control block"
+msgstr "制御ブロック"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:177
+msgid "Checksum error"
+msgstr "チェックサムエラー"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:391
+#, c-format
+msgid "Opened %s, blocks: %d"
+msgstr "%s を開きました、ブロック数: %d"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:400
+#, c-format
+msgid "Opened %s, blocks: %d. Use Analyze to find files."
+msgstr ""
+"%s を開きました、ブロック数: %d。ファイルを探すには「解析」を使ってください。"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:553
+#, c-format
+msgid "Imported %s, blocks: %d"
+msgstr "%s をインポートしました、ブロック数: %d"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:589
+msgid "Loading mode: Tape"
+msgstr "読み込みモード: テープ"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:590
+msgid "Loading mode: Boost"
+msgstr "読み込みモード: Boost"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:591
+msgid "Loading mode: Direct"
+msgstr "読み込みモード: ダイレクト"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:599
+msgid "The selected ROM does not support direct loading."
+msgstr "選択したROMはダイレクト読み込みに対応していません。"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:638
+msgid "The ROM SAVE could not be stored on the tape."
+msgstr "ROMのSAVEをテープに保存できませんでした。"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:643
+#, c-format
+msgid "ROM SAVE stored \"%s\" (%u bytes) as tape block %d."
+msgstr "ROMのSAVEで \"%s\" (%uバイト) をテープブロック %d として保存しました。"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:713 src/ui-imgui/cmt/cmt_view.cpp:1386
+#: src/ui-imgui/cmt/cmt_window.cpp:2465
+#, c-format
+msgid "Loop start x%u"
+msgstr "ループ開始 x%u"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:716
+msgid "Loop start"
+msgstr "ループ開始"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:717 src/ui-imgui/cmt/cmt_view.cpp:1392
+msgid "Loop end"
+msgstr "ループ終了"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:720 src/ui-imgui/cmt/cmt_view.cpp:1387
+#, c-format
+msgid "Jump %+d"
+msgstr "ジャンプ %+d"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:723
+msgid "Jump"
+msgstr "ジャンプ"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:724 src/ui-imgui/cmt/cmt_view.cpp:725
+#: src/ui-imgui/cmt/cmt_view.cpp:1424 src/ui-imgui/cmt/cmt_window.cpp:2466
+msgid "Stop the tape"
+msgstr "テープ停止"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:726
+msgid "Group start"
+msgstr "グループ開始"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:727
+msgid "Group end"
+msgstr "グループ終了"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:819
+msgid "ZX data"
+msgstr "ZXデータ"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:824
+msgid "WAV recording"
+msgstr "WAV録音"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:829 src/ui-imgui/cmt/cmt_view.cpp:1180
+msgid "Raw recording"
+msgstr "生の録音"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:693 src/ui-imgui/cmt/cmt_window.cpp:1052
+#: src/ui-imgui/cmt/cmt_window.cpp:1830 src/ui-imgui/cmt/cmt_window.cpp:3947
+msgid "No tape"
+msgstr "テープなし"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:694
+#: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:365
+msgid "Stopped"
+msgstr "停止中"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:695
+#: src/ui-imgui/topmenu/replay_window.cpp:213
+msgid "Playing"
+msgstr "再生中"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:696
+msgid "Waiting for motor"
+msgstr "モーター待ち"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:697
+msgid "Paused"
+msgstr "一時停止中"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:698
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:363
 #: src/ui-imgui/topmenu/replay_window.cpp:205
 msgid "Recording"
 msgstr "録音中"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:847
-#: src/ui-imgui/topmenu/replay_window.cpp:213
-msgid "Playing"
-msgstr "再生中"
+#: src/ui-imgui/cmt/cmt_window.cpp:700
+msgid "Direct load"
+msgstr "ダイレクト読み込み"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:862
-msgid "Stopped - Ready to Play"
-msgstr "停止 - 再生準備完了"
+#: src/ui-imgui/cmt/cmt_window.cpp:763
+msgid "ZX header"
+msgstr "ZXヘッダー"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:869
-msgid "(paused)"
-msgstr "(一時停止)"
+#: src/ui-imgui/cmt/cmt_window.cpp:803 src/ui-imgui/cmt/cmt_window.cpp:824
+#: src/ui-imgui/cmt/cmt_window.cpp:830 src/ui-imgui/cmt/cmt_window.cpp:1016
+msgid "Elapsed"
+msgstr "経過"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:891
-msgid "*** Empty ***"
-msgstr "*** 空 ***"
+#: src/ui-imgui/cmt/cmt_window.cpp:805 src/ui-imgui/cmt/cmt_window.cpp:1065
+#: src/ui-imgui/cmt/cmt_window.cpp:1984 src/ui-imgui/cmt/cmt_window.cpp:2247
+#: src/ui-imgui/cmt/cmt_window.cpp:2632
+msgid "Not used in Direct mode"
+msgstr "ダイレクトモードでは使用しません"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:897
-msgid "Recording (paused)"
-msgstr "録音中 (一時停止)"
+#: src/ui-imgui/cmt/cmt_window.cpp:810 src/ui-imgui/cmt/cmt_window.cpp:1016
+msgid "Recording time"
+msgstr "録音時間"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:901
-msgid "Recording.."
-msgstr "録音中.."
+#: src/ui-imgui/cmt/cmt_window.cpp:811 src/ui-imgui/cmt/cmt_window.cpp:1987
+#: src/ui-imgui/cmt/cmt_window.cpp:2633 src/ui-imgui/cmt/cmt_window.cpp:2648
+msgid "Not available while recording."
+msgstr "録音中は使用できません。"
 
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:109
-msgid "Custom Tape Pulses"
-msgstr "テープのカスタムパルス"
+#: src/ui-imgui/cmt/cmt_window.cpp:817
+msgid ""
+"The remaining time is shown once the lengths of all blocks are known. They "
+"are computed while the tape is stopped."
+msgstr ""
+"残り時間は、すべてのブロックの長さが判明すると表示されます。長さはテープの停"
+"止中に計算されます。"
 
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:121
-msgid "Pulse lengths in microseconds (order of the UniCMT CMTSPEED header):"
-msgstr "パルス長（マイクロ秒、UniCMTのCMTSPEEDヘッダーと同じ順序）:"
+#: src/ui-imgui/cmt/cmt_window.cpp:821 src/ui-imgui/cmt/cmt_window.cpp:1016
+msgid "Remaining"
+msgstr "残り"
 
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:125
-msgid "Long pulse high (bit 1)"
-msgstr "長パルス High（ビット1）"
+#: src/ui-imgui/cmt/cmt_window.cpp:827 src/ui-imgui/cmt/cmt_window.cpp:1016
+msgid "Block time"
+msgstr "ブロック時間"
 
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:126
-msgid "Long pulse low (bit 1)"
-msgstr "長パルス Low（ビット1）"
+#: src/ui-imgui/cmt/cmt_window.cpp:1028 src/ui-imgui/cmt/cmt_window.cpp:1940
+msgid "Motor on"
+msgstr "モーター オン"
 
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:127
-msgid "Short pulse high (bit 0)"
-msgstr "短パルス High（ビット0）"
+#: src/ui-imgui/cmt/cmt_window.cpp:1028 src/ui-imgui/cmt/cmt_window.cpp:1940
+msgid "Motor off"
+msgstr "モーター オフ"
 
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:128
-msgid "Short pulse low (bit 0)"
-msgstr "短パルス Low（ビット0）"
+#: src/ui-imgui/cmt/cmt_window.cpp:1030 src/ui-imgui/cmt/cmt_window.cpp:1883
+msgid "No block"
+msgstr "ブロックなし"
 
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:137
-msgid "Presets:"
-msgstr "プリセット:"
+#: src/ui-imgui/cmt/cmt_window.cpp:1030 src/ui-imgui/cmt/cmt_window.cpp:1888
+msgid "New recording"
+msgstr "新しい録音"
 
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:150
-msgid "Revert"
-msgstr "元に戻す"
+#: src/ui-imgui/cmt/cmt_window.cpp:1030 src/ui-imgui/cmt/cmt_window.cpp:1907
+msgid "Next LOAD takes this block"
+msgstr "次のLOADでこのブロックを読み込みます"
 
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:164
+#: src/ui-imgui/cmt/cmt_window.cpp:1030 src/ui-imgui/cmt/cmt_window.cpp:1908
+msgid "This block cannot be loaded directly"
+msgstr "このブロックは直接読み込めません"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1038 src/ui-imgui/cmt/cmt_window.cpp:1902
 #, c-format
-msgid "Equivalent speed: ~%.2f:1 (%.0f Bd)"
-msgstr "相当する速度: ~%.2f:1 (%.0f Bd)"
+msgid "%s pulses"
+msgstr "%s パルス"
 
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:168
+#: src/ui-imgui/cmt/cmt_window.cpp:1050 src/ui-imgui/cmt/cmt_window.cpp:1796
+#: src/ui-imgui/cmt/cmt_window.cpp:4360
+msgid "Open..."
+msgstr "開く..."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1050 src/ui-imgui/cmt/cmt_window.cpp:1795
+#: src/ui-imgui/cmt/cmt_window.cpp:4383
+msgid "Eject"
+msgstr "取り出し"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1050 src/ui-imgui/cmt/cmt_window.cpp:1051
+#: src/ui-imgui/cmt/cmt_window.cpp:1785 src/ui-imgui/cmt/cmt_window.cpp:3956
+msgid "Blocks"
+msgstr "ブロック"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1051 src/ui-imgui/cmt/cmt_window.cpp:1821
+msgid "Open tape..."
+msgstr "テープを開く..."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1051 src/ui-imgui/cmt/cmt_window.cpp:1820
+#: src/ui-imgui/cmt/cmt_window.cpp:4359
+msgid "New tape"
+msgstr "新しいテープ"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1052 src/ui-imgui/cmt/cmt_window.cpp:1808
+msgid "Modified"
+msgstr "変更あり"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1056 src/ui-imgui/cmt/cmt_window.cpp:2150
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:437
+msgid "Echo"
+msgstr "エコー"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1060 src/ui-imgui/cmt/cmt_window.cpp:2243
+msgid "Signal speed"
+msgstr "信号速度"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1064 src/ui-imgui/cmt/cmt_window.cpp:2249
+#: src/ui-imgui/cmt/cmt_window.cpp:2251 src/ui-imgui/cmt/cmt_window.cpp:3982
+msgid "(set in file)"
+msgstr "(ファイルで指定)"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1065 src/ui-imgui/cmt/cmt_window.cpp:2251
+msgid "(recorded signal)"
+msgstr "(録音された信号)"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1070 src/ui-imgui/cmt/cmt_window.cpp:2304
+msgid "Loading"
+msgstr "読み込み"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1071 src/ui-imgui/cmt/cmt_window.cpp:2328
+#: src/ui-imgui/cmt/cmt_window.cpp:4356
+msgid "Tape"
+msgstr "テープ"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1071 src/ui-imgui/cmt/cmt_window.cpp:2329
+msgid "Boost"
+msgstr "Boost"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1071 src/ui-imgui/cmt/cmt_window.cpp:2330
+msgid "Direct"
+msgstr "ダイレクト"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1111 src/ui-imgui/cmt/cmt_window.cpp:1874
+#: src/ui-imgui/cmt/cmt_window.cpp:1877 src/ui-imgui/cmt/cmt_window.cpp:1880
 #, c-format
-msgid "Each length must be greater than 0 and at most %.0f µs."
-msgstr "各長さは0より大きく、%.0f µs以下である必要があります。"
+msgid "Block %d / %d"
+msgstr "ブロック %d / %d"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1481 src/ui-imgui/cmt/cmt_window.cpp:2630
+#: src/ui-imgui/cmt/cmt_window.cpp:2646
+msgid "Not available while an input replay is played."
+msgstr "リプレイの再生中は使用できません。"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1496 src/ui-imgui/cmt/cmt_window.cpp:1530
+#: src/ui-imgui/cmt/cmt_window.cpp:1547 src/ui-imgui/cmt/cmt_window.cpp:1988
+#: src/ui-imgui/cmt/cmt_window.cpp:2265 src/ui-imgui/cmt/cmt_window.cpp:2309
+#: src/ui-imgui/cmt/cmt_window.cpp:2723
+msgid "Not available while an input replay is recorded."
+msgstr "リプレイの記録中は使用できません。"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1497 src/ui-imgui/cmt/cmt_window.cpp:1513
+#: src/ui-imgui/cmt/cmt_window.cpp:2023 src/ui-imgui/cmt/cmt_window.cpp:2311
+msgid "Stop the recording first."
+msgstr "先に録音を停止してください。"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1532 src/ui-imgui/cmt/cmt_window.cpp:1548
+#: src/ui-imgui/cmt/cmt_window.cpp:2017 src/ui-imgui/cmt/cmt_window.cpp:2023
+#: src/ui-imgui/cmt/cmt_window.cpp:2034 src/ui-imgui/cmt/cmt_window.cpp:2312
+#: src/ui-imgui/cmt/cmt_window.cpp:2724
+msgid "Stop the tape first."
+msgstr "先にテープを停止してください。"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1680
+msgid "Select a single block to move it."
+msgstr "移動するには、ブロックを1つだけ選択してください。"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1681
+msgid "This is the first block."
+msgstr "これは最初のブロックです。"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1682
+msgid "This is the last block."
+msgstr "これは最後のブロックです。"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1701
+msgid "Select one raw recording in the list of blocks."
+msgstr "ブロック一覧で生の録音を 1 つ選択してください。"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1702
+msgid "Only a raw recording can be analyzed."
+msgstr "解析できるのは生の録音だけです。"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1721
+msgid "Select a single block to convert it."
+msgstr "変換するブロックを 1 つだけ選択してください。"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1722
+msgid "This block cannot be converted to another profile."
+msgstr "このブロックは別のプロファイルに変換できません。"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1788
+msgid "Open or create a tape to see its blocks."
+msgstr "ブロックを表示するには、テープを開くか作成してください。"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1790
+msgid "Show only the deck"
+msgstr "デッキのみ表示"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1790
+msgid "Show the list of blocks"
+msgstr "ブロック一覧を表示"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1801 src/ui-imgui/cmt/cmt_window.cpp:1825
+msgid "Open a tape file"
+msgstr "テープファイルを開く"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1803
+msgid "Eject the tape"
+msgstr "テープを取り出す"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1817
+msgid "The tape has unsaved changes."
+msgstr "テープに未保存の変更があります。"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1828
+msgid "Insert a new empty tape"
+msgstr "新しい空のテープを挿入"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1851
+msgid "Click to show the time from the start of the tape"
+msgstr "クリックするとテープの先頭からの時間を表示"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1852
+msgid "Click to show the time to the end of the tape"
+msgstr "クリックするとテープの終わりまでの時間を表示"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1986
+msgid "The tape is empty."
+msgstr "テープは空です。"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1998
+msgid "The tape has no playable block."
+msgstr "テープに再生可能なブロックがありません。"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1999
+msgid "There is no playable block before this one."
+msgstr "このブロックより前に再生可能なブロックはありません。"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2000
+msgid "There is no playable block after this one."
+msgstr "このブロックより後に再生可能なブロックはありません。"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2013
+msgid "The tape is already stopped."
+msgstr "テープはすでに停止しています。"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2027
+msgid "No block is selected on the tape."
+msgstr "テープ上でブロックが選択されていません。"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2029 src/ui-imgui/cmt/cmt_window.cpp:2320
+msgid "The current block does not contain an MZF file."
+msgstr "現在のブロックにはMZFファイルが含まれていません。"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2132
+msgctxt "cmt"
+msgid "Rewind"
+msgstr "巻き戻し"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2135
+msgid "Previous block"
+msgstr "前のブロック"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2139
+msgid "Pause"
+msgstr "一時停止"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2139
+msgid "Play"
+msgstr "再生"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2142
+#: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:423
+msgid "Stop"
+msgstr "停止"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2145
+msgid "Next block"
+msgstr "次のブロック"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2151
+msgid "Play the tape signal through the speaker"
+msgstr "テープの信号をスピーカーから鳴らす"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2156
+msgid "Record"
+msgstr "録音"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2266
+msgid "Stop the tape to change the speed."
+msgstr "速度を変更するにはテープを停止してください。"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2294
+msgid "Speed of the tape signal for blocks without their own speed"
+msgstr "独自の速度を持たないブロックに使うテープ信号の速度"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2328
+msgid "Play the signal in real time"
+msgstr "信号を実時間で再生"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2329
+msgid "Run at maximum speed while the motor is on"
+msgstr "モーターの動作中は最高速度で実行"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2330 src/ui-imgui/cmt/cmt_window.cpp:2747
+msgid "Copy the program into memory without playing the signal"
+msgstr "信号を再生せずにプログラムをメモリへコピー"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2408
+msgctxt "cmt column"
+msgid "Load"
+msgstr "ロード"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2409
+msgctxt "cmt column"
+msgid "Exec"
+msgstr "実行"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2411 src/ui-imgui/cmt/cmt_window.cpp:3989
+#: src/ui-imgui/cmt/cmt_window.cpp:3995 src/ui-imgui/cmt/cmt_window.cpp:4011
+msgid "Length"
+msgstr "長さ"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2413 src/ui-imgui/cmt/cmt_window.cpp:4015
+msgid "Status"
+msgstr "状態"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2472 src/ui-imgui/cmt/cmt_window.cpp:3087
+msgid "Recording..."
+msgstr "録音中..."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2631 src/ui-imgui/cmt/cmt_window.cpp:2647
+#: src/ui-imgui/cmt/cmt_window.cpp:2760
+msgid "This block cannot be played."
+msgstr "このブロックは再生できません。"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2725
+msgid "This block does not contain an MZF file."
+msgstr "このブロックにはMZFファイルが含まれていません。"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2728
+msgid "Play from here"
+msgstr "ここから再生"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2736
+msgid "Go to this block"
+msgstr "このブロックへ移動"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2737
+msgid ""
+"Move the tape to the start of this block; playback state does not change"
+msgstr "テープをこのブロックの先頭へ移動します。再生状態は変わりません"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2746
+msgid "Load directly"
+msgstr "直接読み込む"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2755
+msgid "Export as MZF..."
+msgstr "MZFとしてエクスポート..."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2761
+msgid "Export as WAV..."
+msgstr "WAVとしてエクスポート..."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2769
+msgid "The speed of this block is given by the file."
+msgstr "このブロックの速度はファイルで指定されています。"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2771
+msgid "Set speed"
+msgstr "速度を設定"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2804
+msgid "Analyze..."
+msgstr "解析..."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2806
+msgid "Convert to profile..."
+msgstr "プロファイルに変換..."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2814
+msgid "Move up"
+msgstr "上へ移動"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2815
+msgid "Move down"
+msgstr "下へ移動"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2817
+msgid "Import file here..."
+msgstr "ここにファイルをインポート..."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2822
+#, c-format
+msgid "Delete %d blocks"
+msgstr "%d 個のブロックを削除"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2825
+#: src/ui-imgui/debugger/membrowser/membrowser_annot_dialog.cpp:146
+msgid "Delete"
+msgstr "削除"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2832
+msgid "Properties"
+msgstr "プロパティ"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3404 src/ui-imgui/cmt/cmt_window.cpp:3431
+msgid "Delete blocks"
+msgstr "ブロックを削除"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3416
+#, c-format
+msgid ""
+"Delete blocks: %d. Unsaved: %d. Data of the unsaved blocks is not stored "
+"anywhere else."
+msgstr ""
+"削除するブロック: %d。未保存: %d。未保存のブロックのデータは他のどこにも保存"
+"されていません。"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3419
+msgid "Delete this unsaved block? Its data is not stored anywhere else."
+msgstr ""
+"この未保存のブロックを削除しますか? そのデータは他のどこにも保存されていませ"
+"ん。"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3421
+#, c-format
+msgid "Delete %d unsaved blocks? Their data is not stored anywhere else."
+msgstr ""
+"未保存の %d 個のブロックを削除しますか? そのデータは他のどこにも保存されてい"
+"ません。"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3515 src/ui-imgui/cmt/cmt_window.cpp:3539
+msgid "Finish the open dialog first."
+msgstr "先に開いているダイアログを終了してください。"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3542
+msgid "Only one file can be opened as a tape."
+msgstr "テープとして開けるファイルは 1 つだけです。"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3596
+msgid "This tape is empty."
+msgstr "このテープは空です。"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3596
+msgid "Press Record to save a program from the computer, or open a tape file."
+msgstr ""
+"「録音」を押してコンピューターからプログラムを保存するか、テープファイルを開"
+"いてください。"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3918
+msgid "Imported from MZF"
+msgstr "MZFからインポート"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3919
+msgctxt "cmt"
+msgid "Recorded"
+msgstr "録音済み"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3920
+msgctxt "cmt"
+msgid "Imported"
+msgstr "インポート済み"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3922
+msgid "From tape file"
+msgstr "テープファイルから"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3946
+msgid "Tape properties"
+msgstr "テープのプロパティ"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3951
+#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:110
+#: src/ui-imgui/memext/memext_load_dialog.cpp:112
+#: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:101
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:254
+#: src/ui-imgui/topmenu/replay_window.cpp:223
+#: src/ui-imgui/topmenu/replay_window.cpp:229
+msgid "File"
+msgstr "ファイル"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3957
+msgid "Total length"
+msgstr "合計の長さ"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3965
+#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:204
+msgid "Format"
+msgstr "フォーマット"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3968
+msgid "Block properties"
+msgstr "ブロックのプロパティ"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3979
+msgid "Load address"
+msgstr "ロードアドレス"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3981
+msgid "Exec address"
+msgstr "実行アドレス"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3985
+msgid "Long pulse (µs)"
+msgstr "長パルス (µs)"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3987
+msgid "Short pulse (µs)"
+msgstr "短パルス (µs)"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3990 src/ui-imgui/cmt/cmt_window.cpp:3996
+#: src/ui-imgui/cmt/cmt_window.cpp:4003 src/ui-imgui/cmt/cmt_window.cpp:4012
+#: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:318
+msgid "Source"
+msgstr "発生元"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3997
+msgid "Sample rate"
+msgstr "サンプリングレート"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3998
+msgid "Pulse count"
+msgstr "パルス数"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4002
+#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:198
+#: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:105
+msgid "Description"
+msgstr "説明"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4093
+msgid "Hide the properties"
+msgstr "プロパティを隠す"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4093
+msgid "Show the properties"
+msgstr "プロパティを表示"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4173
+msgid "Columns"
+msgstr "列"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4174 src/ui-imgui/cmt/cmt_window.cpp:4408
+msgid "The list of blocks is shown in the Full layout."
+msgstr "ブロック一覧は「フル」レイアウトで表示されます。"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4181
+msgid "Show all"
+msgstr "すべて表示"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4295
+msgid "Virtual CMT"
+msgstr "仮想CMT"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4361
+msgid "Import file..."
+msgstr "ファイルをインポート..."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4362
+#: src/ui-imgui/debugger/breakpoints/bpt_window.cpp:1456
+#: src/ui-imgui/debugger/membrowser/membrowser_annot_dialog.cpp:144
+#: src/ui-imgui/memext/memext_save_dialog.cpp:189
+#: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:119
+msgid "Save"
+msgstr "保存"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4363
+msgid "Save as..."
+msgstr "名前を付けて保存..."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4365
+msgid "Export block as MZF..."
+msgstr "ブロックをMZFとしてエクスポート..."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4367
+msgid "Export block as WAV..."
+msgstr "ブロックをWAVとしてエクスポート..."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4369
+msgid "Export tape as WAV..."
+msgstr "テープをWAVとしてエクスポート..."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4376
+msgid "Analyze recording..."
+msgstr "録音を解析..."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4380
+msgid "Tape information..."
+msgstr "テープ情報..."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4381
+msgid "Check tape"
+msgstr "テープをチェック"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4398
+msgid "View"
+msgstr "表示"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4402
+msgid "Compact"
+msgstr "コンパクト"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4403
+msgid "Full"
+msgstr "フル"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4407
+msgid "Reset column widths"
+msgstr "列幅をリセット"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4644
+#, c-format
+msgid "%d blocks selected"
+msgstr "%d 個のブロックを選択中"
 
 #: src/ui-imgui/debugger/bookmarks/bm_window.cpp:267
 msgid "- Cancel##bm_add_toggle"
@@ -1175,11 +2533,6 @@ msgstr "ラベル"
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:314
 msgid "Address"
 msgstr "アドレス"
-
-#: src/ui-imgui/debugger/bookmarks/bm_window.cpp:983
-#: src/ui-imgui/debugger/vars/vars_window.cpp:1510
-msgid "Comment"
-msgstr "コメント"
 
 #: src/ui-imgui/debugger/breakpoints/bpt_edit_panel.cpp:209
 msgid "PC execution - trigger when Z80 PC reaches the address."
@@ -1539,7 +2892,7 @@ msgstr "(イベントを選択)"
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:1756
 #: src/ui-imgui/debugger/pioz80_window.cpp:424
 #: src/ui-imgui/debugger/pioz80_window.cpp:471
-#: src/ui-imgui/debugger/ppi_window.cpp:409
+#: src/ui-imgui/debugger/ppi_window.cpp:413
 #: src/ui-imgui/debugger/sections/dbg_stack_panel.cpp:1302
 msgid "(none)"
 msgstr "(なし)"
@@ -2270,13 +3623,6 @@ msgstr "グループを先頭に##bpt"
 msgid "Add##bpt"
 msgstr "追加##bpt"
 
-#: src/ui-imgui/debugger/breakpoints/bpt_window.cpp:1456
-#: src/ui-imgui/debugger/membrowser/membrowser_annot_dialog.cpp:144
-#: src/ui-imgui/memext/memext_save_dialog.cpp:189
-#: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:117
-msgid "Save"
-msgstr "保存"
-
 #: src/ui-imgui/debugger/breakpoints/bpt_window.cpp:1475
 msgid "Save##bpt_bar"
 msgstr "保存##bpt_bar"
@@ -2963,7 +4309,7 @@ msgstr "競合ポリシー:"
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:2845
 #: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3160
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:312
-#: src/ui-imgui/topmenu/menu_replay.cpp:208
+#: src/ui-imgui/topmenu/menu_replay.cpp:247
 #: src/ui-imgui/topmenu/replay_window.cpp:245
 msgid "Frame"
 msgstr "フレーム"
@@ -3860,7 +5206,7 @@ msgstr "イベントカテゴリ色でLogテーブル行を着色 (Stripタブ�
 
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:2155
 #: src/ui-imgui/joy/joy_setup_window.cpp:433
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:320
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:323
 msgid "None"
 msgstr "なし"
 
@@ -4360,14 +5706,14 @@ msgid "FDC State"
 msgstr "FDC State"
 
 #: src/ui-imgui/debugger/fdc_window.cpp:198
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:403
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:324
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:405
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:327
 msgid "FDC0 (standard)"
 msgstr "FDC0 (標準)"
 
 #: src/ui-imgui/debugger/fdc_window.cpp:199
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:409
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:328
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:411
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:331
 msgid "FDC1 (secondary)"
 msgstr "FDC1 (セカンダリ)"
 
@@ -5403,21 +6749,49 @@ msgstr "テキスト"
 msgid "Color tag"
 msgstr "カラータグ"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_annot_dialog.cpp:146
-msgid "Delete"
-msgstr "削除"
-
 #: src/ui-imgui/debugger/membrowser/membrowser_annot_dialog.cpp:192
 #, c-format
 msgid "Annotation @ 0x%08X"
 msgstr "注釈 @ 0x%08X"
+
+#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:231
+#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:276
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1729
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1733
+msgid "Target:"
+msgstr "ターゲット:"
+
+#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:239
+msgid "No target callback set"
+msgstr "ターゲットコールバック未設定"
+
+#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:262
+msgid "No target: open a Memory Browser and right-click in hex/ASCII column"
+msgstr "ターゲットなし: メモリブラウザを開き、hex/ASCII列で右クリック"
+
+#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:284
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:337
+msgid "Region:"
+msgstr "リージョン:"
+
+#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:290
+msgid "Edit ON"
+msgstr "編集 ON"
+
+#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:293
+msgid "Edit OFF / RO"
+msgstr "編集 OFF / RO"
+
+#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:309
+msgid "Char Inserter###mb_char_inserter"
+msgstr "文字インサータ###mb_char_inserter"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_diff_window.cpp:404
 msgid "Live"
 msgstr "ライブ"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_diff_window.cpp:405
-#: src/ui-imgui/topmenu/menu_snapshot.cpp:69
+#: src/ui-imgui/topmenu/menu_snapshot.cpp:108
 msgid "Snapshot"
 msgstr "スナップショット"
 
@@ -5509,43 +6883,43 @@ msgstr "差分をテキストファイルとしてエクスポート (1行ごと
 msgid "Memory Diff"
 msgstr "メモリ差分"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_encoding.cpp:51
+#: src/ui-imgui/debugger/membrowser/membrowser_encoding.cpp:50
 msgid "Raw"
 msgstr "Raw"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_encoding.cpp:52
+#: src/ui-imgui/debugger/membrowser/membrowser_encoding.cpp:51
 msgid "SharpMZ-EU -> ASCII"
 msgstr "SharpMZ-EU -> ASCII"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_encoding.cpp:53
+#: src/ui-imgui/debugger/membrowser/membrowser_encoding.cpp:52
 msgid "SharpMZ-JP -> ASCII"
 msgstr "SharpMZ-JP -> ASCII"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_encoding.cpp:54
+#: src/ui-imgui/debugger/membrowser/membrowser_encoding.cpp:53
 msgid "SharpMZ-EU -> UTF-8"
 msgstr "SharpMZ-EU -> UTF-8"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_encoding.cpp:55
+#: src/ui-imgui/debugger/membrowser/membrowser_encoding.cpp:54
 msgid "SharpMZ-JP -> UTF-8"
 msgstr "SharpMZ-JP -> UTF-8"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_encoding.cpp:56
+#: src/ui-imgui/debugger/membrowser/membrowser_encoding.cpp:55
 msgid "SharpMZ-EU -> MZ-CG1"
 msgstr "SharpMZ-EU -> MZ-CG1"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_encoding.cpp:57
+#: src/ui-imgui/debugger/membrowser/membrowser_encoding.cpp:56
 msgid "SharpMZ-EU -> MZ-CG2"
 msgstr "SharpMZ-EU -> MZ-CG2"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_encoding.cpp:58
+#: src/ui-imgui/debugger/membrowser/membrowser_encoding.cpp:57
 msgid "SharpMZ-JP -> MZ-CG1"
 msgstr "SharpMZ-JP -> MZ-CG1"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_encoding.cpp:59
+#: src/ui-imgui/debugger/membrowser/membrowser_encoding.cpp:58
 msgid "SharpMZ-JP -> MZ-CG2"
 msgstr "SharpMZ-JP -> MZ-CG2"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_encoding.cpp:60
+#: src/ui-imgui/debugger/membrowser/membrowser_encoding.cpp:59
 msgid "KOI8-CS"
 msgstr "KOI8-CS"
 
@@ -5902,38 +7276,6 @@ msgstr "元に戻す  (%d レベル)\tCtrl+Z"
 msgid "Redo  (%d levels)\tCtrl+Y"
 msgstr "やり直し  (%d レベル)\tCtrl+Y"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:231
-#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:276
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1729
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1733
-msgid "Target:"
-msgstr "ターゲット:"
-
-#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:239
-msgid "No target callback set"
-msgstr "ターゲットコールバック未設定"
-
-#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:262
-msgid "No target: open a Memory Browser and right-click in hex/ASCII column"
-msgstr "ターゲットなし: メモリブラウザを開き、hex/ASCII列で右クリック"
-
-#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:284
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:337
-msgid "Region:"
-msgstr "リージョン:"
-
-#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:290
-msgid "Edit ON"
-msgstr "編集 ON"
-
-#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:293
-msgid "Edit OFF / RO"
-msgstr "編集 OFF / RO"
-
-#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:309
-msgid "Char Inserter###mb_char_inserter"
-msgstr "文字インサータ###mb_char_inserter"
-
 #: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:312
 msgid "Layers ▼###mb_layers_toggle"
 msgstr "レイヤー ▼###mb_layers_toggle"
@@ -6084,14 +7426,6 @@ msgstr "ヒートマップ"
 #: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:497
 msgid "Snapshot Δ"
 msgstr "スナップショット Δ"
-
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:499
-#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:148
-#: src/ui-imgui/maxspeed_bench_window.cpp:156
-#: src/ui-imgui/plotter/plotter_window.cpp:432
-#: src/ui-imgui/topmenu/topmenu.cpp:59
-msgid "Reset"
-msgstr "リセット"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:500
 msgid "Frozen Bytes"
@@ -6826,7 +8160,7 @@ msgstr "マウント"
 #: src/ui-imgui/debugger/memmap/memmap_window.cpp:695
 #: src/ui-imgui/debugger/memmap/memmap_window.cpp:721
 #: src/ui-imgui/debugger/memmap/memmap_window.cpp:734
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:184
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:186
 msgid "Umount"
 msgstr "アンマウント"
 
@@ -7362,15 +8696,6 @@ msgstr ""
 msgid "Memory Search###memsearch_window"
 msgstr "メモリ検索###memsearch_window"
 
-#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:110
-#: src/ui-imgui/memext/memext_load_dialog.cpp:112
-#: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:99
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:252
-#: src/ui-imgui/topmenu/replay_window.cpp:223
-#: src/ui-imgui/topmenu/replay_window.cpp:229
-msgid "File"
-msgstr "ファイル"
-
 #: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:113
 msgid "Load MZF into RAM..."
 msgstr "MZFをRAMに読み込み..."
@@ -7388,7 +8713,7 @@ msgid "Max Speed"
 msgstr "最高速度"
 
 #: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:160
-#: src/ui-imgui/topmenu/topmenu.cpp:54
+#: src/ui-imgui/topmenu/topmenu.cpp:57
 msgid "Pause Emulation"
 msgstr "エミュレーションを一時停止"
 
@@ -7792,21 +9117,21 @@ msgstr "予約済み"
 msgid "Port for which icena_event is scheduled"
 msgstr "icena_event がスケジュールされているポート"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:94
-#: src/ui-imgui/debugger/ppi_window.cpp:96
+#: src/ui-imgui/debugger/ppi_window.cpp:97
+#: src/ui-imgui/debugger/ppi_window.cpp:99
 msgid "Mode Set (D7=1)"
 msgstr "Mode Set (D7=1)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:125
-#: src/ui-imgui/debugger/ppi_window.cpp:127
+#: src/ui-imgui/debugger/ppi_window.cpp:128
+#: src/ui-imgui/debugger/ppi_window.cpp:130
 msgid "Bit Set/Reset (D7=0)"
 msgstr "Bit Set/Reset (D7=0)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:162
+#: src/ui-imgui/debugger/ppi_window.cpp:165
 msgid "bit"
 msgstr "ビット"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:174
+#: src/ui-imgui/debugger/ppi_window.cpp:177
 msgid ""
 "0 = key pressed, 1 = released (active LOW). Rows = bit 0..7, columns = PA0-3 "
 "selected column."
@@ -7814,15 +9139,15 @@ msgstr ""
 "0 = キー押下, 1 = リリース (active LOW). 行 = bit 0..7, 列 = PA0-3 で選択され"
 "た列."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:217
+#: src/ui-imgui/debugger/ppi_window.cpp:220
 msgid "PPI 8255 State###PPIState"
 msgstr "PPI 8255 状態###PPIState"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:227
+#: src/ui-imgui/debugger/ppi_window.cpp:230
 msgid "Last Control Word###PPI_CW"
 msgstr "最後の Control Word###PPI_CW"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:240
+#: src/ui-imgui/debugger/ppi_window.cpp:243
 msgid ""
 "Last byte written to Control port (debug mirror - 8255 CW sequencer is not "
 "HW readable)."
@@ -7830,157 +9155,157 @@ msgstr ""
 "Control ポートに書かれた最後のバイト (debug mirror - 8255 CW シーケンサは HW "
 "から読めません)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:251
+#: src/ui-imgui/debugger/ppi_window.cpp:254
 msgid "Port A###PPI_PA"
 msgstr "Port A###PPI_PA"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:264
+#: src/ui-imgui/debugger/ppi_window.cpp:267
 msgid "Output port A (sampled keyboard column + JOY enables)."
 msgstr "出力ポート A (サンプリングされたキーボード列 + JOY enables)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:269
-#: src/ui-imgui/debugger/ppi_window.cpp:355
+#: src/ui-imgui/debugger/ppi_window.cpp:272
+#: src/ui-imgui/debugger/ppi_window.cpp:358
 msgid "Bit decode:"
 msgstr "ビットデコード:"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:272
+#: src/ui-imgui/debugger/ppi_window.cpp:275
 msgid "keyboard column (PA0-3)"
 msgstr "キーボード列 (PA0-3)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:276
+#: src/ui-imgui/debugger/ppi_window.cpp:279
 msgid "JOY1 enable (active LOW)"
 msgstr "JOY1 有効 (active LOW)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:279
+#: src/ui-imgui/debugger/ppi_window.cpp:282
 msgid "JOY2 enable (active LOW)"
 msgstr "JOY2 有効 (active LOW)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:283
+#: src/ui-imgui/debugger/ppi_window.cpp:286
 msgid "JOY1 enable"
 msgstr "JOY1 有効"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:284
 #: src/ui-imgui/debugger/ppi_window.cpp:287
+#: src/ui-imgui/debugger/ppi_window.cpp:290
 msgid "not present on this arch"
 msgstr "このアーキテクチャには存在しない"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:286
+#: src/ui-imgui/debugger/ppi_window.cpp:289
 msgid "JOY2 enable"
 msgstr "JOY2 有効"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:289
+#: src/ui-imgui/debugger/ppi_window.cpp:292
 msgid "reserved"
 msgstr "予約"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:296
+#: src/ui-imgui/debugger/ppi_window.cpp:299
 msgid "Port B - Keyboard Matrix###PPI_PB"
 msgstr "Port B - キーボードマトリクス###PPI_PB"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:302
+#: src/ui-imgui/debugger/ppi_window.cpp:305
 msgid "View:"
 msgstr "表示:"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:304
+#: src/ui-imgui/debugger/ppi_window.cpp:307
 msgid "Combined###PPI_PB_VIEW_C"
 msgstr "結合###PPI_PB_VIEW_C"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:308
+#: src/ui-imgui/debugger/ppi_window.cpp:311
 msgid "AND of physical and virtual matrix (what CPU actually reads)."
 msgstr "物理マトリクスと仮想マトリクスの AND (CPU が実際に読む値)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:311
+#: src/ui-imgui/debugger/ppi_window.cpp:314
 msgid "Physical###PPI_PB_VIEW_P"
 msgstr "物理###PPI_PB_VIEW_P"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:315
+#: src/ui-imgui/debugger/ppi_window.cpp:318
 msgid "g_pio8255.keyboard_matrix[] only (SDL keyboard)."
 msgstr "g_pio8255.keyboard_matrix[] のみ (SDL キーボード)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:318
+#: src/ui-imgui/debugger/ppi_window.cpp:321
 msgid "Virtual###PPI_PB_VIEW_V"
 msgstr "仮想###PPI_PB_VIEW_V"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:322
+#: src/ui-imgui/debugger/ppi_window.cpp:325
 msgid "g_pio8255.vkbd_matrix[] only (VKBD / autotype)."
 msgstr "g_pio8255.vkbd_matrix[] のみ (VKBD / autotype)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:329
+#: src/ui-imgui/debugger/ppi_window.cpp:332
 msgid "Cell '*' = key pressed (bit=0, active LOW), '.' = released (bit=1)."
 msgstr "セル '*' = キー押下 (bit=0, active LOW), '.' = リリース (bit=1)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:336
+#: src/ui-imgui/debugger/ppi_window.cpp:339
 msgid "Port C###PPI_PC"
 msgstr "Port C###PPI_PC"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:349
+#: src/ui-imgui/debugger/ppi_window.cpp:352
 msgid "Port C raw output state (D0-D3 OUT, D4-D7 IN; D5-D7 computed on read)."
 msgstr "Port C 生の出力状態 (D0-D3 OUT, D4-D7 IN; D5-D7 は読み出し時に計算)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:359
+#: src/ui-imgui/debugger/ppi_window.cpp:362
 msgid "CTC0 audio mask (0 = mute, 1 = pass)"
 msgstr "CTC0 オーディオマスク (0 = ミュート, 1 = 通過)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:362
+#: src/ui-imgui/debugger/ppi_window.cpp:365
 msgid "CTC0 audio mask not present"
 msgstr "CTC0 オーディオマスクは存在しません"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:365
+#: src/ui-imgui/debugger/ppi_window.cpp:368
 msgid "CMT data out"
 msgstr "CMT data out"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:367
+#: src/ui-imgui/debugger/ppi_window.cpp:370
 msgid "CTC2 INT mask (0 = blocked, 1 = enabled)"
 msgstr "CTC2 INT マスク (0 = ブロック, 1 = 有効)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:369
+#: src/ui-imgui/debugger/ppi_window.cpp:372
 msgid "CMT motor control (rising edge toggles)"
 msgstr "CMT モーター制御 (立ち上がりエッジで切替)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:371
+#: src/ui-imgui/debugger/ppi_window.cpp:375
 msgid "CMT motor state"
 msgstr "CMT モーター状態"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:373
+#: src/ui-imgui/debugger/ppi_window.cpp:377
 msgid "CMT data in - computed on read (not in mirror)"
 msgstr "CMT data in - 読み出し時に計算 (mirror には無し)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:375
+#: src/ui-imgui/debugger/ppi_window.cpp:379
 msgid "Cursor blink NE556@OUT - computed on read"
 msgstr "カーソル点滅 NE556@OUT - 読み出し時に計算"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:377
+#: src/ui-imgui/debugger/ppi_window.cpp:381
 msgid "VBLN - computed on read"
 msgstr "VBLN - 読み出し時に計算"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:387
+#: src/ui-imgui/debugger/ppi_window.cpp:391
 msgid "VKBD Autotype###PPI_VKBD"
 msgstr "VKBD Autotype###PPI_VKBD"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:415
+#: src/ui-imgui/debugger/ppi_window.cpp:419
 msgid "Current column index into vkbd_autotype string."
 msgstr "vkbd_autotype 文字列内の現在の列インデックス."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:418
+#: src/ui-imgui/debugger/ppi_window.cpp:422
 msgid "Last decoded matrix byte (column<<4 | bit)."
 msgstr "最後にデコードしたマトリクスバイト (column<<4 | bit)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:421
+#: src/ui-imgui/debugger/ppi_window.cpp:425
 msgid "Shift modifier required for current char."
 msgstr "現在の文字に Shift 修飾子が必要."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:424
+#: src/ui-imgui/debugger/ppi_window.cpp:428
 msgid "Currently in key-down phase (vs. key-up gap)."
 msgstr "現在 key-down フェーズ (vs. key-up ギャップ)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:437
+#: src/ui-imgui/debugger/ppi_window.cpp:441
 msgid "Key-down duration in gdgclk ticks."
 msgstr "key-down 持続時間 (gdgclk ティック)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:449
+#: src/ui-imgui/debugger/ppi_window.cpp:453
 msgid "Key-up gap duration in gdgclk ticks."
 msgstr "key-up ギャップ持続時間 (gdgclk ティック)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:452
+#: src/ui-imgui/debugger/ppi_window.cpp:456
 msgid "Tick stamp of current phase start."
 msgstr "現在のフェーズ開始時のティックスタンプ."
 
@@ -8487,10 +9812,6 @@ msgstr "旧"
 msgid "New"
 msgstr "新"
 
-#: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:318
-msgid "Source"
-msgstr "発生元"
-
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:319
 msgid "Note"
 msgstr "備考"
@@ -8507,10 +9828,6 @@ msgstr "破棄 (ROM)"
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:352
 msgid "value unchanged"
 msgstr "値は変化なし"
-
-#: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:365
-msgid "Stopped"
-msgstr "停止中"
 
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:367
 msgid "Not started"
@@ -8574,6 +9891,10 @@ msgstr "レコード数"
 msgid "Log size in records (16-16777216), 32 bytes each."
 msgstr "ログのサイズ (レコード数 16-16777216、各 32 バイト)。"
 
+#: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:416
+msgid "Start"
+msgstr "Start"
+
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:418
 msgid ""
 "Start recording; a running log is replaced. Reset and snapshot load empty "
@@ -8581,10 +9902,6 @@ msgid ""
 msgstr ""
 "記録を開始します。実行中のログは置き換えられます。リセットとスナップショット"
 "読み込みでログは空になります。"
-
-#: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:423
-msgid "Stop"
-msgstr "停止"
 
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:432
 msgid "(all memory: emulation is slower)"
@@ -11347,8 +12664,8 @@ msgstr "置換##watch_load_ok"
 msgid "Cancel##watch_load_cancel"
 msgstr "キャンセル##watch_load_cancel"
 
-#: src/ui-imgui/devices/device_request_ui.cpp:36
-#: src/ui-imgui/topmenu/topmenu.cpp:44
+#: src/ui-imgui/devices/device_request_ui.cpp:49
+#: src/ui-imgui/topmenu/topmenu.cpp:47
 msgid ""
 "Machine settings cannot be changed while a replay is recorded or played. "
 "Stop it in the Replay menu first."
@@ -11592,7 +12909,7 @@ msgstr "デバイス再スキャン"
 msgid "Joystick"
 msgstr "ジョイスティック"
 
-#: src/ui-imgui/main_window.cpp:119
+#: src/ui-imgui/main_window.cpp:122
 msgid "No audio device - running without sound"
 msgstr "オーディオデバイスがありません - サウンドなしで実行中"
 
@@ -12118,18 +13435,22 @@ msgstr "ファイル名:"
 msgid "Save file"
 msgstr "ファイルを保存"
 
-#: src/ui-imgui/message/message_window.cpp:111
-#: src/ui-imgui/message/message_window.cpp:123
-msgid "Information"
-msgstr "情報"
-
-#: src/ui-imgui/message/message_window.cpp:115
+#: src/ui-imgui/message/message_window.cpp:188
 msgid "Error"
 msgstr "エラー"
 
-#: src/ui-imgui/message/message_window.cpp:119
+#: src/ui-imgui/message/message_window.cpp:192
 msgid "Warning"
 msgstr "警告"
+
+#: src/ui-imgui/message/message_window.cpp:197
+msgid "Information"
+msgstr "情報"
+
+#: src/ui-imgui/message/message_window.cpp:215
+#, c-format
+msgid "(repeated %u times)"
+msgstr "(%u 回繰り返し)"
 
 #: src/ui-imgui/mz700/devbus/menu_devbus.cpp:237
 #: src/ui-imgui/mz700/devbus/menu_devbus.cpp:282
@@ -12755,45 +14076,36 @@ msgstr ""
 "フレームシリーズは、変化したエミュレートフレームごとに PNG を新しいフォルダへ"
 "保存します。"
 
-#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:157
+#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:158
 msgid "Snapshot Preview"
 msgstr "スナップショットプレビュー"
 
-#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:176
+#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:177
 msgid "No screenshot available"
 msgstr "スクリーンショットがありません"
 
-#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:190
+#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:191
 msgid "Architecture"
 msgstr "アーキテクチャ"
 
-#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:191
+#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:192
 msgid "Created"
 msgstr "作成日時"
 
-#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:192
+#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:193
 #: src/ui-imgui/topmenu/menu_emulator.cpp:24
 msgid "Emulator"
 msgstr "エミュレータ"
 
-#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:197
-#: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:103
-msgid "Description"
-msgstr "説明"
-
-#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:203
-msgid "Format"
-msgstr "フォーマット"
-
-#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:216
+#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:217
 msgid "Cannot read snapshot metadata"
 msgstr "スナップショットのメタデータを読み取れません"
 
-#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:238
+#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:239
 msgid "Load Snapshot"
 msgstr "スナップショットを読み込む"
 
-#: src/ui-imgui/snapshot/snapshot_notification.cpp:87
+#: src/ui-imgui/snapshot/snapshot_notification.cpp:88
 msgid "Snapshot Error"
 msgstr "スナップショットエラー"
 
@@ -12829,18 +14141,18 @@ msgstr "クイックロード完了"
 msgid "Quick Load failed"
 msgstr "クイックロード失敗"
 
-#: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:61
-#: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:94
-#: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:98
+#: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:62
+#: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:96
+#: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:100
 msgid "Save Snapshot"
 msgstr "スナップショットを保存"
 
-#: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:108
+#: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:110
 #: src/ui-imgui/snapshot/snapshot_setup_dialog.cpp:88
 msgid "Include RAM disk content"
 msgstr "RAMディスクの内容を含める"
 
-#: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:110
+#: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:112
 #: src/ui-imgui/snapshot/snapshot_setup_dialog.cpp:89
 msgid "Include MEMEXT content"
 msgstr "MEMEXTの内容を含める"
@@ -12862,7 +14174,7 @@ msgid "Compression level"
 msgstr "圧縮レベル"
 
 #: src/ui-imgui/snapshot/snapshot_setup_dialog.cpp:97
-#: src/ui-imgui/topmenu/menu_snapshot.cpp:93
+#: src/ui-imgui/topmenu/menu_snapshot.cpp:133
 msgid "Quick Save"
 msgstr "クイックセーブ"
 
@@ -12894,69 +14206,168 @@ msgstr "現在の速度"
 msgid "Reset sliders"
 msgstr "スライダーをリセット"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:27
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:175
+msgid "Device for Direct MZF Start"
+msgstr "MZF直接起動のデバイス"
+
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:194
+msgid "CMT - cassette"
+msgstr "CMT - カセット"
+
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:195
+msgid "FD - floppy disk"
+msgstr "FD - フロッピーディスク"
+
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:196
+msgid "QD - Quick Disk"
+msgstr "QD - Quick Disk"
+
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:197
+msgid "RD - SRAM"
+msgstr "RD - SRAM"
+
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:216
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:218
+msgid "Custom value"
+msgstr "カスタム値"
+
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:236
+msgid ""
+"The device code a program gets in register BC when an MZF file\n"
+"is started directly (command line --run-mzf, MCP emu_media_run_mzf),\n"
+"as if it was loaded from that device.\n"
+"Some programs choose their default device by it."
+msgstr ""
+"MZFファイルを直接起動したとき (コマンドライン --run-mzf、MCP "
+"emu_media_run_mzf)\n"
+"にプログラムがレジスタBCで受け取るデバイスコードです。\n"
+"そのデバイスから読み込まれたものとして扱われます。\n"
+"一部のプログラムはこれで既定のデバイスを選びます。"
+
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:270
+msgid "Device Code for Direct MZF Start"
+msgstr "MZF直接起動のデバイスコード"
+
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:276
+#, c-format
+msgid "Current value: %04Xh (%s)"
+msgstr "現在の値: %04Xh (%s)"
+
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:277
+msgid "Decimal (512) or hexadecimal (0x0200 or 0200h), 0 to 65535."
+msgstr "10進数 (512) または16進数 (0x0200 または 0200h)、0から65535まで。"
+
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:294
+msgid "Invalid value"
+msgstr "無効な値"
+
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:297
+msgid ""
+"A number with a leading zero is not accepted: write hexadecimal as 0x0200 or "
+"0200h."
+msgstr ""
+"先頭に0が付いた数値は使えません。16進数は 0x0200 または 0200h と書いてくださ"
+"い。"
+
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:349
 msgid "CMT"
 msgstr "CMT"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:35
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:365
 msgid "Use CMT Hack"
 msgstr "CMT Hackを使用"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:42
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:377
 msgid "Set Default CMT MZ Speed"
 msgstr "デフォルトCMT MZ速度を設定"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:44
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:379
 msgid "1:1 - 1200 Bd"
 msgstr "1:1 - 1200 Bd"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:49
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:384
 msgid "2:1 - 2 400 Bd"
 msgstr "2:1 - 2 400 Bd"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:54
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:389
 msgid "2:1 - 2 400 Bd (cp/m)"
 msgstr "2:1 - 2 400 Bd (cp/m)"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:59
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:394
 msgid "7:3 - 2 800 Bd"
 msgstr "7:3 - 2 800 Bd"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:64
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:399
 msgid "8:3 - 3 200 Bd"
 msgstr "8:3 - 3 200 Bd"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:69
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:404
 msgid "3:1 - 3 600 Bd"
 msgstr "3:1 - 3 600 Bd"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:79
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:414
 msgid "Fast Open CMT File & Play..."
 msgstr "CMTファイルを素早く開いて再生..."
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:84
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:420
 msgid "Show Virtual CMT"
 msgstr "仮想CMTを表示"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:91
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:427
 msgid "CMT Options"
 msgstr "CMTオプション"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:93
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:429
 msgid "Enable CPU Boost"
 msgstr "CPUブーストを有効化"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:98
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:444
+msgid ""
+"Plays the tape signal through the speaker while the tape\n"
+"is playing or recording. Direct loading and saving have no signal."
+msgstr ""
+"テープの再生中または録音中に、テープの信号をスピーカーから鳴らします。\n"
+"ダイレクト読み込みとダイレクト保存には信号がありません。"
+
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:448
 msgid "MZF"
 msgstr "MZF"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:100
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:450
 msgid "Enable MZF Size Check"
 msgstr "MZFサイズチェックを有効化"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:105
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:456
+msgid "Fix MZF Size Automatically"
+msgstr "MZFサイズを自動修正"
+
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:468
 msgid "Fix FNAME Terminator"
 msgstr "FNAMEターミネータを修正"
+
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:477
+msgid "Direct Save"
+msgstr "ダイレクト保存"
+
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:485
+msgid "Direct Save works only with Direct loading: turn on Use CMT Hack first."
+msgstr ""
+"ダイレクト保存はダイレクト読み込みでのみ使えます。先に「CMT Hackを使用」をオ"
+"ンにしてください。"
+
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:487
+msgid "The selected ROM does not support direct saving."
+msgstr "選択したROMはダイレクト保存に対応していません。"
+
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:489
+msgid ""
+"Without Record, a ROM SAVE stores the file at once as a new block at the end "
+"of the tape.\n"
+"With Record pressed, the signal is recorded as usual."
+msgstr ""
+"録音なしでは、ROMのSAVEはファイルを直ちにテープ末尾の新しいブロックとして保存"
+"します。\n"
+"録音を押している場合は、通常どおり信号が録音されます。"
 
 #: src/ui-imgui/topmenu/devices/menu_devices.cpp:26
 msgid "HW & Devices"
@@ -12966,111 +14377,111 @@ msgstr "HWとデバイス"
 msgid "Bus Map"
 msgstr "バスマップ"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:72
 #: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:74
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:76
 msgid "FDC: Unsaved RAM changes"
 msgstr "FDC: 未保存のRAM変更"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:77
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:79
 #, c-format
 msgid "Drive %d is in Discard mode and has unsaved RAM changes."
 msgstr "ドライブ %d はDiscardモードで、未保存のRAM変更があります。"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:78
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:87
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:80
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:89
 #, c-format
 msgid "Switching to '%s' mode will close the current RAM buffer."
 msgstr "'%s' モードへの切り替えで現在のRAMバッファが閉じられます。"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:81
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:89
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:83
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:91
 msgid "What to do with the changes?"
 msgstr "変更をどうしますか?"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:87
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:94
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:89
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:96
 msgid "Save and switch"
 msgstr "保存して切り替え"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:88
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:95
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:90
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:97
 msgid "Switch and discard"
 msgstr "切り替えて破棄"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:164
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:166
 #: src/ui-imgui/topmenu/devices/menu_ide8.cpp:42
 msgid "No image"
 msgstr "イメージなし"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:177
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:179
 msgid "Mount..."
 msgstr "マウント..."
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:177
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:179
 msgid "Re-Mount..."
 msgstr "再マウント..."
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:202
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:204
 msgid "Read-only (FS write-protected)"
 msgstr "読み取り専用 (FS書き込み保護)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:208
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:210
 msgid "Read-only"
 msgstr "読み取り専用"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:221
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:346
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:223
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:348
 msgid "Storage mode"
 msgstr "ストレージモード"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:239
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:368
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:241
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:370
 msgid "Cached (sync at reset/umount/exit)"
 msgstr "Cached (reset/umount/exit時にsync)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:244
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:373
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:246
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:375
 msgid "Direct (write-through to file)"
 msgstr "Direct (ファイルへwrite-through)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:249
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:378
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:251
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:380
 msgid "Discard changes (in-RAM, no sync)"
 msgstr "Discard (RAMのみ、syncなし)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:257
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:259
 msgid "Sync now"
 msgstr "今すぐsync"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:271
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:273
 msgid "FDD "
 msgstr "FDD "
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:279
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:281
 msgid "(Empty)"
 msgstr "(空)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:308
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:310
 msgid "Hardware options"
 msgstr "ハードウェアオプション"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:311
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:313
 msgid "HD Patch enabled"
 msgstr "HD Patch 有効"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:317
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:319
 msgid "Bus translation: invert (Sharp)"
 msgstr "バス変換: invert (Sharp)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:322
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:324
 msgid "Sharp MZ default - XOR 0xFF between CPU bus and WD279x chip."
 msgstr "Sharp MZのデフォルト - CPUバスとWD279xチップ間でXOR 0xFF。"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:324
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:326
 msgid "Bus translation: passthrough"
 msgstr "バス変換: passthrough"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:332
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:334
 msgid ""
 "NOT compatible with Sharp MZ - no inversion between CPU bus and WD279x chip. "
 "Reserved for future 'true bus' ROMs / experiments."
@@ -13078,43 +14489,43 @@ msgstr ""
 "Sharp MZと非互換 - CPUバスとWD279xチップ間に反転なし。将来の'true bus' ROM / "
 "実験用に予約。"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:351
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:353
 msgid "Floppy Drives"
 msgstr "フロッピードライブ"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:365
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:367
 msgid "FD Controller"
 msgstr "FDコントローラ"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:375
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:377
 #: src/ui-imgui/topmenu/devices/menu_memext.cpp:64
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:188
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:190
 #: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:70
 msgid "Not Connected"
 msgstr "未接続"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:385
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:387
 msgid "WD279x (standard)"
 msgstr "WD279x (標準)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:390
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:392
 msgid "Default FDC on ports 0xD8 - 0xDF"
 msgstr "標準 FDC (ポート 0xD8 - 0xDF)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:392
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:394
 msgid "WD279x (secondary)"
 msgstr "WD279x (セカンダリ)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:397
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:399
 msgid "Unicard alternate FDC ports 0x58 - 0x5F"
 msgstr "Unicard 代替 FDC ポート 0x58 - 0x5F"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:416
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:418
 #: src/ui-imgui/topmenu/menu_tools.cpp:32
 msgid "Tools"
 msgstr "ツール"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:418
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:420
 msgid "FDC State (debugger)..."
 msgstr "FDC State (debugger)..."
 
@@ -13287,121 +14698,121 @@ msgstr "プロッタ MZ-1P16 接続済み"
 msgid "Open plotter window"
 msgstr "プロッタウィンドウを開く"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:81
 #: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:83
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:85
 msgid "QD: Unsaved RAM changes"
 msgstr "QD: 未保存のRAM変更"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:86
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:88
 msgid "Quick Disk is in Discard mode and has unsaved RAM changes."
 msgstr "Quick DiskはDiscardモードで、未保存のRAM変更があります。"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:176
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:178
 msgid "Create new QD image"
 msgstr "新しいQDイメージを作成"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:176
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:178
 msgid "qdimage.mzq"
 msgstr "qdimage.mzq"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:186
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:188
 msgid "Quick Disk"
 msgstr "Quick Disk"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:193
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:195
 msgid "MZ 1F11"
 msgstr "MZ 1F11"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:198
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:200
 msgid "Virtual - Mapped Directory"
 msgstr "仮想 - マップされたディレクトリ"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:210
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:212
 msgid "Unicard Boot Loader"
 msgstr "Unicard Boot Loader"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:223
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:225
 msgid "Empty"
 msgstr "空"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:227
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:229
 msgid "image"
 msgstr "イメージ"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:231
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:233
 msgid "directory"
 msgstr "ディレクトリ"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:235
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:232
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:237
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:235
 msgid "Unicard"
 msgstr "Unicard"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:238
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:240
 msgid "QD Drive"
 msgstr "QDドライブ"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:241
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:243
 #, c-format
 msgid " (%s)"
 msgstr " (%s)"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:252
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:254
 msgid "Dir"
 msgstr "Dir"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:259
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:261
 #, c-format
 msgid "%s: %s..."
 msgstr "%s: %s..."
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:263
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:265
 #, c-format
 msgid "%s: %s"
 msgstr "%s: %s"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:273
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:275
 msgid "Mount Image..."
 msgstr "イメージをマウント..."
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:273
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:275
 msgid "Mount Directory..."
 msgstr "ディレクトリをマウント..."
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:280
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:282
 msgid "Unmount"
 msgstr "アンマウント"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:297
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:299
 msgid "Write Protected"
 msgstr "書き込み保護"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:303
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:305
 msgid "Forced R/O by UNICARD - cannot be changed."
 msgstr "UNICARDにより強制R/O - 変更不可。"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:313
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:315
 msgid "    [FS R/O]"
 msgstr "    [FS R/O]"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:317
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:319
 msgid ""
 "File on disk is not writable - effective R/O regardless of user setting."
 msgstr "ディスク上のファイルは書き込み不可 - ユーザー設定に関わらず実質R/O。"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:330
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:332
 msgid "Save now"
 msgstr "今すぐ保存"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:387
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:389
 msgid "UNICARD mode is locked to Cached storage."
 msgstr "UNICARDモードはCachedストレージに固定。"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:392
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:394
 msgid "Create New Image..."
 msgstr "新しいイメージを作成..."
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:400
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:402
 msgid "QDisk State (debugger)..."
 msgstr "QDisk State (debugger)..."
 
@@ -13515,29 +14926,29 @@ msgstr " (ロック中: プロッタ接続)"
 msgid "Settings for User Defined..."
 msgstr "ユーザー定義の設定..."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:72
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:73
 msgid "Failed to reinitialize SD runtime."
 msgstr "SDランタイムの再初期化に失敗。"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:78
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:79
 msgid "Unicard runtime reinstalled with mgr V2.4 (uc1)."
 msgstr "mgr V2.4 (uc1) でUnicardランタイムを再インストールしました。"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:80
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:88
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:97
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:81
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:89
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:98
 msgid "Unicard runtime reinitialization failed."
 msgstr "Unicardランタイムの再初期化に失敗。"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:86
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:87
 msgid "Unicard runtime reinstalled with mgr V2.11b (uc3)."
 msgstr "mgr V2.11b (uc3) でUnicardランタイムを再インストールしました。"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:95
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:96
 msgid "Unicard runtime files in '{SD}/unicard/' have been reinitialized."
 msgstr "'{SD}/unicard/' のUnicardランタイムファイルが再初期化されました。"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:131
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:133
 msgid ""
 "SD card runtime in '{SD}/unicard/' is missing, incomplete, or does not match "
 "the selected firmware."
@@ -13545,15 +14956,15 @@ msgstr ""
 "'{SD}/unicard/' のSDカードランタイムが欠落、不完全、または選択ファームウェア"
 "と不一致。"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:134
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:136
 msgid "State on SD:"
 msgstr "SDの状態:"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:135
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:137
 msgid "Selected firmware:"
 msgstr "選択ファームウェア:"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:138
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:140
 msgid ""
 "[Reinitialize] overwrites the SD manager files to match the selected "
 "firmware. [Continue] connects with the mismatch (client may see inconsistent "
@@ -13563,19 +14974,19 @@ msgstr ""
 "き。[Continue] は不一致のまま接続 (クライアントが不一致挙動を見る可能性)。"
 "[Cancel] はUnicardを未接続のまま。"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:144
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:146
 msgid "Reinitialize##unicard_rt_reinit"
 msgstr "Reinitialize##unicard_rt_reinit"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:154
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:156
 msgid "Continue##unicard_rt_continue"
 msgstr "続行##unicard_rt_continue"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:164
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:166
 msgid "Cancel##unicard_rt_cancel"
 msgstr "キャンセル##unicard_rt_cancel"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:195
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:198
 msgid ""
 "Choose which manager version to install in '{SD}/unicard/'. This will "
 "overwrite the existing manager files."
@@ -13583,7 +14994,7 @@ msgstr ""
 "'{SD}/unicard/' にインストールするマネージャバージョンを選択。既存のマネー"
 "ジャファイルを上書きします。"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:199
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:202
 msgid ""
 "Note: This choice is independent of the currently selected simulated "
 "firmware. You can install one version while simulating the other (useful for "
@@ -13592,40 +15003,40 @@ msgstr ""
 "注: この選択は現在選択中のシミュレートファームウェアとは独立。一方のバージョ"
 "ンをインストールしつつ他方をシミュレート可 (テストに便利)。"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:207
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:210
 msgid "mgr V2.4 (uc1)##unicard_reinit_v24"
 msgstr "mgr V2.4 (uc1)##unicard_reinit_v24"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:214
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:217
 msgid "mgr V2.11b (uc3)##unicard_reinit_v211b"
 msgstr "mgr V2.11b (uc3)##unicard_reinit_v211b"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:221
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:224
 msgid "Cancel##unicard_reinit_cancel"
 msgstr "キャンセル##unicard_reinit_cancel"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:237
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:240
 msgid "Unicard Connected"
 msgstr "Unicard接続済み"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:238
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:241
 msgid "Unicard Not Connected"
 msgstr "Unicard未接続"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:264
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:267
 msgid "Firmware: uc1 (rev.60)"
 msgstr "ファームウェア: uc1 (rev.60)"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:274
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:277
 #, c-format
 msgid "Firmware: uc3 (v%d.%d)###unicard_fw_uc3"
 msgstr "Firmware: uc3 (v%d.%d)###unicard_fw_uc3"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:283
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:286
 msgid "Check runtime version on connect"
 msgstr "接続時にランタイムバージョンを確認"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:290
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:293
 msgid ""
 "On Connect, verify that {SD}/unicard/ contains the manager matching the "
 "selected firmware. Mismatch shows a dialog with option to reinitialize."
@@ -13633,15 +15044,15 @@ msgstr ""
 "接続時に {SD}/unicard/ に選択ファームウェアと合致するマネージャがあるか確認。"
 "不一致時は再初期化オプション付きダイアログを表示。"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:299
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:302
 msgid "Read-only SD"
 msgstr "読み取り専用SD"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:310
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:313
 msgid "Managed FDC"
 msgstr "管理対象 FDC"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:314
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:317
 msgid ""
 "Which FDC controller the Unicard API manages (DSK mount).\n"
 "'None' disables Unicard FDD commands.\n"
@@ -13651,11 +15062,11 @@ msgstr ""
 "'なし' は Unicard の FDD コマンドを無効にします。\n"
 "変更は今後の操作にのみ影響します。"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:341
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:344
 msgid "Set SD Root Directory..."
 msgstr "SDルートディレクトリを設定..."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:348
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:351
 msgid ""
 "Change the host directory used as the Unicard SD root.\n"
 "If connected, the Unicard is automatically reconnected to the new root."
@@ -13663,11 +15074,11 @@ msgstr ""
 "Unicard の SD ルートとして使用するホストディレクトリを変更します。\n"
 "接続中の場合、Unicard は新しいルートに自動的に再接続されます。"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:366
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:369
 msgid "Reinitialize Runtime..."
 msgstr "ランタイムを再初期化..."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:383
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:386
 msgid ""
 "Overwrites manager files in '{SD}/unicard/' (mgr.mzf, mgr800.mzf, "
 "mgr700.mzf, mgr1500.mzf) with the selected version.\n"
@@ -14067,17 +15478,17 @@ msgstr "開発モード"
 msgid "ImGui Demo"
 msgstr "ImGui Demo"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:93
+#: src/ui-imgui/topmenu/menu_replay.cpp:131
 msgid "Replay"
 msgstr "リプレイ"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:101
+#: src/ui-imgui/topmenu/menu_replay.cpp:139
 #: src/ui-imgui/topmenu/replay_window.cpp:309
 #: src/ui-imgui/topmenu/replay_window.cpp:320
 msgid "Record Inputs..."
 msgstr "入力を記録..."
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:105
+#: src/ui-imgui/topmenu/menu_replay.cpp:143
 msgid ""
 "Record keyboard, joystick, resets and debugger writes from a start snapshot, "
 "to repeat the run exactly later."
@@ -14085,25 +15496,25 @@ msgstr ""
 "開始スナップショットからキーボード、ジョイスティック、リセット、デバッガーの"
 "書き込みを記録し、後で実行を正確に再現します。"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:107
+#: src/ui-imgui/topmenu/menu_replay.cpp:145
 #: src/ui-imgui/topmenu/replay_window.cpp:309
 #: src/ui-imgui/topmenu/replay_window.cpp:321
 msgid "Play Replay..."
 msgstr "リプレイを再生..."
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:111
+#: src/ui-imgui/topmenu/menu_replay.cpp:149
 #: src/ui-imgui/topmenu/replay_window.cpp:309
 #: src/ui-imgui/topmenu/replay_window.cpp:322
 msgid "Stop Replay"
 msgstr "リプレイを停止"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:117
+#: src/ui-imgui/topmenu/menu_replay.cpp:155
 #: src/ui-imgui/topmenu/replay_window.cpp:309
 #: src/ui-imgui/topmenu/replay_window.cpp:323
 msgid "Rewind"
 msgstr "チェックポイントへ戻る"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:121
+#: src/ui-imgui/topmenu/menu_replay.cpp:159
 msgid ""
 "Go back to the previous checkpoint (again = further back). While recording, "
 "the inputs after the checkpoint are dropped and the recording goes on from "
@@ -14113,11 +15524,11 @@ msgstr ""
 "ト以降の入力が破棄され、そこから記録を続けます。ディスクやテープへの書き込み"
 "より前には戻れません。"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:124
+#: src/ui-imgui/topmenu/menu_replay.cpp:162
 msgid "Seek..."
 msgstr "フレームへ移動..."
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:129
+#: src/ui-imgui/topmenu/menu_replay.cpp:167
 msgid ""
 "Jump the playback to a frame: back via a checkpoint, forward at maximum "
 "speed."
@@ -14125,139 +15536,139 @@ msgstr ""
 "再生を指定フレームへ移動します: 戻る場合はチェックポイント経由、進む場合は最"
 "高速度で再生します。"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:130
+#: src/ui-imgui/topmenu/menu_replay.cpp:168
 msgid "Replay Control..."
 msgstr "リプレイ操作..."
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:138
+#: src/ui-imgui/topmenu/menu_replay.cpp:176
 #, c-format
 msgid "Recording: frame %u, %u events"
 msgstr "記録中: フレーム %u、イベント %u"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:141
+#: src/ui-imgui/topmenu/menu_replay.cpp:179
 #, c-format
 msgid "Rewinds: %u"
 msgstr "巻き戻し回数: %u"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:146
+#: src/ui-imgui/topmenu/menu_replay.cpp:184
 #, c-format
 msgid "Playing: frame %u / %u"
 msgstr "再生中: フレーム %u / %u"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:149
+#: src/ui-imgui/topmenu/menu_replay.cpp:187
 #, c-format
 msgid "Seeking to frame %u"
 msgstr "フレーム %u へ移動中"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:153
+#: src/ui-imgui/topmenu/menu_replay.cpp:191
 #, c-format
 msgid "Deviated: %s"
 msgstr "逸脱: %s"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:158
+#: src/ui-imgui/topmenu/menu_replay.cpp:196
 #, c-format
 msgid "Last: %s"
 msgstr "前回: %s"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:162
+#: src/ui-imgui/topmenu/menu_replay.cpp:200
 msgid "No replay"
 msgstr "リプレイなし"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:168
+#: src/ui-imgui/topmenu/menu_replay.cpp:206
 msgid "Checkpoints: off"
 msgstr "チェックポイント: オフ"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:172
+#: src/ui-imgui/topmenu/menu_replay.cpp:210
 #, c-format
 msgid "Checkpoints: %u (frames %u - %u, %u kB)"
 msgstr "チェックポイント: %u (フレーム %u - %u、%u kB)"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:188
+#: src/ui-imgui/topmenu/menu_replay.cpp:226
 msgid "Seek Replay"
 msgstr "リプレイのフレームへ移動"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:206
+#: src/ui-imgui/topmenu/menu_replay.cpp:245
 #, c-format
 msgid "Current frame %u of %u"
 msgstr "現在のフレーム %u / %u"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:211
+#: src/ui-imgui/topmenu/menu_replay.cpp:250
 #: src/ui-imgui/topmenu/replay_window.cpp:332
 #: src/ui-imgui/topmenu/replay_window.cpp:339
 msgid "Seek"
 msgstr "移動"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:245
+#: src/ui-imgui/topmenu/menu_replay.cpp:284
 msgid "Record Inputs"
 msgstr "入力を記録"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:245
+#: src/ui-imgui/topmenu/menu_replay.cpp:284
 msgid "Play Replay"
 msgstr "リプレイを再生"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:261
-#: src/ui-imgui/topmenu/menu_replay.cpp:290
+#: src/ui-imgui/topmenu/menu_replay.cpp:300
+#: src/ui-imgui/topmenu/menu_replay.cpp:329
 msgid "Replay failed"
 msgstr "リプレイに失敗しました"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:262
-#: src/ui-imgui/topmenu/menu_replay.cpp:291
+#: src/ui-imgui/topmenu/menu_replay.cpp:301
+#: src/ui-imgui/topmenu/menu_replay.cpp:330
 msgid "Replay Error"
 msgstr "リプレイエラー"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:277
+#: src/ui-imgui/topmenu/menu_replay.cpp:316
 msgid "Replay recorded"
 msgstr "リプレイを記録しました"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:281
+#: src/ui-imgui/topmenu/menu_replay.cpp:320
 msgid "Replay ended"
 msgstr "リプレイが終了しました"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:285
+#: src/ui-imgui/topmenu/menu_replay.cpp:324
 #, c-format
 msgid "Replay differs from the recording at frame %u (%s)"
 msgstr "リプレイはフレーム %u で記録と異なります (%s)"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:287
+#: src/ui-imgui/topmenu/menu_replay.cpp:326
 msgid "Replay Desync"
 msgstr "リプレイの不一致"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:344
+#: src/ui-imgui/topmenu/menu_replay.cpp:386
 #, c-format
 msgid "REPLAY REC %u"
 msgstr "リプレイ 記録 %u"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:348
+#: src/ui-imgui/topmenu/menu_replay.cpp:390
 #, c-format
 msgid "REPLAY SEEK %u -> %u"
 msgstr "リプレイ 移動 %u -> %u"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:352
+#: src/ui-imgui/topmenu/menu_replay.cpp:394
 #, c-format
 msgid "REPLAY PLAY %u / %u%s"
 msgstr "リプレイ 再生 %u / %u%s"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:353
+#: src/ui-imgui/topmenu/menu_replay.cpp:395
 msgid " (deviated)"
 msgstr " (逸脱)"
 
-#: src/ui-imgui/topmenu/menu_snapshot.cpp:72
+#: src/ui-imgui/topmenu/menu_snapshot.cpp:111
 msgid "Load Snapshot..."
 msgstr "スナップショットを読み込み..."
 
-#: src/ui-imgui/topmenu/menu_snapshot.cpp:78
+#: src/ui-imgui/topmenu/menu_snapshot.cpp:117
 msgid "Not available while a replay is recorded or played."
 msgstr "リプレイの記録中または再生中は使用できません。"
 
-#: src/ui-imgui/topmenu/menu_snapshot.cpp:81
+#: src/ui-imgui/topmenu/menu_snapshot.cpp:120
 msgid "Save Snapshot..."
 msgstr "スナップショットを保存..."
 
-#: src/ui-imgui/topmenu/menu_snapshot.cpp:88
+#: src/ui-imgui/topmenu/menu_snapshot.cpp:127
 msgid "Quick Load"
 msgstr "クイックロード"
 
-#: src/ui-imgui/topmenu/menu_snapshot.cpp:100
+#: src/ui-imgui/topmenu/menu_snapshot.cpp:140
 msgid "Snapshot Setup..."
 msgstr "スナップショット設定..."
 
@@ -14376,7 +15787,7 @@ msgstr ""
 msgid "Available while playing a replay."
 msgstr "リプレイ再生中に使用できます。"
 
-#: src/ui-imgui/topmenu/topmenu.cpp:75
+#: src/ui-imgui/topmenu/topmenu.cpp:78
 msgid "About..."
 msgstr "バージョン情報..."
 
@@ -14475,6 +15886,10 @@ msgstr "ビルド日時"
 #: src/ui-imgui/version_check/imgui_version_check.cpp:384
 msgid "Setup"
 msgstr "設定"
+
+#: src/ui-imgui/version_check/imgui_version_check.cpp:390
+msgid "Close"
+msgstr "閉じる"
 
 #: src/ui-imgui/videorec/videorec_menu.cpp:41
 msgid "Video recording is not initialized"
@@ -14892,6 +16307,189 @@ msgstr "MZ-1500仮想キーボード"
 #: src/ui-imgui/vkbd_window.cpp:229
 msgid "MZ-800 Virtual Keyboard"
 msgstr "MZ-800仮想キーボード"
+
+#: src/ui/cmt/UiCmt.cpp:31
+msgid "Default"
+msgstr "デフォルト"
+
+#: src/ui/cmt/UiCmt.cpp:36
+msgid "Custom pulses..."
+msgstr "カスタムパルス..."
+
+#: src/ui/cmt/UiCmt.cpp:49
+msgid "UNKNOWN"
+msgstr "不明"
+
+#: src/ui/vkbd/ui_vkbd.c:207
+msgid "PC key: CapsLock"
+msgstr "PCキー: CapsLock"
+
+#: src/ui/vkbd/ui_vkbd.c:210
+msgid "PC key: \\"
+msgstr "PCキー: \\"
+
+#: src/ui/vkbd/ui_vkbd.c:213
+msgid "PC key: \\ or Tab"
+msgstr "PCキー: \\ または Tab"
+
+#: src/ui/vkbd/ui_vkbd.c:216
+msgid "PC key: ~"
+msgstr "PCキー: ~"
+
+#: src/ui/vkbd/ui_vkbd.c:218
+msgid "PC key: Esc or End"
+msgstr "PCキー: Esc または End"
+
+#: src/ui/vkbd/ui_vkbd.c:220
+msgid "PC key: Insert"
+msgstr "PCキー: Insert"
+
+#: src/ui/vkbd/ui_vkbd.c:222
+msgid "PC key: Backspace or Delete"
+msgstr "PCキー: Backspace または Delete"
+
+#: src/ui/vkbd/ui_vkbd.c:224
+msgid "PC key: F6"
+msgstr "PCキー: F6"
+
+#: src/ui/vkbd/ui_vkbd.c:226
+msgid "PC key: F7"
+msgstr "PCキー: F7"
+
+#: src/ui/vkbd/ui_vkbd.c:228
+msgid "PC key: F8"
+msgstr "PCキー: F8"
+
+#: src/ui/vkbd/ui_vkbd.c:230
+msgid "PC key: F9"
+msgstr "PCキー: F9"
+
+#~ msgid ""
+#~ "The device code a program gets in register BC when an MZF file is started "
+#~ "directly (command line --run-mzf, MCP emu_media_run_mzf), as if it was "
+#~ "loaded from that device. Some programs choose their default device by it."
+#~ msgstr ""
+#~ "MZFファイルを直接起動したとき (コマンドライン --run-mzf、MCP "
+#~ "emu_media_run_mzf) にプログラムがレジスタBCで受け取るデバイスコードです。"
+#~ "そのデバイスから読み込まれたものとして扱われます。一部のプログラムはこれで"
+#~ "既定のデバイスを選びます。"
+
+#~ msgid ""
+#~ "Without Record, a ROM SAVE stores the file at once as a new block at the "
+#~ "end of the tape. With Record pressed, the signal is recorded as usual."
+#~ msgstr ""
+#~ "録音なしでは、ROMのSAVEはファイルを直ちにテープ末尾の新しいブロックとして"
+#~ "保存します。録音を押している場合は、通常どおり信号が録音されます。"
+
+#~ msgid "Direct Save: on (a ROM SAVE goes straight to the tape)"
+#~ msgstr "ダイレクト保存: オン (ROMのSAVEはテープに直接保存)"
+
+#~ msgid "Direct Save: off (a ROM SAVE records the signal)"
+#~ msgstr "ダイレクト保存: オフ (ROMのSAVEは信号として録音)"
+
+#~ msgid ""
+#~ "A ROM SAVE stores the file at once as a new block at the end of the tape, "
+#~ "without Record. Turn it off to record the signal of a ROM SAVE."
+#~ msgstr ""
+#~ "ROMのSAVEは録音なしでファイルを直ちにテープ末尾の新しいブロックとして保存"
+#~ "します。ROMのSAVEの信号を録音するにはオフにしてください。"
+
+#~ msgid "CRC error"
+#~ msgstr "CRCエラー"
+
+#~ msgid "Exec"
+#~ msgstr "Exec"
+
+#~ msgid "Tape Filelist"
+#~ msgstr "テープファイル一覧"
+
+#~ msgid "Playing time:"
+#~ msgstr "再生時間:"
+
+#~ msgid "Remaining time:"
+#~ msgstr "残り時間:"
+
+#~ msgid "CMT Hack"
+#~ msgstr "CMT Hack"
+
+#~ msgid "CPU Boost"
+#~ msgstr "CPUブースト"
+
+#~ msgid "Click here to change the time info mode."
+#~ msgstr "ここをクリックして時間情報モードを変更します。"
+
+#~ msgid "Block"
+#~ msgstr "ブロック"
+
+#~ msgid "of"
+#~ msgstr "/"
+
+#~ msgid "FSize"
+#~ msgstr "FSize"
+
+#~ msgid "FExec"
+#~ msgstr "FExec"
+
+#~ msgid "FStart"
+#~ msgstr "FStart"
+
+#~ msgid "Stream"
+#~ msgstr "Stream"
+
+#~ msgid "Rate"
+#~ msgstr "Rate"
+
+#~ msgid "SSize"
+#~ msgstr "SSize"
+
+#~ msgid "Default MZ Speed:"
+#~ msgstr "デフォルトMZ速度:"
+
+#~ msgid ""
+#~ "Recording a replay: tape control is recorded; another tape and speed "
+#~ "settings are not available."
+#~ msgstr ""
+#~ "リプレイ記録中: テープ操作は記録されます。別のテープと速度設定は使用できま"
+#~ "せん。"
+
+#~ msgid "Tape control is not available while a replay is recorded or played."
+#~ msgstr "入力の記録中または再生中はテープを操作できません。"
+
+#~ msgid "CMT Hack is activated!"
+#~ msgstr "CMT Hackが有効です！"
+
+#~ msgid "Virtual CMT is not available!"
+#~ msgstr "仮想CMTは利用できません！"
+
+#~ msgid "No tape loaded"
+#~ msgstr "テープが挿入されていません"
+
+#~ msgid "Stopped - Ready to Play"
+#~ msgstr "停止 - 再生準備完了"
+
+#~ msgid "(paused)"
+#~ msgstr "(一時停止)"
+
+#~ msgid "*** Empty ***"
+#~ msgstr "*** 空 ***"
+
+#~ msgid "Recording (paused)"
+#~ msgstr "録音中 (一時停止)"
+
+#~ msgid "Recording.."
+#~ msgstr "録音中.."
+
+#~ msgid "Create a new WAV file"
+#~ msgstr "新しいWAVファイルを作成"
+
+#~ msgid "newfile.wav"
+#~ msgstr "newfile.wav"
+
+#~ msgid "All Supported CMT Files"
+#~ msgstr "すべてのサポートされたCMTファイル"
+
+#~ msgid "Tape Files"
+#~ msgstr "テープファイル"
 
 #~ msgid ""
 #~ "State: filled circle = present or connected, empty circle = not present, "

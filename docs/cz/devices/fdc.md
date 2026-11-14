@@ -11,7 +11,7 @@ chipu pracuje s "true-bus" hodnotami podle datasheetu.
 
 ## Připojení radiče
 
-Z menu Devices / FD Controller lze řadič logicky odpojit nebo
+Z menu HW & Devices / FD Controller lze řadič logicky odpojit nebo
 připojit:
 
 | Volba         | Význam                                                       |
@@ -27,7 +27,7 @@ adresovat čtyři nezávislé mechaniky (FDD0..FDD3). Každá mechanika má
 vlastní mount stav, vlastní DSK obraz, vlastní R/O nastavení a vlastní
 storage mode.
 
-V menu Devices / FD Controller / "FDD N" jsou pro každou mechaniku
+V menu HW & Devices / FD Controller / "FDD N" jsou pro každou mechaniku
 dostupné položky:
 
 - **Mount...** - otevře file chooser pro výběr DSK obrazu (klávesová
@@ -146,7 +146,7 @@ hodnoty lze sledovat v FDC State debugger okně.
 
 ## HW volby FDC chipu
 
-V menu Devices / FD Controller je sekce "Hardware options" s těmito
+V menu HW & Devices / FD Controller je sekce "Hardware options" s těmito
 přepínači. Změna platí hned, řadič čte obě volby za běhu; restart
 emulátoru není potřeba.
 
@@ -168,7 +168,7 @@ INI při exitu.
 
 ## FDC State debugger window
 
-Z menu Devices / FD Controller / "FDC State (debugger)..." se otevře
+Z menu HW & Devices / FD Controller / "FDC State (debugger)..." se otevře
 okno s kompletním stavem FDC subsystému (k dispozici jen v debug build
 emulátoru). Okno se refreshuje automaticky při každém ImGui rendru.
 

@@ -1,7 +1,7 @@
 /**
  * @file   mzf.h
  * @author Michal Hucik <hucik@ordoz.com>
- * @version 2.0.0
+ * @version 2.1.1
  * @brief  Veřejné API knihovny pro MZF souborový formát počítačů Sharp MZ.
  *
  * Knihovna pro práci s MZF souborovým formátem počítačů Sharp MZ
@@ -18,9 +18,14 @@
  * mzf_tools (viz mzf_tools.h).
  *
  * @par Changelog:
- * - 2026-03-14: Proběhla kompletní revize a refaktorizace. Vytvořeny unit testy.
+ * - 2026-03-14: Proběhla kompletní kontrola kódu a refaktorizace. Vytvořeny unit testy.
+ * - 2026-11-09: popisy typů souborů 02h-05h podle dokumentace BASICu 1Z-016 (2.1.1)
  *
  * @par Licence:
+ * GNU General Public License v3 (GPLv3)
+ *
+ * Copyright (C) 2017-2026 Michal Hucik <hucik@ordoz.com>
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -28,11 +33,11 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
 
@@ -77,12 +82,12 @@ extern "C" {
 #define MZF_FTYPE_OBJ           0x01
 /** @brief Program BASICu uložený `SAVE` bez volby A (binární forma) */
 #define MZF_FTYPE_BTX           0x02
-/** @brief BSD - jméno podle tabulky typů ROM; podle manuálu sekvenční data
- *  nebo program BASICu v ASCII (`SAVE ...,A`, kód 03h neověřen); používá ho
- *  i boot disku IPLPRO */
+/** @brief BSD - jméno podle tabulky typů ROM; podle dokumentace BASICu 1Z-016
+ *  sekvenční data nebo program BASICu v ASCII (`SAVE ...,A`, kód 03h
+ *  neověřen); používá ho i boot disku IPLPRO */
 #define MZF_FTYPE_BSD           0x03
-/** @brief BRD - datový soubor BASICu 1Z-016 z `WOPEN#`/`PRINT#` (manuál ho
- *  nazývá "BSD file") */
+/** @brief BRD - datový soubor BASICu 1Z-016 z `WOPEN#`/`PRINT#` (dokumentace
+ *  BASICu ho nazývá "BSD file") */
 #define MZF_FTYPE_BRD           0x04
 /** @brief RB - program BASICu ve sbalené formě */
 #define MZF_FTYPE_RB            0x05
@@ -109,7 +114,7 @@ typedef enum en_MZF_ERROR {
     /** @brief Jméno souboru v Sharp MZ ASCII — 16 znaků + terminátor 0x0d */
     typedef struct __attribute__((packed)) st_MZF_FILENAME {
         uint8_t name[MZF_FILE_NAME_LENGTH]; /**< znaky jména souboru v Sharp MZ ASCII */
-        uint8_t terminator;                 /**< terminátorový bajt (vždy 0x0d) */
+        uint8_t terminator;                 /**< bajt 11h: obvykle 0x0d, ROM SAVE zapíše bajt z paměti (např. 0x00) */
     } st_MZF_FILENAME;
 
 /** @brief Plná délka struktury jména (16 znaků + 1 terminátor) */
@@ -154,17 +159,35 @@ typedef enum en_MZF_ERROR {
     /**
      * @brief Konverze endianity uint16 polí hlavičky (LE <-> host byte order).
      *
-     * Funkce je symetrická — volání dvakrát vrátí původní hodnoty.
+     * Funkce je symetrická - volání dvakrát vrátí původní hodnoty.
      * Nastavuje také fname.terminator na 0x0D.
      *
      * @param mzfhdr Ukazatel na hlavičku k úpravě
+     * @see mzf_header_swap_endianity() - totéž bez změny fname.terminator
      */
     extern void mzf_header_items_correction ( st_MZF_HEADER *mzfhdr );
+
+    /**
+     * @brief Konverze endianity fsize, fstrt a fexec (LE <-> host byte order) bez dalších změn.
+     *
+     * Na rozdíl od mzf_header_items_correction() nechá fname.terminator (11h)
+     * i všechny ostatní bajty hlavičky beze změny. Pro cesty, které mají přenést
+     * hlavičku tak, jak je na pásce nebo v souboru (ROM SAVE zapíše 11h tak, jak
+     * je v paměti, např. 00h).
+     *
+     * Funkce je symetrická - volání dvakrát vrátí původní hodnoty.
+     *
+     * @param mzfhdr Ukazatel na hlavičku k úpravě; NULL se ignoruje.
+     */
+    extern void mzf_header_swap_endianity ( st_MZF_HEADER *mzfhdr );
 
     /**
      * @brief Načte MZF hlavičku z handleru na daném byte offsetu.
      *
      * Automaticky provede konverzi endianity přes mzf_header_items_correction().
+     * Vedlejší efekt: bajt 11h (fname.terminator) nastaví na 0Dh (platí i pro
+     * mzf_read_header() a mzf_load()); kdo potřebuje bajt ze souboru, přečte
+     * ho zvlášť.
      *
      * @param h       Otevřený handler (soubor nebo paměť)
      * @param offset  Byte offset v datovém zdroji
@@ -358,6 +381,15 @@ typedef enum en_MZF_ERROR {
 
 /** @brief Přetypování proměnné na uint8_t* — zpětně kompatibilní makro pro starší kód */
 #define MZF_UINT8_FNAME(n) ((uint8_t*)&(n))
+
+    /** @brief Verze knihovny mzf. */
+#define MZF_VERSION "2.1.1"
+
+    /**
+     * @brief Vrátí řetězec s verzí knihovny mzf.
+     * @return Statický řetězec s verzí (např. "2.0.0").
+     */
+    extern const char* mzf_version ( void );
 
 #ifdef __cplusplus
 }

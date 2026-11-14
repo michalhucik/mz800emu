@@ -6,7 +6,8 @@
  *
  * Testuje: velikosti binárních struktur, parsování hlavičky (validní/nevalidní),
  *          chunk scanning (přeskakování neznámých chunků), čtení vzorků
- *          (normalizovaná float hodnota, 1-bit kvantizace), zápis WAV souborů,
+ *          (normalizovaná float hodnota včetně 32-bit IEEE float WAV, 1-bit
+ *          kvantizace), zápis WAV souborů,
  *          roundtrip (zápis → čtení), polaritu, vícekanálové WAV, chybové kódy,
  *          robustnost (NULL vstupy, poškozená data, prázdné WAV).
  *
@@ -14,6 +15,7 @@
  *
  * @par Changelog:
  * - 2026-03-14: Proběhla kompletní revize a refaktorizace. Vytvořeny unit testy.
+ * - 2026-11-09: Test čtení 32-bit IEEE float mono WAV (wav 2.1.0).
  *
  * @par Licence:
  * This program is free software: you can redistribute it and/or modify
@@ -38,7 +40,7 @@
 
 #include "libs/wav/wav.h"
 #include "libs/generic_driver/generic_driver.h"
-#include "generic_driver/memory_driver.h"
+#include "libs/generic_driver/memory_driver.h"
 #include "libs/endianity/endianity.h"
 
 
@@ -352,7 +354,7 @@ static void test_parse_bad_riff ( void ) {
 }
 
 
-/** @brief Testuje detekci nepodporovaného formátového kódu (IEEE float místo PCM) */
+/** @brief Testuje detekci nepodporovaného formátového kódu (A-law 0x0006 místo PCM; IEEE float čte knihovna od wav 2.1.0) */
 static void test_parse_unsupported_codec ( void ) {
     MZTEST_REQUIRE_LEVEL ( MZTEST_LEVEL_UNIT );
 
@@ -361,8 +363,8 @@ static void test_parse_unsupported_codec ( void ) {
     TEST_ASSERT_NOT_NULL ( h );
 
     /* format_code je na offsetu: RIFF(12) + chunk_hdr(8) + 0 = 20 */
-    uint16_t float_code = endianity_bswap16_LE ( WAVE_FORMAT_CODE_IEEE_FLOAT );
-    write_raw_bytes ( h, 20, &float_code, 2 );
+    uint16_t unsupported_code = endianity_bswap16_LE ( 0x0006 ); /* WAVE_FORMAT_ALAW */
+    write_raw_bytes ( h, 20, &unsupported_code, 2 );
 
     en_WAV_ERROR err;
     st_WAV_SIMPLE_HEADER *sh = wav_simple_header_new_from_handler ( h, &err );
@@ -508,6 +510,83 @@ static void test_sample_float_16bit ( void ) {
     /* -32768 → -1.0 */
     TEST_ASSERT_EQUAL_INT ( WAV_OK, wav_get_sample_float ( h, sh, 4, 0, &val ) );
     TEST_ASSERT_FLOAT_WITHIN ( 0.001, -1.0, val );
+
+    wav_simple_header_destroy ( sh );
+}
+
+
+/*
+ * 32-bit IEEE float mono WAV (format_code 3) - hlavička se přijme a vzorky
+ * se vrátí beze změny jako normalizované hodnoty.
+ */
+static void test_sample_float_ieee32_mono ( void ) {
+    MZTEST_REQUIRE_LEVEL ( MZTEST_LEVEL_UNIT );
+
+    const float samples[] = { 0.5f, -0.5f, 0.0f, 1.0f };
+    const uint32_t num_samples = sizeof ( samples ) / sizeof ( samples[0] );
+    const uint32_t data_size = num_samples * 4;
+    const uint32_t fmt_size = sizeof ( st_WAV_FMT16 );
+    const uint32_t total_size = sizeof ( st_WAV_RIFF_HEADER )
+                              + sizeof ( st_WAV_CHUNK_HEADER ) + fmt_size
+                              + sizeof ( st_WAV_CHUNK_HEADER ) + data_size;
+
+    st_HANDLER *h = open_memory_handler ( total_size );
+    TEST_ASSERT_NOT_NULL ( h );
+
+    /* RIFF + fmt (IEEE float, 1 kanál, 44100 Hz, 32 bit) + data, ručně v LE */
+    st_WAV_RIFF_HEADER riff;
+    memcpy ( riff.riff_tag, "RIFF", 4 );
+    riff.overall_size = endianity_bswap32_LE ( total_size - 8 );
+    memcpy ( riff.wave_tag, "WAVE", 4 );
+
+    st_WAV_CHUNK_HEADER fmt_hdr;
+    memcpy ( fmt_hdr.chunk_tag, "fmt ", 4 );
+    fmt_hdr.chunk_size = endianity_bswap32_LE ( fmt_size );
+
+    st_WAV_FMT16 fmt;
+    fmt.format_code = endianity_bswap16_LE ( WAVE_FORMAT_CODE_IEEE_FLOAT );
+    fmt.channels = endianity_bswap16_LE ( 1 );
+    fmt.sample_rate = endianity_bswap32_LE ( 44100 );
+    fmt.bytes_per_sec = endianity_bswap32_LE ( 44100 * 4 );
+    fmt.block_size = endianity_bswap16_LE ( 4 );
+    fmt.bits_per_sample = endianity_bswap16_LE ( 32 );
+
+    st_WAV_CHUNK_HEADER data_hdr;
+    memcpy ( data_hdr.chunk_tag, "data", 4 );
+    data_hdr.chunk_size = endianity_bswap32_LE ( data_size );
+
+    uint32_t offset = 0;
+    TEST_ASSERT_EQUAL_INT ( EXIT_SUCCESS, write_raw_bytes ( h, offset, &riff, sizeof ( riff ) ) );
+    offset += sizeof ( riff );
+    TEST_ASSERT_EQUAL_INT ( EXIT_SUCCESS, write_raw_bytes ( h, offset, &fmt_hdr, sizeof ( fmt_hdr ) ) );
+    offset += sizeof ( fmt_hdr );
+    TEST_ASSERT_EQUAL_INT ( EXIT_SUCCESS, write_raw_bytes ( h, offset, &fmt, sizeof ( fmt ) ) );
+    offset += sizeof ( fmt );
+    TEST_ASSERT_EQUAL_INT ( EXIT_SUCCESS, write_raw_bytes ( h, offset, &data_hdr, sizeof ( data_hdr ) ) );
+    offset += sizeof ( data_hdr );
+    for ( uint32_t i = 0; i < num_samples; i++ ) {
+        uint32_t u;
+        memcpy ( &u, &samples[i], sizeof ( u ) );
+        u = endianity_bswap32_LE ( u );
+        TEST_ASSERT_EQUAL_INT ( EXIT_SUCCESS, write_raw_bytes ( h, offset, &u, sizeof ( u ) ) );
+        offset += sizeof ( u );
+    }
+    TEST_ASSERT_EQUAL_UINT32 ( total_size, offset );
+
+    en_WAV_ERROR err = WAV_ERROR_IO;
+    st_WAV_SIMPLE_HEADER *sh = wav_simple_header_new_from_handler ( h, &err );
+    TEST_ASSERT_NOT_NULL ( sh );
+    TEST_ASSERT_EQUAL_INT ( WAV_OK, err );
+    TEST_ASSERT_EQUAL_UINT16 ( WAVE_FORMAT_CODE_IEEE_FLOAT, sh->format_code );
+    TEST_ASSERT_EQUAL_UINT16 ( WAVE_FORMAT_CODE_IEEE_FLOAT, sh->sample_format );
+    TEST_ASSERT_EQUAL_UINT16 ( 32, sh->bits_per_sample );
+    TEST_ASSERT_EQUAL_UINT32 ( num_samples, sh->blocks );
+
+    for ( uint32_t i = 0; i < num_samples; i++ ) {
+        double val = -99.0;
+        TEST_ASSERT_EQUAL_INT ( WAV_OK, wav_get_sample_float ( h, sh, i, 0, &val ) );
+        TEST_ASSERT_FLOAT_WITHIN ( 1e-6, (double) samples[i], val );
+    }
 
     wav_simple_header_destroy ( sh );
 }
@@ -854,6 +933,7 @@ int main ( int argc, char *argv[] ) {
     /* Čtení vzorků — float */
     RUN_TEST ( test_sample_float_8bit_range );
     RUN_TEST ( test_sample_float_16bit );
+    RUN_TEST ( test_sample_float_ieee32_mono );
     RUN_TEST ( test_sample_float_out_of_range );
     RUN_TEST ( test_sample_float_null_params );
 

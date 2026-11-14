@@ -18,7 +18,8 @@ a testovací program vyrobený v testu (MZF na 1200h):
 
 Případy:
   1. --exit-after-frames + --automation-dir: kód 0, result.json (schéma,
-     snímky, registry, hashe), screen.png;
+     snímky, registry, hashe, inputs včetně kódu zařízení run_mzf_device /
+     run_mzf_bc z nastavení i z --run-mzf-device), screen.png;
   2. --timeout-frames bez jiné podmínky: kód 2;
   3. --exit-on-pc se skip: kód 0, trigger.hits = skip + 1, option;
   4. --fail-on-pc: kód 1;
@@ -159,6 +160,12 @@ def case_frames(exe, tmp):
     check(res["artifacts"]["screenshot"] and Path(res["artifacts"]["screenshot"]).name == "screen.png",
           "artifacts.screenshot")
     check(res["inputs"]["run_mzf"].endswith("exittest.mzf"), "inputs.run_mzf")
+    check(res["inputs"]["run_mzf_device"] == "cmt" and res["inputs"]["run_mzf_bc"] == 0x0100,
+          f"inputs.run_mzf_device / run_mzf_bc from the setting ({res['inputs']})")
+    r = run(exe, tmp, "frames_dev", "--exit-after-frames", "5", "--run-mzf-device", " QD ")
+    check(r.code == 0 and r.result["inputs"]["run_mzf_device"] == "qd"
+          and r.result["inputs"]["run_mzf_bc"] == 0x0300,
+          f"inputs.run_mzf_device / run_mzf_bc from --run-mzf-device ({r.result and r.result['inputs']})")
     return res
 
 

@@ -127,27 +127,40 @@ documented separately in [Resources overview](resources-overview.md).
 | `emu_media_insert` | **YES** | Insert image into slot (auto-eject when already mounted) |
 | `emu_media_eject` | no | Eject image from slot |
 | `emu_media_state` | no | Snapshot of all 11 slots (cmt/fdc0_fd0..3/fdc1_fd0..3/qd/ide8) |
-| `emu_cmt_open` | **YES** | Open a tape file (.mzf, .mzt, .wav, ...) into the real tape drive, optionally play |
-| `emu_cmt_eject` | **YES** | Eject the tape from the real tape drive |
+| `emu_cmt_open` | **YES** | Open a tape file (.tmz, .tzx, .mzf, .m12, .mzt, .tap, .wav) into the real tape drive, optionally play; a file that cannot be opened leaves the inserted tape; import warnings and discarded unsaved changes in `warning` |
+| `emu_cmt_eject` | **YES** | Eject the tape from the real tape drive; `warning` when unsaved changes or a recording were discarded |
 | `emu_cmt_play` | **YES** | Start tape playback (transport PLAY) |
 | `emu_cmt_play_paused` | **YES** | Start tape playback paused (waits until resumed) |
 | `emu_cmt_pause` | **YES** | Pause / resume the tape transport |
-| `emu_cmt_stop` | **YES** | Stop the tape transport (PLAY or RECORD -> STOP) |
-| `emu_cmt_record` | **YES** | Record the tape output to a WAV file |
-| `emu_cmt_hack_set` | **YES** | Enable / disable cmthack (instant tape load ROM patch) |
+| `emu_cmt_stop` | **YES** | Stop the tape transport (PLAY or RECORD -> STOP); after a recording the result in `recorded` |
+| `emu_cmt_record` | **YES** | Record the tape output into the tape (optionally also a WAV or tape file after the stop) |
+| `emu_cmt_save` | **YES** | Save the inserted tape to a file (.tmz, .tzx, .mzt, .mzf, .m12) |
+| `emu_cmt_export_block` | **YES** | Export one tape block as an MZF or WAV file |
+| `emu_cmt_new_tape` | **YES** | Insert a new empty tape |
+| `emu_cmt_hack_set` | **YES** | Enable / disable cmthack (instant tape load ROM patch; with a tape inserted it reads the current tape block); changes only with the tape stopped |
+| `emu_cmt_load_directly` | **YES** | Pick a tape block and switch cmthack on in one step, as "Load directly" in the window (deck stopped) |
 | `emu_cmt_set_cpu_boost` | **YES** | Enable / disable CPU boost while the tape runs |
 | `emu_cmt_set_mzfsize_check` | **YES** | Enable / disable the MZF size check on tape load |
 | `emu_cmt_set_polarity` | **YES** | Tape signal polarity (rear DIP switch) |
 | `emu_cmt_set_speed` | **YES** | Default playback speed of the virtual cassette (ratio or custom pulses) |
-| `emu_cmt_tape_seek` | **YES** | Seek a multi-block tape to a block |
+| `emu_cmt_tape_seek` | **YES** | Seek the tape to a block (every tape, also a single MZF or WAV) |
+| `emu_cmt_tape_step` | **YES** | Move to the next, previous or first playable block, as the Next / Previous / Rewind buttons of the deck |
 | `emu_cmt_tape_set_block_speed` | **YES** | Playback speed of a single tape block |
+| `emu_cmt_tape_delete_blocks` | **YES** | Delete blocks from the inserted tape (deck stopped) |
+| `emu_cmt_tape_move_block` | **YES** | Move a block of the inserted tape to another position (deck stopped) |
+| `emu_cmt_tape_import` | **YES** | Insert all blocks of a tape file into the inserted tape, or into a new tape (deck stopped) |
+| `emu_cmt_export_tape` | **YES** | Export the whole tape as a WAV file as it plays |
+| `emu_cmt_tape_analyze` | **YES** | Find files in a raw signal block (WAV, undecoded recording); optionally add them as file blocks (deck stopped) |
+| `emu_cmt_tape_info` | **YES** | Read or write the tape information (Archive Info texts, target machine) |
+| `emu_cmt_tape_check` | no | Check the structure of the inserted tape (read only) |
+| `emu_cmt_tape_convert_block` | **YES** | Rebuild a TMZ file block with another writer profile (deck stopped) |
 | `emu_set_speed` | no | Emulation speed: 100 %, custom percent or MAX SPEED |
 | `emu_speed_step` | no | Change the custom emulation speed by a relative percentage |
 | `emu_settings_set` | **YES** | Live INI write (whitelist); **mutates global state** |
 | `emu_settings_get` | no | Read INI key + type + live value (open read, no whitelist) |
 | `emu_platform_set` | **YES** | Platform switch attempt - returns error (compile-time MZARCH) |
-| `emu_periph_attach` | **YES** | Attaches a peripheral at runtime (like the Devices menu) |
-| `emu_periph_detach` | **YES** | Detaches a peripheral at runtime (like the Devices menu) |
+| `emu_periph_attach` | **YES** | Attaches a peripheral at runtime (like the HW & Devices menu) |
+| `emu_periph_detach` | **YES** | Detaches a peripheral at runtime (like the HW & Devices menu) |
 | `emu_get_devices` | no | Expansion devices of the MZ-700 core: id, options, ports, MMIO, regions, outputs |
 | `emu_device_screenshot` | no | Picture of an expansion device's own monitor (secondary output) as PNG or palette indices |
 | `emu_get_bus_map` | no | Who owns each I/O port and MMIO address (board chips and expansion devices), output stage, flags, activity; bus model (conflict policy, undriven bus) |
@@ -227,6 +240,8 @@ Sensitive tools include:
   state)
 - **Replay** - `emu_replay_record_start` (overwrites a file),
   `emu_replay_play` (replaces emu state)
+- **Tape files** - `emu_cmt_save`, `emu_cmt_export_block`,
+  `emu_cmt_export_tape` and `emu_cmt_record` with `path` (write a file)
 - **Media operations** - `emu_media_load_binary` (raw RAM write),
   `emu_media_insert` (auto-eject overwrites mounted image)
 - **Configuration** - `emu_settings_set` (mutates global state),
@@ -562,7 +577,10 @@ Arguments:
   `pcg`, `periph`, `memmap`, `rom`, `media`, `inputs`, `ramdisk`, `cmt`;
   default all
 - `include_media` (bool, default false) - also hash the content of disk,
-  Quick Disk, IDE8 and tape images, MemExt FLASH and RAM disks
+  Quick Disk and IDE8 images, of the tape (as it is in the emulator, with
+  unsaved changes - never the file on disk; a replay gives the same
+  value), MemExt FLASH and RAM disks
+
 
 Returns `sha256` (over the requested parts), `parts` (`{name: hex}`,
 `null` = the part does not exist in this build or configuration),
@@ -1537,14 +1555,25 @@ boundary (after `emu_run(frames=N)` or a `deadline`, or a pause sent
 while running). In a pause **between** frame boundaries (after a step or
 a breakpoint) they are refused with an explanation. Tape control
 (`emu_cmt_play`, `emu_cmt_play_paused`, `emu_cmt_stop`, `emu_cmt_pause`,
-`emu_cmt_eject`, `emu_cmt_tape_seek`, `emu_cmt_record`) is recorded the
-same way. Tools that change the machine in a way the replay cannot
-repeat are refused: snapshot load, media, inserting a tape
-(`emu_cmt_open`), tape speed, pulses, polarity and boost, the CMT hack,
-block speed, settings, platform, peripherals, memory map, `emu_io_read`
-(side effects), `emu_freeze_add`. Starting is refused while autotype
-runs, Freeze Bytes are active or the tape records. Breakpoint actions that
-write (`poke`, `set`) are not recorded: the manifest gets a warning.
+`emu_cmt_eject`, `emu_cmt_tape_seek`, `emu_cmt_tape_step`,
+`emu_cmt_record`, `emu_cmt_new_tape`) is recorded the same way. Tools
+that change the machine in a way the replay cannot repeat are refused:
+snapshot load, media, inserting a tape (`emu_cmt_open`), saving the tape
+(`emu_cmt_save`; a replay never writes user files - during playback
+`emu_cmt_save` and `emu_cmt_record` with a path are refused as well,
+`emu_cmt_record` without a path and `emu_cmt_export_block` are allowed),
+tape speed, pulses, polarity and boost, the CMT hack (`emu_cmt_hack_set`
+and `emu_cmt_load_directly`; during playback they fail as well), block
+speed, tape edits (`emu_cmt_tape_delete_blocks`,
+`emu_cmt_tape_move_block`, `emu_cmt_tape_import`, `emu_cmt_tape_analyze`
+with `apply` "add" or "replace", `emu_cmt_tape_info` with `set`,
+`emu_cmt_tape_convert_block`; during playback they fail as well;
+`emu_cmt_export_tape`, `emu_cmt_tape_analyze` without apply, reading
+`emu_cmt_tape_info` and `emu_cmt_tape_check` are allowed), settings,
+platform, peripherals, memory map, `emu_io_read` (side effects),
+`emu_freeze_add`. Starting is refused while autotype runs, Freeze Bytes
+are active or the tape records. Breakpoint actions that write (`poke`,
+`set`) are not recorded: the manifest gets a warning.
 
 Returns the status (see `emu_replay_status`).
 
@@ -1595,10 +1624,13 @@ playing it is a seek back to that checkpoint (see `emu_replay_seek`;
 when it runs, the answer carries its `run_seq`).
 
 Checkpoints do not hold the contents of the media. A checkpoint after
-which a disk (FDC, Quick Disk, IDE8) or the tape was written, or the tape
-was ejected, cannot be used: while recording the rewind is refused,
-while playing the playback starts again from the beginning. No
-checkpoint is taken while autotype runs or the tape records. Errors:
+which a disk (FDC, Quick Disk, IDE8) was written, a recording to tape
+with a file path started, or the tape was ejected, cannot be used: while
+recording the rewind is refused, while playing the playback starts again
+from the beginning. A recording to tape without a path is undone by going
+back (the appended blocks are removed; a checkpoint taken without a tape
+ejects the tape the recording created). No checkpoint is taken while
+autotype runs or while a tape recording has more than 1 MB of edges. Errors:
 `checkpoints are off`, `no checkpoint at or before frame N (the oldest
 kept is frame M)`, `a disk or the tape was written or ejected after frame
 N; rewinding past a media change is not possible`, `nothing is recording
@@ -2168,7 +2200,7 @@ Unified access to media operations across 11 supported slots:
 
 | Slot | Meaning |
 |------|---------|
-| `cmt` | CMT cassette (.mzf, .mzt) |
+| `cmt` | CMT cassette (.tmz, .tzx, .mzf, .m12, .mzt, .tap, .wav, .wave) |
 | `fdc0_fd0` .. `fdc0_fd3` | WD279x FDC0 (standard, ports 0xD8-0xDF) drives 0..3 (.dsk) |
 | `fdc1_fd0` .. `fdc1_fd3` | WD279x FDC1 (secondary, ports 0x58-0x5F) drives 0..3 (.dsk) |
 | `qd` | Quick Disk (.qd) |
@@ -2226,9 +2258,11 @@ Loads an MZF and starts it from the EXEC address in the header
 - **`bootstrap=true` (default)** - resets the machine and starts the
   program exactly like the CLI option `--run-mzf` (emulator command
   `media_run_mzf`). The machine is in the state the ROM leaves it in
-  after loading a program from tape: CPU registers (IM 1, DI,
-  SP = 0x10F0, the registers the ROM passes to the program), 8255,
-  8253, Z80 PIO, PSG, GDG, VRAM and the monitor work area in RAM. The
+  after loading a program from tape: IM 1, DI, SP = 0x10F0, 8255, 8253,
+  Z80 PIO, PSG, GDG, VRAM and the monitor work area in RAM. Of the other
+  CPU registers only the jump register (HL on the MZ-700 and MZ-1500, IX
+  on the MZ-800) and BC (the device code, see below) are set like the
+  ROM; the others (for example AF) are not. The
   reset is the same as `emu_reset`, so the result does not depend on
   what ran in the emulator before. The pause state is kept: when paused,
   the program waits at its first instruction (PC = EXEC). The file is
@@ -2241,8 +2275,22 @@ Loads an MZF and starts it from the EXEC address in the header
   program left them. The program may then behave differently than after
   a tape load (for example it gets no interrupts).
 
+Register BC (only with `bootstrap=true`) holds the code of the device
+the program was loaded from; some programs choose their default device
+by it (the BASIC 1Z-016 uses the Quick Disk with 0300h). The value comes
+from the setting `CMT/run_mzf_device` (see `emu_settings_set`, default
+`cmt`), or for this call only from the optional parameter `device`:
+`cmt` (0100h, on the MZ-700 0000h - what the ROM leaves after a tape
+load), `fd` (0200h), `qd` (0300h), `rd` or `sram` (0000h), case does not
+matter, or a number 0-65535 as a string (`"512"`, `"0x0200"`, `"0200h"`;
+a decimal number is written without leading zeros (`0200` is an error, write `0x0200` or `0200h`);
+the emulator command also accepts a JSON integer). An invalid value is an
+error and the machine is not reset; `device` with `bootstrap=false` is an
+error.
+
 ```
 emu_media_run_mzf(path="/programs/mzdos.mzf")
+emu_media_run_mzf(path="/programs/basic.mzf", device="qd")
 emu_media_run_mzf(path="/programs/mzdos.mzf", bootstrap=false)
 ```
 
@@ -2257,12 +2305,17 @@ Returns:
   },
   "bootstrap": true,
   "reset": true,
-  "pc_set_to": 256
+  "pc_set_to": 256,
+  "device": "cmt",
+  "bc": 256
 }
 ```
 
-With `bootstrap=false` the result has `"bootstrap": false,
-"reset": false` and also `"rom_disconnected": true`. The MZF header is
+`device` is the choice used (the parameter with a name in lower case,
+a number as written, or the setting), `bc` the value of BC the program
+starts with. With `bootstrap=false` the result has `"bootstrap": false,
+"reset": false` and also `"rom_disconnected": true`, without `device`
+and `bc`. The MZF header is
 parsed by the wrapper (Python).
 
 **Destructive:** both variants replace the running program. If the
@@ -2297,6 +2350,13 @@ emu_media_insert(slot="qd", path="/disks/game.mzq", ro=True)
 
 Returns `{"ok": true, "slot": "fdc0_fd0", "result_code": 0}`.
 
+Slot `cmt` works like `emu_cmt_open`: the new file is read and checked
+first, so a file that cannot be opened (missing, damaged, unsupported)
+returns an error and leaves the inserted tape, its unsaved changes and a
+running recording untouched. The response has `warning` with "Unsaved
+tape changes were discarded" when the previous tape had unsaved changes
+or a recording was running, and the tape open warnings.
+
 Slot `qd` mounts an MZ-1F11 Quick Disk image (`.mzq`). The file must
 exist (the Quick Disk dialog in the GUI creates a new blank image).
 If the drive is not connected as MZ-1F11 (the default is the Unicard
@@ -2314,7 +2374,9 @@ Eject image from slot. No-op when the slot is empty.
 emu_media_eject(slot="fdc0_fd0")
 ```
 
-Returns `{"ok": true, "slot": "fdc0_fd0"}`.
+Returns `{"ok": true, "slot": "fdc0_fd0"}`. Slot `cmt` works like
+`emu_cmt_eject`: `warning` "Unsaved tape changes were discarded" when the
+tape had unsaved changes or a recording was running.
 
 ### `emu_media_state`
 
@@ -2381,6 +2443,36 @@ Whitelist:
 - `DISPLAY/locked_window_aspect_ratio` (bool)
 - `DISPLAY/custom_fps` (unsigned, 50..1000; used in the Custom frame rate mode)
 - `TRACE_CPUTRACK/pc_range_lo` .. `TRACE_CPUTRACK/pc_range_hi` (unsigned, 0..65535; runtime PC trace filter)
+- `CMT/rec_autostop_s` (unsigned, 0..600; a tape recording stops by
+  itself after that many seconds of silence while the motor runs, 0 =
+  off; the number is read like the other unsigned keys: decimal, `0x`
+  hexadecimal or with a leading `0` octal; applies from the next frame:
+  a value shorter than the silence already recorded stops a running
+  recording at the end of that frame; like the other live keys the value
+  is saved to the INI file on exit, i.e. it stays the user's setting;
+  while an input replay is played the write succeeds but holds only until
+  the playback ends, then the value from before the playback is back)
+- `CMT/run_mzf_device` (text; the device code in register BC when an MZF
+  is started directly by `emu_media_run_mzf` or `--run-mzf`: `cmt`,
+  `fd`, `qd`, `rd`, `sram` in any case, stored in lower case, or a number
+  0..65535 in decimal without leading zeros, `0x` hexadecimal or
+  hexadecimal with the suffix `h` (`0200h`), stored as written; another
+  value (also `0200`) is an error that says how to write it; the response
+  has the stored value in `new_value` and the value in use before in
+  `previous_value`; applies from
+  the next direct start; `live` in `emu_settings_get` is the value in use,
+  also after a change in the menu)
+- `CMTHACK/direct_save` (bool, default true; Direct Save: with the CMT
+  hack on and the deck not recording, a SAVE through the ROM routines
+  stores the file at once as a new MZF block at the end of the tape and
+  the ROM VERIFY compares the memory with the current block; false = a
+  ROM SAVE needs `emu_cmt_record`; like the menu item only with the tape
+  stopped (else the error `Stop the tape to switch Direct Save on or
+  off.`) and not while an input replay is recorded or played (`Direct
+  Save cannot be changed while an input replay is recorded or played.`;
+  while a replay is recorded the replay gate of `emu_settings_set`
+  answers first with its own text); applies at once; `direct_save_enabled` in `emulator://periph/cmt` is
+  the setting, `direct_save` whether the patch is in ROM now)
 - `<ini_section>/<key>` - an option of an MZ-700 expansion device
   (`emu_get_devices`); a keyword option takes the keyword. The response
   has `applies`: `now` (applied immediately) or `on_connect` (applied
@@ -2439,7 +2531,7 @@ ignored.
 
 ### `emu_periph_attach` (sensitive)
 
-Attaches a peripheral at runtime, the same way as the Devices menu;
+Attaches a peripheral at runtime, the same way as the HW & Devices menu;
 the choice is saved to the INI file on exit. Refused while a replay is
 being recorded or played back.
 
@@ -2706,7 +2798,11 @@ The MCP interface uses an **active-HIGH** mask (0x01 = UP pressed).
 The native HW state byte is active-LOW (0xFE = UP pressed). Bridge
 conversion happens automatically.
 
-Frame timing default = 3 frames (60 ms of emulated time at 50 Hz PAL).
+The default key hold (`frames` of `emu_input_send_key`, `frame_per_key`
+of `emu_input_send_keys`) is 6 frames (120 ms of emulated time at 50 Hz
+PAL); the boot menu of the MZ-800 and the MZ-1500 misses a key held for
+3 frames at some moments. The joystick (`frames`) and `hold_frames`
+default to 3 frames.
 Maximum 600 frames per hold or gap as a safety against AI-induced freezes.
 
 **Emulated frames semantics:** `frames`, `frame_per_key`, `hold_frames`
@@ -2735,7 +2831,8 @@ program overwrite, AI-controlled game in unexpected contexts).
 
 **Key landing readback (`landing_verified`):** `emu_input_send_keys`
 returns `{"keys_sent": N, "keys_landed": N, "total_frames": N, "encoding": str,
-"landing_verified": <bool>}`. `keys_sent` counts host-side injections
+"landing_verified": <bool>, "skipped": N}` (plus `warning` when characters
+were skipped, see the examples below). `keys_sent` counts host-side injections
 into the virtual matrix; `keys_landed` counts how many of them the guest
 actually read. Previously the tool reported success even when the guest
 swallowed the keys (a running program with the ROM disconnected scans only
@@ -2748,11 +2845,25 @@ prompt that scans the keyboard, or reset the emulator.
 
 ### Practical examples
 
-**ASCII encoding** (= default, simple text + `\r` for RETURN):
+**ASCII encoding** (= default, simple text + `\r` or `\n` for RETURN;
+the pair `\r\n` types RETURN once). A character the keyboard cannot type
+(for example a control character other than CR or any character outside
+ASCII) is skipped; the result
+then has `skipped` (the number of skipped characters, also present as 0)
+and `warning` `Skipped N character(s) that cannot be typed: U+010D, ...`
+(at most 16 code points named). With `key_names` `skipped` is 0 (an
+unknown name is an error). One call types at most 256 keys (skipped
+characters do not count, the pair `\r\n` is one key); the rest of the
+text is not typed, `truncated` (also present as 0) counts the characters
+left out (key names with `key_names`) and `warning` says `Text truncated:
+N character(s) after the first 256 keys were not typed` (with
+`key_names` `Text truncated: N key name(s) after the first 256 keys were
+not sent`), joined with another warning by `; `. Split a longer text
+into several calls:
 
 ```python
-# Type "LOAD" + Enter (= Sharp ROM Monitor LOAD command)
-emu.call('input_send_keys', text="LOAD\r", encoding='ascii',
+# Type "L" + Enter (= load command of the MZ-700 monitor 1Z-013A)
+emu.call('input_send_keys', text="L\r", encoding='ascii',
          frame_per_key=3)
 
 # BASIC program type-in (= multi-line)
@@ -3386,73 +3497,229 @@ concepts, kept separate on purpose:
   cycle-accurate emulated cassette. The program reads/writes the tape
   signal through the normal Sharp ROM routine, exactly like physical
   hardware. This is the accurate path and works with any program.
-- **cmthack** (`emu_cmt_hack_set`) is a ROM-patch shortcut (instant
-  load): the patched ROM load routine copies a tape file straight into
-  RAM, skipping the tape signal. It is faster but only works for
-  programs that load through the patched ROM entry points.
+- **cmthack** (`emu_cmt_hack_set`, `emu_cmt_load_directly`) is a
+  ROM-patch shortcut (instant load): the patched ROM load routine copies
+  a tape file straight into RAM, skipping the tape signal. It is faster
+  but only works for programs that load through the patched ROM entry
+  points. In the Virtual CMT window it is the loading mode Direct.
+
+Tape blocks are numbered from 0 in all tools and in
+`emulator://periph/cmt/tape`. Pass block numbers and positions as JSON
+integers. The notes "a string or a decimal number is an invalid
+parameter" below describe the emulator command (JSONL protocol); through
+the MCP server the MCP library first converts the arguments to the
+tool's parameter types in a lenient way (observed with the MCP Python
+package 1.27): `true` becomes 1, `"2"` 2 and `2.0` 2, so such a value
+selects a block instead of failing; only a value that cannot be read as
+a whole number (for example `1.5` or `"abc"`) is an argument error there
+(`isError` true).
 
 All of these change emulator state (sensitive) and appear in the
 Activity log as MCP actions. The current tape state, including
-`cmthack_enabled`, is read via the `emulator://periph/cmt` resource.
+`cmthack_enabled` and `direct_save`, is read via the
+`emulator://periph/cmt` resource.
 
 A tape image must be inserted first via `emu_media_insert(slot="cmt",
-path=...)` before playback.
+path=...)` or `emu_cmt_open` before playback. Recording does not need a
+tape: without one it records into a new empty tape.
+
+A tape the emulator changed (a recording appended, a new tape, blocks
+deleted, moved or imported, a changed block speed, files added by
+`emu_cmt_tape_analyze`, tape information written by `emu_cmt_tape_info`,
+a block converted by `emu_cmt_tape_convert_block`) has
+unsaved changes until it is saved with `emu_cmt_save`: `modified` in
+`emulator://periph/cmt/tape` is true. Tools that eject the tape
+(`emu_cmt_eject`, `emu_cmt_open`, `emu_cmt_new_tape`, `emu_media_insert`
+and `emu_media_eject` with slot `cmt`) are done anyway and return
+`warning` "Unsaved tape changes were discarded".
+
+`emulator://periph/cmt/tape` field `last_recording` = `{"serial": int,
+"blocks": int, "mzf": int, "raw": int, "discarded": bool, "message":
+str}` of the most recent recording that finished or was discarded since
+the emulator started (null if none; inserting or ejecting a tape does not
+clear it). It also reports a recording that
+ended by itself (`rec_autostop_s`, length limit), which `emu_cmt_stop`
+does not return; `serial` grows with every outcome.
 
 ### `emu_cmt_play` (sensitive)
 
 Start real cassette playback (transport PLAY). No-op if no tape is
 loaded or playback cannot start in the current state.
 
-Returns: `{"ok": true, "action": "play"}`.
+With the CMT hack on (`cmthack_enabled` in `emulator://periph/cmt`, the
+loading mode Direct; a fresh configuration has it on) the motor commands
+of the emulated program do not start or stop the tape; the Virtual CMT
+window disables Play in this mode. The tool still starts the tape and
+returns a `warning` (only when the call really started the tape from
+STOP; a call that did nothing - no tape, tape already running - returns
+none):
+`Direct loading (CMT hack) is on: a ROM load reads the tape block directly and the emulated program's motor commands do not start or stop the tape. To let the program drive the motor, stop the tape and call emu_cmt_hack_set(enabled=false); to run the tape regardless of the motor, call emu_cmt_pause(paused=false)`.
+
+Returns: `{"ok": true, "action": "play"}`; with the CMT hack on also
+`warning` when the call started the tape.
 
 ### `emu_cmt_play_paused` (sensitive)
 
-Same as `emu_cmt_play` but the tape begins paused; call
-`emu_cmt_pause(paused=False)` to advance it.
+Like `emu_cmt_play`, but the tape waits for the motor (PLAY, `paused`
+true, `user_paused` false): the emulated program's motor command (a ROM
+load does it) starts it, so the program's own load command is enough;
+`emu_cmt_pause(paused=False)` starts it without the motor. With the CMT
+hack on the program's motor command never starts the waiting tape (only
+`emu_cmt_pause(paused=False)` does); the result has the same `warning`
+as `emu_cmt_play`.
 
-Returns: `{"ok": true, "action": "play_paused"}`.
+Returns: `{"ok": true, "action": "play_paused"}`; with the CMT hack on
+also `warning` when the call started the tape.
 
 ### `emu_cmt_stop` (sensitive)
 
 Stop the transport (PLAY or RECORD -> STOP). No-op if already stopped.
-Without a loaded tape it still puts the transport into STOP.
+Without a loaded tape it still puts the transport into STOP. A stop that
+ends a recording decodes it and appends it to the end of the tape: an
+error-free recording in the ROM format as an MZF block, anything else
+(another format, an error, a stop in the middle) as a raw signal block.
+The deck stands at the first new block; the tape is never ejected.
 
-Returns: `{"ok": true, "action": "stop"}`.
+Returns: `{"ok": true, "action": "stop"}`; after a recording also
+`"recorded": {"blocks": <int>, "mzf": <int>, "raw": <int>, "message": <str>}`
+(`message` e.g. `Recorded "NAME", 300 B` or `Recording could not be
+decoded, stored as a raw block`).
 
 ### `emu_cmt_pause` (sensitive)
 
 Pause (`paused=True`, default) or resume (`paused=False`) the running
-transport without resetting its position.
+transport without resetting its position. On a stopped tape
+`paused=True` starts playback waiting for the motor (like
+`emu_cmt_play_paused`; with the CMT hack on the program's motor command
+never starts it and the result has the same `warning` as `emu_cmt_play`).
+On a running tape the pause is the user's own:
+while it is on, the program's motor commands do not move the tape (they
+only switch the motor). `paused=False` clears the user's pause and
+leaves the motor as the program set it (with the motor off the tape keeps
+waiting for it); without a user's pause it starts the motor, so a tape or
+a recording waiting for the motor starts. `emulator://periph/cmt` shows
+`user_paused` and `motor_on`.
 
 Args:
 - `paused` (default true): true = pause, false = resume.
 
-Returns: `{"ok": true, "action": "pause"}`.
+Returns: `{"ok": true, "action": "pause"}`; `warning` when `paused=True`
+started a stopped tape with the CMT hack on.
 
 ### `emu_cmt_eject` (sensitive)
 
 Stop the transport (if running) and remove the loaded tape image.
-Scoped equivalent of `emu_media_eject(slot="cmt")`.
+Scoped equivalent of `emu_media_eject(slot="cmt")`. A running recording
+is discarded (nothing is appended or written).
 
-Returns: `{"ok": true, "action": "eject"}`.
+Returns: `{"ok": true, "action": "eject"}`; `warning` "Unsaved tape
+changes were discarded" when the tape had unsaved changes or a
+recording was running.
 
 ### `emu_cmt_record` (sensitive)
 
-Start recording the real cassette output to a WAV file. Recording
-starts paused; call `emu_cmt_pause(paused=False)` to begin capturing.
-Only WAV output is supported. Requires the tape to be in the STOP
-state and the path to be writable.
+Start recording what the program writes to the cassette output into the
+inserted tape (without a tape into a new empty tape). Requires the STOP
+state. Recording starts paused; the program's motor command (the ROM
+SAVE does it) or `emu_cmt_pause(paused=False)` starts capturing.
+`emu_cmt_stop` ends it (see there). Recording stops by itself at
+4 hours or 16,000,000 edges, and optionally after a set time of silence
+(INI `[CMT] rec_autostop_s`, seconds, 0-600, default 0 = off; at run time
+`emu_settings_set` with the key `CMT/rec_autostop_s`).
+
+The CMT hack (loading mode Direct) does not affect recording: also with
+the hack on, the program's motor command starts and stops the recording
+and a SAVE records onto the tape, through the ROM routines as well as
+through a program's own save routine (while the deck records, the Direct
+Save patch is not in ROM); the tool returns no `warning`. With a `path`
+the recorded ROM SAVE is written to the file as well. Without this tool
+a ROM SAVE in Direct mode is stored at once as a new MZF block at the
+end of the tape when `direct_save` in `emulator://periph/cmt` is true.
 
 Args:
-- `path` (required): target WAV file path (must be writable).
+- `path` (optional): a file written after the stop: `.wav` = the
+  recording as a 44.1 kHz WAV, `.tmz`, `.tzx`, `.mzt`, `.mzf`, `.m12` =
+  the whole tape saved (as `emu_cmt_save`). Nothing is written when
+  nothing was recorded. The path must be writable.
 
-Returns: `{"ok": true, "path": "<path>"}`. Fails (`error`) on bad state
-or a path that is not writable.
+Returns: `{"ok": true, "path": <str or null>}`. Fails (`error`) when not
+in STOP, for a path that is not writable or an unsupported extension.
+
+### `emu_cmt_save` (sensitive)
+
+Save the inserted tape to a file. The extension selects the format:
+`.tmz` / `.tzx` = the whole tape (a tape with MZ blocks saved as `.tzx`
+stays in the TMZ format, with a warning), `.mzt` = the MZF files of all
+blocks (every block must hold an MZF), `.mzf` / `.m12` = a tape with a
+single MZF block. The file is replaced atomically: on any error the old
+file stays intact and the tape keeps its unsaved changes. After success
+the tape belongs to the file and `modified` is false. Refused while an
+input replay is recorded or played.
+
+What `.mzt` does not keep: pauses between blocks (opened again they are
+1000 ms), a block that follows the default speed after a block with its
+own speed (opened again it has its own 1:1 speed), a speed ratio (stored
+as UniCMT pulse lengths, opened again as custom pulses), the speed of the
+first block when it is not 1:1 and of a 2:1 CP/M block (warning `Speed of
+block N cannot be stored in MZT`).
+
+Args:
+- `path` (optional): output file; omitted = the current file of the tape
+  (a new tape without a file needs a path).
+
+Returns: `{"ok": true, "path": <str>, "message": <str>}`, with `warning`
+when something could not be stored, or an error (e.g. `Tape has no file
+name`, `Tape contains blocks that cannot be stored as MZT`).
+
+### `emu_cmt_export_block` (sensitive)
+
+Export one block of the inserted tape: `.mzf` / `.m12` = the MZF the
+block carries (an error for a block without an MZF, e.g. a raw
+recording), `.wav` = the block signal as a 44.1 kHz WAV, at the speed it
+would play now. The tape, its position and `modified` do not change.
+
+Args:
+- `block` or `block_id` (one of them required, not both): 0-based block index as a JSON integer (a string or a decimal number is an invalid parameter); `block_id` is the name the other tape tools use.
+- `path` (required): output file.
+
+Returns: `{"ok": true, "block": <int>, "block_id": <int>, "path": <str>,
+"message": <str>}` (`block` and `block_id` hold the same number) or an
+error (block out of range, block without an MZF, unsupported extension,
+both `block` and `block_id`).
+
+### `emu_cmt_new_tape` (sensitive)
+
+Eject the inserted tape (a running recording is discarded) and insert a
+new empty tape without a file name. Record into it with `emu_cmt_record`
+and save it with `emu_cmt_save(path)`. An input replay records it like
+an eject.
+
+Returns: `{"ok": true}`; `warning` "Unsaved tape changes were discarded"
+when the previous tape had unsaved changes or a recording was running.
 
 ### `emu_cmt_hack_set` (sensitive)
 
 Enable or disable the cmthack ROM patch (instant tape load). NOT the
 real tape - see the note above.
+
+The rules of the main menu item "Use CMT Hack", shared with the Loading
+switch of the Virtual CMT window: the patch changes only with the tape
+stopped; in PLAY, pause or recording the tool returns the error `tape is
+not stopped` and nothing changes. A request that changes nothing (the
+patch already has that state) succeeds in any state. Switching the patch
+off forgets what it had read from the tape (a header without its body,
+the end of the tape reached). The CPU boost does not change. Only the
+window's switch additionally refuses Direct when the current tape block
+carries no MZF file; the tool does not check the block. Switching the
+patch on with a ROM that does not support it (MZ-800 Willy, MZ-1500
+MZ-NEWMON, a user ROM set without the hack) is the error `The selected ROM does not support the CMT hack`
+and nothing changes (the window cannot switch to Direct then
+either). Refused while an input replay is recorded or played. With the
+setting `CMTHACK/direct_save` on (default) the patch includes the ROM
+save and verify routines while the deck does not record: a ROM SAVE is
+stored at once as a new MZF block at the end of the tape and the ROM
+VERIFY compares the memory with the current block (`direct_save` in
+`emulator://periph/cmt`).
 
 Args:
 - `enabled` (required): true = install the ROM patch, false = remove it.
@@ -3460,14 +3727,38 @@ Args:
 Returns: `{"ok": true, "installed": <bool>}` echoing the patch state
 after the operation.
 
+### `emu_cmt_load_directly` (sensitive)
+
+The same action as "Load directly" in the block list of the Virtual CMT
+window: picks a block and switches to the loading mode Direct in one
+step, all or nothing. The deck must be stopped and the block must carry
+an MZF file; then the block becomes the current block and the cmthack is
+switched on with the CPU boost off. When the cmthack is already on, only
+the block changes (the CPU boost stays). The next ROM load reads this
+block instantly. Refused while an input replay is recorded or played.
+
+Args:
+- `block_id` (required): 0-based block index as a JSON integer (a string, a decimal number or a negative number is an invalid parameter).
+
+Returns: `{"ok": true, "block_id": <int>, "mode_changed": <bool>,
+"installed": <bool>, "current_block": <int>}` (`mode_changed` false =
+the cmthack was already on), or an error: `No tape inserted`, `tape is
+not stopped`, `Block N does not exist`, `Block N does not contain an MZF
+file` (control, raw and ZX blocks, and a file block whose MZF cannot be
+assembled - `size` null in `emulator://periph/cmt/tape`), `Block N cannot
+be opened`, `The selected ROM does not support the CMT hack` (with a ROM that does not
+support the patch; nothing changes, not even the block or the CPU
+boost).
+
 ### Example workflow - record real tape output
 
 ```python
-emu_media_insert(slot="cmt", path="game.mzf")  # source tape
-emu_cmt_record(path="out.wav")     # arm recording (starts paused)
-emu_cmt_pause(paused=False)        # begin capturing
-# ... run the program ...
-emu_cmt_stop()                     # finish, flush WAV
+emu_cmt_new_tape()                 # empty tape (optional: recording works without a tape)
+emu_cmt_record()                   # arm recording (starts paused)
+# ... the program saves (the ROM SAVE starts the motor itself) ...
+emu_cmt_stop()                     # decode and append; result in "recorded"
+emu_cmt_save(path="out.tmz")       # keep the whole tape
+emu_cmt_export_block(block=0, path="prog.mzf")  # or just the program
 ```
 
 ### `emu_cmt_set_speed` (sensitive)
@@ -3495,8 +3786,9 @@ Returns: `{"ok": true, "property": "speed", "value": <int>}`, for
 
 ### `emu_cmt_set_polarity` (sensitive)
 
-Sets the tape signal polarity (rear DIP switch). Reflected as
-`polarity_inverted`.
+Sets the tape signal polarity (rear DIP switch). It inverts the
+signal of blocks imported from a WAV file (`type` 0); other blocks and
+the recording are not affected. Reflected as `polarity_inverted`.
 
 Args:
 - `inverted` (required): true = inverted, false = normal.
@@ -3513,11 +3805,17 @@ Args:
 
 ### `emu_cmt_set_mzfsize_check` (sensitive)
 
-Enables/disables the MZF size consistency check on load (body size vs
-header file size). Reflected as `mzfsize_check`.
+Enables/disables the MZF size check when a tape file is opened: a
+`.mzf` / `.m12` file longer than its header says (header file size + 128
+bytes) writes a line to the emulator output and the emulator window
+offers to fix the file in a dialog. The file is opened either way;
+nothing is refused. The same check runs when the cmthack loads an MZF
+file chosen in its file dialog; other tape files are not checked.
+Reflected as
+`mzfsize_check`.
 
 Args:
-- `enabled` (required): true = enforce, false = skip.
+- `enabled` (required): true = check on open, false = skip.
 
 ### `emu_cmt_open` (sensitive)
 
@@ -3535,29 +3833,68 @@ Returns: `{"ok": true, "path": <str>, "playing": <bool>, "state": <str>,
 and `paused` report the actual transport state after the operation (same
 meaning as in `emulator://periph/cmt`); `playing` is true only for PLAY
 without pause. If `play_immediately` was requested but the tape is not
-playing afterwards, the result also contains `warning`.
+playing afterwards, the result also contains `warning`; with the CMT hack
+on `play_immediately` adds the warning of `emu_cmt_play` only when the
+tape really plays (several warnings are joined by `; `).
+
+The new file is read and checked first: a file that cannot be opened
+(missing, damaged, unsupported) returns an error and leaves the inserted
+tape, its unsaved changes and a running recording untouched. A
+successful open that discarded unsaved changes or a recording starts
+`warning` with "Unsaved tape changes were discarded".
 
 ### `emu_cmt_tape_seek` (sensitive)
 
-Seeks to a tape block (SIMPLE_TAPE multi-block containers: .mzt,
-.tap). A single-file container (SINGLE: a plain .mzf or .wav) does not
-support seeking - the call fails even for block 0; to start it from
-the beginning again, use `emu_cmt_stop` + `emu_cmt_play`. Requires a
-loaded tape. Block listing is in `emulator://periph/cmt/tape`.
+
+Seeks to a tape block. Works for every inserted tape, including a
+single .mzf or .wav (a tape with one block). A control block (`type` 5)
+or a block the player cannot play cannot be opened; seeking also fails
+while recording. The transport state (STOP, PLAY, paused) is kept; while
+playing or paused the block plays from its start, in STOP the next PLAY
+starts there. With the CMT hack on, the next ROM load reads the MZF of
+this block. Requires a loaded tape. Block listing is in
+`emulator://periph/cmt/tape`.
 
 Args:
-- `block_id` (required): 0-based block index.
+- `block_id` (required): 0-based block index as a JSON integer (a string or a decimal number is an invalid parameter).
 
-Returns: `{"ok": true, "block_id": <int>}`.
+Returns: `{"ok": true, "block_id": <int>}`. On failure (no tape, block
+out of range, a block that cannot be opened) an error; the tape and the
+transport stay unchanged.
+
+### `emu_cmt_tape_step` (sensitive)
+
+The Next block, Previous block and Rewind buttons of the Virtual CMT
+deck. Control and information blocks and blocks the player cannot play
+are skipped (`playable` false in `emulator://periph/cmt/tape`). "next"
+and "prev" keep the transport: a playing tape plays the new block from
+its start, a paused tape stays paused. "start" opens the first playable
+block of the tape without changing the transport (as
+`emu_cmt_tape_seek`). Works in the Direct loading mode too (it picks the
+block the next ROM load reads). An input replay records it like the
+deck buttons; while an input replay is played the step is done (the
+window disables the buttons then) and the playback deviates, as with
+`emu_cmt_tape_seek`.
+
+Args:
+- `direction` (required): `"next"`, `"prev"` or `"start"` (another value or type is an invalid parameter).
+
+Returns: `{"ok": true, "direction": <str>, "block_id": <int>}`
+(`block_id` = the current block afterwards), or an error, the deck
+unchanged: `No tape inserted`, `The tape is empty`, `Not available while
+recording`, `The tape has no playable block`, `There is no playable
+block after this one` / `before this one`.
 
 ### `emu_cmt_tape_set_block_speed` (sensitive)
 
-Per-block speed (cmt speed only, no other parameters; SIMPLE_TAPE).
+Per-block speed (cmt speed only, no other parameters).
 `speed` accepts the same ratio keys / int 1..9 as `emu_cmt_set_speed`,
 `pulses_us` custom pulse lengths of the block (MZ blocks only, the block
 then has `speed` 10). Requires a loaded tape. The speed applies from the
 next opening of the block (advancing to it during playback,
-`emu_cmt_tape_seek`); the currently open block is not changed.
+`emu_cmt_tape_seek`); the currently open block is not changed. A real
+change of the speed marks the tape `modified`; saving the tape (.tmz,
+.tzx, .mzt) writes the block at its new speed.
 
 Blocks after a CMTSPEED header (UniCMT) in an `.mzt` tape already have
 their own speed from the header when the tape is opened; the header
@@ -3566,7 +3903,7 @@ itself is not played and is not listed. The listing
 "none") and the effective `pulses_us` of each block.
 
 Args:
-- `block_id` (required): 0-based block index.
+- `block_id` (required): 0-based block index as a JSON integer (a string or a decimal number is an invalid parameter).
 - `speed` (optional): ratio string ("2:1") or int (2).
 - `pulses_us` (optional): 4 pulse lengths in microseconds (instead of `speed`).
 
@@ -3580,10 +3917,235 @@ Returns: `{"ok": true, "block_id": <int>, "speed": <int>}` (with
 emu_cmt_open(path="tape.mzt")
 emu_cmt_tape_seek(block_id=2)       # pick the third program
 emu_cmt_play()
+emu_cmt_tape_step(direction="next") # next playable block, control blocks skipped
+emu_cmt_stop()                      # Load directly needs the deck stopped
+emu_cmt_load_directly(block_id=4)   # pick block 4; the next ROM load reads it instantly
 ```
 
-The full workflow (real tape vs cmthack, transport, blocks) is in the
-resource `emulator://docs/cmt_workflow`.
+### Editing the tape
+
+`emu_cmt_tape_delete_blocks`, `emu_cmt_tape_move_block` and
+`emu_cmt_tape_import` change the tape in memory (the file changes only
+with `emu_cmt_save`). They work only with the deck stopped (otherwise
+the error `tape is not stopped`), not while recording and not during an
+input replay (refused while it is recorded, they fail while it is
+played). An error leaves the tape unchanged. After every edit the
+numbers of the following blocks shift: read `emulator://periph/cmt/tape`
+again. Every edit marks the tape `modified`; imported blocks are
+`unsaved` (block field in `emulator://periph/cmt/tape`), moving and
+deleting do not change the flag of the other blocks, saving clears it.
+The deck stays at the block it stood at (from its start); when that
+block was deleted, at the block that took its place or the last block.
+A block of the emulator's own profile with a zero pause that gets a
+block behind it by an import or a move gets a 1000 ms pause.
+
+### `emu_cmt_tape_delete_blocks` (sensitive)
+
+Delete blocks. All numbers refer to the tape before the deletion; any
+order, no repeats.
+
+Args:
+- `block_ids` (required): list of 0-based block numbers.
+
+Returns: `{"ok": true, "deleted": <int>, "count": <int>,
+"current_block": <int>}` (`count` = blocks left, `current_block` -1 =
+none) with `warning` "The tape clock setting now applies to different
+blocks; check their speed." when an MZ File block (0x46) now plays at a
+different CPU clock (a deleted machine info block 0x43), or an error (e.g. `tape is not stopped`, `Block 7 does not exist`,
+an empty or repeating list).
+
+### `emu_cmt_tape_move_block` (sensitive)
+
+Move one block so that it ends at position `to` (0 = first, count - 1 =
+last). Moving a block to its own place changes nothing. Both numbers must
+be JSON integers (a string such as `"1"`, a decimal number or a boolean is
+an invalid parameter).
+
+Args:
+- `block_id` (required): 0-based number of the block.
+- `to` (required): 0-based position after the move.
+
+Returns: `{"ok": true, "block_id": <int>, "to": <int>, "count": <int>,
+"current_block": <int>}` with the same `warning` when an MZ File block now
+plays at a different CPU clock (a machine info block 0x43 moved, or a
+block moved across one), or an error (e.g. `Target position 5 is out of
+range (0 to 1)`).
+
+### `emu_cmt_tape_import` (sensitive)
+
+Insert all blocks of a file (.mzf, .m12, .mzt, .tap, .wav, .tmz, .tzx;
+converted as by `emu_cmt_open`) before block `at`, or at the end.
+Without a tape a new tape is created (`new_tape` true), only when `at`
+is omitted, null or -1; with a position 0 or higher the error without a
+tape is `no tape in the deck`. A large WAV is converted synchronously
+(the emulation waits).
+
+Args:
+- `path` (required): the file.
+- `at` (optional): 0-based position of the first imported block
+  (0 .. count) as a JSON integer; omitted, null or -1 = at the end. A
+  string, a fractional number or a boolean is an invalid parameter.
+
+Returns: `{"ok": true, "path": <str>, "at": <int>, "imported": <int>,
+"count": <int>, "current_block": <int>, "new_tape": <bool>}`, with
+`warning` for import warnings, or an error (`Can't import <path>:
+<reason>` for a missing, damaged, empty or unsupported file).
+
+### `emu_cmt_export_tape` (sensitive)
+
+Write the whole tape to a `.wav` file (44.1 kHz, 8 bit mono) as the
+player plays it: blocks and pauses, loops, jumps, calls, blocks with
+their own speed at that speed. Blocks the player cannot play are skipped
+with a warning; a tape longer than 4 hours is an error. The tape, its
+position and `modified` do not change; works in any transport state and
+during an input replay. A recording in progress is not part of the
+export (it is added to the tape only when the recording stops); stop it
+first. The file is replaced atomically. The whole signal of the tape is
+held in memory during the export and the emulation waits until the
+export is done.
+
+Args:
+- `path` (required): output file with the `.wav` extension.
+
+Returns: `{"ok": true, "path": <str>, "message": <str>}` with `warning`
+when blocks were skipped, or an error (e.g. `The tape is empty`, another
+extension).
+
+### Example workflow - assemble a tape
+
+```python
+emu_cmt_stop()
+emu_cmt_tape_import(path="loader.mzf")        # empty deck: new tape
+emu_cmt_tape_import(path="game.mzt")          # appended at the end
+emu_cmt_tape_move_block(block_id=2, to=1)     # reorder
+emu_cmt_tape_delete_blocks(block_ids=[3])     # drop a block
+emu_cmt_save(path="assembled.tmz")
+emu_cmt_export_tape(path="assembled.wav")
+```
+
+### Tools over the tape
+
+The reading variants (`emu_cmt_tape_analyze` without `apply`,
+`emu_cmt_tape_info` without `set`, `emu_cmt_tape_check`) work in any
+state and during an input replay; they return no `state_rev` and refuse
+`expected_state_rev`. The variants that change the tape (`apply` "add" /
+"replace", `set`, `emu_cmt_tape_convert_block`) follow the rules of
+Editing the tape (deck stopped, not during an input replay, all or
+nothing, numbers shift, `modified` and `unsaved`) and return `state_rev`.
+In the emulator commands numbers must be JSON numbers and options JSON
+booleans; anything else is an invalid parameter. A `warning` belongs only
+to the call that returned it.
+
+### `emu_cmt_tape_analyze` (sensitive)
+
+Find tape files in a raw signal block (TZX 0x18: an opened or imported
+WAV, a recording the emulator could not decode). The analysis runs
+synchronously: the emulation waits, the emulator window keeps drawing.
+There is no time limit; after about 610 s the emulator answers
+`Emulator busy` and the result is unknown (read
+`emulator://periph/cmt/tape` again before repeating `apply`). Each file is a row (`kind` "file"),
+signal without a file of 64 pulses or more is a row of `kind` "unknown".
+Only a standard Sharp file (`format` "NORMAL") with a correct header and
+body checksum (`result` "addable") or repaired by an enabled repair
+option ("addable_repaired") can be added; a NORMAL file with a checksum
+error or incomplete stays raw ("stays_raw"), other formats cannot be
+added ("cannot_add"). `apply` "add" inserts every addable file after the
+raw block; "replace" replaces the raw block by the file blocks and keeps
+the rest of the signal in raw blocks in the original order (pieces
+shorter than 64 pulses next to a file are left out, as when recording). File blocks
+use the emulator profile MZ800EMU-CMT at the default tape speed. When a
+machine info block 0x43 with a CPU clock other than the default 3546895 Hz
+lies before the raw block, the new file blocks play at that clock and
+`warning` says so (as an import does).
+
+Args:
+- `block_id` (required): 0-based number of the raw block (JSON integer).
+- `tolerance` (optional): leader detection tolerance, 0.02 .. 0.35, default 0.20; a value outside the range is an invalid parameter.
+- `repair_header`, `repair_body`, `repair_bsd` (optional, booleans): repair options.
+- `apply` (optional): "none" (default), "add" or "replace".
+
+Returns: `{"ok": true, "block_id": <int>, "apply": <str>, "sample_rate":
+<int>, "pulse_count": <int>, "length_s": <float>, "rows": [{"row",
+"kind", "name", "type", "format", "start_s", "length_s", "size",
+"header", "body", "result", "reason", "recovery"}], "applied": <int>,
+"first_added": <int> | null, "count": <int>, "current_block": <int>}`
+(`header` / `body` "ok", "checksum_error" or "not_available";
+`analysis_error` when the block has no signal; `warning` "The tape clock
+setting now applies to different blocks; check their speed." after "add"
+or "replace" when the new file blocks play at another CPU clock) or an
+error (e.g. `Block 0 is not a raw signal block (CSW recording)`, `tape is
+not stopped`).
+
+### `emu_cmt_tape_info` (sensitive)
+
+Read (without `set`) or write (with `set`) the tape information: the
+Archive Info texts `title`, `publisher`, `author`, `year`, `language`,
+`type`, `price`, `protection`, `origin`, `comment` and the target
+`machine` ("generic", "mz700", "mz800", "mz1500", "mz80b" or null). The
+write reads, merges the given fields and writes in one step; "" removes a
+text, `"machine": null` removes the machine block. Texts are ISO 8859-1
+(at most 255 characters); other characters become "?" with a `warning`.
+The Archive Info block is the first block of the tape and Machine Info
+follows it; entries the emulator does not know are kept.
+
+Args:
+- `set` (optional): object with the fields to write.
+
+Returns: `{"ok": true, "title": <str>, ..., "comment": <str>, "machine":
+<str> | null, "machine_code": <int>, "storable": <bool>,
+"other_entries": <int>, "other_archive_blocks": <int>,
+"other_archive_block": <int> | null}`; with `set` also `changed` and an
+optional `warning`. `storable` false: a tape opened from a file of
+another format than .tmz or .tzx (for example .mzf, .mzt, .wav) can keep
+the information only when saved as .tmz or .tzx.
+
+### `emu_cmt_tape_check`
+
+List structural problems of the inserted tape (read only): unbalanced
+loops and groups, jumps and calls outside the tape, calls without a
+return block, unknown block IDs, MZ file blocks that cannot be parsed, a
+header without the name terminator, an unknown file type, a body length
+different from the header size, and profiles the emulator does not know.
+The body checksum is not checked; at most 500 findings.
+
+Returns: `{"ok": true, "blocks_checked": <int>, "count": <int>,
+"findings": [{"block_id": <int>, "severity": "warning" | "info", "text":
+<str>}]}` or `No tape inserted`.
+
+### `emu_cmt_tape_convert_block` (sensitive)
+
+Rebuild a TMZ MZ file block (`convertible` in
+`emulator://periph/cmt/tape`) with another writer profile (an `id` from
+`profiles` there). The file bytes stay the same. Settings of the old
+profile the new one accepts are carried over; the rest is listed in
+`warning`. The block's own profile without a speed changes nothing
+(`changed` false). After a conversion to a profile other than
+MZ800EMU-CMT the block speed cannot be changed with
+`emu_cmt_tape_set_block_speed`.
+
+Args:
+- `block_id` (required): 0-based block number (JSON integer).
+- `profile` (required): profile ID, e.g. `ROM-800-NOMINAL`.
+- `speed` (optional): only for a profile with `accepts_speed`; the Python tool takes a ratio key (`"2:1"`) or the integer 1 .. 9, the emulator command only the integer.
+
+Returns: `{"ok": true, "block_id": <int>, "profile": <str>, "changed":
+<bool>, "count": <int>, "current_block": <int>}` with an optional
+`warning`, or an error (e.g. `Unknown profile: X`, `Profile X does not
+accept a speed`).
+
+### Example workflow - WAV to files
+
+```python
+emu_cmt_stop()
+emu_cmt_open(path="recording.wav")                     # one raw block
+emu_cmt_tape_analyze(block_id=0)                       # look at the rows
+emu_cmt_tape_analyze(block_id=0, apply="replace")      # files as blocks
+emu_cmt_tape_info(set={"title": "My recordings", "machine": "mz800"})
+emu_cmt_save(path="recording.tmz")
+```
+
+The full workflow (real tape vs cmthack, transport, blocks, editing) is
+in the resource `emulator://docs/cmt_workflow`.
 
 ## Related
 

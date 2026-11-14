@@ -219,6 +219,7 @@ void audio_init(void)
     APP_MUTEX_CREATE(g_audio.old_log_mutex);
 
     g_audio.ctc0_output = 0;
+    g_audio.cmt_echo = 0;
 
     audio_print_volume_info();
 }
@@ -320,11 +321,41 @@ static inline void audio_changed(st_AUDIO_LOG *log, en_AUDIO_SOURCE audio_source
     };
 }
 
+/**
+ * @brief Zapíše do kanálu CTC0 zvukového logu hodnotu ctc0_output XOR cmt_echo.
+ *
+ * @param total_event_ticks Čas události; starší než poslední událost kanálu
+ *        se posune na ni (echo kazety doručuje hrany zpětně).
+ * @pre Vlákno emulátoru; g_audio.ctc0_output a g_audio.cmt_echo jsou 0/1.
+ */
+static inline void audio_ctc0_channel_update(uint64_t total_event_ticks)
+{
+    st_AUDIO_SOURCE_LOG *src = g_audio.log->src[audio_source_id(AUDIO_SRC_CTC0)];
+    if (total_event_ticks < src->last_timestamp)
+        total_event_ticks = src->last_timestamp;
+    AUDIO_BUF_t value = (g_audio.ctc0_output ^ g_audio.cmt_echo) ? AUDIO_MAXVAL_PER_CHANNEL : 0;
+    audio_changed(g_audio.log, AUDIO_SRC_CTC0, value, total_event_ticks);
+}
+
 void audio_ctc0_changed(bool ctc0_state, uint64_t total_event_ticks)
 {
-    AUDIO_BUF_t value = (ctc0_state) ? AUDIO_MAXVAL_PER_CHANNEL : 0;
-    audio_changed(g_audio.log, AUDIO_SRC_CTC0, value, total_event_ticks);
     g_audio.ctc0_output = ctc0_state;
+    if (!g_audio.cmt_echo)
+    {
+        /* bez echa beze změny: čas události se neupravuje */
+        audio_changed(g_audio.log, AUDIO_SRC_CTC0, (ctc0_state) ? AUDIO_MAXVAL_PER_CHANNEL : 0, total_event_ticks);
+        return;
+    };
+    audio_ctc0_channel_update(total_event_ticks);
+}
+
+/* Doxygen viz audio.h. */
+void audio_cmt_echo_changed(bool level, uint64_t total_event_ticks)
+{
+    if (g_audio.cmt_echo == (unsigned)level)
+        return;
+    g_audio.cmt_echo = level;
+    audio_ctc0_channel_update(total_event_ticks);
 }
 
 void audio_log_fill_psg(uint64_t total_event_ticks)

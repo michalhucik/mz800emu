@@ -44,7 +44,7 @@ static const st_RANGE s_ref_read[] = {
 
 /** @brief Porty, které port_write_cb() v mz1500_iorq.c obsluhuje. */
 static const st_RANGE s_ref_write[] = {
-    { 0x01, 0x02 },  /* CMT hack */
+    { 0x01, 0x04 },  /* CMT hack (01h-02h načtení, 03h-04h uložení a ověření) */
     { 0x50, 0x51 },  /* Unicard */
     { 0x58, 0x5f },  /* FDC1 */
     { 0x68, 0x6f },  /* Pezik 68h */

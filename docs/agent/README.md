@@ -98,6 +98,27 @@ the directory is unset or missing, no `kb` resources are registered.
 - Cross-reference other `emulator://docs/*` and live resources
   (`emulator://memory/map`, `emulator://watch`, `emulator://vars`).
 - Mark unverified facts with `[unverified]` or `TODO`.
+- Names are checked automatically against the emulator (this README is
+  not checked): every `emu_cmt_*` tool, every `emulator://periph/cmt*`
+  resource and every named argument in a call of an `emu_*` tool written
+  as `tool(name=...)` must exist as an MCP tool, resource or argument.
+  Fields of a resource or of a tool result are checked against the JSON
+  names the emulator returns, when the table is marked:
+  - `<!-- field-table: <resource URI or tool name> [<member>] -->` on
+    its own line before a table: the first column of every body row
+    holds field names in backticks; without `<member>` the fields are
+    those of the top level, with it those of the object (or the array
+    elements) in that member, for example `blocks`;
+  - `<!-- result-table -->` before a table: the first column holds one
+    tool name in backticks, the second column the result field names in
+    backticks; each must also be named in the tool's docstring.
+  In fenced code blocks, `var["field"]` is checked when `var` was
+  assigned from a cassette tool (`r = emu_cmt_stop()`) or resource
+  (`t = emulator://periph/cmt/tape`), is a loop variable over it
+  (`b in t["blocks"]`), or the subscript follows the resource URI. The
+  binding follows the order in the block: a new assignment of the same
+  variable (from any tool) replaces it. At least one such subscript must
+  exist in the documents, so the check cannot silently stop working.
 
 ## Distribution
 

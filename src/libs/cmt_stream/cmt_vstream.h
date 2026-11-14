@@ -1,7 +1,7 @@
 /**
  * @file   cmt_vstream.h
  * @author Michal Hucik <hucik@ordoz.com>
- * @version 2.0.0
+ * @version 2.1.0
  * @brief  Variable-length stream (vstream) — pulzně-délkové kódování CMT signálu.
  *
  * Ukládá délku setrvání signálu v jednom stavu pomocí variabilně-šířkového
@@ -16,9 +16,13 @@
  *              a následuje uint32_t
  *
  * @par Changelog:
- * - 2026-03-14: Proběhla kompletní revize a refaktorizace. Vytvořeny unit testy.
+ * - 2026-03-14: Proběhla kompletní kontrola kódu a refaktorizace. Vytvořeny unit testy.
  *
  * @par Licence:
+ * GNU General Public License v3 (GPLv3)
+ *
+ * Copyright (C) 2017-2026 Michal Hucik <hucik@ordoz.com>
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -26,11 +30,11 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
 
@@ -129,6 +133,57 @@ extern "C" {
      * @return EXIT_SUCCESS při úspěchu, EXIT_FAILURE při chybě
      */
     extern int cmt_vstream_add_value ( st_CMT_VSTREAM *cmt_vstream, int value, uint32_t count_samples );
+
+    /** @brief Nejdelší event vstreamu ve vzorcích (cmt_vstream_add_value() delší nepřijme). */
+#define CMT_VSTREAM_MAX_EVENT 0xFFFFFFFEu
+
+    /**
+     * @brief Přidá běh hodnoty libovolné délky (i delší než jeden event).
+     *
+     * Běh, který se do aktuálního eventu nevejde (event nejvýš
+     * CMT_VSTREAM_MAX_EVENT vzorků), se rozdělí na několik eventů téže
+     * hodnoty; mezi ně se vloží event opačné hodnoty s délkou 0 vzorků
+     * (úrovně eventů se střídají). Event s délkou 0 je i první event
+     * nového vstreamu, dokud se nepřidá hodnota opačná k počáteční:
+     * cmt_vstream_get_value() ho přeskočí, cmt_vstream_read_pulse() ho
+     * vrátí jako pulz s 0 vzorky.
+     *
+     * @param cmt_vstream Ukazatel na vstream (nesmí být NULL).
+     * @param value Hodnota signálu (0 nebo 1).
+     * @param count_samples Počet vzorků (nesmí být 0).
+     * @return EXIT_SUCCESS; EXIT_FAILURE při count_samples 0 nebo chybě alokace
+     *         (vstream pak může obsahovat část běhu).
+     */
+    extern int cmt_vstream_add_value_long ( st_CMT_VSTREAM *cmt_vstream, int value, uint64_t count_samples );
+
+    /**
+     * @brief Nejdelší signál jednoho generovaného bloku pásky v sekundách (4 hodiny).
+     *
+     * Mez celého výstupu jednoho bloku (všech částí, pulzů i pauzy), kterou
+     * generátory bloků (tzx 0x15 a 0x18, tmz_player blok 0x46) ověří
+     * předem, z hlavičky a dat bloku, ještě před alokací vstreamu. Blok mimo
+     * mez se nepřehraje (UNSUPPORTED). Hodnota pokryje nahrávku celé
+     * kazety C120 (2 x 60 min) v jednom souboru WAV, který import převádí na
+     * jeden blok 0x18; počet eventů za dlouhé běhy (dělení po
+     * CMT_VSTREAM_MAX_EVENT vzorcích) je pak i při 17 721 600 Hz nejvýš
+     * asi 60 na blok.
+     */
+#define CMT_VSTREAM_MAX_BLOCK_SECONDS 14400u
+
+    /**
+     * @brief Převede čas v jednotkách časové základny na zaokrouhlený počet vzorků bez přetečení.
+     *
+     * round ( units * rate / timebase ) v celých číslech: units se dělí
+     * časovou základnou předem (zbytek < timebase < 2^32, součin zbytku
+     * a rate se do 64 bitů vejde).
+     *
+     * @param units Čas v jednotkách timebase.
+     * @param timebase Časová základna v Hz (> 0).
+     * @param rate Vzorkovací frekvence v Hz.
+     * @return Počet vzorků; UINT64_MAX, pokud by výsledek přetekl 64 bitů
+     *         (nebo timebase == 0).
+     */
+    extern uint64_t cmt_vstream_scale_time ( uint64_t units, uint32_t timebase, uint32_t rate );
 
     /* === Čtení — řízení pozice === */
 

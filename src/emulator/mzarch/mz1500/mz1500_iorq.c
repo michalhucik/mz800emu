@@ -261,6 +261,24 @@ void port_write_cb(z80_t *cpu, uint16_t addr, uint8_t value, void *user_data)
         };
         break;
 
+    /* Past zápisových rutin ROM (Direct Save): 03h WHEAD / WDATA, 04h
+     * VERFY. Jen s patchem zápisu v ROM, jinak nepřipojený port. */
+    case 0x03:
+        if (CMTHACK_TEST_SAVE_INSTALLED)
+        {
+            cmthack_save_block();
+            TRACELOG_IORQ_MARK_HANDLED();
+        };
+        break;
+
+    case 0x04:
+        if (CMTHACK_TEST_VERIFY_INSTALLED)
+        {
+            cmthack_verify_block();
+            TRACELOG_IORQ_MARK_HANDLED();
+        };
+        break;
+
     case 0x50:
     case 0x51:
         /* zapisujeme do Unicard */

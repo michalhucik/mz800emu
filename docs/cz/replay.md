@@ -58,17 +58,21 @@ a emulace běží dál. Během záznamu je v levém dolním rohu obrazu
 
 Během záznamu:
 
-- **Nastavení stroje** (menu Devices, platforma, periferie, rozšíření
+- **Nastavení stroje** (menu HW & Devices, platforma, periferie, rozšíření
   paměti, ROM) a **načtení snapshotu** nejsou k dispozici: záznam by je
   nezopakoval. Přes MCP se nástroje, které stroj takto mění (načtení
   snapshotu, média, nastavení), odmítnou s vysvětlením. Změna zařízení,
   která nepřijde z menu (zkratka Alt+1..4, dialog výběru souboru, okno
   zařízení otevřené před začátkem záznamu nebo změna typu joysticku
   v okně Joystick Setup), se odmítne s hlášením také.
-- **Kazetu** jde ovládat jako obvykle (okna Virtual CMT a Tape Filelist,
-  MCP `emu_cmt_*` pro transport, přesun na blok a nahrávání na kazetu).
-  Vložení jiné pásky, rychlost pásky, vlastní pulzy, polarita a přepínač
-  CMT hacku během záznamu k dispozici nejsou.
+- **Kazetu** jde ovládat jako obvykle (okno Virtual CMT, MCP `emu_cmt_*`
+  pro transport, přesun na blok a nahrávání na kazetu). Vložení jiné
+  pásky, úpravy pásky (mazání, přesun a import bloků, analýza záznamu,
+  informace o pásce, převod bloku na jiný profil), rychlost pásky,
+  vlastní pulzy, polarita a režim načítání
+  (přepínač Loading v okně Virtual CMT, v menu Use CMT Hack a Enable CPU
+  Boost) během záznamu k dispozici nejsou; v okně Virtual CMT ani uložení
+  pásky a export bloku nebo celé pásky.
 - **Zápisy debuggeru** se zaznamenají, když emulace běží, a v pauze na
   hranici snímku - po pauze (tlačítko pauzy i MCP `emu_pause` pozastaví
   na konci snímku), po `emu_run(frames=N)` nebo po deadlinu. V pauze mezi
@@ -91,7 +95,8 @@ Během záznamu:
 
 Při přehrávání je v obraze **REPLAY PLAY** se snímkem a délkou záznamu.
 Živý vstup (klávesnice, virtuální klávesnice, joystick hostitele, klávesy
-z MCP) se ignoruje a okna kazety jsou zamčená - kazetu ovládá záznam.
+z MCP) se ignoruje a okno Virtual CMT je zamčené (včetně režimu načítání,
+v menu Use CMT Hack a Enable CPU Boost) - kazetu ovládá záznam.
 Breakpointy, trace, záznam zápisů do paměti, screenshoty i nahrávání videa
 fungují jako obvykle; pauza a krokování výsledek nemění.
 
@@ -145,12 +150,21 @@ pořízeného při přehrávání, a vrátí stav stroje v tom okamžiku. Breakp
 při něm ve výchozím stavu nezastavují. Recept je v MCP dokumentu
 `emulator://docs/replay`.
 
-Checkpoint nenese obsah médií. Když emulovaný program zapíše na disketu,
-Quick Disk nebo disk IDE8, nahraje na kazetu nebo se páska vysune,
-checkpointy před tím už použít nejde: návrat přes takový zápis se při
-záznamu odmítne (soubory disků uživatele se nikdy nepřepisují), skok přes
-něj při přehrávání začne přehrávání od začátku s čistými kopiemi médií.
-Při běžícím autotype ani při nahrávání na kazetu checkpoint nevznikne.
+Checkpoint nenese obsah disků. Když emulovaný program zapíše na disketu,
+Quick Disk nebo disk IDE8, když se vložená páska vysune (i tím, že ji
+nahradí nová nebo jiná páska) nebo když začne nahrávání do souboru (MCP
+`emu_cmt_record` s cestou), checkpointy před tím už použít nejde: návrat
+přes takový zápis se při záznamu odmítne (soubory disků uživatele se
+nikdy nepřepisují), skok přes něj při přehrávání začne přehrávání od
+začátku s čistými kopiemi médií.
+
+Nahrávání na pásku v kazetofonu návrat neblokuje: checkpoint si pásku
+pamatuje a návrat na něj odstraní bloky nahrané po něm a vrátí poslední
+blok, jméno souboru a příznak neuložených změn; checkpoint pořízený bez
+pásky pásku vzniklou později vysune. Checkpoint pořízený během nahrávání
+v něm po návratu pokračuje. Při běžícím autotype ani při dlouhém
+nahrávání na kazetu (nahraný signál zabírá víc než 1 MB) checkpoint
+nevznikne.
 
 Checkpointy jsou jen v paměti, ne v souboru záznamu. Záznam přehrávaný
 v novém procesu si během přehrávání sbírá vlastní; skok před první z nich
@@ -198,7 +212,9 @@ souborů - a pracuje nad nimi: emulovaný program může zapisovat na disk
 nebo nahrávat na kazetu, původní soubory se nikdy nezmění a nastavení
 emulátoru (INI) zůstane, jak bylo. Mechaniky, které byly při záznamu
 prázdné, jsou při přehrávání prázdné. Po přehrání se vrátí média podle
-nastavení; vložená páska se vloží znovu od začátku.
+nastavení; vložená páska se vloží znovu od začátku s rychlostmi bloků
+jako před přehráním. Když se soubor pásky během přehrání na disku změnil
+(má jiné bloky), rychlosti se nevrátí a okno Virtual CMT ukáže varování.
 
 Uložená média jednoho záznamu mohou mít dohromady nejvýš 64 MB. Větší
 obraz (typicky disk IDE8) se uloží jen jako hash SHA-256 a záznam dostane
@@ -226,7 +242,7 @@ rozdíl na novém buildu znamená "chování se změnilo", ne nutně chybu.
 
 | Vstup | Co dělat |
 |-------|----------|
-| vložení nebo vysunutí média během záznamu | během záznamu není k dispozici (menu Devices je zakázané, MCP ho odmítne); média vložit před záznamem |
+| vložení nebo vysunutí média během záznamu | během záznamu není k dispozici (menu HW & Devices je zakázané, MCP ho odmítne); média vložit před záznamem |
 | SD karta Unicardu (adresář hostitele) | přehrávat se stejným obsahem SD karty; záznam dostane varování, když je Unicard připojený |
 | Quick Disk ve virtuálním (adresářovém) režimu | přehrávat se stejným adresářem; záznam dostane varování |
 | nastavení emulátoru mimo snapshot (INI) | přehrávat se stejným nastavením |

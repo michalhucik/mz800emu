@@ -47,7 +47,7 @@ Globální klávesové zkratky dostupné napříč celým oknem emulátoru.
 
 | Klávesa                    | Akce                                                                        |
 |----------------------------|-----------------------------------------------------------------------------|
-| `Alt + C`                  | Zobrazit / Skrýt okno virtuálního magnetofonu                               |
+| `Alt + C`                  | Zobrazit / Skrýt okno virtuálního kazetofonu                                |
 | `Alt + K`                  | Zobrazit / Skrýt okno virtuální klávesnice                                  |
 
 ## Snapshoty

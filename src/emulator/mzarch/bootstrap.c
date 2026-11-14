@@ -37,6 +37,7 @@
 
 #include "mzarch/mzarch_config.h"
 #include "mzarch/bootstrap.h"
+#include "mzarch/bootstrap_device.h"
 #include "libs/mzf/mzf_tools.h"
 #include "hw-generic/gdg/gdg.h"
 #include "hw-generic/ctc8253/ctc8253.h"
@@ -232,9 +233,12 @@ static void mzarch_bootstrap_init(void)
 }
 
 
-void mzarch_bootstrap_run_mzf(const char *filename)
+void mzarch_bootstrap_run_mzf(const char *filename, const st_BOOTDEV_CHOICE *device)
 {
     printf("Bootstrapping...\n");
+
+    /* Kód zařízení se určí hned (nastavení může z UI vlákna změnit menu). */
+    const uint16_t device_bc = device ? bootdev_choice_bc_here(device) : bootdev_setting_bc();
 
     mzarch_bootstrap_init();
 
@@ -273,14 +277,19 @@ void mzarch_bootstrap_run_mzf(const char *filename)
      * deklaraci v bootstrap.h. */
     mzarch_platform_bootstrap_post_header(mzf_header.fstrt);
 
+    /* HL = zaváděcí adresa a BC = délka těla čte cmthack_read_mzf_body()
+     * (stejné rozhraní jako past RDATA). */
     z80_set_reg(g_mzarch_main.cpu, Z80_REG_HL, mzf_header.fstrt);
     z80_set_reg(g_mzarch_main.cpu, Z80_REG_BC, mzf_header.fsize);
     cmthack_read_mzf_body();
     z80_set_reg(g_mzarch_main.cpu, Z80_REG_SP, 0x10f0);
 
-    /* Registry, které ROM předává programu (BC = zařízení u IPL, skokový
-     * registr s exec adresou) - platformně podle ROM. */
+    /* Skokový registr s exec adresou platformně podle ROM. */
     mzarch_platform_bootstrap_entry_regs(mzf_header.fexec);
+
+    /* BC = kód zařízení, ze kterého byl program "nahrán" (bootstrap_device.h:
+     * výchozí cmt = hodnota, kterou nechá ROM platformy po zavedení z pásky). */
+    z80_set_reg(g_mzarch_main.cpu, Z80_REG_BC, device_bc);
 
     z80_set_reg(g_mzarch_main.cpu, Z80_REG_PC, mzf_header.fexec);
 

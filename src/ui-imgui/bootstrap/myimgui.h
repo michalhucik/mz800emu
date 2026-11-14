@@ -46,7 +46,6 @@ typedef struct MyImGui
     bool showAudioWindow;
     bool showVirtualCmtWindow;
     bool showCmtFixMzfsizeWindow;
-    bool showVirtualCmtTapeIndexWindow;
     bool showVirtualKeyboardWindow;
     bool showSnapshotSetupWindow;
     bool showVideorecSetupWindow;        /**< Dialog nastavení video záznamu (Tools -> Video Recording -> Settings...). */
@@ -172,6 +171,19 @@ extern "C"
 #endif
     gboolean myimgui_init_cb(SdlAppWindow *win, gpointer user_data);
     void myimgui_render_cb(SdlAppWindow *win, gpointer user_data);
+    /**
+     * @brief Událost SDL pro hlavní okno sdlapp: předá ji backendu ImGui, oknu Virtual CMT a obsluze aplikace.
+     *
+     * Nastaví ImGui kontext okna, zavolá ImGui_ImplSDL3_ProcessEvent(),
+     * události přetažení souboru z OS (SDL_EVENT_DROP_BEGIN, _POSITION,
+     * _FILE, _COMPLETE) předá imgui_cmt_window_os_drop_event() a nakonec
+     * zavolá gui->event_cb (iface_sdl3_events_cb()). sdlapp rozesílá sem
+     * všechny události SDL, i události oken viewportů ImGui.
+     *
+     * @param win Okno sdlapp (nesmí být NULL, nese MyImGui v gui_data). @param event Událost.
+     * @param user_data Nepoužito.
+     * @pre UI (hlavní) vlákno.
+     */
     void myimgui_event_cb(SdlAppWindow *win, SDL_Event *event, gpointer user_data);
     void myimgui_destroy_cb(SdlAppWindow *win, gpointer user_data);
 

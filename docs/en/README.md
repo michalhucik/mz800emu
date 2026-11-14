@@ -69,10 +69,11 @@ are rejected with an error - use `--help` for a generated listing.
 | `--help` | - | Print the option list and exit. |
 | `--version` | - | Print the version, revision, build date, source origin (branch, commit, uncommitted changes, when available), compiler, compiled-in features, SDL and GLib versions and the host OS, then exit. Works in every binary (`mz800emu`, `mz700emu-pal`, `mz700emu-ntsc`, `mz1500emu`) and with `--mcp-pipe`; neither the emulator nor a window is started. |
 | `--console` | - | Windows only: allocate a console window for stdout/stderr. |
-| `--run-mzf` | `<filepath>` | Automatically load and run the given MZF file after the emulator boots. |
-| `--cmt` | `<filepath>` | Insert a tape into the virtual cassette recorder at startup: `.mzf`, `.m12`, `.mzt`, `.tap`, `.wav` or `.wave`. If the CMT hack is on, it is turned off for this session only (the `.ini` keeps the original setting). In the window, the Virtual CMT window opens. Missing file or unknown extension = error and exit. |
-| `--cmt-play` | - | With `--cmt`: press PLAY after inserting the tape. When the emulator boots through the ROM, the ROM stops the tape motor during its startup, so the tape waits in PLAY + PAUSE; it plays at once only together with `--run-mzf`. |
-| `--cmt-play-pause` | - | With `--cmt`: the tape waits in PLAY + PAUSE and starts moving when the ROM or the program turns the cassette motor on (e.g. `LOAD` in BASIC, loading from the monitor). Cannot be combined with `--cmt-play`. |
+| `--run-mzf` | `<filepath>` | Automatically load and run the given MZF file after the emulator boots. The program starts as if the ROM had loaded it from the tape, without running the ROM loader; register BC holds the device code set in the menu HW & Devices > CMT > CMT Options > Device for Direct MZF Start (default CMT). |
+| `--run-mzf-device` | `<cmt\|fd\|qd\|rd\|value>` | With `--run-mzf`: the device code in register BC, as if the program was loaded from that device: `cmt` (0100h, on MZ-700 0000h - the value the ROM leaves after a tape load), `fd` (0200h), `qd` (0300h), `rd` or `sram` (0000h), or a number 0-65535 (`512`, `0x0200` or `0200h`; a decimal number is written without leading zeros (`0200` is an error, write `0x0200` or `0200h`)). Some programs, for example the BASIC 1Z-016, choose their default device by it. Applies to this start only; the setting in the menu and in the INI file is kept. An invalid value or a missing `--run-mzf` is an error. |
+| `--cmt` | `<filepath>` | Insert a tape into the virtual cassette recorder at startup: `.tmz`, `.tzx`, `.mzf`, `.m12`, `.mzt`, `.tap`, `.wav` or `.wave` (see [devices/cmt.md](devices/cmt.md)). If the CMT hack is on, it is turned off for this session only (the `.ini` keeps the original setting). In the window, the Virtual CMT window opens. Missing file or unknown extension = error and exit. |
+| `--cmt-play` | - | With `--cmt`: press PLAY after inserting the tape. When the emulator boots through the ROM, the ROM stops the tape motor during its startup, so the tape waits in PLAY for the motor (Waiting for motor); it plays at once only together with `--run-mzf`. |
+| `--cmt-play-pause` | - | With `--cmt`: the tape waits in PLAY for the motor (Waiting for motor) and starts moving when the ROM or the program turns the cassette motor on (e.g. `LOAD` in BASIC, loading from the monitor). Cannot be combined with `--cmt-play`. |
 | `--cmt-boot` | - | MZ-800 only, with `--cmt`: like `--cmt-play-pause`, and the emulator holds the C key from start until the ROM turns the motor on, so the boot menu loads the program from the tape. Works in both positions of the mode switch. Cannot be combined with `--run-mzf` or `--cmt-play`. |
 | `--fdd` | `<N>=<filepath>` | Insert a DSK image into floppy drive N at startup; the option can be repeated. N 0-3 = drives FDD0-FDD3 of the FDC controller (ports 0xD8 - 0xDF), 4-7 = drives FDD0-FDD3 of the secondary FDC1 controller (ports 0x58 - 0x5F, must be connected). It replaces the disk from the `.ini` in the same drive and the path is saved to the `.ini` like a disk inserted from the menu (unless you use `--no-save-ini`). A missing file, a number outside 0-7 or a drive given twice = error and exit; a disconnected FDC1 or an image that cannot be opened = error (in `--headless` exit with code 3, in the window a pause). See [devices/fdc.md](devices/fdc.md). |
 | `--fdd0` .. `--fdd7` | `<filepath>` | Same as `--fdd <N>=<filepath>` for drive 0-7. |
@@ -267,6 +268,14 @@ mz800emu --cputrack-mode always \
          --cputrack-chunk-mb 32 --cputrack-max-total-mb 512
 ```
 
+
+## Cassette recorder (Virtual CMT)
+
+HW & Devices -> CMT -> Show Virtual CMT (`Alt + C`) opens the virtual
+cassette recorder: TMZ, TZX, MZF, MZT, TAP and WAV tapes, playing the real
+signal or loading at once through the CMT hack, recording what the computer
+saves, saving the tape and programs to files, editing the tape and finding
+programs in WAV recordings. For details see [`devices/cmt.md`](devices/cmt.md).
 
 ## Screenshots
 

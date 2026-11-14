@@ -3122,6 +3122,52 @@ bool bp_event_trigger_from_string ( const char *s, en_BP_EVENT_TRIGGER *out )
 
 
 /* ------------------------------------------------------------------ */
+/* Klíče informací o pásce (cmt_tape_info)                             */
+/* ------------------------------------------------------------------ */
+
+/**
+ * @brief Stub cmttmz_tape_info_key() (cmt_tmz_meta.c, který test nelinkuje).
+ *
+ * Pořadí klíčů jako jádro (ID položek TZX 00h .. 08h, FFh,
+ * st_CMTTMZ_TAPE_INFO); dispatch podle nich čte a skládá `cmt_tape_info`.
+ *
+ * @param field Index 0 .. CMTTMZ_TAPE_INFO_FIELDS - 1.
+ * @return Klíč, NULL mimo rozsah.
+ */
+const char *cmttmz_tape_info_key(uint32_t field)
+{
+    static const char *const keys[] = { "title", "publisher", "author", "year", "language",
+                                        "type", "price", "protection", "origin", "comment" };
+    G_STATIC_ASSERT(G_N_ELEMENTS(keys) == CMTTMZ_TAPE_INFO_FIELDS);
+    return (field < CMTTMZ_TAPE_INFO_FIELDS) ? keys[field] : NULL;
+}
+
+
+/**
+ * @brief Stub cmttmz_tape_info_text() (cmt_tmz_meta.c, který test nelinkuje).
+ * @param info Informace (NULL = NULL). @param field Index.
+ * @return Buffer textu v @p info, NULL mimo rozsah.
+ */
+char *cmttmz_tape_info_text(st_CMTTMZ_TAPE_INFO *info, uint32_t field)
+{
+    if (!info || field >= CMTTMZ_TAPE_INFO_FIELDS) return NULL;
+    return info->title + (size_t)field * CMTTMZ_TAPE_INFO_TEXT_SIZE;
+}
+
+
+/**
+ * @brief Stub cmttmz_tape_info_text_const() (cmt_tmz_meta.c, který test nelinkuje).
+ * @param info Informace (NULL = NULL). @param field Index.
+ * @return Text v @p info, NULL mimo rozsah.
+ */
+const char *cmttmz_tape_info_text_const(const st_CMTTMZ_TAPE_INFO *info, uint32_t field)
+{
+    if (!info || field >= CMTTMZ_TAPE_INFO_FIELDS) return NULL;
+    return info->title + (size_t)field * CMTTMZ_TAPE_INFO_TEXT_SIZE;
+}
+
+
+/* ------------------------------------------------------------------ */
 /* mcp-inbox-fixes: snapshot_result_to_string stub                     */
 /* ------------------------------------------------------------------ */
 

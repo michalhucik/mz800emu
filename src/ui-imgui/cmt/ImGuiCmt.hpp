@@ -9,6 +9,14 @@
 
 #include "ui/cmt/UiCmt.hpp"
 
+/**
+ * @brief Stabilní ID popupu editoru vlastních pulzů (část za "###" se nepřekládá).
+ *
+ * OpenPopup() dostane jen toto ID, BeginPopupModal() přeložený titulek
+ * a toto ID; obě volání tak dají totéž ID v každém jazyce.
+ */
+#define IMGUI_CMT_PULSES_POPUP_ID "###cmt_custom_tape_pulses"
+
 typedef struct ImGuiCmtSpeedList_t
 {
     en_CMTSPEED cmtspeed;
@@ -53,6 +61,9 @@ public:
      * Volá se každý snímek z okna, které editor otevírá (mimo combo a
      * tabulku). Neplatné délky (mimo rozsah mztape_pulses_set_us) nejde
      * potvrdit.
+     *
+     * Popup má stabilní ID IMGUI_CMT_PULSES_POPUP_ID (titulek se překládá,
+     * ID ne), takže se po přepnutí jazyka nezavře ani nezmění uložený stav.
      *
      * @param scope Identifikace volajícího okna (stejný řetězec jako u open).
      * @param[out] owner Při potvrzení údaj z openPulsesEditor().

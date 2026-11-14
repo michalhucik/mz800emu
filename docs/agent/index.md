@@ -23,7 +23,7 @@ Read individual topics on demand via `resources/read`.
 | `emulator://docs/eventlog_mask` | EventLog 64-bit category mask: bit assignments per `en_EVENTLOG_CATEGORY`, common mask recipes ("memory writes only", "IRQ only"), how to pass via `emu_eventlog_set_mask`. |
 | `emulator://docs/sharp_display_code` | Sharp MZ ASCII vs display code vs standard ASCII. Mapping tables, inverse video, decoding `emulator://video/text_dump`. |
 | `emulator://docs/mz800_keyboard` | Sharp MZ-800 keyboard: physical layout, per-key matrix position + emitted characters, modifiers (SHIFT / CTRL / GRAPH / ALPHA), the four character layers, canonical key names for the `emu_input_send_keys` injection tool, recipes for typing graphics / semigraphics. MZ-700 / MZ-1500 as a diff (no TAB, longer ALPHA). |
-| `emulator://docs/cmt_workflow` | CMT cassette workflow: real tape (`emu_cmt_*`) vs cmthack instant load, starting a program in a defined state (`emu_media_run_mzf`), transport flow, WAV recording, speed ratios / polarity / cpu boost / mzfsize check, SIMPLE_TAPE multi-block seek + per-block speed. Cross-refs `emulator://periph/cmt` and `emulator://periph/cmt/tape`. |
+| `emulator://docs/cmt_workflow` | Cassette recorder (`emu_cmt_*`): real tape signal vs Direct load through the CMT hack (`emu_cmt_load_directly`) vs `emu_media_run_mzf`, the tape and block model (MCP numbers blocks from 0, the window from 1), all fields of `emulator://periph/cmt` and `emulator://periph/cmt/tape`, transport and stepping (`emu_cmt_tape_step`), recording a SAVE into an MZF, saving and exporting, editing (import, move, delete), analysis of WAV recordings, tape information, check, profile conversion, speeds, one table of what is refused when (tape not stopped, recording, input replay), snapshots, command line, limits and costs, recipes. |
 | `emulator://docs/videorec_workflow` | Recording a gameplay video (all builds): `emu_videorec_*` tools, recipe start -> play with keystrokes -> markers -> snapshot retake -> stop, error messages, export of the recording to MP4. |
 | `emulator://docs/trace_read` | Reading trace records page by page: `emu_trace_status` / `emu_trace_read` for cputrack, iorqlog, intlog, hwlog, marklog, the Event Viewer ring and the breakpoint action output `bplog` (text of `log` / `stop`) - recipe, cursor, filters, character budget, columns (time `t`, `asm` from recorded bytes, `INT ACK`), `segment_replaced` and `gap`. |
 | `emulator://docs/ramlog` | Who wrote a byte: RAM write log `emu_ramlog_start` / `_who_wrote` / `_writers` / `_stop`, channel `ramlog` of `emu_trace_read` - recipe, record fields (`pc` of the writing instruction, physical cell, old / new, source), banking and VRAM planes, hidden unchanged writes, last-writer map after ring wrap. |
@@ -62,8 +62,9 @@ Read individual topics on demand via `resources/read`.
 - Using an optional MZ-700 expansion card (character generator, 80 columns)
   or a region of kind `device` -> `devices`.
 - Loading a program from cassette, starting a program in the same state
-  as after a tape load, recording to tape, or working with a multi-block
-  tape -> `cmt_workflow`.
+  as after a tape load, recording a SAVE to tape, working with a
+  multi-block tape, editing a tape, turning a WAV recording into files
+  -> `cmt_workflow`.
 - Injecting keystrokes via `emu_input_send_keys` and need the exact key names,
   or want to type Sharp graphics / special characters -> `mz800_keyboard`.
 - Recording a video of a game (with chapters and retakes) and exporting it

@@ -19,6 +19,7 @@
 #include "cmtext.h"
 #include "cmthack.h"
 #include "cmt_cli.h"
+#include "device_request.h"
 
 
 /** Stav držení klávesy C volbou --cmt-boot (jen EMU vlákno). */
@@ -116,29 +117,29 @@ static void cmt_cli_boot_press ( void ) {
 }
 
 
-void cmt_cli_apply ( void ) {
-    gchar *path = mzarch_cli_option_value_utf8 ( "--cmt" );
-    if ( !path ) return;
+/**
+ * @brief Tělo cmt_cli_apply() (volající drží device_state_lock()).
+ * @param path Cesta pásky z --cmt (UTF-8, vlastní ji volající).
+ */
+static void cmt_cli_apply_locked ( const gchar *path ) {
 
     if ( CMTHACK_TEST_IS_INSTALLED ) {
         cmthack_disable_for_session ( );
         g_print ( "CLI --cmt: CMT hack disabled for this session\n" );
     };
 
-    if ( EXIT_SUCCESS != cmt_open_file_by_extension ( path ) ) {
+    if ( EXIT_SUCCESS != cmt_open_file_by_extension ( ( char * ) path ) ) {
         fprintf ( stderr, "CLI --cmt: cannot open tape file: %s\n", path );
-        g_free ( path );
         return;
     };
     g_print ( "CLI --cmt: %s\n", path );
-    g_free ( path );
 
     bool boot = sdlapp_option_present ( "--cmt-boot" );
     if ( sdlapp_option_present ( "--cmt-play" ) ) {
         cmt_play ( );
     } else if ( boot || sdlapp_option_present ( "--cmt-play-pause" ) ) {
-        /* Emulátor nemá motor jako samostatný stav: motor = páska hraje bez
-         * pauzy a každá náběžná hrana PC3 ho přepne (pio8255.c). ROM všech
+        /* Bez pauzy uživatele je motor totéž co páska bez pauzy a každá
+         * náběžná hrana PC3 ho přepne (pio8255.c, cmt_motor_toggle()). ROM všech
          * tří platforem při inicializaci zapíše do 0E003h 8Ah (mode set,
          * PC3 = 0) a hned 07h (BSR PC3 = 1, 0741h-0744h) - tahle hrana by
          * PLAY + PAUSE přepnula na běžící pásku ještě před LOAD. Když tedy
@@ -155,6 +156,19 @@ void cmt_cli_apply ( void ) {
     if ( boot ) {
         cmt_cli_boot_press ( );
     };
+}
+
+
+void cmt_cli_apply ( void ) {
+    gchar *path = mzarch_cli_option_value_utf8 ( "--cmt" );
+    if ( !path ) return;
+    /* Vložení pásky uvolňuje g_cmt.last_filename a mění kontejner; UI vlákno
+     * (menu, okno kazety) je čte pod zámkem stavu zařízení a v tu chvíli už
+     * může kreslit. */
+    device_state_lock ( );
+    cmt_cli_apply_locked ( path );
+    device_state_unlock ( );
+    g_free ( path );
 }
 
 

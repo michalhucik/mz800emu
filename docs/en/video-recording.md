@@ -25,7 +25,7 @@ frame rate per platform:
 | MZ-1500 | 704x232 | 704x464 | 640x200 | 60 | stereo: left CTC and the first PSG, right CTC and the second PSG |
 
 On the MZ-800 the recording is stereo when the second PSG is enabled
-(called "PSG1" in the menu: **Devices -> HW Compatibility Experiments -> Allow PSG1 (stereo)**); without
+(called "PSG1" in the menu: **HW & Devices -> HW Compatibility Experiments -> Allow PSG1 (stereo)**); without
 it both channels are the same. The recording has the same left/right sound
 layout the emulator plays.
 

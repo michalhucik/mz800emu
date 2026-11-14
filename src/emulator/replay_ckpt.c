@@ -15,11 +15,23 @@ static st_REPLAY_CKPT *replay_ckpt_at(const st_REPLAY_CKPT_RING *ring, guint i)
 }
 
 
+/** @brief Uvolní snapshot a doplňková data položky (bez úpravy součtu velikostí). */
+static void replay_ckpt_free_data(const st_REPLAY_CKPT *c)
+{
+    g_free(c->snap);
+    if (c->aux)
+    {
+        if (c->aux_free) c->aux_free(c->aux);
+        else g_free(c->aux);
+    };
+}
+
+
 /** @brief Uvolní snapshot položky a sníží součet velikostí. */
 static void replay_ckpt_release(st_REPLAY_CKPT_RING *ring, st_REPLAY_CKPT *c)
 {
-    ring->bytes -= c->snap_size;
-    g_free(c->snap);
+    ring->bytes -= c->snap_size + c->aux_size;
+    replay_ckpt_free_data(c);
     memset(c, 0, sizeof(*c));
 }
 
@@ -79,7 +91,7 @@ void replay_ckpt_ring_push(st_REPLAY_CKPT_RING *ring, const st_REPLAY_CKPT *c)
     };
     *replay_ckpt_at(ring, ring->count) = *c;
     ring->count++;
-    ring->bytes += c->snap_size;
+    ring->bytes += c->snap_size + c->aux_size;
 }
 
 
@@ -99,14 +111,14 @@ bool replay_ckpt_ring_insert(st_REPLAY_CKPT_RING *ring, const st_REPLAY_CKPT *c)
     {
         replay_ckpt_release(ring, replay_ckpt_at(ring, k));
         *replay_ckpt_at(ring, k) = *c;
-        ring->bytes += c->snap_size;
+        ring->bytes += c->snap_size + c->aux_size;
         return true;
     };
     if (ring->count == ring->capacity)
     {
         if (k == 0)
         {
-            g_free(c->snap);
+            replay_ckpt_free_data(c);
             return false;
         };
         replay_ckpt_release(ring, replay_ckpt_at(ring, 0));
@@ -117,7 +129,7 @@ bool replay_ckpt_ring_insert(st_REPLAY_CKPT_RING *ring, const st_REPLAY_CKPT *c)
     for (guint i = ring->count; i > k; i--) *replay_ckpt_at(ring, i) = *replay_ckpt_at(ring, i - 1);
     *replay_ckpt_at(ring, k) = *c;
     ring->count++;
-    ring->bytes += c->snap_size;
+    ring->bytes += c->snap_size + c->aux_size;
     return true;
 }
 

@@ -14,10 +14,11 @@
  * `[WATCH_PANEL]` s auto_load / auto_save). Phase B rozšíření schema
  * (fmt/length/bit_index) je backward compat - chybějící fieldy = defaulty.
  *
- * mzascii rendering: používá `sharpmz_to_utf8(byte, SHARPMZ_CHARSET_EU)`
- * z `libs/sharpmz_ascii/sharpmz_utf8.h`. Tabulka NENI per-arch (jeden
- * globální EU/JP volič; pro debugger watch jsme zvolili EU default,
- * harvest poznámka v `emu-experiments/knowledge/watch/types.md`).
+ * mzascii rendering: typ mzascii zobrazuje bajt jako znak znakové sady
+ * Sharp MZ ASCII v evropské variantě (EU), ne jako display kód:
+ * `sharpmz_to_utf8 ( b, SHARPMZ_CHARSET_EU )` z
+ * `libs/sharpmz_ascii/sharpmz_ascii.h`. Volba EU/JP není per-arch;
+ * watch používá pevně EU.
  *
  * ----------------------------- License -------------------------------------
  *
@@ -53,7 +54,7 @@
 #include "cfgmain.h"
 #include "main.h"   /* g_sdlapp */
 #include "libs/sdlapp/sdlapp_paths.h"
-#include "libs/sharpmz_ascii/sharpmz_utf8.h"
+#include "libs/sharpmz_ascii/sharpmz_ascii.h"
 #include "hw-generic/memory/memory.h"
 #include "debugger/symbols/sym_db.h"
 #include "debugger/bp_expr.h"

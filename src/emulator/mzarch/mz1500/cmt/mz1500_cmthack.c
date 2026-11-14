@@ -91,9 +91,14 @@ void cmthack_mzarch_reinstall_rom_patch(void)
             if (g_cmthack.load_patch_installed)
             {
                 mz1500_cmthack_install_rom_patch();
+                /* patch zápisu (Direct Save) podle nastavení a stavu decku */
+                cmthack_save_patch_sync();
             };
+            return;
         };
     };
+    /* ROM bez výchozího patche (INCOMP, vlastní ROM hacku): patch zápisu v ROM není */
+    cmthack_save_patch_sync();
 }
 
 void cmthack_mzarch_load_rom_patch(unsigned enabled)
@@ -112,10 +117,14 @@ void cmthack_mzarch_load_rom_patch(unsigned enabled)
                 memcpy(&g_memory.ROM[0x04f8], &g_rom.mz700rom[0x04f8], 14);
             };
             g_cmthack.load_patch_installed = enabled & 1;
+            /* patch zápisu jen s patchem čtení (vypnutí vrátí i jeho bajty) */
+            cmthack_save_patch_sync();
         }
         else if (g_rom.user_defined_cmthack_type == ROM_CMTHACK_CUSTOM)
         {
             g_cmthack.load_patch_installed = enabled & 1;
+            /* vlastní ROM hacku uživatele: výchozí patch zápisu se nedává */
+            cmthack_save_patch_sync();
             rom_reinstall(g_rom.rom_cfg);
         };
     };

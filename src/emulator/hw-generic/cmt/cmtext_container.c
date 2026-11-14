@@ -23,6 +23,11 @@
  * ---------------------------------------------------------------------------
  */
 
+/**
+ * @file cmtext_container.c
+ * @brief Kontejner pásky Virtual CMT (implementace cmtext_container.h).
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
@@ -147,6 +152,26 @@ const char* cmtext_container_get_filepath ( st_CMTEXT_CONTAINER *container ) {
 }
 
 
+int cmtext_container_set_filepath ( st_CMTEXT_CONTAINER *container, const char *filepath ) {
+    assert ( container );
+    assert ( filepath );
+    size_t size = strlen ( filepath ) + 1;
+    char *path = ( char* ) baseui_tools_mem_alloc0 ( ( uint32_t ) size );
+    char *name = baseui_tools_basename ( filepath );
+    if ( !path || !name ) {
+        if ( path ) baseui_tools_mem_free ( path );
+        if ( name ) baseui_tools_mem_free ( name );
+        return EXIT_FAILURE;
+    };
+    memcpy ( path, filepath, size );
+    if ( container->filepath ) baseui_tools_mem_free ( container->filepath );
+    if ( container->name ) baseui_tools_mem_free ( container->name );
+    container->filepath = path;
+    container->name = name;
+    return EXIT_SUCCESS;
+}
+
+
 en_CMTEXT_CONTAINER_TYPE cmtext_container_get_type ( st_CMTEXT_CONTAINER *container ) {
     assert ( container );
     return container->type;
@@ -199,6 +224,12 @@ const char* cmtext_container_get_block_fname ( st_CMTEXT_CONTAINER *container, i
 
         case CMTEXT_BLOCK_TYPE_TAPDATA:
             fname = "";
+            break;
+
+        case CMTEXT_BLOCK_TYPE_TZX:
+        case CMTEXT_BLOCK_TYPE_CONTROL:
+            /* statický název typu bloku (tmz_block_id_name()) */
+            fname = (char*) container->tape->index[block_id].item.tzx.name;
             break;
 
         default:

@@ -101,7 +101,8 @@ void mzarch_platform_bootstrap_post_header(uint16_t fstrt)
 
 void mzarch_platform_bootstrap_entry_regs(uint16_t fexec)
 {
-    /* E9E6h: LD BC,0100h (zařízení = CMT), E9E9h: LD HL,(1106h), E9ECh: JP (HL). */
-    z80_set_reg ( g_mzarch_main.cpu, Z80_REG_BC, 0x0100 );
+    /* E9E9h: LD HL,(1106h), E9ECh: JP (HL). BC (E9E6h: LD BC,0100h,
+     * zařízení = CMT) nastaví společná část podle bootstrap_device.h
+     * (výchozí cmt = 0100h). */
     z80_set_reg ( g_mzarch_main.cpu, Z80_REG_HL, fexec );
 }

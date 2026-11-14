@@ -11,6 +11,7 @@
 #include "libs/cpu-z80/z80.h"
 #include "hw-generic/gdg/gdg.h"
 #include "mzarch/mzevent.h"
+#include "mzarch/bootstrap_device.h"
 
 /**
  * @brief Poloha zadního přepínače SW1 MZ-800 (volba MZ-700 / MZ-800 módu).
@@ -126,18 +127,21 @@ extern "C"
      * po startu emulátoru s `--run-mzf`.
      *
      * @param filename Cesta k MZF souboru (UTF-8).
+     * @param device   Kód zařízení v BC jen pro toto spuštění, NULL =
+     *                 nastavení `[CMT] run_mzf_device` (viz
+     *                 mzarch_bootstrap_run_mzf()).
      *
      * @pre Volá se z emulátorového vlákna v bodě mezi instrukcemi (drain
      *      fronty dbgapi). Soubor ověřil volající: při nečitelném souboru
      *      se chová jako mzarch_bootstrap_run_mzf() (viz bootstrap.h).
-     * @post PC = exec adresa MZF, CPU stojí před první instrukcí programu.
-     *       Stav pauzy emulace se nemění.
+     * @post PC = exec adresa MZF, BC = kód zařízení, CPU stojí před první
+     *       instrukcí programu. Stav pauzy emulace se nemění.
      *
      * Vedlejší efekty: stejné jako tlačítko Reset (BP událost reset, záznam
      * COLD_RESET do Event Vieweru, zrušení frame-bounded běhu) plus zápisy
      * bootstrapu do periferií a RAM.
      */
-    extern void mzarch_main_reset_and_run_mzf(const char *filename);
+    extern void mzarch_main_reset_and_run_mzf(const char *filename, const st_BOOTDEV_CHOICE *device);
 
     /**
      * @brief Okamžitý reset stroje (stejný jako tlačítko Reset, bez fronty žádostí).

@@ -31,7 +31,7 @@
  * řádky (FDC: data 58h-5Bh / 0D8h-0DBh RW, ostatní jen W).
  */
 static const st_BUS_STATIC_OWNER s_rows[] = {
-    { 0x01, 0x02, 0, BUS_DIR_W,  "cmthack", "CMT hack (emulator trap)", "CH",
+    { 0x01, 0x04, 0, BUS_DIR_W,  "cmthack", "CMT hack (emulator trap)", "CH",
       DEVBUS_DRIVE_NONE, 0, MZ700_BUS_PRESENT_CMTHACK, BUS_SRC_CMTHACK, NULL },
     { 0x50, 0x51, 0, BUS_DIR_RW, "unicard", "Unicard", "U",
       DEVBUS_DRIVE_TRISTATE, 0, MZ700_BUS_PRESENT_UNICARD, BUS_SRC_UNICARD, NULL },

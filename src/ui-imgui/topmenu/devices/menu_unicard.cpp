@@ -4,6 +4,7 @@
 #include <glib.h>
 
 #include "libs/imgui/imgui.h"
+#include "ui-imgui/imgui_modal.h"
 
 // Lokalizace
 #include "i18n.h"
@@ -118,7 +119,8 @@ void imgui_unicard_runtime_mismatch_dialog(void)
     if (g_unicard_runtime_mismatch_pending == 0) return;
 
     /* Otevre popup pri prvnim frame s pending flagem. */
-    ImGui::OpenPopup("Unicard runtime mismatch##unicard_rt_mismatch");
+    /* jen při volnu: jinak by OpenPopup() zavřel jiný otevřený modál (imgui_modal.h) */
+    imgui_modal_open_when_free("Unicard runtime mismatch##unicard_rt_mismatch");
 
     ImGui::SetNextWindowSize(ImVec2(480, 0), ImGuiCond_Appearing);
     if (ImGui::BeginPopupModal("Unicard runtime mismatch##unicard_rt_mismatch",
@@ -186,7 +188,8 @@ void imgui_unicard_reinit_choice_dialog(void)
 {
     if (!s_unicard_reinit_choice_pending) return;
 
-    ImGui::OpenPopup("Reinitialize Unicard runtime##unicard_reinit_choice");
+    /* jen při volnu: jinak by OpenPopup() zavřel jiný otevřený modál (imgui_modal.h) */
+    imgui_modal_open_when_free("Reinitialize Unicard runtime##unicard_reinit_choice");
 
     if (ImGui::BeginPopupModal("Reinitialize Unicard runtime##unicard_reinit_choice",
                                NULL, ImGuiWindowFlags_AlwaysAutoResize))

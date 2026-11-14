@@ -3,7 +3,8 @@
  * @brief CLI volby virtuální kazety: --cmt, --cmt-play, --cmt-play-pause, --cmt-boot.
  *
  * - `--cmt <soubor>` vloží při startu pásku do virtuálního CMT (přípony
- *   mzf, m12, mzt, tap, wav, wave). Zapnutý CMT hack vypne jen pro běh
+ *   přehrávatelných pásek cmtext_is_playable_filename(): tmz, tzx, mzf,
+ *   m12, mzt, tap, wav, wave). Zapnutý CMT hack vypne jen pro běh
  *   (cmthack_disable_for_session) a v GUI otevře okno Virtual CMT.
  * - `--cmt-play` po vložení stiskne PLAY. Při bootu z ROM ji inicializace
  *   ROM (hrana PC3) přepne do PLAY + PAUSE; páska běží rovnou jen
@@ -11,8 +12,10 @@
  * - `--cmt-play-pause` připraví PLAY + PAUSE; pauzu zruší ROM, až zapne
  *   motor (náběžná hrana PC3 8255, pio8255.c). ROM MZ-700, MZ-800
  *   i MZ-1500 mají na 069Fh stejnou rutinu zapnutí motoru (BSR 06h/07h
- *   na 0E003h + test PC4). Emulátor nemá motor jako samostatný stav
- *   (motor = páska bez pauzy) a hranu PC3 vyrobí i inicializace ROM
+ *   na 0E003h + test PC4). Bez pauzy uživatele je motor v emulátoru
+ *   totéž co páska bez pauzy: hrana PC3 přepne pohyb pásky
+ *   (cmt_motor_toggle(); samostatně se motor pamatuje jen při pauze
+ *   uživatele, st_CMT::motor_off). Hranu PC3 vyrobí i inicializace ROM
  *   (0741h-0744h), proto se při bootu z ROM vkládá PLAY a do PLAY + PAUSE
  *   ji přepne až ROM; s --run-mzf (ROM se přeskočí) rovnou PLAY + PAUSE.
  * - `--cmt-boot` (jen MZ-800) = --cmt-play-pause a navíc drží od resetu
@@ -69,7 +72,8 @@ extern "C" {
      *
      * @pre EMU vlákno, mzarch_main() po mzarch_main_reset(), před hlavní
      *      smyčkou; cmt_init() a cmthack_init() proběhly; volby ověřilo
-     *      cmt_cli_validate().
+     *      cmt_cli_validate(); volající nedrží device_state_lock() (funkce
+     *      ho bere kolem vložení pásky, UI vlákno už může kreslit).
      * @post Při --cmt-boot je C stisknutá ve virtuální matici klávesnice
      *       (g_pio8255.vkbd_matrix), dokud ji neuvolní cmt_cli_on_screen_done()
      *       nebo cmt_cli_on_reset().

@@ -69,7 +69,7 @@
 #include "baseui/baseui.h"
 
 /* generic_driver migrace (qdisk-rewrite, Faze 1) */
-#include "generic_driver/memory_driver.h"
+#include "libs/generic_driver/memory_driver.h"
 #include "generic_driver/file_driver.h"
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED

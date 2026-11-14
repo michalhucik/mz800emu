@@ -29,10 +29,10 @@ mz_add_test(mcp_jsonl_parser
 
 # Override compile definitions na samotný test target - potřebuje:
 #   MZ800EMU_MCP_TEST_BUILD - vypne include mzarch_config.h v jsonl_io.c
-#   MZ800EMU_CFG_MCP_SERVER_ENABLED - aktivuje tělo jsonl_io.c
+#   MZ800EMU_CFG_MCP_SERVER_ENABLED - aktivuje tělo jsonl_io.c (prázdná hodnota jako v mzarch_config.h, jinak varování o redefinici)
 target_compile_definitions(test_mcp_jsonl_parser PRIVATE
     MZ800EMU_MCP_TEST_BUILD
-    MZ800EMU_CFG_MCP_SERVER_ENABLED
+    MZ800EMU_CFG_MCP_SERVER_ENABLED=
 )
 
 # Linkneme json-glib + glib (jsonl_io.c je na nich závislý).
@@ -74,6 +74,9 @@ mz_add_test(mcp_dispatch
         ${CMAKE_SOURCE_DIR}/src/emulator/debugger/png_encode.c
         # get_devices: jména budičů sběrnice (čistý modul bez závislostí)
         ${CMAKE_SOURCE_DIR}/src/emulator/hw-generic/devbus/devbus_resolve.c
+        # media_run_mzf device a settings_set CMT/run_mzf_device: zápis kódu
+        # zařízení (čistá část modulu, jen GLib)
+        ${CMAKE_SOURCE_DIR}/src/emulator/mzarch/bootstrap_device.c
     LABELS   "standalone;mcp"
 )
 
@@ -83,7 +86,7 @@ target_link_libraries(test_mcp_dispatch PRIVATE mzlib_dasm_z80 m)
 
 target_compile_definitions(test_mcp_dispatch PRIVATE
     MZ800EMU_MCP_TEST_BUILD
-    MZ800EMU_CFG_MCP_SERVER_ENABLED
+    MZ800EMU_CFG_MCP_SERVER_ENABLED=
 )
 
 target_link_libraries(test_mcp_dispatch PRIVATE
@@ -404,6 +407,38 @@ if(Python3_FOUND)
     message(STATUS "  tests/mcp: registered mcp_run_mzf_state "
                    "(Python ${Python3_VERSION})")
 
+    # Kód zařízení v BC při přímém spuštění MZF ([CMT] run_mzf_device), jeden
+    # test na binárku: media_run_mzf s parametrem device i bez něj (jména,
+    # čísla, neplatné hodnoty bez resetu), settings_get / settings_set a INI
+    # (pipe), --run-mzf s INI a --run-mzf-device (MCP TCP, volný port, ne
+    # 23800), chybné CLI. Chybějící binárka = FAIL.
+    foreach(_rd_bin mz800emu mz700emu-pal mz700emu-ntsc mz1500emu)
+        add_test(
+            NAME    mcp_run_mzf_device_${_rd_bin}
+            COMMAND ${Python3_EXECUTABLE}
+                    ${CMAKE_CURRENT_SOURCE_DIR}/test_run_mzf_device.py ${_rd_bin}
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        )
+        set_tests_properties(mcp_run_mzf_device_${_rd_bin} PROPERTIES
+            LABELS  "e2e;mcp;pipe;tcp"
+            TIMEOUT 180
+        )
+    endforeach()
+
+    # Klíčové slovo [ROM] rom_type v INI (MZ-800: vývojové ROM bez klíčového
+    # slova): jméno vybere ROM toho jména a uloží se pod ním; INI formátu 1.0
+    # (posunutá jména) se čte postaru. Pipe, bez portu. Chybějící binárka = FAIL.
+    add_test(
+        NAME    mcp_rom_type_ini
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_rom_type_ini.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_rom_type_ini PROPERTIES
+        LABELS  "e2e;mcp;pipe"
+        TIMEOUT 180
+    )
+
     # MCP media_run_mzf = stejný stav jako --run-mzf (všechny 4 binárky):
     # reference --run-mzf zastavená exec breakpointem proti media_run_mzf
     # v pauze nad "špinavým" strojem (IM 2, I, vektor Z80 PIO); chybný
@@ -453,7 +488,10 @@ if(Python3_FOUND)
     # načtení + cmt_open play_immediately (páska hraje od začátku, signál
     # se mění, odpověď cmt_open hlásí skutečný stav); navíc
     # playable/recordable ve výpisu pásky a MAX SPEED po načtení snapshotu
-    # s cpu_boost (uživatelská MAX SPEED zůstává).
+    # s cpu_boost (uživatelská MAX SPEED zůstává). Snapshot pásky: chybějící
+    # soubor (varování na stderr), snapshot ve starém formátu bez <tape>,
+    # MZT s blokem a pozicí 1 s do bloku 1 obnovené po vysunutí i v novém
+    # procesu, dohrání nahraje program.
     add_test(
         NAME    mcp_cmt_snapshot
         COMMAND ${Python3_EXECUTABLE}
@@ -900,6 +938,222 @@ if(Python3_FOUND)
     )
     message(STATUS "  tests/mcp: registered mcp_snapshot_vram_latch "
                    "(Python ${Python3_VERSION})")
+
+    # -----------------------------------------------------------
+    # Pásky TMZ ve Virtual CMT a načtení MZF ROM na všech platformách (pipe)
+    # -----------------------------------------------------------
+    # Data v tests/data/cmt/ (kontroluje je unit test cmt_testdata):
+    # --cmt .tmz --cmt-play a ROM z boot menu načte první program, seznam
+    # bloků po emu_cmt_open, seek na blok 1 a druhý program, Pause 0 mezi
+    # programy zastaví pásku; seek na blok při PLAY a v pauze hraje blok od
+    # začátku a celý; varování emu_cmt_open u pásky s blokem, který
+    # player neumí; ROM RHEAD/RDATA načte MZF z --cmt na mz700emu-pal,
+    # mz1500emu a mz800emu.
+    add_test(
+        NAME    mcp_cmt_tmz
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_cmt_tmz.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_cmt_tmz PROPERTIES
+        LABELS  "e2e;mcp;pipe;cmt"
+        TIMEOUT 300
+        SKIP_RETURN_CODE 77
+    )
+    message(STATUS "  tests/mcp: registered mcp_cmt_tmz "
+                   "(Python ${Python3_VERSION})")
+
+    # -----------------------------------------------------------
+    # Záznam do pásky přes MCP (pipe): nová páska, záznam hran z programu
+    # v RAM, výsledek stop (recorded), uložení, export bloku, varování
+    # neuložených změn u eject a open během nahrávání (100x), reset během
+    # nahrávání nahrávání nezastaví.
+    # -----------------------------------------------------------
+    add_test(
+        NAME    mcp_cmt_record
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_cmt_record.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_cmt_record PROPERTIES
+        LABELS  "e2e;mcp;pipe;cmt"
+        TIMEOUT 300
+        SKIP_RETURN_CODE 77
+    )
+    message(STATUS "  tests/mcp: registered mcp_cmt_record "
+                   "(Python ${Python3_VERSION})")
+
+    # -----------------------------------------------------------
+    # Úpravy pásky přes MCP (pipe): import dvou MZF, přesun, smazání,
+    # pole unsaved a modified v cmt_tape_list, uložení do TMZ
+    # a znovuotevření, export celé pásky do WAV, chyby mimo STOP
+    # a neplatné bloky, odmítnutí při záznamu a přehrávání vstupů.
+    # -----------------------------------------------------------
+    add_test(
+        NAME    mcp_cmt_edit
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_cmt_edit.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_cmt_edit PROPERTIES
+        LABELS  "e2e;mcp;pipe;cmt"
+        TIMEOUT 180
+        SKIP_RETURN_CODE 77
+    )
+    message(STATUS "  tests/mcp: registered mcp_cmt_edit "
+                   "(Python ${Python3_VERSION})")
+
+    # -----------------------------------------------------------
+    # Nástroje nad páskou přes MCP pipe - analýza surového
+    # bloku (WAV z exportu bloku), Replace s MZF bajtově shodným
+    # s původním, informace o pásce, kontrola, převod profilu, přísné
+    # typy parametrů, záznam vstupů (čtení povolené, změny odmítnuté).
+    # -----------------------------------------------------------
+    add_test(
+        NAME    mcp_cmt_analyze
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_cmt_analyze.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_cmt_analyze PROPERTIES
+        LABELS  "e2e;mcp;pipe;cmt"
+        TIMEOUT 180
+        SKIP_RETURN_CODE 77
+    )
+    message(STATUS "  tests/mcp: registered mcp_cmt_analyze "
+                   "(Python ${Python3_VERSION})")
+
+    # -----------------------------------------------------------
+    # Kazeta přes MCP jako okno Virtual CMT: CMT hack jen ve STOP,
+    # Load directly, krok po přehratelných blocích, nová pole resource
+    # pásky (stav, soubor, délka, pozice, strop 256 bloků), záznam
+    # a přehrávání vstupů, alias block_id, rec_autostop_s.
+    # -----------------------------------------------------------
+    add_test(
+        NAME    mcp_cmt_parity
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_cmt_parity.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_cmt_parity PROPERTIES
+        LABELS  "e2e;mcp;pipe;cmt"
+        TIMEOUT 180
+        SKIP_RETURN_CODE 77
+    )
+    message(STATUS "  tests/mcp: registered mcp_cmt_parity "
+                   "(Python ${Python3_VERSION})")
+
+    # -----------------------------------------------------------
+    # input_send_keys v kódování ascii: CR z '\r', '\r\n' i '\n',
+    # nenapsatelné znaky v poli skipped a ve varování.
+    # -----------------------------------------------------------
+    add_test(
+        NAME    mcp_send_keys_text
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_send_keys_text.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_send_keys_text PROPERTIES
+        LABELS  "e2e;mcp;pipe;hid"
+        TIMEOUT 120
+        SKIP_RETURN_CODE 77
+    )
+    message(STATUS "  tests/mcp: registered mcp_send_keys_text "
+                   "(Python ${Python3_VERSION})")
+
+    # Python wrapper MCP (mcp-server/mcp_server.py) se aspoň přeloží do
+    # bajtkódu: chybu syntaxe jinak odhalí jen stdio e2e test, který bez
+    # .venv přeskočí. -I = izolovaný režim, nic z cwd.
+    add_test(
+        NAME    mcp_server_py_compile
+        COMMAND ${Python3_EXECUTABLE} -I -c
+                "import py_compile, sys; py_compile.compile(sys.argv[1], cfile=sys.argv[2], doraise=True)"
+                ${CMAKE_SOURCE_DIR}/mcp-server/mcp_server.py
+                ${CMAKE_CURRENT_BINARY_DIR}/mcp_server_py_compile.pyc
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    )
+    set_tests_properties(mcp_server_py_compile PROPERTIES
+        LABELS  "mcp;python"
+        TIMEOUT 60
+    )
+
+    # Převod rychlosti wrapperu (emu_cmt_tape_convert_block): 2, "2", "2:1" = hodnota, kterou bere C,
+    # bool odmítnut; čisté funkce vyjmuté z mcp_server.py (bez balíku mcp).
+    add_test(
+        NAME    mcp_wrapper_speed_unit
+        COMMAND ${Python3_EXECUTABLE} -I
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_mcp_wrapper_speed.py
+                ${CMAKE_SOURCE_DIR}/mcp-server/mcp_server.py
+                ${CMAKE_SOURCE_DIR}/src/libs/cmtspeed/cmtspeed.h
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    )
+    set_tests_properties(mcp_wrapper_speed_unit PROPERTIES
+        LABELS  "mcp;python"
+        TIMEOUT 60
+    )
+
+    # Jména v dokumentaci pro agenty (docs/agent/*.md) proti kódu: nástroje
+    # emu_cmt_*, resource emulator://periph/cmt*, pojmenované parametry
+    # a pole tabulek označených <!-- field-table: ... --> / <!-- result-table -->
+    # (mcp_server.py a handlery dispatch.c); čte jen zdrojové texty.
+    add_test(
+        NAME    mcp_agent_docs_names
+        COMMAND ${Python3_EXECUTABLE} -I
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_agent_docs_names.py
+                ${CMAKE_SOURCE_DIR}/docs/agent
+                ${CMAKE_SOURCE_DIR}/mcp-server/mcp_server.py
+                ${CMAKE_SOURCE_DIR}/src/emulator/mcp/dispatch.c
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    )
+    set_tests_properties(mcp_agent_docs_names PROPERTIES
+        LABELS  "mcp;python;docs"
+        TIMEOUT 60
+    )
+
+    # SAVE z ROM (@WHEAD + @WDATA), export MZF, zpětné načtení ROM a surový
+    # blok jen z hlavičky: jeden test na binárku (izolace, kratší timeout).
+    # Chybějící binárka = FAIL (všechny čtyři se sestavují).
+    foreach(_rs_bin mz800emu mz700emu-pal mz700emu-ntsc mz1500emu)
+        add_test(
+            NAME    mcp_cmt_rom_save_${_rs_bin}
+            COMMAND ${Python3_EXECUTABLE}
+                    ${CMAKE_CURRENT_SOURCE_DIR}/test_cmt_record.py --rom-save ${_rs_bin}
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        )
+        set_tests_properties(mcp_cmt_rom_save_${_rs_bin} PROPERTIES
+            LABELS  "e2e;mcp;pipe;cmt"
+            TIMEOUT 180
+        )
+        # Totéž se zapnutým CMT hackem (Direct, výchozí nové konfigurace):
+        # hrana PC3 programu rozjede nahrávání, MZF bajtově shodné, LOAD
+        # zpět přes patch; přehrávání s hackem beze změny.
+        add_test(
+            NAME    mcp_cmt_rom_save_direct_${_rs_bin}
+            COMMAND ${Python3_EXECUTABLE}
+                    ${CMAKE_CURRENT_SOURCE_DIR}/test_cmt_record.py --rom-save-direct ${_rs_bin}
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        )
+        set_tests_properties(mcp_cmt_rom_save_direct_${_rs_bin} PROPERTIES
+            LABELS  "e2e;mcp;pipe;cmt"
+            TIMEOUT 180
+        )
+        # Direct Save (výchozí nové konfigurace): SAVE z ROM bez Record uloží
+        # blok MZF hned, VERIFY z ROM proti otevřenému bloku (OK i chyba),
+        # LOAD zpět, druhý soubor jako další blok, Record + Direct Save,
+        # direct_save false vrátí původní bajty ROM, na mz800emu rewind
+        # záznamu vstupů po přímém uložení.
+        add_test(
+            NAME    mcp_cmt_direct_save_${_rs_bin}
+            COMMAND ${Python3_EXECUTABLE}
+                    ${CMAKE_CURRENT_SOURCE_DIR}/test_cmt_direct_save.py --machine ${_rs_bin}
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        )
+        set_tests_properties(mcp_cmt_direct_save_${_rs_bin} PROPERTIES
+            LABELS  "e2e;mcp;pipe;cmt"
+            TIMEOUT 180
+        )
+    endforeach()
+
 
     # -----------------------------------------------------------
     # MZT s hlavičkou CMTSPEED (UniCMT) a vlastní délky pulzů (pipe)

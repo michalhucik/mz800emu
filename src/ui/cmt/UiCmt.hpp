@@ -8,46 +8,6 @@
 #include "libs/mztape/mztape.h"
 #include "cmt/cmtext_block.h"
 
-typedef enum en_PLAY_STATE
-{
-    PLAY_STATE_NONE = 0,
-    PLAY_STATE_STOPPED,
-    PLAY_STATE_PLAYING,
-    PLAY_STATE_PAUSED,
-    PLAY_STATE_COUNT_ITEMS
-} en_PLAY_STATE;
-
-typedef enum en_CMT_SPEED_TYPE
-{
-    CMT_SPEED_TYPE_NONE = 0,
-    CMT_SPEED_TYPE_MZ,
-    CMT_SPEED_TYPE_ZX,
-} en_CMT_SPEED_TYPE;
-
-typedef struct TapeFileEntry_t
-{
-    int id;
-    en_PLAY_STATE play_state;
-    bool ready;
-    bool played;
-    bool paused;
-    std::string name;
-    std::string ftype_txt;
-    std::string fsize_txt;
-    std::string fstrt_txt;
-    std::string fexec_txt;
-    int block_type;
-    en_CMTEXT_BLOCK_SPEED block_speed; // CMTEXT_BLOCK_SPEED_NONE, CMTEXT_BLOCK_SPEED_DEFAULT, CMTEXT_BLOCK_SPEED_SET
-    en_CMTSPEED cmtspeed;              // CMTSPEED_NONE, CMTSPEED_1_1, ..., CMTSPEED_25_14, CMTSPEED_CUSTOM
-    std::string cmtspeed_txt;          // "1:1 - 1200 Bd", ..., u vlastních pulzů "156/164/80/92 µs (~3.03:1)"
-    en_CMT_SPEED_TYPE cmtspeed_type;   // CMT_SPEED_TYPE_NONE, CMT_SPEED_TYPE_MZ, CMT_SPEED_TYPE_ZX
-    bool has_pulses;                   // pulses platí (MZ blok, cmt_tape_get_block_pulses uspěl)
-    st_MZTAPE_PULSES_LENGTH pulses;    // efektivní délky pulzů MZ bloku (výchozí nebo vlastní rychlost)
-    std::string length_txt;
-} TapeFileEntry_t;
-
-extern std::vector<TapeFileEntry_t> g_tapeFileList;
-
 typedef struct UiCmtSpeedList_t
 {
     en_CMTSPEED cmtspeed;
@@ -108,21 +68,6 @@ public:
 
     // ziskani pole s rychlostmi pro ZX
     static std::vector<UiCmtSpeedList_t> getZxSpeedList(void);
-
-    /**
-     * @brief Odhad délky bloku v sekundách (9 bitů na bajt těla).
-     *
-     * @param bltype Typ bloku.
-     * @param blspeed Režim rychlosti bloku.
-     * @param cmtspeed Rychlost bloku (CMTSPEED_NONE = 1:1).
-     * @param fsize Délka těla v bajtech.
-     * @param pulses Délky pulzů pro CMTSPEED_CUSTOM (jinak se ignoruje; NULL = délku nelze určit).
-     * @return Délka v sekundách, -1 pokud ji nelze určit.
-     */
-    static int getLengthInSec(en_CMTEXT_BLOCK_TYPE bltype, en_CMTEXT_BLOCK_SPEED blspeed, en_CMTSPEED cmtspeed, int fsize, const st_MZTAPE_PULSES_LENGTH *pulses = nullptr);
-
-    // aktualizace seznamu souboru na pasce
-    static void updateTapeFilelist(void);
 };
 
 #endif // UI_CMT_HPP

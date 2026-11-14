@@ -1,3 +1,7 @@
+/**
+ * @file ImGuiCmt.cpp
+ * @brief Seznamy rychlostí kazety pro ImGui a modální editor vlastních délek pulzů (Custom Tape Pulses).
+ */
 #include "main.h"
 #include "libs/sdlapp/sdlapp.h"
 #include <stdio.h>
@@ -11,13 +15,14 @@
 
 #include "libs/cmtspeed/cmtspeed.h"
 #include "hw-generic/cmt/cmtext_block.h"
-#include "hw-generic/cmt/cmt_mzf.h"
-#include "hw-generic/cmt/cmt_tap.h"
+#include "hw-generic/cmt/cmt_tmz.h"
 
 #include "ui/cmt/UiCmt.hpp"
 #include "ImGuiCmt.hpp"
 
 #include "libs/imgui/imgui.h"
+#include "ui-imgui/imgui_modal.h"
+#include "ui-imgui/cmt/imgui_cmt.h"
 #include "libs/mztape/mztape.h"
 
 struct
@@ -106,16 +111,22 @@ bool ImGuiCmt::drawPulsesEditor(const char *scope, int *owner, st_MZTAPE_PULSES_
     if ((g_imgui_pulses_editor.scope == nullptr) || (strcmp(g_imgui_pulses_editor.scope, scope) != 0))
         return false;
 
-    const char *title = _L("Custom Tape Pulses");
+    /* ID popupu nezávislé na překladu titulku ("###"):
+     * OpenPopup() i BeginPopupModal() počítají ID jen z části za "###" */
+    char title[160];
+    snprintf(title, sizeof(title), "%s%s", _("Custom Tape Pulses"), IMGUI_CMT_PULSES_POPUP_ID);
 
-    if (g_imgui_pulses_editor.open_request)
+    /* požadavek čeká, dokud je otevřený jiný popup (imgui_modal.h) */
+    if (g_imgui_pulses_editor.open_request && imgui_modal_can_open())
     {
-        ImGui::OpenPopup(title);
+        ImGui::OpenPopup(IMGUI_CMT_PULSES_POPUP_ID);
         g_imgui_pulses_editor.open_request = false;
     };
 
     bool confirmed = false;
 
+    /* uprostřed okna Virtual CMT a v jeho viewportu */
+    imgui_cmt_window_modal_next_pos();
     if (ImGui::BeginPopupModal(title, NULL, ImGuiWindowFlags_AlwaysAutoResize))
     {
         ImGui::TextUnformatted(_("Pulse lengths in microseconds (order of the UniCMT CMTSPEED header):"));
@@ -160,7 +171,7 @@ bool ImGuiCmt::drawPulsesEditor(const char *scope, int *owner, st_MZTAPE_PULSES_
         ImGui::Spacing();
         if (valid)
         {
-            double ratio = mztape_pulses_get_ratio(CMTMZF_FORMATSET, &pulses);
+            double ratio = mztape_pulses_get_ratio(CMTTMZ_FORMATSET, &pulses);
             ImGui::Text(_("Equivalent speed: ~%.2f:1 (%.0f Bd)"), ratio, ratio * MZTAPE_DEFAULT_BDSPEED);
         }
         else

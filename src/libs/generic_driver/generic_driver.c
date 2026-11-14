@@ -1,7 +1,7 @@
 /**
  * @file   generic_driver.c
  * @author Michal Hucik <hucik@ordoz.com>
- * @version 2.0.0
+ * @version 2.0.2
  * @brief  Jádrová implementace univerzální I/O abstrakce a volitelné zabudované callbacky.
  *
  * Tato knihovna slouží jako univerzální prostředek pro přístup k datovým blokům.
@@ -17,9 +17,13 @@
  * (prepare + ppread/ppwrite), který se vyhne kopírování dat.
  *
  * @par Changelog:
- * - 2026-03-14: Proběhla kompletní revize a refaktorizace. Vytvořeny unit testy.
+ * - 2026-03-14: Proběhla kompletní kontrola kódu a refaktorizace. Vytvořeny unit testy.
  *
  * @par Licence:
+ * GNU General Public License v3 (GPLv3)
+ *
+ * Copyright (C) 2017-2026 Michal Hucik <hucik@ordoz.com>
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -27,29 +31,32 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include <string.h>
 
-#ifdef WINDOWS
+#if defined(WINDOWS)
 #include <windows.h>
-#elif LINUX
-/* při kompilaci přidat -D_XOPEN_SOURCE=500 */
+#else
+/* POSIX (Linux, MSYS2/MinGW, ...) */
 #include <unistd.h>
 #endif
 
 #include "generic_driver.h"
 
-/** @brief Příznak použití baseui_tools jako podkladové vrstvy pro alokaci a souborové operace */
+/** @brief Příznak použití baseui_tools jako podkladové vrstvy pro alokaci a souborové operace.
+ *  Pro standalone build (bez mz800emu) definovat GENERIC_DRIVER_NO_BASEUI. */
+#ifndef GENERIC_DRIVER_NO_BASEUI
 #define HAVE_BASEUI_TOOLS
+#endif
 
 #ifdef HAVE_BASEUI_TOOLS
-#include "baseui/baseui.h"
+#include "../baseui_compat.h"
 
 /** @brief Alokace paměti s vynulováním (přes baseui_tools) */
 #define generic_driver_utils_mem_alloc0( size ) baseui_tools_mem_alloc ( size )
@@ -733,7 +740,7 @@ int generic_driver_truncate_file_cb ( st_HANDLER *h, uint32_t size ) {
         return EXIT_FAILURE;
     }
 
-#ifdef WINDOWS
+#if defined(WINDOWS)
     if ( EXIT_SUCCESS != fseek ( fh, size, SEEK_SET ) ) {
         d->err = GENERIC_DRIVER_ERROR_SEEK;
         return EXIT_FAILURE;
@@ -742,7 +749,13 @@ int generic_driver_truncate_file_cb ( st_HANDLER *h, uint32_t size ) {
         d->err = GENERIC_DRIVER_ERROR_TRUNCATE;
         return EXIT_FAILURE;
     }
-#elif LINUX
+#elif defined(LINUX)
+    if ( EXIT_SUCCESS != ftruncate ( fileno ( fh ), size ) ) {
+        d->err = GENERIC_DRIVER_ERROR_TRUNCATE;
+        return EXIT_FAILURE;
+    }
+#else
+    /* POSIX fallback (MSYS2/MinGW) */
     if ( EXIT_SUCCESS != ftruncate ( fileno ( fh ), size ) ) {
         d->err = GENERIC_DRIVER_ERROR_TRUNCATE;
         return EXIT_FAILURE;
@@ -1225,3 +1238,8 @@ st_DRIVER* generic_driver_memory_init ( st_DRIVER *d ) {
 
 
 #endif /* GENERIC_DRIVER_MEMORY_CB */
+
+
+const char* generic_driver_version ( void ) {
+    return GENERIC_DRIVER_VERSION;
+}

@@ -1,13 +1,18 @@
 /**
  * @file   cmt_vstream.c
  * @author Michal Hucik <hucik@ordoz.com>
- * @version 2.0.0
+ * @version 2.1.0
  * @brief  Implementace vstream formátu — pulzně-délkové kódování CMT signálu.
  *
  * @par Changelog:
- * - 2026-03-14: Proběhla kompletní revize a refaktorizace. Vytvořeny unit testy.
+ * - 2026-11-10: cmt_vstream_add_value_long() - běh delší než jeden event (2.1.0).
+ * - 2026-03-14: Proběhla kompletní kontrola kódu a refaktorizace. Vytvořeny unit testy.
  *
  * @par Licence:
+ * GNU General Public License v3 (GPLv3)
+ *
+ * Copyright (C) 2017-2026 Michal Hucik <hucik@ordoz.com>
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -15,11 +20,11 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include <stdio.h>
@@ -28,7 +33,7 @@
 #include <string.h>
 #include <math.h>
 
-#include "baseui/baseui.h"
+#include "../baseui_compat.h"
 #include "libs/generic_driver/generic_driver.h"
 #include "libs/wav/wav.h"
 
@@ -214,6 +219,56 @@ int cmt_vstream_add_value ( st_CMT_VSTREAM *cmt_vstream, int value, uint32_t cou
     cmt_vstream->scans += count_samples;
 
     return cmt_vstream_set_last_event ( cmt_vstream, ( count_samples ) );
+}
+
+
+/**
+ * @brief Připojí event opačné hodnoty s délkou 0 vzorků (oddělovač plných eventů téže hodnoty).
+ * @param cmt_vstream Vstream.
+ * @return EXIT_SUCCESS, nebo EXIT_FAILURE při chybě alokace.
+ */
+static int cmt_vstream_add_empty_event ( st_CMT_VSTREAM *cmt_vstream ) {
+    cmt_vstream->data = baseui_tools_mem_realloc ( cmt_vstream->data, cmt_vstream->size + cmt_vstream->min_byte_length );
+    if ( !cmt_vstream->data ) {
+        fprintf ( stderr, "%s():%d: Error: can't allocate memory (%u B).\n", __func__, __LINE__, cmt_vstream->size + (uint32_t) cmt_vstream->min_byte_length );
+        return EXIT_FAILURE;
+    }
+    cmt_vstream->last_set_value = ~cmt_vstream->last_set_value & 1;
+    cmt_vstream->last_event_byte_length = cmt_vstream->min_byte_length;
+    cmt_vstream->size += cmt_vstream->min_byte_length;
+    return cmt_vstream_set_last_event ( cmt_vstream, 0 );
+}
+
+
+uint64_t cmt_vstream_scale_time ( uint64_t units, uint32_t timebase, uint32_t rate ) {
+    if ( !timebase ) return UINT64_MAX;
+    uint64_t q = units / timebase;
+    uint64_t r = units % timebase;
+    if ( rate && q > ( UINT64_MAX - UINT32_MAX ) / rate ) return UINT64_MAX;
+    return q * rate + ( r * rate + timebase / 2 ) / timebase;
+}
+
+
+int cmt_vstream_add_value_long ( st_CMT_VSTREAM *cmt_vstream, int value, uint64_t count_samples ) {
+    if ( count_samples == 0 ) {
+        fprintf ( stderr, "%s():%d: Error: count_samples can't be 0.\n", __func__, __LINE__ );
+        return EXIT_FAILURE;
+    }
+    while ( count_samples ) {
+        uint64_t room = CMT_VSTREAM_MAX_EVENT;
+        if ( ( value & 1 ) == cmt_vstream->last_set_value ) {
+            room -= cmt_vstream_get_last_event ( cmt_vstream );
+            if ( room == 0 ) {
+                /* event plný: oddělovač opačné úrovně s délkou 0, pak nový event téže úrovně */
+                if ( EXIT_SUCCESS != cmt_vstream_add_empty_event ( cmt_vstream ) ) return EXIT_FAILURE;
+                continue;
+            }
+        }
+        uint32_t n = ( uint32_t ) ( ( count_samples < room ) ? count_samples : room );
+        if ( EXIT_SUCCESS != cmt_vstream_add_value ( cmt_vstream, value, n ) ) return EXIT_FAILURE;
+        count_samples -= n;
+    }
+    return EXIT_SUCCESS;
 }
 
 

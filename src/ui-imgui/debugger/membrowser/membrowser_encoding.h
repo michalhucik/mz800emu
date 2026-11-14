@@ -9,7 +9,7 @@
  *   uint8_t vcode = mz_vcode_from_ascii_dump ( byte, MZ_VCODE_EU/JP );
  *   mzglyphs_to_utf8_buf ( vcode, MZGLYPHS_EU1/EU2/JP1/JP2, buf );
  *
- * Dispatch nad sharpmz_ascii (sharpmz_to_utf8) + sharpmz_koi8cs +
+ * Dispatch nad sharpmz_ascii (sharpmz_to_utf8, vč. KOI8-CS) +
  * mz_vcode + mzglyphs knihovny. Core hex view kód NESmí znát konkrétní
  * charset_t enum konkrétních libs - jen integer encoding_id z
  * en_MEMBROWSER_ENCODING. Dispatch je zapouzdřen v tomto modulu.
@@ -76,7 +76,7 @@ bool membrowser_encoding_utf8_to_byte ( const char *utf8, int encoding_id, uint8
 /**
  * @brief Vrátí true pokud KOI8-CS tabulka v lib není načtena.
  *
- * Status row pak ukáže warning. V0 returns false (sharpmz_koi8cs je
+ * Status row pak ukáže warning. V0 returns false (sharpmz_ascii KOI8-CS je
  * importována jako V-1a, tabulka je vždy dostupná). Hook ponechaný
  * pro budoucí build varianty (např. minimal lib bez tabulky).
  *

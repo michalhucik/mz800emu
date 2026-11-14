@@ -56,6 +56,15 @@ mz_add_test(mz800_bootstrap_dmd
     LABELS   "emu;peripherals"
 )
 
+# Kód zařízení v BC při přímém spuštění MZF ([CMT] run_mzf_device): zápis
+# volby (jména, čísla, neplatné), tabulka pro 700 / 800 / 1500, nastavení,
+# klíč INI a BC po bootstrapu.
+mz_add_test(bootstrap_device
+    TYPE     EMU
+    SOURCES  test_bootstrap_device.c
+    LABELS   "emu;peripherals;cmt"
+)
+
 # Stav registrů GDG MZ-800 po resetu jako na HW (paleta černá, DMD 0,
 # okraj 0; simulace netlistu GDG).
 mz_add_test(mz800_gdg_reset
@@ -96,6 +105,95 @@ mz_add_test(cmt_state
 mz_add_test(cmt_unicmt
     TYPE     EMU
     SOURCES  test_cmt_unicmt.c
+    LABELS   "emu;peripherals;cmt"
+)
+
+# Rozšíření cmt_tmz: index pásky z TMZ (řídicí bloky CONTROL), otevření bloku
+# přes tmz_player, páska bez signálu, vysunutí během pauzy a nové otevření.
+mz_add_test(cmt_tmz
+    TYPE     EMU
+    SOURCES  test_cmt_tmz.c
+    LABELS   "emu;peripherals;cmt"
+)
+
+# Úpravy vložené pásky: mazání, přesun a vložení bloků, invarianty
+# indexu, kurzor, příznak neuloženo, pauza na švu, řídicí bloky, značka
+# checkpointu a snapshot po úpravách.
+mz_add_test(cmt_tmz_edit
+    TYPE     EMU
+    SOURCES  test_cmt_tmz_edit.c
+    LABELS   "emu;peripherals;cmt"
+)
+
+# Analýza surového bloku 0x18: kopie pulzů a její chyby, řádky
+# (krátké neznámé úseky vynechané, ZX a překryv souborů), soubory ADDABLE /
+# STAYS_RAW / opravené, uplatnění Add a Replace (pulzy surových řádků
+# v původním pořadí, pauzy jako záznam, mez playeru), odmítnutí zastaralého
+# výsledku, prázdný blok, histogram.
+mz_add_test(cmt_tmz_analyze
+    TYPE     EMU
+    SOURCES  test_cmt_tmz_analyze.c
+    LABELS   "emu;peripherals;cmt"
+)
+
+# Nástroje nad páskou: informace o pásce (bloky 0x32 a 0x43,
+# cizí položky, zápis beze změny), kontrola pásky (nálezy s číslem bloku),
+# převod bloku 0x46 na jiný profil zapisovače (MZF bajtově shodné).
+mz_add_test(cmt_tmz_meta
+    TYPE     EMU
+    SOURCES  test_cmt_tmz_meta.c
+    LABELS   "emu;peripherals;cmt"
+)
+
+# CMT hack nad vloženou páskou: MZF z aktuálního bloku, posun po těle,
+# jen hlavička, posun pásky mezi pastmi, bloky bez MZF a s jiným fsize.
+mz_add_test(cmthack_tape
+    TYPE     EMU
+    SOURCES  test_cmthack_tape.c
+    LABELS   "emu;peripherals;cmt"
+)
+
+# Direct Save: patch zápisových rutin ROM nad všemi vestavěnými obrazy dolní
+# ROM (signatura, XOR beze změny, odinstalace vrátí obraz), patch podle
+# hacku a nastavení, výměna ROM, zásah menu jen ve STOP, pasti OUT 03h
+# (WHEAD / WDATA) a OUT 04h (VERFY). Obrazy ROM MZ-700 a MZ-1500 jsou
+# přilinkované jako data (jádro testů je MZ-800).
+mz_add_test(cmthack_save
+    TYPE     EMU
+    SOURCES  test_cmthack_save.c
+             ${CMAKE_SOURCE_DIR}/src/emulator/mzarch/mz700/memory/ROM/ROM_MZ700_13A_0000.c
+             ${CMAKE_SOURCE_DIR}/src/emulator/mzarch/mz700/memory/ROM/ROM_MZ700_9B_0000.c
+             ${CMAKE_SOURCE_DIR}/src/emulator/mzarch/mz1500/memory/ROM/ROM_MZ1500_0000.c
+             ${CMAKE_SOURCE_DIR}/src/emulator/mzarch/mz1500/memory/ROM/ROM_MZNEWMON_0000.c
+    LABELS   "emu;peripherals;cmt"
+)
+
+# Testovací pásky pro tests/mcp/test_cmt_tmz.py (tests/data/cmt/): generátor
+# z malých syntetických MZF; porovná uložené soubory, s MZTEST_REGEN_CMT_DATA=1
+# je zapíše.
+mz_add_test(cmt_testdata
+    TYPE     EMU
+    SOURCES  test_cmt_testdata.c
+    LABELS   "emu;peripherals;cmt"
+)
+target_compile_definitions(test_cmt_testdata PRIVATE
+    MZTEST_CMT_DATA_DIR="${CMAKE_SOURCE_DIR}/tests/data/cmt"
+)
+
+# Import pásky do TMZ v paměti (cmt_tmz_import.h): zdroj podle přípony,
+# MZF a MZT jako bloky 0x46 MZ800EMU-CMT, shoda signálu s mztape.
+mz_add_test(cmt_tmz_import
+    TYPE     EMU
+    SOURCES  test_cmt_tmz_import.c
+    LABELS   "emu;peripherals;cmt"
+)
+
+# Buffer hran záznamu (cmt_tmz_record.h): úseky mezi hranami, ignorovaná
+# stejná úroveň, odmítnutý nerostoucí čas, meze položek a délky (zmenšené
+# testovacím setterem), dělení úseku nad UINT32_MAX, begin po discard.
+mz_add_test(cmt_tmz_record
+    TYPE     EMU
+    SOURCES  test_cmt_tmz_record.c
     LABELS   "emu;peripherals;cmt"
 )
 
@@ -195,6 +293,25 @@ mz_add_test(cmt-request
     TYPE     EMU
     SOURCES  test_cmt_request.c
     LABELS   "emu;peripherals"
+)
+
+# Zásahy úprav pásky (cmt_request.h): smazání, přesun, import a export
+# celé pásky až v device_request_poll(), kódování seznamu bloků do rozsahů,
+# kontrola čítače výměn pásky, odmítnutí při replay, výsledek úpravy pro okno.
+mz_add_test(cmt-request-edit
+    TYPE     EMU
+    SOURCES  test_cmt_request_edit.c
+    LABELS   "emu;peripherals;cmt"
+)
+
+# Zásahy nástrojů nad páskou (cmt_request.h): kopie pulzů surového
+# bloku a její vyzvednutí, uplatnění analýzy (zásah drží odkazy do provedení),
+# zápis informací o pásce (kopie formuláře), převod profilu bloku, kontrola
+# čítače výměn pásky, odmítnutí při replay, výsledek úpravy pro okno.
+mz_add_test(cmt-request-analyze
+    TYPE     EMU
+    SOURCES  test_cmt_request_analyze.c
+    LABELS   "emu;peripherals;cmt"
 )
 
 # Zásahy GUI do joysticků (joy_request.h): typ zařízení až

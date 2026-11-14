@@ -440,7 +440,7 @@ static const st_SDLAPP_OPTION_DEF g_pipe_known_options[] = {
     { "--cmt-play",             SDLAPP_OPTION_FLAG,  SDLAPP_OPTVAL_NONE,   NULL, NULL,
       "With --cmt: press PLAY after inserting the tape." },
     { "--cmt-play-pause",       SDLAPP_OPTION_FLAG,  SDLAPP_OPTVAL_NONE,   NULL, NULL,
-      "With --cmt: PLAY + PAUSE; the tape moves when the ROM starts the motor." },
+      "With --cmt: PLAY waiting for the motor; the tape moves when the ROM starts the motor." },
     { "--cmt-boot",             SDLAPP_OPTION_FLAG,  SDLAPP_OPTVAL_NONE,   NULL, NULL,
       "With --cmt (MZ-800): hold C until the ROM starts the motor (boot from tape)." },
     { "--fdd",                  SDLAPP_OPTION_VALUE, SDLAPP_OPTVAL_STRING, NULL, "<N>=<filepath>",

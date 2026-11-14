@@ -222,7 +222,7 @@ Hovering the "Banking" header shows the tooltip "Left: rotate, Right: menu".
 | PEHU (8K) | 8 dual cells, even row is a `$XX` button, odd row empty |
 
 Clicking the button = open the "MemExt Map Settings" window (identical to
-the matching item in the Devices menu).
+the matching item in the HW & Devices menu).
 
 Tooltip over the button: "MemExt remap...".
 

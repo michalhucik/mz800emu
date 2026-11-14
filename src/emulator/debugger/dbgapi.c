@@ -122,7 +122,9 @@
  * DBGAPI_CMD_MEDIA_* dispatchuje na jednotlivé hw-generic API. Periferie
  * jsou per-arch volitelné přes CFG_HWEXT_HAVE_* makra v mzarch_config.h. */
 #include "hw-generic/cmt/cmt.h"
+#include "hw-generic/cmt/cmt_tmz.h"
 #include "hw-generic/cmt/cmthack.h"
+#include "hw-generic/cmt/cmt_request.h"
 #include "libs/mztape/mztape.h"
 /* fix mzdos 0008: media_load_mzf zrcadlí bootstrap.c plný load (header +
  * post-header mapping + body). Potřebujeme post_header per-arch + MZF
@@ -1161,6 +1163,21 @@ const char *dbgapi_cmd_to_str(en_DBGAPI_CMD cmd)
         case DBGAPI_CMD_CMT_TAPE_SEEK:                  return "cmt_tape_seek";
         case DBGAPI_CMD_CMT_TAPE_BLOCK_SPEED:           return "cmt_tape_block_speed";
         case DBGAPI_CMD_CMT_TAPE_LIST:                  return "cmt_tape_list";
+        case DBGAPI_CMD_CMT_SAVE:                       return "cmt_save";
+        case DBGAPI_CMD_CMT_EXPORT_BLOCK:               return "cmt_export_block";
+        case DBGAPI_CMD_CMT_NEW_TAPE:                   return "cmt_new_tape";
+        case DBGAPI_CMD_CMT_TAPE_DELETE_BLOCKS:         return "cmt_tape_delete_blocks";
+        case DBGAPI_CMD_CMT_TAPE_MOVE_BLOCK:            return "cmt_tape_move_block";
+        case DBGAPI_CMD_CMT_TAPE_IMPORT:                return "cmt_tape_import";
+        case DBGAPI_CMD_CMT_EXPORT_TAPE:                return "cmt_export_tape";
+        case DBGAPI_CMD_CMT_TAPE_ANALYZE:               return "cmt_tape_analyze";
+        case DBGAPI_CMD_CMT_TAPE_ANALYZE_APPLY:         return "cmt_tape_analyze_apply";
+        case DBGAPI_CMD_CMT_TAPE_INFO_GET:              return "cmt_tape_info_get";
+        case DBGAPI_CMD_CMT_TAPE_INFO_SET:              return "cmt_tape_info_set";
+        case DBGAPI_CMD_CMT_TAPE_CHECK:                 return "cmt_tape_check";
+        case DBGAPI_CMD_CMT_TAPE_CONVERT_BLOCK:         return "cmt_tape_convert_block";
+        case DBGAPI_CMD_CMT_LOAD_DIRECTLY:              return "cmt_load_directly";
+        case DBGAPI_CMD_CMT_TAPE_STEP:                  return "cmt_tape_step";
         /* mcp-debug-control request 0021 - deterministický frame-bounded run */
         case DBGAPI_CMD_RUN_FRAMES:                     return "run_frames";
     };
@@ -1631,6 +1648,27 @@ void dbgapi_test_arm_dispatch_stall(en_DBGAPI_CMD cmd, int ms)
     g_atomic_int_set(&s_test_stall_cmd, (gint)cmd);
     g_atomic_int_set(&s_test_stall_ms, ms > 0 ? (gint)ms : 0);
 }
+
+
+#ifdef MZTEST_HEADLESS
+/**
+ * @brief Testovací háček: držel emu vlákno zámek stavu zařízení během poslední
+ *        MCP analýzy pásky? (-1 = analýza neproběhla, 0 = ne, 1 = ano).
+ */
+static gint s_test_cmt_analyze_lock_state = -1;
+
+
+int dbgapi_test_cmt_analyze_lock_state(void)
+{
+    return g_atomic_int_get(&s_test_cmt_analyze_lock_state);
+}
+
+
+void dbgapi_test_cmt_analyze_lock_reset(void)
+{
+    g_atomic_int_set(&s_test_cmt_analyze_lock_state, -1);
+}
+#endif
 
 
 /**
@@ -2687,7 +2725,12 @@ static int dbgapi_periph_apply ( st_DBGAPI_PERIPH_PARAM *p, bool attach )
  *
  * Otevření a vysunutí pásky uvolňuje kontejner a bloky, které okna kazety
  * v UI vlákně čtou pod zámkem stavu zařízení (device_request.h); stejně
- * transport, výběr bloku, rychlost a CMT hack (přepis ROM, stav pásky).
+ * transport, výběr bloku, rychlost a CMT hack (přepis ROM, stav pásky),
+ * úpravy pásky (mazání, přesun, import) a export bloku i celé pásky;
+ * nástroje nad páskou (informace o pásce, kontrola, převod profilu) čtou bloky pod
+ * týmž zámkem. Výjimka: DBGAPI_CMD_CMT_TAPE_ANALYZE a _APPLY tu nejsou -
+ * handler bere zámek sám jen kolem kopie pulzů a kolem uplatnění, aby
+ * po dobu analýzy (čistá funkce nad kopií) nestálo okno aplikace.
  *
  * @param cmd Příkaz bez příznaku BLOCKING.
  * @return true = dispatch ho provede pod device_state_lock().
@@ -2703,11 +2746,159 @@ static bool dbgapi_cmd_needs_device_lock(en_DBGAPI_CMD cmd)
         case DBGAPI_CMD_CMT_OPEN:
         case DBGAPI_CMD_CMT_TAPE_SEEK:
         case DBGAPI_CMD_CMT_TAPE_BLOCK_SPEED:
+        case DBGAPI_CMD_CMT_SAVE:
+        case DBGAPI_CMD_CMT_EXPORT_BLOCK:
+        case DBGAPI_CMD_CMT_NEW_TAPE:
+        case DBGAPI_CMD_CMT_TAPE_DELETE_BLOCKS:
+        case DBGAPI_CMD_CMT_TAPE_MOVE_BLOCK:
+        case DBGAPI_CMD_CMT_TAPE_IMPORT:
+        case DBGAPI_CMD_CMT_EXPORT_TAPE:
+        case DBGAPI_CMD_CMT_TAPE_INFO_GET:
+        case DBGAPI_CMD_CMT_TAPE_INFO_SET:
+        case DBGAPI_CMD_CMT_TAPE_CHECK:
+        case DBGAPI_CMD_CMT_TAPE_CONVERT_BLOCK:
+        case DBGAPI_CMD_CMT_LOAD_DIRECTLY:
+        case DBGAPI_CMD_CMT_TAPE_STEP:
             return true;
         default:
             return false;
     };
 }
+
+
+/**
+ * @brief Otevření pásky pro MCP (cmt_open i media_insert slot cmt): soubor a varování.
+ *
+ * cmt_open_file(): neúspěšné otevření nechá vloženou pásku beze změny
+ * a varování prázdné. Úspěšné otevření, které zahodilo neuložené změny
+ * nebo nahrávání, dá varování CMT_WARNING_DISCARDED, za ním "; " a varování
+ * otevření pásky (cmttmz_get_open_warning()); jinak jen varování otevření.
+ *
+ * @param path Cesta souboru (neprázdná).
+ * @param[out] out_warning Varování (vždy ukončené nulou). @param size Velikost @p out_warning.
+ * @return EXIT_SUCCESS; EXIT_FAILURE, když soubor nejde otevřít.
+ * @pre Emu vlákno pod device_state_lock().
+ */
+static int dbgapi_cmt_open_file ( const char *path, char *out_warning, size_t size )
+{
+    out_warning[ 0 ] = '\0';
+    bool discarded = false;
+    int rc = cmt_open_file ( path, &discarded );
+    if ( rc != EXIT_SUCCESS )
+        return rc;
+    if ( discarded )
+    {
+        g_strlcpy ( out_warning, CMT_WARNING_DISCARDED, size );
+        if ( cmttmz_get_open_warning ( )[ 0 ] )
+        {
+            g_strlcat ( out_warning, "; ", size );
+            g_strlcat ( out_warning, cmttmz_get_open_warning ( ), size );
+        };
+    }
+    else
+    {
+        g_strlcpy ( out_warning, cmttmz_get_open_warning ( ), size );
+    };
+    return rc;
+}
+
+
+/**
+ * @brief Vysunutí pásky pro MCP (cmt_transport eject i media_eject slot cmt).
+ *
+ * @param[out] out_warning CMT_WARNING_DISCARDED, když páska byla Modified
+ *             nebo běželo nahrávání, jinak prázdné (vždy ukončené nulou).
+ * @param size Velikost @p out_warning.
+ * @pre Emu vlákno pod device_state_lock().
+ */
+static void dbgapi_cmt_eject ( char *out_warning, size_t size )
+{
+    out_warning[ 0 ] = '\0';
+    if ( cmt_has_unsaved_changes ( ) )
+        g_strlcpy ( out_warning, CMT_WARNING_DISCARDED, size );
+    cmt_eject ( );
+}
+
+
+#ifdef MZ800EMU_CFG_MCP_SERVER_ENABLED
+/**
+ * @brief Ověří pro MCP, že deck stojí (úpravy pásky jen ve STOP).
+ *
+ * Mimo STOP (PLAY, pauza, nahrávání) zapíše DBGAPI_CMT_EDIT_NOT_STOPPED.
+ * Ostatní podmínky (páska, nahrávání, přehrávání vstupů) ověří obal
+ * úpravy v cmt.c s vlastním textem chyby.
+ *
+ * @param[out] out_message Text chyby (při false). @param size Velikost @p out_message.
+ * @return true = deck ve STOP.
+ * @pre Emu vlákno.
+ */
+static bool dbgapi_cmt_edit_stopped ( char *out_message, size_t size )
+{
+    if ( CMT_TEST_STOP )
+        return true;
+    g_strlcpy ( out_message, DBGAPI_CMT_EDIT_NOT_STOPPED, size );
+    return false;
+}
+
+
+/**
+ * @brief Počet bloků a otevřený blok vložené pásky (výstupy úprav pásky pro MCP).
+ * @param[out] count Počet bloků (0 bez pásky).
+ * @param[out] current Otevřený blok (-1 = žádný).
+ * @pre Emu vlákno.
+ */
+static void dbgapi_cmt_tape_counts ( int *count, int *current )
+{
+    *count = 0;
+    *current = -1;
+    if ( !CMT_TEST_FILLED || !g_cmt.ext )
+        return;
+    st_CMTEXT_CONTAINER *c = cmtext_get_container ( g_cmt.ext );
+    if ( c )
+        *count = cmtext_container_get_count_blocks ( c );
+    if ( g_cmt.ext->block )
+        *current = cmtext_block_get_block_id ( g_cmt.ext->block );
+}
+
+
+/* st_DBGAPI_CMT_TAPE_BLOCK_ENTRY::status nese en_CMT_BLOCK_STATUS; dispatch
+ * ho převádí na text podle těchto hodnot (ok, not_decoded, cannot_play, control) */
+G_STATIC_ASSERT ( CMT_BLOCK_STATUS_OK == 0 && CMT_BLOCK_STATUS_NOT_DECODED == 1
+                  && CMT_BLOCK_STATUS_CANNOT_PLAY == 2 && CMT_BLOCK_STATUS_CONTROL == 3 );
+
+
+/**
+ * @brief Text chyby Load directly pro MCP podle důvodu odmítnutí (cmt_load_directly_apply()).
+ *
+ * @param why Důvod. @param block_id Číslo bloku z požadavku (do textu).
+ * @param[out] out Text anglicky (vždy ukončený nulou). @param size Velikost @p out.
+ */
+static void dbgapi_cmt_load_directly_message ( en_CMT_LOAD_DIRECTLY_REFUSAL why, int block_id, char *out, size_t size )
+{
+    switch ( why )
+    {
+        case CMT_LOAD_DIRECTLY_NO_TAPE:
+            g_strlcpy ( out, "No tape inserted", size );
+            break;
+        case CMT_LOAD_DIRECTLY_NOT_STOPPED:
+            g_strlcpy ( out, DBGAPI_CMT_EDIT_NOT_STOPPED, size );
+            break;
+        case CMT_LOAD_DIRECTLY_NO_BLOCK:
+            g_snprintf ( out, size, "Block %d does not exist", block_id );
+            break;
+        case CMT_LOAD_DIRECTLY_NOT_MZF:
+            g_snprintf ( out, size, "Block %d does not contain an MZF file", block_id );
+            break;
+        case CMT_LOAD_DIRECTLY_NO_HACK:
+            g_strlcpy ( out, DBGAPI_CMT_NO_HACK_ROM, size );
+            break;
+        case CMT_LOAD_DIRECTLY_CANNOT_OPEN:
+        default:
+            g_snprintf ( out, size, "Block %d cannot be opened", block_id );
+            break;
+    };
+}
+#endif /* MZ800EMU_CFG_MCP_SERVER_ENABLED */
 
 
 void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
@@ -6420,7 +6611,11 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
              *
              * Reset v drainu fronty je stejná situace jako načtení snapshotu
              * (SNAPSHOT_LOAD_*): celý stav stroje se nahradí mezi
-             * instrukcemi. */
+             * instrukcemi.
+             *
+             * BC = kód zařízení: p->device při p->has_device (jen pro toto
+             * spuštění), jinak nastavení [CMT] run_mzf_device; výsledný BC
+             * vrací out_bc. */
             st_DBGAPI_MEDIA_PARAM *p =
                 (st_DBGAPI_MEDIA_PARAM *) rq->data_ptr;
             if ( !p || !p->filepath || p->filepath[0] == '\0' )
@@ -6472,7 +6667,24 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                 break;
             };
 
-            mzarch_main_reset_and_run_mzf ( p->filepath );
+            /* Kód zařízení v BC: jednorázová volba z MCP (parametr device),
+             * jinak nastavení [CMT] run_mzf_device přečtené tady, v emu
+             * vlákně, jednou: text do out_device, volba do bootstrapu (BC
+             * a vrácený text tak patří k sobě i při souběžné změně z menu). */
+            st_BOOTDEV_CHOICE dev_setting;
+            const st_BOOTDEV_CHOICE *dev = NULL;
+            p->out_device[ 0 ] = '\0';
+            if ( p->has_device )
+            {
+                dev = &p->device;
+            }
+            else
+            {
+                bootdev_setting_get_text ( p->out_device, sizeof ( p->out_device ) );
+                if ( bootdev_parse ( p->out_device, &dev_setting ) ) dev = &dev_setting;
+            };
+            mzarch_main_reset_and_run_mzf ( p->filepath, dev );
+            p->out_bc = (uint16_t) z80_get_reg ( g_mzarch_main.cpu, Z80_REG_BC );
 
             /* CARRY v AF = selhání CMT hacku (cmthack_result). Bootstrap po
              * načtení těla AF nemění. */
@@ -6539,6 +6751,7 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
              * CMD samostatně). */
             st_DBGAPI_MEDIA_PARAM *p =
                 (st_DBGAPI_MEDIA_PARAM *) rq->data_ptr;
+            if ( p ) p->out_warning[ 0 ] = '\0';
             if ( !p || !p->filepath || p->filepath[0] == '\0' )
             {
                 if ( p ) p->out_result = -1;
@@ -6553,11 +6766,9 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
             {
                 case DBGAPI_MEDIA_SLOT_CMT:
                 {
-                    /* cmt_open_file_by_extension nemodifikuje argument,
-                     * ale signatura ho deklaruje jako (char*) - cast. */
-                    rc = cmt_open_file_by_extension ( (char *) p->filepath );
-                    /* cmt API vrací 0=OK, nenula=error (interpretace
-                     * závisí na implementaci). */
+                    /* stejná cesta jako cmt_open (varování o zahozených
+                     * změnách, neúspěch pásku nevysune); 0 = OK */
+                    rc = ( EXIT_SUCCESS == dbgapi_cmt_open_file ( p->filepath, p->out_warning, sizeof ( p->out_warning ) ) ) ? 0 : -1;
                     break;
                 };
 #if CFG_HWEXT_HAVE_FDC
@@ -6652,6 +6863,7 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                 rq->success = false;
                 break;
             };
+            p->out_warning[ 0 ] = '\0';
             int rc = -1;
             /* Mount mění cesty a buffery, které čte menu zařízení v UI
              * vlákně pod stejným zámkem (device_request.h). */
@@ -6659,7 +6871,8 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
             switch ( p->slot )
             {
                 case DBGAPI_MEDIA_SLOT_CMT:
-                    cmt_eject ( );
+                    /* stejná cesta jako cmt_transport eject (varování) */
+                    dbgapi_cmt_eject ( p->out_warning, sizeof ( p->out_warning ) );
                     rc = 0;
                     break;
 #if CFG_HWEXT_HAVE_FDC
@@ -6859,6 +7072,14 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                 break;
             };
             p->out_live = dbgapi_settings_live_value ( elm );
+            if ( !p->out_live && bootdev_cfg_is_key ( p->module, p->element ) )
+            {
+                /* [CMT] run_mzf_device: element drží INI hodnotu, menu mění
+                 * nastavení modulu bootstrap_device (pod jeho zámkem) */
+                char dev[ BOOTDEV_TEXT_MAX ];
+                bootdev_setting_get_text ( dev, sizeof ( dev ) );
+                p->out_live = g_strdup ( dev );
+            };
             switch ( elm->type )
             {
                 case CFGENTYPE_UNSIGNED:
@@ -6928,11 +7149,16 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
              * propagujeme (cfgelement_propagate(), stejně jako start),
              * jinak by zápis neměl účinek a při ukončení by se ztratil.
              * TEXT ne: propagate by alokoval nový řetězec bez uvolnění
-             * starého (whitelist žádný TEXT klíč nemá). Povolené klíče
+             * starého (jediný TEXT klíč whitelistu, [CMT] run_mzf_device,
+             * má vlastní větev níže bez propagate). Povolené klíče
              * propagují jedno číslo: zesílení zvuku (float čtený audio
              * vláknem, menu ho píše z UI stejně), příznaky a FPS
              * zobrazení (int čtený UI vláknem každý snímek), meze PC
-             * trasování (emu vlákno). */
+             * trasování (emu vlákno), automatické ukončení nahrávání
+             * kazety CMT/rec_autostop_s (unsigned g_cmt.rec_autostop_s,
+             * čte ho emu vlákno na konci snímku). CMTHACK/direct_save má
+             * vlastní větev níže (jako zásah menu: jen ve STOP, ne při
+             * záznamu vstupů, pod device_state_lock()). */
             st_DBGAPI_SETTINGS_PARAM *p =
                 (st_DBGAPI_SETTINGS_PARAM *) rq->data_ptr;
             if ( !p || !p->module || !p->element || !p->new_value )
@@ -6978,6 +7204,75 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                     break;
                 };
             }
+            /* [CMTHACK] direct_save (BOOL): pravidla zásahu menu
+             * (cmt_request_set_direct_save()): při záznamu nebo přehrávání
+             * vstupů DBGAPI_SETTINGS_ERR_REPLAY, mimo STOP
+             * DBGAPI_SETTINGS_ERR_NOT_STOPPED, jinak cmthack_direct_save_set() pod
+             * device_state_lock() (přepisuje ROM a příznaky, které UI čte
+             * pod týmž zámkem); neplatná hodnota -4. */
+            if ( !strcmp ( p->module, "CMTHACK" ) && !strcmp ( p->element, "direct_save" ) )
+            {
+                p->out_value = g_strdup ( g_cmthack.direct_save ? "true" : "false" );
+                p->out_type  = DBGAPI_SETTINGS_TYPE_BOOL;
+                int bv = -1;
+                if ( !g_ascii_strcasecmp ( p->new_value, "true" ) || !strcmp ( p->new_value, "1" ) )
+                    bv = 1;
+                else if ( !g_ascii_strcasecmp ( p->new_value, "false" ) || !strcmp ( p->new_value, "0" ) )
+                    bv = 0;
+                if ( bv < 0 )
+                {
+                    p->out_result = -4;
+                    rq->success = false;
+                    break;
+                };
+                if ( replay_is_active ( ) )
+                {
+                    p->out_result = DBGAPI_SETTINGS_ERR_REPLAY;
+                    rq->success = false;
+                    break;
+                };
+                if ( !CMT_TEST_STOP )
+                {
+                    p->out_result = DBGAPI_SETTINGS_ERR_NOT_STOPPED;
+                    rq->success = false;
+                    break;
+                };
+                bool taken = false;
+                if ( !device_state_lock_held ( ) )
+                {
+                    device_state_lock ( );
+                    taken = true;
+                };
+                cmthack_direct_save_set ( (unsigned) bv );
+                if ( taken ) device_state_unlock ( );
+                p->out_result = 0;
+                rq->success = true;
+                break;
+            };
+            /* [CMT] run_mzf_device (TEXT): ověření zápisu, nastavení modulu
+             * bootstrap_device i text elementu v normalizovaném tvaru, aby
+             * settings_get a INI viděly totéž; neplatný zápis = -4. */
+            if ( bootdev_cfg_is_key ( p->module, p->element ) )
+            {
+                /* předchozí = nastavení v použití (menu mění jen nastavení,
+                 * element až při uložení INI) */
+                char prev[ BOOTDEV_TEXT_MAX ];
+                bootdev_setting_get_text ( prev, sizeof ( prev ) );
+                p->out_value = g_strdup ( prev );
+                p->out_type  = DBGAPI_SETTINGS_TYPE_TEXT;
+                char norm[ BOOTDEV_TEXT_MAX ];
+                if ( !bootdev_normalize ( p->new_value, norm, sizeof ( norm ) )
+                     || !bootdev_setting_set_text ( norm ) )
+                {
+                    p->out_result = -4;
+                    rq->success = false;
+                    break;
+                };
+                cfgelement_set_text_value ( elm, norm );
+                p->out_result = 0;
+                rq->success = true;
+                break;
+            };
             switch ( elm->type )
             {
                 case CFGENTYPE_UNSIGNED:
@@ -8164,7 +8459,8 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
             p->signal_pc01         = (uint8_t)( g_pio8255.signal_pc01 & 0x01 );
             p->signal_pc02         = (uint8_t)( g_pio8255.signal_pc02 & 0x01 );
             p->signal_pc03         = (uint8_t)( g_pio8255.signal_pc03 & 0x01 );
-            p->signal_pc04         = (uint8_t)( g_pio8255.signal_pc04 & 0x01 );
+            /* PC4 jak ho čte program (s CMT hackem při nahrávání stav decku) */
+            p->signal_pc04         = (uint8_t)( pio8255_pc4_get ( ) & 0x01 );
             p->pa_keyboard_column  =
                 (uint8_t)( g_pio8255.signal_PA_keybord_column & 0x0F );
             p->pa_joy1_enabled     =
@@ -8619,6 +8915,15 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
             p->output            = (uint8_t)( g_cmt.output & 0x01u );
             p->playsts           = (uint8_t)g_cmt.playsts;
             p->cmthack_enabled   = (uint8_t)( CMTHACK_TEST_IS_INSTALLED ? 1 : 0 );
+            p->direct_save       = (uint8_t)( CMTHACK_TEST_SAVE_INSTALLED ? 1 : 0 );
+            p->direct_save_enabled = (uint8_t)( g_cmthack.direct_save ? 1 : 0 );
+            p->user_paused       = (uint8_t)( g_cmt.user_paused ? 1 : 0 );
+            {
+                bool mk = false, mo = false;
+                cmt_motor_get_state ( &mk, &mo );
+                p->motor_known = (uint8_t)( mk ? 1 : 0 );
+                p->motor_on    = (uint8_t)( mo ? 1 : 0 );
+            }
             p->start_time        = (uint64_t)g_cmt.start_time;
             p->paused_time       = (uint64_t)g_cmt.paused_time;
             /* Image basename: prefer ui_base_filename, jinak last_filename. */
@@ -9502,6 +9807,16 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                 break;
             };
             p->out_result = 0;
+            p->out_recorded = 0;
+            p->out_rec_mzf = p->out_rec_raw = 0;
+            p->out_rec_message[ 0 ] = '\0';
+            p->out_warning[ 0 ] = '\0';
+            /* stav hacku a decku v okamžiku příkazu (varování MCP DBGAPI_CMT_WARNING_DIRECT
+             * jen u PLAY, PLAY_PAUSED a PAUSE 1, které ze STOP opravdu spustily přehrávání) */
+            const bool hack_before = CMTHACK_TEST_IS_INSTALLED ? true : false;
+            const bool stop_before = CMT_TEST_STOP ? true : false;
+            p->out_cmthack = 0;
+            bool was_record = CMT_TEST_FILLED && CMT_TEST_RECORD;
             switch ( p->action )
             {
                 case DBGAPI_CMT_TRANSPORT_PLAY:
@@ -9512,12 +9827,19 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                     break;
                 case DBGAPI_CMT_TRANSPORT_STOP:
                     cmt_stop ( );
+                    if ( was_record )
+                    {
+                        /* výsledek záznamu (cmt_record_finish()) */
+                        p->out_recorded = 1;
+                        cmttmz_get_record_result ( &p->out_rec_mzf, &p->out_rec_raw, NULL );
+                        g_strlcpy ( p->out_rec_message, cmttmz_get_record_message ( ), sizeof ( p->out_rec_message ) );
+                    };
                     break;
                 case DBGAPI_CMT_TRANSPORT_PAUSE:
                     cmt_pause ( p->pause_value ? 1 : 0 );
                     break;
                 case DBGAPI_CMT_TRANSPORT_EJECT:
-                    cmt_eject ( );
+                    dbgapi_cmt_eject ( p->out_warning, sizeof ( p->out_warning ) );
                     break;
                 default:
                     p->out_result = -1;
@@ -9526,23 +9848,42 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
             };
             if ( p->out_result == 0 )
                 rq->success = true;
+            if ( hack_before && stop_before && CMT_TEST_PLAY
+                 && ( ( p->action == DBGAPI_CMT_TRANSPORT_PLAY ) || ( p->action == DBGAPI_CMT_TRANSPORT_PLAY_PAUSED )
+                      || ( ( p->action == DBGAPI_CMT_TRANSPORT_PAUSE ) && p->pause_value ) ) )
+                p->out_cmthack = 1;
             break;
         }
 
         case DBGAPI_CMD_CMT_RECORD:
         {
-            /* CMT-A: zahájení WAV nahrávání do souboru bez file dialogu.
-             * cmt_record_to_file vrátí EXIT_SUCCESS/EXIT_FAILURE; chyba
-             * (nezapisovatelná cesta, špatný stav) -> success = false. */
+            /* Zahájení nahrávání do vložené pásky (bez pásky do nové),
+             * s cestou navíc zápis souboru po STOP (cmt_record_to_file():
+             * .wav = WAV, přípona pásky = uložení pásky). Chyba (stav mimo
+             * STOP, nepodporovaná přípona, nezapisovatelná cesta) ->
+             * success = false. */
             st_DBGAPI_CMT_RECORD_PARAM *p =
                 (st_DBGAPI_CMT_RECORD_PARAM *) rq->data_ptr;
-            if ( !p || !p->filepath || p->filepath[ 0 ] == '\0' )
+            if ( !p )
             {
-                if ( p ) p->out_result = -1;
                 rq->success = false;
                 break;
             };
-            int rc = cmt_record_to_file ( p->filepath );
+            const bool with_path = ( p->filepath && p->filepath[ 0 ] );
+            /* CMT hack nahrávání nebrání (při RECORD řídí deck hrana PC3,
+             * CMTHACK_TEST_FAKES_MOTOR), proto bez varování Direct */
+            /* Přehrávání záznamu vstupů: brána replaye příkaz pustí (jen
+             * odchýlení), nahrávání s cestou by ale zapsalo soubor uživatele
+             * (zkouška zapisovatelnosti, WAV, uložení pásky přehrávání pod
+             * jeho jménem) - odmítnuto jako emu_cmt_save. Bez cesty povoleno. */
+            if ( with_path && ( g_atomic_int_get ( &g_replay_mode ) == REPLAY_MODE_PLAYING ) )
+            {
+                p->out_result = -3;
+                rq->success = false;
+                break;
+            };
+            /* bez cesty jen do pásky (cmt_record()), s cestou kompatibilní obálka cmt_record_to_file() */
+            int rc = with_path ? cmt_record_to_file ( p->filepath ) : cmt_record ( );
             if ( rc == EXIT_SUCCESS )
             {
                 p->out_result = 0;
@@ -9559,9 +9900,12 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
         case DBGAPI_CMD_CMT_HACK_SET:
         {
             /* CMT-A: zapnutí/vypnutí cmthack ROM patche (instant load).
-             * mzarch varianta (= general cmthack_load_rom_patch na ni
-             * jen deleguje, viz cmthack.c). out_installed echo reálného
-             * stavu po operaci. */
+             * Tatáž funkce jádra jako přepínač Loading okna a položka menu
+             * Use CMT Hack (cmt_loading_mode_apply(), CPU Boost zůstane):
+             * změna jen ve STOP, vypnutí zapomene stav hacku nad páskou.
+             * Okno zásah při záznamu i přehrávání vstupů odmítne; záznam
+             * odmítla už brána replaye (FORBIDDEN), přehrávání odmítne
+             * příkaz. out_installed echo reálného stavu po operaci. */
             st_DBGAPI_CMT_HACK_SET_PARAM *p =
                 (st_DBGAPI_CMT_HACK_SET_PARAM *) rq->data_ptr;
             if ( !p )
@@ -9569,9 +9913,14 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                 rq->success = false;
                 break;
             };
-            cmthack_mzarch_load_rom_patch ( p->enabled ? 1u : 0u );
+            if ( replay_is_active ( ) )
+                p->out_result = -3;
+            else if ( p->enabled && !CMTHACK_TEST_IS_INSTALLED && !cmthack_rom_supported ( ) )
+                p->out_result = -4;   /* jako okno: s takovou ROM se Direct nezapne */
+            else
+                p->out_result = ( cmt_loading_mode_apply ( -1, p->enabled ? 1 : 0, -1 ) < 0 ) ? -1 : 0;
             p->out_installed = (uint8_t)( CMTHACK_TEST_IS_INSTALLED ? 1 : 0 );
-            rq->success = true;
+            rq->success = ( p->out_result == 0 );
             break;
         }
 
@@ -9645,25 +9994,37 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
 
         case DBGAPI_CMD_CMT_OPEN:
         {
-            /* CMT-B: otevření CMT souboru (non-UI). cmt_open_file_by_
-             * extension udělá eject + open; při play_immediately handler
-             * navíc zavolá cmt_play (= jako cmt_ui_open_cb). Selhání
-             * openu -> out_result = -2, success = false. Vždy vyplní
-             * out_state / out_paused podle skutečného stavu. */
+            /* CMT-B: otevření CMT souboru (non-UI). cmt_open_file() soubor
+             * nejdřív načte a ověří, teprve pak vysune dosavadní pásku;
+             * při play_immediately handler navíc zavolá cmt_play (= jako
+             * Open & Play z UI). Selhání openu -> out_result = -2,
+             * success = false, vložená páska beze změny. Vždy vyplní
+             * out_state / out_paused podle skutečného stavu a out_warning
+             * varováním otevření pásky (import, nepřehratelné bloky, žádný
+             * otevřený blok). */
             st_DBGAPI_CMT_OPEN_PARAM *p =
                 (st_DBGAPI_CMT_OPEN_PARAM *) rq->data_ptr;
+            if ( p ) p->out_warning[ 0 ] = '\0';
+            /* stav hacku v okamžiku příkazu (varování MCP u play_immediately, jen když
+             * pásku opravdu spustil) */
+            const bool hack_before = CMTHACK_TEST_IS_INSTALLED ? true : false;
+            if ( p ) p->out_cmthack = 0;
             if ( !p || !p->filepath || p->filepath[ 0 ] == '\0' )
             {
                 if ( p ) p->out_result = -1;
                 rq->success = false;
                 break;
             };
-            /* cmt_open_file_by_extension bere char* (ne const); jen čte. */
-            int rc = cmt_open_file_by_extension ( (char *) p->filepath );
+            /* soubor se nejdřív ověří; neúspěch pásku nevysune, úspěch zahodí
+             * neuložené změny a nahrávání s varováním */
+            int rc = dbgapi_cmt_open_file ( p->filepath, p->out_warning, sizeof ( p->out_warning ) );
             if ( rc == EXIT_SUCCESS )
             {
                 if ( p->play_immediately )
+                {
                     cmt_play ( );
+                    p->out_cmthack = ( uint8_t ) ( ( hack_before && CMT_TEST_PLAY ) ? 1 : 0 );
+                };
                 p->out_result = 0;
                 rq->success = true;
             }
@@ -9681,9 +10042,10 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
 
         case DBGAPI_CMD_CMT_TAPE_SEEK:
         {
-            /* CMT-B: seek na blok pásky přes container->cb_open_block.
-             * Vyžaduje naloženou pásku s containerem. Mimo rozsah nebo
-             * bez pásky -> out_result != 0, success = false. */
+            /* CMT-B: seek na blok pásky (cmt_tape_seek_block(): otevře blok
+             * a při PLAY i v pauze nastaví začátek bloku, stav transportu
+             * zachová). Vyžaduje naloženou pásku s containerem. Mimo rozsah
+             * nebo bez pásky -> out_result != 0, success = false. */
             st_DBGAPI_CMT_TAPE_SEEK_PARAM *p =
                 (st_DBGAPI_CMT_TAPE_SEEK_PARAM *) rq->data_ptr;
             if ( !p )
@@ -9698,7 +10060,7 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                 rq->success = false;
                 break;
             };
-            int rc = g_cmt.ext->container->cb_open_block ( p->block_id );
+            int rc = cmt_tape_seek_block ( p->block_id );
             if ( rc == EXIT_SUCCESS )
             {
                 p->out_result = 0;
@@ -9709,6 +10071,506 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                 p->out_result = -2;
                 rq->success = false;
             };
+            break;
+        }
+
+        case DBGAPI_CMD_CMT_LOAD_DIRECTLY:
+        {
+            /* Load directly jako kontextové menu okna: tatáž funkce jádra
+             * (cmt_load_directly_apply()), vše nebo nic. Záznam vstupů
+             * odmítla brána replaye (FORBIDDEN), přehrávání odmítne příkaz
+             * (okno zásah odmítne v obou). */
+            st_DBGAPI_CMT_LOAD_DIRECTLY_PARAM *p = (st_DBGAPI_CMT_LOAD_DIRECTLY_PARAM *) rq->data_ptr;
+            if ( !p )
+            {
+                rq->success = false;
+                break;
+            };
+            p->out_message[ 0 ] = '\0';
+            if ( replay_is_active ( ) )
+            {
+                p->out_result = -1;
+                g_strlcpy ( p->out_message, DBGAPI_CMT_LOADING_MODE_REPLAY, sizeof ( p->out_message ) );
+            }
+            else
+            {
+                en_CMT_LOAD_DIRECTLY_REFUSAL why = CMT_LOAD_DIRECTLY_OK;
+                p->out_result = cmt_load_directly_apply ( p->block_id, &why );
+                if ( p->out_result < 0 )
+                    dbgapi_cmt_load_directly_message ( why, p->block_id, p->out_message, sizeof ( p->out_message ) );
+            };
+            int count = 0;
+            dbgapi_cmt_tape_counts ( &count, &p->out_current_block );
+            p->out_installed = ( uint8_t ) ( CMTHACK_TEST_IS_INSTALLED ? 1 : 0 );
+            rq->success = ( p->out_result >= 0 );
+            break;
+        }
+
+        case DBGAPI_CMD_CMT_TAPE_STEP:
+        {
+            /* Tlačítka decku Next / Previous (cmt_tape_step_block()) a Rewind
+             * (cmt_tape_seek_block() na cmt_tape_first_playable_block()):
+             * řídicí a nepřehratelné bloky se přeskočí. Důvody chyb v pořadí
+             * a se zněním zákazů tlačítek okna. */
+            st_DBGAPI_CMT_TAPE_STEP_PARAM *p = (st_DBGAPI_CMT_TAPE_STEP_PARAM *) rq->data_ptr;
+            if ( !p )
+            {
+                rq->success = false;
+                break;
+            };
+            p->out_message[ 0 ] = '\0';
+            p->out_result = -1;
+            p->out_block_id = -1;
+            int count = 0, current = -1;
+            dbgapi_cmt_tape_counts ( &count, &current );
+            const int first = cmt_tape_first_playable_block ( );
+            if ( !CMT_TEST_FILLED )
+                g_strlcpy ( p->out_message, "No tape inserted", sizeof ( p->out_message ) );
+            else if ( count == 0 )
+                g_strlcpy ( p->out_message, "The tape is empty", sizeof ( p->out_message ) );
+            else if ( CMT_TEST_RECORD )
+                g_strlcpy ( p->out_message, "Not available while recording", sizeof ( p->out_message ) );
+            else if ( first < 0 )
+                g_strlcpy ( p->out_message, "The tape has no playable block", sizeof ( p->out_message ) );
+            else if ( p->direction == DBGAPI_CMT_STEP_START )
+            {
+                if ( EXIT_SUCCESS == cmt_tape_seek_block ( first ) )
+                {
+                    p->out_result = 0;
+                    p->out_block_id = first;
+                }
+                else
+                {
+                    g_snprintf ( p->out_message, sizeof ( p->out_message ), "Block %d cannot be opened", first );
+                };
+            }
+            else if ( ( p->direction == DBGAPI_CMT_STEP_NEXT ) || ( p->direction == DBGAPI_CMT_STEP_PREV ) )
+            {
+                const bool fwd = ( p->direction == DBGAPI_CMT_STEP_NEXT );
+                if ( EXIT_SUCCESS == cmt_tape_step_block ( fwd ? 1 : 0 ) )
+                {
+                    p->out_result = 0;
+                    dbgapi_cmt_tape_counts ( &count, &p->out_block_id );
+                }
+                else
+                {
+                    g_strlcpy ( p->out_message, fwd ? "There is no playable block after this one"
+                                                    : "There is no playable block before this one",
+                                sizeof ( p->out_message ) );
+                };
+            }
+            else
+            {
+                g_strlcpy ( p->out_message, "Invalid direction", sizeof ( p->out_message ) );
+            };
+            if ( p->out_result < 0 )
+                p->out_block_id = current;
+            rq->success = ( p->out_result == 0 );
+            break;
+        }
+
+        case DBGAPI_CMD_CMT_SAVE:
+        {
+            /* Uložení vložené pásky (cmttmz_save(); NULL = dosavadní cesta). */
+            st_DBGAPI_CMT_SAVE_PARAM *p = (st_DBGAPI_CMT_SAVE_PARAM *) rq->data_ptr;
+            if ( !p )
+            {
+                rq->success = false;
+                break;
+            };
+            /* Při záznamu vstupů odmítne brána replaye (REPLAY_DBG_FORBIDDEN);
+             * při přehrávání ji brána pustí (jen odchýlení), páska ale patří
+             * přehrávání (kopie ze záznamu) a soubor uživatele se přepsat nesmí. */
+            if ( g_atomic_int_get ( &g_replay_mode ) == REPLAY_MODE_PLAYING )
+            {
+                p->out_result = -1;
+                g_strlcpy ( p->out_message, "Saving the tape is not allowed while a replay is played",
+                            sizeof ( p->out_message ) );
+                p->out_warning[ 0 ] = '\0';
+                p->out_path[ 0 ] = '\0';
+                rq->success = false;
+                break;
+            };
+            int rc = cmttmz_save ( ( p->filepath && p->filepath[ 0 ] ) ? p->filepath : NULL );
+            p->out_result = ( rc == EXIT_SUCCESS ) ? 0 : -1;
+            g_strlcpy ( p->out_message, cmttmz_get_save_message ( ), sizeof ( p->out_message ) );
+            g_strlcpy ( p->out_warning, cmttmz_get_save_warning ( ), sizeof ( p->out_warning ) );
+            p->out_path[ 0 ] = '\0';
+            if ( CMT_TEST_FILLED && g_cmt.ext->container )
+                g_strlcpy ( p->out_path, cmtext_container_get_filepath ( g_cmt.ext->container ), sizeof ( p->out_path ) );
+            rq->success = ( rc == EXIT_SUCCESS );
+            break;
+        }
+
+        case DBGAPI_CMD_CMT_EXPORT_BLOCK:
+        {
+            /* Export bloku jako MZF nebo WAV (páska se nemění). */
+            st_DBGAPI_CMT_EXPORT_BLOCK_PARAM *p = (st_DBGAPI_CMT_EXPORT_BLOCK_PARAM *) rq->data_ptr;
+            if ( !p )
+            {
+                rq->success = false;
+                break;
+            };
+            int rc = cmttmz_export_block ( p->block_id, p->filepath );
+            p->out_result = ( rc == EXIT_SUCCESS ) ? 0 : -1;
+            g_strlcpy ( p->out_message, cmttmz_get_save_message ( ), sizeof ( p->out_message ) );
+            rq->success = ( rc == EXIT_SUCCESS );
+            break;
+        }
+
+        case DBGAPI_CMD_CMT_NEW_TAPE:
+        {
+            /* Nová prázdná páska (dosavadní se vysune, záznam se zahodí). */
+            st_DBGAPI_CMT_NEW_TAPE_PARAM *p = (st_DBGAPI_CMT_NEW_TAPE_PARAM *) rq->data_ptr;
+            if ( !p )
+            {
+                rq->success = false;
+                break;
+            };
+            p->out_warning[ 0 ] = '\0';
+            if ( cmt_has_unsaved_changes ( ) )
+                g_strlcpy ( p->out_warning, CMT_WARNING_DISCARDED, sizeof ( p->out_warning ) );
+            int rc = cmt_new_tape ( );
+            p->out_result = ( rc == EXIT_SUCCESS ) ? 0 : -1;
+            rq->success = ( rc == EXIT_SUCCESS );
+            break;
+        }
+
+        case DBGAPI_CMD_CMT_TAPE_DELETE_BLOCKS:
+        {
+            /* Smazání bloků (jen ve STOP; záznam vstupů odmítne brána,
+             * přehrávání vstupů obal úpravy). Při chybě páska beze změny. */
+            st_DBGAPI_CMT_TAPE_DELETE_BLOCKS_PARAM *p = (st_DBGAPI_CMT_TAPE_DELETE_BLOCKS_PARAM *) rq->data_ptr;
+            if ( !p )
+            {
+                rq->success = false;
+                break;
+            };
+            p->out_message[ 0 ] = '\0';
+            p->out_warning[ 0 ] = '\0';
+            int rc = EXIT_FAILURE;
+            if ( dbgapi_cmt_edit_stopped ( p->out_message, sizeof ( p->out_message ) ) )
+            {
+                rc = cmt_tape_remove_blocks ( p->block_ids, p->count );
+                if ( rc != EXIT_SUCCESS )
+                    g_strlcpy ( p->out_message, cmttmz_get_edit_error ( ), sizeof ( p->out_message ) );
+                else
+                    /* změna taktu bloků 0x46 (smazaný blok 0x43); společný kanál varování úprav */
+                    g_strlcpy ( p->out_warning, cmttmz_get_edit_warning ( ), sizeof ( p->out_warning ) );
+            };
+            dbgapi_cmt_tape_counts ( &p->out_count, &p->out_current_block );
+            p->out_result = ( rc == EXIT_SUCCESS ) ? 0 : -1;
+            rq->success = ( rc == EXIT_SUCCESS );
+            break;
+        }
+
+        case DBGAPI_CMD_CMT_TAPE_MOVE_BLOCK:
+        {
+            /* Přesun bloku (podmínky jako mazání). */
+            st_DBGAPI_CMT_TAPE_MOVE_BLOCK_PARAM *p = (st_DBGAPI_CMT_TAPE_MOVE_BLOCK_PARAM *) rq->data_ptr;
+            if ( !p )
+            {
+                rq->success = false;
+                break;
+            };
+            p->out_message[ 0 ] = '\0';
+            p->out_warning[ 0 ] = '\0';
+            int rc = EXIT_FAILURE;
+            if ( dbgapi_cmt_edit_stopped ( p->out_message, sizeof ( p->out_message ) ) )
+            {
+                rc = cmt_tape_move_block ( p->block_id, p->to );
+                if ( rc != EXIT_SUCCESS )
+                    g_strlcpy ( p->out_message, cmttmz_get_edit_error ( ), sizeof ( p->out_message ) );
+                else
+                    /* změna taktu bloků 0x46 (přesun přes blok 0x43); společný kanál varování úprav */
+                    g_strlcpy ( p->out_warning, cmttmz_get_edit_warning ( ), sizeof ( p->out_warning ) );
+            };
+            dbgapi_cmt_tape_counts ( &p->out_count, &p->out_current_block );
+            p->out_result = ( rc == EXIT_SUCCESS ) ? 0 : -1;
+            rq->success = ( rc == EXIT_SUCCESS );
+            break;
+        }
+
+        case DBGAPI_CMD_CMT_TAPE_IMPORT:
+        {
+            /* Import souboru jako bloků před blok `at` (-1 = na konec);
+             * bez pásky do nové prázdné pásky (podmínky jako mazání). */
+            st_DBGAPI_CMT_TAPE_IMPORT_PARAM *p = (st_DBGAPI_CMT_TAPE_IMPORT_PARAM *) rq->data_ptr;
+            if ( !p || !p->filepath || !p->filepath[ 0 ] )
+            {
+                rq->success = false;
+                break;
+            };
+            p->out_message[ 0 ] = '\0';
+            p->out_warning[ 0 ] = '\0';
+            p->out_imported = 0;
+            p->out_new_tape = 0;
+            p->out_at = -1;
+            int rc = EXIT_FAILURE;
+            if ( dbgapi_cmt_edit_stopped ( p->out_message, sizeof ( p->out_message ) ) )
+            {
+                const bool filled = CMT_TEST_FILLED ? true : false;
+                int count = 0, current = -1;
+                dbgapi_cmt_tape_counts ( &count, &current );
+                int at = ( !filled ) ? 0 : ( ( p->at < 0 ) ? count : p->at );
+                if ( !filled && ( p->at >= 0 ) )
+                {
+                    /* pozice bez pásky: chyba místo tichého ignorování */
+                    g_strlcpy ( p->out_message, "no tape in the deck", sizeof ( p->out_message ) );
+                }
+                else
+                {
+                    rc = cmt_tape_import_file ( p->filepath, at, &p->out_imported );
+                };
+                if ( rc == EXIT_SUCCESS )
+                {
+                    p->out_at = at;
+                    p->out_new_tape = filled ? 0 : 1;
+                    g_strlcpy ( p->out_warning, cmttmz_get_import_warning ( ), sizeof ( p->out_warning ) );
+                }
+                else
+                {
+                    if ( !p->out_message[ 0 ] ) g_strlcpy ( p->out_message, cmttmz_get_edit_error ( ), sizeof ( p->out_message ) );
+                };
+            };
+            dbgapi_cmt_tape_counts ( &p->out_count, &p->out_current_block );
+            p->out_result = ( rc == EXIT_SUCCESS ) ? 0 : -1;
+            rq->success = ( rc == EXIT_SUCCESS );
+            break;
+        }
+
+        case DBGAPI_CMD_CMT_EXPORT_TAPE:
+        {
+            /* Export celé pásky do WAV (páska se nemění, v každém stavu). */
+            st_DBGAPI_CMT_EXPORT_TAPE_PARAM *p = (st_DBGAPI_CMT_EXPORT_TAPE_PARAM *) rq->data_ptr;
+            if ( !p || !p->filepath )
+            {
+                rq->success = false;
+                break;
+            };
+            int rc = cmttmz_export_tape_wav ( p->filepath );
+            p->out_result = ( rc == EXIT_SUCCESS ) ? 0 : -1;
+            g_strlcpy ( p->out_message, cmttmz_get_export_message ( ), sizeof ( p->out_message ) );
+            g_strlcpy ( p->out_warning, ( rc == EXIT_SUCCESS ) ? cmttmz_get_export_warning ( ) : "",
+                        sizeof ( p->out_warning ) );
+            rq->success = ( rc == EXIT_SUCCESS );
+            break;
+        }
+
+
+        case DBGAPI_CMD_CMT_TAPE_ANALYZE:
+        case DBGAPI_CMD_CMT_TAPE_ANALYZE_APPLY:
+        {
+            /* Analýza surového bloku synchronně na emu vlákně;
+             * _APPLY s apply ADD / REPLACE uplatní všechny řádky, které jdou
+             * přidat. Čtení (_ANALYZE) pásku nemění v žádném stavu.
+             *
+             * Výjimka ze zámku příkazů kazety (dbgapi_cmd_needs_device_lock()):
+             * zámek stavu zařízení se bere jen kolem kopie pulzů a kolem
+             * uplatnění, analýza kopie běží bez něj. Emulace po
+             * celou dobu stojí (běží v emu vlákně), okno aplikace ale zámek
+             * dostane a kreslí. Změnu pásky mezi kopií a uplatněním (jen
+             * z vlákna, které zámek drží, tedy ne z emu vlákna) odhalí
+             * cmttmz_analysis_apply() (čítač výměn pásky, blok, otisk dat). */
+            st_DBGAPI_CMT_TAPE_ANALYZE_PARAM *p = (st_DBGAPI_CMT_TAPE_ANALYZE_PARAM *) rq->data_ptr;
+            if ( !p )
+            {
+                rq->success = false;
+                break;
+            };
+            p->out_message[ 0 ] = '\0';
+            p->out_warning[ 0 ] = '\0';
+            p->out_analysis_error[ 0 ] = '\0';
+            p->out_sample_rate = 0;
+            p->out_pulse_count = 0;
+            p->out_total_us = 0;
+            p->out_rows = NULL;
+            p->out_row_count = 0;
+            p->out_applied = 0;
+            p->out_first_added = -1;
+            const int apply = ( cmd == DBGAPI_CMD_CMT_TAPE_ANALYZE_APPLY ) ? p->apply : DBGAPI_CMT_ANALYZE_APPLY_NONE;
+            int rc = EXIT_FAILURE;
+            st_CMTTMZ_PULSES *pulses = NULL;
+            st_CMTTMZ_ANALYSIS *an = NULL;
+
+            /* 1. kopie pulzů pod zámkem */
+            device_state_lock ( );
+            if ( ( apply == DBGAPI_CMT_ANALYZE_APPLY_NONE )
+                 || dbgapi_cmt_edit_stopped ( p->out_message, sizeof ( p->out_message ) ) )
+            {
+                pulses = cmttmz_analyze_copy_pulses ( p->block_id );
+                if ( !pulses )
+                    g_strlcpy ( p->out_message, cmttmz_get_edit_error ( ), sizeof ( p->out_message ) );
+            };
+            device_state_unlock ( );
+
+            /* 2. analýza kopie bez zámku (čistá funkce) */
+            if ( pulses )
+            {
+                st_CMTTMZ_ANALYZE_OPTS opts;
+                cmttmz_analyze_opts_default ( &opts );
+                opts.tolerance = p->tolerance;
+                opts.repair_header = p->repair_header ? 1 : 0;
+                opts.repair_body = p->repair_body ? 1 : 0;
+                opts.repair_bsd = p->repair_bsd ? 1 : 0;
+                p->out_sample_rate = pulses->sample_rate;
+                p->out_pulse_count = pulses->count;
+                p->out_total_us = pulses->total_us;
+#ifdef MZTEST_HEADLESS
+                g_atomic_int_set ( &s_test_cmt_analyze_lock_state, device_state_lock_held ( ) ? 1 : 0 );
+#endif
+                an = cmttmz_analyze_pulses ( pulses, &opts );
+                if ( !an )
+                    g_strlcpy ( p->out_message, "Not enough memory", sizeof ( p->out_message ) );
+            };
+
+            /* 3. řádky a uplatnění pod zámkem */
+            device_state_lock ( );
+            if ( an )
+            {
+                g_strlcpy ( p->out_analysis_error, cmttmz_analysis_error ( an ), sizeof ( p->out_analysis_error ) );
+                uint32_t n = cmttmz_analysis_row_count ( an );
+                uint8_t *use = g_new0 ( uint8_t, n ? n : 1 );
+                if ( n )
+                    p->out_rows = g_new0 ( st_DBGAPI_CMT_ANALYZE_ROW, n );
+                for ( uint32_t i = 0; i < n; i++ )
+                {
+                    const st_CMTTMZ_ANALYZE_ROW *row = cmttmz_analysis_row ( an, i );
+                    p->out_rows[ i ].row = *row;
+                    p->out_rows[ i ].reason_text = cmttmz_analyze_reason_text ( row->reason );
+                    use[ i ] = ( uint8_t ) ( ( row->result == CMTTMZ_ANALYZE_ADDABLE )
+                                             || ( row->result == CMTTMZ_ANALYZE_ADDABLE_REPAIRED ) );
+                };
+                p->out_row_count = n;
+                rc = EXIT_SUCCESS;
+                if ( apply != DBGAPI_CMT_ANALYZE_APPLY_NONE )
+                {
+                    const int replace = ( apply == DBGAPI_CMT_ANALYZE_APPLY_REPLACE ) ? 1 : 0;
+                    rc = EXIT_FAILURE;
+                    if ( dbgapi_cmt_edit_stopped ( p->out_message, sizeof ( p->out_message ) ) )
+                    {
+                        rc = cmt_tape_analysis_apply ( pulses, an, use, replace, &p->out_applied );
+                        if ( rc != EXIT_SUCCESS )
+                            g_strlcpy ( p->out_message, cmttmz_get_edit_error ( ), sizeof ( p->out_message ) );
+                        else if ( p->out_applied )
+                        {
+                            p->out_first_added = cmttmz_analysis_first_file_block ( an, use, replace );
+                            /* takt nových bloků souborů (blok 0x43 s jiným taktem před nimi) */
+                            g_strlcpy ( p->out_warning, cmttmz_get_edit_warning ( ), sizeof ( p->out_warning ) );
+                        };
+                    };
+                };
+                g_free ( use );
+            };
+            dbgapi_cmt_tape_counts ( &p->out_count, &p->out_current_block );
+            device_state_unlock ( );
+            cmttmz_analysis_free ( an );
+            cmttmz_pulses_free ( pulses );
+            p->out_result = ( rc == EXIT_SUCCESS ) ? 0 : -1;
+            rq->success = ( rc == EXIT_SUCCESS );
+            break;
+        }
+
+
+        case DBGAPI_CMD_CMT_TAPE_INFO_GET:
+        case DBGAPI_CMD_CMT_TAPE_INFO_SET:
+        {
+            /* Informace o pásce; SET přečte, sloučí a zapíše v jednom
+             * příkazu (čítač výměn pásky formuláře vždy souhlasí). */
+            st_DBGAPI_CMT_TAPE_INFO_PARAM *p = (st_DBGAPI_CMT_TAPE_INFO_PARAM *) rq->data_ptr;
+            if ( !p )
+            {
+                rq->success = false;
+                break;
+            };
+            p->out_message[ 0 ] = '\0';
+            p->out_warning[ 0 ] = '\0';
+            p->out_changed = 0;
+            int rc = EXIT_FAILURE;
+            if ( ( cmd == DBGAPI_CMD_CMT_TAPE_INFO_GET )
+                 || dbgapi_cmt_edit_stopped ( p->out_message, sizeof ( p->out_message ) ) )
+            {
+                rc = cmttmz_tape_info_get ( &p->out_info );
+                if ( rc != EXIT_SUCCESS )
+                    g_strlcpy ( p->out_message, "No tape inserted", sizeof ( p->out_message ) );
+            };
+            if ( ( rc == EXIT_SUCCESS ) && ( cmd == DBGAPI_CMD_CMT_TAPE_INFO_SET ) )
+            {
+                st_CMTTMZ_TAPE_INFO *merged = g_new ( st_CMTTMZ_TAPE_INFO, 1 );
+                *merged = p->out_info;
+                for ( uint32_t k = 0; k < CMTTMZ_TAPE_INFO_FIELDS; k++ )
+                {
+                    if ( !( p->set_mask & ( 1u << k ) ) ) continue;
+                    memcpy ( cmttmz_tape_info_text ( merged, k ), cmttmz_tape_info_text ( &p->set, k ),
+                             CMTTMZ_TAPE_INFO_TEXT_SIZE );
+                };
+                if ( p->set_mask & DBGAPI_CMT_TAPE_INFO_MACHINE_BIT )
+                    merged->machine = p->set.machine;
+                int changed = 0;
+                rc = cmt_tape_info_set ( merged, &changed );
+                g_free ( merged );
+                p->out_changed = ( uint8_t ) ( changed ? 1 : 0 );
+                if ( rc != EXIT_SUCCESS )
+                    g_strlcpy ( p->out_message, cmttmz_get_edit_error ( ), sizeof ( p->out_message ) );
+                else
+                    g_strlcpy ( p->out_warning, cmttmz_get_edit_warning ( ), sizeof ( p->out_warning ) );
+                /* výsledné informace (i po chybě, která nechala pásku beze změny) */
+                cmttmz_tape_info_get ( &p->out_info );
+            };
+            p->out_result = ( rc == EXIT_SUCCESS ) ? 0 : -1;
+            rq->success = ( rc == EXIT_SUCCESS );
+            break;
+        }
+
+        case DBGAPI_CMD_CMT_TAPE_CHECK:
+        {
+            /* Kontrola pásky (jen čtení). */
+            st_DBGAPI_CMT_TAPE_CHECK_PARAM *p = (st_DBGAPI_CMT_TAPE_CHECK_PARAM *) rq->data_ptr;
+            if ( !p )
+            {
+                rq->success = false;
+                break;
+            };
+            int rc = cmttmz_tape_check ( &p->out_items, &p->out_count, &p->out_blocks_checked );
+            g_strlcpy ( p->out_message, ( rc == EXIT_SUCCESS ) ? "" : "No tape inserted", sizeof ( p->out_message ) );
+            p->out_result = ( rc == EXIT_SUCCESS ) ? 0 : -1;
+            rq->success = ( rc == EXIT_SUCCESS );
+            break;
+        }
+
+        case DBGAPI_CMD_CMT_TAPE_CONVERT_BLOCK:
+        {
+            /* Převod bloku 0x46 na profil zapisovače (jen ve STOP). */
+            st_DBGAPI_CMT_TAPE_CONVERT_BLOCK_PARAM *p = (st_DBGAPI_CMT_TAPE_CONVERT_BLOCK_PARAM *) rq->data_ptr;
+            if ( !p || !p->profile_id )
+            {
+                rq->success = false;
+                break;
+            };
+            p->out_message[ 0 ] = '\0';
+            p->out_warning[ 0 ] = '\0';
+            p->out_profile[ 0 ] = '\0';
+            p->out_changed = 0;
+            int rc = EXIT_FAILURE;
+            if ( dbgapi_cmt_edit_stopped ( p->out_message, sizeof ( p->out_message ) ) )
+            {
+                const unsigned before = cmttmz_get_tape_serial ( );
+                rc = cmt_tape_convert_block ( p->block_id, p->profile_id, ( en_CMTSPEED ) p->speed );
+                if ( rc != EXIT_SUCCESS )
+                {
+                    g_strlcpy ( p->out_message, cmttmz_get_edit_error ( ), sizeof ( p->out_message ) );
+                }
+                else
+                {
+                    p->out_changed = ( uint8_t ) ( ( cmttmz_get_tape_serial ( ) != before ) ? 1 : 0 );
+                    g_strlcpy ( p->out_warning, cmttmz_get_edit_warning ( ), sizeof ( p->out_warning ) );
+                };
+                if ( EXIT_SUCCESS != cmttmz_block_profile ( p->block_id, p->out_profile, sizeof ( p->out_profile ) ) )
+                    p->out_profile[ 0 ] = '\0';
+            };
+            dbgapi_cmt_tape_counts ( &p->out_count, &p->out_current_block );
+            p->out_result = ( rc == EXIT_SUCCESS ) ? 0 : -1;
+            rq->success = ( rc == EXIT_SUCCESS );
             break;
         }
 
@@ -9764,6 +10626,38 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
             p->available      = 0;
             p->container_type = 0;
             p->current_block  = -1;
+            p->modified       = (uint8_t) ( cmttmz_is_modified ( ) ? 1 : 0 );
+            p->path[ 0 ]      = '\0';
+            p->has_position   = 0;
+            p->position_s     = 0.0;
+            p->has_block_position = 0;
+            p->block_position_s = 0.0;
+            /* výsledek posledního nahrávání od startu emulátoru (i bez
+             * pásky; vysunutí ani vložení pásky ho nesmaže) */
+            {
+                unsigned serial = 0;
+                uint32_t mzf = 0, raw = 0;
+                int discarded = 0;
+                p->has_last_rec = (uint8_t) ( cmttmz_get_last_recording ( &serial, &mzf, &raw, &discarded ) ? 1 : 0 );
+                p->last_rec_serial = (uint32_t) serial;
+                p->last_rec_mzf = mzf;
+                p->last_rec_raw = raw;
+                p->last_rec_discarded = (uint8_t) ( discarded ? 1 : 0 );
+                g_strlcpy ( p->last_rec_message, p->has_last_rec ? cmttmz_get_record_message ( ) : "",
+                            sizeof ( p->last_rec_message ) );
+            }
+            /* nabídka profilů zapisovače pro převod bloku (i bez pásky) */
+            p->profile_count = 0;
+            for ( uint32_t k = 0; k < cmttmz_profile_count ( ) && p->profile_count < DBGAPI_CMT_PROFILES_MAX; k++ )
+            {
+                const char *pid = NULL, *pdesc = NULL;
+                int pspeed = 0;
+                if ( EXIT_SUCCESS != cmttmz_profile_get ( k, &pid, &pdesc, &pspeed ) ) continue;
+                p->profile_id[ p->profile_count ] = pid ? pid : "";
+                p->profile_description[ p->profile_count ] = pdesc ? pdesc : "";
+                p->profile_accepts_speed[ p->profile_count ] = ( uint8_t ) ( pspeed ? 1 : 0 );
+                p->profile_count++;
+            };
             if ( ( !CMT_TEST_FILLED ) || ( !g_cmt.ext ) )
             {
                 rq->success = true; /* read = úspěch, jen available=0 */
@@ -9777,6 +10671,7 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
             };
             en_CMTEXT_CONTAINER_TYPE ctype =
                 cmtext_container_get_type ( container );
+            g_strlcpy ( p->path, cmtext_container_get_filepath ( container ), sizeof ( p->path ) );
             p->available      = 1;
             p->container_type = (uint8_t) ctype;
             if ( g_cmt.ext->block )
@@ -9789,8 +10684,9 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
 
             if ( ctype != CMTEXT_CONTAINER_TYPE_SIMPLE_TAPE )
             {
-                /* SINGLE container nemá tape index (container->tape ==
-                 * NULL); per-blok get_* funkce by dereferencovaly NULL.
+                /* SINGLE container (dnes ho žádné rozšíření nevytváří) nemá
+                 * tape index (container->tape == NULL); per-blok get_*
+                 * funkce by dereferencovaly NULL.
                  * Reprezentujeme jako jeden syntetický blok: název z
                  * containeru, rychlost z aktuální default cmt speed. */
                 if ( p->capacity >= 1 )
@@ -9807,6 +10703,14 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                     e->is_current = (uint8_t)( p->current_block == 0 ? 1 : 0 );
                     e->playable   = (uint8_t)( playable ? 1 : 0 );
                     e->recordable = (uint8_t)( recordable ? 1 : 0 );
+                    e->unsaved    = 0;
+                    e->convertible = 0;
+                    e->profile[ 0 ] = '\0';
+                    /* bez indexu bloků: stav, soubor ani délka nejsou známé */
+                    e->status     = (uint8_t) CMT_BLOCK_STATUS_OK;
+                    e->has_file   = 0;
+                    e->has_length = 0;
+                    e->length_s   = 0.0;
                     const char *cname = cmtext_container_get_name ( container );
                     if ( cname )
                         g_strlcpy ( e->name, cname, sizeof ( e->name ) );
@@ -9820,6 +10724,53 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
 
             /* SIMPLE_TAPE: má tape index, per-blok get_* jsou bezpečné. */
             int count = cmtext_container_get_count_blocks ( container );
+            /* Pozice jako počítadlo Elapsed okna (cmt_view_compute_times()):
+             * pozice v bloku z časové základny transportu, od začátku pásky
+             * součet délek předchozích bloků ze všech bloků, i za stropem
+             * výpisu; nepřehratelný blok s neznámou délkou = 0. Délky jsou
+             * z vedlejších polí (cmttmz_get_block_ui()), nic se nepočítá. */
+            if ( !CMT_TEST_RECORD )
+            {
+                int pos_block = -1;
+                double pos_s = 0.0;
+                if ( EXIT_SUCCESS == cmt_tape_get_ui_position ( &pos_block, &pos_s ) )
+                {
+                    p->has_block_position = 1;
+                    p->block_position_s = pos_s;
+                }
+                else
+                {
+                    pos_block = -1;
+                };
+                if ( pos_block >= 0 )
+                {
+                    double before = 0.0;
+                    bool known = true;
+                    for ( int i = 0; i < pos_block && i < count; i++ )
+                    {
+                        st_CMTTMZ_BLOCK_UI bui;
+                        en_CMT_BLOCK_STATUS st;
+                        (void) cmttmz_get_block_ui ( i, &bui );
+                        (void) cmt_tape_block_status ( i, &st );
+                        const bool block_playable = ( st == CMT_BLOCK_STATUS_OK ) || ( st == CMT_BLOCK_STATUS_NOT_DECODED );
+                        if ( bui.length_state == CMTTMZ_LENGTH_KNOWN )
+                            before += bui.length_s;
+                        else if ( block_playable )
+                            known = false;
+                    };
+                    if ( known )
+                    {
+                        p->has_position = 1;
+                        p->position_s = before + pos_s;
+                    };
+                }
+                else if ( p->current_block < 0 )
+                {
+                    /* páska bez otevřeného bloku (prázdná, jen řídicí bloky): začátek */
+                    p->has_position = 1;
+                    p->position_s = 0.0;
+                };
+            };
             for ( int i = 0; i < count; i++ )
             {
                 if ( p->out_count >= p->capacity )
@@ -9834,8 +10785,39 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                 if ( e->has_pulses )
                     dbgapi_cmt_pulses_to_us ( &pulses, e->pulses_us );
                 e->is_current = (uint8_t)( i == p->current_block ? 1 : 0 );
-                e->playable   = (uint8_t)( playable ? 1 : 0 );
+                /* stav a přehratelnost po blocích (dříve příznak celé pásky) */
+                en_CMT_BLOCK_STATUS st = CMT_BLOCK_STATUS_OK;
+                (void) cmt_tape_block_status ( i, &st );
+                e->status     = (uint8_t) st;
+                e->playable   = (uint8_t)( ( playable && ( ( st == CMT_BLOCK_STATUS_OK ) || ( st == CMT_BLOCK_STATUS_NOT_DECODED ) ) ) ? 1 : 0 );
                 e->recordable = (uint8_t)( recordable ? 1 : 0 );
+                /* soubor MZF z indexu pásky, délka z vedlejších polí (nic se nedekóduje) */
+                e->has_file = (uint8_t)( ( e->type == CMTEXT_BLOCK_TYPE_MZF ) ? 1 : 0 );
+                e->file_type = 0;
+                e->file_size = 0;
+                e->file_load = 0;
+                e->file_exec = 0;
+                if ( e->has_file )
+                {
+                    e->file_type = (uint8_t) cmtext_container_get_block_ftype ( container, i );
+                    e->file_size = (uint16_t) cmtext_container_get_block_fsize ( container, i );
+                    e->file_load = (uint16_t) cmtext_container_get_block_fstrt ( container, i );
+                    e->file_exec = (uint16_t) cmtext_container_get_block_fexec ( container, i );
+                };
+                {
+                    /* jako sloupec Length okna (cmt_view.cpp): známá délka,
+                     * řídicí blok bez signálu 0 s, jinak neznámá */
+                    st_CMTTMZ_BLOCK_UI bui;
+                    (void) cmttmz_get_block_ui ( i, &bui );
+                    e->has_length = (uint8_t) ( ( bui.length_state == CMTTMZ_LENGTH_KNOWN )
+                                                || ( ( bui.length_state == CMTTMZ_LENGTH_NO_SIGNAL )
+                                                     && ( st == CMT_BLOCK_STATUS_CONTROL ) ) ? 1 : 0 );
+                    e->length_s = ( bui.length_state == CMTTMZ_LENGTH_KNOWN ) ? bui.length_s : 0.0;
+                }
+                e->unsaved    = (uint8_t)( cmttmz_block_is_unsaved ( i ) ? 1 : 0 );
+                e->convertible = ( uint8_t ) ( cmttmz_block_profile_convertible ( i ) ? 1 : 0 );
+                if ( EXIT_SUCCESS != cmttmz_block_profile ( i, e->profile, sizeof ( e->profile ) ) )
+                    e->profile[ 0 ] = '\0';
                 const char *fname = cmtext_container_get_block_fname ( container, i );
                 if ( fname )
                     g_strlcpy ( e->name, fname, sizeof ( e->name ) );

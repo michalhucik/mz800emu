@@ -205,6 +205,25 @@ en_DBGAPI_SUBMIT_STATUS dbgapi_ui_submit_cmd_sync_opts(st_DBGAPI_CMDRQ_QUEUE *qu
  */
 void dbgapi_test_arm_dispatch_stall(en_DBGAPI_CMD cmd, int ms);
 
+#ifdef MZTEST_HEADLESS
+/**
+ * @brief Jen testy: držel emu vlákno zámek stavu zařízení během analýzy
+ *        poslední MCP analýzy pásky (DBGAPI_CMD_CMT_TAPE_ANALYZE / _APPLY)?
+ *
+ * Analýza kopie pulzů běží bez zámku, aby okno aplikace kreslilo;
+ * háček zaznamená device_state_lock_held() těsně před
+ * cmttmz_analyze_pulses().
+ *
+ * @return -1 = od posledního dbgapi_test_cmt_analyze_lock_reset() analýza
+ *         neproběhla, 0 = zámek nedržel, 1 = držel.
+ * @note Libovolné vlákno (atomické čtení).
+ */
+int dbgapi_test_cmt_analyze_lock_state(void);
+
+/** @brief Jen testy: nastaví stav dbgapi_test_cmt_analyze_lock_state() na -1. */
+void dbgapi_test_cmt_analyze_lock_reset(void);
+#endif
+
 
 /*
  * Synchronní odeslání příkazu do emulátoru s explicitním origin.

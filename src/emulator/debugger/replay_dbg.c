@@ -418,9 +418,29 @@ bool replay_dbg_cmt_op(en_DBGAPI_CMD cmd, const void *data_ptr, int *op, int32_t
             *op = REPLAY_CMT_SEEK;
             *arg = (int32_t)((const st_DBGAPI_CMT_TAPE_SEEK_PARAM *)data_ptr)->block_id;
             return true;
+        case DBGAPI_CMD_CMT_TAPE_STEP:
+        {
+            /* krok jako tlačítka decku: Next / Previous = operace next / prev,
+             * Rewind = seek na první přehratelný blok, který krok našel */
+            const st_DBGAPI_CMT_TAPE_STEP_PARAM *p = (const st_DBGAPI_CMT_TAPE_STEP_PARAM *)data_ptr;
+            switch (p->direction)
+            {
+                case DBGAPI_CMT_STEP_NEXT: *op = REPLAY_CMT_NEXT; break;
+                case DBGAPI_CMT_STEP_PREV: *op = REPLAY_CMT_PREV; break;
+                case DBGAPI_CMT_STEP_START:
+                    *op = REPLAY_CMT_SEEK;
+                    *arg = (int32_t)p->out_block_id;
+                    break;
+                default: return false;
+            };
+            return true;
+        };
         case DBGAPI_CMD_CMT_RECORD:
             *op = REPLAY_CMT_RECORD;
             *path = ((const st_DBGAPI_CMT_RECORD_PARAM *)data_ptr)->filepath;
+            return true;
+        case DBGAPI_CMD_CMT_NEW_TAPE:
+            *op = REPLAY_CMT_NEW_TAPE;
             return true;
         default:
             break;

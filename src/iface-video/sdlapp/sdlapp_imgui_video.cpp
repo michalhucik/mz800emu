@@ -20,6 +20,9 @@
 #include "ui-imgui/topmenu/topmenu.h"
 #include "ui-imgui/screenshot/screenshot_ui.h"
 #include "ui-imgui/audiocap/audio_capture_ui.h"
+#include "ui-imgui/cmt/imgui_cmt.h"
+#include "ui-imgui/cmt/cmt_window.h"
+#include "ui-imgui/cmt/cmt_analyze_dialog.h"
 #if MZARCH == 700
 #include "ui-imgui/mz700/devices/kp80/kp80_window.h"
 #endif
@@ -193,6 +196,24 @@ static gboolean sdlapp_mygui_video_update_status_line(guint timer_id, gpointer u
     return TRUE;
 }
 
+/**
+ * @brief Callback close_requested hlavního okna: u neuložené pásky nejdřív dotaz.
+ *
+ * Při nahrávání na kazetu nebo u pásky Modified ukončení odloží a otevře
+ * dialog Virtual CMT (imgui_cmt_quit_requested()); aplikace pak skončí přes
+ * sdlapp_quit() až po Save / Discard, Cancel ukončení zruší.
+ *
+ * @param win Okno (nepoužito). @param user_data Nepoužito.
+ * @return TRUE = okno zavřít (a ukončit), FALSE = zavření zrušit.
+ * @pre UI vlákno (zpracování SDL eventů v sdlapp).
+ */
+static gboolean sdlapp_myimgui_video_close_requested_cb(SdlAppWindow *win, gpointer user_data)
+{
+    (void)win;
+    (void)user_data;
+    return imgui_cmt_quit_requested() ? TRUE : FALSE;
+}
+
 static gboolean sdlapp_myimgui_video_init(void)
 {
     /* Persistence viditelnosti okna dálkového ovládání nahrávání - registrace
@@ -205,6 +226,8 @@ static gboolean sdlapp_myimgui_video_init(void)
      * Control ([AUDIOCAP_UI]). */
     imgui_screenshot_window_cfg_init();
     imgui_audio_capture_window_cfg_init();
+    /* Rozvržení a velikosti nového okna Virtual CMT ([VIRTUAL_CMT_UI]). */
+    imgui_cmt_window_cfg_init();
 #if MZARCH == 700
     /* Persistence okna druhého monitoru karty K&P 80 ([KP80_UI]); položku
      * menu a okno registruje mz700_devices_ui_register() (myimgui_init_cb). */
@@ -217,8 +240,7 @@ static gboolean sdlapp_myimgui_video_init(void)
      *    z display.c, který běží v emu vlákně a očekává existující surface).
      *  - Stub @c MyImGui struct (g_gui) zaplněný nulami. Důvod: 400+ míst
      *    v kódu emulátoru i UI cest čte @c g_gui->showXxxWindow flagy
-     *    (viz např. @c imgui_cmt_tape_update_filelist volané z @c cmt_init
-     *    v emu vlákně). NULL deref by emu vlákno spadl. Stub všech polí
+     *    (i v emu vlákně). NULL deref by emu vlákno spadl. Stub všech polí
      *    na nulu = všechny @c show* flagy false = UI cesty no-op.
      *
      * SDL surface lze vytvořit i bez SDL_INIT_VIDEO (SDL_CreateSurface
@@ -302,6 +324,17 @@ static gboolean sdlapp_myimgui_video_init(void)
         return false;
     };
     g_gui = gui;
+
+    /* Zavření hlavního okna u neuložené pásky (nebo při nahrávání) se
+     * nejdřív zeptá. SDL jinak posílá SDL_EVENT_QUIT už při požadavku na
+     * zavření posledního okna (SDL_HINT_QUIT_ON_LAST_WINDOW_CLOSE, výchozí
+     * "1") a sdlapp by skončil bez ohledu na callback; s "0" konec řídí
+     * callback a sdlapp (quit_on_last_window_close po zničení okna). Jiné
+     * zdroje SDL_EVENT_QUIT (např. SIGINT) končí dál bez dotazu (cmt_exit()
+     * jen zapíše varování). */
+    SDL_SetHint(SDL_HINT_QUIT_ON_LAST_WINDOW_CLOSE, "0");
+    sdlapp_window_set_close_requested_cb(win, sdlapp_myimgui_video_close_requested_cb, NULL);
+
     myimgui_set_event_cb(gui, iface_sdl3_events_cb);
     myimgui_set_render_cb(gui, video_sdlapp_imgui_render_cb);
 
@@ -374,8 +407,19 @@ static gboolean sdlapp_myimgui_video_init(void)
     return imgui_images_load_all();
 }
 
+/**
+ * @brief Úklid videa a UI ImGui při ukončení aplikace.
+ *
+ * Nejdřív opustí dialog analýzy okna Virtual CMT
+ * (cmt_analyze_dialog_shutdown(): na běžící pracovní vlákno analýzy čeká
+ * nejvýš 2 s a připojí ho, jinak ho odpojí - doběhne nad vlastní kopií
+ * pulzů a uvolní ji, na UI nesahá), pak uvolní timer titulku, surface,
+ * stub g_gui (headless) a obrázky ImGui.
+ */
 static void sdlapp_myimgui_video_exit(void)
 {
+    /* dialog analýzy záznamu: pracovní vlákno nejvýš 2 s, pak odpojit */
+    cmt_analyze_dialog_shutdown();
     /* Headless režim: nealokovali jsme ImGui obrázky ani timer titulku,
      * proto cleanup omezujeme jen na surface + stub g_gui. Vyhneme se
      * @c imgui_images_destroy_all (= hlásilo by "Images not loaded"). */

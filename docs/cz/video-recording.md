@@ -22,7 +22,7 @@ platformy:
 | MZ-700 NTSC | 704x232 | 704x464 | 640x200 | 60 | jen CTC (oba kanály stejné) |
 | MZ-1500 | 704x232 | 704x464 | 640x200 | 60 | stereo: vlevo CTC a první PSG, vpravo CTC a druhý PSG |
 
-Na MZ-800 je stereo nahrávka, když je zapnutý druhý PSG (v menu pod názvem "PSG1": **Devices -> HW
+Na MZ-800 je stereo nahrávka, když je zapnutý druhý PSG (v menu pod názvem "PSG1": **HW & Devices -> HW
 Compatibility Experiments -> Allow PSG1 (stereo)**); bez něj jsou oba kanály
 stejné. Nahrávka obsahuje stejné rozložení zvuku vlevo a vpravo, jaké emulátor
 přehrává.

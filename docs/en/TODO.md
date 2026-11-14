@@ -11,7 +11,7 @@
 - Reference search (where exactly is this read/written)
 - Back step
 - complete overscreen menu
-- TapeMZ support and online conversion from wav to mzf
+- conversion of WAV recordings in non-standard tape formats (TURBO, FASTIPL, BSD, CP/M) to files, and conversion while the tape is playing
 - gdb support
 
 

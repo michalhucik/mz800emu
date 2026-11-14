@@ -43,6 +43,9 @@
 #include "machine_hash.h"
 #include "debugger/trace/cputrack.h"
 #include "debugger/coverage/coverage.h"
+#include "hw-generic/cmt/cmt_tmz_analyze.h"
+#include "hw-generic/cmt/cmt_tmz_meta.h"
+#include "mzarch/bootstrap_device.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -796,6 +799,34 @@ typedef enum en_DBGAPI_CMD
      * s rezolucí sběrnice. Čte emu vlákno. Na KONCI enumu. */
     DBGAPI_CMD_BUS_MAP,              /* Snímek Bus Map - data_ptr: st_DBGAPI_BUS_MAP_PARAM* */
     DBGAPI_CMD_BUS_PEEK,             /* Peek portu / MMIO adresy s maskou buzených bitů - data_ptr: st_DBGAPI_BUS_PEEK_PARAM* */
+
+    /* Uložení pásky, export bloku, nová páska (Virtual CMT).
+     * Na KONCI enumu kvůli stabilitě číselných hodnot. */
+    DBGAPI_CMD_CMT_SAVE,             /* Uložit pásku (cmttmz_save) - data_ptr: st_DBGAPI_CMT_SAVE_PARAM* */
+    DBGAPI_CMD_CMT_EXPORT_BLOCK,     /* Export bloku pásky (cmttmz_export_block) - data_ptr: st_DBGAPI_CMT_EXPORT_BLOCK_PARAM* */
+    DBGAPI_CMD_CMT_NEW_TAPE,         /* Nová prázdná páska (cmt_new_tape) - data_ptr: st_DBGAPI_CMT_NEW_TAPE_PARAM* */
+
+    /* Úpravy pásky (mazání, přesun, import) a export celé
+     * pásky do WAV. Na KONCI enumu kvůli stabilitě číselných hodnot. */
+    DBGAPI_CMD_CMT_TAPE_DELETE_BLOCKS, /* Smazání bloků (cmt_tape_remove_blocks) - data_ptr: st_DBGAPI_CMT_TAPE_DELETE_BLOCKS_PARAM* */
+    DBGAPI_CMD_CMT_TAPE_MOVE_BLOCK,    /* Přesun bloku (cmt_tape_move_block) - data_ptr: st_DBGAPI_CMT_TAPE_MOVE_BLOCK_PARAM* */
+    DBGAPI_CMD_CMT_TAPE_IMPORT,        /* Import souboru jako bloků (cmt_tape_import_file) - data_ptr: st_DBGAPI_CMT_TAPE_IMPORT_PARAM* */
+    DBGAPI_CMD_CMT_EXPORT_TAPE,        /* Export celé pásky do WAV (cmttmz_export_tape_wav) - data_ptr: st_DBGAPI_CMT_EXPORT_TAPE_PARAM* */
+
+    /* Analýza surového bloku, informace o pásce, kontrola
+     * pásky, převod profilu. Čtení a změna jsou samostatné příkazy (třída
+     * záznamu vstupů ALLOW / FORBIDDEN). Na KONCI enumu. */
+    DBGAPI_CMD_CMT_TAPE_ANALYZE,       /* Analýza surového bloku bez změny pásky - data_ptr: st_DBGAPI_CMT_TAPE_ANALYZE_PARAM* */
+    DBGAPI_CMD_CMT_TAPE_ANALYZE_APPLY, /* Analýza a uplatnění Add / Replace (cmt_tape_analysis_apply) - data_ptr: st_DBGAPI_CMT_TAPE_ANALYZE_PARAM* */
+    DBGAPI_CMD_CMT_TAPE_INFO_GET,      /* Informace o pásce (cmttmz_tape_info_get) - data_ptr: st_DBGAPI_CMT_TAPE_INFO_PARAM* */
+    DBGAPI_CMD_CMT_TAPE_INFO_SET,      /* Čtení, sloučení a zápis informací o pásce (cmt_tape_info_set) - data_ptr: st_DBGAPI_CMT_TAPE_INFO_PARAM* */
+    DBGAPI_CMD_CMT_TAPE_CHECK,         /* Kontrola pásky (cmttmz_tape_check) - data_ptr: st_DBGAPI_CMT_TAPE_CHECK_PARAM* */
+    DBGAPI_CMD_CMT_TAPE_CONVERT_BLOCK, /* Převod bloku 0x46 na profil (cmt_tape_convert_block) - data_ptr: st_DBGAPI_CMT_TAPE_CONVERT_BLOCK_PARAM* */
+
+    /* Kazeta: Load directly a krok po přehratelných blocích jako okno Virtual
+     * CMT (tytéž funkce jádra). Na KONCI enumu kvůli stabilitě čísel. */
+    DBGAPI_CMD_CMT_LOAD_DIRECTLY,      /* Výběr bloku a režim Direct najednou (cmt_load_directly_apply) - data_ptr: st_DBGAPI_CMT_LOAD_DIRECTLY_PARAM* */
+    DBGAPI_CMD_CMT_TAPE_STEP,          /* Krok na další / předchozí / první přehratelný blok (cmt_tape_step_block, cmt_tape_seek_block) - data_ptr: st_DBGAPI_CMT_TAPE_STEP_PARAM* */
 
     /* Zarážka: počet příkazů, sama není příkaz. Nové příkazy patří PŘED
      * ni. Každý příkaz musí mít řádek v tabulce vlastností
@@ -3576,6 +3607,25 @@ typedef enum en_DBGAPI_MEDIA_SLOT
  *                     u QD -12 = soubor neexistuje nebo není běžný soubor (beze změny stavu),
  *                     -3 = obraz se nepodařilo otevřít (mechanika už
  *                     může být přepnutá, viz out_qd_switched).
+ *                     U slotu CMT -1 = soubor pásky nejde otevřít
+ *                     (vložená páska beze změny).
+ * @field out_warning  OUT: jen slot CMT (INSERT i EJECT), jinak prázdné:
+ *                     "Unsaved tape changes were discarded"
+ *                     (CMT_WARNING_DISCARDED), když operace zahodila
+ *                     neuložené změny pásky nebo nahrávání, u INSERT za ním
+ *                     "; " a varování otevření pásky; stejná cesta jako
+ *                     DBGAPI_CMD_CMT_OPEN / CMT_TRANSPORT eject. Vždy
+ *                     ukončené nulou.
+ * @field has_device   IN: jen RUN_MZF: 1 = kód zařízení v BC z pole device
+ *                     jen pro toto spuštění, 0 = z nastavení
+ *                     `[CMT] run_mzf_device` (bootstrap_device.h). Nulová
+ *                     inicializace = nastavení.
+ * @field device       IN: jen RUN_MZF při has_device: volba rozebraná
+ *                     bootdev_parse() (ověřila ji MCP vrstva).
+ * @field out_bc       OUT: jen RUN_MZF: BC, se kterým program startuje.
+ * @field out_device   OUT: jen RUN_MZF bez has_device: text nastavení
+ *                     `[CMT] run_mzf_device`, který emu vlákno při
+ *                     spuštění použilo (ukončený nulou); jinak "".
  */
 typedef struct st_DBGAPI_MEDIA_PARAM
 {
@@ -3583,11 +3633,16 @@ typedef struct st_DBGAPI_MEDIA_PARAM
     const char          *filepath;
     uint16_t             load_addr;
     uint8_t              read_only;
+    uint8_t              has_device;
+    st_BOOTDEV_CHOICE    device;
+    uint16_t             out_bc;
+    char                 out_device[ BOOTDEV_TEXT_MAX ];
     uint32_t             out_size;
     uint16_t             out_load_addr;
     uint16_t             out_exec_addr;
     uint8_t              out_qd_switched;
     int                  out_result;
+    char                 out_warning[ 512 ];
 } st_DBGAPI_MEDIA_PARAM;
 
 
@@ -3641,6 +3696,11 @@ typedef enum en_DBGAPI_SETTINGS_TYPE
 } en_DBGAPI_SETTINGS_TYPE;
 
 
+/** @brief out_result SETTINGS_SET: `CMTHACK/direct_save` při záznamu nebo přehrávání vstupů. */
+#define DBGAPI_SETTINGS_ERR_REPLAY (-6)
+/** @brief out_result SETTINGS_SET: `CMTHACK/direct_save` s deckem kazety mimo STOP. */
+#define DBGAPI_SETTINGS_ERR_NOT_STOPPED (-7)
+
 /**
  * @brief Společný parametr pro DBGAPI_CMD_SETTINGS_GET / SETTINGS_SET.
  *
@@ -3664,8 +3724,12 @@ typedef enum en_DBGAPI_SETTINGS_TYPE
  *   -2  = modul neexistuje
  *   -3  = element neexistuje v modulu
  *   -4  = type-coerce hodnoty selhal (= např. "abc" do UNSIGNED)
- *   -5  = klíč není live-settable (pouze SET; check je v MCP vrstvě,
- *         ale handler ho také používá pro defense in depth)
+ *   -5  = klíč není live-settable (vyhrazeno; whitelist hlídá MCP vrstva,
+ *         handler tento kód dnes nevrací)
+ *   -6  = DBGAPI_SETTINGS_ERR_REPLAY: jen `CMTHACK/direct_save`, běží
+ *         záznam nebo přehrávání vstupů (pravidlo zásahu menu)
+ *   -7  = DBGAPI_SETTINGS_ERR_NOT_STOPPED: jen `CMTHACK/direct_save`,
+ *         deck kazety není ve STOP
  *
  * Volba zařízení devbus (sekce INI zařízení, devbus_option_key()): SET
  * hodnotu ověří a nastaví přes devbus_option_set() (LIVE volba připojeného
@@ -4820,7 +4884,11 @@ typedef struct st_DBGAPI_PERIPH_CMT_PARAM
     uint8_t  output;             /**< OUT: aktuální výstupní bit (na PIO). */
     uint8_t  playsts;            /**< OUT: en_CMTEXT_BLOCK_PLAYSTS. */
     uint8_t  cmthack_enabled;    /**< OUT: 1 = cmthack ROM patch nainstalován (CMTHACK_TEST_IS_INSTALLED). */
-    uint8_t  _pad;               /**< Zarovnání. */
+    uint8_t  direct_save;        /**< OUT: 1 = patch zápisových rutin ROM (Direct Save) je teď v ROM (CMTHACK_TEST_SAVE_INSTALLED; v RECORD 0). */
+    uint8_t  direct_save_enabled; /**< OUT: 1 = nastavení `[CMTHACK] direct_save` je zapnuté (g_cmthack.direct_save). */
+    uint8_t  user_paused;        /**< OUT: 1 = pauza uživatele (g_cmt.user_paused); `paused` je 1 i při stojícím motoru. */
+    uint8_t  motor_known;        /**< OUT: 1 = stav motoru je znám (cmt_motor_get_state()). */
+    uint8_t  motor_on;           /**< OUT: 1 = motor běží (platí jen s motor_known). */
     uint64_t start_time;         /**< OUT: gdg_total_ticks při zahájení PLAY/RECORD. */
     uint64_t paused_time;        /**< OUT: gdg_total_ticks při pauznutí. */
     char     image_basename[64]; /**< OUT: jen filename (basename) MZF, NUL-terminated. */
@@ -5364,33 +5432,68 @@ typedef struct st_DBGAPI_CMT_TRANSPORT_PARAM
     en_DBGAPI_CMT_TRANSPORT_ACTION action; /**< IN: zvolená transport akce. */
     uint8_t pause_value;                   /**< IN: hodnota pro PAUSE (0/1). */
     int     out_result;                    /**< OUT: 0 = OK, -1 = neznámá akce. */
+    uint8_t out_recorded;                  /**< OUT: 1 = STOP ukončil nahrávání (platí out_rec_*). */
+    uint32_t out_rec_mzf;                  /**< OUT: bloky 0x46 připojené záznamem (jen out_recorded). */
+    uint32_t out_rec_raw;                  /**< OUT: bloky 0x18 připojené záznamem (jen out_recorded). */
+    char    out_rec_message[ 512 ];        /**< OUT: zpráva záznamu (cmttmz_get_record_message()), jen out_recorded; ukončená nulou. */
+    char    out_warning[ 128 ];            /**< OUT: EJECT pásky Modified nebo při RECORD: "Unsaved tape changes were discarded", jinak prázdné. */
+    uint8_t out_cmthack;                   /**< OUT: 1 = CMT hack byl v okamžiku příkazu nainstalovaný a PLAY, PLAY_PAUSED nebo PAUSE 1 spustil ze STOP přehrávání (MCP pak přidá varování DBGAPI_CMT_WARNING_DIRECT); volání, které nic neudělalo, 0. */
 } st_DBGAPI_CMT_TRANSPORT_PARAM;
 
 /**
  * @brief Parametr pro DBGAPI_CMD_CMT_RECORD.
  *
- * Zahájí WAV nahrávání do souboru `filepath` přes cmt_record_to_file.
- * Nahrávání startuje v pauze (= cmt_record nastaví paused). Pokud cestu
- * nelze otevřít pro zápis nebo CMT není ve STOP, out_result != 0 a
- * success=false.
+ * Bez `filepath` (NULL nebo "") zahájí nahrávání do vložené pásky
+ * (cmt_record(); bez pásky do nové prázdné). S cestou cmt_record_to_file():
+ * navíc po STOP zapíše WAV (.wav) nebo uloží pásku (.tmz, .tzx, .mzt,
+ * .mzf, .m12). Nahrávání startuje v pauze. Mimo STOP, s nezapisovatelnou
+ * cestou nebo nepodporovanou příponou out_result != 0 a success=false.
+ * S cestou během přehrávání záznamu vstupů odmítnuto (out_result -3):
+ * zapsal by soubor uživatele (zkouška, WAV, uložení pásky přehrávání).
  */
 typedef struct st_DBGAPI_CMT_RECORD_PARAM
 {
-    const char *filepath;   /**< IN: cesta k cílovému WAV souboru. */
-    int         out_result; /**< OUT: 0 = OK, -1 = neplatný param, -2 = cmt_record_to_file selhal. */
+    const char *filepath;   /**< IN: cílový soubor, nebo NULL / "" = jen do pásky. */
+    int         out_result; /**< OUT: 0 = OK, -1 = neplatný param, -2 = cmt_record_to_file selhal, -3 = s cestou při přehrávání záznamu vstupů. */
 } st_DBGAPI_CMT_RECORD_PARAM;
+
+/**
+ * @brief Varování MCP u spuštění přehrávání se zapnutým CMT hackem (režim načítání Direct).
+ *
+ * Se zapnutým hackem mimo nahrávání náběžná hrana PC3 přepíná jen
+ * náhradní čidlo motoru PC4 (pio8255.c, CMTHACK_TEST_FAKES_MOTOR)
+ * a cmt_motor_toggle() se nevolá: příkaz motoru emulovaného programu
+ * pásku nerozjede ani nezastaví, takže PLAY čekající na motor nikdy
+ * nezačne. cmt_pause(0) (MCP emu_cmt_pause(paused=false)) motor rozběhne
+ * bez ohledu na program a páska pak běží. Okno Virtual CMT v Direct
+ * tlačítko Play zakáže ("Not used in Direct mode"); MCP příkaz provede
+ * a připojí toto varování. Nahrávání ho nedostane: při RECORD hrana PC3
+ * řídí deck i s hackem. Emulace se nemění.
+ */
+#define DBGAPI_CMT_WARNING_DIRECT "Direct loading (CMT hack) is on: a ROM load reads the tape block directly and the emulated program's motor commands do not start or stop the tape. To let the program drive the motor, stop the tape and call emu_cmt_hack_set(enabled=false); to run the tape regardless of the motor, call emu_cmt_pause(paused=false)"
+
+/** @brief Text chyby MCP: vybraná ROM CMT hack nepodporuje (emu_cmt_hack_set(true), emu_cmt_load_directly; cmthack_rom_supported()). */
+#define DBGAPI_CMT_NO_HACK_ROM "The selected ROM does not support the CMT hack"
+
+/** @brief Text chyby změny režimu načítání (CMT hack, Load directly) při přehrávání záznamu vstupů (jako okno Virtual CMT). */
+#define DBGAPI_CMT_LOADING_MODE_REPLAY "The loading mode cannot be changed while an input replay is recorded or played"
 
 /**
  * @brief Parametr pro DBGAPI_CMD_CMT_HACK_SET.
  *
- * Zapne/vypne cmthack ROM patch (= instant load) přes
- * cmthack_mzarch_load_rom_patch. Po operaci handler vyplní out_installed
- * z CMTHACK_TEST_IS_INSTALLED (= echo skutečného stavu).
+ * Zapne/vypne cmthack ROM patch (= instant load) stejnou funkcí jádra jako
+ * přepínač Loading okna Virtual CMT a položka hlavního menu Use CMT Hack
+ * (cmt_loading_mode_apply(-1, enabled, -1); CPU Boost zůstane): změna jen
+ * ve STOP, vypnutí smaže stav hacku nad páskou, požadavek beze změny
+ * uspěje v každém stavu. Při záznamu vstupů odmítne brána replaye, při
+ * přehrávání vstupů příkaz sám. Po operaci (i neúspěšné) handler vyplní
+ * out_installed z CMTHACK_TEST_IS_INSTALLED (= echo skutečného stavu).
  */
 typedef struct st_DBGAPI_CMT_HACK_SET_PARAM
 {
     uint8_t enabled;       /**< IN: 1 = zapnout patch, 0 = vypnout. */
     uint8_t out_installed; /**< OUT: stav patche po operaci (CMTHACK_TEST_IS_INSTALLED). */
+    int     out_result;    /**< OUT: 0 = OK, -1 = mimo STOP (DBGAPI_CMT_EDIT_NOT_STOPPED), -3 = přehrávání vstupů, -4 = zapnutí s ROM bez podpory hacku (DBGAPI_CMT_NO_HACK_ROM). */
 } st_DBGAPI_CMT_HACK_SET_PARAM;
 
 
@@ -5442,20 +5545,26 @@ typedef struct st_DBGAPI_CMT_SET_PROPERTY_PARAM
  *
  * Otevře CMT soubor přes cmt_open_file_by_extension (non-UI). Při
  * `play_immediately` handler navíc po úspěšném openu zavolá cmt_play()
- * (= přesně jako cmt_ui_open_cb). Nerozpoznaná přípona nebo selhání
+ * (= jako Open & Play z UI). Nerozpoznaná přípona nebo selhání
  * cb_open -> out_result != 0, success = false.
  *
  * Po operaci (i při selhání openu) handler vyplní skutečný stav
  * transportu out_state / out_paused - klient z nich pozná, zda páska
- * opravdu hraje (cmt_play může být no-op, např. nepřehratelná páska).
+ * opravdu hraje (cmt_play může být no-op, např. nepřehratelná páska),
+ * a varování otevření pásky out_warning (cmttmz_get_open_warning(): import,
+ * bloky, které player neumí, žádný otevřený blok).
  */
 typedef struct st_DBGAPI_CMT_OPEN_PARAM
 {
-    const char *filepath;         /**< IN: cesta k CMT souboru (.mzf/.mzt/.wav/...). */
+    /* out_warning začíná "Unsaved tape changes were discarded", když dosavadní páska byla
+     * Modified nebo běželo nahrávání (otevření ji vysune a záznam zahodí). */
+    const char *filepath;         /**< IN: cesta k CMT souboru (.tmz/.tzx/.mzf/.mzt/.tap/.wav/...). */
     uint8_t     play_immediately; /**< IN: 1 = po openu spustit přehrávání. */
     int         out_result;       /**< OUT: 0 = OK, -1 = neplatný param, -2 = open selhal. */
     uint8_t     out_state;        /**< OUT: en_CMT_STATE po operaci (0 STOP, 1 PLAY, 2 RECORD). */
     uint8_t     out_paused;       /**< OUT: 1 = transport v pauze (g_cmt.paused) po operaci. */
+    char        out_warning[ 512 ]; /**< OUT: varování otevření pásky anglicky (cmttmz_get_open_warning(), víc oddělených "; "), prázdné = bez varování; vždy ukončené nulou. */
+    uint8_t     out_cmthack;      /**< OUT: 1 = CMT hack byl v okamžiku příkazu nainstalovaný a play_immediately pásku spustil (MCP pak přidá varování DBGAPI_CMT_WARNING_DIRECT). */
 } st_DBGAPI_CMT_OPEN_PARAM;
 
 /**
@@ -5463,9 +5572,10 @@ typedef struct st_DBGAPI_CMT_OPEN_PARAM
  *
  * Seek na blok `block_id` přes container->cb_open_block. Vyžaduje
  * naloženou pásku (g_cmt.ext != NULL) s containerem, který seek
- * podporuje (SIMPLE_TAPE). SINGLE container (.mzf, .wav) nemá
- * cb_open_block -> out_result = -1 i pro blok 0. Mimo rozsah nebo
- * bez pásky -> out_result != 0, success = false.
+ * podporuje (SIMPLE_TAPE - každá přehrávaná páska, i samostatné .mzf
+ * a .wav). SINGLE container (dnes ho nic nevytváří) nemá cb_open_block
+ * -> out_result = -1 i pro blok 0. Mimo rozsah, řídicí blok bez signálu
+ * nebo bez pásky -> out_result != 0, success = false.
  */
 typedef struct st_DBGAPI_CMT_TAPE_SEEK_PARAM
 {
@@ -5504,9 +5614,19 @@ typedef struct st_DBGAPI_CMT_TAPE_BLOCK_SPEED_PARAM
  * `block_speed` je en_CMTEXT_BLOCK_SPEED (0=NONE, 1=DEFAULT, 2=SET).
  * `pulses_us` jsou efektivní délky pulzů MZ bloku (has_pulses = 1):
  * u výchozí rychlosti délky výchozí rychlosti Virtual CMT.
- * `type` je en_CMTEXT_BLOCK_TYPE (0=WAV, 1=MZF, 2=TAPHEADER, 3=TAPDATA).
- * `playable`/`recordable` jsou per-extension příznaky (= stejné pro
- * všechny bloky téže pásky), kopírují se do každého záznamu pro pohodlí.
+ * `type` je en_CMTEXT_BLOCK_TYPE (0=WAV, 1=MZF, 2=TAPHEADER, 3=TAPDATA,
+ * 4=TZX jiný blok se signálem, 5=CONTROL blok bez signálu).
+ * `playable` je příznak bloku: páska je přehratelná a blok má stav
+ * CMT_BLOCK_STATUS_OK nebo CMT_BLOCK_STATUS_NOT_DECODED
+ * (cmt_tape_block_status(), totéž, co přeskakují Next / Previous decku).
+ * `recordable` je příznak rozšíření (= stejný pro všechny bloky téže
+ * pásky), kopíruje se do každého záznamu pro pohodlí.
+ * Údaje souboru (`has_file`, `file_*`) jsou z indexu pásky, délka
+ * (`has_length`, `length_s`) z vedlejších polí rozšíření
+ * (cmttmz_get_block_ui()): nic se při výpisu nedekóduje ani nepočítá.
+ *
+ * @invariant has_file == 0 => file_size == file_load == file_exec == file_type == 0.
+ * @invariant has_length == 0 => length_s == 0.
  */
 typedef struct st_DBGAPI_CMT_TAPE_BLOCK_ENTRY
 {
@@ -5515,12 +5635,26 @@ typedef struct st_DBGAPI_CMT_TAPE_BLOCK_ENTRY
     int     cmtspeed;                        /**< en_CMTSPEED rychlost bloku. */
     uint8_t type;                            /**< en_CMTEXT_BLOCK_TYPE. */
     uint8_t is_current;                      /**< 1 = právě přehrávaný blok. */
-    uint8_t playable;                        /**< 1 = páska je playable. */
+    uint8_t playable;                        /**< 1 = blok jde přehrát (páska přehratelná, stav OK nebo NOT_DECODED). */
     uint8_t recordable;                      /**< 1 = páska je recordable. */
     uint8_t block_speed;                     /**< en_CMTEXT_BLOCK_SPEED bloku. */
     uint8_t has_pulses;                      /**< 1 = pulses_us platí (MZ blok). */
     double  pulses_us[4];                    /**< Efektivní délky pulzů v µs (LONG high/low, SHORT high/low). */
+    uint8_t unsaved;                         /**< 1 = blok není v souboru pásky (nahraný, importovaný; cmttmz_block_is_unsaved()). */
+    uint8_t convertible;                     /**< 1 = blok 0x46 jde převést na jiný profil (cmttmz_block_profile_convertible()). */
+    char    profile[ 64 ];                   /**< ID profilu bloku 0x46 (cmttmz_block_profile()), "" u jiného bloku. */
+    uint8_t status;                          /**< en_CMT_BLOCK_STATUS bloku (cmt_tape_block_status()): 0 = ok, 1 = not_decoded, 2 = cannot_play, 3 = control. */
+    uint8_t has_file;                        /**< 1 = blok nese soubor MZF (typ MZF); file_* platí. */
+    uint8_t file_type;                       /**< Typ souboru MZF z hlavičky (ftype). */
+    uint16_t file_size;                      /**< Velikost těla souboru MZF z hlavičky (fsize). */
+    uint16_t file_load;                      /**< Adresa načtení souboru MZF z hlavičky (fstrt). */
+    uint16_t file_exec;                      /**< Adresa spuštění souboru MZF z hlavičky (fexec). */
+    uint8_t has_length;                      /**< 1 = length_s platí: délka známá (CMTTMZ_LENGTH_KNOWN), nebo řídicí blok bez signálu (0 s); jako sloupec Length okna. */
+    double  length_s;                        /**< Délka signálu bloku v s (jen has_length, jinak 0). */
 } st_DBGAPI_CMT_TAPE_BLOCK_ENTRY;
+
+/** @brief Nejvýš profilů zapisovače ve výpisu pásky (st_DBGAPI_CMT_TAPE_LIST_PARAM; registr tmz 1.14.0 jich nabízí 11). */
+#define DBGAPI_CMT_PROFILES_MAX 32
 
 /**
  * @brief Parametr pro DBGAPI_CMD_CMT_TAPE_LIST (read-only).
@@ -5533,6 +5667,15 @@ typedef struct st_DBGAPI_CMT_TAPE_BLOCK_ENTRY
  * případě je out_count = 0 a klient čte důvod z available. `container_type`
  * je en_CMTEXT_CONTAINER_TYPE (0=SINGLE, 1=SIMPLE_TAPE). `current_block`
  * je index právě přehrávaného bloku (-1 pokud žádný).
+ *
+ * Pozice (`has_position`, `position_s`, `has_block_position`,
+ * `block_position_s`) počítá handler jako počítadlo Elapsed okna Virtual
+ * CMT ze všech bloků pásky, i těch za stropem `capacity`: pozice v bloku
+ * z cmt_tape_get_ui_position(), pozice od začátku pásky = součet délek
+ * bloků před otevřeným (řídicí a nepřehratelné bloky s neznámou délkou
+ * se počítají 0) + pozice v bloku; neznámá, je-li neznámá délka některého
+ * přehratelného bloku před ním. Prázdná páska (bez otevřeného bloku) má
+ * pozici od začátku 0. Při nahrávání a bez pásky jsou obě neznámé.
  */
 typedef struct st_DBGAPI_CMT_TAPE_LIST_PARAM
 {
@@ -5542,7 +5685,308 @@ typedef struct st_DBGAPI_CMT_TAPE_LIST_PARAM
     uint8_t                         available;     /**< (OUT) 1 = páska + container k dispozici. */
     uint8_t                         container_type;/**< (OUT) en_CMTEXT_CONTAINER_TYPE. */
     int                             current_block; /**< (OUT) index aktuálního bloku, -1 = žádný. */
+    uint8_t                         modified;      /**< (OUT) 1 = páska změněná proti souboru (cmttmz_is_modified()). */
+    char                            path[ 1024 ];  /**< (OUT) cesta pásky (kontejner), "" = páska bez cesty; ukončená nulou (delší se ořízne). */
+    uint8_t                         has_last_rec;  /**< (OUT) 1 = od startu emulátoru skončilo nahrávání (cmttmz_get_last_recording()), i bez pásky. */
+    uint32_t                        last_rec_serial;    /**< (OUT) čítač výsledků nahrávání (jen has_last_rec). */
+    uint32_t                        last_rec_mzf;       /**< (OUT) připojené bloky 0x46 (jen has_last_rec). */
+    uint32_t                        last_rec_raw;       /**< (OUT) připojené bloky 0x18 (jen has_last_rec). */
+    uint8_t                         last_rec_discarded; /**< (OUT) 1 = nahrávání zahozené (jen has_last_rec). */
+    char                            last_rec_message[ 512 ]; /**< (OUT) zpráva nahrávání (cmttmz_get_record_message(), jen has_last_rec; 512 = CMTTMZ_RECORD_MESSAGE_SIZE). */
+    uint32_t                        profile_count; /**< (OUT) počet profilů zapisovače v nabídce převodu (cmttmz_profile_count(), nejvýš DBGAPI_CMT_PROFILES_MAX), i bez pásky. */
+    const char                     *profile_id[ DBGAPI_CMT_PROFILES_MAX ];          /**< (OUT) ID profilu (statický řetězec knihovny). */
+    const char                     *profile_description[ DBGAPI_CMT_PROFILES_MAX ]; /**< (OUT) popis profilu anglicky (statický řetězec knihovny). */
+    uint8_t                         profile_accepts_speed[ DBGAPI_CMT_PROFILES_MAX ]; /**< (OUT) 1 = převod na profil přijme rychlost. */
+    uint8_t                         has_position;       /**< (OUT) 1 = position_s platí. */
+    double                          position_s;         /**< (OUT) pozice od začátku pásky v s (jen has_position). */
+    uint8_t                         has_block_position; /**< (OUT) 1 = block_position_s platí. */
+    double                          block_position_s;   /**< (OUT) pozice v otevřeném bloku v s (jen has_block_position). */
 } st_DBGAPI_CMT_TAPE_LIST_PARAM;
+
+
+/**
+ * @brief Parametr pro DBGAPI_CMD_CMT_SAVE (cmttmz_save()).
+ *
+ * Bez `filepath` (NULL nebo "") uloží na dosavadní cestu pásky. Výsledek
+ * a varování (MZT: rychlost bloku, .tzx s bloky MZ) jsou anglicky.
+ */
+typedef struct st_DBGAPI_CMT_SAVE_PARAM
+{
+    const char *filepath;            /**< IN: cíl, nebo NULL / "" = dosavadní cesta. */
+    int         out_result;          /**< OUT: 0 = uloženo, -1 = chyba (text v out_message). */
+    char        out_path[ 1024 ];    /**< OUT: cesta pásky po operaci ("" = bez cesty). */
+    char        out_message[ 512 ];  /**< OUT: zpráva (cmttmz_get_save_message()). */
+    char        out_warning[ 512 ];  /**< OUT: varování úspěšného uložení (cmttmz_get_save_warning()), jinak "". */
+} st_DBGAPI_CMT_SAVE_PARAM;
+
+
+/**
+ * @brief Parametr pro DBGAPI_CMD_CMT_EXPORT_BLOCK (cmttmz_export_block()).
+ */
+typedef struct st_DBGAPI_CMT_EXPORT_BLOCK_PARAM
+{
+    int         block_id;            /**< IN: index bloku. */
+    const char *filepath;            /**< IN: cíl (.mzf, .m12, .wav), nesmí být NULL ani prázdný. */
+    int         out_result;          /**< OUT: 0 = exportováno, -1 = chyba (text v out_message). */
+    char        out_message[ 512 ];  /**< OUT: zpráva (cmttmz_get_save_message()). */
+} st_DBGAPI_CMT_EXPORT_BLOCK_PARAM;
+
+
+/**
+ * @brief Parametr pro DBGAPI_CMD_CMT_NEW_TAPE (cmt_new_tape()).
+ */
+typedef struct st_DBGAPI_CMT_NEW_TAPE_PARAM
+{
+    int  out_result;                 /**< OUT: 0 = nová páska vložena, -1 = chyba alokace. */
+    char out_warning[ 128 ];         /**< OUT: "Unsaved tape changes were discarded", když dosavadní páska byla Modified nebo běželo nahrávání. */
+} st_DBGAPI_CMT_NEW_TAPE_PARAM;
+
+
+/** @brief Velikost textu chyby úprav pásky v parametrech dbgapi (= CMTTMZ_WARNING_SIZE, delší text se ořízne). */
+#define DBGAPI_CMT_EDIT_MESSAGE_MAX 512
+
+/** @brief Text chyby úpravy pásky mimo STOP (MCP). */
+#define DBGAPI_CMT_EDIT_NOT_STOPPED "tape is not stopped"
+
+/**
+ * @brief Parametr pro DBGAPI_CMD_CMT_TAPE_DELETE_BLOCKS (cmt_tape_remove_blocks()).
+ *
+ * Úprava jen ve STOP (jinak out_message DBGAPI_CMT_EDIT_NOT_STOPPED), mimo
+ * nahrávání a přehrávání vstupů (text jádra, cmttmz_get_edit_error());
+ * záznam vstupů ji odmítne už brána (REPLAY_DBG_FORBIDDEN). Při chybě je
+ * páska beze změny.
+ */
+typedef struct st_DBGAPI_CMT_TAPE_DELETE_BLOCKS_PARAM
+{
+    const int  *block_ids;           /**< IN: čísla bloků vzestupně bez opakování (vlastní volající). */
+    uint32_t    count;               /**< IN: počet čísel (aspoň 1). */
+    int         out_result;          /**< OUT: 0 = smazáno, -1 = chyba (text v out_message). */
+    int         out_count;           /**< OUT: počet bloků pásky po operaci. */
+    int         out_current_block;   /**< OUT: otevřený blok po operaci (-1 = žádný). */
+    char        out_message[ DBGAPI_CMT_EDIT_MESSAGE_MAX ]; /**< OUT: text chyby (anglicky), "" po úspěchu. */
+    char        out_warning[ DBGAPI_CMT_EDIT_MESSAGE_MAX ]; /**< OUT: varování úpravy po úspěchu (cmttmz_get_edit_warning(), např. změna taktu bloků 0x46 po smazání bloku 0x43), jinak "". */
+} st_DBGAPI_CMT_TAPE_DELETE_BLOCKS_PARAM;
+
+
+/**
+ * @brief Parametr pro DBGAPI_CMD_CMT_TAPE_MOVE_BLOCK (cmt_tape_move_block()).
+ *
+ * Podmínky a chyby jako st_DBGAPI_CMT_TAPE_DELETE_BLOCKS_PARAM.
+ */
+typedef struct st_DBGAPI_CMT_TAPE_MOVE_BLOCK_PARAM
+{
+    int   block_id;                  /**< IN: číslo přesouvaného bloku. */
+    int   to;                        /**< IN: pozice bloku po přesunu (0 .. počet - 1). */
+    int   out_result;                /**< OUT: 0 = přesunuto (i na vlastní místo), -1 = chyba. */
+    int   out_count;                 /**< OUT: počet bloků pásky po operaci. */
+    int   out_current_block;         /**< OUT: otevřený blok po operaci (-1 = žádný). */
+    char  out_message[ DBGAPI_CMT_EDIT_MESSAGE_MAX ]; /**< OUT: text chyby (anglicky), "" po úspěchu. */
+    char  out_warning[ DBGAPI_CMT_EDIT_MESSAGE_MAX ]; /**< OUT: varování úpravy po úspěchu (cmttmz_get_edit_warning(), např. program přesunutý přes blok 0x43), jinak "". */
+} st_DBGAPI_CMT_TAPE_MOVE_BLOCK_PARAM;
+
+
+/**
+ * @brief Parametr pro DBGAPI_CMD_CMT_TAPE_IMPORT (cmt_tape_import_file()).
+ *
+ * Bez vložené pásky (ve STOP) se importuje do nové prázdné pásky
+ * (out_new_tape 1, `at` se bere jako 0). Podmínky a chyby jako
+ * st_DBGAPI_CMT_TAPE_DELETE_BLOCKS_PARAM; nečitelný soubor = "Can't import
+ * <cesta>: <důvod>".
+ */
+typedef struct st_DBGAPI_CMT_TAPE_IMPORT_PARAM
+{
+    const char *filepath;            /**< IN: soubor (MZF, M12, MZT, TAP, WAV, TMZ, TZX). */
+    int         at;                  /**< IN: pozice 0 .. počet bloků, -1 = na konec. */
+    int         out_result;          /**< OUT: 0 = importováno, -1 = chyba. */
+    int         out_at;              /**< OUT: číslo prvního importovaného bloku. */
+    uint32_t    out_imported;        /**< OUT: počet importovaných bloků. */
+    int         out_count;           /**< OUT: počet bloků pásky po operaci. */
+    int         out_current_block;   /**< OUT: otevřený blok po operaci (-1 = žádný). */
+    uint8_t     out_new_tape;        /**< OUT: 1 = páska vznikla importem do prázdného decku. */
+    char        out_message[ DBGAPI_CMT_EDIT_MESSAGE_MAX ]; /**< OUT: text chyby (anglicky), "" po úspěchu. */
+    char        out_warning[ DBGAPI_CMT_EDIT_MESSAGE_MAX ]; /**< OUT: varování importu (cmttmz_get_import_warning()), jinak "". */
+} st_DBGAPI_CMT_TAPE_IMPORT_PARAM;
+
+
+/**
+ * @brief Parametr pro DBGAPI_CMD_CMT_EXPORT_TAPE (cmttmz_export_tape_wav()).
+ *
+ * Export pásku nemění; jde v každém stavu transportu i při záznamu
+ * a přehrávání vstupů (REPLAY_DBG_ALLOW, zapisuje jen soubor).
+ */
+typedef struct st_DBGAPI_CMT_EXPORT_TAPE_PARAM
+{
+    const char *filepath;            /**< IN: cíl s příponou .wav. */
+    int         out_result;          /**< OUT: 0 = exportováno, -1 = chyba (text v out_message). */
+    char        out_message[ 512 ];  /**< OUT: zpráva (cmttmz_get_export_message()). */
+    char        out_warning[ 512 ];  /**< OUT: varování exportu (cmttmz_get_export_warning()), jinak "". */
+} st_DBGAPI_CMT_EXPORT_TAPE_PARAM;
+
+
+/** @brief Uplatnění analýzy v st_DBGAPI_CMT_TAPE_ANALYZE_PARAM::apply (MCP `apply`). */
+typedef enum en_DBGAPI_CMT_ANALYZE_APPLY {
+    DBGAPI_CMT_ANALYZE_APPLY_NONE = 0, /**< jen analýza, páska beze změny ("none") */
+    DBGAPI_CMT_ANALYZE_APPLY_ADD,      /**< přidat soubory za surový blok ("add") */
+    DBGAPI_CMT_ANALYZE_APPLY_REPLACE,  /**< nahradit surový blok ("replace") */
+} en_DBGAPI_CMT_ANALYZE_APPLY;
+
+/**
+ * @brief Řádek analýzy ve výsledku DBGAPI_CMD_CMT_TAPE_ANALYZE(_APPLY).
+ *
+ * Vlastnictví: format_name, recovery_text a reason_text jsou statické
+ * řetězce (knihovna, cmttmz_analyze_reason_text()), platí trvale.
+ */
+typedef struct st_DBGAPI_CMT_ANALYZE_ROW {
+    st_CMTTMZ_ANALYZE_ROW row;       /**< kopie řádku (cmttmz_analysis_row()) */
+    const char           *reason_text; /**< důvod výsledku anglicky (cmttmz_analyze_reason_text(row.reason)), "" u ADDABLE */
+} st_DBGAPI_CMT_ANALYZE_ROW;
+
+/**
+ * @brief Parametr pro DBGAPI_CMD_CMT_TAPE_ANALYZE a DBGAPI_CMD_CMT_TAPE_ANALYZE_APPLY.
+ *
+ * Synchronně na emu vlákně: kopie pulzů bloku (cmttmz_analyze_copy_pulses(),
+ * pod zámkem stavu zařízení), analýza (cmttmz_analyze_pulses(), bez zámku -
+ * okno aplikace kreslí) a pod zámkem řádky a u _APPLY
+ * s `apply` ADD / REPLACE uplatnění se všemi řádky, které jdou přidat
+ * (cmt_tape_analysis_apply()). DBGAPI_CMD_CMT_TAPE_ANALYZE `apply`
+ * ignoruje (pásku nikdy nemění, třída ALLOW). Uplatnění jen ve STOP (jinak
+ * out_message DBGAPI_CMT_EDIT_NOT_STOPPED), mimo nahrávání a přehrávání
+ * vstupů; záznam vstupů ho odmítne už brána (FORBIDDEN).
+ *
+ * Vlastnictví: out_rows alokuje handler (g_new), uvolní volající g_free()
+ * i při chybě (NULL bez řádků).
+ */
+typedef struct st_DBGAPI_CMT_TAPE_ANALYZE_PARAM
+{
+    int         block_id;            /**< IN: číslo surového bloku 0x18. */
+    double      tolerance;           /**< IN: tolerance detekce leaderu (jádro ji omezí na 0,02 až 0,35). */
+    int         repair_header;       /**< IN: 1 = oprava hlavičky (recover_header). */
+    int         repair_body;         /**< IN: 1 = oprava těla (recover_body). */
+    int         repair_bsd;          /**< IN: 1 = oprava BSD (recover_bsd). */
+    int         apply;               /**< IN: en_DBGAPI_CMT_ANALYZE_APPLY (jen _APPLY). */
+    int         out_result;          /**< OUT: 0 = analýza (a uplatnění) proběhla, -1 = chyba (text v out_message). */
+    char        out_message[ DBGAPI_CMT_EDIT_MESSAGE_MAX ]; /**< OUT: text chyby (anglicky), "" po úspěchu. */
+    char        out_warning[ DBGAPI_CMT_EDIT_MESSAGE_MAX ]; /**< OUT: varování uplatnění po úspěchu s přidanými bloky (cmttmz_get_edit_warning(): takt nových bloků za blokem 0x43), jinak "". */
+    char        out_analysis_error[ CMTTMZ_ANALYZE_ERROR_SIZE ]; /**< OUT: chyba analýzy (cmttmz_analysis_error(), "" = analýza proběhla), i při out_result 0. */
+    uint32_t    out_sample_rate;     /**< OUT: vzorkovací frekvence bloku v Hz. */
+    uint32_t    out_pulse_count;     /**< OUT: počet pulzů bloku. */
+    uint64_t    out_total_us;        /**< OUT: délka pulzů bloku v µs. */
+    st_DBGAPI_CMT_ANALYZE_ROW *out_rows; /**< OUT: řádky (g_new, uvolní volající), NULL bez řádků. */
+    uint32_t    out_row_count;       /**< OUT: počet řádků. */
+    uint32_t    out_applied;         /**< OUT: počet přidaných bloků souborů (0 bez uplatnění). */
+    int         out_first_added;     /**< OUT: číslo prvního přidaného bloku souboru, -1 = žádný. */
+    int         out_count;           /**< OUT: počet bloků pásky po operaci. */
+    int         out_current_block;   /**< OUT: otevřený blok po operaci (-1 = žádný). */
+} st_DBGAPI_CMT_TAPE_ANALYZE_PARAM;
+
+
+/** @brief Bit set_mask pro stroj (st_DBGAPI_CMT_TAPE_INFO_PARAM); bity 0 .. CMTTMZ_TAPE_INFO_FIELDS - 1 jsou texty v pořadí cmttmz_tape_info_key(). */
+#define DBGAPI_CMT_TAPE_INFO_MACHINE_BIT ( 1u << CMTTMZ_TAPE_INFO_FIELDS )
+
+/**
+ * @brief Parametr pro DBGAPI_CMD_CMT_TAPE_INFO_GET a DBGAPI_CMD_CMT_TAPE_INFO_SET.
+ *
+ * GET jen přečte (cmttmz_tape_info_get()). SET v jednom příkazu na emu
+ * vlákně informace přečte, do přečtených sloučí pole z `set` vybraná
+ * `set_mask` a zapíše je (cmt_tape_info_set()) - čítač výměn pásky tak
+ * vždy souhlasí; pak informace přečte znovu do out_info. SET jen ve STOP
+ * (jinak DBGAPI_CMT_EDIT_NOT_STOPPED), mimo nahrávání a přehrávání vstupů.
+ */
+typedef struct st_DBGAPI_CMT_TAPE_INFO_PARAM
+{
+    uint32_t            set_mask;    /**< IN (SET): bit i = text i ze `set`, DBGAPI_CMT_TAPE_INFO_MACHINE_BIT = stroj. */
+    st_CMTTMZ_TAPE_INFO set;         /**< IN (SET): nové hodnoty (jen pole podle set_mask; machine -1 = bez bloku 0x43). */
+    int                 out_result;  /**< OUT: 0 = přečteno / zapsáno, -1 = chyba (text v out_message). */
+    uint8_t             out_changed; /**< OUT (SET): 1 = páska se změnila. */
+    char                out_message[ DBGAPI_CMT_EDIT_MESSAGE_MAX ]; /**< OUT: text chyby (anglicky), "" po úspěchu. */
+    char                out_warning[ DBGAPI_CMT_EDIT_MESSAGE_MAX ]; /**< OUT (SET): varování zápisu (cmttmz_get_edit_warning()), jinak "". */
+    st_CMTTMZ_TAPE_INFO out_info;    /**< OUT: informace o pásce (po zápisu přečtené znovu). */
+} st_DBGAPI_CMT_TAPE_INFO_PARAM;
+
+
+/**
+ * @brief Parametr pro DBGAPI_CMD_CMT_TAPE_CHECK (cmttmz_tape_check(), jen čtení).
+ *
+ * Vlastnictví: out_items alokuje jádro (g_malloc), uvolní volající g_free().
+ */
+typedef struct st_DBGAPI_CMT_TAPE_CHECK_PARAM
+{
+    int                  out_result;         /**< OUT: 0 = zkontrolováno, -1 = bez pásky. */
+    st_CMTTMZ_CHECK_ITEM *out_items;         /**< OUT: nálezy seřazené podle bloku (NULL bez nálezu). */
+    uint32_t             out_count;          /**< OUT: počet nálezů. */
+    uint32_t             out_blocks_checked; /**< OUT: počet zkontrolovaných bloků. */
+    char                 out_message[ 64 ]; /**< OUT: text chyby ("No tape inserted"), "" po úspěchu. */
+} st_DBGAPI_CMT_TAPE_CHECK_PARAM;
+
+
+/**
+ * @brief Parametr pro DBGAPI_CMD_CMT_TAPE_CONVERT_BLOCK (cmt_tape_convert_block()).
+ *
+ * Jen ve STOP (jinak DBGAPI_CMT_EDIT_NOT_STOPPED), mimo nahrávání
+ * a přehrávání vstupů. Převod na tentýž profil bez rychlosti pásku nezmění
+ * (out_changed 0).
+ */
+typedef struct st_DBGAPI_CMT_TAPE_CONVERT_BLOCK_PARAM
+{
+    int         block_id;            /**< IN: číslo bloku 0x46. */
+    const char *profile_id;          /**< IN: ID profilu (vlastní volající). */
+    int         speed;               /**< IN: en_CMTSPEED (CMTSPEED_NONE = výchozí profilu). */
+    int         out_result;          /**< OUT: 0 = převedeno nebo beze změny, -1 = chyba. */
+    uint8_t     out_changed;         /**< OUT: 1 = páska se změnila (čítač výměn pásky vzrostl). */
+    char        out_profile[ 64 ];   /**< OUT: ID profilu bloku po operaci ("" když nejde přečíst). */
+    int         out_count;           /**< OUT: počet bloků pásky po operaci. */
+    int         out_current_block;   /**< OUT: otevřený blok po operaci (-1 = žádný). */
+    char        out_message[ DBGAPI_CMT_EDIT_MESSAGE_MAX ]; /**< OUT: text chyby (anglicky), "" po úspěchu. */
+    char        out_warning[ DBGAPI_CMT_EDIT_MESSAGE_MAX ]; /**< OUT: varování převodu (cmttmz_get_edit_warning()), jinak "". */
+} st_DBGAPI_CMT_TAPE_CONVERT_BLOCK_PARAM;
+
+
+/**
+ * @brief Parametr pro DBGAPI_CMD_CMT_LOAD_DIRECTLY (cmt_load_directly_apply(), Load directly okna Virtual CMT).
+ *
+ * Vše nebo nic: jen ve STOP, blok musí nést MZF; blok se vybere a režim
+ * načítání přepne do Direct (CMT hack zapnutý, CPU Boost vypnutý; se
+ * zapnutým hackem se nemění nic dalšího). Při záznamu vstupů odmítne
+ * brána replaye (FORBIDDEN), při přehrávání vstupů příkaz sám
+ * (DBGAPI_CMT_LOADING_MODE_REPLAY), jako zásah okna.
+ */
+typedef struct st_DBGAPI_CMT_LOAD_DIRECTLY_PARAM
+{
+    int     block_id;           /**< IN: číslo bloku (od 0). */
+    int     out_result;         /**< OUT: 1 = vybráno a přepnuto do Direct, 0 = vybráno (Direct už byl), -1 = odmítnuto (out_message). */
+    uint8_t out_installed;      /**< OUT: stav CMT hacku po operaci (CMTHACK_TEST_IS_INSTALLED). */
+    int     out_current_block;  /**< OUT: otevřený blok po operaci (-1 = žádný). */
+    char    out_message[ DBGAPI_CMT_EDIT_MESSAGE_MAX ]; /**< OUT: text chyby anglicky (jen při out_result -1), jinak "". */
+} st_DBGAPI_CMT_LOAD_DIRECTLY_PARAM;
+
+/**
+ * @brief Směr kroku po pásce pro DBGAPI_CMD_CMT_TAPE_STEP.
+ */
+typedef enum en_DBGAPI_CMT_STEP
+{
+    DBGAPI_CMT_STEP_NEXT = 0, /**< další přehratelný blok (tlačítko Next block, cmt_tape_step_block(1)) */
+    DBGAPI_CMT_STEP_PREV,     /**< předchozí přehratelný blok (tlačítko Previous block, cmt_tape_step_block(0)) */
+    DBGAPI_CMT_STEP_START,    /**< první přehratelný blok pásky (tlačítko Rewind, cmt_tape_seek_block()) */
+} en_DBGAPI_CMT_STEP;
+
+/**
+ * @brief Parametr pro DBGAPI_CMD_CMT_TAPE_STEP (tlačítka Rewind / Previous / Next decku).
+ *
+ * Řídicí bloky a bloky, které player neumí, se přeskočí jako u tlačítek
+ * decku. NEXT / PREV zachovají transport (hrající pásku krátce zastaví
+ * a znovu spustí, pauza zůstane), START otevře první přehratelný blok
+ * bez změny transportu (jako emu_cmt_tape_seek). Chyba (bez pásky,
+ * prázdná páska, nahrávání, tím směrem žádný přehratelný blok) nic
+ * nemění. Třída záznamu vstupů RECORD: záznam ho zapíše jako událost
+ * `cmt` (next, prev, seek na out_block_id).
+ */
+typedef struct st_DBGAPI_CMT_TAPE_STEP_PARAM
+{
+    int  direction;           /**< IN: en_DBGAPI_CMT_STEP. */
+    int  out_result;          /**< OUT: 0 = OK, -1 = odmítnuto (out_message). */
+    int  out_block_id;        /**< OUT: otevřený blok po kroku (u START cíl seeku); -1 při chybě bez otevřeného bloku. */
+    char out_message[ DBGAPI_CMT_EDIT_MESSAGE_MAX ]; /**< OUT: text chyby anglicky (jen při out_result -1), jinak "". */
+} st_DBGAPI_CMT_TAPE_STEP_PARAM;
 
 
 /* ============================================================================

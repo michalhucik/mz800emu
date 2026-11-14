@@ -90,7 +90,9 @@ extern "C"
     /**
      * @brief Příkaz kazety dbgapi jako operace záznamu (`cmt` událost).
      *
-     * @param cmd      Příkaz (`DBGAPI_CMD_CMT_TRANSPORT`, `_TAPE_SEEK`, `_RECORD`).
+     * @param cmd      Příkaz (`DBGAPI_CMD_CMT_TRANSPORT`, `_TAPE_SEEK`, `_RECORD`,
+     *                 `_NEW_TAPE`, `_TAPE_STEP`: next / prev, start = seek na
+     *                 nalezený blok).
      * @param data_ptr Jeho parametry (po provedení).
      * @param[out] op   en_REPLAY_CMT_OP.
      * @param[out] arg  Hodnota (pauza, blok).

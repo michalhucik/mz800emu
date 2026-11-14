@@ -217,7 +217,7 @@ Hover nad headerem "Banking" zobrazí tooltip "Left: rotate, Right: menu".
 | PEHU (8K) | 8 dvojbuněk, sudý řádek tlačítko `$XX`, lichý řádek prázdný |
 
 Klik na tlačítko = otevřít "MemExt Map Settings" okno (identické s
-odpovídající položkou v Devices menu).
+odpovídající položkou v menu HW & Devices).
 
 Tooltip nad tlačítkem: "MemExt remap...".
 

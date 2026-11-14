@@ -9,6 +9,8 @@
  *  - argumenty se při zařazení zkopírují (text včetně oříznutí),
  *  - výsledky přicházejí v pořadí zařazení se shodným seq a návratem,
  *  - při aktivním replay se zásah neprovede (DEVICE_REQ_REJECTED_REPLAY),
+ *  - zásah jen pro data UI (device_request_submit_ui_data()) revizi stavu
+ *    nezvedne,
  *  - když UI drží zámek stavu zařízení, poll nic neprovede a zásahy počkají,
  *  - nevyzvednutých výsledků je nejvýš DEVICE_REQUEST_RESULTS_MAX,
  *  - device_request_clear() zahodí čekající zásahy i výsledky.
@@ -162,6 +164,40 @@ void test_rejected_while_replay_active(void)
 
 
 /**
+ * @brief Zásah jen pro data UI (device_request_submit_ui_data()) se provede,
+ *        ale revizi stavu nezvedne; při replay se odmítne jako jiné zásahy.
+ */
+void test_ui_data_request_keeps_state_rev(void)
+{
+    st_DEVICE_REQ_ARGS a;
+    device_request_args_set_str(&a, NULL);
+    a.i[0] = 7; a.i[1] = 3;
+    uint32_t s = device_request_submit_ui_data("ui_data", test_fn, &a);
+    TEST_ASSERT_NOT_EQUAL_UINT32(0, s);
+    TEST_ASSERT_EQUAL_UINT32(0, device_request_submit_ui_data("none", NULL, NULL));
+
+    uint64_t rev0 = g_state_rev;
+    device_request_poll();
+    TEST_ASSERT_EQUAL_UINT64_MESSAGE(rev0, g_state_rev, "a UI data request does not change the machine state");
+    TEST_ASSERT_EQUAL_INT(1, s_calls);
+    TEST_ASSERT_EQUAL_INT(7, s_order[0]);
+    st_DEVICE_REQ_RESULT res;
+    TEST_ASSERT_TRUE(device_request_take_result(&res));
+    TEST_ASSERT_EQUAL_UINT32(s, res.seq);
+    TEST_ASSERT_EQUAL_STRING("ui_data", res.name);
+    TEST_ASSERT_EQUAL_INT(DEVICE_REQ_DONE, res.status);
+    TEST_ASSERT_EQUAL_INT(3, res.rc);
+
+    g_replay_mode = REPLAY_MODE_PLAYING;
+    device_request_submit_ui_data("ui_data", test_fn, NULL);
+    device_request_poll();
+    TEST_ASSERT_EQUAL_INT(1, s_calls);
+    TEST_ASSERT_TRUE(device_request_take_result(&res));
+    TEST_ASSERT_EQUAL_INT(DEVICE_REQ_REJECTED_REPLAY, res.status);
+}
+
+
+/**
  * @brief Zámek stavu zařízení držený UI odloží zásahy na další poll.
  */
 void test_state_lock_defers_execution(void)
@@ -234,6 +270,7 @@ int main(void)
     RUN_TEST(test_poll_executes_in_order);
     RUN_TEST(test_args_are_copied);
     RUN_TEST(test_rejected_while_replay_active);
+    RUN_TEST(test_ui_data_request_keeps_state_rev);
     RUN_TEST(test_state_lock_defers_execution);
     RUN_TEST(test_results_are_capped);
     RUN_TEST(test_clear_drops_everything);

@@ -6,7 +6,11 @@
  * 
  * 
  * ----------------------------- License -------------------------------------
- * 
+ *
+ * GNU General Public License v3 (GPLv3)
+ *
+ * Copyright (C) 2017-2026 Michal Hucik <hucik@ordoz.com>
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -14,17 +18,19 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ *
  * ---------------------------------------------------------------------------
  */
 
 #include <stdint.h>
 #include <sys/param.h>
+
+#include "endianity.h"
 
 
 #ifndef __BYTE_ORDER
@@ -154,7 +160,7 @@ uint64_t endianity_bswap64_LE ( uint64_t n ) {
 #ifndef __BYTE_ORDER
     if ( *g_ui8 == 0x01 ) return n;
     return __builtin_bswap64 ( n );
-#else    
+#else
 #if __BYTE_ORDER == __BIG_ENDIAN
     return __builtin_bswap64 ( n );
 #elif __BYTE_ORDER == __LITTLE_ENDIAN
@@ -163,5 +169,10 @@ uint64_t endianity_bswap64_LE ( uint64_t n ) {
 #error "Unknown byte order"
 #endif
 #endif
+}
+
+
+const char* endianity_version ( void ) {
+    return ENDIANITY_VERSION;
 }
 

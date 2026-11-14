@@ -18,6 +18,7 @@
 #include <glib.h>
 
 #include "libs/imgui/imgui.h"
+#include "ui-imgui/imgui_modal.h"
 #include "libs/igfd/ImGuiFileDialog.h"
 #include "ui-imgui/filechooser/imgui_filechooser.h"
 #include "ui-imgui/bootstrap/myimgui.h"
@@ -27,6 +28,7 @@
 #include "emulator/replay.h"
 #include "snapshot/snapshot.h"
 #include "topmenu.h"
+#include "ui-imgui/cmt/imgui_cmt.h"
 
 extern "C" void snapshot_notification_show_ex(const char *message, bool is_error, const char *error_title);
 
@@ -54,7 +56,43 @@ void imgui_replay_open_record_dialog(void)
 
 void imgui_replay_open_play_dialog(void)
 {
+    /* přehrání vloží pásku záznamu: nejdřív dotaz Virtual CMT */
+    imgui_cmt_tape_action(IMGUI_CMT_TAPE_ACTION_REPLAY_PLAY);
+}
+
+
+/**
+ * @brief Dialog přehrání záznamu vstupů po dotazu Virtual CMT (bez dalšího dotazu).
+ * @pre UI vlákno.
+ */
+extern "C" void imgui_replay_open_play_dialog_now(void)
+{
     s_play_dialog_request = true;
+}
+
+
+/**
+ * @brief Start přehrání vybraného záznamu vstupů po dotazu Virtual CMT (výsledek hlásí replay_notify()).
+ * @param path Soubor .mzr.
+ * @pre UI vlákno.
+ */
+extern "C" void imgui_replay_start_play(const char *path)
+{
+    s_pending_seq = replay_request_play(path, false);
+}
+
+
+/**
+ * @brief Zastaví záznam nebo přehrání vstupů jako položka Stop Replay (výsledek hlásí replay_notify()).
+ *
+ * Volá ho i dotaz Virtual CMT při ukončení aplikace během přehrávání:
+ * konec přehrávání vrátí pásku uživatele (replay_media_restore()).
+ *
+ * @pre UI vlákno.
+ */
+extern "C" void imgui_replay_stop_play(void)
+{
+    s_pending_seq = replay_request_stop();
 }
 
 
@@ -106,7 +144,7 @@ void imgui_menu_replay(void)
                                   "to repeat the run exactly later."));
     if (ImGui::MenuItem(_L("Play Replay..."), NULL, false, off))
     {
-        s_play_dialog_request = true;
+        imgui_replay_open_play_dialog();
     };
     if (ImGui::MenuItem(_L("Stop Replay"), NULL, false, !off))
     {
@@ -186,7 +224,8 @@ void imgui_menu_replay(void)
 static void replay_seek_dialog(void)
 {
     const std::string title = std::string(_("Seek Replay")) + "###ReplaySeekPopup";
-    if (s_seek_dialog_request)
+    /* požadavek čeká, dokud je otevřený jiný popup (imgui_modal.h) */
+    if (s_seek_dialog_request && imgui_modal_can_open())
     {
         s_seek_dialog_request = false;
         ImGui::OpenPopup(title.c_str());
@@ -319,8 +358,11 @@ void imgui_replay_dialogs(void)
             if (ImGuiFileDialog::Instance()->IsOk())
             {
                 std::string path = ImGuiFileDialog::Instance()->GetFilePathName();
-                s_pending_seq = (s_dialog_open == 1) ? replay_request_record(path.c_str(), 0, NULL)
-                                                     : replay_request_play(path.c_str(), false);
+                if (s_dialog_open == 1)
+                    s_pending_seq = replay_request_record(path.c_str(), 0, NULL);
+                else /* stav pásky znovu: mezi dotazem a výběrem se mohl zhoršit */
+                    imgui_cmt_tape_file_action(IMGUI_CMT_TAPE_ACTION_REPLAY_PLAY_FILE, path.c_str());
+
             };
             ImGuiFileDialog::Instance()->Close();
             s_dialog_open = 0;

@@ -25,6 +25,7 @@
 #include "emulator.h"
 #include "ui-imgui/debugger/dbgapi_helpers.h"
 #include "ui-imgui/snapshot/snapshot_request_ui.h"
+#include "ui-imgui/cmt/imgui_cmt.h"
 
 extern "C"
 {
@@ -240,7 +241,18 @@ static void snapshot_load_open_file_dialog(void)
 }
 
 
+/**
+ * @brief Načtení snapshotu zrušené dotazem Virtual CMT po výběru souboru: obnoví běh jako Cancel dialogu.
+ * @pre UI vlákno.
+ */
+extern "C" void snapshot_ui_load_cancelled(void)
+{
+    snapshot_load_restore_emulation();
+}
+
+
 extern "C" void imgui_snapshot_load_dialog(void)
+
 {
     /* Fáze 1: Otevření souborového dialogu po požadavku z menu */
     if (snapshot_ui_is_load_requested()) {
@@ -256,8 +268,10 @@ extern "C" void imgui_snapshot_load_dialog(void)
                 std::string path = ImGuiFileDialog::Instance()->GetFilePathName();
 
                 /* Načtení vyřídí emu vlákno v pauze; oznámení a obnovení
-                 * běhu dělá imgui_snapshot_request_results(). */
-                snapshot_ui_submit(SNAPSHOT_REQ_LOAD, path.c_str(), NULL);
+                 * běhu dělá imgui_snapshot_request_results(). Stav pásky se
+                 * kontroluje znovu (mezi dotazem a výběrem souboru se mohl
+                 * zhoršit); zrušený dotaz = snapshot_ui_load_cancelled(). */
+                imgui_cmt_tape_file_action(IMGUI_CMT_TAPE_ACTION_SNAPSHOT_LOAD_FILE, path.c_str());
             } else {
                 /* Cancel — obnovit předchozí stav */
                 snapshot_load_restore_emulation();

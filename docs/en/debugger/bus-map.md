@@ -30,8 +30,8 @@ both can be open side by side.
 ```
 [Ports] [MMIO]   Color by [Owners v] (?)   [x] Track activity
 +-- status strip above the grid ---+||+-- Owner   Ports    Drive     (?) -------------+
-|     0  1  2  3 ... F             ||||[CH] CMT hack  01h-02h  none       (*)        |
-| 00  .  CH CH  .  ...             ||||[U]  Unicard   50h-51h  tri-state  (*)        |
+|     0  1  2  3 ... F             ||||[CH] CMT hack  01h-04h  none       (*)        |
+| 00  .  CH CH CH  ...             ||||[U]  Unicard   50h-51h  tri-state  (*)        |
 | 50  U  U  .   .  ... F1 F1 F1 F1 ||||[K8] K&P 80... 70h-73h  tri-state  (/) [Connect]
 | 70  K8 K8 K8 K8  ...             ||||  ...  (ScrollY, sorted by the first port)    |
 | F0  G  G  .   .  Q  Q  Q  Q  RD  |||+-v [K8] Port 70h  K&P 80 Column Card ------+

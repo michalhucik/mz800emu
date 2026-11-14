@@ -30,7 +30,7 @@
 #include "debugger/run_control/run_control.h"
 #endif
 
-#include "generic_driver/memory_driver.h"
+#include "libs/generic_driver/memory_driver.h"
 #include "generic_driver/file_driver.h"
 
 #include "version_check/version_check.h"

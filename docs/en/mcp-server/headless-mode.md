@@ -36,7 +36,7 @@ event), or until an exit condition of an unattended run is met (see
 | Framebuffer (in memory, BGRA 928×288) | rendered |
 | Snapshot save/load | works |
 | CMT hack (`--run-mzf`) | works |
-| CMT hack load started by the ROM (boot menu C, `LOAD`) | **no** file dialog: the load is cancelled at once (the ROM reports Break) and a warning goes to stderr. Load the program with `media_load_mzf` or `--run-mzf`, or switch the CMT hack off (`cmt_hack_set`) and use the virtual tape |
+| CMT hack load started by the ROM (boot menu C, `LOAD`) | with a tape inserted it takes the program from the current block of the tape as in the window (choose the block with `cmt_load_directly`, `cmt_tape_seek` or `cmt_tape_step`); without a tape, at a block without a program and after the last program of the tape **no** file dialog: the load is cancelled at once (the ROM reports Break) and a warning goes to stderr. Then load the program with `media_load_mzf` or `--run-mzf`, insert a tape, or switch the CMT hack off with the tape stopped (`cmt_hack_set`) and use the tape signal |
 | Console stdout/stderr | only in `FORCE_CONSOLE=1` builds (see below) |
 | GUI window | **no** (skipped) |
 | Audio output | **no** (no-op SDL audio device) |
@@ -143,7 +143,8 @@ and paths shortened):
                "vram" : "edf097e8...", "screen" : "f58b3934...", "cpu" : "9c1e07d2..." },
   "artifacts" : { "screenshot" : ".../out/screen.png", "snapshot" : null,
                   "audio_capture" : null, "video" : null },
-  "inputs" : { "run_mzf" : ".../Gardner.mzf", "bpt" : null },
+  "inputs" : { "run_mzf" : ".../Gardner.mzf", "run_mzf_device" : "cmt", "run_mzf_bc" : 256,
+               "bpt" : null },
   "warnings" : [ ]
 }
 ```
@@ -179,6 +180,11 @@ line).
   `emulated_seconds` is `gdg_ticks` in seconds of the emulated clock.
 - `cpu`: registers as numbers (`af2` ... `hl2` are the shadow registers),
   `halted` true or false.
+- `inputs`: `run_mzf` and `bpt` (absolute paths or `null`);
+  `run_mzf_device` (the device code choice the program started with:
+  `--run-mzf-device`, otherwise the setting `[CMT] run_mzf_device`) and
+  `run_mzf_bc` (register BC the program got), both `null` without
+  `--run-mzf`.
 - `hashes`: SHA-256 of the internal RAM (64 KB), the MemExt RAM (only when
   connected), the VRAM (MZ-800: all four planes), the PCG (MZ-1500), the
   screen (the framebuffer as palette indices) and `cpu` (the Z80 registers

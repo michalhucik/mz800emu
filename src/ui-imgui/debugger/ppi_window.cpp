@@ -11,11 +11,14 @@
  *    CTC2 INT mask, motor IN, computed IN bity 5-7).
  *  - VKBD autotype state (collapsible, default closed).
  *
- * Side-effect free: čte výhradně raw fields `g_pio8255` + mirror `last_cw_byte`.
- * NEVOLÁ `pio8255_read()`, `pio8255_pc4_get()`, `pio8255_pa5_get()` ani jiné
- * gettery - ty mají side-effecty (sample CMT, JOY probe). Bity PC5/PC6/PC7
- * v hlavičce zakomentované (computed on demand v `pio8255_pc?_get()`); UI je
- * jen označí "computed on read (not in mirror)".
+ * Side-effect free: čte raw fields `g_pio8255` + mirror `last_cw_byte`; jedinou
+ * výjimkou je PC4 přes `pio8255_pc4_get()` - ten vedlejší efekty nemá a vrací
+ * hodnotu, jakou čte program (s CMT hackem mimo nahrávání podvržený bit, jinak
+ * stav decku; čte `g_cmt` a `g_cmthack` bez zámku, jen pro zobrazení).
+ * NEVOLÁ `pio8255_read()`, `pio8255_pa5_get()` ani jiné gettery s vedlejšími
+ * efekty (sample CMT, JOY probe). Bity PC5/PC6/PC7 v hlavičce zakomentované
+ * (computed on demand v `pio8255_pc?_get()`); UI je jen označí "computed on
+ * read (not in mirror)".
  *
  * License: GPLv3.
  */
@@ -367,7 +370,8 @@ void imgui_ppi_state_window(bool *p_open)
                     _("CTC2 INT mask (0 = blocked, 1 = enabled)"));
         ImGui::Text("D3 OUT  pc03 = %u  (%s)", g_pio8255.signal_pc03,
                     _("CMT motor control (rising edge toggles)"));
-        ImGui::Text("D4 IN   pc04 = %u  (%s)", g_pio8255.signal_pc04,
+        /* PC4 jak ho čte program (pio8255_pc4_get(): s CMT hackem mimo nahrávání podvržený bit) */
+        ImGui::Text("D4 IN   pc04 = %u  (%s)", (unsigned)pio8255_pc4_get(),
                     _("CMT motor state"));
         ImGui::TextDisabled("D5 IN   pc05 - %s",
                             _("CMT data in - computed on read (not in mirror)"));

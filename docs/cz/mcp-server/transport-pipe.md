@@ -47,7 +47,7 @@ jinou odmítne hláškou `Unknown option: <volba>` na stderr a nespustí se:
 | `--home-dir`, `--cfg-dir`, `--work-dir` | přesměrování adresářů (data, konfigurace, výchozí cesta dialogů) |
 | `--config <soubor>` | cesta k hlavnímu INI |
 | `--no-save-ini`, `--no-first-run-windows` | neukládat INI při ukončení, bez úvodních oken |
-| `--cmt <soubor>`, `--cmt-play`, `--cmt-play-pause`, `--cmt-boot` | páska ve virtuálním magnetofonu od startu |
+| `--cmt <soubor>`, `--cmt-play`, `--cmt-play-pause`, `--cmt-boot` | páska ve virtuálním kazetofonu od startu |
 | `--fdd <N>=<soubor>`, `--fdd0` až `--fdd7`, `--fdd-readonly <N>` | obrazy DSK v disketových mechanikách od startu |
 
 Ostatní volby `mz800emu.exe` (např. `--run-mzf`, `--speed`, `--mode-switch`,

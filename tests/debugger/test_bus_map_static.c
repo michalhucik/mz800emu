@@ -43,7 +43,7 @@ static const st_RANGE s_ref_read[] = {
 
 /** @brief Porty, které port_write_cb() v mz700_iorq.c obsluhuje. */
 static const st_RANGE s_ref_write[] = {
-    { 0x01, 0x02 },  /* CMT hack */
+    { 0x01, 0x04 },  /* CMT hack (01h-02h načtení, 03h-04h uložení a ověření) */
     { 0x50, 0x51 },  /* Unicard */
     { 0x58, 0x5f },  /* FDC1 */
     { 0x68, 0x6f },  /* Pezik 68h */
@@ -57,9 +57,9 @@ static const st_RANGE s_ref_write[] = {
     { 0xfa, 0xfa },  /* RAM disk std */
 };
 
-/** @brief Dřívější ruční seznam mz700_devbus_port_is_static() (D1-D5). */
+/** @brief Dřívější ruční seznam mz700_devbus_port_is_static() (D1-D5), CMT hack rozšířený na 01h-04h (Direct Save). */
 static const st_RANGE s_ref_static_old[] = {
-    { 0x01, 0x02 }, { 0x50, 0x51 }, { 0x68, 0x6f }, { 0xea, 0xeb }, { 0xf8, 0xfa },
+    { 0x01, 0x04 }, { 0x50, 0x51 }, { 0x68, 0x6f }, { 0xea, 0xeb }, { 0xf8, 0xfa },
     { 0x78, 0x7f }, { 0xd8, 0xdf }, { 0x58, 0x5f }, { 0xe0, 0xe7 }, { 0xf0, 0xf1 },
     { 0xf4, 0xf7 },
 };

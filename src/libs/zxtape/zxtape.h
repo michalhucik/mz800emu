@@ -1,16 +1,20 @@
 /**
  * @file   zxtape.h
  * @author Michal Hucik <hucik@ordoz.com>
- * @version 2.0.0
+ * @version 2.0.1
  * @brief  Veřejné API knihovny zxtape pro konverzi ZX Spectrum TAP bloků na CMT streamy.
  *
  * Poskytuje typy, enumy, alokátor, error callback a funkce pro generování
  * CMT audio streamů (bitstream/vstream) z TAP bloků ZX Spectra.
  *
  * @par Changelog:
- * - 2026-03-14: Proběhla kompletní revize a refaktorizace. Vytvořeny unit testy.
+ * - 2026-03-14: Proběhla kompletní kontrola kódu a refaktorizace. Vytvořeny unit testy.
  *
  * @par Licence:
+ * GNU General Public License v3 (GPLv3)
+ *
+ * Copyright (C) 2017-2026 Michal Hucik <hucik@ordoz.com>
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -18,11 +22,11 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
 
@@ -172,6 +176,15 @@ extern "C" {
      */
     extern int zxtape_validate_checksum ( uint8_t *data, uint16_t data_size );
 
+
+    /** @brief Verze knihovny zxtape. */
+#define ZXTAPE_VERSION "2.0.1"
+
+    /**
+     * @brief Vrátí řetězec s verzí knihovny zxtape.
+     * @return Statický řetězec s verzí (např. "2.0.0").
+     */
+    extern const char* zxtape_version ( void );
 
 #ifdef __cplusplus
 }

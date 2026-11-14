@@ -1,16 +1,20 @@
 /**
  * @file   cmt_stream.h
  * @author Michal Hucik <hucik@ordoz.com>
- * @version 2.0.0
+ * @version 2.1.0
  * @brief  Sjednocující wrapper nad dvěma typy CMT streamů (bitstream a vstream).
  *
  * Poskytuje polymorfní rozhraní — volající nemusí znát konkrétní typ
  * streamu a může používat společné funkce (get_size, get_rate, destroy...).
  *
  * @par Changelog:
- * - 2026-03-14: Proběhla kompletní revize a refaktorizace. Vytvořeny unit testy.
+ * - 2026-03-14: Proběhla kompletní kontrola kódu a refaktorizace. Vytvořeny unit testy.
  *
  * @par Licence:
+ * GNU General Public License v3 (GPLv3)
+ *
+ * Copyright (C) 2017-2026 Michal Hucik <hucik@ordoz.com>
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -18,11 +22,11 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
 
@@ -159,6 +163,15 @@ extern "C" {
      * @return EXIT_SUCCESS při úspěchu, EXIT_FAILURE při chybě
      */
     extern int cmt_stream_save_wav ( st_CMT_STREAM *stream, uint32_t rate, char *filename );
+
+    /** @brief Verze knihovny cmt_stream. */
+#define CMT_STREAM_VERSION "2.1.0"
+
+    /**
+     * @brief Vrátí řetězec s verzí knihovny cmt_stream.
+     * @return Statický řetězec s verzí (např. "2.0.0").
+     */
+    extern const char* cmt_stream_version ( void );
 
 #ifdef __cplusplus
 }

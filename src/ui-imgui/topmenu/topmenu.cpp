@@ -16,6 +16,7 @@
 // #include "iface/iface_video.h"
 #include "topmenu.h"
 #include "ui-imgui/debugger/dbgapi_helpers.h"
+#include "ui-imgui/cmt/imgui_cmt.h"
 
 // #if HAVE_JOY
 // #include "iface/iface_joy.h"
@@ -38,6 +39,8 @@ void imgui_topmenu_body(void)
     device_state_lock();
     imgui_menu_devices();
     device_state_unlock();
+    /* Fast Open CMT File & Play...: akce dotazu Virtual CMT až bez zámku */
+    imgui_cmt_tape_run_deferred();
     ImGui::EndDisabled();
     if (replay_active && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
     {

@@ -31,7 +31,7 @@
 
 #include "emulator/emulator.h"
 #include "hw-generic/cmt/cmt.h"
-#include "hw-generic/cmt/cmt_mzf.h"
+#include "hw-generic/cmt/cmt_tmz.h"
 #include "hw-generic/gdg/gdgclk.h"
 
 /** @brief Délka těla testovacích MZF v bajtech. */
@@ -207,7 +207,7 @@ void test_mzt_markers_set_speed_of_following_blocks(void)
 
     /* blok A má výchozí rychlost 1:1 = délky Intercopy */
     st_MZTAPE_PULSES_LENGTH nominal;
-    TEST_ASSERT_EQUAL_INT(EXIT_SUCCESS, mztape_get_speed_pulses(CMTMZF_FORMATSET, CMTSPEED_1_1, &nominal));
+    TEST_ASSERT_EQUAL_INT(EXIT_SUCCESS, mztape_get_speed_pulses(CMTTMZ_FORMATSET, CMTSPEED_1_1, &nominal));
     TEST_ASSERT_EQUAL_INT(0, cmt_tape_get_block_pulses(0, &p));
     TEST_ASSERT_EQUAL_MEMORY(&nominal, &p, sizeof(p));
 
@@ -309,7 +309,7 @@ void test_block_pulses_set_and_get(void)
     TEST_ASSERT_EQUAL_INT(-2, cmt_tape_set_block_cmt_speed(1, CMTSPEED_CUSTOM));
     TEST_ASSERT_EQUAL_INT(0, cmt_tape_set_block_cmt_speed(1, CMTSPEED_3_1));
     st_MZTAPE_PULSES_LENGTH r3;
-    TEST_ASSERT_EQUAL_INT(EXIT_SUCCESS, mztape_get_speed_pulses(CMTMZF_FORMATSET, CMTSPEED_3_1, &r3));
+    TEST_ASSERT_EQUAL_INT(EXIT_SUCCESS, mztape_get_speed_pulses(CMTTMZ_FORMATSET, CMTSPEED_3_1, &r3));
     TEST_ASSERT_EQUAL_INT(0, cmt_tape_get_block_pulses(1, &got));
     TEST_ASSERT_EQUAL_MEMORY(&r3, &got, sizeof(got));
 }

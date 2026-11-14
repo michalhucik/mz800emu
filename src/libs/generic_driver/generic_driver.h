@@ -1,8 +1,11 @@
 /**
  * @file   generic_driver.h
  * @author Michal Hucik <hucik@ordoz.com>
- * @version 2.0.0
+ * @version 2.0.2
  * @brief  Univerzální I/O abstrakce pro práci s datovými bloky (soubory, paměťové buffery).
+ *
+ * @par Historie:
+ * - 2026-11-09: memory_driver přes makra baseui_tools_mem_* (2.0.2)
  *
  * Virtualizuje datovou vrstvu — nadřazená vrstva používá vždy stejné API
  * nezávisle na typu úložiště. Obsahuje definice datových typů, enumů,
@@ -23,9 +26,13 @@
  *                                          (vyžaduje GENERIC_DRIVER_MEMORY_CB)
  *
  * @par Changelog:
- * - 2026-03-14: Proběhla kompletní revize a refaktorizace. Vytvořeny unit testy.
+ * - 2026-03-14: Proběhla kompletní kontrola kódu a refaktorizace. Vytvořeny unit testy.
  *
  * @par Licence:
+ * GNU General Public License v3 (GPLv3)
+ *
+ * Copyright (C) 2017-2026 Michal Hucik <hucik@ordoz.com>
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -33,11 +40,11 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
 
@@ -319,6 +326,15 @@ extern "C" {
 
         return EXIT_SUCCESS;
     }
+
+    /** @brief Verze knihovny generic_driver. */
+#define GENERIC_DRIVER_VERSION "2.0.2"
+
+    /**
+     * @brief Vrátí řetězec s verzí knihovny generic_driver.
+     * @return Statický řetězec s verzí (např. "2.0.0").
+     */
+    extern const char* generic_driver_version ( void );
 
 #ifdef __cplusplus
 }

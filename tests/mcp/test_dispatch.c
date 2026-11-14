@@ -142,8 +142,19 @@
  * na KONEC cmd_map[]) = 224 + 1 = 225.
  * bus-model doplnil get_bus_map a bus_peek (mapa vlastníků sběrnice,
  * peek s rezolucí, na KONEC cmd_map[]) = 225 + 2 = 227.
+ * Kazeta doplnila cmt_save, cmt_export_block a cmt_new_tape
+ * (uložení pásky, export bloku, nová páska, na KONEC cmd_map[]) = 227 + 3 = 230.
+ * Úpravy pásky doplnily cmt_tape_delete_blocks, cmt_tape_move_block,
+ * cmt_tape_import a cmt_export_tape (úpravy pásky a export celé pásky, na
+ * KONEC cmd_map[]) = 230 + 4 = 234.
+ * Nástroje nad páskou doplnily cmt_tape_analyze, cmt_tape_info, cmt_tape_check
+ * a cmt_tape_convert_block (analýza surového bloku, informace o pásce,
+ * kontrola pásky, převod profilu, na KONEC cmd_map[]) = 234 + 4 = 238.
+ * Kazeta jako okno Virtual CMT doplnila cmt_load_directly a cmt_tape_step
+ * (Load directly, krok po přehratelných blocích, na KONEC cmd_map[])
+ * = 238 + 2 = 240.
  */
-#define MCP_EXPECTED_CMD_COUNT 227
+#define MCP_EXPECTED_CMD_COUNT 240
 
 
 /* ====================================================================== */
@@ -4324,6 +4335,56 @@ void test_cmt_tape_block_speed_pulses(void) {
     TEST_ASSERT_NOT_NULL(strstr(resp, "\"speed\":4"));
     TEST_ASSERT_NULL(strstr(resp, "pulses_us"));
     free(resp);
+}
+
+
+/**
+ * @brief cmt_load_directly, cmt_tape_step a alias block_id u cmt_export_block: přísné typy před dbgapi.
+ *
+ * Neplatné parametry (block_id jiného typu nebo záporné, direction mimo
+ * next / prev / start nebo jiného typu, block i block_id naráz) se odmítnou
+ * jako INVALID_PARAMS bez volání emulátoru; platné jdou na správný příkaz
+ * dbgapi.
+ */
+void test_cmt_load_directly_step_params(void) {
+    static const char *const bad[] = {
+        "{\"type\":\"request\",\"id\":1221,\"cmd\":\"cmt_load_directly\",\"data\":{}}",
+        "{\"type\":\"request\",\"id\":1222,\"cmd\":\"cmt_load_directly\",\"data\":{\"block_id\":\"1\"}}",
+        "{\"type\":\"request\",\"id\":1223,\"cmd\":\"cmt_load_directly\",\"data\":{\"block_id\":1.5}}",
+        "{\"type\":\"request\",\"id\":1224,\"cmd\":\"cmt_load_directly\",\"data\":{\"block_id\":-1}}",
+        "{\"type\":\"request\",\"id\":1225,\"cmd\":\"cmt_tape_step\",\"data\":{}}",
+        "{\"type\":\"request\",\"id\":1226,\"cmd\":\"cmt_tape_step\",\"data\":{\"direction\":\"back\"}}",
+        "{\"type\":\"request\",\"id\":1227,\"cmd\":\"cmt_tape_step\",\"data\":{\"direction\":1}}",
+        "{\"type\":\"request\",\"id\":1228,\"cmd\":\"cmt_export_block\","
+        "\"data\":{\"block\":0,\"block_id\":0,\"path\":\"x.mzf\"}}",
+        "{\"type\":\"request\",\"id\":1229,\"cmd\":\"cmt_export_block\","
+        "\"data\":{\"block_id\":\"0\",\"path\":\"x.mzf\"}}",
+    };
+    for (size_t i = 0; i < G_N_ELEMENTS(bad); i++) {
+        dispatch_stub_reset();
+        TEST_ASSERT_EQUAL_INT_MESSAGE(MCP_DISPATCH_INVALID_PARAMS, _cmt_pulses_dispatch(bad[i], NULL), bad[i]);
+        TEST_ASSERT_EQUAL_INT_MESSAGE(0, g_stub_state.call_count, bad[i]);
+    }
+
+    static const struct { const char *line; int cmd; } good[] = {
+        { "{\"type\":\"request\",\"id\":1231,\"cmd\":\"cmt_load_directly\",\"data\":{\"block_id\":2}}",
+          DBGAPI_CMD_CMT_LOAD_DIRECTLY },
+        { "{\"type\":\"request\",\"id\":1232,\"cmd\":\"cmt_tape_step\",\"data\":{\"direction\":\"next\"}}",
+          DBGAPI_CMD_CMT_TAPE_STEP },
+        { "{\"type\":\"request\",\"id\":1233,\"cmd\":\"cmt_tape_step\",\"data\":{\"direction\":\"prev\"}}",
+          DBGAPI_CMD_CMT_TAPE_STEP },
+        { "{\"type\":\"request\",\"id\":1234,\"cmd\":\"cmt_tape_step\",\"data\":{\"direction\":\"start\"}}",
+          DBGAPI_CMD_CMT_TAPE_STEP },
+        { "{\"type\":\"request\",\"id\":1235,\"cmd\":\"cmt_export_block\","
+          "\"data\":{\"block_id\":0,\"path\":\"x.mzf\"}}", DBGAPI_CMD_CMT_EXPORT_BLOCK },
+    };
+    for (size_t i = 0; i < G_N_ELEMENTS(good); i++) {
+        dispatch_stub_reset();
+        char *resp = NULL;
+        TEST_ASSERT_EQUAL_INT_MESSAGE(MCP_DISPATCH_OK, _cmt_pulses_dispatch(good[i].line, &resp), good[i].line);
+        TEST_ASSERT_EQUAL_INT_MESSAGE(good[i].cmd, g_stub_state.last_cmd, good[i].line);
+        free(resp);
+    }
 }
 
 
@@ -10037,6 +10098,7 @@ int main(void) {
     RUN_TEST(test_media_run_mzf_errors);
     RUN_TEST(test_cmt_set_property_custom_pulses);
     RUN_TEST(test_cmt_tape_block_speed_pulses);
+    RUN_TEST(test_cmt_load_directly_step_params);
     RUN_TEST(test_media_load_binary_addr_validation);
     RUN_TEST(test_media_insert_each_slot);
     RUN_TEST(test_media_insert_invalid_slot);

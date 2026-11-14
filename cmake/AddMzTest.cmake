@@ -154,7 +154,6 @@ list(APPEND _test_emu_sources
 # generic_driver/ - file/memory driver
 list(APPEND _test_emu_sources
     ${CMAKE_SOURCE_DIR}/src/generic_driver/file_driver.c
-    ${CMAKE_SOURCE_DIR}/src/generic_driver/memory_driver.c
 )
 
 # app/ je headers-only (app.h, app_main.h, app_thread.h) - žádné .c

@@ -585,35 +585,22 @@ void test_watch_format_ascii_basic ( void ) {
 
 
 /**
- * mzascii (sharp_translation=true) prevadi pres EU sharpmz_utf8 tabulku.
- *
- * DULEZITY FAKT: Sharp MZ display ROM neuziva ASCII pro velka pismena!
- * Velka pismena maji v Sharp MZ jine kody nez ASCII:
- *   - Sharp MZ kod 0x38 = 'H' (ASCII 'H' je 0x48)
- *   - Sharp MZ kod 0x48 = 'X' (ASCII 'X' je 0x58)
- * Tj. kdyz CPU pamet obsahuje bajt 0x48 ('H' v ASCII), Sharp MZ display
- * to interpretuje jako 'X'. Watch mzascii respektuje display ROM, tj.
- * zobrazi take 'X'.
- *
- * Tento test overuje prave tento shift - pokud pridame v pameti bajty,
- * ktere v ASCII byly H,I, mzascii preklad vrati X,Y (cisla A-Z v Sharp
- * MZ EU jsou kody 0x31-0x4A).
- *
- * Cisla 0-9 (kod 0x20-0x29 v Sharp MZ) jsou shodne s ASCII offset, tj.
- * "12" prijde z 0x21, 0x22 ale ASCII '1' = 0x31 -> v Sharp MZ je 'A'.
+ * mzascii (sharp_translation=true) převádí bajty jako Sharp MZ ASCII (EU)
+ * přes sharpmz_to_utf8 ( byte, SHARPMZ_CHARSET_EU ).
  */
 void test_watch_format_ascii_mz ( void ) {
     char buf[128];
 
-    /* Bajty 0x48 0x49 (= ASCII 'H','I') -> Sharp MZ display 'X','Y'. */
+    /* Bajty 0x48 0x49 = Sharp MZ ASCII 'H','I' (starý 1.0.0 převod je chybně
+     * zobrazoval jako 'XY' - tabulka byla posunutá). */
     const uint8_t s[] = { 0x48, 0x49 };
     watch_format_ascii ( s, sizeof ( s ), buf, sizeof ( buf ), true );
-    TEST_ASSERT_EQUAL_STRING ( "XY", buf );
-
-    /* Sharp MZ kody pro 'H','I' = 0x38, 0x39 -> 'H','I' v UTF-8. */
-    const uint8_t mz_HI[] = { 0x38, 0x39 };
-    watch_format_ascii ( mz_HI, sizeof ( mz_HI ), buf, sizeof ( buf ), true );
     TEST_ASSERT_EQUAL_STRING ( "HI", buf );
+
+    /* Cifry: 0x38, 0x39 = '8', '9'. */
+    const uint8_t mz_89[] = { 0x38, 0x39 };
+    watch_format_ascii ( mz_89, sizeof ( mz_89 ), buf, sizeof ( buf ), true );
+    TEST_ASSERT_EQUAL_STRING ( "89", buf );
 }
 
 

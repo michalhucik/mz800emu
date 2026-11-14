@@ -58,6 +58,7 @@ void snapshot_ui_request_quickload(void);
 void imgui_snapshot_quicksave_handler(void);
 }
 #include "ui-imgui/snapshot/snapshot_request_ui.h"
+#include "ui-imgui/cmt/imgui_cmt.h"
 
 /* UI globál, který jinak vytváří sdlapp_imgui_video.cpp. */
 static MyImGui s_gui;
@@ -98,6 +99,30 @@ extern "C" void snapshot_notification_show(const char *message, bool is_error)
 {
     snapshot_notification_show_ex(message, is_error, NULL);
 }
+
+/* Stub dotazu Virtual CMT (cmt_tape_actions.cpp test nelinkuje; páska tu
+ * nemá změny): akce menu snapshotů a záznamu vstupů proběhnou hned. */
+extern "C" void snapshot_ui_request_load_now(void);
+extern "C" void snapshot_ui_request_quickload_now(void);
+extern "C" void imgui_replay_open_play_dialog_now(void);
+extern "C" void imgui_replay_start_play(const char *path);
+
+extern "C" void imgui_cmt_tape_action(en_IMGUI_CMT_TAPE_ACTION action)
+{
+    switch (action)
+    {
+        case IMGUI_CMT_TAPE_ACTION_SNAPSHOT_LOAD: snapshot_ui_request_load_now(); break;
+        case IMGUI_CMT_TAPE_ACTION_QUICK_LOAD: snapshot_ui_request_quickload_now(); break;
+        case IMGUI_CMT_TAPE_ACTION_REPLAY_PLAY: imgui_replay_open_play_dialog_now(); break;
+        default: break;
+    };
+}
+
+extern "C" void imgui_cmt_tape_file_action(en_IMGUI_CMT_TAPE_ACTION action, const char *path)
+{
+    if (action == IMGUI_CMT_TAPE_ACTION_REPLAY_PLAY_FILE) imgui_replay_start_play(path);
+}
+
 
 /* ================================================================
  * Stub paměti adresářů dialogu (skutečná implementace je

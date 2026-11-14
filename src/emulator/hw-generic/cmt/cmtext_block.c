@@ -23,6 +23,11 @@
  * ---------------------------------------------------------------------------
  */
 
+/**
+ * @file cmtext_block.c
+ * @brief Blok pásky Virtual CMT se streamem (implementace cmtext_block.h).
+ */
+
 #include <stdio.h>
 #include <stdint.h>
 #include <math.h>
@@ -40,7 +45,7 @@
 void cmtext_block_destroy ( st_CMTEXT_BLOCK *block ) {
     if ( !block ) return;
     assert ( block->spec == NULL );
-    if ( !block->stream ) cmt_stream_destroy ( block->stream );
+    if ( block->stream ) cmt_stream_destroy ( block->stream );
     baseui_tools_mem_free ( block );
 }
 
@@ -153,14 +158,13 @@ uint32_t cmtext_block_get_rate ( st_CMTEXT_BLOCK *block ) {
 
 
 uint32_t cmtext_block_get_size ( st_CMTEXT_BLOCK *block ) {
-    assert ( block != NULL );
-    if ( !block->stream ) return 0;
+    if ( ( !block ) || ( !block->stream ) ) return 0;
     return cmt_stream_get_size ( block->stream );
 }
 
 
 uint16_t cmtext_block_get_pause_after ( st_CMTEXT_BLOCK *block ) {
-    assert ( block != NULL );
+    if ( !block ) return 0;
     return block->pause_after;
 }
 
@@ -179,26 +183,24 @@ en_CMT_STREAM_TYPE cmtext_block_get_stream_type ( st_CMTEXT_BLOCK *block ) {
 
 
 int cmtext_block_get_block_id ( st_CMTEXT_BLOCK *block ) {
-    assert ( block != NULL );
+    if ( !block ) return -1;
     return block->block_id;
 }
 
 
 uint64_t cmtext_block_get_count_scans ( st_CMTEXT_BLOCK *block ) {
-    assert ( block != NULL );
-    if ( block->stream != NULL ) return cmt_stream_get_count_scans ( block->stream );
+    if ( ( block != NULL ) && ( block->stream != NULL ) ) return cmt_stream_get_count_scans ( block->stream );
     return 0;
 }
 
 
 double cmtext_block_get_scantime ( st_CMTEXT_BLOCK *block ) {
-    assert ( block != NULL );
-    if ( block->stream != NULL ) return cmt_stream_get_scantime ( block->stream );
+    if ( ( block != NULL ) && ( block->stream != NULL ) ) return cmt_stream_get_scantime ( block->stream );
     return 0;
 }
 
 
 en_CMTEXT_BLOCK_SPEED cmtext_block_get_block_speed ( st_CMTEXT_BLOCK *block ) {
-    assert ( block != NULL );
+    if ( !block ) return CMTEXT_BLOCK_SPEED_NONE;
     return block->block_speed;
 }

@@ -65,8 +65,8 @@ two advantages over Tools:
 | `emulator://periph/beeper` | CTC0 OUT audio path through GATE0 + PC0 (raw bits + derived audible) |
 | `emulator://periph/gdg` | GDG video LSI - palette, raster state, regDMD; MZ-800 also VRAM access registers (WF/RF) and hardware scroll |
 | `emulator://periph/wd1793` | WD279x FDC chip registers + 4 drive mount metadata |
-| `emulator://periph/cmt` | CMT cassette - stop/play/record state, motor, polarity, image basename, `cmthack_enabled` (ROM patch instant load) |
-| `emulator://periph/cmt/tape` | Loaded tape block listing - container_type (SINGLE/SIMPLE_TAPE), current_block, per-block id/name/cmt_speed/type/playable/recordable |
+| `emulator://periph/cmt` | CMT cassette - stop/play/record state, `paused`, `user_paused` (the user's pause), `motor_on` (motor runs; null = state unknown; with the CMT hack on it is only the motor sensor the hack shows to the program and says nothing about the deck - `paused` tells whether the tape stands), `filled` (a tape is inserted), `polarity_inverted`, `cmtspeed`, `default_pulses_us`, `custom_pulses_us`, `cpu_boost`, `mzfsize_check`, `cmthack_enabled` (ROM patch instant load), `direct_save` (the Direct Save patch is in ROM now: a ROM SAVE without recording is stored straight onto the tape; false while recording), `direct_save_enabled` (the setting), `output`, `playsts`, `start_time`, `paused_time`, `image_basename` |
+| `emulator://periph/cmt/tape` | Loaded tape block listing - `container_type` (always 1 = tape with a block list), `current_block`, `modified` (unsaved changes), `path` (full path of the tape file, null for a new tape), `last_recording` (outcome of the last recording), `count` and `truncated` (at most 256 blocks are listed), `position_s` and `block_position_s` (position from the start of the tape and in the open block in seconds, as the Elapsed counter of the Virtual CMT window; null = unknown, also while recording, when the window counter shows the recording time), and per block `block_id`, `name`, `type`, `status` (ok / not_decoded / cannot_play / control), `playable` (the block can be played), `is_current`, `recordable`, `size`, `load_addr`, `exec_addr`, `file_type` (MZF header of a block with a file, null otherwise), `length_s` (length in seconds once known, null otherwise), `unsaved` (the block is not in the tape file: recorded, imported), `block_speed`, `cmt_speed`, `pulses_us`, `profile` (writer profile of a TMZ file block, null otherwise) and `convertible`; `profiles` (writer profiles a block can be converted to: id, description, accepts_speed) |
 | `emulator://periph/qd` | Quick Disk - state machine, image basename |
 
 ### Input and video
@@ -101,7 +101,7 @@ transport call).
 | `emulator://docs/eventlog_mask` | EventLog 64-bit category mask - bit assignments + recipes |
 | `emulator://docs/sharp_display_code` | Sharp MZ ASCII vs display code vs std ASCII (decoding `video/text_dump` + `mzascii` watch) |
 | `emulator://docs/mz800_keyboard` | MZ-800 keyboard - layout, matrix, modifiers, character layers, key names for `emu_input_send_keys`, special-character recipes (MZ-700/1500 as a diff) |
-| `emulator://docs/cmt_workflow` | CMT workflow - real tape vs cmthack, transport, WAV recording, speed ratios, SIMPLE_TAPE multi-block seek + per-block speed |
+| `emulator://docs/cmt_workflow` | CMT workflow - real tape vs cmthack, transport, recording into the tape, tape blocks (seek, step, per-block speed), editing and tools over the tape |
 | `emulator://docs/videorec_workflow` | Video recording workflow - `emu_videorec_*` tools, recipe start, play, markers, retake from a snapshot, stop, export to MP4 |
 | `emulator://docs/screenshot_workflow` | Screenshot workflow - `emu_screenshot_save_to_file` with area, scale (framebuffer / native dots / window 1-4) and crop, picture sizes per build, recipes, frame series `emu_screenshot_series_*` for animation bugs |
 
@@ -387,7 +387,9 @@ URI; use `emulator://watch` for the full list.
   (or QDisk) when the chip is not in the build or is runtime detached.
   The default build of all three platforms has both enabled.
 - **Image paths as basename only** - FDC / CMT / QD `image_basename`
-  is filename only (no directory component) - security limitation.
+  is filename only (no directory component) - security limitation. The
+  inserted tape is an exception: `emulator://periph/cmt/tape` returns
+  its full path in `path`.
 - **CMT without sample stream** - the Resource returns state + image
   basename + motor flag, but not tape signal samples.
 - **QD VIRTUAL files listing missing** - `virt_files_count` reports

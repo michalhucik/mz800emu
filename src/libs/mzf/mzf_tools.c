@@ -1,7 +1,7 @@
 /**
  * @file   mzf_tools.c
  * @author Michal Hucik <hucik@ordoz.com>
- * @version 2.0.0
+ * @version 2.2.1
  * @brief  Implementace pomocných funkcí pro MZF hlavičku.
  *
  * Implementace konverze jmen souborů (Sharp MZ ASCII <-> ASCII),
@@ -9,9 +9,15 @@
  * Viz mzf_tools.h pro popis API.
  *
  * @par Changelog:
- * - 2026-03-14: Proběhla kompletní revize a refaktorizace. Vytvořeny unit testy.
+ * - 2026-03-14: Proběhla kompletní kontrola kódu a refaktorizace. Vytvořeny unit testy.
+ * - 2026-08-15: v2.2.0 - hex dump se znakovou sadou (en_MZF_DUMP_CHARSET,
+ *   mzf_tools_dump_char, mzf_tools_hex_dump, mzf_tools_parse_dump_charset).
  *
  * @par Licence:
+ * GNU General Public License v3 (GPLv3)
+ *
+ * Copyright (C) 2017-2026 Michal Hucik <hucik@ordoz.com>
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -19,11 +25,11 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include <stdlib.h>
@@ -69,19 +75,44 @@ uint8_t mzf_tools_get_fname_length ( const st_MZF_HEADER *mzfhdr ) {
 
 /** @copydoc mzf_tools_get_fname */
 void mzf_tools_get_fname ( const st_MZF_HEADER *mzfhdr, char *ascii_filename ) {
-    const uint8_t *fname = mzfhdr->fname.name;
+    mzf_tools_get_fname_ex ( mzfhdr, ascii_filename,
+                              MZF_FILE_NAME_LENGTH + 1, MZF_NAME_ASCII_EU );
+}
 
-    for ( unsigned i = 0; i < MZF_FNAME_FULL_LENGTH; i++ ) {
-        if ( *fname == MZF_FNAME_TERMINATOR ) break;
 
-        /* Konverze Sharp MZ ASCII → ASCII, přeskočení netisknutelných znaků */
-        uint8_t c = sharpmz_cnv_from ( *fname );
-        if ( c >= 0x20 ) {
-            *ascii_filename++ = c;
+/** @copydoc mzf_tools_get_fname_ex */
+void mzf_tools_get_fname_ex ( const st_MZF_HEADER *mzfhdr, char *filename,
+                               size_t buf_size, en_MZF_NAME_ENCODING encoding ) {
+    if ( !mzfhdr || !filename || buf_size == 0 ) return;
+
+    if ( encoding == MZF_NAME_ASCII_EU || encoding == MZF_NAME_ASCII_JP ) {
+        /* ASCII režim (EU nebo JP) */
+        const uint8_t *fname = mzfhdr->fname.name;
+        char *dst = filename;
+        char *dst_end = filename + buf_size - 1;
+
+        for ( unsigned i = 0; i < MZF_FNAME_FULL_LENGTH && dst < dst_end; i++ ) {
+            if ( fname[i] == MZF_FNAME_TERMINATOR ) break;
+            uint8_t c = ( encoding == MZF_NAME_ASCII_JP )
+                          ? sharpmz_jp_cnv_from ( fname[i] )
+                          : sharpmz_cnv_from ( fname[i] );
+            if ( c >= 0x20 ) {
+                *dst++ = c;
+            }
         }
-        fname++;
+        *dst = '\0';
+        return;
     }
-    *ascii_filename = 0x00;
+
+    /* UTF-8 režim (EU nebo JP) */
+    sharpmz_charset_t charset = ( encoding == MZF_NAME_UTF8_JP || encoding == MZF_NAME_ASCII_JP )
+                                  ? SHARPMZ_CHARSET_JP : SHARPMZ_CHARSET_EU;
+
+    /* zjistíme délku jména (po terminátor 0x0D) */
+    uint8_t src_len = mzf_tools_get_fname_length ( mzfhdr );
+
+    sharpmz_str_to_utf8 ( mzfhdr->fname.name, src_len,
+                           filename, buf_size, charset );
 }
 
 
@@ -108,6 +139,91 @@ st_MZF_HEADER* mzf_tools_create_mzfhdr ( uint8_t ftype, uint16_t fsize, uint16_t
     memcpy ( mzfhdr->fname.name, fname, length );
 
     return mzfhdr;
+}
+
+
+/** @copydoc mzf_tools_parse_dump_charset */
+int mzf_tools_parse_dump_charset ( const char *name, en_MZF_DUMP_CHARSET *charset ) {
+    if ( !name || !charset ) return 0;
+    if ( strcmp ( name, "raw" ) == 0 )     { *charset = MZF_DUMP_RAW;      return 1; }
+    if ( strcmp ( name, "eu" ) == 0 )      { *charset = MZF_DUMP_ASCII_EU; return 1; }
+    if ( strcmp ( name, "jp" ) == 0 )      { *charset = MZF_DUMP_ASCII_JP; return 1; }
+    if ( strcmp ( name, "utf8-eu" ) == 0 ) { *charset = MZF_DUMP_UTF8_EU;  return 1; }
+    if ( strcmp ( name, "utf8-jp" ) == 0 ) { *charset = MZF_DUMP_UTF8_JP;  return 1; }
+    return 0;
+}
+
+
+/** @copydoc mzf_tools_dump_char */
+const char* mzf_tools_dump_char ( uint8_t c, en_MZF_DUMP_CHARSET charset ) {
+    static char buf[2];
+    int converted = 0;
+    int printable = 0;
+
+    switch ( charset ) {
+
+        case MZF_DUMP_ASCII_EU:
+        case MZF_DUMP_ASCII_JP:
+        {
+            uint8_t a = ( charset == MZF_DUMP_ASCII_JP )
+                          ? sharpmz_jp_convert_to_ASCII ( c, &converted, &printable )
+                          : sharpmz_convert_to_ASCII ( c, &converted, &printable );
+            if ( !converted || !printable ) return MZF_DUMP_PLACEHOLDER;
+            buf[0] = ( char ) a;
+            buf[1] = '\0';
+            return buf;
+        }
+
+        case MZF_DUMP_UTF8_EU:
+        case MZF_DUMP_UTF8_JP:
+        {
+            const char *u = ( charset == MZF_DUMP_UTF8_JP )
+                              ? sharpmz_jp_convert_to_UTF8 ( c, &converted, &printable )
+                              : sharpmz_eu_convert_to_UTF8 ( c, &converted, &printable );
+            if ( !converted || !printable || !u ) return MZF_DUMP_PLACEHOLDER;
+            return u;
+        }
+
+        case MZF_DUMP_RAW:
+        default:
+            if ( c >= 0x20 && c <= 0x7E ) {
+                buf[0] = ( char ) c;
+                buf[1] = '\0';
+                return buf;
+            }
+            return MZF_DUMP_PLACEHOLDER;
+    }
+}
+
+
+/** @copydoc mzf_tools_hex_dump */
+void mzf_tools_hex_dump ( FILE *fp, const uint8_t *data, size_t size,
+                          uint32_t base_addr, en_MZF_DUMP_CHARSET charset,
+                          const char *indent ) {
+    if ( !fp ) return;
+    if ( !data && size > 0 ) return;
+    if ( !indent ) indent = "";
+
+    for ( size_t off = 0; off < size; off += 16 ) {
+        fprintf ( fp, "%s%04X  ", indent, ( unsigned ) ( base_addr + off ) );
+
+        /* hex část */
+        for ( size_t j = 0; j < 16; j++ ) {
+            if ( off + j < size ) {
+                fprintf ( fp, "%02X ", data[off + j] );
+            } else {
+                fprintf ( fp, "   " );
+            }
+            if ( j == 7 ) fprintf ( fp, " " );
+        }
+
+        /* textová část */
+        fprintf ( fp, " |" );
+        for ( size_t j = 0; j < 16 && off + j < size; j++ ) {
+            fputs ( mzf_tools_dump_char ( data[off + j], charset ), fp );
+        }
+        fprintf ( fp, "|\n" );
+    }
 }
 
 

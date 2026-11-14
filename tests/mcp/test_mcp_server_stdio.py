@@ -326,6 +326,16 @@ def main():
             "emu_cmt_set_cpu_boost", "emu_cmt_set_mzfsize_check",
             "emu_cmt_open", "emu_cmt_tape_seek",
             "emu_cmt_tape_set_block_speed",
+            # tape save, block export, new tape (3)
+            "emu_cmt_save", "emu_cmt_export_block", "emu_cmt_new_tape",
+            # tape edits, whole tape export (4)
+            "emu_cmt_tape_delete_blocks", "emu_cmt_tape_move_block",
+            "emu_cmt_tape_import", "emu_cmt_export_tape",
+            # analysis, tape information, tape check, profile conversion (4)
+            "emu_cmt_tape_analyze", "emu_cmt_tape_info", "emu_cmt_tape_check",
+            "emu_cmt_tape_convert_block",
+            # Load directly and a step over the playable blocks, as the window (2)
+            "emu_cmt_load_directly", "emu_cmt_tape_step",
         }
         if (resp and resp.get("id") == 2
                 and "result" in resp
@@ -746,8 +756,11 @@ def main():
         return 0 if passed == total else 1
 
     finally:
-        # Graceful close - posíláme EOF na stdin a počkáme. mcp_server.py
-        # má best-effort cleanup _shutdown_emu v finally bloku main().
+        # Konec session: EOF na stdin. mcp_server.py ukončí emulátor
+        # v životním cyklu serveru (_lifespan) a sám skončí. Dřív po EOF
+        # visel i s emulátorem (čtecí vlákno stdout emulátoru drželo smyčku
+        # událostí), proto je nedokončení do 15 s chyba testu.
+        eof_ok = True
         try:
             proc.stdin.close()
         except Exception:
@@ -755,13 +768,19 @@ def main():
         try:
             proc.wait(timeout=15.0)
         except subprocess.TimeoutExpired:
-            print("WARN: mcp_server didn't exit in 15s, killing", file=sys.stderr)
+            eof_ok = False
+            print("FAIL: mcp_server.py did not exit within 15 s after stdin EOF, killing",
+                  file=sys.stderr)
             proc.kill()
             try:
                 proc.wait(timeout=5.0)
             except subprocess.TimeoutExpired:
                 pass
         _cleanup_work_dir(work_dir)
+        if not eof_ok:
+            # výjimka z finally přebije návratovou hodnotu těla
+            sys.exit(1)
+        print("PASS: mcp_server.py exits after stdin EOF")
 
 
 def _cleanup_work_dir(work_dir):

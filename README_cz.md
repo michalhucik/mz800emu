@@ -26,7 +26,7 @@ https://sourceforge.net/projects/mz800emu/
   - SN76489AN PSG
 - Přesné časování vnitřních signálů
 - Široká podpora periferií:
-  - Kazeta (CMT): MZF, MZT, TAP, WAV
+  - Kazeta (CMT): TMZ, TZX, MZF, MZT, TAP, WAV; nahrávání, ukládání, úpravy pásky, hledání programů v nahrávkách WAV
   - Řadič disket (FDC WD279x)
   - Quick Disk
   - RAM disk, paměťová rozšíření

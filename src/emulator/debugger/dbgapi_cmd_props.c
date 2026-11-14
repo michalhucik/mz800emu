@@ -155,6 +155,37 @@ static const st_DBGAPI_CMD_PROPS s_cmd_props[DBGAPI_CMD_COUNT] = {
     [ DBGAPI_CMD_CMT_TAPE_SEEK ] = { DBGAPI_CMD_KIND_MUTATES, REPLAY_DBG_RECORD },
     [ DBGAPI_CMD_CMT_TAPE_BLOCK_SPEED ] = { DBGAPI_CMD_KIND_MUTATES, REPLAY_DBG_FORBIDDEN },
     [ DBGAPI_CMD_CMT_TAPE_LIST ] = { DBGAPI_CMD_KIND_READ, REPLAY_DBG_ALLOW },
+    /* Uložení mění jen cestu a Modified pásky (ne emulovaný stroj) a záznam
+     * vstupů ho nezopakuje: při záznamu ho odmítne brána replaye, při přehrání
+     * samotný příkaz (dbgapi.c, páska patří přehrávání), jako v UI. Export
+     * zapisuje jen soubor, pásku ani stroj nemění. */
+    [ DBGAPI_CMD_CMT_SAVE ] = { DBGAPI_CMD_KIND_MUTATES, REPLAY_DBG_FORBIDDEN },
+    [ DBGAPI_CMD_CMT_EXPORT_BLOCK ] = { DBGAPI_CMD_KIND_READ, REPLAY_DBG_ALLOW },
+    /* nová páska jako vysunutí: událost cmt "new_tape" záznamu vstupů */
+    [ DBGAPI_CMD_CMT_NEW_TAPE ] = { DBGAPI_CMD_KIND_MUTATES, REPLAY_DBG_RECORD },
+    /* Úpravy pásky záznam vstupů neumí zopakovat ani vrátit
+     * značkou checkpointu - při záznamu je odmítne brána, při přehrávání
+     * obal úpravy (cmt_tape_edit_allowed()). Export celé pásky zapisuje jen
+     * soubor, pásku ani stroj nemění (jako export bloku). */
+    [ DBGAPI_CMD_CMT_TAPE_DELETE_BLOCKS ] = { DBGAPI_CMD_KIND_MUTATES, REPLAY_DBG_FORBIDDEN },
+    [ DBGAPI_CMD_CMT_TAPE_MOVE_BLOCK ] = { DBGAPI_CMD_KIND_MUTATES, REPLAY_DBG_FORBIDDEN },
+    [ DBGAPI_CMD_CMT_TAPE_IMPORT ] = { DBGAPI_CMD_KIND_MUTATES, REPLAY_DBG_FORBIDDEN },
+    [ DBGAPI_CMD_CMT_EXPORT_TAPE ] = { DBGAPI_CMD_KIND_READ, REPLAY_DBG_ALLOW },
+    /* Nástroje nad páskou: čtení (analýza bez uplatnění, informace o pásce,
+     * kontrola) ALLOW, změny pásky (uplatnění analýzy, zápis informací,
+     * převod profilu) FORBIDDEN jako ostatní úpravy pásky. */
+    [ DBGAPI_CMD_CMT_TAPE_ANALYZE ] = { DBGAPI_CMD_KIND_READ, REPLAY_DBG_ALLOW },
+    [ DBGAPI_CMD_CMT_TAPE_ANALYZE_APPLY ] = { DBGAPI_CMD_KIND_MUTATES, REPLAY_DBG_FORBIDDEN },
+    [ DBGAPI_CMD_CMT_TAPE_INFO_GET ] = { DBGAPI_CMD_KIND_READ, REPLAY_DBG_ALLOW },
+    [ DBGAPI_CMD_CMT_TAPE_INFO_SET ] = { DBGAPI_CMD_KIND_MUTATES, REPLAY_DBG_FORBIDDEN },
+    [ DBGAPI_CMD_CMT_TAPE_CHECK ] = { DBGAPI_CMD_KIND_READ, REPLAY_DBG_ALLOW },
+    [ DBGAPI_CMD_CMT_TAPE_CONVERT_BLOCK ] = { DBGAPI_CMD_KIND_MUTATES, REPLAY_DBG_FORBIDDEN },
+    /* Load directly mění režim načítání jako cmt_hack_set (záznam vstupů
+     * ho nezopakuje, okno ho při záznamu i přehrávání odmítne): FORBIDDEN.
+     * Krok po pásce je transport jako cmt_tape_seek: RECORD, záznam ho
+     * zapíše jako událost cmt next / prev / seek (replay_dbg_cmt_op()). */
+    [ DBGAPI_CMD_CMT_LOAD_DIRECTLY ] = { DBGAPI_CMD_KIND_MUTATES, REPLAY_DBG_FORBIDDEN },
+    [ DBGAPI_CMD_CMT_TAPE_STEP ] = { DBGAPI_CMD_KIND_MUTATES, REPLAY_DBG_RECORD },
     [ DBGAPI_CMD_TRACE_START ] = { DBGAPI_CMD_KIND_DEBUG_CONFIG, REPLAY_DBG_ALLOW },
     [ DBGAPI_CMD_TRACE_STOP ] = { DBGAPI_CMD_KIND_DEBUG_CONFIG, REPLAY_DBG_ALLOW },
     [ DBGAPI_CMD_TRACE_RESET ] = { DBGAPI_CMD_KIND_DEBUG_CONFIG, REPLAY_DBG_ALLOW },

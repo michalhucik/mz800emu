@@ -5,6 +5,7 @@
 #include <glib.h>
 
 #include "libs/imgui/imgui.h"
+#include "ui-imgui/imgui_modal.h"
 
 // Lokalizace
 #include "i18n.h"
@@ -78,7 +79,8 @@ void imgui_qdisk_storage_switch_popup(bool *p_open)
         return;
     };
 
-    ImGui::OpenPopup(_L("QD: Unsaved RAM changes"));
+    /* jen při volnu: jinak by OpenPopup() zavřel jiný otevřený modál (imgui_modal.h) */
+    imgui_modal_open_when_free(_L("QD: Unsaved RAM changes"));
 
     if (ImGui::BeginPopupModal(_L("QD: Unsaved RAM changes"), NULL,
                                ImGuiWindowFlags_AlwaysAutoResize))

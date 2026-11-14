@@ -17,6 +17,11 @@ extern "C"
     void imgui_fdc_storage_switch_popup(bool *p_open);
     void imgui_fdc_state_window(bool *p_open);
     void imgui_menu_cmt(void);
+    /**
+     * @brief Modál Custom value... volby Device for Direct MZF Start (každý snímek, mimo nabídky).
+     * @pre UI vlákno uvnitř ImGui snímku (main_window.cpp); viz menu_cmt.cpp.
+     */
+    void imgui_menu_cmt_bootdev_popup(void);
     void imgui_menu_ramdisk(void);
     void imgui_ramdisk_state_window(bool *p_open);
     void imgui_menu_qdisk(void);
@@ -89,7 +94,7 @@ void imgui_menu_mz800_dip_switch(void);
     /** @brief Otevře souborový dialog startu záznamu (zobrazí se v imgui_replay_dialogs()). */
     void imgui_replay_open_record_dialog(void);
 
-    /** @brief Otevře souborový dialog přehrání (zobrazí se v imgui_replay_dialogs()). */
+    /** @brief Otevře souborový dialog přehrání (imgui_replay_dialogs()) po dotazu Virtual CMT na nahrávání a neuložené změny pásky. */
     void imgui_replay_open_play_dialog(void);
 
     /**

@@ -174,16 +174,19 @@ static inline void pio8255_bp_event_cmt_motor ( unsigned new_pc03 )
  * HWE - HW event BP wrapper pro CMT motor sense bit (PC4 input).
  *
  * Vrací aktuální simulovaný stav motorového sense bitu, který se vrací
- * v PortC read jako bit 4. Při CMTHACK = g_pio8255.signal_pc04
- * (= toggle při PC03 nábežné hraně, viz pio8255_write). Bez CMTHACK =
- * fabulace na základě CMT_TEST_STOP / CMT_TEST_PAUSED stavu.
+ * v PortC read jako bit 4. Když hack podvrhuje motor (CMTHACK_TEST_FAKES_MOTOR:
+ * hack nainstalovaný a deck nenahrává) = g_pio8255.signal_pc04
+ * (= toggle při PC03 nábežné hraně, viz pio8255_write). Jinak (bez hacku
+ * i s hackem při nahrávání) = stav decku podle CMT_TEST_STOP / CMT_TEST_PAUSED (při pauze
+ * uživatele, st_CMT::user_paused, čte 0 i s běžícím klopným obvodem
+ * motoru - beze změny proti modelu s jedním příznakem pauzy).
  *
  * TODO: nahradit reálnou simulací motorového sense (= poklepávajícího
  * spínače, který opravdové MZ-800 dává náhodně 0/1 dokud motor točí).
  */
 static inline unsigned pio8255_cmt_mstate ( void )
 {
-    if ( CMTHACK_TEST_IS_INSTALLED ) {
+    if ( CMTHACK_TEST_FAKES_MOTOR ) {
         return g_pio8255.signal_pc04 & 1;
     }
     return ( ( CMT_TEST_STOP ) || ( CMT_TEST_PAUSED ) ) ? 0 : 1;
@@ -297,13 +300,14 @@ void pio8255_write(int addr, uint8_t value)
         DBGPRINTF(DBGINF, "interrupt ctc2 mask (pc02): %d\n", g_pio8255.signal_pc02);
         mzarch_interrupt_manager();
 
-        /* rizeni motoru CMT - nabezna hrana provede zmenu */
+        /* rizeni motoru CMT - nabezna hrana provede zmenu; s CMT hackem jen
+         * podvržený PC4, při nahrávání i s hackem deck (CMTHACK_TEST_FAKES_MOTOR) */
         unsigned old_pc03_state = g_pio8255.signal_pc03;
         g_pio8255.signal_pc03 = (value >> 3) & 0x01;
         DBGPRINTF(DBGINF, "cmt motor driver (pc03): %d\n", g_pio8255.signal_pc03);
         if ((old_pc03_state == 0) && (g_pio8255.signal_pc03 == 1))
         {
-            if (CMTHACK_TEST_IS_INSTALLED)
+            if (CMTHACK_TEST_FAKES_MOTOR)
             {
                 g_pio8255.signal_pc04 = (~g_pio8255.signal_pc04) & 1;
                 DBGPRINTF(DBGINF, "set CMT motor for CMT hack (pc04 - input): %d\n", g_pio8255.signal_pc04);
@@ -320,14 +324,8 @@ void pio8255_write(int addr, uint8_t value)
             }
             else if (!CMT_TEST_STOP)
             {
-                if (CMT_TEST_PAUSED)
-                {
-                    cmt_pause(0);
-                }
-                else
-                {
-                    cmt_pause(1);
-                };
+                /* klopný obvod motoru (bez pauzy uživatele = pauza transportu) */
+                cmt_motor_toggle();
                 DBGPRINTF(DBGINF, "set CMT motor (virtual CMT): %d\n", ((CMT_TEST_STOP) || (CMT_TEST_PAUSED)) ? 0 : 1);
                 /* V1.5 fáze 2.2: pro non-CMTHACK případ se BP_EVENT_CMT_MSTATE
                  * fire dělá v cmt.c při změně CMT state (pause/play/stop) -
@@ -401,7 +399,8 @@ void pio8255_write(int addr, uint8_t value)
             }
             else if (bit_setres == 3)
             {
-                /* rizeni motoru CMT - nabezna hrana provede zmenu */
+                /* rizeni motoru CMT - nabezna hrana provede zmenu (CMT hack
+                 * jako výše: podvržený PC4 mimo nahrávání) */
                 unsigned old_pc03_state = g_pio8255.signal_pc03;
                 g_pio8255.signal_pc03 = value & 0x01;
                 DBGPRINTF(DBGINF, "cmt motor driver (pc03): %d\n", g_pio8255.signal_pc03);
@@ -410,7 +409,7 @@ void pio8255_write(int addr, uint8_t value)
 #endif
                 if ((old_pc03_state == 0) && (g_pio8255.signal_pc03 == 1))
                 {
-                    if (CMTHACK_TEST_IS_INSTALLED)
+                    if (CMTHACK_TEST_FAKES_MOTOR)
                     {
                         g_pio8255.signal_pc04 = (~g_pio8255.signal_pc04) & 1;
                         DBGPRINTF(DBGINF, "set CMT motor for CMT hack (pc04 - input): %d\n", g_pio8255.signal_pc04);
@@ -425,14 +424,8 @@ void pio8255_write(int addr, uint8_t value)
                     }
                     else if (!CMT_TEST_STOP)
                     {
-                        if (CMT_TEST_PAUSED)
-                        {
-                            cmt_pause(0);
-                        }
-                        else
-                        {
-                            cmt_pause(1);
-                        };
+                        /* klopný obvod motoru (bez pauzy uživatele = pauza transportu) */
+                        cmt_motor_toggle();
                         DBGPRINTF(DBGINF, "set CMT motor (virtual CMT): %d\n", ((CMT_TEST_STOP) || (CMT_TEST_PAUSED)) ? 0 : 1);
                     }
                     else
@@ -619,7 +612,9 @@ int pio8255_autotype_get_matrix(char c, uint8_t *ret, bool *ret_shift)
  *
  * Bity: 0 = blokování CTC0_OUT (PC0), 1 = data do CMT (čte se 0),
  * 2 = zákaz přerušení z CTC (PC2), 3 = řízení motoru CMT (čte se 0),
- * 4 = stav motoru CMT, 5 = data z CMT, 6 = cursor timer, 7 = VBLNK.
+ * 4 = stav motoru CMT (podvržený bit CMT hacku, jinak - i s hackem při
+ * nahrávání - stav decku; CMTHACK_TEST_FAKES_MOTOR), 5 = data z CMT,
+ * 6 = cursor timer, 7 = VBLNK.
  *
  * @param cmt_in_data Úroveň dat z pásky (bit 0); read ji předá po
  *        cmt_read_data(), peek z g_cmt.output bez dosynchronizování.
@@ -638,7 +633,7 @@ static inline uint8_t pio8255_portc_compose ( unsigned cmt_in_data )
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
     retval |= pio8255_cmt_mstate ( ) << 4;
 #else
-    if (CMTHACK_TEST_IS_INSTALLED)
+    if (CMTHACK_TEST_FAKES_MOTOR)
     {
         retval |= g_pio8255.signal_pc04 << 4;
     }
@@ -942,7 +937,7 @@ int pio8255_pc2_get(void)
 
 int pio8255_pc4_get(void)
 {
-    if (CMTHACK_TEST_IS_INSTALLED)
+    if (CMTHACK_TEST_FAKES_MOTOR)
     {
         return g_pio8255.signal_pc04;
     };

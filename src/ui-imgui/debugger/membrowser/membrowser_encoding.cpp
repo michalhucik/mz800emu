@@ -9,10 +9,11 @@
  *   mzglyphs_to_utf8_buf ( vcode, MZGLYPHS_EU1/EU2/JP1/JP2, buf );
  *
  * UTF-8 / ASCII charsety přes sharpmz_ascii lib:
- *   sharpmz_eu_convert_to_UTF8 ( byte, ... ) / sharpmz_jp_convert_to_UTF8
+ *   sharpmz_to_utf8 ( byte, SHARPMZ_CHARSET_EU / _JP ) = Sharp MZ ASCII (EU/JP),
+ *   ne display kód; sharpmz_eu_convert_to_UTF8 / sharpmz_jp_convert_to_UTF8
  *   sharpmz_convert_to_ASCII / sharpmz_jp_convert_to_ASCII
  *
- * KOI8-CS přes sharpmz_koi8cs lib (mzkoi8cs_to_utf8).
+ * KOI8-CS přes sharpmz_ascii lib (sharpmz_to_utf8 + SHARPMZ_CHARSET_KOI8CS).
  *
  * ----------------------------- License -------------------------------------
  *
@@ -35,9 +36,7 @@
 #include <glib.h>
 
 extern "C" {
-#include "libs/sharpmz_ascii/sharpmz_ascii.h"  /* sharpmz_cnv_from / cnv_to */
-#include "libs/sharpmz_ascii/sharpmz_utf8.h"   /* sharpmz_to_utf8 / from_utf8 */
-#include "libs/sharpmz_koi8cs/sharpmz_koi8cs.h"
+#include "libs/sharpmz_ascii/sharpmz_ascii.h"  /* sharpmz_cnv_from, sharpmz_to_utf8, sharpmz_koi8cs_* */
 #include "libs/mz_vcode/mz_vcode.h"
 #include "libs/mzglyphs/mzglyphs.h"
 }
@@ -166,7 +165,7 @@ extern "C" const char *membrowser_encoding_byte_to_utf8 ( uint8_t byte, int enco
         }
 
         case MB_CHARSET_KOI8CS:
-            return mzkoi8cs_to_utf8 ( byte, MZKOI8CS_CHARSET_KOI8CS );
+            return sharpmz_to_utf8 ( byte, SHARPMZ_CHARSET_KOI8CS );
 
         default:
             return ".";
@@ -217,9 +216,9 @@ extern "C" bool membrowser_encoding_utf8_to_byte ( const char *utf8, int encodin
             return false;
 
         case MB_CHARSET_KOI8CS: {
-            /* mzkoi8cs_utf8_to_koi8cs vrací 0x20 pro neznámé znaky -
+            /* sharpmz_koi8cs_convert_UTF8_to vrací 0x20 pro neznámé znaky -
              * to není chyba detekovatelná z návratu, ale pro V0 přijímáme. */
-            uint8_t k = mzkoi8cs_utf8_to_koi8cs ( utf8 );
+            uint8_t k = sharpmz_koi8cs_convert_UTF8_to ( utf8 );
             *out = k;
             return true;
         }
@@ -244,7 +243,7 @@ extern "C" bool membrowser_encoding_koi8cs_table_missing ( void )
     if ( s_tested ) return s_missing;
 
     int converted = 0, printable = 0;
-    const char *s = mzkoi8cs_koi8cs_to_utf8 ( 0xC1, &converted, &printable );
+    const char *s = sharpmz_koi8cs_convert_to_UTF8 ( 0xC1, &converted, &printable );
     /* Validní mapping: dvoubajtový UTF-8 začínající 0xC3 (= U+00xx range). */
     if ( !s || !converted || ( unsigned char ) s[0] != 0xC3 ) {
         s_missing = true;

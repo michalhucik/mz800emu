@@ -12,7 +12,7 @@ chip's internal logic operates on "true-bus" values per the datasheet.
 
 ## Controller connection
 
-From the menu Devices / FD Controller, the controller can be logically
+From the menu HW & Devices / FD Controller, the controller can be logically
 disconnected or connected:
 
 | Option        | Meaning                                                      |
@@ -28,7 +28,7 @@ four independent drives (FDD0..FDD3). Each drive has its own mount
 state, its own DSK image, its own R/O setting and its own storage
 mode.
 
-In the menu Devices / FD Controller / "FDD N" the following items are
+In the menu HW & Devices / FD Controller / "FDD N" the following items are
 available for each drive:
 
 - **Mount...** - opens the file chooser for selecting a DSK image
@@ -153,7 +153,7 @@ Current values can be inspected in the FDC State debugger window.
 
 ## FDC chip HW options
 
-In the menu Devices / FD Controller there is a "Hardware options"
+In the menu HW & Devices / FD Controller there is a "Hardware options"
 section with these toggles. A change applies immediately, the
 controller reads both options while running; no restart is needed.
 
@@ -175,7 +175,7 @@ CLI override is persisted to INI on exit.
 
 ## FDC State debugger window
 
-From the menu Devices / FD Controller / "FDC State (debugger)..." a
+From the menu HW & Devices / FD Controller / "FDC State (debugger)..." a
 window opens with the complete FDC subsystem state (available only in
 debug build of the emulator). The window refreshes automatically on
 each ImGui render.

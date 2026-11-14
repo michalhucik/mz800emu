@@ -1,13 +1,13 @@
 /**
  * @file   mztape.c
  * @author Michal Hucik <hucik@ordoz.com>
- * @version 2.0.0
+ * @version 2.4.0
  * @brief  Implementace knihovny mztape — generování CMT audio streamů z MZF souborů.
  *
  * Obsahuje logiku konverze MZF dat na CMT bitstream/vstream, výpočet pulzů,
  * definice formátů záznamu a pulzních konstant pro různé modely Sharp MZ.
  *
- * @par Popis standardního MZ-800 CMT záznamu 1200 baudů:
+ * @par Popis standardního MZ-800 CMT záznamu 1200 baudů (údaj servisního manuálu):
  *
  * @verbatim
  *              ___________
@@ -42,10 +42,19 @@
  * - MZ-800: změna polarity zadním přepínačem ovlivňuje pouze vstupní data
  *
  * @par Changelog:
- * - 2026-03-14: Proběhla kompletní revize a refaktorizace. Vytvořeny unit testy.
- * - 2026-10-08: Vlastní délky pulzů a hlavička CMTSPEED zařízení UniCMT.
+ * - 2026-03-14: Proběhla kompletní kontrola kódu a refaktorizace. Vytvořeny unit testy.
+ * - 2026-11-09: Doplněny vlastní délky pulzů a hlavička CMTSPEED (UniCMT); pulzní
+ *   sady převzaty z mz800emu: výchozí sada pro vstream změřená v emulátoru z výstupu
+ *   Intercopy (takt GDG), sada cmt.com změřená stejně, údaj servisního manuálu jen
+ *   jako záložní sada bitstreamu.
+ * - 2026-11-09: kontrola rychlosti v bitstreamu (2.3.1)
+ * - 2026-11-10: mztape_get_format() - definice formátové varianty jen pro čtení (2.4.0)
  *
  * @par Licence:
+ * GNU General Public License v3 (GPLv3)
+ *
+ * Copyright (C) 2017-2026 Michal Hucik <hucik@ordoz.com>
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -53,11 +62,11 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include <stdio.h>
@@ -176,23 +185,38 @@ en_MZTAPE_BLOCK g_mztape_format_sharp[] = {
                                            MZTAPE_BLOCK_STOP
 };
 
-/** @brief Pulzní konstanty pro MZ-700, MZ-80K, MZ-80A. */
+/**
+ * @brief Pulzní konstanty pro MZ-700, MZ-80K, MZ-80A.
+ *
+ * LONG 464/494 µs, SHORT 240/264 µs (HIGH/LOW). Původ hodnot není
+ * doložen [neověřeno]. Žádný formát mztape tuto sadu nehraje; čte ji
+ * mztape_get_pulse_lengths().
+ */
 const st_MZTAPE_PULSES_LENGTH g_mztape_pulses_700 = {
     { 0.000464, 0.000494, 0.000958 }, // LONG PULSE
     { 0.000240, 0.000264, 0.000504 }, // SHORT PULSE
 };
 
-/** @brief Pulzní konstanty pro MZ-800, MZ-1500 (bitstream path). */
+/**
+ * @brief Pulzní konstanty pro MZ-800, MZ-1500 (bitstream path).
+ *
+ * Údaj servisního manuálu: LONG 470/494 µs, SHORT 240/278 µs (HIGH/LOW).
+ * ROM MZ-800 zapisuje jiné délky, závislé na kontextu (změřeno v emulátoru,
+ * profil ROM-800-EXACT), a jiné programy zase vlastní;
+ * čtení 1:1 je tolerantní. Vstream path proto hraje sadu
+ * g_mztape_pulses_800_intercopy; tato sada zůstává jen jako záložní sada
+ * bitstream path a jako výstup mztape_get_pulse_lengths().
+ */
 const st_MZTAPE_PULSES_LENGTH g_mztape_pulses_800 = {
     { 0.000470, 0.000494, 0.000964 }, // LONG PULSE
     { 0.000240, 0.000278, 0.000518 }, // SHORT PULSE
 };
 
 /**
- * @brief Přesné pulzní konstanty pro MZ-800 — Intercopy 10.2 (vstream path).
+ * @brief Pulzní konstanty pro MZ-800 - výchozí sada vstream path.
  *
- * Přepočet z naměřených GDG ticků na MZ-800 (pixel clock 17 721 600 Hz).
- * GDG ticky: {8335,8760}, {4356,4930}.
+ * Změřeno v emulátoru z výstupu Intercopy 10.2 (takt GDG 17 721 600 Hz).
+ * Ticky GDG (HIGH, LOW): LONG {8335, 8760}, SHORT {4356, 4930}.
  */
 static const st_MZTAPE_PULSES_LENGTH g_mztape_pulses_800_intercopy = {
     { 0.000470330, 0.000494308, 0.000964638 }, /* LONG */
@@ -200,9 +224,10 @@ static const st_MZTAPE_PULSES_LENGTH g_mztape_pulses_800_intercopy = {
 };
 
 /**
- * @brief Přesné pulzní konstanty pro MZ-800 — CP/M cmt.com (vstream path).
+ * @brief Pulzní konstanty pro MZ-800 - CP/M cmt.com (vstream path, rychlost 2:1 CPM).
  *
- * GDG ticky: {9300,8660}, {5400,4660}.
+ * Změřeno v emulátoru z výstupu cmt.com (takt GDG 17 721 600 Hz).
+ * Ticky GDG (HIGH, LOW): LONG {9300, 8660}, SHORT {5400, 4660}.
  */
 static const st_MZTAPE_PULSES_LENGTH g_mztape_pulses_800_cmtcom = {
     { 0.000524796, 0.000488665, 0.001013461 }, /* LONG */
@@ -240,10 +265,19 @@ const st_MZTAPE_FORMAT g_format_mz800 = {
                                          g_mztape_format_sharp,
 };
 
+/** @brief Definice formátu MZ-80B (1800 Bd, GAP 10000, bez kopií). */
+const st_MZTAPE_FORMAT g_format_mz80b = {
+                                         MZTAPE_LGAP_LENGTH_MZ80B,
+                                         MZTAPE_SGAP_LENGTH,
+                                         MZTAPE_PULSESET_80B,
+                                         g_mztape_format_sharp_sane,
+};
+
 /** @brief Pole formátů — indexováno podle en_MZTAPE_FORMATSET (pořadí zachovat!). */
 const st_MZTAPE_FORMAT *g_formats[] = {
                                        &g_format_mz800_sane,
                                        &g_format_mz800,
+                                       &g_format_mz80b,
 };
 
 
@@ -554,11 +588,19 @@ st_MZTAPE_MZF* mztape_create_mztapemzf ( st_HANDLER *mzf_handler, uint32_t offse
  *
  * @param mztmzf MZF data.
  * @param mztape_format Formátová varianta záznamu.
- * @param mztape_speed Rychlost záznamu.
+ * @param mztape_speed Rychlost záznamu (platný poměr, cmtspeed_is_valid()).
  * @param sample_rate Vzorkovací frekvence výstupního bitstreamu (Hz).
- * @return Ukazatel na nový bitstream, nebo NULL při chybě.
+ * @return Ukazatel na nový bitstream (vlastník je volající), nebo NULL při
+ *         chybě. Chybou je i neplatný formát a neplatná rychlost
+ *         (CMTSPEED_NONE, CMTSPEED_CUSTOM).
  */
 st_CMT_BITSTREAM* mztape_create_cmt_bitstream_from_mztmzf ( st_MZTAPE_MZF *mztmzf, en_MZTAPE_FORMATSET mztape_format, en_CMTSPEED mztape_speed, uint32_t sample_rate ) {
+
+    /* CMTSPEED_CUSTOM a neplatná rychlost nemají násobitel, délky pulzů by zůstaly neinicializované */
+    if ( mztape_format < 0 || mztape_format >= MZTAPE_FORMATSET_COUNT || !cmtspeed_is_valid ( mztape_speed ) ) {
+        g_mztape_error_cb ( __func__, __LINE__, "Invalid format %d or speed %d\n", mztape_format, mztape_speed );
+        return NULL;
+    };
 
     double sample_length = (double) 1 / sample_rate;
 
@@ -772,10 +814,10 @@ static inline int mztape_add_cmt_vstream_data_block ( st_CMT_VSTREAM* vstream, s
 /**
  * @brief Vybere referenční délky pulzů (1:1) pro pulzní sadu formátu a režim rychlosti.
  *
- * Pro MZ-800 jsou to přesné konstanty Intercopy, pro 2:1 CP/M konstanty
- * cmt.com (jiný tvar pulzu, ne jen jiný poměr).
+ * Pro MZ-800 je to sada změřená v emulátoru z výstupu Intercopy, pro 2:1
+ * CP/M sada cmt.com (jiný tvar pulzu, ne jen jiný poměr).
  *
- * @param mztape_format Formátová varianta záznamu (platná).
+ * @param mztape_format Formátová varianta záznamu (platná, ověřuje volající).
  * @param mztape_speed Rychlost záznamu.
  * @return Ukazatel na statické konstanty (nikdy NULL).
  */
@@ -802,8 +844,9 @@ static const st_MZTAPE_PULSES_LENGTH* mztape_get_src_pulses ( en_MZTAPE_FORMATSE
  * je do vstreamu.
  *
  * @param mztmzf MZF data.
- * @param mztape_format Formátová varianta záznamu (platná).
- * @param gpulses Počty vzorků high/low částí dlouhého a krátkého pulzu.
+ * @param mztape_format Formátová varianta záznamu (platná, ověřuje volající).
+ * @param gpulses Počty vzorků high/low částí dlouhého a krátkého pulzu
+ *                (všechny nenulové, jinak cmt_vstream_add_value() selže).
  * @param rate Vzorkovací frekvence výstupního vstreamu (Hz).
  * @return Ukazatel na nový vstream (vlastník je volající), nebo NULL při chybě.
  */
@@ -897,7 +940,7 @@ static st_CMT_VSTREAM* mztape_create_cmt_vstream_from_samples ( st_MZTAPE_MZF *m
 /**
  * @brief Vytvoří CMT vstream z MZF dat (RLE kódování pulzů).
  *
- * Přesnější path — zaokrouhlení probíhá nezávisle pro každý pulz, takže
+ * Přesnější path - zaokrouhlení probíhá nezávisle pro každý pulz, takže
  * se chyba neakumuluje. Doporučený způsob generování CMT streamu.
  *
  * Počet vzorků se počítá jako round(délka 1:1 * rate / poměr); tento
@@ -908,11 +951,13 @@ static st_CMT_VSTREAM* mztape_create_cmt_vstream_from_samples ( st_MZTAPE_MZF *m
  * @param mztape_format Formátová varianta záznamu.
  * @param mztape_speed Rychlost záznamu (platný poměr, cmtspeed_is_valid()).
  * @param rate Vzorkovací frekvence výstupního vstreamu (Hz).
- * @return Ukazatel na nový vstream, nebo NULL při chybě (i pro neplatný
- *         formát nebo rychlost, včetně CMTSPEED_CUSTOM).
+ * @return Ukazatel na nový vstream (vlastník je volající), nebo NULL při
+ *         chybě. Chybou je i neplatný formát a neplatná rychlost
+ *         (CMTSPEED_NONE, CMTSPEED_CUSTOM).
  */
 st_CMT_VSTREAM* mztape_create_cmt_vstream_from_mztmzf ( st_MZTAPE_MZF *mztmzf, en_MZTAPE_FORMATSET mztape_format, en_CMTSPEED mztape_speed, uint32_t rate ) {
 
+    /* CMTSPEED_CUSTOM a neplatná rychlost nemají násobitel, dělení by bylo nulou */
     if ( mztape_format < 0 || mztape_format >= MZTAPE_FORMATSET_COUNT || !cmtspeed_is_valid ( mztape_speed ) ) {
         g_mztape_error_cb ( __func__, __LINE__, "Invalid format %d or speed %d\n", mztape_format, mztape_speed );
         return NULL;
@@ -933,6 +978,10 @@ st_CMT_VSTREAM* mztape_create_cmt_vstream_from_mztmzf ( st_MZTAPE_MZF *mztmzf, e
 }
 
 
+/*
+ * Vlastní délky pulzů: každá část pulzu se zaokrouhlí na celé vzorky samostatně.
+ * Kontrakt viz mztape.h.
+ */
 st_CMT_VSTREAM* mztape_create_cmt_vstream_from_mztmzf_pulses ( st_MZTAPE_MZF *mztmzf, en_MZTAPE_FORMATSET mztape_format, const st_MZTAPE_PULSES_LENGTH *pulses, uint32_t rate ) {
 
     if ( mztape_format < 0 || mztape_format >= MZTAPE_FORMATSET_COUNT || !pulses ) {
@@ -1021,7 +1070,7 @@ static st_CMT_STREAM* mztape_wrap_vstream ( st_CMT_VSTREAM *vstream, en_CMT_STRE
  * @param type Typ výstupního streamu (bitstream/vstream).
  * @param mztape_fset Formátová varianta záznamu.
  * @param rate Vzorkovací frekvence (Hz).
- * @return Ukazatel na nový stream, nebo NULL při chybě.
+ * @return Ukazatel na nový stream (vlastník je volající), nebo NULL při chybě.
  */
 st_CMT_STREAM* mztape_create_stream_from_mztapemzf ( st_MZTAPE_MZF *mztmzf, en_CMTSPEED cmtspeed, en_CMT_STREAM_TYPE type, en_MZTAPE_FORMATSET mztape_fset, uint32_t rate ) {
 
@@ -1043,7 +1092,7 @@ st_CMT_STREAM* mztape_create_stream_from_mztapemzf ( st_MZTAPE_MZF *mztmzf, en_C
      * Ani jedna cesta není přesná. Zavaděče s pevným okamžikem vzorkování
      * bitu (Interkarate, díly 2-3 při 3:1) na 44,1 kHz načítají
      * nespolehlivě. Emulátor proto MZF přehrává jako vstream s frekvencí
-     * taktu GDG (cmt_mzf.c); bitstream zůstává pro WAV.
+     * taktu GDG; bitstream zůstává pro WAV.
      */
     if ( type == CMT_STREAM_TYPE_BITSTREAM ) {
         st_CMT_STREAM *stream = cmt_stream_new ( type );
@@ -1065,11 +1114,58 @@ st_CMT_STREAM* mztape_create_stream_from_mztapemzf ( st_MZTAPE_MZF *mztmzf, en_C
 }
 
 
+/* Kontrakt viz mztape.h. */
 st_CMT_STREAM* mztape_create_stream_from_mztapemzf_pulses ( st_MZTAPE_MZF *mztmzf, const st_MZTAPE_PULSES_LENGTH *pulses, en_CMT_STREAM_TYPE type, en_MZTAPE_FORMATSET mztape_fset, uint32_t rate ) {
     return mztape_wrap_vstream ( mztape_create_cmt_vstream_from_mztmzf_pulses ( mztmzf, mztape_fset, pulses, rate ), type, rate );
 }
 
 
+/**
+ * @brief Rozšířená verze s volitelným přepisem délek pulzů.
+ *
+ * Všechny čtyři hodnoty nulové = mztape_create_stream_from_mztapemzf().
+ * Jinak se hodnoty v jednotkách 0,1 µs převedou na µs (hodnota / 10)
+ * a záznam vznikne přes mztape_create_stream_from_mztapemzf_pulses();
+ * počet vzorků každé části pulzu je round(hodnota / 1e7 * rate).
+ *
+ * @param mztmzf MZF data.
+ * @param cmtspeed Rychlost záznamu (ignorována, pokud některá délka != 0).
+ * @param type Typ výstupního streamu (bitstream/vstream).
+ * @param mztape_fset Formátová varianta záznamu.
+ * @param rate Vzorkovací frekvence (Hz).
+ * @param long_high_us100  Délka HIGH části dlouhého pulzu (0,1 µs, 0 = výchozí).
+ * @param long_low_us100   Délka LOW části dlouhého pulzu (0,1 µs, 0 = výchozí).
+ * @param short_high_us100 Délka HIGH části krátkého pulzu (0,1 µs, 0 = výchozí).
+ * @param short_low_us100  Délka LOW části krátkého pulzu (0,1 µs, 0 = výchozí).
+ * @return Ukazatel na nový stream (vlastník je volající), nebo NULL při
+ *         chybě (mimo jiné částečně nulové délky nebo část pulzu kratší
+ *         než půl vzorku).
+ */
+st_CMT_STREAM* mztape_create_stream_from_mztapemzf_ex ( st_MZTAPE_MZF *mztmzf, en_CMTSPEED cmtspeed, en_CMT_STREAM_TYPE type, en_MZTAPE_FORMATSET mztape_fset, uint32_t rate,
+                                                          uint16_t long_high_us100, uint16_t long_low_us100,
+                                                          uint16_t short_high_us100, uint16_t short_low_us100 ) {
+
+    /* všechny vlastní délky nulové = délky z pulzní sady a rychlosti */
+    if ( long_high_us100 == 0 && long_low_us100 == 0 &&
+         short_high_us100 == 0 && short_low_us100 == 0 ) {
+        return mztape_create_stream_from_mztapemzf (
+            mztmzf, cmtspeed, type, mztape_fset, rate );
+    }
+
+    /* 0,1 µs -> µs; nulová část (částečně vyplněné délky) je chyba */
+    st_MZTAPE_PULSES_LENGTH pulses;
+    if ( EXIT_SUCCESS != mztape_pulses_set_us ( &pulses, long_high_us100 / 10.0, long_low_us100 / 10.0,
+                                                short_high_us100 / 10.0, short_low_us100 / 10.0 ) ) {
+        g_mztape_error_cb ( __func__, __LINE__, "Invalid custom pulses %u/%u/%u/%u\n",
+                            long_high_us100, long_low_us100, short_high_us100, short_low_us100 );
+        return NULL;
+    };
+
+    return mztape_create_stream_from_mztapemzf_pulses ( mztmzf, &pulses, type, mztape_fset, rate );
+}
+
+
+/* Kontrakt viz mztape.h. */
 int mztape_pulses_set_us ( st_MZTAPE_PULSES_LENGTH *pulses, double long_high_us, double long_low_us, double short_high_us, double short_low_us ) {
     const double v[4] = { long_high_us, long_low_us, short_high_us, short_low_us };
     int i;
@@ -1087,6 +1183,7 @@ int mztape_pulses_set_us ( st_MZTAPE_PULSES_LENGTH *pulses, double long_high_us,
 }
 
 
+/* Kontrakt viz mztape.h. */
 int mztape_get_speed_pulses ( en_MZTAPE_FORMATSET mztape_format, en_CMTSPEED mztape_speed, st_MZTAPE_PULSES_LENGTH *pulses ) {
     if ( mztape_format < 0 || mztape_format >= MZTAPE_FORMATSET_COUNT || !cmtspeed_is_valid ( mztape_speed ) ) return EXIT_FAILURE;
     const st_MZTAPE_PULSES_LENGTH *src = mztape_get_src_pulses ( mztape_format, mztape_speed );
@@ -1101,6 +1198,7 @@ int mztape_get_speed_pulses ( en_MZTAPE_FORMATSET mztape_format, en_CMTSPEED mzt
 }
 
 
+/* Kontrakt viz mztape.h. */
 double mztape_pulses_get_ratio ( en_MZTAPE_FORMATSET mztape_format, const st_MZTAPE_PULSES_LENGTH *pulses ) {
     st_MZTAPE_PULSES_LENGTH nominal;
     if ( !pulses || EXIT_SUCCESS != mztape_get_speed_pulses ( mztape_format, CMTSPEED_1_1, &nominal ) ) return 0;
@@ -1110,6 +1208,7 @@ double mztape_pulses_get_ratio ( en_MZTAPE_FORMATSET mztape_format, const st_MZT
 }
 
 
+/* Kontrakt viz mztape.h. */
 en_MZTAPE_UNICMT_MARKER mztape_unicmt_speed_marker ( const uint8_t *header, st_MZTAPE_PULSES_LENGTH *pulses ) {
     static const char name[] = "CMTSPEED\r";
     /* typ 00h, jméno (offset 01h), délka těla 0 (offset 12h, LE) */
@@ -1128,4 +1227,27 @@ en_MZTAPE_UNICMT_MARKER mztape_unicmt_speed_marker ( const uint8_t *header, st_M
     if ( EXIT_SUCCESS != mztape_pulses_set_us ( &tmp, us[0], us[1], us[2], us[3] ) ) return MZTAPE_UNICMT_MARKER_INVALID;
     if ( pulses ) *pulses = tmp;
     return MZTAPE_UNICMT_MARKER_VALID;
+}
+
+
+const char* mztape_version ( void ) {
+    return MZTAPE_VERSION;
+}
+
+
+int mztape_get_pulse_lengths ( en_MZTAPE_PULSESET pulseset, double out[4] ) {
+    if ( !out || ( int ) pulseset < 0 || pulseset >= MZTAPE_PULSESET_COUNT ) return EXIT_FAILURE;
+    const st_MZTAPE_PULSES_LENGTH *p = g_pulses_length[pulseset];
+    out[0] = p->long_pulse.high;
+    out[1] = p->long_pulse.low;
+    out[2] = p->short_pulse.high;
+    out[3] = p->short_pulse.low;
+    return EXIT_SUCCESS;
+}
+
+
+/* Kontrakt viz mztape.h. */
+const st_MZTAPE_FORMAT* mztape_get_format ( en_MZTAPE_FORMATSET mztape_format ) {
+    if ( ( int ) mztape_format < 0 || mztape_format >= MZTAPE_FORMATSET_COUNT ) return NULL;
+    return g_formats[mztape_format];
 }

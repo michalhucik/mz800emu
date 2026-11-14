@@ -60,6 +60,8 @@ void mzarch_platform_bootstrap_post_header(uint16_t fstrt)
 
 void mzarch_platform_bootstrap_entry_regs(uint16_t fexec)
 {
-    /* Příkaz L monitoru: 0126h LD HL,(1106h) ... 012Eh JP (HL). */
+    /* Příkaz L monitoru: 0126h LD HL,(1106h) ... 012Eh JP (HL). BC nastaví
+     * společná část podle bootstrap_device.h (výchozí cmt = 0000h jako po
+     * příkazu L; dřív zůstala délka těla z hlavičky). */
     z80_set_reg ( g_mzarch_main.cpu, Z80_REG_HL, fexec );
 }

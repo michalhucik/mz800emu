@@ -62,7 +62,7 @@ left corner of the picture shows **REPLAY REC** and the frame number.
 
 While recording:
 
-- **Machine settings** (the Devices menu, platform, peripherals, memory
+- **Machine settings** (the HW & Devices menu, platform, peripherals, memory
   expansions, ROM) and **loading a snapshot** are not available: the
   replay could not repeat them. Over MCP the tools that change the
   machine this way (snapshot load, media, settings) are refused with an
@@ -70,10 +70,15 @@ While recording:
   Alt+1..4 shortcut, a file dialog, a device window opened before the
   recording started or a changed joystick type in Joystick Setup) is
   refused with a message as well.
-- **The tape** can be controlled as usual (Virtual CMT and Tape Filelist
-  windows, MCP `emu_cmt_*` transport, block seek and recording to tape).
-  Inserting another tape, the tape speed, custom pulses, polarity and the
-  CMT hack switch are not available while recording.
+- **The tape** can be controlled as usual (the Virtual CMT window, MCP
+  `emu_cmt_*` transport, block seek and recording to tape). Inserting
+  another tape, editing the tape (deleting, moving and importing blocks,
+  analyzing a recording, the tape information, converting a block to
+  another profile), the tape speed, custom pulses, polarity and the loading
+  mode (the Loading switch in the Virtual CMT window, Use CMT Hack and
+  Enable CPU Boost in the menu) are not available while recording; in
+  the Virtual CMT window neither are saving the tape and exporting a block
+  or the whole tape.
 - **Writes of the debugger** are recorded while the emulation runs and
   while it is paused at a frame boundary - after a pause (the pause
   button or MCP `emu_pause` pause at the end of the frame), after
@@ -97,8 +102,9 @@ While recording:
 
 While playing back, the picture shows **REPLAY PLAY** with the frame and
 the length of the replay. Live input (keyboard, virtual keyboard, host
-joystick, MCP keys) is ignored and the tape windows are disabled - the
-replay controls the tape. Breakpoints, trace, the RAM Write Log,
+joystick, MCP keys) is ignored and the Virtual CMT window is disabled
+(including the loading mode, Use CMT Hack and Enable CPU Boost in the
+menu) - the replay controls the tape. Breakpoints, trace, the RAM Write Log,
 screenshots and video recording work as usual; pausing and stepping do
 not change the result.
 
@@ -154,13 +160,23 @@ recorded during playback, and returns the machine state at that moment.
 By default breakpoints do not stop it. The recipe is in the MCP document
 `emulator://docs/replay`.
 
-A checkpoint does not hold the contents of the media. When the emulated
-program writes to a floppy disk, Quick Disk or IDE8 disk, records to tape
-or the tape is ejected, the checkpoints before that can no longer be
-used: a rewind past it while recording is refused (the disk files of the
-user are never overwritten), a seek past it while playing back starts
-the playback from its beginning with clean copies of the media. No
-checkpoint is taken while autotype runs or the tape records.
+A checkpoint does not hold the contents of the disks. When the emulated
+program writes to a floppy disk, Quick Disk or IDE8 disk, when the
+inserted tape is ejected (also by a new tape or another tape replacing
+it) or when a recording into a file starts (MCP `emu_cmt_record` with a
+path), the checkpoints before that can no longer be used: a rewind past
+it while recording is refused (the disk files of the user are never
+overwritten), a seek past it while playing back starts the playback from
+its beginning with clean copies of the media.
+
+A recording onto the tape in the deck does not block going back: a
+checkpoint remembers the tape, and going back to it removes the blocks
+recorded after it and restores the last block, the file name and the
+unsaved-changes flag; a checkpoint taken without a tape ejects a tape
+created later. A checkpoint taken during a recording continues that
+recording after going back. No checkpoint is taken while autotype runs
+or while a long recording to tape runs (its recorded signal takes more
+than 1 MB).
 
 Checkpoints exist only in memory, not in the replay file. A replay
 played in a new process collects its own checkpoints as it runs; a seek
@@ -210,7 +226,10 @@ write to a disk or record to tape, the original files never change and
 the emulator settings (INI) stay as they are. Drives that were empty in
 the recording are empty during the playback. After the playback the
 media from the settings are mounted again; a tape that was inserted is
-inserted again from its beginning.
+inserted again from its beginning, with the speeds of its blocks as
+before the playback. When the tape file changed on the disk during the
+playback (its blocks differ), the speeds are not restored and the Virtual
+CMT window shows a warning.
 
 All stored media of one recording together may have up to 64 MB. A
 larger image (typically an IDE8 disk) is stored only as a SHA-256 hash
@@ -240,7 +259,7 @@ changed", not necessarily a bug.
 
 | Input | What to do |
 |-------|------------|
-| inserting or ejecting a medium during the recording | not available while recording (the Devices menu is disabled, MCP refuses it); mount the media before the recording |
+| inserting or ejecting a medium during the recording | not available while recording (the HW & Devices menu is disabled, MCP refuses it); mount the media before the recording |
 | Unicard SD card (a directory of the host) | play back with the same SD card contents; the recording gets a warning when the Unicard is connected |
 | Quick Disk in the virtual (directory) mode | play back with the same directory; the recording gets a warning |
 | emulator settings outside the snapshot (INI) | play back with the same settings |

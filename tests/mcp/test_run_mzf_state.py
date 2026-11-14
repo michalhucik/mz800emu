@@ -18,8 +18,9 @@ zastaví CPU před první instrukcí programu. Pak ověří:
     BPFLG (119Dh) = 1, znak D000h = 00h a atributy D800h-DFFFh = 71h
     (CLS a FILLA), CTC0 mode 3 s předvolbou tónu z BEEP (0577h, tabulka not
     027Ch: 04ECh, na MZ-1500 03F8h),
-  * MZ-700: HL = exec (012Eh JP (HL)), CTC1 neprogramovaný (monitor 1Z-013A
-    nevolá TIMST),
+  * MZ-700: HL = exec (012Eh JP (HL)), BC = 0000h (stav po příkazu L, báze
+    firmware/stav-po-zavedeni-z-cmt.md; dřív zůstala délka těla), CTC1
+    neprogramovaný (monitor 1Z-013A nevolá TIMST),
   * MZ-800: BC = 0100h (E99Dh), IX = exec (ED41h JP (IX)), PC0 = 1 (E86Ch),
     CTC1 předvolba 3CFBh (TIMST 033Eh), CTC2 bez latche (TIMST čte E006h
     na 0331h), PSG ztišené (útlum 15 na všech kanálech),
@@ -262,6 +263,7 @@ def run_platform(exe, bpt_name, platform, port):
 
         if platform == "mz700":
             check(regs["HL"] == _EXEC, f"HL = {regs['HL']:04X}h (monitor JP (HL))")
+            check(regs["BC"] == 0x0000, f"BC = {regs['BC']:04X}h (1Z-013A leaves 0000h after L)")
             check(ctc[1]["mode"] == "mode0" and ctc[1]["preset_value"] == 0xFFFF,
                   "CTC1 not programmed (1Z-013A does not call TIMST)")
         else:

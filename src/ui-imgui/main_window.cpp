@@ -14,6 +14,9 @@
 #include "iface/iface_keyboard.h"
 #include "hw-generic/pio8255/pio8255.h"
 #include "imgui_windows.h"
+#include "ui-imgui/cmt/cmt_window.h"
+#include "ui-imgui/cmt/cmt_check_window.h"
+#include "ui-imgui/main_window_focus.h"
 #include "emulator/emulator.h"
 #include "emulator/replay.h"
 
@@ -200,8 +203,8 @@ static void ShowFullScreenImageEmulatorWindow(GLuint texture)
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0);
 
-    static ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoCollapse;
-    ImGui::Begin("##MainEmulatorWindow", NULL, flags);
+    /* příznaky v main_window_focus.h (sdílí je test pravidla fokusu) */
+    ImGui::Begin("##MainEmulatorWindow", NULL, MAIN_WINDOW_FLAGS);
 
 // Prozatim nemame nic smysluplneho pro zobrazovani overlay okna
 #if 0
@@ -218,7 +221,8 @@ static void ShowFullScreenImageEmulatorWindow(GLuint texture)
     {
         g_gui->VkbdWindowHasFocus = false;
     };
-    g_gui->MainWindowHasFocus = (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) || g_gui->VkbdWindowHasFocus);
+    /* pravidlo v main_window_focus.h (sdílí ho testy oken nástrojů) */
+    g_gui->MainWindowHasFocus = main_window_keyboard_focus(g_gui->VkbdWindowHasFocus);
 
     // obsluha klávesnice pro PIO8255 podle zaznamenanych klavesovych udalosti
     static gboolean pvevious_MainWindowHasFocus = FALSE;
@@ -326,13 +330,27 @@ void imgui_main_window(GLuint texture)
     imgui_devbus_windows();
 #endif
 
-    /* Okna kazety čtou pásku (jméno, kontejner, bloky), kterou otevření
-     * a vysunutí v emu vlákně uvolňuje; zásah mezitím neprovede. */
+    /* Okno kazety plní kopii stavu z pásky (jméno, kontejner, bloky), kterou
+     * otevření a vysunutí v emu vlákně uvolňuje; zásah mezitím neprovede.
+     * Viditelnost: --cmt, Alt+C, menu HW & Devices > CMT > Show Virtual CMT. */
     device_state_lock();
-    imgui_cmt_tape_filelist_refresh();
     if (g_gui->showVirtualCmtWindow)
-        imgui_cmt(&g_gui->showVirtualCmtWindow);
+    {
+        imgui_cmt_window(&g_gui->showVirtualCmtWindow);
+    };
+    /* nemodální okno Tape check (otevírá ho menu Tape okna kazety; nálezy čte jen při otevření a Check again) */
+    imgui_cmt_check_window();
+    /* dotaz na neuložené změny pásky, oznámení výsledku nahrávání */
+    imgui_cmt_tape_dialogs();
     device_state_unlock();
+    /* akce zvolená v dialogu nebo v okně kazety: až bez zámku (může
+     * synchronně čekat na emu vlákno, které si zámek bere pro MCP) */
+    imgui_cmt_tape_run_deferred();
+
+    /* Modál Custom value... volby Device for Direct MZF Start (menu
+     * HW & Devices > CMT > CMT Options): položka nabídky ho jen vyžádá,
+     * nabídku klik zavře; nastavení má vlastní zámek modulu. */
+    imgui_menu_cmt_bootdev_popup();
 
     /* Popup kontroly velikosti MZF má vlastní zámek (aktivuje ho i CMT
      * hack uvnitř instrukce, bez zámku stavu zařízení). */
@@ -399,14 +417,6 @@ void imgui_main_window(GLuint texture)
         imgui_ide8_state_window(&g_gui->showIde8StateWindow);
 #endif
 #endif
-
-    if (g_gui->showVirtualCmtTapeIndexWindow)
-    {
-        /* Seznam bloků čte kontejner pásky (viz okna kazety výše). */
-        device_state_lock();
-        imgui_cmt_tape_index_window(&g_gui->showVirtualCmtTapeIndexWindow);
-        device_state_unlock();
-    }
 
     if (g_gui->showVirtualKeyboardWindow)
         imgui_vkbd(&g_gui->showVirtualKeyboardWindow);

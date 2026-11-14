@@ -69,7 +69,7 @@
 #include "cfgmain.h"
 #include "emulator/emulator_measuring.h"
 #include "emulator/mzarch/interrupt.h"
-#include "generic_driver/memory_driver.h"
+#include "libs/generic_driver/memory_driver.h"
 #include "generic_driver/file_driver.h"
 #include "libs/cfgfile/cfgroot.h"
 #include "libs/cfgfile/cfgmodule.h"

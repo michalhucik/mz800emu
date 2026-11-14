@@ -23,8 +23,7 @@ echo ""
 # Známé výjimky — funkce v jádře volané z UI vrstvy, kde _() je legitimní:
 #   audio.c:audio_print_volume_info()      — konzolový výpis při init
 #   emulator.c:emulator_get_speed_status_as_text() — text pro window title
-#   cmt.c:cmt_ui_record/open()             — file chooser volaný z cmt_window.cpp
-#   cmthack.c:cmthack_load_file()          — file chooser volaný z cmt_window.cpp
+#   cmthack.c:cmthack_load_file()          - file chooser z pasti hlavičky CMT hacku
 #   fdc.c:fdc_ui_mount()                   — file chooser volaný z menu_fdcontroller.cpp
 #   qdisk.c:qdisk_ui_mount()               — file chooser volaný z menu_qdisk.cpp
 #   unicard.c:unicard_ui_select_sd_root_directory() — file chooser volaný z menu_unicard.cpp

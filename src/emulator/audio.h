@@ -115,6 +115,9 @@ extern "C"
     typedef struct st_AUDIO
     {
         unsigned ctc0_output; // Indikuje aktualni stav vystupu z ctc0 (0/1)
+        /** Úroveň echa kazety (0/1, audio_cmt_echo_changed()); v klidu 0.
+         *  Kanál CTC0 zvukového logu nese ctc0_output XOR cmt_echo. */
+        unsigned cmt_echo;
 
         st_AUDIO_LOG *log;
         st_AUDIO_LOG *old_log;
@@ -126,6 +129,22 @@ extern "C"
     extern void audio_init(void);
 
     extern void audio_ctc0_changed(bool ctc0_state, uint64_t total_event_ticks);
+
+    /**
+     * @brief Změna úrovně echa kazety (signál pásky do reproduktoru).
+     *
+     * Echo nemá vlastní zvukový kanál: kanál CTC0 zvukového logu nese
+     * ctc0_output XOR cmt_echo, takže hrana kteréhokoli z obou signálů je
+     * hranou výstupu a v klidu echa (0) je výstup čistý CTC0. Čas události
+     * starší než poslední událost kanálu se posune na ni (hrany pásky se
+     * doručují zpětně, nejvýš o snímek).
+     *
+     * @param level Nová úroveň signálu pásky.
+     * @param total_event_ticks Čas hrany (osa gdg_get_total_ticks()).
+     * @pre Vlákno emulátoru.
+     * @post g_audio.cmt_echo == level; g_audio.ctc0_output se nemění.
+     */
+    extern void audio_cmt_echo_changed(bool level, uint64_t total_event_ticks);
     extern void audio_log_fill_psg(uint64_t total_event_ticks);
     extern void audiolog_finish_20ms_frame(uint64_t total_event_ticks);
     extern void audio_log_destroy(st_AUDIO_LOG *audio_log);

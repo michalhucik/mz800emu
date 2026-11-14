@@ -33,7 +33,7 @@ konce automatického běhu (viz [Automatické běhy](#automatické-běhy)).
 | Framebuffer (v paměti, BGRA 928×288) | renderuje se |
 | Snapshot save/load | funguje |
 | CMT hack (`--run-mzf`) | funguje |
-| Načítání přes CMT hack spuštěné z ROM (boot menu C, `LOAD`) | **bez** dialogu pro výběr souboru: načtení se hned zruší (ROM ohlásí Break) a na stderr se vypíše varování. Program načtěte přes `media_load_mzf` nebo `--run-mzf`, nebo CMT hack vypněte (`cmt_hack_set`) a použijte virtuální pásku |
+| Načítání přes CMT hack spuštěné z ROM (boot menu C, `LOAD`) | s vloženou páskou vezme program z aktuálního bloku pásky jako v okně (blok vybere `cmt_load_directly`, `cmt_tape_seek` nebo `cmt_tape_step`); bez pásky, u bloku bez programu a po posledním programu pásky **bez** dialogu pro výběr souboru: načtení se hned zruší (ROM ohlásí Break) a na stderr se vypíše varování. Program pak načtěte přes `media_load_mzf` nebo `--run-mzf`, vložte pásku, nebo CMT hack při zastavené pásce vypněte (`cmt_hack_set`) a použijte signál pásky |
 | Konzole stdout/stderr | jen v `FORCE_CONSOLE=1` buildu (viz níže) |
 | GUI okno | **ne** (přeskočeno) |
 | Audio výstup | **ne** (no-op SDL audio device) |
@@ -136,7 +136,8 @@ a cesty zkrácené):
                "vram" : "edf097e8...", "screen" : "f58b3934...", "cpu" : "9c1e07d2..." },
   "artifacts" : { "screenshot" : ".../out/screen.png", "snapshot" : null,
                   "audio_capture" : null, "video" : null },
-  "inputs" : { "run_mzf" : ".../Gardner.mzf", "bpt" : null },
+  "inputs" : { "run_mzf" : ".../Gardner.mzf", "run_mzf_device" : "cmt", "run_mzf_bc" : 256,
+               "bpt" : null },
   "warnings" : [ ]
 }
 ```
@@ -169,6 +170,11 @@ Běh ukončený breakpointem má například `"reason" : "exit_action"` a
   je `gdg_ticks` v sekundách emulovaných hodin.
 - `cpu`: registry jako čísla (`af2` ... `hl2` jsou stínové registry),
   `halted` true nebo false.
+- `inputs`: `run_mzf` a `bpt` (absolutní cesty nebo `null`);
+  `run_mzf_device` (volba kódu zařízení, se kterou program startoval:
+  `--run-mzf-device`, jinak nastavení `[CMT] run_mzf_device`) a
+  `run_mzf_bc` (registr BC, který program dostal), bez `--run-mzf` oba
+  `null`.
 - `hashes`: SHA-256 vnitřní RAM (64 KB), RAM MemExt (jen připojený),
   VRAM (MZ-800: všechny čtyři plány), PCG (MZ-1500), obrazovky
   (framebuffer jako indexy palety) a `cpu` (registry Z80 včetně skrytého

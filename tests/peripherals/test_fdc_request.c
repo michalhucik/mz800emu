@@ -25,7 +25,7 @@
 #include "hw-generic/fdc/fdc.h"
 #include "hw-generic/fdc/fdc_request.h"
 #include "libs/dsk/dsk_tools.h"
-#include "generic_driver/memory_driver.h"
+#include "libs/generic_driver/memory_driver.h"
 
 /** @brief Dočasný adresář testu. */
 static char *s_tmpdir = NULL;

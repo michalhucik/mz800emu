@@ -23,7 +23,7 @@
  */
 
 #include "mztest.h"
-#include "libs/sharpmz_ascii/sharpmz_utf8.h"
+#include "libs/sharpmz_ascii/sharpmz_ascii.h"
 #include "libs/mz_vcode/mz_vcode.h"
 #include "libs/mzglyphs/mzglyphs.h"
 

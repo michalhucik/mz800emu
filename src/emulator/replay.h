@@ -488,15 +488,16 @@ extern "C"
         REPLAY_CMT_PLAY = 0,       /**< `play`: cmt_play(). */
         REPLAY_CMT_PLAY_PAUSED,    /**< `play_paused`: cmt_play_paused(). */
         REPLAY_CMT_STOP,           /**< `stop`: cmt_stop() (MCP). */
-        REPLAY_CMT_STOP_BUTTON,    /**< `stop_button`: cmt_stop_button() (okno; při nahrávání uloží a znovu vloží pásku). */
+        REPLAY_CMT_STOP_BUTTON,    /**< `stop_button`: cmt_stop_button() (okno; = cmt_stop(), záznam se připojí k pásce). */
         REPLAY_CMT_PAUSE,          /**< `pause`: cmt_pause(arg). */
         REPLAY_CMT_EJECT,          /**< `eject`: cmt_eject(). */
-        REPLAY_CMT_SEEK,           /**< `seek`: otevření bloku arg (MCP `cmt_tape_seek`). */
+        REPLAY_CMT_SEEK,           /**< `seek`: cmt_tape_seek_block(arg) (MCP `cmt_tape_seek`; blok od začátku, transport beze změny). */
         REPLAY_CMT_SELECT,         /**< `select`: cmt_tape_select_block(arg, 0) (kliknutí v seznamu bloků). */
         REPLAY_CMT_SELECT_FORCED,  /**< `select_forced`: cmt_tape_select_block(arg, 1) (dvojklik). */
         REPLAY_CMT_NEXT,           /**< `next`: cmt_tape_step_block(1). */
         REPLAY_CMT_PREV,           /**< `prev`: cmt_tape_step_block(0). */
-        REPLAY_CMT_RECORD,         /**< `record`: cmt_record_to_file(path); při přehrání do dočasného souboru. */
+        REPLAY_CMT_RECORD,         /**< `record`: cmt_record_to_file(path), bez cesty cmt_record(); při přehrání cesta do dočasného adresáře (replay.c). */
+        REPLAY_CMT_NEW_TAPE,       /**< `new_tape`: cmt_new_tape() (vysunutí a nová prázdná páska). */
         REPLAY_CMT_OP_COUNT        /**< Počet operací (není operace). */
     } en_REPLAY_CMT_OP;
 
@@ -507,7 +508,7 @@ extern "C"
     const char *replay_cmt_op_name(en_REPLAY_CMT_OP op);
 
     /**
-     * @brief Operace kazety z okna Virtual CMT / Tape Filelist (UI vlákno).
+     * @brief Operace kazety z okna Virtual CMT (UI vlákno).
      *
      * Operaci provede emu vlákno: za běhu v nejbližším bodě hranice snímku,
      * v pauze v paused smyčce (do ~20 ms). Při záznamu se zapíše jako
@@ -516,10 +517,56 @@ extern "C"
      *
      * @param op   Operace.
      * @param arg  Hodnota (pauza 0/1, číslo bloku), jinak 0.
-     * @param path Cesta souboru u REPLAY_CMT_RECORD, jinak NULL (zkopíruje se).
+     * @param path Cesta souboru u REPLAY_CMT_RECORD (NULL = nahrávat jen do
+     *             pásky), jinak NULL (zkopíruje se).
      * @note Libovolné vlákno; pod zámkem fronty.
      */
     void replay_host_cmt(en_REPLAY_CMT_OP op, int32_t arg, const char *path);
+
+    /** @brief Podmínka operace kazety: vložená páska má čítač výměn st_REPLAY_CMT_GUARD::tape_serial (cmttmz_get_tape_serial()). */
+#define REPLAY_CMT_GUARD_TAPE (1u << 0)
+    /** @brief Podmínka operace kazety: transport nestojí (není STOP). */
+#define REPLAY_CMT_GUARD_NOT_STOP (1u << 1)
+    /** @brief Podmínka operace kazety: blok @c arg není právě hrající blok (PLAY bez pauzy s otevřeným blokem @c arg). */
+#define REPLAY_CMT_GUARD_NOT_PLAYING_ARG (1u << 2)
+    /** @brief Podmínka operace kazety: transport je RECORD (Play při nahrávání čekajícím na motor). */
+#define REPLAY_CMT_GUARD_RECORD (1u << 3)
+
+    /**
+     * @brief Podmínky, za kterých má emu vlákno operaci kazety z okna provést.
+     *
+     * Okno rozhoduje o operaci podle kopie stavu z minulého snímku; než ji
+     * emu vlákno provede, mohla se páska vyměnit (MCP, návrat na checkpoint)
+     * nebo transport změnit (konec pásky, přechod na další blok). Emu vlákno
+     * podmínky ověří těsně před provedením a nesplněnou operaci zahodí: nic
+     * neprovede a záznam vstupů ji nezapíše (přehrání tak opakuje jen
+     * provedené operace a podmínky nepotřebuje).
+     *
+     * @invariant flags obsahuje jen bity REPLAY_CMT_GUARD_*; tape_serial má
+     *            význam jen s REPLAY_CMT_GUARD_TAPE.
+     */
+    typedef struct st_REPLAY_CMT_GUARD
+    {
+        unsigned flags;       /**< Bity REPLAY_CMT_GUARD_* (0 = bez podmínek). */
+        unsigned tape_serial; /**< Očekávaný čítač výměn pásky (REPLAY_CMT_GUARD_TAPE). */
+    } st_REPLAY_CMT_GUARD;
+
+    /**
+     * @brief Operace kazety z okna Virtual CMT s podmínkami (UI vlákno).
+     *
+     * Jako replay_host_cmt() bez cesty; emu vlákno operaci provede jen při
+     * splněných podmínkách @p guard (replay_media_cmt_guard_holds()),
+     * jinak ji zahodí s řádkem na stdout, do záznamu vstupů ji nezapíše
+     * a zvedne čítač cmt_request_get_window_drop_serial() (okno ukáže
+     * jedno varování). Při přehrávání záznamu vstupů se zahodí jako každá
+     * operace z UI, bez varování.
+     *
+     * @param op    Operace.
+     * @param arg   Hodnota (pauza 0/1, číslo bloku), jinak 0.
+     * @param guard Podmínky (zkopírují se); NULL = bez podmínek (= replay_host_cmt()).
+     * @note Libovolné vlákno; pod zámkem fronty.
+     */
+    void replay_host_cmt_guarded(en_REPLAY_CMT_OP op, int32_t arg, const st_REPLAY_CMT_GUARD *guard);
 
     /**
      * @brief CMT hack při přehrávání: další soubor ze záznamu místo dialogu.
@@ -609,6 +656,32 @@ extern "C"
      * @pre Emu vlákno; jen pokud replay_dbg_before() vrátilo true.
      */
     void replay_dbg_after(struct st_DBGAPI_CMDRQ *rq, bool was_paused);
+#endif
+
+#ifdef MZTEST_HEADLESS
+    /**
+     * @brief Jen pro testy: mez kopie bufferu hran v checkpointu během nahrávání (bajty).
+     * @param max_bytes Mez; 0 = výchozí (REPLAY_CKPT_RECORD_MAX_BYTES, 1 MB).
+     */
+    void replay_test_set_ckpt_record_max(size_t max_bytes);
+
+    /**
+     * @brief Jen pro testy: vyjme nejstarší operaci kazety zařazenou replay_host_cmt() bez provedení.
+     *
+     * Testy oken tak ověří, jakou operaci (a s jakým argumentem) UI zařadilo.
+     *
+     * @param[out] op Operace (NULL = nezajímá). @param[out] arg Argument (NULL = nezajímá).
+     * @return true = operace vyjmuta, false = fronta je prázdná.
+     */
+    bool replay_test_take_ui_cmt(en_REPLAY_CMT_OP *op, int32_t *arg);
+
+    /**
+     * @brief Jen pro testy: jako replay_test_take_ui_cmt(), navíc s podmínkami operace.
+     * @param[out] op Operace (NULL = nezajímá). @param[out] arg Argument (NULL = nezajímá).
+     * @param[out] guard Podmínky (replay_host_cmt() = nulové; NULL = nezajímá).
+     * @return true = operace vyjmuta, false = fronta je prázdná.
+     */
+    bool replay_test_take_ui_cmt_guard(en_REPLAY_CMT_OP *op, int32_t *arg, st_REPLAY_CMT_GUARD *guard);
 #endif
 
 #ifdef __cplusplus

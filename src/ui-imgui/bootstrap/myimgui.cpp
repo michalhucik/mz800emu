@@ -23,6 +23,7 @@
 #include "ui-imgui/filechooser/res/CustomFont.h"
 
 #include "main.h"  /* g_sdlapp */
+#include "ui-imgui/cmt/cmt_window.h" /* imgui_cmt_window_os_drop_event() */
 extern "C" void imgui_filechooser_settings_init(void);
 
 #include "mzarch/mzarch_config.h"
@@ -517,6 +518,20 @@ void myimgui_event_cb(SdlAppWindow *win, SDL_Event *event, gpointer user_data)
     ImGui_ImplSDL3_ProcessEvent(event);
     // ImGuiIO &io = ImGui::GetIO();
     // (void)io;
+
+    /* soubor přetažený z OS: poloha i soubory pro okno Virtual CMT;
+     * všechny události SDL (i oken viewportů ImGui) jdou přes hlavní okno sdlapp */
+    switch (event->type)
+    {
+        case SDL_EVENT_DROP_BEGIN:
+        case SDL_EVENT_DROP_POSITION:
+        case SDL_EVENT_DROP_FILE:
+        case SDL_EVENT_DROP_COMPLETE:
+            imgui_cmt_window_os_drop_event(event);
+            break;
+        default:
+            break;
+    };
 
     if (gui->event_cb)
     {

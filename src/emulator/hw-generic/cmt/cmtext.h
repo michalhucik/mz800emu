@@ -24,6 +24,11 @@
  */
 
 
+/**
+ * @file cmtext.h
+ * @brief Rozhraní rozšíření Virtual CMT (formát pásky) a registr rozšíření.
+ */
+
 #ifndef CMTEXT_H
 #define CMTEXT_H
 
@@ -78,7 +83,6 @@ extern "C" {
     extern void cmtext_exit ( void );
 
     extern st_CMTEXT* cmtext_get_extension ( const char *filename );
-    extern st_CMTEXT* cmtext_get_recording_extension ( void );
     extern const char* cmtext_get_description ( st_CMTEXT *ext );
     extern const char* cmtext_get_name ( st_CMTEXT *ext );
     extern st_CMTEXT_BLOCK* cmtext_get_block ( st_CMTEXT *ext );
@@ -95,7 +99,7 @@ extern "C" {
      * Na rozdíl od cmtext_get_extension() nezávisí na cmtext_init(): prochází
      * statickou tabulku g_cmtext[] až po koncový NULL, takže ji lze volat
      * i při kontrole CLI voleb před startem emulátoru. Přípona se porovnává
-     * bez ohledu na velikost písmen (mzf, m12, mzt, tap, wav, wave).
+     * bez ohledu na velikost písmen (tmz, tzx, mzf, m12, mzt, tap, wav, wave).
      *
      * @param filename Jméno nebo cesta souboru (UTF-8); NULL = false.
      * @return true, pokud přípona patří některé přehrávatelné (PLAYABLE) příponě.
@@ -135,6 +139,10 @@ extern "C" {
      * @param ext Rozšíření (může být NULL).
      * @return EXIT_SUCCESS (0), pokud rozšíření má CMTEXT_TYPE_RECORDABLE;
      *         EXIT_FAILURE pro NULL, chybějící info nebo typ bez nahrávání.
+     *         Dnes žádné rozšíření typ RECORDABLE nemá (vrací vždy
+     *         EXIT_FAILURE): záznam se připojuje k pásce cmt_tmz
+     *         (cmt_record()), příznak recordable v MCP výpisu pásky proto
+     *         zůstává false.
      */
     extern int cmtext_is_recordable ( st_CMTEXT *ext );
 

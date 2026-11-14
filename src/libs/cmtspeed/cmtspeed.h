@@ -1,7 +1,7 @@
 /**
  * @file   cmtspeed.h
  * @author Michal Hucik <hucik@ordoz.com>
- * @version 2.0.0
+ * @version 2.1.0
  * @brief  Definice rychlostních poměrů CMT pásky a inline funkce pro výpočet baudových rychlostí.
  *
  * Hlavičkový soubor knihovny cmtspeed poskytuje enum rychlostních režimů,
@@ -10,10 +10,14 @@
  * kazetové pásky počítačů Sharp MZ.
  *
  * @par Changelog:
- * - 2026-03-14: Proběhla kompletní revize a refaktorizace. Vytvořeny unit testy.
- * - 2026-10-08: Přidána hodnota CMTSPEED_CUSTOM (vlastní délky pulzů, UniCMT).
+ * - 2026-03-14: Proběhla kompletní kontrola kódu a refaktorizace. Vytvořeny unit testy.
+ * - 2026-11-09: Přidána hodnota CMTSPEED_CUSTOM (vlastní délky pulzů, UniCMT) a cmtspeed_is_custom (2.1.0).
  *
  * @par Licence:
+ * GNU General Public License v3 (GPLv3)
+ *
+ * Copyright (C) 2017-2026 Michal Hucik <hucik@ordoz.com>
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -21,11 +25,11 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
 
@@ -41,22 +45,29 @@ extern "C" {
 #include <math.h>
 
 
-    /** @brief Výčet rychlostních poměrů CMT pásky. */
+    /**
+     * @brief Výčet rychlostních poměrů CMT pásky.
+     *
+     * Poměr je nominální násobek rychlosti 1:1 ("1200 Bd"). Skutečné
+     * zapisovače se od nominálu liší: ROM má ~1350 Bd, Intercopy 10.2
+     * "2400/2800/3200 Bd" je skutečně ~1,96x/2,39x/2,75x, TurboCopy škáluje
+     * pulzy afinně (2:1 je ~1,8x).
+     */
     typedef enum en_CMTSPEED {
         CMTSPEED_NONE = 0,  /**< Žádná rychlost (neplatná hodnota) */
-        CMTSPEED_1_1,       /**< Poměr 1:1 — standardní rychlost (1200 Bd) */
-        CMTSPEED_2_1,       /**< Poměr 2:1 — dvojnásobná rychlost */
-        CMTSPEED_2_1_CPM,   /**< Poměr 2:1 — CP/M varianta */
-        CMTSPEED_3_1,       /**< Poměr 3:1 — trojnásobná rychlost */
+        CMTSPEED_1_1,       /**< Poměr 1:1 - rychlost ROM (nominálně 1200 Bd, skutečně ~1350 Bd) */
+        CMTSPEED_2_1,       /**< Poměr 2:1 - dvojnásobná rychlost */
+        CMTSPEED_2_1_CPM,   /**< Poměr 2:1 - CP/M CMT.COM (SOKODI), 2400 Bd s vlastní pulzní sadou */
+        CMTSPEED_3_1,       /**< Poměr 3:1 - trojnásobná rychlost */
         CMTSPEED_3_2,       /**< Poměr 3:2 */
-        CMTSPEED_7_3,       /**< Poměr 7:3 — Intercopy 10.2 */
-        CMTSPEED_8_3,       /**< Poměr 8:3 — CP/M cmt.com */
+        CMTSPEED_7_3,       /**< Poměr 7:3 - nominálně Intercopy 10.2 "2800 Bd" (skutečně ~2,39x) */
+        CMTSPEED_8_3,       /**< Poměr 8:3 - nominálně Intercopy 10.2 "3200 Bd" (skutečně ~2,75x); CP/M cmt.com používá 2:1 */
         CMTSPEED_9_7,       /**< Poměr 9:7 */
         CMTSPEED_25_14,     /**< Poměr 25:14 */
         CMTSPEED_CUSTOM,    /**< Vlastní délky pulzů (např. hlavička CMTSPEED zařízení UniCMT).
                                  Nejde o poměr: délky nese volající zvlášť, divisor je 0
                                  a cmtspeed_is_valid() vrací 0. */
-        CMTSPEED_COUNT      /**< Počet hodnot enumu (sentinel — nepoužívat jako rychlost) */
+        CMTSPEED_COUNT      /**< Počet hodnot enumu (sentinel - nepoužívat jako rychlost) */
     } en_CMTSPEED;
 
     /** @brief Pole násobitelů rychlosti indexované hodnotami en_CMTSPEED. */
@@ -182,6 +193,49 @@ extern "C" {
         }
         snprintf ( dsttxt, size, "%s - %d Bd", cmtspeed_get_ratiotxt ( cmtspeed ), cmtspeed_get_bdspeed ( cmtspeed, base_bdspeed ) );
     }
+
+    /**
+     * @brief Najde nejbližší en_CMTSPEED pro zadanou baudovou rychlost.
+     *
+     * Porovná zadanou rychlost se všemi platnými hodnotami
+     * CMTSPEED_1_1 .. CMTSPEED_25_14 (CMTSPEED_CUSTOM nemá Bd, proto se
+     * neprochází); Bd kandidáta počítá cmtspeed_get_bdspeed() z base_bdspeed.
+     * Vrátí hodnotu s nejmenší absolutní odchylkou. Při shodné odchylce
+     * vyhrává hodnota, která je v enumu dřív (např. CMTSPEED_2_1 před
+     * CMTSPEED_2_1_CPM, obě mají při základu 1200 Bd shodně 2400 Bd).
+     *
+     * @param bdspeed Baudová rychlost (např. 2400, 2800, 3200).
+     * @param base_bdspeed Základní baudová rychlost (typicky 1200).
+     * @return Nejbližší platná en_CMTSPEED hodnota; CMTSPEED_NONE, pokud
+     *         bdspeed nebo base_bdspeed je 0.
+     */
+    static inline en_CMTSPEED cmtspeed_from_bdspeed ( uint16_t bdspeed, uint16_t base_bdspeed ) {
+        if ( bdspeed == 0 || base_bdspeed == 0 ) return CMTSPEED_NONE;
+
+        en_CMTSPEED best = CMTSPEED_1_1;
+        double best_diff = 1e9;
+
+        for ( int s = CMTSPEED_1_1; s < CMTSPEED_CUSTOM; s++ ) {
+            uint16_t candidate = cmtspeed_get_bdspeed ( ( en_CMTSPEED ) s, base_bdspeed );
+            double diff = fabs ( ( double ) bdspeed - ( double ) candidate );
+            if ( diff < best_diff ) {
+                best_diff = diff;
+                best = ( en_CMTSPEED ) s;
+            }
+        }
+
+        return best;
+    }
+
+
+    /** @brief Verze knihovny cmtspeed. */
+#define CMTSPEED_VERSION "2.1.0"
+
+    /**
+     * @brief Vrátí řetězec s verzí knihovny cmtspeed.
+     * @return Statický řetězec s verzí knihovny (hodnota CMTSPEED_VERSION).
+     */
+    extern const char* cmtspeed_version ( void );
 
 #ifdef __cplusplus
 }

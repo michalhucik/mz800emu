@@ -41,10 +41,9 @@ endfunction()
 # ----------------------------------------------------------------------------
 mz_add_lib(mzlib_endianity        SOURCES endianity/endianity.c)
 mz_add_lib(mzlib_generic_driver   SOURCES generic_driver/generic_driver.c
+                                          generic_driver/memory_driver.c
                                   DEPS    mz::glib)
-mz_add_lib(mzlib_sharpmz_ascii    SOURCES sharpmz_ascii/sharpmz_ascii.c
-                                          sharpmz_ascii/sharpmz_utf8.c)
-mz_add_lib(mzlib_sharpmz_koi8cs   SOURCES sharpmz_koi8cs/sharpmz_koi8cs.c)
+mz_add_lib(mzlib_sharpmz_ascii    SOURCES sharpmz_ascii/sharpmz_ascii.c)
 mz_add_lib(mzlib_vram_sim         SOURCES vram_sim/vram_sim.c
                                           vram_sim/vram_sim_modes.c
                                           vram_sim/vram_sim_render.c)
@@ -121,6 +120,72 @@ mz_add_lib(mzlib_zxtape           SOURCES zxtape/zxtape.c
                                   DEPS    mzlib_cmt_stream)
 
 # ----------------------------------------------------------------------------
+# TapeMZ: TZX/TMZ, kodeky mzcmt_*, analyzátor WAV, přehrávač TMZ
+# (zdroj sdílených knihoven je TapeMZ, v klonu se nemění)
+# ----------------------------------------------------------------------------
+mz_add_lib(mzlib_tzx              SOURCES tzx/tzx.c
+                                  DEPS    mzlib_generic_driver mzlib_cmt_stream mzlib_endianity)
+
+mz_add_lib(mzlib_mzcmt_fm         SOURCES mzcmt_fm/mzcmt_fm.c
+                                  DEPS    mzlib_cmt_stream)
+
+mz_add_lib(mzlib_mzcmt_manchester SOURCES mzcmt_manchester/mzcmt_manchester.c
+                                  DEPS    mzlib_cmt_stream)
+
+mz_add_lib(mzlib_mzcmt_turbo      SOURCES mzcmt_turbo/mzcmt_turbo.c
+                                  DEPS    mzlib_cmt_stream mzlib_cmtspeed mzlib_endianity)
+
+mz_add_lib(mzlib_mzcmt_fastipl    SOURCES mzcmt_fastipl/mzcmt_fastipl.c
+                                  DEPS    mzlib_cmt_stream mzlib_cmtspeed mzlib_endianity)
+
+mz_add_lib(mzlib_mzcmt_bsd        SOURCES mzcmt_bsd/mzcmt_bsd.c
+                                  DEPS    mzlib_cmt_stream mzlib_cmtspeed mzlib_endianity)
+
+mz_add_lib(mzlib_mzcmt_fsk        SOURCES mzcmt_fsk/mzcmt_fsk.c
+                                  DEPS    mzlib_cmt_stream)
+
+mz_add_lib(mzlib_mzcmt_slow       SOURCES mzcmt_slow/mzcmt_slow.c
+                                  DEPS    mzlib_cmt_stream)
+
+mz_add_lib(mzlib_mzcmt_direct     SOURCES mzcmt_direct/mzcmt_direct.c
+                                  DEPS    mzlib_cmt_stream)
+
+mz_add_lib(mzlib_wav_analyzer     SOURCES wav_analyzer/wav_analyzer.c
+                                          wav_analyzer/wav_analyzer_types.c
+                                          wav_analyzer/wav_classify.c
+                                          wav_analyzer/wav_decode_bsd.c
+                                          wav_analyzer/wav_decode_cpmtape.c
+                                          wav_analyzer/wav_decode_direct.c
+                                          wav_analyzer/wav_decode_fastipl.c
+                                          wav_analyzer/wav_decode_fm.c
+                                          wav_analyzer/wav_decode_fsk.c
+                                          wav_analyzer/wav_decode_slow.c
+                                          wav_analyzer/wav_decode_turbo.c
+                                          wav_analyzer/wav_decode_zx.c
+                                          wav_analyzer/wav_histogram.c
+                                          wav_analyzer/wav_leader.c
+                                          wav_analyzer/wav_preprocess.c
+                                          wav_analyzer/wav_pulse.c
+                                  DEPS    mzlib_generic_driver mzlib_wav mzlib_mzf mzlib_endianity
+                                          mzlib_sharpmz_ascii mzlib_cmtspeed)
+
+mz_add_lib(mzlib_tmz              SOURCES tmz/tmz.c
+                                          tmz/tmz_blocks.c
+                                          tmz/tmz_mzfile.c
+                                          tmz/tmz_mzt.c
+                                          tmz/tmz_part_fm.c
+                                          tmz/tmz_part_manchester.c
+                                          tmz/tmz_player.c
+                                          tmz/tmz_profile.c
+                                          tmz/tmz_tlv.c
+                                          tmz/tmz_v1conv.c
+                                  DEPS    mzlib_endianity mzlib_mzf mzlib_mztape mzlib_zxtape
+                                          mzlib_tzx mzlib_cmt_stream mzlib_cmtspeed
+                                          mzlib_mzcmt_fm mzlib_mzcmt_manchester mzlib_mzcmt_turbo
+                                          mzlib_mzcmt_fastipl mzlib_mzcmt_bsd mzlib_mzcmt_fsk
+                                          mzlib_mzcmt_slow mzlib_mzcmt_direct)
+
+# ----------------------------------------------------------------------------
 # sdlapp (SDL3 application framework)
 # ----------------------------------------------------------------------------
 mz_add_lib(mzlib_sdlapp
@@ -192,7 +257,6 @@ target_link_libraries(mz_libs INTERFACE
     mzlib_endianity
     mzlib_generic_driver
     mzlib_sharpmz_ascii
-    mzlib_sharpmz_koi8cs
     mzlib_vram_sim
     mzlib_mz_vcode
     mzlib_mzglyphs
@@ -209,6 +273,17 @@ target_link_libraries(mz_libs INTERFACE
     mzlib_mzf
     mzlib_mztape
     mzlib_zxtape
+    mzlib_tzx
+    mzlib_mzcmt_fm
+    mzlib_mzcmt_manchester
+    mzlib_mzcmt_turbo
+    mzlib_mzcmt_fastipl
+    mzlib_mzcmt_bsd
+    mzlib_mzcmt_fsk
+    mzlib_mzcmt_slow
+    mzlib_mzcmt_direct
+    mzlib_wav_analyzer
+    mzlib_tmz
     mzlib_sdlapp
     mzlib_imgui
     mzlib_igfd

@@ -113,6 +113,8 @@ typedef struct st_AM
     char *snapshot_path;        /**< Absolutní cesta snapshotu na konci nebo NULL. */
     char *bpt_path;             /**< Absolutní `--bpt` nebo NULL. */
     char *run_mzf;              /**< Absolutní `--run-mzf` (jen pro `inputs`) nebo NULL. */
+    char *run_mzf_device;       /**< Zápis kódu zařízení použitého `--run-mzf` (emu vlákno) nebo NULL. */
+    int run_mzf_bc;             /**< BC programu po `--run-mzf`, -1 = nespuštěno. */
     uint64_t exit_after_frames; /**< `--exit-after-frames`, 0 = vypnuto. */
     uint64_t timeout_frames;    /**< `--timeout-*` přepočtený na snímky, 0 = vypnuto. */
     GArray *cli_bps;            /**< Pole st_AM_CLI_BP. */
@@ -137,7 +139,17 @@ typedef struct st_AM
 
 static st_AM s_am = {
     .trig_bp_id = -1,
+    .run_mzf_bc = -1,
 };
+
+
+void automation_note_run_mzf_device(const char *text, uint16_t bc)
+{
+    if (!text) return;
+    g_free(s_am.run_mzf_device);
+    s_am.run_mzf_device = g_strdup(text);
+    s_am.run_mzf_bc = (int)bc;
+}
 
 
 /** @brief Všechny automatizační volby (pro automation_cli_requested()). */
@@ -635,6 +647,12 @@ static void am_json_files(JsonBuilder *b, bool screenshot_ok, bool snapshot_ok)
     json_builder_set_member_name(b, "inputs");
     json_builder_begin_object(b);
     am_json_str_or_null(b, "run_mzf", s_am.run_mzf);
+    am_json_str_or_null(b, "run_mzf_device", s_am.run_mzf_device);
+    json_builder_set_member_name(b, "run_mzf_bc");
+    if (s_am.run_mzf_bc >= 0)
+        json_builder_add_int_value(b, s_am.run_mzf_bc);
+    else
+        json_builder_add_null_value(b);
     am_json_str_or_null(b, "bpt", s_am.bpt_path);
     json_builder_end_object(b);
 

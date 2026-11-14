@@ -23,6 +23,11 @@
  * ---------------------------------------------------------------------------
  */
 
+/**
+ * @file cmtext.c
+ * @brief Registr rozšíření Virtual CMT a obecné dotazy nad rozšířením.
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include <strings.h>
@@ -33,18 +38,17 @@
 
 /* Pripojeni cmt extenzi */
 
-#include "cmt_wav.h"
-#include "cmt_mzf.h"
-#include "cmt_mzftape.h"
-#include "cmt_tap.h"
-#include "cmt_save.h"
+#include "cmt_tmz.h"
 
+/**
+ * @brief Registr rozšíření zakončený NULL.
+ *
+ * Přehrávání všech formátů (tmz, tzx, mzf, m12, mzt, tap, wav, wave) obstará
+ * i nahrávání (záznam se připojí k pásce v paměti, cmt_tmz_record.h) obstará
+ * jediné rozšíření cmt_tmz (páska jako TMZ přes tmz_player).
+ */
 st_CMTEXT *g_cmtext[] = {
-                         &g_cmt_wav_extension,
-                         &g_cmt_mzf_extension,
-                         &g_cmt_mzftape_extension,
-                         &g_cmt_tap_extension,
-                         &g_cmt_save_extension,
+                         &g_cmt_tmz_extension_def,
                          NULL
 };
 
@@ -143,16 +147,6 @@ void cmtext_get_playable_extensions_list ( char *buf, size_t size ) {
             len += (size_t) n;
         };
     };
-}
-
-
-st_CMTEXT* cmtext_get_recording_extension ( void ) {
-    int i;
-    for ( i = 0; i < g_count_extensions; i++ ) {
-        if ( ( g_cmtext[i]->info == NULL ) || ( !( g_cmtext[i]->info->type & CMTEXT_TYPE_RECORDABLE ) ) ) continue;
-        return g_cmtext[i];
-    };
-    return NULL;
 }
 
 

@@ -42,7 +42,7 @@ static void mztest_sigabrt_handler(int sig)
 #include "iface/iface_audio.h"
 #include "mzarch/mzarch_platform_functions.h"
 #include "generic_driver/file_driver.h"
-#include "generic_driver/memory_driver.h"
+#include "libs/generic_driver/memory_driver.h"
 #include "libs/sdlapp/sdlapp_options.h"
 
 /* globální proměnné mztestu */

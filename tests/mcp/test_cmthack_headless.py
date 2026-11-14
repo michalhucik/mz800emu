@@ -27,11 +27,21 @@ vlastní prázdné INI, ``--no-save-ini``, zabíjí se jen vlastní PID):
      ``OUT (01h),A`` a ``OUT (02h),A``. Porty nejsou pastí (dřív se past
      spustila i bez patche a změnila AF z 0044h): AF i HL zůstanou, CPU
      doběhne do smyčky, na stderr není varování CMT hacku.
+  E  mz800emu, CMT hack z vložené pásky: MZT se dvěma programy (4000h,
+     5000h), zavaděč v RAM volá pasti stejně jako patch ROM (hlavička
+     ``OUT (01h)``, tělo ``OUT (02h)`` s HL = fstrt, BC = fsize z hlavičky).
+     První načtení dá program 1 (obsah paměti na fstrt), druhé program 2,
+     třetí Break s varováním; transport zůstává ve STOP.
+  F  mz800emu, páska TAP + CMT hack: aktuální blok MZF nenese, načtení
+     skončí Break s dnešním varováním.
+  G  mz800emu, jako E, ale páska vložená s ``play_immediately`` (hraje):
+     první načtení transport zastaví (STOP), žádný program se nepřeskočí.
 
 Bez jakékoli binárky vrací 77 (SKIP). Výstup anglicky.
 Exit code: 0 = PASS, 1 = FAIL, 77 = SKIP.
 """
 
+import base64
 import json
 import queue
 import subprocess
@@ -79,6 +89,25 @@ _PROGRAM_OFF = bytes([0xF3, 0x21, 0xF0, 0x10, 0xAF, 0xD3, 0x01,
 #: PC smyčky programu fáze D.
 _LOOP_PC_OFF = 0x1209
 
+#: Fáze E/F: zavaděč na 1200h. Hlavička na 2000h (OUT 01h), tělo podle
+#: hlavičky (HL = (2014h) fstrt, BC = (2012h) fsize, OUT 02h), výsledek na
+#: 1300h: 55h = načteno, jinak A z pasti (1 chyba, 2 Break).
+#:   1200 DI / LD HL,2000h / OUT (01h),A / JR C,1215h / LD HL,(2014h)
+#:   LD BC,(2012h) / OUT (02h),A / JR C,1215h / LD A,55h / 1215 LD (1300h),A
+#:   1218 JR $
+_LOADER = bytes([0xF3, 0x21, 0x00, 0x20, 0xD3, 0x01, 0x38, 0x0D,
+                 0x2A, 0x14, 0x20, 0xED, 0x4B, 0x12, 0x20, 0xD3, 0x02,
+                 0x38, 0x02, 0x3E, 0x55, 0x32, 0x00, 0x13, 0x18, 0xFE])
+
+#: PC smyčky zavaděče.
+_LOADER_LOOP_PC = 0x1218
+
+#: Adresa výsledku zavaděče.
+_RESULT_ADDR = 0x1300
+
+#: Programy MZT fáze E: (jméno, fstrt, délka těla, posun obsahu).
+_TAPE_PROGRAMS = [(b"PROG ONE\r", 0x4000, 256, 3), (b"PROG TWO\r", 0x5000, 300, 77)]
+
 #: Text varování na stderr (cmthack_load_file() bez GUI).
 _WARNING = "CMT hack needs the GUI file dialog"
 
@@ -104,6 +133,33 @@ def _find_exe(name):
         if c.is_file():
             return c
     return None
+
+
+def _mzf_bytes(name, addr, body):
+    """MZF (hlavička + tělo): atribut 01h, fstrt = fexec = addr."""
+    hdr = bytearray(128)
+    hdr[0] = 0x01
+    hdr[1:18] = b"\r" * 17
+    hdr[1:1 + len(name)] = name
+    hdr[0x12:0x14] = len(body).to_bytes(2, "little")
+    hdr[0x14:0x16] = addr.to_bytes(2, "little")
+    hdr[0x16:0x18] = addr.to_bytes(2, "little")
+    return bytes(hdr) + bytes(body)
+
+
+def _program_body(size, shift):
+    """Tělo programu fáze E (pseudonáhodné, programy se liší)."""
+    return bytes(((i * 73) + shift) & 0xFF for i in range(size))
+
+
+def _make_tap(path):
+    """TAP s hlavičkou programu ZX Spectrum (blok s příznakem 00h)."""
+    data = bytes([0x00, 0x03]) + b"TESTPROG  " + bytes([0x10, 0x00, 0x00, 0x80, 0x00, 0x80])
+    chk = 0
+    for b in data:
+        chk ^= b
+    block = data + bytes([chk])
+    path.write_bytes(len(block).to_bytes(2, "little") + block)
 
 
 def _make_mzf(path, body, name=b"CMTHACK TEST\r"):
@@ -183,6 +239,11 @@ class PipeEmu:
             self.dead = True
             raise TestFailure(f"{cmd} failed: {resp.get('error')}")
         return resp.get("data") or {}
+
+    def ram(self, addr, length):
+        """Přečte bajty z regionu User RAM."""
+        d = self.call("region_read", {"region_id": 1, "offset": addr, "length": length})
+        return base64.b64decode(d["data_b64"])
 
     def run_frames(self, frames):
         """``run`` s frames: musí skončit počtem snímků, ne timeoutem."""
@@ -299,6 +360,71 @@ def phase_c(exe, tmp, tape):
         emu.close()
 
 
+def _run_loader(emu):
+    """Spustí zavaděč (výsledek na 1300h vynulovaný) a vrátí bajt výsledku."""
+    emu.call("region_write", {"region_id": 1, "offset": _RESULT_ADDR,
+                              "data_b64": base64.b64encode(b"\x00").decode("ascii")})
+    emu.call("set_register", {"reg": "PC", "value": _EXEC})
+    emu.run_frames(5)
+    regs = emu.call("get_registers")
+    check(regs["PC"] == _LOADER_LOOP_PC, f"loader finished (PC = {regs['PC']:04X}h)")
+    return emu.ram(_RESULT_ADDR, 1)[0]
+
+
+def phase_e(exe, tmp, loader, mzt, playing=False):
+    """CMT hack čte programy z vložené MZT pásky, třetí načtení = konec pásky."""
+    print("  Phase %s: CMT hack loads the programs of the inserted tape%s"
+          % (("G", " (tape playing)") if playing else ("E", "")))
+    emu = PipeEmu(exe, tmp)
+    try:
+        emu.run_frames(50)
+        _enable_cmthack(emu)
+        emu.call("media_load_mzf", {"path": str(loader)})
+        emu.call("cmt_open", {"path": str(mzt), "play_immediately": playing})
+        if playing:
+            emu.run_frames(25)
+            cmt = emu.call("get_periph_cmt")
+            check(cmt.get("state") == "play" and not cmt.get("paused"),
+                  "tape plays before the first load")
+        for n, (name, addr, size, shift) in enumerate(_TAPE_PROGRAMS):
+            res = _run_loader(emu)
+            if playing and n == 0:
+                cmt = emu.call("get_periph_cmt")
+                check(cmt.get("state") == "stop", "first load stopped the transport")
+            check(res == 0x55, f"load {n + 1}: result {res:02X}h (55h = loaded)")
+            check(emu.ram(addr, size) == _program_body(size, shift),
+                  f"load {n + 1}: program {n + 1} in memory at {addr:04X}h")
+            hdr = emu.ram(0x2000, 0x18)
+            check(hdr[1:1 + len(name) - 1] == name[:-1],
+                  f"load {n + 1}: header of program {n + 1} at 2000h")
+        res = _run_loader(emu)
+        check(res == 0x02, f"load 3: Break at the end of the tape (A = {res:02X}h)")
+        cmt = emu.call("get_periph_cmt")
+        check(cmt.get("state") == "stop" and cmt.get("filled"),
+              "tape stays inserted, transport STOP")
+        check(emu.call("cmt_tape_list").get("current_block") == 1,
+              "tape stays on its last block")
+    finally:
+        emu.close()
+    check(_WARNING in emu.stderr_text(), "end of tape: headless warning on stderr")
+
+
+def phase_f(exe, tmp, loader, tap):
+    """Páska TAP: aktuální blok MZF nenese, hack skončí Break s varováním."""
+    print("  Phase F: CMT hack with a TAP tape (block without MZF)")
+    emu = PipeEmu(exe, tmp)
+    try:
+        emu.run_frames(50)
+        _enable_cmthack(emu)
+        emu.call("media_load_mzf", {"path": str(loader)})
+        emu.call("cmt_open", {"path": str(tap), "play_immediately": False})
+        res = _run_loader(emu)
+        check(res == 0x02, f"TAP tape: Break (A = {res:02X}h)")
+    finally:
+        emu.close()
+    check(_WARNING in emu.stderr_text(), "TAP tape: headless warning on stderr")
+
+
 def main():
     # Úklid spuštěných procesů i při selhání, přerušení nebo zabití
     # ctestem; vnitřní limit je kratší než TIMEOUT testu v ctestu.
@@ -320,6 +446,13 @@ def main():
         tape = root / "tape.mzf"
         _make_mzf(tape, bytes((i * 37 + 11) & 0xFF for i in range(4096)),
                   name=b"CMTHACK TAPE\r")
+        loader = root / "loader.mzf"
+        _make_mzf(loader, _LOADER, name=b"CMTHACK LOADER\r")
+        mzt = root / "two.mzt"
+        mzt.write_bytes(b"".join(_mzf_bytes(n, a, _program_body(sz, sh))
+                                 for n, a, sz, sh in _TAPE_PROGRAMS))
+        tap = root / "spectrum.tap"
+        _make_tap(tap)
         for name, arch, exe in present:
             print(f"== {name} ({arch}) ==")
             phases = [("A", lambda t, e=exe: phase_a(e, t, mzf)),
@@ -327,6 +460,9 @@ def main():
             if arch == "mz800":
                 phases.append(("B", lambda t, e=exe: phase_b(e, t)))
                 phases.append(("C", lambda t, e=exe: phase_c(e, t, tape)))
+                phases.append(("E", lambda t, e=exe: phase_e(e, t, loader, mzt)))
+                phases.append(("F", lambda t, e=exe: phase_f(e, t, loader, tap)))
+                phases.append(("G", lambda t, e=exe: phase_e(e, t, loader, mzt, playing=True)))
             for pname, fn in phases:
                 tmp = root / f"{name}-{pname}"
                 tmp.mkdir()

@@ -134,11 +134,20 @@ Every tool that changes the machine state: `emu_mem_write`,
 a chip), `emu_irq_inject`, `emu_nmi_inject`, `emu_snapshot_load`,
 `emu_snapshot_load_buffer`, `emu_media_insert`, `emu_media_eject`; on the
 JSONL protocol also `reset`, `media_load_mzf`, `media_load_binary`,
-`media_run_mzf`, `input_*`, `cmt_*` state changes, `settings_set`,
-`platform_set`, `periph_attach`, `periph_detach`, `freeze_add` and
-`set_pioz80_interrupt_vector`. These tools also return `state_rev`. Other
-tools refuse the parameter with `Invalid parameters: expected_state_rev is
-accepted only by commands that change the machine state`.
+`media_run_mzf`, `input_*`, the `cmt_*` commands that change the tape
+or the deck, `settings_set`, `platform_set`, `periph_attach`,
+`periph_detach`, `freeze_add` and `set_pioz80_interrupt_vector`. These
+tools also return `state_rev`. Other tools refuse the parameter with
+`Invalid parameters: expected_state_rev is accepted only by commands that
+change the machine state`.
+
+The cassette tools of the Python wrapper (`emu_cmt_*`) have no
+`expected_state_rev` parameter; the changing ones return `state_rev`,
+the reading ones (`emu_cmt_export_block`, `emu_cmt_export_tape`,
+`emu_cmt_tape_analyze` without `apply`, `emu_cmt_tape_info` without
+`set`, `emu_cmt_tape_check`) do not. To make a tape change conditional,
+use `emu_media_insert` / `emu_media_eject` with `slot="cmt"`, or the
+JSONL command (`emulator://docs/cmt_workflow`).
 
 Rules:
 
@@ -179,12 +188,15 @@ of the machine and one `sha256` over all requested parts:
 | `media` | inserted media: paths, write protection, connection, the counter of writes to media |
 | `inputs` | effective keyboard matrix (host and virtual keyboard), joysticks, running autotype |
 | `ramdisk` | RAM disk state (bank, latch, connection) |
-| `cmt` | tape: transport, block and position, speed, polarity, CMT hack |
+| `cmt` | tape: transport (with the user's pause), block and position, default and block speeds, polarity, CMT hack, `rec_autostop_s`, unsaved changes (`modified`) |
 
 With `include_media: true` the parts `media` and `ramdisk` also hash the
-content of disk, Quick Disk, IDE8 and tape images, MemExt FLASH and RAM
-disks (slow with a big IDE8 image). `parts: [...]` computes only the
-listed parts. Compare two fingerprints only when both were taken in pause
+content of disk, Quick Disk and IDE8 images, MemExt FLASH and RAM disks
+(slow with a big IDE8 image), and of the tape as it is in the emulator
+(serialised from memory with its unsaved changes, never the file on
+disk). The tape path in the `media` part is the original path also in a
+replay (not the replay's temporary copy), so a live run and its replay
+give the same value. `parts: [...]` computes only the listed parts. Compare two fingerprints only when both were taken in pause
 (`stable: true`) with the same parameters.
 
 The answer lists `covered` parts and `not_covered` areas the fingerprint

@@ -127,27 +127,40 @@ dokumentu [Resources overview](resources-overview.md).
 | `emu_media_insert` | **ANO** | Vloží image do slotu (auto-eject pokud již vloženo) |
 | `emu_media_eject` | ne | Vyjme image ze slotu |
 | `emu_media_state` | ne | Snapshot stavu všech 11 slotů (cmt/fdc0_fd0..3/fdc1_fd0..3/qd/ide8) |
-| `emu_cmt_open` | **ANO** | Otevře soubor pásky (.mzf, .mzt, .wav, ...) do skutečného kazetofonu, volitelně přehraje |
-| `emu_cmt_eject` | **ANO** | Vysune pásku ze skutečného kazetofonu |
+| `emu_cmt_open` | **ANO** | Otevře soubor pásky (.tmz, .tzx, .mzf, .m12, .mzt, .tap, .wav) do skutečného kazetofonu, volitelně přehraje; soubor, který nejde otevřít, vloženou pásku nechá; varování importu a zahozených neuložených změn v `warning` |
+| `emu_cmt_eject` | **ANO** | Vysune pásku ze skutečného kazetofonu; `warning` při zahození neuložených změn nebo nahrávání |
 | `emu_cmt_play` | **ANO** | Spustí přehrávání pásky (transport PLAY) |
 | `emu_cmt_play_paused` | **ANO** | Spustí přehrávání pásky v pauze (čeká na pokračování) |
 | `emu_cmt_pause` | **ANO** | Pozastaví / obnoví transport pásky |
-| `emu_cmt_stop` | **ANO** | Zastaví transport pásky (PLAY nebo RECORD -> STOP) |
-| `emu_cmt_record` | **ANO** | Nahrává výstup pásky do WAV souboru |
-| `emu_cmt_hack_set` | **ANO** | Zapne / vypne cmthack (patch ROM pro okamžité nahrání z pásky) |
+| `emu_cmt_stop` | **ANO** | Zastaví transport pásky (PLAY nebo RECORD -> STOP); po nahrávání výsledek v `recorded` |
+| `emu_cmt_record` | **ANO** | Nahrává výstup pásky do pásky (po zastavení volitelně i soubor WAV nebo pásky) |
+| `emu_cmt_save` | **ANO** | Uloží vloženou pásku do souboru (.tmz, .tzx, .mzt, .mzf, .m12) |
+| `emu_cmt_export_block` | **ANO** | Exportuje jeden blok pásky jako soubor MZF nebo WAV |
+| `emu_cmt_new_tape` | **ANO** | Vloží novou prázdnou pásku |
+| `emu_cmt_hack_set` | **ANO** | Zapne / vypne cmthack (patch ROM pro okamžité nahrání; s vloženou páskou čte aktuální blok pásky); mění se jen při zastavené pásce |
+| `emu_cmt_load_directly` | **ANO** | Vybere blok pásky a zapne cmthack jedním krokem jako "Load directly" v okně (deck ve STOP) |
 | `emu_cmt_set_cpu_boost` | **ANO** | Zapne / vypne zrychlení CPU během běhu pásky |
 | `emu_cmt_set_mzfsize_check` | **ANO** | Zapne / vypne kontrolu velikosti MZF při nahrávání |
 | `emu_cmt_set_polarity` | **ANO** | Polarita signálu pásky (zadní DIP přepínač) |
 | `emu_cmt_set_speed` | **ANO** | Výchozí rychlost přehrávání virtuálního kazetofonu (poměr nebo vlastní pulzy) |
-| `emu_cmt_tape_seek` | **ANO** | Posune víceblokovou pásku na zvolený blok |
+| `emu_cmt_tape_seek` | **ANO** | Posune pásku na zvolený blok (každou pásku, i samotné MZF nebo WAV) |
+| `emu_cmt_tape_step` | **ANO** | Přejde na další, předchozí nebo první přehratelný blok jako tlačítka Next / Previous / Rewind decku |
 | `emu_cmt_tape_set_block_speed` | **ANO** | Rychlost přehrávání jednoho bloku pásky |
+| `emu_cmt_tape_delete_blocks` | **ANO** | Smaže bloky vložené pásky (deck ve STOP) |
+| `emu_cmt_tape_move_block` | **ANO** | Přesune blok vložené pásky na jinou pozici (deck ve STOP) |
+| `emu_cmt_tape_import` | **ANO** | Vloží všechny bloky souboru pásky do vložené pásky, nebo do nové pásky (deck ve STOP) |
+| `emu_cmt_export_tape` | **ANO** | Exportuje celou pásku jako soubor WAV tak, jak hraje |
+| `emu_cmt_tape_analyze` | **ANO** | Najde soubory v surovém bloku signálu (WAV, nedekódovaný záznam); volitelně je přidá jako bloky souborů (deck ve STOP) |
+| `emu_cmt_tape_info` | **ANO** | Čte nebo zapisuje informace o pásce (texty Archive Info, cílový stroj) |
+| `emu_cmt_tape_check` | ne | Zkontroluje strukturu vložené pásky (jen čtení) |
+| `emu_cmt_tape_convert_block` | **ANO** | Přestaví blok souboru TMZ jiným profilem zapisovače (deck ve STOP) |
 | `emu_set_speed` | ne | Rychlost emulace: 100 %, vlastní procenta nebo MAX SPEED |
 | `emu_speed_step` | ne | Změní vlastní rychlost emulace o relativní počet procent |
 | `emu_settings_set` | **ANO** | Live INI write (whitelist), **mutuje globální stav** |
 | `emu_settings_get` | ne | Read INI klíče + typ + živá hodnota (open read, žádný whitelist) |
 | `emu_platform_set` | **ANO** | Pokus o platform switch - vrací error (compile-time MZARCH) |
-| `emu_periph_attach` | **ANO** | Připojí periferii za běhu (jako menu Devices) |
-| `emu_periph_detach` | **ANO** | Odpojí periferii za běhu (jako menu Devices) |
+| `emu_periph_attach` | **ANO** | Připojí periferii za běhu (jako menu HW & Devices) |
+| `emu_periph_detach` | **ANO** | Odpojí periferii za běhu (jako menu HW & Devices) |
 | `emu_get_devices` | ne | Rozšiřující zařízení jádra MZ-700: id, volby, porty, MMIO, regiony, výstupy |
 | `emu_device_screenshot` | ne | Obraz vlastního monitoru rozšiřujícího zařízení (sekundární výstup) jako PNG nebo indexy palety |
 | `emu_get_bus_map` | ne | Kdo vlastní který port a MMIO adresu (čipy desky i rozšiřující zařízení), výstupní stupeň, příznaky, aktivita; model sběrnice (politika kolize, nebuzená sběrnice) |
@@ -226,6 +239,8 @@ Mezi sensitive tools patří:
   `emu_snapshot_load` a `emu_snapshot_load_buffer` (přepíší stav emu)
 - **Záznam vstupů** - `emu_replay_record_start` (přepíše soubor),
   `emu_replay_play` (nahradí stav emulátoru)
+- **Soubory pásky** - `emu_cmt_save`, `emu_cmt_export_block`,
+  `emu_cmt_export_tape` a `emu_cmt_record` s `path` (zapíší soubor)
 - **Media operace** - `emu_media_load_binary` (raw zápis do paměti),
   `emu_media_insert` (auto-eject přepíše mountnuté médium)
 - **Konfigurace** - `emu_settings_set` (mutuje globální stav),
@@ -551,7 +566,10 @@ Obsahový otisk celého stroje, spočítaný emu vláknem v jednom průchodu
   `pcg`, `periph`, `memmap`, `rom`, `media`, `inputs`, `ramdisk`, `cmt`;
   výchozí všechny
 - `include_media` (bool, výchozí false) - hashovat i obsah obrazů disket,
-  Quick Disku, IDE8 a pásky, FLASH MemExt a RAM disků
+  Quick Disku a IDE8, pásky (tak, jak je v emulátoru, i s neuloženými
+  změnami - nikdy soubor na disku; přehrání dá stejnou hodnotu), FLASH
+  MemExt a RAM disků
+
 
 Vrací `sha256` (přes vyžádané části), `parts` (`{jméno: hex}`, `null` =
 část v této sestavě nebo konfiguraci není), `covered`, `not_covered`
@@ -1487,19 +1505,31 @@ v paměti, desítky kB), drží se posledních `checkpoint_count`; viz
 Během záznamu se klávesnice z GUI převezme na nejbližší hranici snímku.
 Zápisy debuggeru (`emu_mem_write`, `emu_mem_write_force`, zápis do
 regionu, `emu_set_register`, příznaky CPU, `emu_io_write`,
-`emu_irq_inject`, `emu_nmi_inject`) a vstupní nástroje se zaznamenají
-za běhu (převzaté na hranici snímku) a v pauze **na** hranici snímku (po
-`emu_run(frames=N)` nebo `deadline`, nebo po pauze poslané za běhu).
-V pauze **mezi** hranicemi snímků (po kroku nebo breakpointu) se odmítnou
+`emu_irq_inject`, `emu_nmi_inject`) a vstupní nástroje se zaznamenají za
+běhu (převzaté na hranici snímku) a v pauze **na** hranici snímku (po
+`emu_run(frames=N)` nebo `deadline`, nebo po pauze poslané za běhu). V
+pauze **mezi** hranicemi snímků (po kroku nebo breakpointu) se odmítnou
 s vysvětlením. Ovládání kazety (`emu_cmt_play`, `emu_cmt_play_paused`,
 `emu_cmt_stop`, `emu_cmt_pause`, `emu_cmt_eject`, `emu_cmt_tape_seek`,
-`emu_cmt_record`) se zaznamená stejně. Nástroje, které stroj mění tak,
-že to záznam nezopakuje, se odmítnou: načtení snapshotu, média, vložení
-pásky (`emu_cmt_open`), rychlost, pulzy, polarita a boost pásky, CMT
-hack, rychlost bloku, nastavení, platforma, periferie, mapa paměti,
-`emu_io_read` (vedlejší efekty), `emu_freeze_add`. Start se odmítne při
-běžícím autotype, aktivních Freeze Bytes nebo nahrávající kazetě. Zapisující akce breakpointů (`poke`, `set`) se
-nezaznamenají: manifest dostane varování.
+`emu_cmt_tape_step`, `emu_cmt_record`, `emu_cmt_new_tape`) se zaznamená
+stejně. Nástroje, které stroj mění tak, že to záznam nezopakuje, se
+odmítnou: načtení snapshotu, média, vložení pásky (`emu_cmt_open`),
+uložení pásky (`emu_cmt_save`; přehrání nikdy nezapisuje soubory
+uživatele - při přehrávání se odmítne i `emu_cmt_save` a
+`emu_cmt_record` s cestou, `emu_cmt_record` bez cesty a
+`emu_cmt_export_block` jsou povolené), rychlost, pulzy, polarita a boost
+pásky, CMT hack (`emu_cmt_hack_set` a `emu_cmt_load_directly`; při
+přehrávání také selžou), rychlost bloku, úpravy pásky
+(`emu_cmt_tape_delete_blocks`, `emu_cmt_tape_move_block`,
+`emu_cmt_tape_import`, `emu_cmt_tape_analyze` s `apply` "add" nebo
+"replace", `emu_cmt_tape_info` se `set`, `emu_cmt_tape_convert_block`;
+při přehrávání také selžou; `emu_cmt_export_tape`,
+`emu_cmt_tape_analyze` bez uplatnění, čtení `emu_cmt_tape_info` a
+`emu_cmt_tape_check` jsou povolené), nastavení, platforma, periferie,
+mapa paměti, `emu_io_read` (vedlejší efekty), `emu_freeze_add`. Start se
+odmítne při běžícím autotype, aktivních Freeze Bytes nebo nahrávající
+kazetě. Zapisující akce breakpointů (`poke`, `set`) se nezaznamenají:
+manifest dostane varování.
 
 Vrací stav (viz `emu_replay_status`).
 
@@ -1547,10 +1577,12 @@ checkpointu. Při přehrávání jde o seek zpět na ten checkpoint (viz
 `emu_replay_seek`; když dohrávání běží, odpověď nese jeho `run_seq`).
 
 Checkpointy nenesou obsah médií. Checkpoint, po kterém se zapsalo na
-disk (FDC, Quick Disk, IDE8) nebo na kazetu nebo se páska vysunula, použít
-nejde: při záznamu se rewind odmítne, při přehrávání začne přehrávání
-znovu od začátku. Při běžícím autotype ani při nahrávání na kazetu
-checkpoint nevznikne. Chyby: `checkpoints are off`, `no checkpoint at or
+disk (FDC, Quick Disk, IDE8), začalo nahrávání na kazetu s cestou souboru
+nebo se páska vysunula, použít nejde: při záznamu se rewind odmítne, při
+přehrávání začne přehrávání znovu od začátku. Nahrávání na kazetu bez
+cesty návrat vrátí (připojené bloky zmizí; checkpoint bez pásky pásku
+vzniklou nahráváním vysune). Při běžícím autotype ani při nahrávání na
+kazetu s více než 1 MB hran checkpoint nevznikne. Chyby: `checkpoints are off`, `no checkpoint at or
 before frame N (the oldest kept is frame M)`, `a disk or the tape was
 written or ejected after frame N; rewinding past a media change is not
 possible`, `nothing is recording or playing`. Vrací stav.
@@ -2104,7 +2136,7 @@ Sjednocený přístup k media operacím napříč 11 podporovanými sloty:
 
 | Slot | Význam |
 |------|--------|
-| `cmt` | CMT pásek (.mzf, .mzt) |
+| `cmt` | CMT pásek (.tmz, .tzx, .mzf, .m12, .mzt, .tap, .wav, .wave) |
 | `fdc0_fd0` .. `fdc0_fd3` | WD279x FDC0 (standard, porty 0xD8-0xDF) mechaniky 0..3 (.dsk) |
 | `fdc1_fd0` .. `fdc1_fd3` | WD279x FDC1 (secondary, porty 0x58-0x5F) mechaniky 0..3 (.dsk) |
 | `qd` | Quick Disk (.qd) |
@@ -2161,9 +2193,10 @@ Dvě varianty podle parametru `bootstrap`:
 - **`bootstrap=true` (výchozí)** - reset stroje a zavedení programu
   stejně jako CLI volba `--run-mzf` (příkaz emulátoru `media_run_mzf`).
   Stroj je ve stavu, v jakém ho ROM nechá po nahrání programu z pásky:
-  registry CPU (IM 1, DI, SP = 0x10F0, registry, které ROM předává
-  programu), 8255, 8253, Z80 PIO, PSG, GDG, VRAM a pracovní oblast
-  monitoru v RAM. Reset je stejný jako `emu_reset`, takže výsledek
+  IM 1, DI, SP = 0x10F0, 8255, 8253, Z80 PIO, PSG, GDG, VRAM a pracovní
+  oblast monitoru v RAM. Z ostatních registrů CPU nastaví jako ROM jen
+  skokový registr (HL na MZ-700 a MZ-1500, IX na MZ-800) a BC (kód
+  zařízení, viz níže); ostatní (například AF) ne. Reset je stejný jako `emu_reset`, takže výsledek
   nezávisí na tom, co v emulátoru běželo předtím. Stav pauzy se nemění:
   v pauze program čeká na první instrukci (PC = EXEC). Soubor se ověří
   před resetem - neexistující, nečitelný nebo zkrácený soubor vrátí chybu
@@ -2175,8 +2208,21 @@ Dvě varianty podle parametru `bootstrap`:
   programu. Program se pak může chovat jinak než po nahrání z pásky
   (například mu nechodí přerušení).
 
+Registr BC (jen s `bootstrap=true`) nese kód zařízení, ze kterého byl
+program nahrán; některé programy podle něj volí výchozí zařízení (BASIC
+1Z-016 s 0300h používá Quick Disk). Hodnota je z nastavení
+`CMT/run_mzf_device` (viz `emu_settings_set`, výchozí `cmt`), nebo jen pro
+toto volání z volitelného parametru `device`: `cmt` (0100h, na MZ-700
+0000h - hodnota, kterou nechá ROM po nahrání z pásky), `fd` (0200h), `qd`
+(0300h), `rd` nebo `sram` (0000h), na velikosti písmen nezáleží, nebo
+číslo 0-65535 jako řetězec (`"512"`, `"0x0200"`, `"0200h"`;
+desítkové číslo se píše bez úvodních nul (`0200` je chyba, pište `0x0200` nebo `0200h`); příkaz
+emulátoru přijme i celé číslo JSON). Neplatná hodnota je chyba a stroj se
+nezresetuje; `device` s `bootstrap=false` je chyba.
+
 ```
 emu_media_run_mzf(path="/programs/mzdos.mzf")
+emu_media_run_mzf(path="/programs/basic.mzf", device="qd")
 emu_media_run_mzf(path="/programs/mzdos.mzf", bootstrap=false)
 ```
 
@@ -2191,12 +2237,16 @@ Vrací:
   },
   "bootstrap": true,
   "reset": true,
-  "pc_set_to": 256
+  "pc_set_to": 256,
+  "device": "cmt",
+  "bc": 256
 }
 ```
 
+`device` je použitá volba (parametr, jméno malými písmeny, číslo, jak bylo
+zapsané, nebo nastavení), `bc` hodnota BC, se kterou program startuje.
 S `bootstrap=false` je `"bootstrap": false, "reset": false` a navíc
-`"rom_disconnected": true`. MZF hlavička se parsuje na straně wrapperu
+`"rom_disconnected": true`, bez `device` a `bc`. MZF hlavička se parsuje na straně wrapperu
 (Python).
 
 **Destruktivní:** obě varianty přepíšou běžící program. Pokud má
@@ -2231,6 +2281,13 @@ emu_media_insert(slot="qd", path="/disks/hra.mzq", ro=True)
 
 Vrací `{"ok": true, "slot": "fdc0_fd0", "result_code": 0}`.
 
+Slot `cmt` se chová jako `emu_cmt_open`: nový soubor se nejdřív načte
+a ověří, takže soubor, který nejde otevřít (chybí, je poškozený nebo
+nepodporovaný), vrátí chybu a vloženou pásku, její neuložené změny
+i probíhající nahrávání nechá beze změny. Odpověď má `warning` s textem
+"Unsaved tape changes were discarded", když dosavadní páska měla
+neuložené změny nebo běželo nahrávání, a varování otevření pásky.
+
 Slot `qd` připojí obraz Quick Disku MZ-1F11 (`.mzq`). Soubor musí
 existovat (nový prázdný obraz vytvoří dialog Quick Disku v GUI).
 Pokud mechanika není připojená jako MZ-1F11 (výchozí je zavaděč
@@ -2247,7 +2304,9 @@ Vyjme image ze slotu. No-op pokud je slot prázdný.
 emu_media_eject(slot="fdc0_fd0")
 ```
 
-Vrací `{"ok": true, "slot": "fdc0_fd0"}`.
+Vrací `{"ok": true, "slot": "fdc0_fd0"}`. Slot `cmt` se chová jako
+`emu_cmt_eject`: `warning` "Unsaved tape changes were discarded", když
+páska měla neuložené změny nebo běželo nahrávání.
 
 ### `emu_media_state`
 
@@ -2314,6 +2373,34 @@ Whitelist:
 - `DISPLAY/locked_window_aspect_ratio` (bool)
 - `DISPLAY/custom_fps` (unsigned, 50..1000; platí v režimu snímkové frekvence Custom)
 - `TRACE_CPUTRACK/pc_range_lo` .. `TRACE_CPUTRACK/pc_range_hi` (unsigned, 0..65535; PC filtr trasování za běhu)
+- `CMT/rec_autostop_s` (unsigned, 0..600; nahrávání pásky skončí samo po
+  tolika sekundách ticha při běžícím motoru, 0 = vypnuto; číslo se čte
+  jako u ostatních klíčů unsigned: desítkově, s `0x` šestnáctkově, s
+  úvodní `0` osmičkově; platí od dalšího snímku: hodnota kratší než už
+  nahrané ticho ukončí běžící nahrávání na konci toho snímku; jako
+  ostatní živé klíče se hodnota při ukončení uloží do INI, zůstane tedy
+  nastavením uživatele; při přehrávání záznamu vstupů zápis projde, ale
+  platí jen do konce přehrávání, pak se vrátí hodnota z doby před ním)
+- `CMT/run_mzf_device` (text; kód zařízení v registru BC při přímém
+  spuštění MZF přes `emu_media_run_mzf` nebo `--run-mzf`: `cmt`, `fd`,
+  `qd`, `rd`, `sram` v libovolné velikosti písmen, uloží se malými
+  písmeny, nebo číslo 0..65535 desítkově bez úvodních nul, s `0x`
+  šestnáctkově nebo šestnáctkově s příponou `h` (`0200h`), uloží se, jak
+  bylo zapsané; jiná hodnota (i `0200`) je chyba, která řekne, jak ji
+  zapsat; odpověď má uloženou hodnotu v `new_value` a hodnotu v použití
+  před změnou v `previous_value`; platí od příštího přímého spuštění; `live`
+  v `emu_settings_get` je hodnota v použití, i po změně v menu)
+- `CMTHACK/direct_save` (bool, výchozí true; Direct Save: se zapnutým CMT
+  hackem a mimo nahrávání SAVE rutinami ROM uloží soubor hned jako nový
+  blok MZF na konec pásky a VERIFY z ROM porovná paměť s aktuálním
+  blokem; false = SAVE z ROM potřebuje `emu_cmt_record`; jako položka
+  menu jen při zastavené pásce (jinak chyba `Stop the tape to switch
+  Direct Save on or off.`) a ne při záznamu nebo přehrávání vstupů
+  (`Direct Save cannot be changed while an input replay is recorded or
+  played.`; při záznamu vstupů dřív odpoví brána záznamu u
+  `emu_settings_set` vlastním textem); platí hned; `direct_save_enabled`
+  v `emulator://periph/cmt` je nastavení, `direct_save` to, zda je patch
+  teď v ROM)
 - `<ini_section>/<key>` - volba rozšiřujícího zařízení MZ-700
   (`emu_get_devices`); volba typu keyword se zadává klíčovým slovem.
   Odpověď má `applies`: `now` (projeví se hned) nebo `on_connect`
@@ -2369,7 +2456,7 @@ Parametry `mode` (`native` / `compat`) a `save_snapshot` (path k
 
 ### `emu_periph_attach` (sensitive)
 
-Připojí periferii za běhu, stejně jako volba v menu Devices; volba se
+Připojí periferii za běhu, stejně jako volba v menu HW & Devices; volba se
 při ukončení uloží do INI. Během záznamu nebo přehrávání vstupů je
 odmítnut.
 
@@ -2632,7 +2719,11 @@ MCP interface používá **active-HIGH** masku (0x01 = UP stisknuto).
 Native HW state byte je active-LOW (0xFE = UP stisknuto). Bridge
 konverze probíhá automaticky.
 
-Frame timing default = 3 snímky (60 ms emulovaného času při 50 Hz PAL).
+Výchozí držení klávesy (`frames` u `emu_input_send_key`, `frame_per_key`
+u `emu_input_send_keys`) je 6 snímků (120 ms emulovaného času při 50 Hz
+PAL); klávesu drženou 3 snímky zaváděcí nabídka MZ-800 a MZ-1500
+v některých okamžicích nepřijme. Joystick (`frames`) a `hold_frames` mají
+výchozí 3 snímky.
 Maximum 600 snímků na jedno držení nebo mezeru jako safety proti AI freezi.
 
 **Sémantika snímků emulace:** `frames`, `frame_per_key`, `hold_frames`
@@ -2660,7 +2751,8 @@ program přepsání, hra ovládaná AI v různých kontextech).
 
 **Signalizace dosednutí kláves (`landing_verified`):** `emu_input_send_keys`
 vrací `{"keys_sent": N, "keys_landed": N, "total_frames": N, "encoding": str,
-"landing_verified": <bool>}`. `keys_sent` počítá host-side injekce do
+"landing_verified": <bool>, "skipped": N}` (navíc `warning`, když se znaky
+přeskočily, viz příklady níže). `keys_sent` počítá host-side injekce do
 virtual matrix; `keys_landed` počítá, kolik z nich guest skutečně přečetl.
 Dříve tool hlásil úspěch, i když guest klávesy spolkl (běžící program s
 odpojenou ROM skenuje jen úzkou podmnožinu matice) - to bylo tiché selhání.
@@ -2672,11 +2764,23 @@ na promptu, který skenuje klávesnici, nebo emulátor resetujte.
 
 ### Praktické příklady
 
-**ASCII encoding** (= default, jednoduchý text + `\r` pro RETURN):
+**ASCII encoding** (= default, jednoduchý text + `\r` nebo `\n` pro
+RETURN; dvojice `\r\n` napíše RETURN jednou). Znak, který klávesnice
+nenapíše (např. řídicí znak jiný než CR nebo každý znak mimo ASCII), se přeskočí;
+výsledek pak nese `skipped` (počet přeskočených znaků, přítomné i jako 0)
+a `warning` `Skipped N character(s) that cannot be typed: U+010D, ...`
+(jmenuje nejvýš 16 kódů). U `key_names` je `skipped` 0 (neznámé jméno je
+chyba). Jedno volání napíše nejvýš 256 kláves (přeskočené znaky se
+nepočítají, dvojice `\r\n` je jedna klávesa); zbytek textu se nenapíše,
+`truncated` (přítomné i jako 0) je počet vynechaných znaků (u `key_names`
+jmen) a `warning` nese `Text truncated: N character(s) after the first 256
+keys were not typed` (u `key_names` `Text truncated: N key name(s) after
+the first 256 keys were not sent`), s jiným varováním spojené přes `; `.
+Delší text rozdělte do více volání:
 
 ```python
-# Napsat "LOAD" + Enter (= Sharp ROM Monitor LOAD command)
-emu.call('input_send_keys', text="LOAD\r", encoding='ascii',
+# Napsat "L" + Enter (= povel nahrání monitoru MZ-700 1Z-013A)
+emu.call('input_send_keys', text="L\r", encoding='ascii',
          frame_per_key=3)
 
 # BASIC program type-in (= multi-řádek)
@@ -3299,73 +3403,217 @@ oddělené koncepty:
   pohání cyklicky přesnou emulaci kazety. Program čte/zapisuje signál
   pásky přes standardní ROM rutinu Sharp, přesně jako fyzický hardware.
   Toto je přesná cesta a funguje s libovolným programem.
-- **cmthack** (`emu_cmt_hack_set`) je ROM-patch zkratka (instant load):
-  patchnutá ROM load rutina zkopíruje soubor pásky přímo do RAM a
-  obejde signál pásky. Je rychlejší, ale funguje jen pro programy, které
-  načítají přes patchnuté ROM vstupní body.
+- **cmthack** (`emu_cmt_hack_set`, `emu_cmt_load_directly`) je
+  ROM-patch zkratka (instant load): patchnutá ROM load rutina zkopíruje
+  soubor pásky přímo do RAM a obejde signál pásky. Je rychlejší, ale
+  funguje jen pro programy, které načítají přes patchnuté ROM vstupní
+  body. V okně Virtual CMT je to režim načítání Direct.
+
+Bloky pásky se ve všech nástrojích i v `emulator://periph/cmt/tape`
+číslují od 0. Čísla a pozice bloků předávej jako celá čísla JSON.
+Poznámky "řetězec nebo desetinné číslo je neplatný parametr" níže
+popisují příkaz emulátoru (protokol JSONL); přes MCP server knihovna MCP
+nejdřív shovívavě převede argumenty na typy parametrů nástroje
+(pozorováno s balíčkem MCP pro Python 1.27): `true` se převede na 1,
+`"2"` na 2 a `2.0` na 2, takže taková hodnota vybere blok místo chyby;
+chybou argumentu (`isError` true) je tam jen hodnota, kterou nejde číst
+jako celé číslo (např. `1.5` nebo `"abc"`).
 
 Všechny tyto mění stav emulátoru (sensitive) a objeví se v Activity logu
-jako MCP akce. Aktuální stav pásky, včetně `cmthack_enabled`, se čte přes
-resource `emulator://periph/cmt`.
+jako MCP akce. Aktuální stav pásky, včetně `cmthack_enabled`
+a `direct_save`, se čte přes resource `emulator://periph/cmt`.
 
 Před přehráváním musí být páskový obraz nejdřív vložen přes
-`emu_media_insert(slot="cmt", path=...)`.
+`emu_media_insert(slot="cmt", path=...)` nebo `emu_cmt_open`. Nahrávání
+pásku nepotřebuje: bez ní nahrává do nové prázdné pásky.
+
+Páska, kterou emulátor změnil (připojený záznam, nová páska, smazané,
+přesunuté nebo importované bloky, změněná rychlost bloku, soubory
+přidané přes `emu_cmt_tape_analyze`, informace o pásce zapsané přes
+`emu_cmt_tape_info`, blok převedený přes `emu_cmt_tape_convert_block`), má
+neuložené změny, dokud se neuloží přes `emu_cmt_save`: `modified`
+v `emulator://periph/cmt/tape` je true. Nástroje, které pásku vysunou
+(`emu_cmt_eject`, `emu_cmt_open`, `emu_cmt_new_tape`, `emu_media_insert`
+a `emu_media_eject` se slotem `cmt`), se přesto provedou a vrátí
+`warning` "Unsaved tape changes were discarded".
+
+`emulator://periph/cmt/tape` pole `last_recording` = `{"serial": int,
+"blocks": int, "mzf": int, "raw": int, "discarded": bool, "message":
+str}` posledního nahrávání, které od startu emulátoru skončilo nebo se
+zahodilo (null, žádné nebylo; vložení ani vysunutí pásky ho nesmaže). Nese i nahrávání ukončené samo
+(`rec_autostop_s`, mez délky), které `emu_cmt_stop` nevrátí; `serial`
+roste s každým výsledkem.
 
 ### `emu_cmt_play` (sensitive)
 
 Spustí přehrávání reálné kazety (transport PLAY). No-op pokud není
 vložena páska nebo přehrávání nelze v aktuálním stavu spustit.
 
-Returns: `{"ok": true, "action": "play"}`.
+Se zapnutým CMT hackem (`cmthack_enabled` v `emulator://periph/cmt`, režim
+načítání Direct; nová konfigurace ho má zapnutý) příkazy motoru
+emulovaného programu pásku nerozjedou ani nezastaví; okno Virtual CMT
+v tomto režimu Play zakáže. Nástroj pásku přesto spustí a vrátí
+`warning` (jen když volání pásku ze STOP opravdu spustilo; volání, které
+nic neudělalo - bez pásky, páska už běží - varování nevrací):
+`Direct loading (CMT hack) is on: a ROM load reads the tape block directly and the emulated program's motor commands do not start or stop the tape. To let the program drive the motor, stop the tape and call emu_cmt_hack_set(enabled=false); to run the tape regardless of the motor, call emu_cmt_pause(paused=false)`.
+
+Returns: `{"ok": true, "action": "play"}`; se zapnutým CMT hackem navíc
+`warning`, pokud volání pásku spustilo.
 
 ### `emu_cmt_play_paused` (sensitive)
 
-Jako `emu_cmt_play`, ale páska startuje v pauze; pro posun volej
-`emu_cmt_pause(paused=False)`.
+Jako `emu_cmt_play`, ale páska čeká na motor (PLAY, `paused` true,
+`user_paused` false): rozjede ji příkaz motoru emulovaného programu (dělá
+ho načítání ROM), takže stačí vlastní povel programu k načtení;
+`emu_cmt_pause(paused=False)` ji rozjede bez motoru. Se zapnutým CMT
+hackem čekající pásku příkaz motoru programu nikdy nerozjede (jen
+`emu_cmt_pause(paused=False)`); výsledek nese stejné `warning` jako
+`emu_cmt_play`.
 
-Returns: `{"ok": true, "action": "play_paused"}`.
+Returns: `{"ok": true, "action": "play_paused"}`; se zapnutým CMT hackem
+navíc `warning`, pokud volání pásku spustilo.
 
 ### `emu_cmt_stop` (sensitive)
 
 Zastaví transport (PLAY nebo RECORD -> STOP). No-op pokud už zastaveno.
-Bez vložené pásky transport také uvede do STOP.
+Bez vložené pásky transport také uvede do STOP. Zastavení, které ukončí
+nahrávání, záznam dekóduje a připojí na konec pásky: bezchybný záznam ve
+formátu ROM jako blok MZF, ostatní (jiný formát, chyba, zastavení
+uprostřed) jako surový blok signálu. Kazetofon stojí na prvním novém
+bloku; páska se nikdy nevysouvá.
 
-Returns: `{"ok": true, "action": "stop"}`.
+Returns: `{"ok": true, "action": "stop"}`; po nahrávání navíc
+`"recorded": {"blocks": <int>, "mzf": <int>, "raw": <int>, "message": <str>}`
+(`message` např. `Recorded "NAME", 300 B` nebo `Recording could not be
+decoded, stored as a raw block`).
 
 ### `emu_cmt_pause` (sensitive)
 
 Pauzne (`paused=True`, default) nebo odpauzne (`paused=False`) běžící
-transport bez resetu pozice.
+transport bez resetu pozice. Zastavená páska se s `paused=True` spustí
+a čeká na motor (jako `emu_cmt_play_paused`; se zapnutým CMT hackem ji
+příkaz motoru programu nerozjede a výsledek nese stejné `warning` jako
+`emu_cmt_play`). U běžící pásky je pauza
+pauzou uživatele: dokud trvá, povely programu pro motor pásku nerozjedou
+(jen přepínají motor). `paused=False` pauzu uživatele zruší a motor nechá,
+jak ho nastavil program (stojí-li, páska na něj dál čeká); bez pauzy
+uživatele motor rozběhne, takže se rozjede páska nebo nahrávání čekající
+na motor. `emulator://periph/cmt` ukazuje `user_paused` a `motor_on`.
 
 Args:
 - `paused` (default true): true = pauznout, false = odpauznout.
 
-Returns: `{"ok": true, "action": "pause"}`.
+Returns: `{"ok": true, "action": "pause"}`; `warning`, když `paused=True`
+se zapnutým CMT hackem spustil zastavenou pásku.
 
 ### `emu_cmt_eject` (sensitive)
 
 Zastaví transport (pokud běží) a vyjme vložený páskový obraz.
-Zúžený ekvivalent `emu_media_eject(slot="cmt")`.
+Zúžený ekvivalent `emu_media_eject(slot="cmt")`. Probíhající nahrávání
+se zahodí (nic se nepřipojí ani nezapíše).
 
-Returns: `{"ok": true, "action": "eject"}`.
+Returns: `{"ok": true, "action": "eject"}`; `warning` "Unsaved tape
+changes were discarded", když páska měla neuložené změny nebo běželo
+nahrávání.
 
 ### `emu_cmt_record` (sensitive)
 
-Spustí nahrávání výstupu reálné kazety do WAV souboru. Nahrávání
-startuje v pauze; pro zahájení záznamu volej
-`emu_cmt_pause(paused=False)`. Podporován je jen WAV výstup. Vyžaduje
-stav pásky STOP a zapisovatelnou cestu.
+Spustí nahrávání toho, co program zapisuje na výstup kazety, do vložené
+pásky (bez pásky do nové prázdné). Vyžaduje stav STOP. Nahrávání startuje
+v pauze; zapnutí motoru programem (dělá ho SAVE v ROM) nebo
+`emu_cmt_pause(paused=False)` záznam rozběhne. Ukončí ho `emu_cmt_stop`
+(viz tam). Nahrávání se samo zastaví po 4 hodinách nebo 16 000 000
+hranách a volitelně po nastavené době ticha (INI `[CMT] rec_autostop_s`,
+sekundy, 0-600, výchozí 0 = vypnuto; za běhu `emu_settings_set` s klíčem
+`CMT/rec_autostop_s`).
+
+CMT hack (režim načítání Direct) nahrávání neovlivní: i se zapnutým
+hackem příkaz motoru programu nahrávání rozjíždí a zastavuje a SAVE se do
+pásky nahraje, rutinami ROM i vlastní ukládací rutinou programu (při
+nahrávání patch Direct Save v ROM není); nástroj nevrací `warning`.
+S `path` se nahraný SAVE z ROM zapíše i do souboru. Bez tohoto nástroje
+se SAVE z ROM v režimu Direct uloží hned jako nový blok MZF na konec
+pásky, když je `direct_save` v `emulator://periph/cmt` true.
 
 Args:
-- `path` (required): cílová cesta WAV souboru (musí být zapisovatelná).
+- `path` (optional): soubor zapsaný po zastavení: `.wav` = záznam jako
+  WAV 44,1 kHz, `.tmz`, `.tzx`, `.mzt`, `.mzf`, `.m12` = uložení celé
+  pásky (jako `emu_cmt_save`). Když se nic nenahrálo, nic se nezapíše.
+  Cesta musí být zapisovatelná.
 
-Returns: `{"ok": true, "path": "<path>"}`. Selže (`error`) při špatném
-stavu nebo nezapisovatelné cestě.
+Returns: `{"ok": true, "path": <str nebo null>}`. Selže (`error`) mimo
+STOP, u nezapisovatelné cesty nebo nepodporované přípony.
+
+### `emu_cmt_save` (sensitive)
+
+Uloží vloženou pásku do souboru. Formát určuje přípona: `.tmz` / `.tzx`
+= celá páska (páska s bloky MZ uložená jako `.tzx` zůstane ve formátu
+TMZ, s varováním), `.mzt` = soubory MZF všech bloků (každý blok musí nést
+MZF), `.mzf` / `.m12` = páska s jediným blokem MZF. Soubor se nahradí
+atomicky: při jakékoli chybě zůstane starý soubor celý a páska si
+neuložené změny ponechá. Po úspěchu páska patří k souboru a `modified` je
+false. Při záznamu i přehrávání vstupů se odmítne.
+
+Co `.mzt` neudrží: pauzy mezi bloky (po otevření 1000 ms), blok s výchozí
+rychlostí za blokem s vlastní rychlostí (po otevření má vlastní rychlost
+1:1), poměr rychlosti (uloží se jako délky pulzů UniCMT, po otevření vlastní
+pulzy), rychlost prvního bloku jiného než 1:1 a bloku 2:1 CP/M (varování
+`Speed of block N cannot be stored in MZT`).
+
+Args:
+- `path` (optional): výstupní soubor; bez něj dosavadní soubor pásky
+  (nová páska bez souboru cestu potřebuje).
+
+Returns: `{"ok": true, "path": <str>, "message": <str>}`, s `warning`,
+když něco nešlo uložit, nebo chyba (např. `Tape has no file name`, `Tape
+contains blocks that cannot be stored as MZT`).
+
+### `emu_cmt_export_block` (sensitive)
+
+Exportuje jeden blok vložené pásky: `.mzf` / `.m12` = soubor MZF, který
+blok nese (chyba u bloku bez MZF, např. surového záznamu), `.wav` = signál
+bloku jako WAV 44,1 kHz rychlostí, kterou by teď hrál. Páska, její pozice
+ani `modified` se nemění.
+
+Args:
+- `block` nebo `block_id` (jedno z nich povinné, ne obě): číslo bloku od 0 jako celé číslo JSON (řetězec nebo desetinné číslo je neplatný parametr); `block_id` je jméno, které používají ostatní nástroje pásky.
+- `path` (required): výstupní soubor.
+
+Returns: `{"ok": true, "block": <int>, "block_id": <int>, "path": <str>,
+"message": <str>}` (`block` a `block_id` nesou totéž číslo) nebo chyba
+(blok mimo rozsah, blok bez MZF, nepodporovaná přípona, `block`
+i `block_id` naráz).
+
+### `emu_cmt_new_tape` (sensitive)
+
+Vysune vloženou pásku (probíhající nahrávání se zahodí) a vloží novou
+prázdnou pásku bez jména souboru. Nahrává se do ní přes `emu_cmt_record`
+a uloží se přes `emu_cmt_save(path)`. Záznam vstupů ji zaznamená jako
+vysunutí.
+
+Returns: `{"ok": true}`; `warning` "Unsaved tape changes were discarded",
+když dosavadní páska měla neuložené změny nebo běželo nahrávání.
 
 ### `emu_cmt_hack_set` (sensitive)
 
 Zapne nebo vypne cmthack ROM patch (instant tape load). NENÍ reálná
 páska - viz poznámka výše.
+
+Platí pravidla položky hlavního menu "Use CMT Hack", která sdílí
+i přepínač Loading okna Virtual CMT: patch se mění jen při zastavené
+pásce; při PLAY, v pauze a při nahrávání nástroj vrátí chybu `tape is
+not stopped` a nic se nezmění. Požadavek, který nic nemění (patch už je
+v požadovaném stavu), projde v každém stavu. Vypnutí patche zapomene, co
+z pásky načetl (hlavičku bez těla, dosažený konec pásky). CPU boost se
+nemění. Jen přepínač okna navíc nedovolí Direct, když aktuální blok
+pásky nenese soubor MZF; nástroj blok nekontroluje. Zapnutí s ROM, která
+patch nepodporuje (MZ-800 Willy, MZ-1500 MZ-NEWMON, uživatelská ROM
+nastavená bez hacku), je chyba `The selected ROM does not support the CMT hack` a nic se
+nezmění (okno tehdy do Direct také nepřepne). Při záznamu a přehrávání
+vstupů se odmítne. Se zapnutým nastavením `CMTHACK/direct_save` (výchozí)
+patch mimo nahrávání zahrne i ukládací a ověřovací rutiny ROM: SAVE z ROM
+se hned uloží jako nový blok MZF na konec pásky a VERIFY z ROM porovná
+paměť s aktuálním blokem (`direct_save` v `emulator://periph/cmt`).
 
 Args:
 - `enabled` (required): true = nainstaluj ROM patch, false = odeber.
@@ -3373,14 +3621,36 @@ Args:
 Returns: `{"ok": true, "installed": <bool>}` echo stavu patche po
 operaci.
 
+### `emu_cmt_load_directly` (sensitive)
+
+Totéž co "Load directly" v seznamu bloků okna Virtual CMT: vybere blok
+a přepne režim načítání do Direct jedním krokem, vše nebo nic. Deck musí
+stát a blok musí nést soubor MZF; pak se blok stane aktuálním blokem
+a zapne se cmthack s vypnutým CPU boost. Je-li cmthack už zapnutý, změní
+se jen blok (CPU boost zůstane). Příští nahrávání z ROM vezme tento blok
+okamžitě. Při záznamu a přehrávání vstupů se odmítne.
+
+Args:
+- `block_id` (required): číslo bloku od 0 jako celé číslo JSON (řetězec, desetinné nebo záporné číslo je neplatný parametr).
+
+Returns: `{"ok": true, "block_id": <int>, "mode_changed": <bool>,
+"installed": <bool>, "current_block": <int>}` (`mode_changed` false =
+cmthack už byl zapnutý), nebo chyba: `No tape inserted`, `tape is not
+stopped`, `Block N does not exist`, `Block N does not contain an MZF
+file` (řídicí, surové a ZX bloky a blok souboru, ze kterého MZF sestavit
+nejde - `size` null v `emulator://periph/cmt/tape`), `Block N cannot be
+opened`, `The selected ROM does not support the CMT hack` (s ROM bez podpory
+patche; nezmění se nic, ani blok a CPU boost).
+
 ### Příklad workflow - nahrávání výstupu reálné pásky
 
 ```python
-emu_media_insert(slot="cmt", path="game.mzf")  # zdrojová páska
-emu_cmt_record(path="out.wav")     # arm nahrávání (startuje v pauze)
-emu_cmt_pause(paused=False)        # zahaj záznam
-# ... spusť program ...
-emu_cmt_stop()                     # ukonči, flush WAV
+emu_cmt_new_tape()                 # prázdná páska (nepovinné: nahrává se i bez pásky)
+emu_cmt_record()                   # zahájí nahrávání (startuje v pauze)
+# ... program ukládá (SAVE v ROM si motor zapne sám) ...
+emu_cmt_stop()                     # dekóduje a připojí; výsledek v "recorded"
+emu_cmt_save(path="out.tmz")       # uloží celou pásku
+emu_cmt_export_block(block=0, path="prog.mzf")  # nebo jen program
 ```
 
 ### `emu_cmt_set_speed` (sensitive)
@@ -3406,8 +3676,9 @@ Returns: `{"ok": true, "property": "speed", "value": <int>}`, pro
 
 ### `emu_cmt_set_polarity` (sensitive)
 
-Nastaví polaritu páskového signálu (zadní DIP přepínač). Odráží se v
-`polarity_inverted`.
+Nastaví polaritu páskového signálu (zadní DIP přepínač). Obrací signál
+bloků importovaných ze souboru WAV (`type` 0); ostatní bloky ani
+nahrávání neovlivní. Odráží se v `polarity_inverted`.
 
 Args:
 - `inverted` (required): true = invertovaná, false = normální.
@@ -3424,11 +3695,17 @@ Args:
 
 ### `emu_cmt_set_mzfsize_check` (sensitive)
 
-Zapne/vypne kontrolu konzistence velikosti MZF při loadu (body size vs
-header file size). Odráží se v `mzfsize_check`.
+Zapne/vypne kontrolu velikosti MZF při otevření souboru pásky: soubor
+`.mzf` / `.m12` delší, než říká jeho hlavička (velikost souboru
+z hlavičky + 128 bajtů), zapíše řádek do výstupu emulátoru a okno
+emulátoru nabídne opravu souboru v dialogu. Soubor se otevře tak jako
+tak; nic se neodmítá. Stejná kontrola proběhne, když cmthack nahrává
+soubor MZF vybraný v jeho dialogu souboru; jiné soubory pásky se
+nekontrolují. Odráží se
+v `mzfsize_check`.
 
 Args:
-- `enabled` (required): true = vynutit kontrolu, false = přeskočit.
+- `enabled` (required): true = kontrolovat při otevření, false = přeskočit.
 
 ### `emu_cmt_open` (sensitive)
 
@@ -3446,29 +3723,66 @@ Returns: `{"ok": true, "path": <str>, "playing": <bool>, "state": <str>,
 a `paused` hlásí skutečný stav transportu po operaci (stejný význam jako
 v `emulator://periph/cmt`); `playing` je true jen pro PLAY bez pauzy. Pokud
 byl požadován `play_immediately`, ale páska po operaci nehraje, výsledek
-obsahuje navíc `warning`.
+obsahuje navíc `warning`; se zapnutým CMT hackem přidá `play_immediately`
+varování `emu_cmt_play`, jen když páska opravdu hraje (víc varování
+spojuje `; `).
+
+Nový soubor se nejdřív načte a ověří: soubor, který nejde otevřít (chybí,
+je poškozený nebo nepodporovaný), vrátí chybu a vloženou pásku, její
+neuložené změny i probíhající nahrávání nechá beze změny. Úspěšné
+otevření, které zahodilo neuložené změny nebo nahrávání, začne `warning`
+textem "Unsaved tape changes were discarded".
 
 ### `emu_cmt_tape_seek` (sensitive)
 
-Seek na blok pásky (SIMPLE_TAPE multi-blok containery: .mzt, .tap).
-Jednosouborový container (SINGLE: samostatné .mzf nebo .wav) seek
-nepodporuje - volání selže i pro blok 0; pro přehrání od začátku použij
-`emu_cmt_stop` + `emu_cmt_play`. Vyžaduje naloženou pásku. Seznam bloků
-viz `emulator://periph/cmt/tape`.
+
+Seek na blok pásky. Funguje u každé vložené pásky, i u samostatného
+.mzf nebo .wav (páska s jedním blokem). Řídicí blok (`type` 5) ani blok,
+který přehrávač neumí přehrát, otevřít nejde; při nahrávání seek také
+selže. Stav transportu (STOP, PLAY, pauza) se nemění; při přehrávání
+i v pauze hraje blok od začátku, ve STOP začne odtud příští PLAY.
+S CMT hackem vezme příští nahrávání z ROM MZF tohoto bloku. Vyžaduje
+naloženou pásku. Seznam bloků viz `emulator://periph/cmt/tape`.
 
 Args:
-- `block_id` (required): index bloku (0-based).
+- `block_id` (required): index bloku (0-based) jako celé číslo JSON (řetězec nebo desetinné číslo je neplatný parametr).
 
-Returns: `{"ok": true, "block_id": <int>}`.
+Returns: `{"ok": true, "block_id": <int>}`. Při chybě (bez pásky, blok
+mimo rozsah, blok, který nejde otevřít) chyba; páska i transport zůstanou
+beze změny.
+
+### `emu_cmt_tape_step` (sensitive)
+
+Tlačítka Next block, Previous block a Rewind decku okna Virtual CMT.
+Řídicí a informační bloky a bloky, které přehrávač neumí přehrát, se
+přeskočí (`playable` false v `emulator://periph/cmt/tape`). "next"
+a "prev" zachovají transport: hrající páska přehraje nový blok od
+začátku, páska v pauze zůstane v pauze. "start" otevře první přehratelný
+blok pásky beze změny transportu (jako `emu_cmt_tape_seek`). Funguje
+i v režimu načítání Direct (vybere blok, který vezme příští nahrávání
+z ROM). Záznam vstupů ho zaznamená jako tlačítka decku; při přehrávání
+vstupů se krok provede (okno tlačítka tehdy zakáže) a přehrávání se
+odchýlí, stejně jako u `emu_cmt_tape_seek`.
+
+Args:
+- `direction` (required): `"next"`, `"prev"` nebo `"start"` (jiná hodnota nebo typ je neplatný parametr).
+
+Returns: `{"ok": true, "direction": <str>, "block_id": <int>}`
+(`block_id` = aktuální blok po kroku), nebo chyba, deck beze změny:
+`No tape inserted`, `The tape is empty`, `Not available while
+recording`, `The tape has no playable block`, `There is no playable
+block after this one` / `before this one`.
 
 ### `emu_cmt_tape_set_block_speed` (sensitive)
 
-Per-blok rychlost (JEN cmt speed, žádné další parametry; SIMPLE_TAPE).
+Per-blok rychlost (JEN cmt speed, žádné další parametry).
 `speed` přijímá stejné klíče poměrů / int 1..9 jako `emu_cmt_set_speed`,
 `pulses_us` vlastní délky pulzů bloku (jen MZ bloky, blok pak má
 `speed` 10). Vyžaduje naloženou pásku. Rychlost platí od příštího
 otevření bloku (přechod na blok při přehrávání, `emu_cmt_tape_seek`);
-právě otevřený blok se nemění.
+právě otevřený blok se nemění. Skutečná změna rychlosti označí pásku
+jako `modified`; uložení pásky (.tmz, .tzx, .mzt) zapíše blok jeho novou
+rychlostí.
 
 Bloky za hlavičkou CMTSPEED (UniCMT) v páskách `.mzt` mají vlastní
 rychlost z hlavičky už po otevření pásky; samotná hlavička se nepřehrává
@@ -3476,7 +3790,7 @@ a ve výpisu bloků není. Výpis `emulator://periph/cmt/tape` hlásí u bloku
 `block_speed` ("default" / "set" / "none") a efektivní `pulses_us`.
 
 Args:
-- `block_id` (required): index bloku (0-based).
+- `block_id` (required): index bloku (0-based) jako celé číslo JSON (řetězec nebo desetinné číslo je neplatný parametr).
 - `speed` (optional): poměr string ("2:1") nebo int (2).
 - `pulses_us` (optional): 4 délky pulzů v µs (místo `speed`).
 
@@ -3490,10 +3804,230 @@ Returns: `{"ok": true, "block_id": <int>, "speed": <int>}` (u
 emu_cmt_open(path="tape.mzt")
 emu_cmt_tape_seek(block_id=2)       # vyber třetí program
 emu_cmt_play()
+emu_cmt_tape_step(direction="next") # další přehratelný blok, řídicí bloky se přeskočí
+emu_cmt_stop()                      # Load directly potřebuje zastavený deck
+emu_cmt_load_directly(block_id=4)   # vyber blok 4; příští nahrávání z ROM ho vezme okamžitě
 ```
 
-Kompletní workflow (reálná páska vs cmthack, transport, bloky) je v
-resource `emulator://docs/cmt_workflow`.
+### Úpravy pásky
+
+`emu_cmt_tape_delete_blocks`, `emu_cmt_tape_move_block`
+a `emu_cmt_tape_import` mění pásku v paměti (soubor se změní až přes
+`emu_cmt_save`). Fungují jen s deckem ve STOP (jinak chyba `tape is not
+stopped`), ne při nahrávání a ne během záznamu vstupů (při záznamu se
+odmítnou, při přehrávání selžou). Chyba nechá pásku beze změny. Po každé
+úpravě se posunou čísla následujících bloků: `emulator://periph/cmt/tape`
+přečtěte znovu. Každá úprava označí pásku jako `modified`; importované
+bloky jsou `unsaved` (pole bloku v `emulator://periph/cmt/tape`), přesun
+a mazání příznak ostatních bloků nemění, uložení ho smaže. Deck zůstane
+na bloku, na kterém stál (od jeho začátku); byl-li ten blok smazán, na
+bloku, který zaujal jeho místo, nebo na posledním. Blok vlastního
+profilu emulátoru s nulovou pauzou, za který se importem nebo přesunem
+dostane jiný blok, dostane pauzu 1000 ms.
+
+### `emu_cmt_tape_delete_blocks` (sensitive)
+
+Smaže bloky. Všechna čísla platí pro pásku před smazáním; libovolné
+pořadí, bez opakování.
+
+Args:
+- `block_ids` (required): seznam čísel bloků (0-based).
+
+Returns: `{"ok": true, "deleted": <int>, "count": <int>,
+"current_block": <int>}` (`count` = zbylé bloky, `current_block` -1 =
+žádný) s `warning` "The tape clock setting now applies to different
+blocks; check their speed.", když blok MZ File (0x46) teď hraje jiným
+taktem CPU (smazaný blok informací o stroji 0x43), nebo chyba (např.
+`tape is not stopped`, `Block 7 does not exist`, prázdný nebo opakující se
+seznam).
+
+### `emu_cmt_tape_move_block` (sensitive)
+
+Přesune jeden blok tak, aby skončil na pozici `to` (0 = první, počet - 1
+= poslední). Přesun bloku na vlastní místo nic nezmění. Obě čísla musí být
+celočíselné hodnoty JSON (řetězec jako `"1"`, desetinné číslo nebo bool je
+neplatný parametr).
+
+Args:
+- `block_id` (required): číslo bloku (0-based).
+- `to` (required): pozice po přesunu (0-based).
+
+Returns: `{"ok": true, "block_id": <int>, "to": <int>, "count": <int>,
+"current_block": <int>}` se stejným `warning`, když blok MZ File teď hraje
+jiným taktem CPU (přesunutý blok informací o stroji 0x43 nebo blok
+přesunutý přes něj), nebo chyba (např. `Target position 5 is out of
+range (0 to 1)`).
+
+### `emu_cmt_tape_import` (sensitive)
+
+Vloží všechny bloky souboru (.mzf, .m12, .mzt, .tap, .wav, .tmz, .tzx;
+převede se jako při `emu_cmt_open`) před blok `at`, nebo na konec. Bez
+pásky vznikne nová páska (`new_tape` true), jen když `at` chybí, je null
+nebo -1; s pozicí 0 a vyšší je bez pásky chyba `no tape in the deck`.
+Velký WAV se převádí synchronně (emulace čeká).
+
+Args:
+- `path` (required): soubor.
+- `at` (optional): pozice prvního importovaného bloku (0-based,
+  0 .. počet) jako celé číslo JSON; vynechané, null nebo -1 = na konec.
+  Řetězec, desetinné číslo nebo bool je neplatný parametr.
+
+Returns: `{"ok": true, "path": <str>, "at": <int>, "imported": <int>,
+"count": <int>, "current_block": <int>, "new_tape": <bool>}`, s `warning`
+u varování importu, nebo chyba (`Can't import <cesta>: <důvod>`
+u chybějícího, poškozeného, prázdného nebo nepodporovaného souboru).
+
+### `emu_cmt_export_tape` (sensitive)
+
+Zapíše celou pásku do souboru `.wav` (44,1 kHz, 8 bit mono) tak, jak ji
+přehraje přehrávač: bloky a pauzy, smyčky, skoky, volání, bloky s vlastní
+rychlostí touto rychlostí. Bloky, které přehrávač neumí přehrát, se
+přeskočí s varováním; páska delší než 4 hodiny je chyba. Páska, její
+pozice ani `modified` se nemění; funguje v každém stavu transportu
+i během záznamu vstupů. Rozpracované nahrávání v exportu není (k pásce
+se připojí až při zastavení nahrávání); nejdřív ho zastavte. Soubor se
+nahradí atomicky. Celý signál pásky se při exportu drží v paměti
+a emulace čeká, dokud export neskončí.
+
+Args:
+- `path` (required): výstupní soubor s příponou `.wav`.
+
+Returns: `{"ok": true, "path": <str>, "message": <str>}` s `warning`,
+když se bloky přeskočily, nebo chyba (např. `The tape is empty`, jiná
+přípona).
+
+### Příklad workflow - sestavení pásky
+
+```python
+emu_cmt_stop()
+emu_cmt_tape_import(path="loader.mzf")        # prázdný deck: nová páska
+emu_cmt_tape_import(path="game.mzt")          # připojí se na konec
+emu_cmt_tape_move_block(block_id=2, to=1)     # změna pořadí
+emu_cmt_tape_delete_blocks(block_ids=[3])     # vyřazení bloku
+emu_cmt_save(path="assembled.tmz")
+emu_cmt_export_tape(path="assembled.wav")
+```
+
+### Nástroje nad páskou
+
+Čtecí varianty (`emu_cmt_tape_analyze` bez `apply`, `emu_cmt_tape_info`
+bez `set`, `emu_cmt_tape_check`) fungují v každém stavu i během záznamu
+vstupů; nevracejí `state_rev` a `expected_state_rev` odmítnou. Varianty,
+které pásku mění (`apply` "add" / "replace", `set`,
+`emu_cmt_tape_convert_block`), se řídí pravidly úprav pásky (deck ve STOP,
+ne během záznamu vstupů, vše nebo nic, čísla bloků se posunou, `modified`
+a `unsaved`) a vracejí `state_rev`. V příkazech emulátoru musí být čísla
+čísly JSON a volby bool JSON; cokoli jiného je neplatný parametr.
+`warning` patří jen k volání, které ho vrátilo.
+
+### `emu_cmt_tape_analyze` (sensitive)
+
+Najde soubory pásky v surovém bloku signálu (TZX 0x18: otevřený nebo
+importovaný WAV, záznam, který emulátor nedekódoval). Analýza běží
+synchronně: emulace čeká, okno emulátoru dál kreslí. Mez doby není; po
+zhruba 610 s emulátor odpoví `Emulator busy` a výsledek není znám (před
+opakováním `apply` znovu přečtěte `emulator://periph/cmt/tape`). Každý
+soubor je řádek (`kind` "file"), signál
+bez souboru o 64 a více pulzech je řádek `kind` "unknown". Přidat jde jen
+standardní soubor Sharp (`format` "NORMAL") se správným součtem hlavičky
+i těla (`result` "addable") nebo opravený zapnutou volbou opravy
+("addable_repaired"); soubor NORMAL s chybou součtu nebo neúplný zůstává
+surový ("stays_raw"), jiné formáty přidat nejde ("cannot_add"). `apply`
+"add" vloží každý soubor, který jde přidat, za surový blok; "replace"
+surový blok nahradí bloky souborů a zbytek signálu ponechá v surových
+blocích v původním pořadí (úseky kratší než 64 pulzů vedle souboru se
+vynechají jako při nahrávání). Bloky souborů mají profil emulátoru
+MZ800EMU-CMT a výchozí rychlost pásky. Leží-li před surovým blokem blok
+informací o stroji 0x43 s jiným taktem CPU než výchozím 3546895 Hz, hrají
+nové bloky souborů tímto taktem a `warning` to řekne (jako import).
+
+Args:
+- `block_id` (required): číslo surového bloku (0-based, celé číslo JSON).
+- `tolerance` (optional): tolerance detekce leaderu, 0,02 .. 0,35, výchozí 0,20; hodnota mimo rozsah je neplatný parametr.
+- `repair_header`, `repair_body`, `repair_bsd` (optional, bool): volby oprav.
+- `apply` (optional): "none" (výchozí), "add" nebo "replace".
+
+Returns: `{"ok": true, "block_id": <int>, "apply": <str>, "sample_rate":
+<int>, "pulse_count": <int>, "length_s": <float>, "rows": [{"row",
+"kind", "name", "type", "format", "start_s", "length_s", "size",
+"header", "body", "result", "reason", "recovery"}], "applied": <int>,
+"first_added": <int> | null, "count": <int>, "current_block": <int>}`
+(`header` / `body` "ok", "checksum_error" nebo "not_available";
+`analysis_error`, když blok nemá signál; `warning` "The tape clock
+setting now applies to different blocks; check their speed." po "add"
+nebo "replace", když nové bloky souborů hrají jiným taktem CPU) nebo
+chyba (např. `Block 0 is not a raw signal block (CSW recording)`, `tape
+is not stopped`).
+
+### `emu_cmt_tape_info` (sensitive)
+
+Čte (bez `set`) nebo zapisuje (se `set`) informace o pásce: texty Archive
+Info `title`, `publisher`, `author`, `year`, `language`, `type`, `price`,
+`protection`, `origin`, `comment` a cílový stroj `machine` ("generic",
+"mz700", "mz800", "mz1500", "mz80b" nebo null). Zápis v jednom kroku
+přečte, sloučí zadaná pole a zapíše; "" text odstraní, `"machine": null`
+odstraní blok stroje. Texty jsou v ISO 8859-1 (nejvýš 255 znaků); jiné
+znaky se nahradí "?" s `warning`. Blok Archive Info je prvním blokem
+pásky a Machine Info hned za ním; položky, které emulátor nezná, se
+zachovají.
+
+Args:
+- `set` (optional): objekt s poli k zápisu.
+
+Returns: `{"ok": true, "title": <str>, ..., "comment": <str>, "machine":
+<str> | null, "machine_code": <int>, "storable": <bool>,
+"other_entries": <int>, "other_archive_blocks": <int>,
+"other_archive_block": <int> | null}`; se `set` navíc `changed`
+a případně `warning`. `storable` false: páska otevřená ze souboru jiného
+formátu než .tmz nebo .tzx (například .mzf, .mzt, .wav) si informace
+ponechá jen při uložení jako .tmz nebo .tzx.
+
+### `emu_cmt_tape_check`
+
+Vypíše strukturální problémy vložené pásky (jen čtení): nevyvážené
+smyčky a skupiny, skoky a volání mimo pásku, volání bez bloku návratu,
+neznámá ID bloků, bloky souborů MZ, které nejde rozebrat, hlavičku bez
+zakončení jména, neznámý typ souboru, délku těla jinou než velikost
+v hlavičce a profily, které emulátor nezná. Součet těla se nekontroluje;
+nejvýš 500 nálezů.
+
+Returns: `{"ok": true, "blocks_checked": <int>, "count": <int>,
+"findings": [{"block_id": <int>, "severity": "warning" | "info", "text":
+<str>}]}` nebo `No tape inserted`.
+
+### `emu_cmt_tape_convert_block` (sensitive)
+
+Přestaví blok souboru MZ v TMZ (`convertible` v
+`emulator://periph/cmt/tape`) jiným profilem zapisovače (`id` z tamního
+`profiles`). Bajty souboru zůstanou stejné. Nastavení dosavadního profilu,
+která nový profil přijme, se přenesou; ostatní vypíše `warning`. Vlastní
+profil bloku bez rychlosti nic nezmění (`changed` false). Po převodu na
+jiný profil než MZ800EMU-CMT nejde rychlost bloku měnit nástrojem
+`emu_cmt_tape_set_block_speed`.
+
+Args:
+- `block_id` (required): číslo bloku (0-based, celé číslo JSON).
+- `profile` (required): ID profilu, např. `ROM-800-NOMINAL`.
+- `speed` (optional): jen u profilu s `accepts_speed`; nástroj Pythonu bere klíč poměru (`"2:1"`) nebo celé číslo 1 .. 9, příkaz emulátoru jen celé číslo.
+
+Returns: `{"ok": true, "block_id": <int>, "profile": <str>, "changed":
+<bool>, "count": <int>, "current_block": <int>}` s případným `warning`,
+nebo chyba (např. `Unknown profile: X`, `Profile X does not accept
+a speed`).
+
+### Příklad workflow - z WAV soubory
+
+```python
+emu_cmt_stop()
+emu_cmt_open(path="recording.wav")                     # jeden surový blok
+emu_cmt_tape_analyze(block_id=0)                       # prohlédnout řádky
+emu_cmt_tape_analyze(block_id=0, apply="replace")      # soubory jako bloky
+emu_cmt_tape_info(set={"title": "My recordings", "machine": "mz800"})
+emu_cmt_save(path="recording.tmz")
+```
+
+Kompletní workflow (reálná páska vs cmthack, transport, bloky, úpravy)
+je v resource `emulator://docs/cmt_workflow`.
 
 ## Související
 

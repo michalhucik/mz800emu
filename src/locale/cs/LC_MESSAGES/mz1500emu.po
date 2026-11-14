@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mz800emu 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-05 10:30+0100\n"
+"POT-Creation-Date: 2026-11-14 15:20+0100\n"
 "PO-Revision-Date: 2026-03-11 21:00+0100\n"
 "Last-Translator: Michal Hucik <hucik@ordoz.com>\n"
 "Language-Team: Czech\n"
@@ -80,27 +80,7 @@ msgstr "Vlastní rychlost"
 msgid "Normal speed"
 msgstr "Normální rychlost"
 
-#: src/emulator/hw-generic/cmt/cmt.c:593
-msgid "Create a new WAV file"
-msgstr "Vytvořit nový WAV soubor"
-
-#: src/emulator/hw-generic/cmt/cmt.c:593
-msgid "newfile.wav"
-msgstr "newfile.wav"
-
-#: src/emulator/hw-generic/cmt/cmt.c:1186
-msgid "All Supported CMT Files"
-msgstr "Všechny podporované CMT soubory"
-
-#: src/emulator/hw-generic/cmt/cmt.c:1187
-msgid "Tape Files"
-msgstr "Soubory pásek"
-
-#: src/emulator/hw-generic/cmt/cmt.c:1264
-msgid "Select CMT file to open"
-msgstr "Vyberte CMT soubor k otevření"
-
-#: src/emulator/hw-generic/cmt/cmthack.c:245
+#: src/emulator/hw-generic/cmt/cmthack.c:1046
 msgid "Select a MZF File"
 msgstr "Vyberte MZF soubor"
 
@@ -136,66 +116,6 @@ msgstr "Uživatel"
 #: src/emulator/mzarch/mz1500/memory/mz1500_rom.c:21
 msgid "User Defined ROM"
 msgstr "Uživatelsky definovaný ROM"
-
-#: src/ui/cmt/UiCmt.cpp:33
-msgid "Default"
-msgstr "Výchozí"
-
-#: src/ui/cmt/UiCmt.cpp:38
-msgid "Custom pulses..."
-msgstr "Vlastní pulzy..."
-
-#: src/ui/cmt/UiCmt.cpp:38
-msgid "Custom pulses"
-msgstr "Vlastní pulzy"
-
-#: src/ui/cmt/UiCmt.cpp:51
-msgid "UNKNOWN"
-msgstr "NEZNÁMÝ"
-
-#: src/ui/vkbd/ui_vkbd.c:207
-msgid "PC key: CapsLock"
-msgstr "Klávesa PC: CapsLock"
-
-#: src/ui/vkbd/ui_vkbd.c:210
-msgid "PC key: \\"
-msgstr "Klávesa PC: \\"
-
-#: src/ui/vkbd/ui_vkbd.c:213
-msgid "PC key: \\ or Tab"
-msgstr "Klávesa PC: \\ nebo Tab"
-
-#: src/ui/vkbd/ui_vkbd.c:216
-msgid "PC key: ~"
-msgstr "Klávesa PC: ~"
-
-#: src/ui/vkbd/ui_vkbd.c:218
-msgid "PC key: Esc or End"
-msgstr "Klávesa PC: Esc nebo End"
-
-#: src/ui/vkbd/ui_vkbd.c:220
-msgid "PC key: Insert"
-msgstr "Klávesa PC: Insert"
-
-#: src/ui/vkbd/ui_vkbd.c:222
-msgid "PC key: Backspace or Delete"
-msgstr "Klávesa PC: Backspace nebo Delete"
-
-#: src/ui/vkbd/ui_vkbd.c:224
-msgid "PC key: F6"
-msgstr "Klávesa PC: F6"
-
-#: src/ui/vkbd/ui_vkbd.c:226
-msgid "PC key: F7"
-msgstr "Klávesa PC: F7"
-
-#: src/ui/vkbd/ui_vkbd.c:228
-msgid "PC key: F8"
-msgstr "Klávesa PC: F8"
-
-#: src/ui/vkbd/ui_vkbd.c:230
-msgid "PC key: F9"
-msgstr "Klávesa PC: F9"
 
 #: src/ui-imgui/about_window.cpp:258
 msgid "Come closer, my friend."
@@ -490,21 +410,32 @@ msgid "Record Audio Capture (%s) starts and stops the capture."
 msgstr "Zachytit zvuk (%s) spustí a zastaví zachycení."
 
 #: src/ui-imgui/audiocap/audio_capture_ui.cpp:249
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:175
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:186
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:862
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:753
+#: src/ui-imgui/cmt/cmt_view.cpp:172
 #: src/ui-imgui/debugger/sections/dbg_cpu_panel.cpp:2421
 #: src/ui-imgui/dsk/dsk_create_window.cpp:104
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:109
 #: src/ui-imgui/joy/joy_setup_window.cpp:584
-#: src/ui-imgui/message/message_window.cpp:139
+#: src/ui-imgui/message/message_window.cpp:222
 #: src/ui-imgui/mz700/devbus/menu_devbus.cpp:243
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:442
-#: src/ui-imgui/snapshot/snapshot_notification.cpp:95
+#: src/ui-imgui/snapshot/snapshot_notification.cpp:97
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:300
 #: src/ui-imgui/videorec/videorec_setup_dialog.cpp:338
 msgid "OK"
 msgstr "OK"
 
 #: src/ui-imgui/audiocap/audio_capture_ui.cpp:255
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:187
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:198
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2079
+#: src/ui-imgui/cmt/cmt_convert_dialog.cpp:609
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1091
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1118
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1172
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:754
+#: src/ui-imgui/cmt/cmt_window.cpp:3432
 #: src/ui-imgui/debugger/membrowser/membrowser_annot_dialog.cpp:148
 #: src/ui-imgui/debugger/membrowser/membrowser_fill_dialog.cpp:264
 #: src/ui-imgui/debugger/sections/dbg_focus_to.cpp:264
@@ -518,11 +449,12 @@ msgstr "OK"
 #: src/ui-imgui/ramdisk/pezik_settings_window.cpp:289
 #: src/ui-imgui/rom/rom_settings_window.cpp:305
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:447
-#: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:127
+#: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:129
 #: src/ui-imgui/snapshot/snapshot_setup_dialog.cpp:176
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:89
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:96
-#: src/ui-imgui/topmenu/menu_replay.cpp:217
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:303
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:91
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:98
+#: src/ui-imgui/topmenu/menu_replay.cpp:256
 #: src/ui-imgui/videorec/videorec_setup_dialog.cpp:343
 msgid "Cancel"
 msgstr "Zrušit"
@@ -649,72 +581,132 @@ msgstr "Znaky"
 msgid "Typed"
 msgstr "Napsáno"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:177
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:179
-msgid "MZF Size Warning"
-msgstr "Upozornění na velikost MZF"
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:117
+msgid "Custom Tape Pulses"
+msgstr "Vlastní pulzy pásky"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:188
-msgid "MZF file"
-msgstr "MZF soubor"
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:132
+msgid "Pulse lengths in microseconds (order of the UniCMT CMTSPEED header):"
+msgstr "Délky pulzů v mikrosekundách (pořadí jako v hlavičce CMTSPEED UniCMT):"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:196
-msgid "Exceeded bytes"
-msgstr "Přebytečné bajty"
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:136
+msgid "Long pulse high (bit 1)"
+msgstr "Dlouhý pulz high (bit 1)"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:208
-msgid "This MZF file is a bit bigger than it should be."
-msgstr "Tento MZF soubor je o něco větší, než by měl být."
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:137
+msgid "Long pulse low (bit 1)"
+msgstr "Dlouhý pulz low (bit 1)"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:210
-msgid "This could arise, for example, when the MZF file is exported from cp/m."
-msgstr "To může nastat například, když je MZF soubor exportován z cp/m."
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:138
+msgid "Short pulse high (bit 0)"
+msgstr "Krátký pulz high (bit 0)"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:211
-msgid "You can ignore it, or truncate the original file."
-msgstr "Můžete to ignorovat, nebo zkrátit původní soubor."
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:139
+msgid "Short pulse low (bit 0)"
+msgstr "Krátký pulz low (bit 0)"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:212
-msgid ""
-"Is recommended to use the Save as, for create truncated copy of this file."
-msgstr ""
-"Doporučuje se použít Uložit jako, pro vytvoření zkrácené kopie tohoto "
-"souboru."
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:148
+msgid "Presets:"
+msgstr "Předvolby:"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:219
-msgid "MZF size check enabled"
-msgstr "Kontrola velikosti MZF zapnuta"
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:161
+msgid "Revert"
+msgstr "Vrátit"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:233
-msgid "Ignore"
-msgstr "Ignorovat"
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:175
+#, c-format
+msgid "Equivalent speed: ~%.2f:1 (%.0f Bd)"
+msgstr "Odpovídající rychlost: ~%.2f:1 (%.0f Bd)"
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:242
-msgid "Truncate"
-msgstr "Zkrátit"
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:179
+#, c-format
+msgid "Each length must be greater than 0 and at most %.0f µs."
+msgstr "Každá délka musí být větší než 0 a nejvýš %.0f µs."
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:260
-msgid "Save As"
-msgstr "Uložit jako"
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:742
+msgid "The tape changed. Close this dialog and analyze again."
+msgstr "Páska se změnila. Zavřete tento dialog a analyzujte znovu."
 
-#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:271
-msgid "Save MZF file as"
-msgstr "Uložit MZF soubor jako"
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:748
+msgid "Analyze again to apply the new options."
+msgstr "Nové volby uplatníte tlačítkem Analyzovat znovu."
 
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:214
-msgid "Tape Filelist"
-msgstr "Seznam souborů na pásce"
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:759
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:762
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:766
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:775
+msgid "Stays raw"
+msgstr "Zůstane v záznamu"
 
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:252
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:276 src/ui-imgui/cmt/cmt_window.cpp:214
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:764
+msgid "Will be added"
+msgstr "Bude přidán"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:768
+msgid "Will be added (repaired)"
+msgstr "Bude přidán (opravený)"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:772
+msgid "Cannot add"
+msgstr "Nelze přidat"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:793
+#, c-format
+msgid "Stored as a standard tape block at speed %s."
+msgstr "Uloží se jako standardní blok pásky rychlostí %s."
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:821
+#, c-format
+msgid "Cannot be added. You can try \"%s\" and Analyze again."
+msgstr "Nelze přidat. Můžete zkusit \"%s\" a Analyzovat znovu."
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:821
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1997
+msgid "Repair damaged body"
+msgstr "Opravit poškozené tělo"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:824
+msgid "Cannot be added. You can try the repair options and Analyze again."
+msgstr "Nelze přidat. Můžete zkusit volby opravy a Analyzovat znovu."
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:825
+msgid "Cannot be added."
+msgstr "Nelze přidat."
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:843
+msgid "Unknown signal"
+msgstr "Neznámý signál"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:845
+#: src/ui-imgui/cmt/cmt_check_window.cpp:252
+#: src/ui-imgui/cmt/cmt_window.cpp:762 src/ui-imgui/cmt/cmt_window.cpp:768
+msgid "(no name)"
+msgstr "(bez jména)"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:848
+msgid "Sharp standard"
+msgstr "Standard Sharp"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:856
+msgid "Header error"
+msgstr "Chyba hlavičky"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:859
+msgid "Body error"
+msgstr "Chyba těla"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:875
+#: src/ui-imgui/cmt/cmt_window.cpp:2405
 #: src/ui-imgui/debugger/sections/dbg_stack_panel.cpp:2677
 #: src/ui-imgui/debugger/vars/vars_window.cpp:1502
 #: src/ui-imgui/debugger/watch/watch_window.cpp:1697
 msgid "Name"
 msgstr "Název"
 
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:253
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:279 src/ui-imgui/cmt/cmt_window.cpp:213
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:876
+#: src/ui-imgui/cmt/cmt_window.cpp:2406 src/ui-imgui/cmt/cmt_window.cpp:3976
+#: src/ui-imgui/cmt/cmt_window.cpp:3994 src/ui-imgui/cmt/cmt_window.cpp:4001
+#: src/ui-imgui/cmt/cmt_window.cpp:4009
 #: src/ui-imgui/debugger/memsearch_window/memsearch_window.cpp:576
 #: src/ui-imgui/debugger/watch/watch_window.cpp:1701
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:132
@@ -724,199 +716,1560 @@ msgstr "Název"
 msgid "Type"
 msgstr "Typ"
 
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:254
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:282
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:878
+msgctxt "Analysis column"
+msgid "Format"
+msgstr "Formát"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:879
+msgctxt "Analysis column"
+msgid "Start"
+msgstr "Začátek"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:880
+#: src/ui-imgui/cmt/cmt_window.cpp:2407 src/ui-imgui/cmt/cmt_window.cpp:3977
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:133
-#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:209
-#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:211
-#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:213
+#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:210
+#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:212
+#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:214
 #: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:125
 msgid "Size"
 msgstr "Velikost"
 
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:255
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:285
-#: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:416
-msgid "Start"
-msgstr "Start"
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:881
+msgid "Checksum"
+msgstr "Součet"
 
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:256
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:288
-msgid "Exec"
-msgstr "Exec"
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:883
+msgid "Result"
+msgstr "Výsledek"
 
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:257
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:291 src/ui-imgui/cmt/cmt_window.cpp:215
-#: src/ui-imgui/topmenu/menu_speed.cpp:27
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:889
+msgid "Files added from the recording."
+msgstr "Soubory ze záznamu byly přidány."
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:891
+#, c-format
+msgid "Files added from the recording: %d"
+msgstr "Přidané soubory ze záznamu: %d"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1030
+msgid "The analysis could not be started."
+msgstr "Analýzu se nepodařilo spustit."
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1044
+msgid "The analysis failed: not enough memory."
+msgstr "Analýza selhala: nedostatek paměti."
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1085
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1123
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2281
+msgid "The recording could not be read."
+msgstr "Záznam se nepodařilo přečíst."
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1116
+msgid ""
+"The recording cannot be analyzed while an input replay is recorded or played."
+msgstr ""
+"Záznam nelze analyzovat během nahrávání nebo přehrávání záznamu vstupů."
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1142
+#: src/ui-imgui/cmt/cmt_convert_dialog.cpp:351
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1864
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:450
+msgid "The tape cannot be edited while an input replay is recorded or played."
+msgstr "Pásku nelze upravovat během nahrávání nebo přehrávání záznamu vstupů."
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1146
+#: src/ui-imgui/cmt/cmt_convert_dialog.cpp:355
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:714
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:874
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1394
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1781
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1870
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:2045
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:2147
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:2185
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:480
+#: src/ui-imgui/cmt/cmt_window.cpp:2718 src/ui-imgui/cmt/cmt_window.cpp:3125
+#: src/ui-imgui/cmt/cmt_window.cpp:3234 src/ui-imgui/cmt/cmt_window.cpp:3396
+#: src/ui-imgui/cmt/cmt_window.cpp:3724 src/ui-imgui/cmt/cmt_window.cpp:4229
+msgid "The tape changed; the action was cancelled."
+msgstr "Páska se změnila, akce byla zrušena."
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1150
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2420
+#: src/ui-imgui/cmt/cmt_convert_dialog.cpp:360
+#: src/ui-imgui/cmt/cmt_convert_dialog.cpp:658
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1876
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:455
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:803
+msgid "The tape could not be edited."
+msgstr "Pásku se nepodařilo upravit."
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1814
+#, c-format
+msgid "Pulse lengths, %s"
+msgstr "Délky pulzů, %s"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1817
+msgid "Pulse lengths, whole recording"
+msgstr "Délky pulzů, celý záznam"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1906
+#, c-format
+msgid "Pulses longer than %d µs are not shown."
+msgstr "Pulzy delší než %d µs nejsou zobrazené."
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1944
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2082
+msgid "Leader tolerance"
+msgstr "Tolerance zaváděcího tónu"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1945
+msgid ""
+"How much pulse lengths in the leader tone may vary. Raise it for worn or "
+"unstable recordings."
+msgstr ""
+"Jak moc se smějí lišit délky pulzů v zaváděcím tónu. Zvyšte ji u "
+"opotřebených nebo nestabilních nahrávek."
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1976
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2082
+#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:499
+#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:148
+#: src/ui-imgui/maxspeed_bench_window.cpp:156
+#: src/ui-imgui/plotter/plotter_window.cpp:432
+#: src/ui-imgui/topmenu/topmenu.cpp:62
+msgid "Reset"
+msgstr "Reset"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1982
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2083
+msgid "Analyze again"
+msgstr "Analyzovat znovu"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1997
+msgid "Repair damaged header"
+msgstr "Opravit poškozenou hlavičku"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1997
+msgid "Repair incomplete BSD file"
+msgstr "Opravit neúplný soubor BSD"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2000
+msgid ""
+"Keeps a file whose header is intact but whose body is missing. The body is "
+"filled with 00h."
+msgstr ""
+"Ponechá soubor s neporušenou hlavičkou, jehož tělo chybí. Tělo se vyplní "
+"bajty 00h."
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2001
+msgid ""
+"Keeps a file whose body is incomplete, or joins two damaged copies. Missing "
+"bytes are filled with 00h."
+msgstr ""
+"Ponechá soubor s neúplným tělem nebo spojí dvě poškozené kopie. Chybějící "
+"bajty se vyplní 00h."
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2002
+msgid ""
+"Keeps an incomplete BSD data file in the results. BSD files cannot be added "
+"as blocks and stay in the recording."
+msgstr ""
+"Ponechá ve výsledcích neúplný datový soubor BSD. Soubory BSD nelze přidat "
+"jako bloky a zůstanou v záznamu."
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2054
+#, c-format
+msgid "Analyze recording - block %d"
+msgstr "Analýza záznamu - blok %d"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2077
+msgid "Add files after recording"
+msgstr "Přidat soubory za záznam"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2078
+msgid "Replace recording"
+msgstr "Nahradit záznam"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2174
+msgid "Analyzing..."
+msgstr "Analyzuje se..."
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2176
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2338
+msgid "The recording could not be analyzed."
+msgstr "Záznam se nepodařilo analyzovat."
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2178
+msgid "No files found."
+msgstr "Nenalezen žádný soubor."
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2182
+msgid "1 file found."
+msgstr "Nalezen 1 soubor."
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2183
+#, c-format
+msgid "%d files found."
+msgstr "Nalezeno souborů: %d."
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2185
+msgid "1 file found, 1 with a checksum error."
+msgstr "Nalezen 1 soubor, má chybu součtu."
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2187
+#, c-format
+msgid "%d files found, %d with a checksum error."
+msgstr "Nalezeno souborů: %d, s chybou součtu: %d."
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2209
+#, c-format
+msgid "%s, %s, %s pulses"
+msgstr "%s, %s, pulzů: %s"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2238
+#, c-format
+msgid "Elapsed time: %s"
+msgstr "Uplynulý čas: %s"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2246
+msgid "No files found in this recording."
+msgstr "V tomto záznamu nebyl nalezen žádný soubor."
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2247
+msgid "Try a different leader tolerance, or check the signal details below."
+msgstr ""
+"Zkuste jinou toleranci zaváděcího tónu nebo se podívejte na podrobnosti "
+"signálu níže."
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2274
+msgid ""
+"Checked files are added as tape blocks. Everything else stays in the "
+"recording."
+msgstr ""
+"Zaškrtnuté soubory se přidají jako bloky pásky. Vše ostatní zůstane v "
+"záznamu."
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2281
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2337
+msgid "Wait until the analysis finishes."
+msgstr "Počkejte, až analýza skončí."
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2291
+msgid "Signal details"
+msgstr "Podrobnosti signálu"
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2332
+msgid "This recording is not saved yet. Replacing it cannot be undone."
+msgstr "Tento záznam ještě není uložený. Nahrazení nelze vrátit."
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2341
+msgid "There are no files to add."
+msgstr "Nejsou žádné soubory k přidání."
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2342
+msgid "Check at least one file to add it."
+msgstr "Zaškrtněte aspoň jeden soubor, který se má přidat."
+
+#: src/ui-imgui/cmt/cmt_check_window.cpp:258
+#, c-format
+msgid "Block %d"
+msgstr "Blok %d"
+
+#: src/ui-imgui/cmt/cmt_check_window.cpp:350
+msgid "Tape check"
+msgstr "Kontrola pásky"
+
+#: src/ui-imgui/cmt/cmt_check_window.cpp:363
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:310
+#: src/ui-imgui/cmt/cmt_window.cpp:805 src/ui-imgui/cmt/cmt_window.cpp:1512
+#: src/ui-imgui/cmt/cmt_window.cpp:1531 src/ui-imgui/cmt/cmt_window.cpp:1737
+#: src/ui-imgui/cmt/cmt_window.cpp:1985
+msgid "No tape inserted."
+msgstr "Není vložená páska."
+
+#: src/ui-imgui/cmt/cmt_check_window.cpp:367
+#, c-format
+msgid "No problems found. Blocks checked: %d."
+msgstr "Žádné problémy nenalezeny. Zkontrolováno bloků: %d."
+
+#: src/ui-imgui/cmt/cmt_check_window.cpp:373
+#, c-format
+msgid "Blocks checked: %d. Warnings: more than %d."
+msgstr "Zkontrolováno bloků: %d. Varování: více než %d."
+
+#: src/ui-imgui/cmt/cmt_check_window.cpp:375
+#, c-format
+msgid "Blocks checked: %d. Warnings: %d."
+msgstr "Zkontrolováno bloků: %d. Varování: %d."
+
+#: src/ui-imgui/cmt/cmt_check_window.cpp:389
+msgid "The tape changed. Run the check again."
+msgstr "Páska se změnila. Spusťte kontrolu znovu."
+
+#: src/ui-imgui/cmt/cmt_check_window.cpp:408
+msgctxt "Tape check severity"
+msgid "Warning"
+msgstr "Varování"
+
+#: src/ui-imgui/cmt/cmt_check_window.cpp:409
+msgctxt "Tape check severity"
+msgid "Info"
+msgstr "Informace"
+
+#: src/ui-imgui/cmt/cmt_check_window.cpp:501
+msgid "Check again"
+msgstr "Zkontrolovat znovu"
+
+#: src/ui-imgui/cmt/cmt_convert_dialog.cpp:238
+msgid "Profile default"
+msgstr "Výchozí podle profilu"
+
+#: src/ui-imgui/cmt/cmt_convert_dialog.cpp:369
+#: src/ui-imgui/cmt/cmt_convert_dialog.cpp:596
+msgid "Nothing to change."
+msgstr "Není co měnit."
+
+#: src/ui-imgui/cmt/cmt_convert_dialog.cpp:372
+#, c-format
+msgid "Block %d converted to %s."
+msgstr "Blok %d převeden na %s."
+
+#: src/ui-imgui/cmt/cmt_convert_dialog.cpp:404
+#, c-format
+msgid "Convert to profile - block %d"
+msgstr "Převod na profil - blok %d"
+
+#: src/ui-imgui/cmt/cmt_convert_dialog.cpp:442
+#, c-format
+msgid "Current profile: %s"
+msgstr "Aktuální profil: %s"
+
+#: src/ui-imgui/cmt/cmt_convert_dialog.cpp:457
+msgid "(current)"
+msgstr "(aktuální)"
+
+#: src/ui-imgui/cmt/cmt_convert_dialog.cpp:545
+#: src/ui-imgui/cmt/cmt_window.cpp:2410 src/ui-imgui/cmt/cmt_window.cpp:3982
+#: src/ui-imgui/cmt/cmt_window.cpp:4010 src/ui-imgui/topmenu/menu_speed.cpp:27
 msgid "Speed"
 msgstr "Rychlost"
 
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:258
-#: src/ui-imgui/cmt/cmt_tape_index.cpp:294
-msgid "Length"
-msgstr "Délka"
+#: src/ui-imgui/cmt/cmt_convert_dialog.cpp:570
+msgid "Set by the profile"
+msgstr "Určuje profil"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:66
-msgid "Playing time:"
-msgstr "Doba přehrávání:"
-
-#: src/ui-imgui/cmt/cmt_window.cpp:70
-msgid "Remaining time:"
-msgstr "Zbývající čas:"
-
-#: src/ui-imgui/cmt/cmt_window.cpp:82 src/ui-imgui/cmt/cmt_window.cpp:790
-msgid "CMT Hack"
-msgstr "CMT Hack"
-
-#: src/ui-imgui/cmt/cmt_window.cpp:91
-msgid "CPU Boost"
-msgstr "CPU Boost"
-
-#: src/ui-imgui/cmt/cmt_window.cpp:128
-msgid "Click here to change the time info mode."
-msgstr "Klikněte zde pro změnu režimu zobrazení času."
-
-#: src/ui-imgui/cmt/cmt_window.cpp:212
-msgid "Block"
-msgstr "Blok"
-
-#: src/ui-imgui/cmt/cmt_window.cpp:212
-msgid "of"
-msgstr "z"
-
-#: src/ui-imgui/cmt/cmt_window.cpp:213
-msgid "FSize"
-msgstr "FSize"
-
-#: src/ui-imgui/cmt/cmt_window.cpp:214
-msgid "FExec"
-msgstr "FExec"
-
-#: src/ui-imgui/cmt/cmt_window.cpp:215
-msgid "FStart"
-msgstr "FStart"
-
-#: src/ui-imgui/cmt/cmt_window.cpp:216
-msgid "Stream"
-msgstr "Stream"
-
-#: src/ui-imgui/cmt/cmt_window.cpp:217
-msgid "Rate"
-msgstr "Rate"
-
-#: src/ui-imgui/cmt/cmt_window.cpp:217
-msgid "SSize"
-msgstr "SSize"
-
-#: src/ui-imgui/cmt/cmt_window.cpp:440
-msgid "Default MZ Speed:"
-msgstr "Výchozí MZ rychlost:"
-
-#: src/ui-imgui/cmt/cmt_window.cpp:721
+#: src/ui-imgui/cmt/cmt_convert_dialog.cpp:578
 msgid ""
-"Recording a replay: tape control is recorded; another tape and speed "
-"settings are not available."
+"Choose the speed here. After the conversion, Set speed cannot change this "
+"block."
 msgstr ""
-"Záznam vstupů: ovládání kazety se zaznamenává; jiná páska a nastavení "
-"rychlosti nejsou k dispozici."
+"Rychlost zvolte zde. Po převodu ji u tohoto bloku Nastavit rychlost nezmění."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:725
-msgid "Tape control is not available while a replay is recorded or played."
-msgstr "Ovládání kazety není během záznamu nebo přehrávání vstupů k dispozici."
+#: src/ui-imgui/cmt/cmt_convert_dialog.cpp:579
+msgid "After the conversion, Set speed cannot change this block."
+msgstr "Po převodu u tohoto bloku Nastavit rychlost nic nezmění."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:762 src/ui-imgui/cmt/cmt_window.cpp:879
-msgid "Virtual CMT"
-msgstr "Virtuální CMT"
+#: src/ui-imgui/cmt/cmt_convert_dialog.cpp:593
+#: src/ui-imgui/cmt/cmt_convert_dialog.cpp:598
+msgid "The tape changed. Close this dialog and open it again."
+msgstr "Páska se změnila. Zavřete tento dialog a otevřete ho znovu."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:799
-msgid "CMT Hack is activated!"
-msgstr "CMT Hack je aktivován!"
+#: src/ui-imgui/cmt/cmt_convert_dialog.cpp:595
+msgid "Select a profile."
+msgstr "Vyberte profil."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:800
-msgid "Virtual CMT is not available!"
-msgstr "Virtuální CMT není k dispozici!"
+#: src/ui-imgui/cmt/cmt_convert_dialog.cpp:608
+msgid "Convert"
+msgstr "Převést"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:806
-#: src/ui-imgui/version_check/imgui_version_check.cpp:390
-msgid "Close"
-msgstr "Zavřít"
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:272
+#, c-format
+msgid "MZF file %s was truncated by %d bytes to the size in its header."
+msgstr "Soubor MZF %s byl zkrácen o %d bajtů na velikost podle hlavičky."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:828
-msgid "No tape loaded"
-msgstr "Není vložena páska"
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:289
+msgid "MZF Size Warning"
+msgstr "Upozornění na velikost MZF"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:837
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:301
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:776
+msgid "MZF file"
+msgstr "MZF soubor"
+
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:309
+msgid "Exceeded bytes"
+msgstr "Přebytečné bajty"
+
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:321
+msgid "This MZF file is a bit bigger than it should be."
+msgstr "Tento MZF soubor je o něco větší, než by měl být."
+
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:323
+msgid "This could arise, for example, when the MZF file is exported from cp/m."
+msgstr "To může nastat například, když je MZF soubor exportován z cp/m."
+
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:324
+msgid "You can ignore it, or truncate the original file."
+msgstr "Můžete to ignorovat, nebo zkrátit původní soubor."
+
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:325
+msgid ""
+"Is recommended to use the Save as, for create truncated copy of this file."
+msgstr ""
+"Doporučuje se použít Uložit jako, pro vytvoření zkrácené kopie tohoto "
+"souboru."
+
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:332
+msgid "MZF size check enabled"
+msgstr "Kontrola velikosti MZF zapnuta"
+
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:340
+msgid "Fix automatically next time"
+msgstr "Příště opravit automaticky"
+
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:347
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:464
+msgid ""
+"An MZF file longer than its header says is truncated\n"
+"to the right size without asking."
+msgstr ""
+"Soubor MZF delší, než udává jeho hlavička, se bez dotazu\n"
+"zkrátí na správnou velikost."
+
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:360
+msgid "Ignore"
+msgstr "Ignorovat"
+
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:369
+msgid "Truncate"
+msgstr "Zkrátit"
+
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:387
+msgid "Save As"
+msgstr "Uložit jako"
+
+#: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:398
+msgid "Save MZF file as"
+msgstr "Uložit MZF soubor jako"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:353
+msgid "The tape could not be opened: the file path is too long."
+msgstr "Pásku nelze otevřít: cesta k souboru je příliš dlouhá."
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:640
+msgid "The tape could not be saved: the file path is too long."
+msgstr "Pásku nelze uložit: cesta k souboru je příliš dlouhá."
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:776
+msgid "TMZ tape"
+msgstr "Páska TMZ"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:776
+msgid "TZX tape"
+msgstr "Páska TZX"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:776
+msgid "MZT tape"
+msgstr "Páska MZT"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:805
+msgid "Save tape as"
+msgstr "Uložit pásku jako"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:879
+msgid "The block could not be exported: the file path is too long."
+msgstr "Blok nelze exportovat: cesta k souboru je příliš dlouhá."
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:925
+msgid "Export block as WAV"
+msgstr "Exportovat blok jako WAV"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:925
+msgid "Export block as MZF"
+msgstr "Exportovat blok jako MZF"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:975
+msgid "Select CMT file to open"
+msgstr "Vyberte CMT soubor k otevření"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1056
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:590
+#: src/ui-imgui/cmt/cmt_view.cpp:391 src/ui-imgui/cmt/cmt_view.cpp:400
+#: src/ui-imgui/cmt/cmt_window.cpp:1807 src/ui-imgui/cmt/cmt_window.cpp:3948
+#: src/ui-imgui/cmt/cmt_window.cpp:4298
+msgid "(new tape)"
+msgstr "(nová páska)"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1089
+msgid "Stopping the recording..."
+msgstr "Zastavuji nahrávání..."
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1099
+msgid "A recording is in progress. Stop and keep it, discard it, or cancel?"
+msgstr "Probíhá nahrávání. Zastavit a ponechat ho, zahodit ho, nebo zrušit?"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1101
+#: src/ui-imgui/cmt/cmt_window.cpp:2156
+msgid "Stop recording"
+msgstr "Zastavit nahrávání"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1108
+msgid "Discard recording"
+msgstr "Zahodit nahrávání"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1147
+msgid "The tape has changes that are not saved to a file."
+msgstr "Páska má změny, které nejsou uložené do souboru."
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1149
+msgid "Save them before you continue?"
+msgstr "Uložit je před pokračováním?"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1151
+msgid "The tape cannot be saved while input recording is active."
+msgstr "Během nahrávání záznamu vstupů pásku nelze uložit."
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1154
+msgid "Save tape"
+msgstr "Uložit pásku"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1164
+msgid "Discard changes"
+msgstr "Zahodit změny"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1228
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1246
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1264
+msgid "Recording in progress"
+msgstr "Probíhá nahrávání"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1228
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1264
+msgid "Unsaved tape changes"
+msgstr "Neuložené změny pásky"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1325
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1389
+msgid ""
+"The loading mode cannot be changed while an input replay is recorded or "
+"played."
+msgstr ""
+"Režim načítání nelze změnit během nahrávání nebo přehrávání záznamu vstupů."
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1335
+msgid "Stop the tape to switch to or from Direct mode."
+msgstr "Pro přepnutí do režimu Přímo nebo z něj zastavte pásku."
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1352
+msgid ""
+"Direct Save cannot be changed while an input replay is recorded or played."
+msgstr ""
+"Přímé ukládání nelze změnit během nahrávání nebo přehrávání záznamu vstupů."
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1357
+msgid "Stop the tape to switch Direct Save on or off."
+msgstr "Pro zapnutí nebo vypnutí přímého ukládání zastavte pásku."
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1360
+msgid "Direct Save: on (a ROM SAVE without Record goes straight to the tape)"
+msgstr "Přímé ukládání: zapnuto (SAVE z ROM bez Nahrávat jde rovnou na pásku)"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1361
+msgid "Direct Save: off (a ROM SAVE needs Record)"
+msgstr "Přímé ukládání: vypnuto (SAVE z ROM potřebuje Nahrávat)"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1399
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1786 src/ui-imgui/cmt/cmt_view.cpp:668
+#: src/ui-imgui/cmt/cmt_window.cpp:3468
+msgid "The tape state changed; the action was cancelled."
+msgstr "Stav pásky se změnil, akce byla zrušena."
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1425
+msgid ""
+"Another tape cannot be opened while an input replay is recorded or played."
+msgstr ""
+"Během nahrávání nebo přehrávání záznamu vstupů nelze otevřít jinou pásku."
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1554
+msgid "Too many separate blocks selected."
+msgstr "Vybráno je příliš mnoho oddělených bloků."
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1597
+msgid "The remaining files were not imported."
+msgstr "Zbývající soubory se neimportovaly."
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1625
+msgid "The file could not be imported: the file path is too long."
+msgstr "Soubor nelze importovat: cesta k souboru je příliš dlouhá."
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1665
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1998
+msgid "The import could not be completed."
+msgstr "Import se nepodařilo dokončit."
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1675
+msgid "Another import is still in progress."
+msgstr "Jiný import ještě probíhá."
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1738
+msgid "Import file"
+msgstr "Importovat soubor"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1791
+msgid "The tape could not be exported: the file path is too long."
+msgstr "Pásku nelze exportovat: cesta k souboru je příliš dlouhá."
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1836
+msgid "Export tape as WAV"
+msgstr "Exportovat pásku jako WAV"
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1919
+#, c-format
+msgid "Deleted block %d."
+msgstr "Smazán blok %d."
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:1921
+#, c-format
+msgid "Deleted %d blocks."
+msgstr "Smazáno bloků: %d."
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:2039
+msgid ""
+"The tape cannot be exported while an input replay is recorded or played."
+msgstr "Pásku nelze exportovat během nahrávání nebo přehrávání záznamu vstupů."
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:2068
+msgid "The tape was exported."
+msgstr "Páska byla exportována."
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:2070
+msgid "The tape could not be exported."
+msgstr "Pásku se nepodařilo exportovat."
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:2145
+msgid ""
+"The speed of a block cannot be changed while an input replay is recorded or "
+"played."
+msgstr ""
+"Rychlost bloku nelze změnit během nahrávání nebo přehrávání záznamu vstupů."
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:2149
+msgid "The speed of the block could not be changed."
+msgstr "Rychlost bloku se nepodařilo změnit."
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:2156
+msgid ""
+"The signal speed cannot be changed while an input replay is recorded or "
+"played."
+msgstr ""
+"Rychlost signálu nelze změnit během nahrávání nebo přehrávání záznamu vstupů."
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:2158
+msgid "The signal speed could not be changed."
+msgstr "Rychlost signálu se nepodařilo změnit."
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:2190
+msgid "The tape cannot be saved while an input replay is recorded or played."
+msgstr "Pásku nelze uložit během nahrávání nebo přehrávání záznamu vstupů."
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:2191
+msgid "A block cannot be exported while an input replay is recorded or played."
+msgstr "Blok nelze exportovat během nahrávání nebo přehrávání záznamu vstupů."
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:2206
+msgid "The tape was saved."
+msgstr "Páska byla uložena."
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:2206
+msgid "The tape could not be saved."
+msgstr "Pásku se nepodařilo uložit."
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:2208
+msgid "The block was exported."
+msgstr "Blok byl exportován."
+
+#: src/ui-imgui/cmt/cmt_tape_actions.cpp:2208
+msgid "The block could not be exported."
+msgstr "Blok se nepodařilo exportovat."
+
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:232
+msgid "Title"
+msgstr "Název"
+
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:233
+msgid "Publisher"
+msgstr "Vydavatel"
+
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:234
+msgid "Author"
+msgstr "Autor"
+
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:235
+msgid "Year"
+msgstr "Rok"
+
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:237
+msgctxt "Tape information"
+msgid "Language"
+msgstr "Jazyk"
+
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:238
+msgctxt "Tape information"
+msgid "Type"
+msgstr "Typ"
+
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:239
+msgid "Price"
+msgstr "Cena"
+
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:240
+msgid "Protection"
+msgstr "Ochrana"
+
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:241
+msgid "Origin"
+msgstr "Původ"
+
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:242
+#: src/ui-imgui/debugger/bookmarks/bm_window.cpp:983
+#: src/ui-imgui/debugger/vars/vars_window.cpp:1510
+msgid "Comment"
+msgstr "Komentář"
+
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:257
+msgid "Not specified"
+msgstr "Neurčeno"
+
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:312
+msgid ""
+"A different tape is in the deck now. Press Reload to read it; your changes "
+"are kept."
+msgstr ""
+"V kazetofonu je teď jiná páska. Klikněte na Načíst znovu; vaše úpravy "
+"zůstanou."
+
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:313
+msgid "The tape changed. Press Reload to read it again; your changes are kept."
+msgstr "Páska se změnila. Klikněte na Načíst znovu; vaše úpravy zůstanou."
+
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:490
+msgid "Tape information updated."
+msgstr "Informace o pásce aktualizovány."
+
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:590
+#, c-format
+msgid "Tape information - %s"
+msgstr "Informace o pásce - %s"
+
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:604
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:706
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:708
+msgid "Target machine"
+msgstr "Cílový stroj"
+
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:739
+msgid ""
+"This tape file format cannot store this information. Save the tape as TMZ to "
+"keep it."
+msgstr ""
+"Tento formát souboru pásky tyto informace neuloží. Aby zůstaly, uložte pásku "
+"jako TMZ."
+
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:743
+msgid ""
+"This tape has another information block further on; it is left unchanged."
+msgstr "Páska má dál ještě jeden informační blok; ten zůstane beze změny."
+
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:751
+msgid "Wait until the tape information is saved."
+msgstr "Počkejte, až se informace o pásce uloží."
+
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:762
+msgid "Reload"
+msgstr "Načíst znovu"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:136
+msgid "machine code"
+msgstr "strojový kód"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:137
+msgid "BASIC program"
+msgstr "program BASIC"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:138
+msgid "data"
+msgstr "data"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:139
+msgid "BASIC data"
+msgstr "data BASIC"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:140
+msgid "CP/M file"
+msgstr "soubor CP/M"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:158 src/ui-imgui/cmt/cmt_window.cpp:1064
+#: src/ui/cmt/UiCmt.cpp:36
+msgid "Custom pulses"
+msgstr "Vlastní pulzy"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:173 src/ui-imgui/cmt/cmt_window.cpp:2466
+msgid "Not decoded"
+msgstr "Nedekódováno"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:174
+msgid "Unsaved"
+msgstr "Neuloženo"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:175 src/ui-imgui/cmt/cmt_window.cpp:2466
+msgid "Cannot play"
+msgstr "Nelze přehrát"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:176 src/ui-imgui/cmt/cmt_window.cpp:757
+#: src/ui-imgui/cmt/cmt_window.cpp:764
+msgid "Control block"
+msgstr "Řídicí blok"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:177
+msgid "Checksum error"
+msgstr "Chyba součtu"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:391
+#, c-format
+msgid "Opened %s, blocks: %d"
+msgstr "Otevřeno: %s, bloků: %d"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:400
+#, c-format
+msgid "Opened %s, blocks: %d. Use Analyze to find files."
+msgstr "Otevřeno: %s, bloků: %d. Soubory v záznamu najde Analyzovat."
+
+#: src/ui-imgui/cmt/cmt_view.cpp:553
+#, c-format
+msgid "Imported %s, blocks: %d"
+msgstr "Importováno: %s, bloků: %d"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:589
+msgid "Loading mode: Tape"
+msgstr "Režim načítání: Páska"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:590
+msgid "Loading mode: Boost"
+msgstr "Režim načítání: Boost"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:591
+msgid "Loading mode: Direct"
+msgstr "Režim načítání: Přímo"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:599
+msgid "The selected ROM does not support direct loading."
+msgstr "Vybraný ROM nepodporuje přímé načtení."
+
+#: src/ui-imgui/cmt/cmt_view.cpp:638
+msgid "The ROM SAVE could not be stored on the tape."
+msgstr "SAVE z ROM se nepodařilo uložit na pásku."
+
+#: src/ui-imgui/cmt/cmt_view.cpp:643
+#, c-format
+msgid "ROM SAVE stored \"%s\" (%u bytes) as tape block %d."
+msgstr "SAVE z ROM uložil \"%s\" (%u bajtů) jako blok pásky %d."
+
+#: src/ui-imgui/cmt/cmt_view.cpp:713 src/ui-imgui/cmt/cmt_view.cpp:1386
+#: src/ui-imgui/cmt/cmt_window.cpp:2465
+#, c-format
+msgid "Loop start x%u"
+msgstr "Začátek smyčky x%u"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:716
+msgid "Loop start"
+msgstr "Začátek smyčky"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:717 src/ui-imgui/cmt/cmt_view.cpp:1392
+msgid "Loop end"
+msgstr "Konec smyčky"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:720 src/ui-imgui/cmt/cmt_view.cpp:1387
+#, c-format
+msgid "Jump %+d"
+msgstr "Skok %+d"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:723
+msgid "Jump"
+msgstr "Skok"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:724 src/ui-imgui/cmt/cmt_view.cpp:725
+#: src/ui-imgui/cmt/cmt_view.cpp:1424 src/ui-imgui/cmt/cmt_window.cpp:2466
+msgid "Stop the tape"
+msgstr "Zastavení pásky"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:726
+msgid "Group start"
+msgstr "Začátek skupiny"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:727
+msgid "Group end"
+msgstr "Konec skupiny"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:819
+msgid "ZX data"
+msgstr "Data ZX"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:824
+msgid "WAV recording"
+msgstr "Nahrávka WAV"
+
+#: src/ui-imgui/cmt/cmt_view.cpp:829 src/ui-imgui/cmt/cmt_view.cpp:1180
+msgid "Raw recording"
+msgstr "Surový záznam"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:693 src/ui-imgui/cmt/cmt_window.cpp:1052
+#: src/ui-imgui/cmt/cmt_window.cpp:1830 src/ui-imgui/cmt/cmt_window.cpp:3947
+msgid "No tape"
+msgstr "Bez pásky"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:694
+#: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:365
+msgid "Stopped"
+msgstr "Zastaveno"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:695
+#: src/ui-imgui/topmenu/replay_window.cpp:213
+msgid "Playing"
+msgstr "Přehrávání"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:696
+msgid "Waiting for motor"
+msgstr "Čeká na motor"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:697
+msgid "Paused"
+msgstr "Pozastaveno"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:698
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:363
 #: src/ui-imgui/topmenu/replay_window.cpp:205
 msgid "Recording"
 msgstr "Nahrávání"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:847
-#: src/ui-imgui/topmenu/replay_window.cpp:213
-msgid "Playing"
-msgstr "Přehrávání"
+#: src/ui-imgui/cmt/cmt_window.cpp:700
+msgid "Direct load"
+msgstr "Přímé načtení"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:862
-msgid "Stopped - Ready to Play"
-msgstr "Zastaveno - Připraveno k přehrávání"
+#: src/ui-imgui/cmt/cmt_window.cpp:763
+msgid "ZX header"
+msgstr "Hlavička ZX"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:869
-msgid "(paused)"
-msgstr "(pozastaveno)"
+#: src/ui-imgui/cmt/cmt_window.cpp:803 src/ui-imgui/cmt/cmt_window.cpp:824
+#: src/ui-imgui/cmt/cmt_window.cpp:830 src/ui-imgui/cmt/cmt_window.cpp:1016
+msgid "Elapsed"
+msgstr "Uplynulo"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:891
-msgid "*** Empty ***"
-msgstr "*** Prázdný ***"
+#: src/ui-imgui/cmt/cmt_window.cpp:805 src/ui-imgui/cmt/cmt_window.cpp:1065
+#: src/ui-imgui/cmt/cmt_window.cpp:1984 src/ui-imgui/cmt/cmt_window.cpp:2247
+#: src/ui-imgui/cmt/cmt_window.cpp:2632
+msgid "Not used in Direct mode"
+msgstr "V režimu Přímo se nepoužívá"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:897
-msgid "Recording (paused)"
-msgstr "Nahrávání (pozastaveno)"
+#: src/ui-imgui/cmt/cmt_window.cpp:810 src/ui-imgui/cmt/cmt_window.cpp:1016
+msgid "Recording time"
+msgstr "Čas nahrávání"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:901
-msgid "Recording.."
-msgstr "Nahrávání.."
+#: src/ui-imgui/cmt/cmt_window.cpp:811 src/ui-imgui/cmt/cmt_window.cpp:1987
+#: src/ui-imgui/cmt/cmt_window.cpp:2633 src/ui-imgui/cmt/cmt_window.cpp:2648
+msgid "Not available while recording."
+msgstr "Během nahrávání není dostupné."
 
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:109
-msgid "Custom Tape Pulses"
-msgstr "Vlastní pulzy pásky"
+#: src/ui-imgui/cmt/cmt_window.cpp:817
+msgid ""
+"The remaining time is shown once the lengths of all blocks are known. They "
+"are computed while the tape is stopped."
+msgstr ""
+"Zbývající čas se ukáže, až budou známé délky všech bloků. Počítají se při "
+"zastavené pásce."
 
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:121
-msgid "Pulse lengths in microseconds (order of the UniCMT CMTSPEED header):"
-msgstr "Délky pulzů v mikrosekundách (pořadí jako v hlavičce CMTSPEED UniCMT):"
+#: src/ui-imgui/cmt/cmt_window.cpp:821 src/ui-imgui/cmt/cmt_window.cpp:1016
+msgid "Remaining"
+msgstr "Zbývá"
 
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:125
-msgid "Long pulse high (bit 1)"
-msgstr "Dlouhý pulz high (bit 1)"
+#: src/ui-imgui/cmt/cmt_window.cpp:827 src/ui-imgui/cmt/cmt_window.cpp:1016
+msgid "Block time"
+msgstr "Čas bloku"
 
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:126
-msgid "Long pulse low (bit 1)"
-msgstr "Dlouhý pulz low (bit 1)"
+#: src/ui-imgui/cmt/cmt_window.cpp:1028 src/ui-imgui/cmt/cmt_window.cpp:1940
+msgid "Motor on"
+msgstr "Motor běží"
 
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:127
-msgid "Short pulse high (bit 0)"
-msgstr "Krátký pulz high (bit 0)"
+#: src/ui-imgui/cmt/cmt_window.cpp:1028 src/ui-imgui/cmt/cmt_window.cpp:1940
+msgid "Motor off"
+msgstr "Motor stojí"
 
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:128
-msgid "Short pulse low (bit 0)"
-msgstr "Krátký pulz low (bit 0)"
+#: src/ui-imgui/cmt/cmt_window.cpp:1030 src/ui-imgui/cmt/cmt_window.cpp:1883
+msgid "No block"
+msgstr "Žádný blok"
 
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:137
-msgid "Presets:"
-msgstr "Předvolby:"
+#: src/ui-imgui/cmt/cmt_window.cpp:1030 src/ui-imgui/cmt/cmt_window.cpp:1888
+msgid "New recording"
+msgstr "Nový záznam"
 
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:150
-msgid "Revert"
-msgstr "Vrátit"
+#: src/ui-imgui/cmt/cmt_window.cpp:1030 src/ui-imgui/cmt/cmt_window.cpp:1907
+msgid "Next LOAD takes this block"
+msgstr "Příští LOAD vezme tento blok"
 
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:164
+#: src/ui-imgui/cmt/cmt_window.cpp:1030 src/ui-imgui/cmt/cmt_window.cpp:1908
+msgid "This block cannot be loaded directly"
+msgstr "Tento blok nelze načíst přímo"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1038 src/ui-imgui/cmt/cmt_window.cpp:1902
 #, c-format
-msgid "Equivalent speed: ~%.2f:1 (%.0f Bd)"
-msgstr "Odpovídající rychlost: ~%.2f:1 (%.0f Bd)"
+msgid "%s pulses"
+msgstr "%s pulzů"
 
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:168
+#: src/ui-imgui/cmt/cmt_window.cpp:1050 src/ui-imgui/cmt/cmt_window.cpp:1796
+#: src/ui-imgui/cmt/cmt_window.cpp:4360
+msgid "Open..."
+msgstr "Otevřít..."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1050 src/ui-imgui/cmt/cmt_window.cpp:1795
+#: src/ui-imgui/cmt/cmt_window.cpp:4383
+msgid "Eject"
+msgstr "Vysunout"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1050 src/ui-imgui/cmt/cmt_window.cpp:1051
+#: src/ui-imgui/cmt/cmt_window.cpp:1785 src/ui-imgui/cmt/cmt_window.cpp:3956
+msgid "Blocks"
+msgstr "Bloky"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1051 src/ui-imgui/cmt/cmt_window.cpp:1821
+msgid "Open tape..."
+msgstr "Otevřít pásku..."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1051 src/ui-imgui/cmt/cmt_window.cpp:1820
+#: src/ui-imgui/cmt/cmt_window.cpp:4359
+msgid "New tape"
+msgstr "Nová páska"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1052 src/ui-imgui/cmt/cmt_window.cpp:1808
+msgid "Modified"
+msgstr "Změněno"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1056 src/ui-imgui/cmt/cmt_window.cpp:2150
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:437
+msgid "Echo"
+msgstr "Echo"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1060 src/ui-imgui/cmt/cmt_window.cpp:2243
+msgid "Signal speed"
+msgstr "Rychlost signálu"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1064 src/ui-imgui/cmt/cmt_window.cpp:2249
+#: src/ui-imgui/cmt/cmt_window.cpp:2251 src/ui-imgui/cmt/cmt_window.cpp:3982
+msgid "(set in file)"
+msgstr "(dáno souborem)"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1065 src/ui-imgui/cmt/cmt_window.cpp:2251
+msgid "(recorded signal)"
+msgstr "(nahraný signál)"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1070 src/ui-imgui/cmt/cmt_window.cpp:2304
+msgid "Loading"
+msgstr "Načítání"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1071 src/ui-imgui/cmt/cmt_window.cpp:2328
+#: src/ui-imgui/cmt/cmt_window.cpp:4356
+msgid "Tape"
+msgstr "Páska"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1071 src/ui-imgui/cmt/cmt_window.cpp:2329
+msgid "Boost"
+msgstr "Boost"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1071 src/ui-imgui/cmt/cmt_window.cpp:2330
+msgid "Direct"
+msgstr "Přímo"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1111 src/ui-imgui/cmt/cmt_window.cpp:1874
+#: src/ui-imgui/cmt/cmt_window.cpp:1877 src/ui-imgui/cmt/cmt_window.cpp:1880
 #, c-format
-msgid "Each length must be greater than 0 and at most %.0f µs."
-msgstr "Každá délka musí být větší než 0 a nejvýš %.0f µs."
+msgid "Block %d / %d"
+msgstr "Blok %d / %d"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1481 src/ui-imgui/cmt/cmt_window.cpp:2630
+#: src/ui-imgui/cmt/cmt_window.cpp:2646
+msgid "Not available while an input replay is played."
+msgstr "Během přehrávání záznamu vstupů není dostupné."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1496 src/ui-imgui/cmt/cmt_window.cpp:1530
+#: src/ui-imgui/cmt/cmt_window.cpp:1547 src/ui-imgui/cmt/cmt_window.cpp:1988
+#: src/ui-imgui/cmt/cmt_window.cpp:2265 src/ui-imgui/cmt/cmt_window.cpp:2309
+#: src/ui-imgui/cmt/cmt_window.cpp:2723
+msgid "Not available while an input replay is recorded."
+msgstr "Během nahrávání záznamu vstupů není dostupné."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1497 src/ui-imgui/cmt/cmt_window.cpp:1513
+#: src/ui-imgui/cmt/cmt_window.cpp:2023 src/ui-imgui/cmt/cmt_window.cpp:2311
+msgid "Stop the recording first."
+msgstr "Nejdřív zastavte nahrávání."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1532 src/ui-imgui/cmt/cmt_window.cpp:1548
+#: src/ui-imgui/cmt/cmt_window.cpp:2017 src/ui-imgui/cmt/cmt_window.cpp:2023
+#: src/ui-imgui/cmt/cmt_window.cpp:2034 src/ui-imgui/cmt/cmt_window.cpp:2312
+#: src/ui-imgui/cmt/cmt_window.cpp:2724
+msgid "Stop the tape first."
+msgstr "Nejdřív zastavte pásku."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1680
+msgid "Select a single block to move it."
+msgstr "Pro přesun vyberte jediný blok."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1681
+msgid "This is the first block."
+msgstr "Toto je první blok."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1682
+msgid "This is the last block."
+msgstr "Toto je poslední blok."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1701
+msgid "Select one raw recording in the list of blocks."
+msgstr "Vyberte v seznamu bloků jeden surový záznam."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1702
+msgid "Only a raw recording can be analyzed."
+msgstr "Analyzovat lze jen surový záznam."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1721
+msgid "Select a single block to convert it."
+msgstr "Pro převod vyberte jen jeden blok."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1722
+msgid "This block cannot be converted to another profile."
+msgstr "Tento blok nelze převést na jiný profil."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1788
+msgid "Open or create a tape to see its blocks."
+msgstr "Otevřete nebo vytvořte pásku, abyste viděli její bloky."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1790
+msgid "Show only the deck"
+msgstr "Zobrazit jen kazetofon"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1790
+msgid "Show the list of blocks"
+msgstr "Zobrazit seznam bloků"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1801 src/ui-imgui/cmt/cmt_window.cpp:1825
+msgid "Open a tape file"
+msgstr "Otevřít soubor pásky"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1803
+msgid "Eject the tape"
+msgstr "Vysunout pásku"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1817
+msgid "The tape has unsaved changes."
+msgstr "Páska má neuložené změny."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1828
+msgid "Insert a new empty tape"
+msgstr "Vložit novou prázdnou pásku"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1851
+msgid "Click to show the time from the start of the tape"
+msgstr "Kliknutím ukážete čas od začátku pásky"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1852
+msgid "Click to show the time to the end of the tape"
+msgstr "Kliknutím ukážete čas do konce pásky"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1986
+msgid "The tape is empty."
+msgstr "Páska je prázdná."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1998
+msgid "The tape has no playable block."
+msgstr "Páska nemá žádný přehratelný blok."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:1999
+msgid "There is no playable block before this one."
+msgstr "Před tímto blokem není žádný přehratelný blok."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2000
+msgid "There is no playable block after this one."
+msgstr "Za tímto blokem není žádný přehratelný blok."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2013
+msgid "The tape is already stopped."
+msgstr "Páska už stojí."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2027
+msgid "No block is selected on the tape."
+msgstr "Na pásce není vybraný žádný blok."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2029 src/ui-imgui/cmt/cmt_window.cpp:2320
+msgid "The current block does not contain an MZF file."
+msgstr "Aktuální blok neobsahuje soubor MZF."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2132
+msgctxt "cmt"
+msgid "Rewind"
+msgstr "Převinout na začátek"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2135
+msgid "Previous block"
+msgstr "Předchozí blok"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2139
+msgid "Pause"
+msgstr "Pozastavit"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2139
+msgid "Play"
+msgstr "Přehrát"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2142
+#: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:423
+msgid "Stop"
+msgstr "Zastavit"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2145
+msgid "Next block"
+msgstr "Další blok"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2151
+msgid "Play the tape signal through the speaker"
+msgstr "Přehrávat signál pásky do reproduktoru"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2156
+msgid "Record"
+msgstr "Nahrávat"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2266
+msgid "Stop the tape to change the speed."
+msgstr "Pro změnu rychlosti zastavte pásku."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2294
+msgid "Speed of the tape signal for blocks without their own speed"
+msgstr "Rychlost signálu pásky pro bloky bez vlastní rychlosti"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2328
+msgid "Play the signal in real time"
+msgstr "Přehrávat signál ve skutečném čase"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2329
+msgid "Run at maximum speed while the motor is on"
+msgstr "Běžet nejvyšší rychlostí, dokud běží motor"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2330 src/ui-imgui/cmt/cmt_window.cpp:2747
+msgid "Copy the program into memory without playing the signal"
+msgstr "Zkopírovat program do paměti bez přehrávání signálu"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2408
+msgctxt "cmt column"
+msgid "Load"
+msgstr "Načtení"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2409
+msgctxt "cmt column"
+msgid "Exec"
+msgstr "Spuštění"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2411 src/ui-imgui/cmt/cmt_window.cpp:3989
+#: src/ui-imgui/cmt/cmt_window.cpp:3995 src/ui-imgui/cmt/cmt_window.cpp:4011
+msgid "Length"
+msgstr "Délka"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2413 src/ui-imgui/cmt/cmt_window.cpp:4015
+msgid "Status"
+msgstr "Stav"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2472 src/ui-imgui/cmt/cmt_window.cpp:3087
+msgid "Recording..."
+msgstr "Nahrává se..."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2631 src/ui-imgui/cmt/cmt_window.cpp:2647
+#: src/ui-imgui/cmt/cmt_window.cpp:2760
+msgid "This block cannot be played."
+msgstr "Tento blok nelze přehrát."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2725
+msgid "This block does not contain an MZF file."
+msgstr "Tento blok neobsahuje soubor MZF."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2728
+msgid "Play from here"
+msgstr "Přehrát odsud"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2736
+msgid "Go to this block"
+msgstr "Přejít na tento blok"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2737
+msgid ""
+"Move the tape to the start of this block; playback state does not change"
+msgstr "Přesune pásku na začátek tohoto bloku; stav přehrávání se nemění"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2746
+msgid "Load directly"
+msgstr "Načíst přímo"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2755
+msgid "Export as MZF..."
+msgstr "Exportovat jako MZF..."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2761
+msgid "Export as WAV..."
+msgstr "Exportovat jako WAV..."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2769
+msgid "The speed of this block is given by the file."
+msgstr "Rychlost tohoto bloku je dána souborem."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2771
+msgid "Set speed"
+msgstr "Nastavit rychlost"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2804
+msgid "Analyze..."
+msgstr "Analyzovat..."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2806
+msgid "Convert to profile..."
+msgstr "Převést na profil..."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2814
+msgid "Move up"
+msgstr "Posunout nahoru"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2815
+msgid "Move down"
+msgstr "Posunout dolů"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2817
+msgid "Import file here..."
+msgstr "Importovat soubor sem..."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2822
+#, c-format
+msgid "Delete %d blocks"
+msgstr "Smazat bloky (%d)"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2825
+#: src/ui-imgui/debugger/membrowser/membrowser_annot_dialog.cpp:146
+msgid "Delete"
+msgstr "Smazat"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:2832
+msgid "Properties"
+msgstr "Vlastnosti"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3404 src/ui-imgui/cmt/cmt_window.cpp:3431
+msgid "Delete blocks"
+msgstr "Smazat bloky"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3416
+#, c-format
+msgid ""
+"Delete blocks: %d. Unsaved: %d. Data of the unsaved blocks is not stored "
+"anywhere else."
+msgstr ""
+"Smazat bloky: %d. Neuložené: %d. Data neuložených bloků nejsou uložená nikde "
+"jinde."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3419
+msgid "Delete this unsaved block? Its data is not stored anywhere else."
+msgstr "Smazat tento neuložený blok? Jeho data nejsou uložená nikde jinde."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3421
+#, c-format
+msgid "Delete %d unsaved blocks? Their data is not stored anywhere else."
+msgstr "Smazat neuložené bloky (%d)? Jejich data nejsou uložená nikde jinde."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3515 src/ui-imgui/cmt/cmt_window.cpp:3539
+msgid "Finish the open dialog first."
+msgstr "Nejdřív dokončete otevřený dialog."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3542
+msgid "Only one file can be opened as a tape."
+msgstr "Jako páska jde otevřít jen jeden soubor."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3596
+msgid "This tape is empty."
+msgstr "Tato páska je prázdná."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3596
+msgid "Press Record to save a program from the computer, or open a tape file."
+msgstr ""
+"Stiskněte Nahrávat a uložte program z počítače, nebo otevřete soubor pásky."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3918
+msgid "Imported from MZF"
+msgstr "Importováno z MZF"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3919
+msgctxt "cmt"
+msgid "Recorded"
+msgstr "Nahráno"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3920
+msgctxt "cmt"
+msgid "Imported"
+msgstr "Importováno"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3922
+msgid "From tape file"
+msgstr "Ze souboru pásky"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3946
+msgid "Tape properties"
+msgstr "Vlastnosti pásky"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3951
+#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:110
+#: src/ui-imgui/memext/memext_load_dialog.cpp:112
+#: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:101
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:254
+#: src/ui-imgui/topmenu/replay_window.cpp:223
+#: src/ui-imgui/topmenu/replay_window.cpp:229
+msgid "File"
+msgstr "Soubor"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3957
+msgid "Total length"
+msgstr "Celková délka"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3965
+#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:204
+msgid "Format"
+msgstr "Formát"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3968
+msgid "Block properties"
+msgstr "Vlastnosti bloku"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3979
+msgid "Load address"
+msgstr "Adresa načtení"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3981
+msgid "Exec address"
+msgstr "Adresa spuštění"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3985
+msgid "Long pulse (µs)"
+msgstr "Dlouhý pulz (µs)"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3987
+msgid "Short pulse (µs)"
+msgstr "Krátký pulz (µs)"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3990 src/ui-imgui/cmt/cmt_window.cpp:3996
+#: src/ui-imgui/cmt/cmt_window.cpp:4003 src/ui-imgui/cmt/cmt_window.cpp:4012
+#: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:318
+msgid "Source"
+msgstr "Zdroj"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3997
+msgid "Sample rate"
+msgstr "Vzorkovací frekvence"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:3998
+msgid "Pulse count"
+msgstr "Počet pulzů"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4002
+#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:198
+#: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:105
+msgid "Description"
+msgstr "Popis"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4093
+msgid "Hide the properties"
+msgstr "Skrýt vlastnosti"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4093
+msgid "Show the properties"
+msgstr "Zobrazit vlastnosti"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4173
+msgid "Columns"
+msgstr "Sloupce"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4174 src/ui-imgui/cmt/cmt_window.cpp:4408
+msgid "The list of blocks is shown in the Full layout."
+msgstr "Seznam bloků je vidět v rozvržení Úplné."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4181
+msgid "Show all"
+msgstr "Zobrazit vše"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4295
+msgid "Virtual CMT"
+msgstr "Virtuální CMT"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4361
+msgid "Import file..."
+msgstr "Importovat soubor..."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4362
+#: src/ui-imgui/debugger/breakpoints/bpt_window.cpp:1456
+#: src/ui-imgui/debugger/membrowser/membrowser_annot_dialog.cpp:144
+#: src/ui-imgui/memext/memext_save_dialog.cpp:189
+#: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:119
+msgid "Save"
+msgstr "Uložit"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4363
+msgid "Save as..."
+msgstr "Uložit jako..."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4365
+msgid "Export block as MZF..."
+msgstr "Exportovat blok jako MZF..."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4367
+msgid "Export block as WAV..."
+msgstr "Exportovat blok jako WAV..."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4369
+msgid "Export tape as WAV..."
+msgstr "Exportovat pásku jako WAV..."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4376
+msgid "Analyze recording..."
+msgstr "Analyzovat záznam..."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4380
+msgid "Tape information..."
+msgstr "Informace o pásce..."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4381
+msgid "Check tape"
+msgstr "Zkontrolovat pásku"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4398
+msgid "View"
+msgstr "Zobrazení"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4402
+msgid "Compact"
+msgstr "Kompaktní"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4403
+msgid "Full"
+msgstr "Úplné"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4407
+msgid "Reset column widths"
+msgstr "Obnovit šířky sloupců"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4644
+#, c-format
+msgid "%d blocks selected"
+msgstr "Vybráno bloků: %d"
 
 #: src/ui-imgui/debugger/bookmarks/bm_window.cpp:267
 msgid "- Cancel##bm_add_toggle"
@@ -1144,11 +2497,6 @@ msgstr "Název"
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:314
 msgid "Address"
 msgstr "Adresa"
-
-#: src/ui-imgui/debugger/bookmarks/bm_window.cpp:983
-#: src/ui-imgui/debugger/vars/vars_window.cpp:1510
-msgid "Comment"
-msgstr "Komentář"
 
 #: src/ui-imgui/debugger/breakpoints/bpt_edit_panel.cpp:209
 msgid "PC execution - trigger when Z80 PC reaches the address."
@@ -1513,7 +2861,7 @@ msgstr "(vyberte událost)"
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:1756
 #: src/ui-imgui/debugger/pioz80_window.cpp:424
 #: src/ui-imgui/debugger/pioz80_window.cpp:471
-#: src/ui-imgui/debugger/ppi_window.cpp:409
+#: src/ui-imgui/debugger/ppi_window.cpp:413
 #: src/ui-imgui/debugger/sections/dbg_stack_panel.cpp:1302
 msgid "(none)"
 msgstr "(žádný)"
@@ -2252,13 +3600,6 @@ msgstr "Skupiny první##bpt"
 msgid "Add##bpt"
 msgstr "Přidat##bpt"
 
-#: src/ui-imgui/debugger/breakpoints/bpt_window.cpp:1456
-#: src/ui-imgui/debugger/membrowser/membrowser_annot_dialog.cpp:144
-#: src/ui-imgui/memext/memext_save_dialog.cpp:189
-#: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:117
-msgid "Save"
-msgstr "Uložit"
-
 #: src/ui-imgui/debugger/breakpoints/bpt_window.cpp:1475
 msgid "Save##bpt_bar"
 msgstr "Uložit##bpt_bar"
@@ -2945,7 +4286,7 @@ msgstr "Politika kolize:"
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:2845
 #: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3160
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:312
-#: src/ui-imgui/topmenu/menu_replay.cpp:208
+#: src/ui-imgui/topmenu/menu_replay.cpp:247
 #: src/ui-imgui/topmenu/replay_window.cpp:245
 msgid "Frame"
 msgstr "Frame"
@@ -3849,7 +5190,7 @@ msgstr ""
 
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:2155
 #: src/ui-imgui/joy/joy_setup_window.cpp:433
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:320
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:323
 msgid "None"
 msgstr "Žádné"
 
@@ -4351,14 +5692,14 @@ msgid "FDC State"
 msgstr "FDC State"
 
 #: src/ui-imgui/debugger/fdc_window.cpp:198
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:403
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:324
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:405
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:327
 msgid "FDC0 (standard)"
 msgstr "FDC0 (standardní)"
 
 #: src/ui-imgui/debugger/fdc_window.cpp:199
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:409
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:328
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:411
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:331
 msgid "FDC1 (secondary)"
 msgstr "FDC1 (sekundární)"
 
@@ -5398,21 +6739,50 @@ msgstr "Text"
 msgid "Color tag"
 msgstr "Barevný štítek"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_annot_dialog.cpp:146
-msgid "Delete"
-msgstr "Smazat"
-
 #: src/ui-imgui/debugger/membrowser/membrowser_annot_dialog.cpp:192
 #, c-format
 msgid "Annotation @ 0x%08X"
 msgstr "Poznámka @ 0x%08X"
+
+#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:231
+#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:276
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1729
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1733
+msgid "Target:"
+msgstr "Cíl:"
+
+#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:239
+msgid "No target callback set"
+msgstr "Není nastaven cílový callback"
+
+#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:262
+msgid "No target: open a Memory Browser and right-click in hex/ASCII column"
+msgstr ""
+"Není cíl: otevřete Memory Browser a klikněte pravým v hex/ASCII sloupci"
+
+#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:284
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:337
+msgid "Region:"
+msgstr "Region:"
+
+#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:290
+msgid "Edit ON"
+msgstr "Editace ZAP"
+
+#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:293
+msgid "Edit OFF / RO"
+msgstr "Editace VYP / RO"
+
+#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:309
+msgid "Char Inserter###mb_char_inserter"
+msgstr "Vkládání znaků###mb_char_inserter"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_diff_window.cpp:404
 msgid "Live"
 msgstr "Živě"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_diff_window.cpp:405
-#: src/ui-imgui/topmenu/menu_snapshot.cpp:69
+#: src/ui-imgui/topmenu/menu_snapshot.cpp:108
 msgid "Snapshot"
 msgstr "Snímek"
 
@@ -5504,43 +6874,43 @@ msgstr "Exportovat diff jako textový soubor (adr: AA -> BB na řádek)"
 msgid "Memory Diff"
 msgstr "Memory Diff"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_encoding.cpp:51
+#: src/ui-imgui/debugger/membrowser/membrowser_encoding.cpp:50
 msgid "Raw"
 msgstr "Surový"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_encoding.cpp:52
+#: src/ui-imgui/debugger/membrowser/membrowser_encoding.cpp:51
 msgid "SharpMZ-EU -> ASCII"
 msgstr "SharpMZ-EU -> ASCII"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_encoding.cpp:53
+#: src/ui-imgui/debugger/membrowser/membrowser_encoding.cpp:52
 msgid "SharpMZ-JP -> ASCII"
 msgstr "SharpMZ-JP -> ASCII"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_encoding.cpp:54
+#: src/ui-imgui/debugger/membrowser/membrowser_encoding.cpp:53
 msgid "SharpMZ-EU -> UTF-8"
 msgstr "SharpMZ-EU -> UTF-8"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_encoding.cpp:55
+#: src/ui-imgui/debugger/membrowser/membrowser_encoding.cpp:54
 msgid "SharpMZ-JP -> UTF-8"
 msgstr "SharpMZ-JP -> UTF-8"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_encoding.cpp:56
+#: src/ui-imgui/debugger/membrowser/membrowser_encoding.cpp:55
 msgid "SharpMZ-EU -> MZ-CG1"
 msgstr "SharpMZ-EU -> MZ-CG1"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_encoding.cpp:57
+#: src/ui-imgui/debugger/membrowser/membrowser_encoding.cpp:56
 msgid "SharpMZ-EU -> MZ-CG2"
 msgstr "SharpMZ-EU -> MZ-CG2"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_encoding.cpp:58
+#: src/ui-imgui/debugger/membrowser/membrowser_encoding.cpp:57
 msgid "SharpMZ-JP -> MZ-CG1"
 msgstr "SharpMZ-JP -> MZ-CG1"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_encoding.cpp:59
+#: src/ui-imgui/debugger/membrowser/membrowser_encoding.cpp:58
 msgid "SharpMZ-JP -> MZ-CG2"
 msgstr "SharpMZ-JP -> MZ-CG2"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_encoding.cpp:60
+#: src/ui-imgui/debugger/membrowser/membrowser_encoding.cpp:59
 msgid "KOI8-CS"
 msgstr "KOI8-CS"
 
@@ -5897,39 +7267,6 @@ msgstr "Undo  (%d úrovní)\tCtrl+Z"
 msgid "Redo  (%d levels)\tCtrl+Y"
 msgstr "Redo  (%d úrovní)\tCtrl+Y"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:231
-#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:276
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1729
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1733
-msgid "Target:"
-msgstr "Cíl:"
-
-#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:239
-msgid "No target callback set"
-msgstr "Není nastaven cílový callback"
-
-#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:262
-msgid "No target: open a Memory Browser and right-click in hex/ASCII column"
-msgstr ""
-"Není cíl: otevřete Memory Browser a klikněte pravým v hex/ASCII sloupci"
-
-#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:284
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:337
-msgid "Region:"
-msgstr "Region:"
-
-#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:290
-msgid "Edit ON"
-msgstr "Editace ZAP"
-
-#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:293
-msgid "Edit OFF / RO"
-msgstr "Editace VYP / RO"
-
-#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:309
-msgid "Char Inserter###mb_char_inserter"
-msgstr "Vkládání znaků###mb_char_inserter"
-
 #: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:312
 msgid "Layers ▼###mb_layers_toggle"
 msgstr "Vrstvy ▼###mb_layers_toggle"
@@ -6079,14 +7416,6 @@ msgstr "Heatmap"
 #: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:497
 msgid "Snapshot Δ"
 msgstr "Snímek Δ"
-
-#: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:499
-#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:148
-#: src/ui-imgui/maxspeed_bench_window.cpp:156
-#: src/ui-imgui/plotter/plotter_window.cpp:432
-#: src/ui-imgui/topmenu/topmenu.cpp:59
-msgid "Reset"
-msgstr "Reset"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:500
 msgid "Frozen Bytes"
@@ -6820,7 +8149,7 @@ msgstr "Připojit"
 #: src/ui-imgui/debugger/memmap/memmap_window.cpp:695
 #: src/ui-imgui/debugger/memmap/memmap_window.cpp:721
 #: src/ui-imgui/debugger/memmap/memmap_window.cpp:734
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:184
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:186
 msgid "Umount"
 msgstr "Odpojit"
 
@@ -7351,15 +8680,6 @@ msgstr "Aritmetika bez přetečení: u8 z 00h na FFh není \"snížilo se o 1\".
 msgid "Memory Search###memsearch_window"
 msgstr "Hledání v paměti###memsearch_window"
 
-#: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:110
-#: src/ui-imgui/memext/memext_load_dialog.cpp:112
-#: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:99
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:252
-#: src/ui-imgui/topmenu/replay_window.cpp:223
-#: src/ui-imgui/topmenu/replay_window.cpp:229
-msgid "File"
-msgstr "Soubor"
-
 #: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:113
 msgid "Load MZF into RAM..."
 msgstr "Načíst MZF do RAM..."
@@ -7377,7 +8697,7 @@ msgid "Max Speed"
 msgstr "Maximální rychlost"
 
 #: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:160
-#: src/ui-imgui/topmenu/topmenu.cpp:54
+#: src/ui-imgui/topmenu/topmenu.cpp:57
 msgid "Pause Emulation"
 msgstr "Pozastavit emulaci"
 
@@ -7781,21 +9101,21 @@ msgstr "naplánováno"
 msgid "Port for which icena_event is scheduled"
 msgstr "Port pro který je icena_event naplánován"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:94
-#: src/ui-imgui/debugger/ppi_window.cpp:96
+#: src/ui-imgui/debugger/ppi_window.cpp:97
+#: src/ui-imgui/debugger/ppi_window.cpp:99
 msgid "Mode Set (D7=1)"
 msgstr "Mode Set (D7=1)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:125
-#: src/ui-imgui/debugger/ppi_window.cpp:127
+#: src/ui-imgui/debugger/ppi_window.cpp:128
+#: src/ui-imgui/debugger/ppi_window.cpp:130
 msgid "Bit Set/Reset (D7=0)"
 msgstr "Bit Set/Reset (D7=0)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:162
+#: src/ui-imgui/debugger/ppi_window.cpp:165
 msgid "bit"
 msgstr "bit"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:174
+#: src/ui-imgui/debugger/ppi_window.cpp:177
 msgid ""
 "0 = key pressed, 1 = released (active LOW). Rows = bit 0..7, columns = PA0-3 "
 "selected column."
@@ -7803,15 +9123,15 @@ msgstr ""
 "0 = klávesa stisknuta, 1 = uvolněna (active LOW). Řádky = bit 0..7, sloupce "
 "= sloupec vybraný PA0-3."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:217
+#: src/ui-imgui/debugger/ppi_window.cpp:220
 msgid "PPI 8255 State###PPIState"
 msgstr "Stav PPI 8255###PPIState"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:227
+#: src/ui-imgui/debugger/ppi_window.cpp:230
 msgid "Last Control Word###PPI_CW"
 msgstr "Poslední Control Word###PPI_CW"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:240
+#: src/ui-imgui/debugger/ppi_window.cpp:243
 msgid ""
 "Last byte written to Control port (debug mirror - 8255 CW sequencer is not "
 "HW readable)."
@@ -7819,163 +9139,163 @@ msgstr ""
 "Poslední bajt zapsaný do Control portu (debug mirror - 8255 CW sekvencer "
 "není HW čitelný)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:251
+#: src/ui-imgui/debugger/ppi_window.cpp:254
 msgid "Port A###PPI_PA"
 msgstr "Port A###PPI_PA"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:264
+#: src/ui-imgui/debugger/ppi_window.cpp:267
 msgid "Output port A (sampled keyboard column + JOY enables)."
 msgstr "Výstupní port A (vzorkovaný sloupec klávesnice + JOY enables)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:269
-#: src/ui-imgui/debugger/ppi_window.cpp:355
+#: src/ui-imgui/debugger/ppi_window.cpp:272
+#: src/ui-imgui/debugger/ppi_window.cpp:358
 msgid "Bit decode:"
 msgstr "Dekódování bitů:"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:272
+#: src/ui-imgui/debugger/ppi_window.cpp:275
 msgid "keyboard column (PA0-3)"
 msgstr "sloupec klávesnice (PA0-3)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:276
+#: src/ui-imgui/debugger/ppi_window.cpp:279
 msgid "JOY1 enable (active LOW)"
 msgstr "JOY1 povolen (aktivní LOW)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:279
+#: src/ui-imgui/debugger/ppi_window.cpp:282
 msgid "JOY2 enable (active LOW)"
 msgstr "JOY2 povolen (aktivní LOW)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:283
+#: src/ui-imgui/debugger/ppi_window.cpp:286
 msgid "JOY1 enable"
 msgstr "JOY1 povolení"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:284
 #: src/ui-imgui/debugger/ppi_window.cpp:287
+#: src/ui-imgui/debugger/ppi_window.cpp:290
 msgid "not present on this arch"
 msgstr "na této architektuře nepřítomno"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:286
+#: src/ui-imgui/debugger/ppi_window.cpp:289
 msgid "JOY2 enable"
 msgstr "JOY2 povolení"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:289
+#: src/ui-imgui/debugger/ppi_window.cpp:292
 msgid "reserved"
 msgstr "rezervováno"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:296
+#: src/ui-imgui/debugger/ppi_window.cpp:299
 msgid "Port B - Keyboard Matrix###PPI_PB"
 msgstr "Port B - matice klávesnice###PPI_PB"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:302
+#: src/ui-imgui/debugger/ppi_window.cpp:305
 msgid "View:"
 msgstr "Pohled:"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:304
+#: src/ui-imgui/debugger/ppi_window.cpp:307
 msgid "Combined###PPI_PB_VIEW_C"
 msgstr "Kombinované###PPI_PB_VIEW_C"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:308
+#: src/ui-imgui/debugger/ppi_window.cpp:311
 msgid "AND of physical and virtual matrix (what CPU actually reads)."
 msgstr "AND fyzické a virtuální matice (co CPU skutečně čte)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:311
+#: src/ui-imgui/debugger/ppi_window.cpp:314
 msgid "Physical###PPI_PB_VIEW_P"
 msgstr "Fyzické###PPI_PB_VIEW_P"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:315
+#: src/ui-imgui/debugger/ppi_window.cpp:318
 msgid "g_pio8255.keyboard_matrix[] only (SDL keyboard)."
 msgstr "pouze g_pio8255.keyboard_matrix[] (SDL klávesnice)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:318
+#: src/ui-imgui/debugger/ppi_window.cpp:321
 msgid "Virtual###PPI_PB_VIEW_V"
 msgstr "Virtuální###PPI_PB_VIEW_V"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:322
+#: src/ui-imgui/debugger/ppi_window.cpp:325
 msgid "g_pio8255.vkbd_matrix[] only (VKBD / autotype)."
 msgstr "pouze g_pio8255.vkbd_matrix[] (VKBD / autotype)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:329
+#: src/ui-imgui/debugger/ppi_window.cpp:332
 msgid "Cell '*' = key pressed (bit=0, active LOW), '.' = released (bit=1)."
 msgstr ""
 "Buňka '*' = klávesa stisknuta (bit=0, aktivní LOW), '.' = uvolněna "
 "(bit=1).Buňka '*' = klávesa stisknuta (bit=0, active LOW), '.' = uvolněna "
 "(bit=1)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:336
+#: src/ui-imgui/debugger/ppi_window.cpp:339
 msgid "Port C###PPI_PC"
 msgstr "Port C###PPI_PC"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:349
+#: src/ui-imgui/debugger/ppi_window.cpp:352
 msgid "Port C raw output state (D0-D3 OUT, D4-D7 IN; D5-D7 computed on read)."
 msgstr ""
 "Port C surový výstupní stav (D0-D3 OUT, D4-D7 IN; D5-D7 počítáno při "
 "čtení).Surový výstupní stav Port C (D0-D3 OUT, D4-D7 IN; D5-D7 dopočítány "
 "při čtení)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:359
+#: src/ui-imgui/debugger/ppi_window.cpp:362
 msgid "CTC0 audio mask (0 = mute, 1 = pass)"
 msgstr "CTC0 audio maska (0 = mute, 1 = propustit)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:362
+#: src/ui-imgui/debugger/ppi_window.cpp:365
 msgid "CTC0 audio mask not present"
 msgstr "CTC0 audio maska nepřítomna"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:365
+#: src/ui-imgui/debugger/ppi_window.cpp:368
 msgid "CMT data out"
 msgstr "CMT data out"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:367
+#: src/ui-imgui/debugger/ppi_window.cpp:370
 msgid "CTC2 INT mask (0 = blocked, 1 = enabled)"
 msgstr "CTC2 INT maska (0 = blokováno, 1 = povoleno)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:369
+#: src/ui-imgui/debugger/ppi_window.cpp:372
 msgid "CMT motor control (rising edge toggles)"
 msgstr "Řízení motoru CMT (nástupná hrana přepíná)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:371
+#: src/ui-imgui/debugger/ppi_window.cpp:375
 msgid "CMT motor state"
 msgstr "Stav motoru CMT"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:373
+#: src/ui-imgui/debugger/ppi_window.cpp:377
 msgid "CMT data in - computed on read (not in mirror)"
 msgstr "CMT data in - dopočítáno při čtení (není v mirroru)"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:375
+#: src/ui-imgui/debugger/ppi_window.cpp:379
 msgid "Cursor blink NE556@OUT - computed on read"
 msgstr "Blikání kurzoru NE556@OUT - dopočítáno při čtení"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:377
+#: src/ui-imgui/debugger/ppi_window.cpp:381
 msgid "VBLN - computed on read"
 msgstr "VBLN - dopočítáno při čtení"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:387
+#: src/ui-imgui/debugger/ppi_window.cpp:391
 msgid "VKBD Autotype###PPI_VKBD"
 msgstr "VKBD Autotype###PPI_VKBD"
 
-#: src/ui-imgui/debugger/ppi_window.cpp:415
+#: src/ui-imgui/debugger/ppi_window.cpp:419
 msgid "Current column index into vkbd_autotype string."
 msgstr "Aktuální index sloupce v řetězci vkbd_autotype."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:418
+#: src/ui-imgui/debugger/ppi_window.cpp:422
 msgid "Last decoded matrix byte (column<<4 | bit)."
 msgstr "Poslední dekódovaný matricový bajt (column<<4 | bit)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:421
+#: src/ui-imgui/debugger/ppi_window.cpp:425
 msgid "Shift modifier required for current char."
 msgstr "Shift modifikátor potřebný pro aktuální znak."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:424
+#: src/ui-imgui/debugger/ppi_window.cpp:428
 msgid "Currently in key-down phase (vs. key-up gap)."
 msgstr "Aktuálně ve fázi key-down (vs. mezera key-up)."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:437
+#: src/ui-imgui/debugger/ppi_window.cpp:441
 msgid "Key-down duration in gdgclk ticks."
 msgstr "Doba trvání key-down v gdgclk tikách."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:449
+#: src/ui-imgui/debugger/ppi_window.cpp:453
 msgid "Key-up gap duration in gdgclk ticks."
 msgstr "Doba mezery key-up v gdgclk tikách."
 
-#: src/ui-imgui/debugger/ppi_window.cpp:452
+#: src/ui-imgui/debugger/ppi_window.cpp:456
 msgid "Tick stamp of current phase start."
 msgstr "Časová značka začátku aktuální fáze."
 
@@ -8480,10 +9800,6 @@ msgstr "Původní"
 msgid "New"
 msgstr "Nová"
 
-#: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:318
-msgid "Source"
-msgstr "Zdroj"
-
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:319
 msgid "Note"
 msgstr "Poznámka"
@@ -8500,10 +9816,6 @@ msgstr "zahozeno (ROM)"
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:352
 msgid "value unchanged"
 msgstr "hodnota beze změny"
-
-#: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:365
-msgid "Stopped"
-msgstr "Zastaveno"
 
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:367
 msgid "Not started"
@@ -8567,6 +9879,10 @@ msgstr "Záznamů"
 msgid "Log size in records (16-16777216), 32 bytes each."
 msgstr "Velikost záznamu v položkách (16-16777216), každá 32 bajtů."
 
+#: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:416
+msgid "Start"
+msgstr "Start"
+
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:418
 msgid ""
 "Start recording; a running log is replaced. Reset and snapshot load empty "
@@ -8574,10 +9890,6 @@ msgid ""
 msgstr ""
 "Spustí záznam; běžící záznam se nahradí. Reset a načtení snapshotu záznam "
 "vyprázdní."
-
-#: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:423
-msgid "Stop"
-msgstr "Zastavit"
 
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:432
 msgid "(all memory: emulation is slower)"
@@ -11351,8 +12663,8 @@ msgstr "Nahradit##watch_load_ok"
 msgid "Cancel##watch_load_cancel"
 msgstr "Zrušit##watch_load_cancel"
 
-#: src/ui-imgui/devices/device_request_ui.cpp:36
-#: src/ui-imgui/topmenu/topmenu.cpp:44
+#: src/ui-imgui/devices/device_request_ui.cpp:49
+#: src/ui-imgui/topmenu/topmenu.cpp:47
 msgid ""
 "Machine settings cannot be changed while a replay is recorded or played. "
 "Stop it in the Replay menu first."
@@ -11596,7 +12908,7 @@ msgstr "Znovu prohledat zařízení"
 msgid "Joystick"
 msgstr "Joystick"
 
-#: src/ui-imgui/main_window.cpp:119
+#: src/ui-imgui/main_window.cpp:122
 msgid "No audio device - running without sound"
 msgstr "Žádné zvukové zařízení - běží bez zvuku"
 
@@ -12124,18 +13436,22 @@ msgstr "Název souboru:"
 msgid "Save file"
 msgstr "Uložit soubor"
 
-#: src/ui-imgui/message/message_window.cpp:111
-#: src/ui-imgui/message/message_window.cpp:123
-msgid "Information"
-msgstr "Informace"
-
-#: src/ui-imgui/message/message_window.cpp:115
+#: src/ui-imgui/message/message_window.cpp:188
 msgid "Error"
 msgstr "Chyba"
 
-#: src/ui-imgui/message/message_window.cpp:119
+#: src/ui-imgui/message/message_window.cpp:192
 msgid "Warning"
 msgstr "Upozornění"
+
+#: src/ui-imgui/message/message_window.cpp:197
+msgid "Information"
+msgstr "Informace"
+
+#: src/ui-imgui/message/message_window.cpp:215
+#, c-format
+msgid "(repeated %u times)"
+msgstr "(opakováno %ukrát)"
 
 #: src/ui-imgui/mz700/devbus/menu_devbus.cpp:237
 #: src/ui-imgui/mz700/devbus/menu_devbus.cpp:282
@@ -12757,45 +14073,36 @@ msgid ""
 msgstr ""
 "Série snímků uloží PNG každého změněného emulovaného snímku do nové složky."
 
-#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:157
+#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:158
 msgid "Snapshot Preview"
 msgstr "Náhled snímku"
 
-#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:176
+#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:177
 msgid "No screenshot available"
 msgstr "Náhled není k dispozici"
 
-#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:190
+#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:191
 msgid "Architecture"
 msgstr "Architektura"
 
-#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:191
+#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:192
 msgid "Created"
 msgstr "Vytvořeno"
 
-#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:192
+#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:193
 #: src/ui-imgui/topmenu/menu_emulator.cpp:24
 msgid "Emulator"
 msgstr "Emulátor"
 
-#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:197
-#: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:103
-msgid "Description"
-msgstr "Popis"
-
-#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:203
-msgid "Format"
-msgstr "Formát"
-
-#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:216
+#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:217
 msgid "Cannot read snapshot metadata"
 msgstr "Nelze přečíst metadata snímku"
 
-#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:238
+#: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:239
 msgid "Load Snapshot"
 msgstr "Načíst snímek"
 
-#: src/ui-imgui/snapshot/snapshot_notification.cpp:87
+#: src/ui-imgui/snapshot/snapshot_notification.cpp:88
 msgid "Snapshot Error"
 msgstr "Chyba snímku"
 
@@ -12831,18 +14138,18 @@ msgstr "Rychlé načtení OK"
 msgid "Quick Load failed"
 msgstr "Rychlé načtení selhalo"
 
-#: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:61
-#: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:94
-#: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:98
+#: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:62
+#: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:96
+#: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:100
 msgid "Save Snapshot"
 msgstr "Uložit snímek"
 
-#: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:108
+#: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:110
 #: src/ui-imgui/snapshot/snapshot_setup_dialog.cpp:88
 msgid "Include RAM disk content"
 msgstr "Zahrnout obsah RAM disku"
 
-#: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:110
+#: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:112
 #: src/ui-imgui/snapshot/snapshot_setup_dialog.cpp:89
 msgid "Include MEMEXT content"
 msgstr "Zahrnout obsah MEMEXT"
@@ -12864,7 +14171,7 @@ msgid "Compression level"
 msgstr "Úroveň komprese"
 
 #: src/ui-imgui/snapshot/snapshot_setup_dialog.cpp:97
-#: src/ui-imgui/topmenu/menu_snapshot.cpp:93
+#: src/ui-imgui/topmenu/menu_snapshot.cpp:133
 msgid "Quick Save"
 msgstr "Rychlé uložení"
 
@@ -12896,69 +14203,164 @@ msgstr "Aktuální rychlost"
 msgid "Reset sliders"
 msgstr "Resetovat posuvníky"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:27
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:175
+msgid "Device for Direct MZF Start"
+msgstr "Zařízení pro přímé spuštění MZF"
+
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:194
+msgid "CMT - cassette"
+msgstr "CMT - kazeta"
+
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:195
+msgid "FD - floppy disk"
+msgstr "FD - disketa"
+
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:196
+msgid "QD - Quick Disk"
+msgstr "QD - Quick Disk"
+
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:197
+msgid "RD - SRAM"
+msgstr "RD - SRAM"
+
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:216
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:218
+msgid "Custom value"
+msgstr "Vlastní hodnota"
+
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:236
+msgid ""
+"The device code a program gets in register BC when an MZF file\n"
+"is started directly (command line --run-mzf, MCP emu_media_run_mzf),\n"
+"as if it was loaded from that device.\n"
+"Some programs choose their default device by it."
+msgstr ""
+"Kód zařízení, který program dostane v registru BC při přímém spuštění\n"
+"souboru MZF (příkazová řádka --run-mzf, MCP emu_media_run_mzf), jako by\n"
+"byl nahrán z tohoto zařízení.\n"
+"Některé programy podle něj volí výchozí zařízení."
+
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:270
+msgid "Device Code for Direct MZF Start"
+msgstr "Kód zařízení pro přímé spuštění MZF"
+
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:276
+#, c-format
+msgid "Current value: %04Xh (%s)"
+msgstr "Aktuální hodnota: %04Xh (%s)"
+
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:277
+msgid "Decimal (512) or hexadecimal (0x0200 or 0200h), 0 to 65535."
+msgstr "Desítkově (512) nebo šestnáctkově (0x0200 nebo 0200h), 0 až 65535."
+
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:294
+msgid "Invalid value"
+msgstr "Neplatná hodnota"
+
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:297
+msgid ""
+"A number with a leading zero is not accepted: write hexadecimal as 0x0200 or "
+"0200h."
+msgstr ""
+"Číslo s úvodní nulou se nepřijímá: šestnáctkově pište 0x0200 nebo 0200h."
+
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:349
 msgid "CMT"
 msgstr "CMT"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:35
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:365
 msgid "Use CMT Hack"
 msgstr "Použít CMT Hack"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:42
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:377
 msgid "Set Default CMT MZ Speed"
 msgstr "Nastavit výchozí CMT MZ rychlost"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:44
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:379
 msgid "1:1 - 1200 Bd"
 msgstr "1:1 - 1200 Bd"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:49
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:384
 msgid "2:1 - 2 400 Bd"
 msgstr "2:1 - 2 400 Bd"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:54
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:389
 msgid "2:1 - 2 400 Bd (cp/m)"
 msgstr "2:1 - 2 400 Bd (cp/m)"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:59
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:394
 msgid "7:3 - 2 800 Bd"
 msgstr "7:3 - 2 800 Bd"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:64
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:399
 msgid "8:3 - 3 200 Bd"
 msgstr "8:3 - 3 200 Bd"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:69
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:404
 msgid "3:1 - 3 600 Bd"
 msgstr "3:1 - 3 600 Bd"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:79
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:414
 msgid "Fast Open CMT File & Play..."
 msgstr "Rychle otevřít CMT soubor a přehrát..."
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:84
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:420
 msgid "Show Virtual CMT"
 msgstr "Zobrazit virtuální CMT"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:91
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:427
 msgid "CMT Options"
 msgstr "Nastavení CMT"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:93
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:429
 msgid "Enable CPU Boost"
 msgstr "Zapnout CPU Boost"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:98
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:444
+msgid ""
+"Plays the tape signal through the speaker while the tape\n"
+"is playing or recording. Direct loading and saving have no signal."
+msgstr ""
+"Přehrává signál pásky do reproduktoru, když páska hraje\n"
+"nebo nahrává. Přímé načítání a ukládání signál nemají."
+
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:448
 msgid "MZF"
 msgstr "MZF"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:100
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:450
 msgid "Enable MZF Size Check"
 msgstr "Zapnout kontrolu velikosti MZF"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:105
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:456
+msgid "Fix MZF Size Automatically"
+msgstr "Opravovat velikost MZF automaticky"
+
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:468
 msgid "Fix FNAME Terminator"
 msgstr "Opravit ukončovač FNAME"
+
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:477
+msgid "Direct Save"
+msgstr "Přímé ukládání"
+
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:485
+msgid "Direct Save works only with Direct loading: turn on Use CMT Hack first."
+msgstr ""
+"Přímé ukládání funguje jen v režimu Přímo: nejdřív zapněte Použít CMT Hack."
+
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:487
+msgid "The selected ROM does not support direct saving."
+msgstr "Vybraný ROM nepodporuje přímé ukládání."
+
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:489
+msgid ""
+"Without Record, a ROM SAVE stores the file at once as a new block at the end "
+"of the tape.\n"
+"With Record pressed, the signal is recorded as usual."
+msgstr ""
+"Bez Nahrávat uloží SAVE z ROM soubor hned jako nový blok na konec pásky.\n"
+"Se stisknutým Nahrávat se signál nahraje jako obvykle."
 
 #: src/ui-imgui/topmenu/devices/menu_devices.cpp:26
 msgid "HW & Devices"
@@ -12968,111 +14370,111 @@ msgstr "HW a zařízení"
 msgid "Bus Map"
 msgstr "Mapa sběrnice"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:72
 #: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:74
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:76
 msgid "FDC: Unsaved RAM changes"
 msgstr "FDC: neuložené změny v RAM"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:77
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:79
 #, c-format
 msgid "Drive %d is in Discard mode and has unsaved RAM changes."
 msgstr "Mechanika %d je v režimu Discard a obsahuje neuložené změny v RAM."
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:78
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:87
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:80
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:89
 #, c-format
 msgid "Switching to '%s' mode will close the current RAM buffer."
 msgstr "Přepnutí do režimu '%s' zavře aktuální RAM buffer."
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:81
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:89
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:83
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:91
 msgid "What to do with the changes?"
 msgstr "Co provést se změnami?"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:87
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:94
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:89
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:96
 msgid "Save and switch"
 msgstr "Uložit a přepnout"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:88
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:95
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:90
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:97
 msgid "Switch and discard"
 msgstr "Přepnout a zahodit"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:164
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:166
 #: src/ui-imgui/topmenu/devices/menu_ide8.cpp:42
 msgid "No image"
 msgstr "Bez obrazu"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:177
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:179
 msgid "Mount..."
 msgstr "Připojit..."
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:177
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:179
 msgid "Re-Mount..."
 msgstr "Znovu připojit..."
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:202
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:204
 msgid "Read-only (FS write-protected)"
 msgstr "Jen pro čtení (soubor chráněn proti zápisu)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:208
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:210
 msgid "Read-only"
 msgstr "Jen pro čtení"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:221
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:346
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:223
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:348
 msgid "Storage mode"
 msgstr "Režim úložiště"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:239
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:368
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:241
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:370
 msgid "Cached (sync at reset/umount/exit)"
 msgstr "Cached (sync při resetu/odpojení/konci)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:244
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:373
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:246
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:375
 msgid "Direct (write-through to file)"
 msgstr "Direct (přímý zápis do souboru)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:249
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:378
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:251
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:380
 msgid "Discard changes (in-RAM, no sync)"
 msgstr "Discard (jen v RAM, bez synchronizace)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:257
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:259
 msgid "Sync now"
 msgstr "Synchronizovat nyní"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:271
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:273
 msgid "FDD "
 msgstr "FDD "
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:279
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:281
 msgid "(Empty)"
 msgstr "(Prázdný)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:308
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:310
 msgid "Hardware options"
 msgstr "Nastavení hardwaru"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:311
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:313
 msgid "HD Patch enabled"
 msgstr "HD Patch povolen"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:317
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:319
 msgid "Bus translation: invert (Sharp)"
 msgstr "Překlad sběrnice: invertovat (Sharp)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:322
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:324
 msgid "Sharp MZ default - XOR 0xFF between CPU bus and WD279x chip."
 msgstr "Výchozí pro Sharp MZ - XOR 0xFF mezi CPU sběrnicí a čipem WD279x."
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:324
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:326
 msgid "Bus translation: passthrough"
 msgstr "Překlad sběrnice: passthrough"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:332
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:334
 msgid ""
 "NOT compatible with Sharp MZ - no inversion between CPU bus and WD279x chip. "
 "Reserved for future 'true bus' ROMs / experiments."
@@ -13080,43 +14482,43 @@ msgstr ""
 "NENÍ kompatibilní se Sharp MZ - bez inverze mezi CPU sběrnicí a čipem "
 "WD279x. Vyhrazeno pro budoucí 'true bus' ROM / experimenty."
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:351
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:353
 msgid "Floppy Drives"
 msgstr "Disketové mechaniky"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:365
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:367
 msgid "FD Controller"
 msgstr "FD řadič"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:375
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:377
 #: src/ui-imgui/topmenu/devices/menu_memext.cpp:64
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:188
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:190
 #: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:70
 msgid "Not Connected"
 msgstr "Nepřipojeno"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:385
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:387
 msgid "WD279x (standard)"
 msgstr "WD279x (standardní)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:390
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:392
 msgid "Default FDC on ports 0xD8 - 0xDF"
 msgstr "Výchozí FDC na portech 0xD8 - 0xDF"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:392
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:394
 msgid "WD279x (secondary)"
 msgstr "WD279x (sekundární)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:397
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:399
 msgid "Unicard alternate FDC ports 0x58 - 0x5F"
 msgstr "Alternativní porty 0x58 - 0x5F pro Unicard FDC"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:416
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:418
 #: src/ui-imgui/topmenu/menu_tools.cpp:32
 msgid "Tools"
 msgstr "Nástroje"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:418
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:420
 msgid "FDC State (debugger)..."
 msgstr "Stav FDC (debugger)..."
 
@@ -13289,123 +14691,123 @@ msgstr "Plotter MZ-1P16 připojen"
 msgid "Open plotter window"
 msgstr "Otevřít okno plotteru"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:81
 #: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:83
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:85
 msgid "QD: Unsaved RAM changes"
 msgstr "QD: neuložené změny v RAM"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:86
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:88
 msgid "Quick Disk is in Discard mode and has unsaved RAM changes."
 msgstr "Quick Disk je v režimu Discard a obsahuje neuložené změny v RAM."
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:176
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:178
 msgid "Create new QD image"
 msgstr "Vytvořit nový QD obraz"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:176
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:178
 msgid "qdimage.mzq"
 msgstr "qdimage.mzq"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:186
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:188
 msgid "Quick Disk"
 msgstr "Quick Disk"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:193
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:195
 msgid "MZ 1F11"
 msgstr "MZ 1F11"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:198
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:200
 msgid "Virtual - Mapped Directory"
 msgstr "Virtuální - Mapovaný adresář"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:210
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:212
 msgid "Unicard Boot Loader"
 msgstr "Unicard Boot Loader"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:223
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:225
 msgid "Empty"
 msgstr "Prázdný"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:227
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:229
 msgid "image"
 msgstr "obraz"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:231
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:233
 msgid "directory"
 msgstr "adresář"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:235
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:232
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:237
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:235
 msgid "Unicard"
 msgstr "Unicard"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:238
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:240
 msgid "QD Drive"
 msgstr "QD mechanika"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:241
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:243
 #, c-format
 msgid " (%s)"
 msgstr " (%s)"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:252
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:254
 msgid "Dir"
 msgstr "Adr"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:259
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:261
 #, c-format
 msgid "%s: %s..."
 msgstr "%s: %s..."
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:263
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:265
 #, c-format
 msgid "%s: %s"
 msgstr "%s: %s"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:273
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:275
 msgid "Mount Image..."
 msgstr "Připojit obraz..."
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:273
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:275
 msgid "Mount Directory..."
 msgstr "Připojit adresář..."
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:280
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:282
 msgid "Unmount"
 msgstr "Odpojit"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:297
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:299
 msgid "Write Protected"
 msgstr "Chráněno proti zápisu"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:303
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:305
 msgid "Forced R/O by UNICARD - cannot be changed."
 msgstr "Vynuceně jen pro čtení přes UNICARD - nelze změnit."
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:313
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:315
 msgid "    [FS R/O]"
 msgstr "    [FS R/O]"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:317
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:319
 msgid ""
 "File on disk is not writable - effective R/O regardless of user setting."
 msgstr ""
 "Soubor na disku není zapisovatelný - efektivně jen pro čtení bez ohledu na "
 "uživatelské nastavení."
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:330
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:332
 msgid "Save now"
 msgstr "Uložit nyní"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:387
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:389
 msgid "UNICARD mode is locked to Cached storage."
 msgstr "Režim UNICARD je uzamčen na úložiště Cached."
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:392
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:394
 msgid "Create New Image..."
 msgstr "Vytvořit nový obraz..."
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:400
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:402
 msgid "QDisk State (debugger)..."
 msgstr "Stav QDisk (debugger)..."
 
@@ -13519,29 +14921,29 @@ msgstr " (uzamčeno: plotter připojen)"
 msgid "Settings for User Defined..."
 msgstr "Nastavení pro uživatelský..."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:72
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:73
 msgid "Failed to reinitialize SD runtime."
 msgstr "Reinicializace SD runtime selhala."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:78
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:79
 msgid "Unicard runtime reinstalled with mgr V2.4 (uc1)."
 msgstr "Unicard runtime přeinstalován s mgr V2.4 (uc1)."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:80
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:88
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:97
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:81
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:89
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:98
 msgid "Unicard runtime reinitialization failed."
 msgstr "Reinicializace Unicard runtime selhala."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:86
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:87
 msgid "Unicard runtime reinstalled with mgr V2.11b (uc3)."
 msgstr "Unicard runtime přeinstalován s mgr V2.11b (uc3)."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:95
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:96
 msgid "Unicard runtime files in '{SD}/unicard/' have been reinitialized."
 msgstr "Soubory Unicard runtime v '{SD}/unicard/' byly reinicializovány."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:131
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:133
 msgid ""
 "SD card runtime in '{SD}/unicard/' is missing, incomplete, or does not match "
 "the selected firmware."
@@ -13549,15 +14951,15 @@ msgstr ""
 "Runtime SD karty v '{SD}/unicard/' chybí, je neúplný nebo neodpovídá "
 "vybranému firmwaru."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:134
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:136
 msgid "State on SD:"
 msgstr "Stav na SD:"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:135
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:137
 msgid "Selected firmware:"
 msgstr "Vybraný firmware:"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:138
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:140
 msgid ""
 "[Reinitialize] overwrites the SD manager files to match the selected "
 "firmware. [Continue] connects with the mismatch (client may see inconsistent "
@@ -13567,19 +14969,19 @@ msgstr ""
 "vybranému firmwaru. [Pokračovat] připojí přes neshodu (klient může vykazovat "
 "nekonzistentní chování). [Zrušit] ponechá Unicard odpojený."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:144
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:146
 msgid "Reinitialize##unicard_rt_reinit"
 msgstr "Reinicializovat##unicard_rt_reinit"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:154
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:156
 msgid "Continue##unicard_rt_continue"
 msgstr "Pokračovat##unicard_rt_continue"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:164
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:166
 msgid "Cancel##unicard_rt_cancel"
 msgstr "Zrušit##unicard_rt_cancel"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:195
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:198
 msgid ""
 "Choose which manager version to install in '{SD}/unicard/'. This will "
 "overwrite the existing manager files."
@@ -13587,7 +14989,7 @@ msgstr ""
 "Vyberte, kterou verzi správce nainstalovat do '{SD}/unicard/'. Toto přepíše "
 "stávající soubory správce."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:199
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:202
 msgid ""
 "Note: This choice is independent of the currently selected simulated "
 "firmware. You can install one version while simulating the other (useful for "
@@ -13596,40 +14998,40 @@ msgstr ""
 "Poznámka: Tato volba je nezávislá na aktuálně vybraném simulovaném firmwaru. "
 "Můžete nainstalovat jednu verzi a simulovat druhou (užitečné pro testování)."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:207
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:210
 msgid "mgr V2.4 (uc1)##unicard_reinit_v24"
 msgstr "mgr V2.4 (uc1)##unicard_reinit_v24"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:214
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:217
 msgid "mgr V2.11b (uc3)##unicard_reinit_v211b"
 msgstr "mgr V2.11b (uc3)##unicard_reinit_v211b"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:221
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:224
 msgid "Cancel##unicard_reinit_cancel"
 msgstr "Zrušit##unicard_reinit_cancel"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:237
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:240
 msgid "Unicard Connected"
 msgstr "Unicard připojen"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:238
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:241
 msgid "Unicard Not Connected"
 msgstr "Unicard nepřipojen"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:264
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:267
 msgid "Firmware: uc1 (rev.60)"
 msgstr "Firmware: uc1 (rev.60)"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:274
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:277
 #, c-format
 msgid "Firmware: uc3 (v%d.%d)###unicard_fw_uc3"
 msgstr "Firmware: uc3 (v%d.%d)###unicard_fw_uc3"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:283
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:286
 msgid "Check runtime version on connect"
 msgstr "Při připojení kontrolovat verzi runtime"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:290
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:293
 msgid ""
 "On Connect, verify that {SD}/unicard/ contains the manager matching the "
 "selected firmware. Mismatch shows a dialog with option to reinitialize."
@@ -13637,15 +15039,15 @@ msgstr ""
 "Při připojení ověřit, že {SD}/unicard/ obsahuje správce odpovídající "
 "vybranému firmwaru. Při neshodě se zobrazí dialog s možností reinicializace."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:299
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:302
 msgid "Read-only SD"
 msgstr "SD jen pro čtení"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:310
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:313
 msgid "Managed FDC"
 msgstr "Spravovaný FDC"
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:314
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:317
 msgid ""
 "Which FDC controller the Unicard API manages (DSK mount).\n"
 "'None' disables Unicard FDD commands.\n"
@@ -13655,11 +15057,11 @@ msgstr ""
 "'Žádné' vypne FDD příkazy Unicard.\n"
 "Změna ovlivní jen budoucí operace."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:341
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:344
 msgid "Set SD Root Directory..."
 msgstr "Nastavit kořenový adresář SD..."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:348
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:351
 msgid ""
 "Change the host directory used as the Unicard SD root.\n"
 "If connected, the Unicard is automatically reconnected to the new root."
@@ -13667,11 +15069,11 @@ msgstr ""
 "Změní hostitelský adresář používaný jako SD root Unicard.\n"
 "Pokud je připojena, Unicard se automaticky znovu připojí k novému rootu."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:366
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:369
 msgid "Reinitialize Runtime..."
 msgstr "Reinicializovat runtime..."
 
-#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:383
+#: src/ui-imgui/topmenu/devices/menu_unicard.cpp:386
 msgid ""
 "Overwrites manager files in '{SD}/unicard/' (mgr.mzf, mgr800.mzf, "
 "mgr700.mzf, mgr1500.mzf) with the selected version.\n"
@@ -14070,17 +15472,17 @@ msgstr "Vývojářský režim"
 msgid "ImGui Demo"
 msgstr "ImGui Demo"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:93
+#: src/ui-imgui/topmenu/menu_replay.cpp:131
 msgid "Replay"
 msgstr "Záznam vstupů"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:101
+#: src/ui-imgui/topmenu/menu_replay.cpp:139
 #: src/ui-imgui/topmenu/replay_window.cpp:309
 #: src/ui-imgui/topmenu/replay_window.cpp:320
 msgid "Record Inputs..."
 msgstr "Nahrát vstupy..."
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:105
+#: src/ui-imgui/topmenu/menu_replay.cpp:143
 msgid ""
 "Record keyboard, joystick, resets and debugger writes from a start snapshot, "
 "to repeat the run exactly later."
@@ -14088,25 +15490,25 @@ msgstr ""
 "Nahrát klávesnici, joystick, resety a zápisy debuggeru od startovního "
 "snapshotu, aby šel běh později přesně zopakovat."
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:107
+#: src/ui-imgui/topmenu/menu_replay.cpp:145
 #: src/ui-imgui/topmenu/replay_window.cpp:309
 #: src/ui-imgui/topmenu/replay_window.cpp:321
 msgid "Play Replay..."
 msgstr "Přehrát záznam..."
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:111
+#: src/ui-imgui/topmenu/menu_replay.cpp:149
 #: src/ui-imgui/topmenu/replay_window.cpp:309
 #: src/ui-imgui/topmenu/replay_window.cpp:322
 msgid "Stop Replay"
 msgstr "Zastavit záznam / přehrávání"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:117
+#: src/ui-imgui/topmenu/menu_replay.cpp:155
 #: src/ui-imgui/topmenu/replay_window.cpp:309
 #: src/ui-imgui/topmenu/replay_window.cpp:323
 msgid "Rewind"
 msgstr "Zpět na checkpoint"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:121
+#: src/ui-imgui/topmenu/menu_replay.cpp:159
 msgid ""
 "Go back to the previous checkpoint (again = further back). While recording, "
 "the inputs after the checkpoint are dropped and the recording goes on from "
@@ -14116,150 +15518,150 @@ msgstr ""
 "checkpointu zahodí a záznam pokračuje odtud. Nejde přes zápis na disk nebo "
 "na kazetu."
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:124
+#: src/ui-imgui/topmenu/menu_replay.cpp:162
 msgid "Seek..."
 msgstr "Přejít na snímek..."
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:129
+#: src/ui-imgui/topmenu/menu_replay.cpp:167
 msgid ""
 "Jump the playback to a frame: back via a checkpoint, forward at maximum "
 "speed."
 msgstr ""
 "Skok přehrávání na snímek: zpět přes checkpoint, dopředu maximální rychlostí."
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:130
+#: src/ui-imgui/topmenu/menu_replay.cpp:168
 msgid "Replay Control..."
 msgstr "Ovládání záznamu..."
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:138
+#: src/ui-imgui/topmenu/menu_replay.cpp:176
 #, c-format
 msgid "Recording: frame %u, %u events"
 msgstr "Záznam: snímek %u, %u událostí"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:141
+#: src/ui-imgui/topmenu/menu_replay.cpp:179
 #, c-format
 msgid "Rewinds: %u"
 msgstr "Návratů zpět: %u"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:146
+#: src/ui-imgui/topmenu/menu_replay.cpp:184
 #, c-format
 msgid "Playing: frame %u / %u"
 msgstr "Přehrávání: snímek %u / %u"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:149
+#: src/ui-imgui/topmenu/menu_replay.cpp:187
 #, c-format
 msgid "Seeking to frame %u"
 msgstr "Přechod na snímek %u"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:153
+#: src/ui-imgui/topmenu/menu_replay.cpp:191
 #, c-format
 msgid "Deviated: %s"
 msgstr "Odchýleno: %s"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:158
+#: src/ui-imgui/topmenu/menu_replay.cpp:196
 #, c-format
 msgid "Last: %s"
 msgstr "Poslední: %s"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:162
+#: src/ui-imgui/topmenu/menu_replay.cpp:200
 msgid "No replay"
 msgstr "Žádný záznam"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:168
+#: src/ui-imgui/topmenu/menu_replay.cpp:206
 msgid "Checkpoints: off"
 msgstr "Checkpointy: vypnuto"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:172
+#: src/ui-imgui/topmenu/menu_replay.cpp:210
 #, c-format
 msgid "Checkpoints: %u (frames %u - %u, %u kB)"
 msgstr "Checkpointy: %u (snímky %u - %u, %u kB)"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:188
+#: src/ui-imgui/topmenu/menu_replay.cpp:226
 msgid "Seek Replay"
 msgstr "Přejít na snímek záznamu"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:206
+#: src/ui-imgui/topmenu/menu_replay.cpp:245
 #, c-format
 msgid "Current frame %u of %u"
 msgstr "Aktuální snímek %u z %u"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:211
+#: src/ui-imgui/topmenu/menu_replay.cpp:250
 #: src/ui-imgui/topmenu/replay_window.cpp:332
 #: src/ui-imgui/topmenu/replay_window.cpp:339
 msgid "Seek"
 msgstr "Přejít"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:245
+#: src/ui-imgui/topmenu/menu_replay.cpp:284
 msgid "Record Inputs"
 msgstr "Nahrát vstupy"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:245
+#: src/ui-imgui/topmenu/menu_replay.cpp:284
 msgid "Play Replay"
 msgstr "Přehrát záznam"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:261
-#: src/ui-imgui/topmenu/menu_replay.cpp:290
+#: src/ui-imgui/topmenu/menu_replay.cpp:300
+#: src/ui-imgui/topmenu/menu_replay.cpp:329
 msgid "Replay failed"
 msgstr "Záznam vstupů selhal"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:262
-#: src/ui-imgui/topmenu/menu_replay.cpp:291
+#: src/ui-imgui/topmenu/menu_replay.cpp:301
+#: src/ui-imgui/topmenu/menu_replay.cpp:330
 msgid "Replay Error"
 msgstr "Chyba záznamu vstupů"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:277
+#: src/ui-imgui/topmenu/menu_replay.cpp:316
 msgid "Replay recorded"
 msgstr "Záznam vstupů uložen"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:281
+#: src/ui-imgui/topmenu/menu_replay.cpp:320
 msgid "Replay ended"
 msgstr "Přehrávání skončilo"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:285
+#: src/ui-imgui/topmenu/menu_replay.cpp:324
 #, c-format
 msgid "Replay differs from the recording at frame %u (%s)"
 msgstr "Přehrávání se liší od záznamu na snímku %u (%s)"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:287
+#: src/ui-imgui/topmenu/menu_replay.cpp:326
 msgid "Replay Desync"
 msgstr "Rozjetí přehrávání"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:344
+#: src/ui-imgui/topmenu/menu_replay.cpp:386
 #, c-format
 msgid "REPLAY REC %u"
 msgstr "ZÁZNAM %u"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:348
+#: src/ui-imgui/topmenu/menu_replay.cpp:390
 #, c-format
 msgid "REPLAY SEEK %u -> %u"
 msgstr "PŘECHOD %u -> %u"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:352
+#: src/ui-imgui/topmenu/menu_replay.cpp:394
 #, c-format
 msgid "REPLAY PLAY %u / %u%s"
 msgstr "PŘEHRÁVÁNÍ %u / %u%s"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:353
+#: src/ui-imgui/topmenu/menu_replay.cpp:395
 msgid " (deviated)"
 msgstr " (odchýleno)"
 
-#: src/ui-imgui/topmenu/menu_snapshot.cpp:72
+#: src/ui-imgui/topmenu/menu_snapshot.cpp:111
 msgid "Load Snapshot..."
 msgstr "Načíst snímek..."
 
-#: src/ui-imgui/topmenu/menu_snapshot.cpp:78
+#: src/ui-imgui/topmenu/menu_snapshot.cpp:117
 msgid "Not available while a replay is recorded or played."
 msgstr "Během záznamu nebo přehrávání vstupů není k dispozici."
 
-#: src/ui-imgui/topmenu/menu_snapshot.cpp:81
+#: src/ui-imgui/topmenu/menu_snapshot.cpp:120
 msgid "Save Snapshot..."
 msgstr "Uložit snímek..."
 
-#: src/ui-imgui/topmenu/menu_snapshot.cpp:88
+#: src/ui-imgui/topmenu/menu_snapshot.cpp:127
 msgid "Quick Load"
 msgstr "Rychlé načtení"
 
-#: src/ui-imgui/topmenu/menu_snapshot.cpp:100
+#: src/ui-imgui/topmenu/menu_snapshot.cpp:140
 msgid "Snapshot Setup..."
 msgstr "Nastavení snímků..."
 
@@ -14377,7 +15779,7 @@ msgstr "Snímek %d = %s; zpět přes checkpoint, dopředu maximální rychlostí
 msgid "Available while playing a replay."
 msgstr "Dostupné při přehrávání záznamu."
 
-#: src/ui-imgui/topmenu/topmenu.cpp:75
+#: src/ui-imgui/topmenu/topmenu.cpp:78
 msgid "About..."
 msgstr "O programu..."
 
@@ -14475,6 +15877,10 @@ msgstr "Datum sestavení"
 #: src/ui-imgui/version_check/imgui_version_check.cpp:384
 msgid "Setup"
 msgstr "Nastavení"
+
+#: src/ui-imgui/version_check/imgui_version_check.cpp:390
+msgid "Close"
+msgstr "Zavřít"
 
 #: src/ui-imgui/videorec/videorec_menu.cpp:41
 msgid "Video recording is not initialized"
@@ -14893,6 +16299,190 @@ msgstr "MZ-1500 Virtuální klávesnice"
 #: src/ui-imgui/vkbd_window.cpp:229
 msgid "MZ-800 Virtual Keyboard"
 msgstr "MZ-800 Virtuální klávesnice"
+
+#: src/ui/cmt/UiCmt.cpp:31
+msgid "Default"
+msgstr "Výchozí"
+
+#: src/ui/cmt/UiCmt.cpp:36
+msgid "Custom pulses..."
+msgstr "Vlastní pulzy..."
+
+#: src/ui/cmt/UiCmt.cpp:49
+msgid "UNKNOWN"
+msgstr "NEZNÁMÝ"
+
+#: src/ui/vkbd/ui_vkbd.c:207
+msgid "PC key: CapsLock"
+msgstr "Klávesa PC: CapsLock"
+
+#: src/ui/vkbd/ui_vkbd.c:210
+msgid "PC key: \\"
+msgstr "Klávesa PC: \\"
+
+#: src/ui/vkbd/ui_vkbd.c:213
+msgid "PC key: \\ or Tab"
+msgstr "Klávesa PC: \\ nebo Tab"
+
+#: src/ui/vkbd/ui_vkbd.c:216
+msgid "PC key: ~"
+msgstr "Klávesa PC: ~"
+
+#: src/ui/vkbd/ui_vkbd.c:218
+msgid "PC key: Esc or End"
+msgstr "Klávesa PC: Esc nebo End"
+
+#: src/ui/vkbd/ui_vkbd.c:220
+msgid "PC key: Insert"
+msgstr "Klávesa PC: Insert"
+
+#: src/ui/vkbd/ui_vkbd.c:222
+msgid "PC key: Backspace or Delete"
+msgstr "Klávesa PC: Backspace nebo Delete"
+
+#: src/ui/vkbd/ui_vkbd.c:224
+msgid "PC key: F6"
+msgstr "Klávesa PC: F6"
+
+#: src/ui/vkbd/ui_vkbd.c:226
+msgid "PC key: F7"
+msgstr "Klávesa PC: F7"
+
+#: src/ui/vkbd/ui_vkbd.c:228
+msgid "PC key: F8"
+msgstr "Klávesa PC: F8"
+
+#: src/ui/vkbd/ui_vkbd.c:230
+msgid "PC key: F9"
+msgstr "Klávesa PC: F9"
+
+#~ msgid ""
+#~ "The device code a program gets in register BC when an MZF file is started "
+#~ "directly (command line --run-mzf, MCP emu_media_run_mzf), as if it was "
+#~ "loaded from that device. Some programs choose their default device by it."
+#~ msgstr ""
+#~ "Kód zařízení, který program dostane v registru BC při přímém spuštění "
+#~ "souboru MZF (příkazová řádka --run-mzf, MCP emu_media_run_mzf), jako by "
+#~ "byl nahrán z tohoto zařízení. Některé programy podle něj volí výchozí "
+#~ "zařízení."
+
+#~ msgid ""
+#~ "Without Record, a ROM SAVE stores the file at once as a new block at the "
+#~ "end of the tape. With Record pressed, the signal is recorded as usual."
+#~ msgstr ""
+#~ "Bez Nahrávat uloží SAVE z ROM soubor hned jako nový blok na konec pásky. "
+#~ "Se stisknutým Nahrávat se signál nahraje jako obvykle."
+
+#~ msgid "Direct Save: on (a ROM SAVE goes straight to the tape)"
+#~ msgstr "Přímé ukládání: zapnuto (SAVE z ROM jde rovnou na pásku)"
+
+#~ msgid "Direct Save: off (a ROM SAVE records the signal)"
+#~ msgstr "Přímé ukládání: vypnuto (SAVE z ROM se nahrává jako signál)"
+
+#~ msgid ""
+#~ "A ROM SAVE stores the file at once as a new block at the end of the tape, "
+#~ "without Record. Turn it off to record the signal of a ROM SAVE."
+#~ msgstr ""
+#~ "SAVE z ROM uloží soubor hned jako nový blok na konec pásky, bez Nahrávat. "
+#~ "Vypněte ho, chcete-li nahrát signál SAVE z ROM."
+
+#~ msgid "CRC error"
+#~ msgstr "Chyba CRC"
+
+#~ msgid "Exec"
+#~ msgstr "Exec"
+
+#~ msgid "Tape Filelist"
+#~ msgstr "Seznam souborů na pásce"
+
+#~ msgid "Playing time:"
+#~ msgstr "Doba přehrávání:"
+
+#~ msgid "Remaining time:"
+#~ msgstr "Zbývající čas:"
+
+#~ msgid "CMT Hack"
+#~ msgstr "CMT Hack"
+
+#~ msgid "CPU Boost"
+#~ msgstr "CPU Boost"
+
+#~ msgid "Click here to change the time info mode."
+#~ msgstr "Klikněte zde pro změnu režimu zobrazení času."
+
+#~ msgid "Block"
+#~ msgstr "Blok"
+
+#~ msgid "of"
+#~ msgstr "z"
+
+#~ msgid "FSize"
+#~ msgstr "FSize"
+
+#~ msgid "FExec"
+#~ msgstr "FExec"
+
+#~ msgid "FStart"
+#~ msgstr "FStart"
+
+#~ msgid "Stream"
+#~ msgstr "Stream"
+
+#~ msgid "Rate"
+#~ msgstr "Rate"
+
+#~ msgid "SSize"
+#~ msgstr "SSize"
+
+#~ msgid "Default MZ Speed:"
+#~ msgstr "Výchozí MZ rychlost:"
+
+#~ msgid ""
+#~ "Recording a replay: tape control is recorded; another tape and speed "
+#~ "settings are not available."
+#~ msgstr ""
+#~ "Záznam vstupů: ovládání kazety se zaznamenává; jiná páska a nastavení "
+#~ "rychlosti nejsou k dispozici."
+
+#~ msgid "Tape control is not available while a replay is recorded or played."
+#~ msgstr ""
+#~ "Ovládání kazety není během záznamu nebo přehrávání vstupů k dispozici."
+
+#~ msgid "CMT Hack is activated!"
+#~ msgstr "CMT Hack je aktivován!"
+
+#~ msgid "Virtual CMT is not available!"
+#~ msgstr "Virtuální CMT není k dispozici!"
+
+#~ msgid "No tape loaded"
+#~ msgstr "Není vložena páska"
+
+#~ msgid "Stopped - Ready to Play"
+#~ msgstr "Zastaveno - Připraveno k přehrávání"
+
+#~ msgid "(paused)"
+#~ msgstr "(pozastaveno)"
+
+#~ msgid "*** Empty ***"
+#~ msgstr "*** Prázdný ***"
+
+#~ msgid "Recording (paused)"
+#~ msgstr "Nahrávání (pozastaveno)"
+
+#~ msgid "Recording.."
+#~ msgstr "Nahrávání.."
+
+#~ msgid "Create a new WAV file"
+#~ msgstr "Vytvořit nový WAV soubor"
+
+#~ msgid "newfile.wav"
+#~ msgstr "newfile.wav"
+
+#~ msgid "All Supported CMT Files"
+#~ msgstr "Všechny podporované CMT soubory"
+
+#~ msgid "Tape Files"
+#~ msgstr "Soubory pásek"
 
 #~ msgid ""
 #~ "State: filled circle = present or connected, empty circle = not present, "

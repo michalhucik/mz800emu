@@ -17,9 +17,22 @@ void imgui_device_request_results(void)
 {
     bool rejected = false;
     st_DEVICE_REQ_RESULT res;
-    while (device_request_take_result(&res))
+    for (;;)
     {
+        /* vyzvednutí výsledku a čtení dat úpravy pásky v jednom držení zámku:
+         * emu vlákno mezitím neprovede další zásah */
+        device_state_lock();
+        bool got = device_request_take_result(&res);
+        if (got)
+            imgui_cmt_device_request_capture(&res);
+        device_state_unlock();
+        if (!got)
+            break;
         if (imgui_unicard_device_request_result(&res))
+        {
+            continue;
+        };
+        if (imgui_cmt_device_request_result(&res))
         {
             continue;
         };

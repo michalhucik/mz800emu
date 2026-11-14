@@ -69,10 +69,11 @@ jsou odmítnuty s chybou - pro vygenerovaný výpis použijte `--help`.
 | `--help` | - | Vypsat seznam options a skončit. |
 | `--version` | - | Vypsat verzi, revizi, datum buildu, původ zdrojů (větev, commit, neuložené změny, pokud jsou k dispozici), překladač, zakompilované části, verze SDL a GLib a hostitelský OS, pak skončit. Funguje ve všech binárkách (`mz800emu`, `mz700emu-pal`, `mz700emu-ntsc`, `mz1500emu`) i s `--mcp-pipe`; emulátor ani okno se nespouští. |
 | `--console` | - | Pouze Windows: alokovat okno konzole pro stdout/stderr. |
-| `--run-mzf` | `<filepath>` | Po startu emulátoru automaticky načíst a spustit zadaný MZF soubor. |
-| `--cmt` | `<filepath>` | Po startu vložit pásku do virtuálního kazetofonu: `.mzf`, `.m12`, `.mzt`, `.tap`, `.wav` nebo `.wave`. Je-li zapnutý CMT hack, vypne se jen pro toto spuštění (v `.ini` zůstane původní nastavení). V okně se otevře okno Virtual CMT. Chybějící soubor nebo neznámá přípona = chyba a konec. |
-| `--cmt-play` | - | S `--cmt`: po vložení stisknout PLAY. Když emulátor startuje přes ROM, ROM při své inicializaci motor kazetofonu zastaví, takže páska čeká v PLAY + PAUSE; hned hraje jen spolu s `--run-mzf`. |
-| `--cmt-play-pause` | - | S `--cmt`: páska čeká v PLAY + PAUSE a rozjede se, až ROM nebo program zapne motor kazetofonu (např. `LOAD` v BASICu, nahrávání z monitoru). Nelze kombinovat s `--cmt-play`. |
+| `--run-mzf` | `<filepath>` | Po startu emulátoru automaticky načíst a spustit zadaný MZF soubor. Program startuje, jako by ho z pásky nahrála ROM, bez průchodu zavaděčem ROM; registr BC nese kód zařízení nastavený v menu HW & Devices > CMT > CMT Options > Device for Direct MZF Start (výchozí CMT). |
+| `--run-mzf-device` | `<cmt\|fd\|qd\|rd\|value>` | S `--run-mzf`: kód zařízení v registru BC, jako by byl program nahrán z daného zařízení: `cmt` (0100h, na MZ-700 0000h - hodnota, kterou nechá ROM po nahrání z pásky), `fd` (0200h), `qd` (0300h), `rd` nebo `sram` (0000h), nebo číslo 0-65535 (`512`, `0x0200` nebo `0200h`; desítkové číslo se píše bez úvodních nul (`0200` je chyba, pište `0x0200` nebo `0200h`)). Některé programy, například BASIC 1Z-016, podle něj volí výchozí zařízení. Platí jen pro tento start; nastavení v menu a v INI souboru zůstane. Neplatná hodnota nebo chybějící `--run-mzf` je chyba. |
+| `--cmt` | `<filepath>` | Po startu vložit pásku do virtuálního kazetofonu: `.tmz`, `.tzx`, `.mzf`, `.m12`, `.mzt`, `.tap`, `.wav` nebo `.wave` (viz [devices/cmt.md](devices/cmt.md)). Je-li zapnutý CMT hack, vypne se jen pro toto spuštění (v `.ini` zůstane původní nastavení). V okně se otevře okno Virtual CMT. Chybějící soubor nebo neznámá přípona = chyba a konec. |
+| `--cmt-play` | - | S `--cmt`: po vložení stisknout PLAY. Když emulátor startuje přes ROM, ROM při své inicializaci motor kazetofonu zastaví, takže páska v PLAY čeká na motor (Waiting for motor); hned hraje jen spolu s `--run-mzf`. |
+| `--cmt-play-pause` | - | S `--cmt`: páska v PLAY čeká na motor (Waiting for motor) a rozjede se, až ROM nebo program zapne motor kazetofonu (např. `LOAD` v BASICu, nahrávání z monitoru). Nelze kombinovat s `--cmt-play`. |
 | `--cmt-boot` | - | Jen MZ-800, s `--cmt`: jako `--cmt-play-pause` a emulátor navíc od startu drží klávesu C, dokud ROM nezapne motor, takže bootovací nabídka nahraje program z pásky. Funguje v obou polohách přepínače režimu. Nelze kombinovat s `--run-mzf` ani s `--cmt-play`. |
 | `--fdd` | `<N>=<filepath>` | Po startu vložit DSK obraz do disketové mechaniky N; volbu lze opakovat. N 0-3 = mechaniky FDD0-FDD3 řadiče FDC (porty 0xD8 - 0xDF), 4-7 = mechaniky FDD0-FDD3 sekundárního řadiče FDC1 (porty 0x58 - 0x5F, musí být připojený). Disk z `.ini` ve stejné mechanice nahradí a cesta se do `.ini` uloží stejně jako při vložení z menu (pokud nepoužijete `--no-save-ini`). Chybějící soubor, číslo mimo 0-7 nebo mechanika zadaná dvakrát = chyba a konec; odpojený FDC1 nebo obraz, který nejde otevřít, = chyba (v `--headless` konec s kódem 3, v okně pauza). Viz [devices/fdc.md](devices/fdc.md). |
 | `--fdd0` .. `--fdd7` | `<filepath>` | Totéž co `--fdd <N>=<filepath>` pro mechaniku 0-7. |
@@ -279,6 +280,14 @@ hodnotu na všechny 4 subsystémy najednou. Per-subsystém option
 (`--cputrack-mode`, `--iorqlog-dir`, ...) má vždy precedenci - shorthand
 vyplní pouze ty subsystémy, kde uživatel per-subsys option nepředal.
 
+
+## Kazetofon (Virtual CMT)
+
+HW & Devices -> CMT -> Show Virtual CMT (`Alt + C`) otevře virtuální
+kazetofon: pásky TMZ, TZX, MZF, MZT, TAP a WAV, přehrávání skutečného signálu
+nebo okamžité nahrání přes CMT hack, nahrávání toho, co počítač ukládá,
+uložení pásky a programu do souboru, úpravy pásky a hledání programů
+v nahrávkách WAV. Podrobnosti viz [`devices/cmt.md`](devices/cmt.md).
 
 ## Screenshoty
 

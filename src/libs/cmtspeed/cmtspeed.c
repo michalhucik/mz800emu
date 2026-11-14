@@ -1,17 +1,21 @@
 /**
  * @file   cmtspeed.c
  * @author Michal Hucik <hucik@ordoz.com>
- * @version 2.0.0
+ * @version 2.1.0
  * @brief  Implementace datových polí knihovny cmtspeed — násobitele rychlostí a textové poměry.
  *
  * Obsahuje definice globálních polí g_cmtspeed_divisor[] a g_cmtspeed_ratio[],
  * která jsou indexována hodnotami enumu en_CMTSPEED.
  *
  * @par Changelog:
- * - 2026-03-14: Proběhla kompletní revize a refaktorizace. Vytvořeny unit testy.
- * - 2026-10-08: Přidána hodnota CMTSPEED_CUSTOM (vlastní délky pulzů, UniCMT).
+ * - 2026-03-14: Proběhla kompletní kontrola kódu a refaktorizace. Vytvořeny unit testy.
+ * - 2026-11-09: Přidána hodnota CMTSPEED_CUSTOM (vlastní délky pulzů, UniCMT) a cmtspeed_is_custom (2.1.0).
  *
  * @par Licence:
+ * GNU General Public License v3 (GPLv3)
+ *
+ * Copyright (C) 2017-2026 Michal Hucik <hucik@ordoz.com>
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -19,11 +23,11 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "cmtspeed.h"
@@ -32,6 +36,7 @@
  *
  * Hodnota na indexu odpovídajícím danému enumu udává poměr vůči základní
  * baudové rychlosti. Např. index CMTSPEED_2_1 obsahuje 2.0.
+ * Pro CMTSPEED_CUSTOM obsahuje 0 (délky pulzů nese volající zvlášť).
  */
 const double g_cmtspeed_divisor[] = {
                                      0,
@@ -65,4 +70,9 @@ const char *g_cmtspeed_ratio[] = {
                                   "25:14",
                                   "custom",
 };
+
+
+const char* cmtspeed_version ( void ) {
+    return CMTSPEED_VERSION;
+}
 

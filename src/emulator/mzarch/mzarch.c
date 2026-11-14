@@ -130,6 +130,8 @@ static void mzarch_main_reset(void);
 
 static inline void mzarch_main_event_callback_20ms(unsigned event_ticks)
 {
+    /* echo kazety: hrany signálu pásky za tento snímek ještě do jeho zvukového logu */
+    cmt_on_frame_audio_event();
     audiolog_finish_20ms_frame(gdg_compute_total_ticks(event_ticks));
 
     if (!EMULATOR_TEST_PAUSED)
@@ -1610,11 +1612,11 @@ char *mzarch_cli_option_value_utf8_nth(const char *name, int n)
     return g_strdup(raw);
 }
 
-void mzarch_main_reset_and_run_mzf(const char *filename)
+void mzarch_main_reset_and_run_mzf(const char *filename, const st_BOOTDEV_CHOICE *device)
 {
     /* Stejná sekvence jako start s CLI --run-mzf v mzarch_main(). */
     mzarch_main_reset();
-    mzarch_bootstrap_run_mzf(filename);
+    mzarch_bootstrap_run_mzf(filename, device);
 }
 
 void mzarch_main_reset_now(void)
@@ -1632,7 +1634,19 @@ void mzarch_main(void)
         if (mzf_path)
         {
             g_print("CLI --run-mzf: %s\n", mzf_path);
-            mzarch_bootstrap_run_mzf(mzf_path);
+            /* --run-mzf-device: kód zařízení v BC jen pro tento start (INI
+             * se nemění); hodnotu už ověřil main() přes bootdev_parse_ex().
+             * Bez volby nastavení [CMT] run_mzf_device, přečtené jednou, aby
+             * zápis pro result.json automatizace odpovídal BC. */
+            const char *dev_opt = sdlapp_option_value("--run-mzf-device");
+            char dev_text[BOOTDEV_TEXT_MAX];
+            if (!dev_opt || !bootdev_normalize(dev_opt, dev_text, sizeof(dev_text)))
+                bootdev_setting_get_text(dev_text, sizeof(dev_text));
+            st_BOOTDEV_CHOICE dev;
+            bool has_dev = bootdev_parse(dev_text, &dev);
+            mzarch_bootstrap_run_mzf(mzf_path, has_dev ? &dev : NULL);
+            automation_note_run_mzf_device(dev_text,
+                                           (uint16_t)z80_get_reg(g_mzarch_main.cpu, Z80_REG_BC));
         };
     }
 

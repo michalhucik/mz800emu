@@ -15,7 +15,7 @@ jako ``:``, v K&P BASICu asi každý sedmý pokus). Na skutečné klávesnici
   - ``input_send_keys`` ``"*"`` (5x), ``"*:*"`` a ``input_send_key`` ``"*"``:
     každý ``*`` uloží sloupec 8 se SHIFT (bit 0 = 0), každý ``:`` bez SHIFT;
   - ``total_frames`` a ``emu_frames`` se nemění (SHIFT jde o snímek dřív
-    v rámci držení klávesy, výchozí ``frame_per_key`` 3).
+    v rámci držení klávesy, výchozí ``frame_per_key`` 6).
 
 Emulátor běží s izolovaným --cfg-dir a --work-dir; zabíjí se jen vlastní
 PID. Výstup anglicky.
@@ -74,13 +74,13 @@ def check_pal(exe, tmp):
         want = []
         for i in range(5):
             r = emu.call("input_send_keys", {"text": "*"})
-            check(r.get("total_frames") == 3 and r.get("emu_frames") == 3,
+            check(r.get("total_frames") == 6 and r.get("emu_frames") == 6,
                   f"'*' #{i + 1}: timing unchanged (total {r.get('total_frames')}, emu {r.get('emu_frames')})")
             emu.call("run", {"frames": 3 + i})
             emu.call("pause")
             want.append(True)
         r = emu.call("input_send_keys", {"text": "*:*"})
-        check(r.get("total_frames") == 11 and r.get("emu_frames") == 11,
+        check(r.get("total_frames") == 20 and r.get("emu_frames") == 20,
               f"'*:*': timing unchanged (total {r.get('total_frames')}, emu {r.get('emu_frames')})")
         want += [True, False, True]
         emu.call("run", {"frames": 3})

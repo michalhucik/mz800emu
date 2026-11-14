@@ -100,19 +100,29 @@ static const st_SDLAPP_OPTION_DEF g_known_options[] = {
 #endif
     { "--run-mzf",          SDLAPP_OPTION_VALUE, SDLAPP_OPTVAL_STRING,      NULL,        "<filepath>",
       "Automatically load and run the given MZF file after the emulator boots." },
+    { "--run-mzf-device",   SDLAPP_OPTION_VALUE, SDLAPP_OPTVAL_STRING,      NULL,        "<cmt|fd|qd|rd|value>",
+      "With --run-mzf: the device code the program gets in register BC, as if "
+      "it was loaded from that device: cmt (default, the value the ROM leaves "
+      "after a tape load: 0100h, on MZ-700 0000h), fd (0200h), qd (0300h), "
+      "rd or sram (0000h), or a number 0-65535 (512, 0x0200 or 0200h; a decimal "
+      "number without leading zeros, 0200 is an error). "
+      "Applies to this start only; the INI setting [CMT] run_mzf_device is "
+      "kept. Invalid value = error and exit." },
     { "--cmt",              SDLAPP_OPTION_VALUE, SDLAPP_OPTVAL_STRING,      NULL,        "<filepath>",
-      "Insert a tape (.mzf, .m12, .mzt, .tap, .wav, .wave) into the virtual "
+      "Insert a tape (.tmz, .tzx, .mzf, .m12, .mzt, .tap, .wav, .wave) into the virtual "
       "cassette recorder at startup and open the Virtual CMT window. If the "
       "CMT hack is on, it is turned off for this session only (the INI value "
       "is kept). Missing file or unknown extension = error and exit." },
     { "--cmt-play",         SDLAPP_OPTION_FLAG,  SDLAPP_OPTVAL_NONE,        NULL,        NULL,
       "With --cmt: press PLAY after inserting the tape. A normal ROM boot "
-      "stops the cassette motor, so the tape then waits in PLAY + PAUSE; it "
-      "plays at once only together with --run-mzf." },
+      "stops the cassette motor, so the tape then waits in PLAY for the "
+      "motor (Waiting for motor); it plays at once only together with "
+      "--run-mzf." },
     { "--cmt-play-pause",   SDLAPP_OPTION_FLAG,  SDLAPP_OPTVAL_NONE,        NULL,        NULL,
-      "With --cmt: press PLAY and PAUSE after inserting the tape; the tape "
-      "starts moving when the ROM turns the cassette motor on (e.g. after "
-      "LOAD). Cannot be combined with --cmt-play." },
+      "With --cmt: press PLAY after inserting the tape; the tape waits for "
+      "the motor (Waiting for motor) and starts moving when the ROM turns "
+      "the cassette motor on (e.g. after LOAD). Cannot be combined with "
+      "--cmt-play." },
     { "--cmt-boot",         SDLAPP_OPTION_FLAG,  SDLAPP_OPTVAL_NONE,        NULL,        NULL,
       "With --cmt: like --cmt-play-pause, and hold the C key from reset until "
       "the ROM turns the cassette motor on, so the MZ-800 boot menu loads the "
@@ -502,6 +512,26 @@ int main(int argc, char *argv[])
 #if MZARCH != 800
         fprintf(stderr, "Warning: --mode-switch is only supported on MZ-800, ignoring\n");
 #endif
+    };
+
+    /* --run-mzf-device: kód zařízení v BC pro --run-mzf se ověří hned
+     * (neplatný zápis nebo chybějící --run-mzf = chyba a konec), použije ho
+     * emulátorové vlákno při bootstrapu (mzarch_main). */
+    if (sdlapp_option_present("--run-mzf-device"))
+    {
+        if (!sdlapp_option_present("--run-mzf"))
+        {
+            fprintf(stderr, "Error: --run-mzf-device requires --run-mzf <file>\n");
+            return automation_cli_error(EXIT_FAILURE, "invalid --run-mzf-device usage");
+        };
+        const char *dev = sdlapp_option_value("--run-mzf-device");
+        en_BOOTDEV_PARSE pr = bootdev_parse_ex(dev, NULL);
+        if (pr != BOOTDEV_PARSE_OK)
+        {
+            fprintf(stderr, "Error: --run-mzf-device: invalid value '%s' (%s)\n", dev ? dev : "",
+                    bootdev_parse_message(pr));
+            return automation_cli_error(EXIT_FAILURE, "invalid --run-mzf-device value");
+        };
     };
 
     /* --cmt, --cmt-play, --cmt-play-pause, --cmt-boot: kombinace voleb
