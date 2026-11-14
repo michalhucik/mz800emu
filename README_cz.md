@@ -72,6 +72,9 @@ cmake -S . -B build -G Ninja
 cmake --build build
 ```
 
+Binárky vzniknou v `build/build-<target>/` (například
+`build/build-mz800emu/mz800emu`) a jdou odtud rovnou spustit.
+
 ## Dokumentace
 
 - [docs/](docs/) - uživatelská dokumentace (build, použití, changelog)

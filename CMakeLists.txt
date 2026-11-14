@@ -65,6 +65,7 @@ option(MZ_BUILD_MZ800       "Build mz800emu (MZ-800 PAL)" ON)
 option(MZ_BUILD_MZ1500      "Build mz1500emu (MZ-1500 NTSC)" ON)
 option(MZ_BUILD_MZ700_PAL   "Build mz700emu-pal (MZ-700 PAL = EU)" ON)
 option(MZ_BUILD_MZ700_NTSC  "Build mz700emu-ntsc (MZ-700 NTSC = JP)" ON)
+option(MZ_RUNTIME_ASSETS    "Make ui_resources/, locale/ and certs/ available next to each emulator binary in the build tree" ON)
 option(BUILD_TESTING    "Build test suite (Unity + CTest)" ON)
 
 # ----------------------------------------------------------------------------

@@ -73,6 +73,9 @@ cmake -S . -B build -G Ninja
 cmake --build build
 ```
 
+The binaries are created in `build/build-<target>/` (for example
+`build/build-mz800emu/mz800emu`) and can be started from there.
+
 ## Documentation
 
 - [docs/](docs/) - user-facing build and usage documentation, changelog
