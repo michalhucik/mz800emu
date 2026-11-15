@@ -55,6 +55,15 @@ Records still in the RAM buffer are readable too, so even a short run
 - `t` = GDG ticks since emulation start (the same clock in all channels,
   so cputrack rows can be matched with iorqlog rows by time). `frame` =
   emulated frame, `pos` = ticks since the start of the frame.
+- intlog `t` of a `pin_edge` row is the moment the emulator processed
+  the change, i.e. the end of the instruction in progress (in HALT the
+  end of the current 4 T-state step), not the moment of the edge itself.
+  The OUT2 edge of the 8253 happens on the HSYNC falling edge (MZ-800:
+  `pos` modulo 1136 = 950) up to one instruction earlier. For interrupt
+  latency measure from that edge, not from `t`.
+- An interrupt request is accepted at the end of an instruction only if
+  it arrived at least 8 ticks (1.6 T-states) before it (CTC2: 13 ticks
+  after the HSYNC falling edge); otherwise after the next instruction.
 - cputrack `asm` is decoded from the bytes the CPU actually fetched (not
   from current memory - banking or self-modifying code cannot change
   it). `t_std` = standard T-states of the instruction, `wait` = extra

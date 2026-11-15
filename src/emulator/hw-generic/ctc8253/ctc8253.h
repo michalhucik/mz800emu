@@ -92,6 +92,7 @@ extern "C"
         CTC_STATE_COUNTDOWN,           /* odecet s cilem */
         CTC_STATE_MODE1_TRIGGER_ERROR, /* MODE1: prisel trigger GATE = 0|1, ale jeste nebyl LOAD_DONE, po naslednem dokonceni LOAD zavolame PRESET32 */
         CTC_STATE_BLIND_COUNT,         /* odecet bez cile */
+        CTC_STATE_STROBE,              /* rezimy 4 a 5: OUT = 0 po dobu jedne periody CLK, dalsi hrana ho vrati do 1 */
 
     } en_CTC_STATE;
 
@@ -111,15 +112,24 @@ extern "C"
          */
         unsigned load_done;
         /**
-         * 1 = hodnota byla dopsána při CLK = HIGH a nejbližší sestupná hrana
-         * CLK ji ještě nenahraje (musí jí předcházet vzestupná hrana).
-         * Platí jen ve stavu CTC_STATE_LOAD_DONE; nastavuje
-         * ctc8253_write_byte(), nuluje ctc8253_clkfall(). Změřeno na HW
-         * MZ-800 (emu-experiments/ctc-mode0-load, CTCLOAD 1-3): hodnota se
-         * nahraje na sestupné hraně CLK, před kterou po zápisu proběhla
-         * vzestupná hrana; okamžik zápisu CW nerozhoduje.
+         * 1 = nejbližší sestupná hrana CLK nedělá nic, jen tento příznak
+         * vynuluje. Nastavuje ho ctc8253_write_byte() po dopsání hodnoty,
+         * která nestihla náběžnou hranu CLK (zápis při CLK = HIGH nebo méně
+         * než asi 250 ns před náběžnou hranou; viz ctc8253_load_skips_edge()),
+         * nuluje ctc8253_clkfall() a zápis řídicího slova. Změřeno na HW
+         * MZ-800 (emu-experiments/ctc-mode0-load a ctc-meas): hodnotu nahraje
+         * sestupná hrana CLK, před kterou po zápisu proběhla náběžná hrana;
+         * okamžik zápisu CW nerozhoduje.
          */
         unsigned load_wait_rise;
+
+        /**
+         * 1 = byl zapsán dolní bajt dvoubajtové hodnoty (RL = LSB+MSB) a čeká
+         * se na horní. Povel Counter Latch v tom stavu nevrací rl_byte na 0
+         * (HW MZ-800: povel zachycení mezi bajty děliče zápis nenaruší).
+         * Invariant: wr_half = 1 jen při rlf = CTC_RLF_LSBMSB a rl_byte = 1.
+         */
+        unsigned wr_half;
 
         unsigned rl_byte; /* pocet bajtu, ktere uz byly do ctc zapsany, nebo precteny - v 8253 je na to skutecne jen jeden registr! */
 
@@ -130,6 +140,7 @@ extern "C"
         /**
          * Aktuální stav čítače tak, jak ho čte CPU (dolních 16 bitů; hodnota
          * 0x10000 / 0x10001 jen hned po nahrání presetu 0 / režimu 3 s N = 1).
+         * Při čítání BCD (bcd = 1) je v kódu BCD (0x10000 = 10 000).
          * V režimu 3 čítá po 2 (liché N: první krok po nahrání -1 při OUT = 1,
          * -3 při OUT = 0), viz ctc8253_mode3_step().
          */

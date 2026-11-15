@@ -62,6 +62,16 @@ typedef struct st_mzarch_main
 
     unsigned interrupt;
 
+    /**
+     * Čas (gdg_get_total_ticks()), kdy linka INT (interrupt) naposledy přešla
+     * z klidu do žádosti. Nastavuje mzarch_interrupt_manager(); čte
+     * mzarch_main_process_interrupt() kvůli předstihu žádosti před koncem
+     * instrukce (MZARCH_INTERRUPT_SETUP_TICKS). Ukládá se do snapshotu;
+     * po resetu a po načtení staršího snapshotu je 0, tedy žádost dávno
+     * platná.
+     */
+    uint64_t interrupt_rise_total_ticks;
+
 #if MZARCH == 800 /* HW experimenty pro MY-800 */
     en_MZ800_HWCOMPAT_ALLOW_PSG1 mz800_hwcompat_allow_psg1;
 

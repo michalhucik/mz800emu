@@ -47,6 +47,7 @@ static en_SNAPSHOT_RESULT snap_mzarch_save(st_SNAPSHOT_CONTEXT *ctx)
 
     /* Přerušení */
     snapshot_xml_write_uint(w, "interrupt", g_mzarch_main.interrupt);
+    snapshot_xml_write_uint64(w, "interrupt_rise_total_ticks", g_mzarch_main.interrupt_rise_total_ticks);
 
     /* HW kompatibilita - pouze MZ-800 ma konfigurovatelne HW experimenty */
 #if MZARCH == 800
@@ -129,6 +130,9 @@ static en_SNAPSHOT_RESULT snap_mzarch_load(st_SNAPSHOT_CONTEXT *ctx)
 
     /* Přerušení */
     snapshot_xml_read_uint(r, "interrupt", &g_mzarch_main.interrupt);
+    /* od úpravy příjmu přerušení (2026-11); starší snapshot = 0, tedy žádost dávno platná */
+    g_mzarch_main.interrupt_rise_total_ticks = 0;
+    snapshot_xml_read_uint64(r, "interrupt_rise_total_ticks", &g_mzarch_main.interrupt_rise_total_ticks);
 
     /* HW kompatibilita - pouze MZ-800 ma konfigurovatelne HW experimenty.
      * Klice mz800_hwcompat_mz700_pal_timing a mz800_hwcompat_mz700_fixed_e008

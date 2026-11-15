@@ -905,6 +905,24 @@ if(Python3_FOUND)
     message(STATUS "  tests/mcp: registered mcp_snapshot_z80_hidden "
                    "(Python ${Python3_VERSION})")
 
+    # 8253 a příjem přerušení podle měření na HW: předstih žádosti o
+    # přerušení před koncem instrukce (CTC2, procesor v HALT), pulz
+    # režimu 4 na CTC0 a pozastavení čítání hradlem GATE0 v režimu 0.
+    # MZ-800, pipe. Bez binárky 77.
+    add_test(
+        NAME    mcp_ctc8253_hw
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_ctc8253_hw.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_ctc8253_hw PROPERTIES
+        LABELS  "e2e;mcp;pipe;peripherals"
+        TIMEOUT 180
+        SKIP_RETURN_CODE 77
+    )
+    message(STATUS "  tests/mcp: registered mcp_ctc8253_hw "
+                   "(Python ${Python3_VERSION})")
+
     # Snapshot z jiné HW konfigurace se načte bezpečně: RAMdisk 1 MB do
     # procesu s 64 kB (dřív přetečení bufferu, load se zasekl), IDE8
     # připojený bez otevřeného obrazu zůstane odpojený. MZ-800, pipe.

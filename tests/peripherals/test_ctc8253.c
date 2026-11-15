@@ -492,6 +492,275 @@ void test_ctc_hw_mode3_odd(void)
     }
 }
 
+/* ================================================================
+ * emu-experiments/ctc-meas (MZ-800, analyzátor na pinech 8253, 2026-11-15):
+ * režimy 4 a 5, čítání BCD, režim 3 s děličem 3, GATE v režimu 0, povel
+ * zachycení mezi bajty děliče. Testy běží na CTC2 po jednotlivých hranách
+ * (pravidla o fázi zápisu a GATE0 vůči CLK0 ověřuje srovnání s HW,
+ * emu-experiments/ctc-meas/tools/ctc_compare.py).
+ * ================================================================ */
+
+/* Režim 4, N = 3 zapsáno při LOW: nahrání 1. hranou (L), OUT = 0 na L + 3
+ * na jednu periodu, pak čítání bez cíle a OUT už se nemění */
+void test_ctc_hw_mode4_strobe(void)
+{
+    MZTEST_REQUIRE_LEVEL(MZTEST_LEVEL_UNIT);
+    static const unsigned expect[] = { 3, 2, 1, 0, 0xFFFF, 0xFFFE, 0xFFFD };
+    static const unsigned out[]    = { 1, 1, 1, 0, 1,      1,      1 };
+    ct2_prime();
+    ct2_clk_fall();
+    ct2_cw(4);
+    TEST_ASSERT_EQUAL_INT(1, g_ctc8253[CTC_CS2].out);
+    ct2_load(3);
+    ct2_clk_high();
+    for (unsigned i = 0; i < sizeof(expect) / sizeof(expect[0]); i++)
+    {
+        ct2_pulse();
+        TEST_ASSERT_EQUAL_HEX16(expect[i], ct2_read());
+        TEST_ASSERT_EQUAL_INT(out[i], g_ctc8253[CTC_CS2].out);
+    }
+}
+
+/* Režim 4: nová hodnota během čítání se nahraje další hranou (báze, na HW neměřeno) */
+void test_ctc_mode4_reload_while_counting(void)
+{
+    MZTEST_REQUIRE_LEVEL(MZTEST_LEVEL_UNIT);
+    ct2_prime();
+    ct2_clk_fall();
+    ct2_cw(4);
+    ct2_load(8);
+    ct2_clk_high();
+    ct2_pulse();
+    ct2_pulse();
+    TEST_ASSERT_EQUAL_HEX16(7, ct2_read());
+    ct2_clk_fall();
+    TEST_ASSERT_EQUAL_HEX16(6, ct2_read());
+    ct2_load(2);
+    ct2_clk_high();
+    ct2_pulse();
+    TEST_ASSERT_EQUAL_HEX16(2, ct2_read());
+    ct2_pulse();
+    ct2_pulse();
+    TEST_ASSERT_EQUAL_INT(0, g_ctc8253[CTC_CS2].out);
+    ct2_pulse();
+    TEST_ASSERT_EQUAL_INT(1, g_ctc8253[CTC_CS2].out);
+}
+
+/* Režim 5, N = 3: bez náběžné hrany GATE se nic neděje; po ní nahrání na
+ * hraně T, OUT = 0 na T + 3 na jednu periodu */
+void test_ctc_hw_mode5_strobe(void)
+{
+    MZTEST_REQUIRE_LEVEL(MZTEST_LEVEL_UNIT);
+    ct2_prime();
+    ct2_clk_fall();
+    ct2_cw(5);
+    ct2_load(3);
+    ct2_clk_high();
+    for (unsigned i = 0; i < 6; i++)
+    {
+        ct2_pulse();
+        TEST_ASSERT_EQUAL_INT(1, g_ctc8253[CTC_CS2].out);
+    }
+    ctc8253_gate(CTC_CS2, 0, 0);
+    ct2_pulse();
+    ctc8253_gate(CTC_CS2, 1, 0);
+    ct2_pulse(); /* T: nahrání */
+    TEST_ASSERT_EQUAL_HEX16(3, ct2_read());
+    TEST_ASSERT_EQUAL_INT(1, g_ctc8253[CTC_CS2].out);
+    ct2_pulse();
+    ct2_pulse();
+    TEST_ASSERT_EQUAL_INT(1, g_ctc8253[CTC_CS2].out);
+    ct2_pulse(); /* T + 3 */
+    TEST_ASSERT_EQUAL_HEX16(0, ct2_read());
+    TEST_ASSERT_EQUAL_INT(0, g_ctc8253[CTC_CS2].out);
+    ct2_pulse(); /* T + 4 */
+    TEST_ASSERT_EQUAL_INT(1, g_ctc8253[CTC_CS2].out);
+    ct2_pulse();
+    TEST_ASSERT_EQUAL_INT(1, g_ctc8253[CTC_CS2].out);
+}
+
+/* Režim 1, N = 3: OUT = 0 na hraně T, OUT = 1 na T + 3; nové spuštění během
+ * pulzu ho prodlouží */
+void test_ctc_hw_mode1_retrigger(void)
+{
+    MZTEST_REQUIRE_LEVEL(MZTEST_LEVEL_UNIT);
+    ct2_prime();
+    ct2_clk_fall();
+    ct2_cw(1);
+    ct2_load(3);
+    ct2_clk_high();
+    ct2_pulse();
+    ctc8253_gate(CTC_CS2, 0, 0);
+    ct2_pulse();
+    ctc8253_gate(CTC_CS2, 1, 0);
+    ct2_pulse(); /* T */
+    TEST_ASSERT_EQUAL_INT(0, g_ctc8253[CTC_CS2].out);
+    ct2_pulse();
+    ctc8253_gate(CTC_CS2, 0, 0);
+    ctc8253_gate(CTC_CS2, 1, 0);
+    ct2_pulse(); /* nové T */
+    ct2_pulse();
+    ct2_pulse();
+    TEST_ASSERT_EQUAL_INT(0, g_ctc8253[CTC_CS2].out);
+    ct2_pulse(); /* nové T + 3 */
+    TEST_ASSERT_EQUAL_INT(1, g_ctc8253[CTC_CS2].out);
+}
+
+/* Čítání BCD, režim 2, N = 10h: perioda 10, čte se 10, 09, 08, ... 01 */
+void test_ctc_hw_bcd_mode2(void)
+{
+    MZTEST_REQUIRE_LEVEL(MZTEST_LEVEL_UNIT);
+    static const unsigned expect[] = { 0x10, 0x09, 0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x10, 0x09 };
+    ct2_prime();
+    ct2_clk_fall();
+    ctc8253_write_byte(CTCADDR_CWREG, 0xB0 | (2 << 1) | 1);
+    ct2_load(0x10);
+    ct2_clk_high();
+    for (unsigned i = 0; i < sizeof(expect) / sizeof(expect[0]); i++)
+    {
+        ct2_pulse();
+        TEST_ASSERT_EQUAL_HEX16(expect[i], ct2_read());
+        TEST_ASSERT_EQUAL_INT((expect[i] == 0x01) ? 0 : 1, g_ctc8253[CTC_CS2].out);
+    }
+}
+
+/* Čítání BCD, režim 3, N = 20h: OUT se mění po 10 hranách (perioda 20) */
+void test_ctc_hw_bcd_mode3(void)
+{
+    MZTEST_REQUIRE_LEVEL(MZTEST_LEVEL_UNIT);
+    ct2_prime();
+    ct2_clk_fall();
+    ctc8253_write_byte(CTCADDR_CWREG, 0xB0 | (3 << 1) | 1);
+    ct2_load(0x20);
+    ct2_clk_high();
+    ct2_pulse(); /* L */
+    TEST_ASSERT_EQUAL_HEX16(0x20, ct2_read());
+    for (unsigned i = 1; i <= 40; i++)
+    {
+        ct2_pulse();
+        TEST_ASSERT_EQUAL_INT(((i / 10) & 1) ? 0 : 1, g_ctc8253[CTC_CS2].out);
+    }
+}
+
+/* Čítání BCD, režim 0, N = 0: 10 000 kroků, pak 0000 a 9999 */
+void test_ctc_bcd_mode0_zero_is_10000(void)
+{
+    MZTEST_REQUIRE_LEVEL(MZTEST_LEVEL_UNIT);
+    ct2_prime();
+    ct2_clk_fall();
+    ctc8253_write_byte(CTCADDR_CWREG, 0xB0 | 1);
+    ct2_load(0);
+    ct2_clk_high();
+    ct2_pulse(); /* L */
+    ct2_pulse();
+    TEST_ASSERT_EQUAL_HEX16(0x9999, ct2_read());
+    for (unsigned i = 2; i < 10000; i++)
+    {
+        ct2_pulse();
+    }
+    TEST_ASSERT_EQUAL_HEX16(0x0001, ct2_read());
+    TEST_ASSERT_EQUAL_INT(0, g_ctc8253[CTC_CS2].out);
+    ct2_pulse();
+    TEST_ASSERT_EQUAL_HEX16(0x0000, ct2_read());
+    TEST_ASSERT_EQUAL_INT(1, g_ctc8253[CTC_CS2].out);
+    ct2_pulse();
+    TEST_ASSERT_EQUAL_HEX16(0x9999, ct2_read());
+}
+
+/* Režim 3, N = 3: OUT jde do nuly na L + 2 a zůstane tam */
+void test_ctc_hw_mode3_divider3_stays_low(void)
+{
+    MZTEST_REQUIRE_LEVEL(MZTEST_LEVEL_UNIT);
+    ct2_prime();
+    ct2_clk_fall();
+    ct2_cw(3);
+    ct2_load(3);
+    ct2_clk_high();
+    ct2_pulse(); /* L */
+    TEST_ASSERT_EQUAL_INT(1, g_ctc8253[CTC_CS2].out);
+    ct2_pulse();
+    TEST_ASSERT_EQUAL_INT(1, g_ctc8253[CTC_CS2].out);
+    for (unsigned i = 0; i < 200; i++)
+    {
+        ct2_pulse();
+        TEST_ASSERT_EQUAL_INT(0, g_ctc8253[CTC_CS2].out);
+    }
+    /* nové řídicí slovo a dělič čítač znovu rozběhnou */
+    ct2_clk_fall();
+    ct2_cw(3);
+    ct2_load(4);
+    ct2_clk_high();
+    ct2_pulse();
+    ct2_pulse();
+    ct2_pulse();
+    TEST_ASSERT_EQUAL_INT(0, g_ctc8253[CTC_CS2].out);
+    ct2_pulse();
+    ct2_pulse();
+    TEST_ASSERT_EQUAL_INT(1, g_ctc8253[CTC_CS2].out);
+}
+
+/* Režim 0: GATE = 0 čítání pozastaví, GATE = 1 pokračuje od místa zastavení */
+void test_ctc_hw_mode0_gate_pauses(void)
+{
+    MZTEST_REQUIRE_LEVEL(MZTEST_LEVEL_UNIT);
+    ct2_prime();
+    ct2_clk_fall();
+    ct2_cw(0);
+    ct2_load(5);
+    ct2_clk_high();
+    ct2_pulse(); /* L */
+    ct2_pulse();
+    ct2_pulse();
+    TEST_ASSERT_EQUAL_HEX16(3, ct2_read());
+    ctc8253_gate(CTC_CS2, 0, 0);
+    for (unsigned i = 0; i < 10; i++)
+    {
+        ct2_pulse();
+    }
+    TEST_ASSERT_EQUAL_HEX16(3, ct2_read());
+    TEST_ASSERT_EQUAL_INT(0, g_ctc8253[CTC_CS2].out);
+    ctc8253_gate(CTC_CS2, 1, 0);
+    ct2_pulse();
+    ct2_pulse();
+    TEST_ASSERT_EQUAL_HEX16(1, ct2_read());
+    TEST_ASSERT_EQUAL_INT(0, g_ctc8253[CTC_CS2].out);
+    ct2_pulse();
+    TEST_ASSERT_EQUAL_HEX16(0, ct2_read());
+    TEST_ASSERT_EQUAL_INT(1, g_ctc8253[CTC_CS2].out);
+}
+
+/* Povel zachycení mezi dolním a horním bajtem děliče zápis nenaruší */
+void test_ctc_hw_latch_between_value_bytes(void)
+{
+    MZTEST_REQUIRE_LEVEL(MZTEST_LEVEL_UNIT);
+    ct2_prime();
+    ct2_clk_fall();
+    ct2_cw(0);
+    ctc8253_write_byte(CTCADDR_CTC2, 0x05);
+    ctc8253_write_byte(CTCADDR_CWREG, 0x80);
+    ctc8253_write_byte(CTCADDR_CTC2, 0x00);
+    ct2_clk_high();
+    TEST_ASSERT_EQUAL_INT(CTC_STATE_LOAD_DONE, g_ctc8253[CTC_CS2].state);
+    ct2_pulse();
+    TEST_ASSERT_EQUAL_HEX16(5, ct2_read());
+    ct2_pulse();
+    TEST_ASSERT_EQUAL_HEX16(4, ct2_read());
+}
+
+/* Povel zachycení mimo zápis hodnoty vrací pořadí čtení na dolní bajt (jako dřív) */
+void test_ctc_latch_resets_read_order(void)
+{
+    MZTEST_REQUIRE_LEVEL(MZTEST_LEVEL_UNIT);
+    ct2_prime();
+    ct2_clk_fall();
+    ct2_cw(0);
+    ct2_load(0x1234);
+    ct2_clk_high();
+    ct2_pulse();
+    (void)ctc8253_read_byte(CTC_CS2); /* jen dolní bajt */
+    TEST_ASSERT_EQUAL_HEX16(0x1234, ct2_read());
+}
+
 /* === MAIN === */
 
 int main(int argc, char *argv[])
@@ -524,6 +793,17 @@ int main(int argc, char *argv[])
     RUN_TEST(test_ctc_hw_mode2_write_high);
     RUN_TEST(test_ctc_hw_mode3_even);
     RUN_TEST(test_ctc_hw_mode3_odd);
+    RUN_TEST(test_ctc_hw_mode4_strobe);
+    RUN_TEST(test_ctc_mode4_reload_while_counting);
+    RUN_TEST(test_ctc_hw_mode5_strobe);
+    RUN_TEST(test_ctc_hw_mode1_retrigger);
+    RUN_TEST(test_ctc_hw_bcd_mode2);
+    RUN_TEST(test_ctc_hw_bcd_mode3);
+    RUN_TEST(test_ctc_bcd_mode0_zero_is_10000);
+    RUN_TEST(test_ctc_hw_mode3_divider3_stays_low);
+    RUN_TEST(test_ctc_hw_mode0_gate_pauses);
+    RUN_TEST(test_ctc_hw_latch_between_value_bytes);
+    RUN_TEST(test_ctc_latch_resets_read_order);
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
     RUN_TEST(test_ctc_read_lsbmsb_ignores_memop_call);
 #endif

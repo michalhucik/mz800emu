@@ -5,6 +5,7 @@
 #include "hw-generic/pioz80/pioz80.h"
 #include "hw-generic/pio8255/pio8255.h"
 #include "hw-generic/ctc8253/ctc8253.h"
+#include "hw-generic/gdg/gdg.h"
 #if CFG_HWEXT_HAVE_FDC
 #include "hw-generic/fdc/fdc.h"
 #endif
@@ -86,12 +87,22 @@ static inline void mzarch_interrupt_check_fdc(void)
 #endif
 
 /**
- * Provede kontrolu vsech zarizeni, ktere jsou schopny vygenerovat interrupt.
+ * @brief Zkontroluje všechna zařízení, která umí vyvolat přerušení, a nastaví linku INT.
  *
- * @param event_ticks
+ * Při přechodu linky z klidu do žádosti zapíše čas do
+ * g_mzarch_main.interrupt_rise_total_ticks: čas právě zpracovávané události
+ * (hrana čítače, událost GDG), jinak aktuální čas uvnitř instrukce. Žádost
+ * od CTC2 má čas o MZARCH_INTERRUPT_CTC2_DELAY_TICKS pozdější (zpoždění
+ * výstupu 8253), může tedy ležet několik tiků v budoucnosti.
+ *
+ * @note Vedlejší efekty: g_mzarch_main.interrupt, interrupt_rise_total_ticks,
+ *       záznam do intlog a háčky breakpointů (debugger).
+ * @pre Emu vlákno.
  */
 void mzarch_interrupt_manager(void)
 {
+    unsigned interrupt_before = g_mzarch_main.interrupt;
+
 #if CFG_HWEXT_HAVE_FDC
     mzarch_interrupt_check_fdc();
 #endif
@@ -99,6 +110,21 @@ void mzarch_interrupt_manager(void)
 #if HAVE_PIOZ80
     mzarch_interrupt_check_pioz80();
 #endif
+
+    if ((interrupt_before == 0) && (g_mzarch_main.interrupt != 0))
+    {
+        /* během zpracování události je event.ticks její čas (<= aktuální čas) */
+        unsigned rise_ticks = g_gdg.total_elapsed.ticks;
+        if (g_mzarch_main.event.ticks < rise_ticks)
+        {
+            rise_ticks = g_mzarch_main.event.ticks;
+        };
+        if (g_mzarch_main.interrupt & MZARCH_INTERRUPT_CTC2)
+        {
+            rise_ticks += MZARCH_INTERRUPT_CTC2_DELAY_TICKS;
+        };
+        g_mzarch_main.interrupt_rise_total_ticks = gdg_compute_total_ticks(rise_ticks);
+    };
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
     /* trace-suite intlog: emit pin_edge eventy pro každou změnu interrupt

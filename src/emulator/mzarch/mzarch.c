@@ -875,7 +875,9 @@ void mzarch_main_report_screen_done_underflow(unsigned ticks)
  * předá (z80_int) jen při povolených přerušeních, takže se úrovňový signál
  * nezapamatuje; čekající IRQ z injectu (vlastní vektor) se nepřepisuje.
  * Když INT čeká a přerušení jsou zakázaná, kontrola se zopakuje po další
- * instrukci (MZEVENT_BREAK_MZARCH_INTERRUPT).
+ * instrukci (MZEVENT_BREAK_MZARCH_INTERRUPT). Stejně se odloží žádost linky
+ * INT, která přišla méně než MZARCH_INTERRUPT_SETUP_TICKS před koncem
+ * instrukce (změřeno na MZ-800, viz interrupt.h).
  *
  * Bez žádosti jedno čtení masky a dvou příznaků jádra (per-event cesta,
  * ne instrukční smyčka).
@@ -890,6 +892,19 @@ static inline void mzarch_main_process_interrupt(void)
     bool int_enabled = cpu->iff1 && !cpu->ei_delay;
     /* NMI má v jádře přednost; přijetí níže je tedy NMI. */
     bool is_nmi = cpu->nmi_pending;
+
+    /* Žádost na lince INT, která přišla těsně před koncem instrukce, procesor
+     * na tomto konci ještě nevidí (MZARCH_INTERRUPT_SETUP_TICKS); zkusíme to
+     * po další instrukci (v HALT po dalších 4 T). NMI a IRQ z injectu se to
+     * netýká. */
+    if (!is_nmi && int_enabled && !cpu->int_pending && g_mzarch_main.interrupt)
+    {
+        if ((int64_t)(gdg_get_total_ticks() - g_mzarch_main.interrupt_rise_total_ticks) < MZARCH_INTERRUPT_SETUP_TICKS)
+        {
+            MZ800_MAIN_SET_EVENT(MZEVENT_BREAK_MZARCH_INTERRUPT, 0);
+            return;
+        };
+    };
 
     if (is_nmi || int_enabled)
     {
@@ -1455,6 +1470,7 @@ static void mzarch_main_reset(void)
 
     // TODO: tohle se nedeje
     g_mzarch_main.interrupt = 0;
+    g_mzarch_main.interrupt_rise_total_ticks = 0;
 
     g_mzarch_main.instruction_addr = 0x0000;
 

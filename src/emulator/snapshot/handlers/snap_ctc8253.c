@@ -40,6 +40,7 @@ static en_SNAPSHOT_RESULT snap_ctc8253_save(st_SNAPSHOT_CONTEXT *ctx)
         snapshot_xml_write_uint(w, "state", (unsigned)ctc->state);
         snapshot_xml_write_uint(w, "load_done", ctc->load_done);
         snapshot_xml_write_uint(w, "load_wait_rise", ctc->load_wait_rise);
+        snapshot_xml_write_uint(w, "wr_half", ctc->wr_half);
         snapshot_xml_write_uint(w, "rl_byte", ctc->rl_byte);
         snapshot_xml_write_uint(w, "latch_op", ctc->latch_op);
 
@@ -121,6 +122,9 @@ static en_SNAPSHOT_RESULT snap_ctc8253_load(st_SNAPSHOT_CONTEXT *ctx)
         ctc->load_wait_rise = 0;
         if (snapshot_xml_read_uint(r, "load_wait_rise", &uval)) ctc->load_wait_rise = uval;
         if (snapshot_xml_read_uint(r, "rl_byte", &uval)) ctc->rl_byte = uval;
+        /* od opravy 8253 podle měření (2026-11); starší snapshot = 0 */
+        ctc->wr_half = 0;
+        if (snapshot_xml_read_uint(r, "wr_half", &uval)) ctc->wr_half = uval;
         if (snapshot_xml_read_uint(r, "latch_op", &uval)) ctc->latch_op = uval;
 
         /* Hodnoty čítačů — hex16 */
@@ -130,6 +134,12 @@ static en_SNAPSHOT_RESULT snap_ctc8253_load(st_SNAPSHOT_CONTEXT *ctx)
         if (snapshot_xml_read_hex16(r, "value", &hval)) ctc->value = hval;
         if (snapshot_xml_read_hex16(r, "mode3_destination_value", &hval)) ctc->mode3_destination_value = hval;
         if (snapshot_xml_read_hex16(r, "mode3_half_value", &hval)) ctc->mode3_half_value = hval;
+
+        /* Hodnoty se ukládají v 16 bitech: dělič 0 (65 536, v BCD 10 000)
+         * a režim 3 s děličem 1 (65 537) mají interně 17 bitů. */
+        if (ctc->preset_value == 0) ctc->preset_value = 0x10000;
+        if ((ctc->mode == CTC_MODE3) && (ctc->preset_value == 1)) ctc->preset_value = 0x10001;
+        if ((ctc->value == 0) && (ctc->state == CTC_STATE_COUNTDOWN)) ctc->value = 0x10000;
 
 #ifdef MZ800EMU_CFG_CLK1M1_FAST
         /* CTC0 rychlá cesta; snapshot bez události (starší verze) ji
