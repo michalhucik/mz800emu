@@ -626,15 +626,28 @@ not decode). Each file is a row (`kind` `"file"`); a part of the signal
 without a file and at least 64 pulses long is a row with `kind`
 `"unknown"`. `result`:
 
-- `addable` - a file in the standard Sharp format (`format` `"NORMAL"`)
-  with correct header and body checksums;
-- `addable_repaired` - a NORMAL file repaired by an enabled option
+- `addable` - a file with correct header and body checksums in a format
+  the emulator can write again as a block: `"NORMAL"` (the standard Sharp
+  format), `"CPM-CMT"`, `"TURBO"`, `"FASTIPL"`, `"CPM-TAPE"` or `"BSD"`.
+  `profile` names what builds the block: `MZ800EMU-CMT` (NORMAL at the
+  default tape speed, CPM-CMT at 2:1 CP/M), `TC-1.21`, `IC-10.2-TURBO`,
+  `IC-10.2-FASTIPL`, `PEZIK-2.0A`, `IC-10.2-CPM`, `BASIC-1Z016`, or
+  `MZ Turbo Data` (a TURBO or FASTIPL file whose writer was not
+  recognized: block 0x41 at the nearest speed). A block of a format
+  other than NORMAL carries the same file, but its signal is generated
+  again by the profile - the timing of the recording is not kept;
+- `addable_repaired` - such a file repaired by an enabled option
   (`repair_body`: an incomplete body filled with 00h, or two damaged
-  copies merged; `repair_header`: a header without its body);
+  copies merged; `repair_header`: a header without its body;
+  `repair_bsd`: an incomplete BSD data file);
 - `stays_raw` - a NORMAL file whose body has a checksum error (a row
   with `kind` `"file"`, its name, `body` `"checksum_error"`, `reason`
   `Checksum error in the body`), and every unknown part;
-- `cannot_add` - any other format (turbo, FSK, BSD, CP/M, ...).
+- `cannot_add` - a format that cannot be written as a block (MZ-80B,
+  SINCLAIR, FSK, SLOW, DIRECT, ZX Spectrum), or a file its writer
+  profile refuses (`reason` `The file cannot be rebuilt as a tape block
+  in this format`, for example a TAPE.COM body over 16 KB or a BSD file
+  over 254 pieces); `profile` is `""`.
 
 A file whose signal ends inside its body is **not** reported as a file
 without `repair_body`: that part is a row with `kind` `"unknown"`,

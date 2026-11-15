@@ -58,7 +58,7 @@ extern "C"
      * Definice v cmt_window.cpp.
      *
      * @pre UI vlákno, uvnitř snímku ImGui; další volání Begin*() musí být modál.
-     * @post Při otevřeném okně kazety: SetNextWindowPos() a SetNextWindowViewport() nastavené.
+     * @post Při otevřeném okně kazety: SetNextWindowPos() nastavené (viewport se nepřipíná, modál jde přetáhnout mimo okno).
      */
     void imgui_cmt_window_modal_next_pos(void);
 

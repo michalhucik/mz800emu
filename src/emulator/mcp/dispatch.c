@@ -13857,7 +13857,7 @@ static bool _cmt_analyze_flag(JsonObject *obj, const char *key, int *out) {
  *   "sample_rate": int, "pulse_count": int, "length_s": float,
  *   ["analysis_error": str,] "rows": [{"row", "kind", "name", "type",
  *   "format", "start_s", "length_s", "size", "header", "body", "result",
- *   "reason", "recovery"}], "applied": int, "first_added": int | null,
+ *   "reason", "recovery", "profile"}], "applied": int, "first_added": int | null,
  *   "count": int, "current_block": int [, "warning": str]}
  * (`warning` po uplatnění: nové bloky souborů hrají jiným taktem než
  * výchozím - blok 0x43 před surovým blokem).
@@ -13958,6 +13958,8 @@ static en_MCP_DISPATCH_RESULT _handle_cmt_tape_analyze(
         json_object_set_string_member(o, "result", _cmt_analyze_result_text(r->result));
         json_object_set_string_member(o, "reason", param->out_rows[i].reason_text ? param->out_rows[i].reason_text : "");
         json_object_set_string_member(o, "recovery", r->recovery_text ? r->recovery_text : "");
+        /* čím se sestaví blok řádku, který jde přidat (profil zapisovače), jinak "" */
+        json_object_set_string_member(o, "profile", r->writer_profile ? r->writer_profile : "");
         json_array_add_object_element(rows, o);
     }
     json_object_set_array_member(resp, "rows", rows);

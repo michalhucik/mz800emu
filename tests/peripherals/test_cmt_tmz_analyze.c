@@ -54,6 +54,8 @@
 #include "libs/tmz/tmz.h"
 #include "libs/tmz/tmz_blocks.h"
 #include "libs/tmz/tmz_player.h"
+#include "libs/tmz/tmz_profile.h"
+#include "libs/mzcmt_bsd/mzcmt_bsd.h"
 #include "libs/mztape/mztape.h"
 #include "libs/mzcmt_fm/mzcmt_fm.h"
 #include "libs/cmt_stream/cmt_stream.h"
@@ -1651,7 +1653,8 @@ void test_raw_run_keeps_inner_gap(void)
     st_CMTTMZ_ANALYSIS *a = syn_analysis(&p, &res);
     TEST_ASSERT_EQUAL_UINT32(5, cmttmz_analysis_row_count(a));
     assert_row(a, 1, CMTTMZ_ANALYZE_FILE, 1000, 30000, CMTTMZ_ANALYZE_ADDABLE, "NORMAL");
-    assert_row(a, 2, CMTTMZ_ANALYZE_FILE, 30010, 60000, CMTTMZ_ANALYZE_CANNOT_ADD, "TURBO");
+    assert_row(a, 2, CMTTMZ_ANALYZE_FILE, 30010, 60000, CMTTMZ_ANALYZE_ADDABLE, "TURBO");
+    TEST_ASSERT_EQUAL_STRING("MZ Turbo Data", cmttmz_analysis_row(a, 2)->writer_profile);
     uint8_t use[5] = {0, 0, 0, 1, 0};
     uint32_t added = 0;
     TEST_ASSERT_EQUAL_INT_MESSAGE(EXIT_SUCCESS, cmttmz_analysis_apply(p, a, use, 1, &added), cmttmz_get_edit_error());
@@ -1756,6 +1759,307 @@ void test_histogram(void)
     free(p.lengths);
 }
 
+
+/* ================================================================
+ * JINÉ FORMÁTY NEŽ NORMAL (TURBO, FASTIPL, BSD, CP/M)
+ * ================================================================ */
+
+/** @brief Délka těla souboru v testech jiných formátů (B). */
+#define FMT_BODY_SIZE 700
+
+/**
+ * @brief Zahraje blok playerem při AN_RATE a vrátí jeho signál jako blok 0x18 s tichem před a za.
+ *
+ * První pulz CSW je LOW: začíná-li signál úrovní HIGH, ticho před ním je
+ * právě ten pulz LOW; jinak se ticho k prvnímu pulzu přičte.
+ *
+ * @param b Blok se signálem. @return Blok 0x18 (data převezme soubor v open_tape_ex()).
+ */
+static st_TZX_BLOCK fmt_block_to_raw(const st_TZX_BLOCK *b)
+{
+    st_TMZ_PLAYER_CONFIG cfg;
+    tmz_player_config_init(&cfg);
+    cfg.sample_rate = AN_RATE;
+    cfg.stream_type = CMT_STREAM_TYPE_VSTREAM;
+    en_TMZ_PLAYER_ERROR perr = TMZ_PLAYER_OK;
+    st_CMT_STREAM *st = tmz_player_play_block(b, &cfg, &perr);
+    TEST_ASSERT_NOT_NULL_MESSAGE(st, tmz_player_error_string(perr));
+    st_CMT_VSTREAM *vs = st->str.vstream;
+    cmt_vstream_read_reset(vs);
+    st_AN_SIG sig;
+    memset(&sig, 0, sizeof(sig));
+    sig_add(&sig, 0, AN_RATE / 2); /* 0,5 s ticha */
+    uint64_t samples = 0;
+    int value = 0;
+    while (EXIT_SUCCESS == cmt_vstream_read_pulse(vs, &samples, &value)) {
+        while (samples > 0) {
+            uint32_t n = (samples > 0x7FFFFFFFu) ? 0x7FFFFFFFu : (uint32_t)samples;
+            sig_add(&sig, value & 1, n);
+            samples -= n;
+        }
+    }
+    sig_add(&sig, sig_next_level(&sig), AN_RATE / 2);
+    cmt_stream_destroy(st);
+    st_TZX_BLOCK raw;
+    TEST_ASSERT_EQUAL_INT(TZX_OK, tzx_block_create_csw_recording(AN_RATE, AN_RAW_PAUSE_MS, sig.len, sig.count, &raw));
+    free(sig.len);
+    return raw;
+}
+
+/**
+ * @brief Hlavička a tělo testovacího souboru jiného formátu.
+ * @param[out] hdr Hlavička v pořadí hostitele. @param[out] body Tělo FMT_BODY_SIZE bajtů.
+ * @param name Jméno. @param ftype Typ souboru.
+ */
+static void fmt_make_file(st_MZF_HEADER *hdr, uint8_t *body, const char *name, uint8_t ftype)
+{
+    memset(hdr, 0, sizeof(*hdr));
+    hdr->ftype = ftype;
+    memset(&hdr->fname, 0x0D, sizeof(hdr->fname));
+    memcpy(&hdr->fname, name, strlen(name));
+    hdr->fsize = FMT_BODY_SIZE;
+    hdr->fstrt = 0x2000;
+    hdr->fexec = 0x2000;
+    uint32_t x = 0x1234u + (uint32_t)name[0];
+    for (int i = 0; i < FMT_BODY_SIZE; i++) {
+        x = x * 1103515245u + 12345u;
+        body[i] = (uint8_t)(x >> 16);
+    }
+}
+
+/**
+ * @brief Kruh jednoho formátu: blok profilu zahraný do surového bloku analýza najde a přidá se stejným obsahem.
+ *
+ * @param profile ID profilu, kterým se sestaví zdrojový blok. @param args Parametry profilu.
+ * @param name Jméno souboru. @param format Očekávané jméno formátu řádku.
+ * @param writer Očekávané st_CMTTMZ_ANALYZE_ROW::writer_profile.
+ */
+static void fmt_roundtrip(const char *profile, const st_TMZ_PROFILE_ARGS *args, const char *name, const char *format,
+                          const char *writer)
+{
+    st_MZF_HEADER hdr;
+    uint8_t body[FMT_BODY_SIZE];
+    fmt_make_file(&hdr, body, name, 0x01);
+    en_TMZ_PROFILE_ERROR pe = TMZ_PROFILE_OK;
+    st_TZX_BLOCK *src = tmz_profile_build_block(profile, args, &hdr, body, FMT_BODY_SIZE, &pe);
+    TEST_ASSERT_NOT_NULL_MESSAGE(src, tmz_profile_error_string(pe));
+    st_TZX_BLOCK raw = fmt_block_to_raw(src);
+    tmz_block_free(src);
+    open_tape_ex(AN_TAPE_GOOD, &raw);
+
+    st_CMTTMZ_PULSES *p = NULL;
+    st_CMTTMZ_ANALYSIS *a = analyze_block1(&p, NULL);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("", cmttmz_analysis_error(a), profile);
+    int row = -1;
+    uint32_t rows = cmttmz_analysis_row_count(a);
+    for (uint32_t i = 0; i < rows; i++) {
+        const st_CMTTMZ_ANALYZE_ROW *r = cmttmz_analysis_row(a, i);
+        if (r->kind == CMTTMZ_ANALYZE_FILE && 0 == strcmp(r->format_name, format)) row = (int)i;
+    }
+    TEST_ASSERT_TRUE_MESSAGE(row >= 0, profile);
+    const st_CMTTMZ_ANALYZE_ROW *r = cmttmz_analysis_row(a, (uint32_t)row);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(name, r->name, profile);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(CMTTMZ_ANALYZE_ADDABLE, r->result, cmttmz_analyze_reason_text(r->reason));
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(writer, r->writer_profile, profile);
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(FMT_BODY_SIZE, r->size, profile);
+
+    uint8_t *use = (uint8_t *)calloc(rows, 1);
+    TEST_ASSERT_NOT_NULL(use);
+    use[row] = 1;
+    uint32_t added = 0;
+    TEST_ASSERT_EQUAL_INT_MESSAGE(EXIT_SUCCESS, cmt_tape_analysis_apply(p, a, use, 0, &added), cmttmz_get_edit_error());
+    TEST_ASSERT_EQUAL_UINT32(1, added);
+    TEST_ASSERT_EQUAL_INT(4, tape_count());
+    /* nový blok za surovým nese stejný soubor */
+    st_MZF *mzf = cmttmz_block_get_mzf(2);
+    TEST_ASSERT_NOT_NULL_MESSAGE(mzf, profile);
+    TEST_ASSERT_EQUAL_UINT8_MESSAGE(hdr.ftype, mzf->header.ftype, profile);
+    TEST_ASSERT_EQUAL_MEMORY_MESSAGE(&hdr.fname, &mzf->header.fname, sizeof(hdr.fname), profile);
+    TEST_ASSERT_EQUAL_UINT16_MESSAGE(hdr.fsize, mzf->header.fsize, profile);
+    TEST_ASSERT_EQUAL_UINT16_MESSAGE(hdr.fstrt, mzf->header.fstrt, profile);
+    TEST_ASSERT_EQUAL_UINT16_MESSAGE(hdr.fexec, mzf->header.fexec, profile);
+    TEST_ASSERT_EQUAL_MEMORY_MESSAGE(body, mzf->body, FMT_BODY_SIZE, profile);
+    mzf_free(mzf);
+    /* a jde přehrát */
+    TEST_ASSERT_TRUE_MESSAGE(block_length_us(2) > 100000.0, profile);
+    assert_not_imported(2);
+    free(use);
+    cmttmz_analysis_free(a);
+    cmttmz_pulses_free(p);
+}
+
+/**
+ * @brief Kruh datového souboru BASIC (BSD): tři kusy po 256 B, blok profilu BASIC-1Z016.
+ */
+static void fmt_roundtrip_bsd(void)
+{
+    enum { CHUNKS = 3 };
+    st_MZF_HEADER hdr;
+    uint8_t body[FMT_BODY_SIZE];
+    fmt_make_file(&hdr, body, "BSDDATA", 0x04);
+    hdr.fsize = 0;
+    hdr.fstrt = 0;
+    hdr.fexec = 0;
+    uint8_t chunks[CHUNKS * MZCMT_BSD_CHUNK_SIZE];
+    memset(chunks, 0, sizeof(chunks));
+    for (int i = 0; i < CHUNKS; i++) {
+        uint16_t id = (i + 1 == CHUNKS) ? 0xFFFFu : (uint16_t)i;
+        chunks[i * MZCMT_BSD_CHUNK_SIZE] = (uint8_t)(id & 0xFF);
+        chunks[i * MZCMT_BSD_CHUNK_SIZE + 1] = (uint8_t)(id >> 8);
+        memcpy(&chunks[i * MZCMT_BSD_CHUNK_SIZE + 2], &body[(i * 97) % 400], MZCMT_BSD_CHUNK_DATA_SIZE);
+    }
+    en_TMZ_PROFILE_ERROR pe = TMZ_PROFILE_OK;
+    st_TZX_BLOCK *src = tmz_profile_build_block("BASIC-1Z016", NULL, &hdr, chunks, sizeof(chunks), &pe);
+    TEST_ASSERT_NOT_NULL_MESSAGE(src, tmz_profile_error_string(pe));
+    st_TZX_BLOCK raw = fmt_block_to_raw(src);
+    tmz_block_free(src);
+    open_tape_ex(AN_TAPE_GOOD, &raw);
+
+    st_CMTTMZ_PULSES *p = NULL;
+    st_CMTTMZ_ANALYSIS *a = analyze_block1(&p, NULL);
+    int row = row_by_name(a, "BSDDATA");
+    TEST_ASSERT_TRUE_MESSAGE(row >= 0, "BSD file found");
+    const st_CMTTMZ_ANALYZE_ROW *r = cmttmz_analysis_row(a, (uint32_t)row);
+    TEST_ASSERT_EQUAL_STRING("BSD", r->format_name);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(CMTTMZ_ANALYZE_ADDABLE, r->result, cmttmz_analyze_reason_text(r->reason));
+    TEST_ASSERT_EQUAL_STRING("BASIC-1Z016", r->writer_profile);
+    uint32_t rows = cmttmz_analysis_row_count(a);
+    uint8_t *use = (uint8_t *)calloc(rows, 1);
+    TEST_ASSERT_NOT_NULL(use);
+    use[row] = 1;
+    uint32_t added = 0;
+    TEST_ASSERT_EQUAL_INT_MESSAGE(EXIT_SUCCESS, cmt_tape_analysis_apply(p, a, use, 0, &added), cmttmz_get_edit_error());
+    TEST_ASSERT_EQUAL_UINT32(1, added);
+    /* nový blok 0x46 nese všechny kusy beze změny (ID i data) a jde přehrát */
+    const st_TZX_BLOCK *nb = &cmttmz_get_file()->blocks[2];
+    TEST_ASSERT_EQUAL_UINT8(TMZ_BLOCK_ID_MZ_FILE, nb->id);
+    for (int i = 0; i < CHUNKS; i++) {
+        const uint8_t *chunk = &chunks[i * MZCMT_BSD_CHUNK_SIZE];
+        int found = 0;
+        for (uint32_t o = 0; !found && o + MZCMT_BSD_CHUNK_SIZE <= nb->length; o++) {
+            found = (0 == memcmp(nb->data + o, chunk, MZCMT_BSD_CHUNK_SIZE));
+        }
+        TEST_ASSERT_TRUE_MESSAGE(found, "BSD chunk kept in the new block");
+    }
+    TEST_ASSERT_TRUE(block_length_us(2) > 100000.0);
+    free(use);
+    cmttmz_analysis_free(a);
+    cmttmz_pulses_free(p);
+}
+
+/*
+ * Soubory TURBO, FASTIPL, CP/M a BSD z analýzy jdou přidat jako bloky:
+ * blok profilu zapisovače zahraný do surového záznamu analýza najde, pozná
+ * zapisovač a přidá blok se stejným souborem.
+ */
+void test_formats_roundtrip(void)
+{
+    MZTEST_REQUIRE_LEVEL(MZTEST_LEVEL_UNIT);
+    st_TMZ_PROFILE_ARGS a;
+
+    tmz_profile_args_init(&a);
+    a.speed = CMTSPEED_2_1;
+    fmt_roundtrip("TC-1.21", &a, "TCTURBO", "TURBO", "TC-1.21");
+
+    tmz_profile_args_init(&a);
+    a.bd = 2400;
+    fmt_roundtrip("IC-10.2-TURBO", &a, "ICTURBO", "TURBO", "IC-10.2-TURBO");
+
+    tmz_profile_args_init(&a);
+    a.bd = 2400;
+    fmt_roundtrip("IC-10.2-FASTIPL", &a, "ICFAST", "FASTIPL", "IC-10.2-FASTIPL");
+
+    tmz_profile_args_init(&a);
+    a.bd = 2400;
+    fmt_roundtrip("PEZIK-2.0A", &a, "PEZIK", "CPM-TAPE", "PEZIK-2.0A");
+
+    tmz_profile_args_init(&a);
+    a.bd = 2400;
+    fmt_roundtrip("IC-10.2-CPM", &a, "ICCPM", "CPM-TAPE", "IC-10.2-CPM");
+
+    fmt_roundtrip_bsd();
+}
+
+/*
+ * Formát, který jako blok sestavit nejde (ZX Spectrum, FSK), zůstává
+ * CANNOT_ADD s důvodem FORMAT a bez profilu; soubor CP/M Pezik s tělem nad
+ * 16 KB profil odmítne (CANNOT_ADD, důvod PROFILE).
+ */
+void test_formats_not_buildable(void)
+{
+    MZTEST_REQUIRE_LEVEL(MZTEST_LEVEL_UNIT);
+    open_tape(AN_TAPE_GOOD);
+    st_WAV_ANALYZER_RESULT res;
+    memset(&res, 0, sizeof(res));
+    syn_add(&res, WAV_TAPE_FORMAT_FSK, 1000, 1000, 30000, syn_mzf(&s_m1));
+    syn_add(&res, WAV_TAPE_FORMAT_CPM_TAPE, 40000, 40000, 70000, syn_mzf(&s_m2));
+    /* tělo Pezik nad 16 KB */
+    st_MZF *big = res.files[1].mzf;
+    free(big->body);
+    big->body = (uint8_t *)calloc(1, 20000);
+    TEST_ASSERT_NOT_NULL(big->body);
+    big->body_size = 20000;
+    big->header.fsize = 20000;
+    res.files[1].cpmtape_variant = WAV_CPMTAPE_PEZIK;
+    res.files[1].cpmtape_bd = 2400;
+    st_CMTTMZ_PULSES *p = NULL;
+    st_CMTTMZ_ANALYSIS *a = syn_analysis(&p, &res);
+    int fsk = -1, cpm = -1;
+    for (uint32_t i = 0; i < cmttmz_analysis_row_count(a); i++) {
+        const st_CMTTMZ_ANALYZE_ROW *r = cmttmz_analysis_row(a, i);
+        if (r->kind != CMTTMZ_ANALYZE_FILE) continue;
+        if (0 == strcmp(r->format_name, "FSK")) fsk = (int)i;
+        if (0 == strcmp(r->format_name, "CPM-TAPE")) cpm = (int)i;
+    }
+    TEST_ASSERT_TRUE(fsk >= 0 && cpm >= 0);
+    TEST_ASSERT_EQUAL_INT(CMTTMZ_ANALYZE_CANNOT_ADD, cmttmz_analysis_row(a, (uint32_t)fsk)->result);
+    TEST_ASSERT_EQUAL_INT(CMTTMZ_ANALYZE_REASON_FORMAT, cmttmz_analysis_row(a, (uint32_t)fsk)->reason);
+    TEST_ASSERT_EQUAL_STRING("", cmttmz_analysis_row(a, (uint32_t)fsk)->writer_profile);
+    TEST_ASSERT_EQUAL_INT(CMTTMZ_ANALYZE_CANNOT_ADD, cmttmz_analysis_row(a, (uint32_t)cpm)->result);
+    TEST_ASSERT_EQUAL_INT(CMTTMZ_ANALYZE_REASON_PROFILE, cmttmz_analysis_row(a, (uint32_t)cpm)->reason);
+    cmttmz_analysis_free(a);
+    cmttmz_pulses_free(p);
+}
+
+
+/*
+ * CPM-CMT (standardní formát při 2400 Bd, CMT.COM): soubor jde přidat jako
+ * blok MZ800EMU-CMT s pevnou rychlostí 2:1 CP/M.
+ */
+void test_formats_cpm_cmt(void)
+{
+    MZTEST_REQUIRE_LEVEL(MZTEST_LEVEL_UNIT);
+    open_tape(AN_TAPE_GOOD);
+    st_WAV_ANALYZER_RESULT res;
+    memset(&res, 0, sizeof(res));
+    syn_add(&res, WAV_TAPE_FORMAT_CPM_CMT, 1000, 1000, 30000, syn_mzf(&s_m1));
+    st_CMTTMZ_PULSES *p = NULL;
+    st_CMTTMZ_ANALYSIS *a = syn_analysis(&p, &res);
+    int row = -1;
+    for (uint32_t i = 0; i < cmttmz_analysis_row_count(a); i++) {
+        if (cmttmz_analysis_row(a, i)->kind == CMTTMZ_ANALYZE_FILE) row = (int)i;
+    }
+    TEST_ASSERT_TRUE(row >= 0);
+    const st_CMTTMZ_ANALYZE_ROW *r = cmttmz_analysis_row(a, (uint32_t)row);
+    TEST_ASSERT_EQUAL_STRING("CPM-CMT", r->format_name);
+    TEST_ASSERT_EQUAL_INT(CMTTMZ_ANALYZE_ADDABLE, r->result);
+    TEST_ASSERT_EQUAL_STRING("MZ800EMU-CMT", r->writer_profile);
+    uint8_t *use = (uint8_t *)calloc(cmttmz_analysis_row_count(a), 1);
+    TEST_ASSERT_NOT_NULL(use);
+    use[row] = 1;
+    uint32_t added = 0;
+    TEST_ASSERT_EQUAL_INT_MESSAGE(EXIT_SUCCESS, cmt_tape_analysis_apply(p, a, use, 0, &added), cmttmz_get_edit_error());
+    TEST_ASSERT_EQUAL_UINT32(1, added);
+    assert_block_mzf(2, &s_m1);
+    st_CMTTMZ_BLOCK_SPEED sp;
+    TEST_ASSERT_EQUAL_INT(EXIT_SUCCESS, cmttmz_test_get_side(2, &sp, NULL));
+    TEST_ASSERT_EQUAL_INT(CMTTMZ_SPEED_ORIGIN_FIXED, sp.origin);
+    TEST_ASSERT_EQUAL_INT(CMTSPEED_2_1_CPM, sp.speed);
+    free(use);
+    cmttmz_analysis_free(a);
+    cmttmz_pulses_free(p);
+}
+
 int main(int argc, char *argv[])
 {
     mztest_parse_args(argc, argv);
@@ -1789,6 +2093,9 @@ int main(int argc, char *argv[])
     RUN_TEST(test_raw_run_keeps_inner_gap);
     RUN_TEST(test_replace_raw_limit);
     RUN_TEST(test_histogram);
+    RUN_TEST(test_formats_roundtrip);
+    RUN_TEST(test_formats_not_buildable);
+    RUN_TEST(test_formats_cpm_cmt);
 
     int result = UNITY_END();
     mztest_teardown();

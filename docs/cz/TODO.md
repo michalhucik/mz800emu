@@ -11,7 +11,6 @@
 - Hledání referencí (kde všude se čte/zapisuje právě tohle)
 - Back step
 - vytvoření kompletního overscreen menu
-- převod nahrávek WAV v nestandardních formátech pásky (TURBO, FASTIPL, BSD, CP/M) na soubory a převod během přehrávání pásky
 - podpora gdb
 
 

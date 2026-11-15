@@ -11,7 +11,6 @@
 - Reference search (where exactly is this read/written)
 - Back step
 - complete overscreen menu
-- conversion of WAV recordings in non-standard tape formats (TURBO, FASTIPL, BSD, CP/M) to files, and conversion while the tape is playing
 - gdb support
 
 

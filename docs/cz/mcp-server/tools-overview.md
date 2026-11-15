@@ -3928,15 +3928,19 @@ synchronně: emulace čeká, okno emulátoru dál kreslí. Mez doby není; po
 zhruba 610 s emulátor odpoví `Emulator busy` a výsledek není znám (před
 opakováním `apply` znovu přečtěte `emulator://periph/cmt/tape`). Každý
 soubor je řádek (`kind` "file"), signál
-bez souboru o 64 a více pulzech je řádek `kind` "unknown". Přidat jde jen
-standardní soubor Sharp (`format` "NORMAL") se správným součtem hlavičky
-i těla (`result` "addable") nebo opravený zapnutou volbou opravy
-("addable_repaired"); soubor NORMAL s chybou součtu nebo neúplný zůstává
-surový ("stays_raw"), jiné formáty přidat nejde ("cannot_add"). `apply`
+bez souboru o 64 a více pulzech je řádek `kind` "unknown". Přidat jde
+soubor se správným součtem hlavičky i těla (`result` "addable") nebo
+opravený zapnutou volbou opravy ("addable_repaired"), je-li jeho `format`
+"NORMAL" (standardní formát Sharp), "CPM-CMT", "TURBO", "FASTIPL",
+"CPM-TAPE" nebo "BSD"; pole řádku `profile` jmenuje profil zapisovače,
+který blok sestaví (blok jiného formátu než NORMAL vyrobí profil znovu,
+časování nahrávky se nezachová). Soubor s chybou součtu nebo neúplný
+zůstává surový ("stays_raw"), jiné formáty a soubory, které profil odmítne,
+přidat nejde ("cannot_add"). `apply`
 "add" vloží každý soubor, který jde přidat, za surový blok; "replace"
 surový blok nahradí bloky souborů a zbytek signálu ponechá v surových
 blocích v původním pořadí (úseky kratší než 64 pulzů vedle souboru se
-vynechají jako při nahrávání). Bloky souborů mají profil emulátoru
+vynechají jako při nahrávání). Bloky souborů NORMAL mají profil emulátoru
 MZ800EMU-CMT a výchozí rychlost pásky. Leží-li před surovým blokem blok
 informací o stroji 0x43 s jiným taktem CPU než výchozím 3546895 Hz, hrají
 nové bloky souborů tímto taktem a `warning` to řekne (jako import).

@@ -269,6 +269,7 @@ Nabídka **Tape**:
 | **Export block as WAV...** | uloží signál aktuálního bloku jako soubor WAV | zastavená páska |
 | **Export tape as WAV...** | uloží celou pásku jako soubor WAV tak, jak by hrála | zastavená páska s aspoň jedním blokem |
 | **Analyze recording...** | najde programy ve vybraném surovém záznamu (viz Analýza záznamu) | zastavená páska, jeden vybraný surový záznam |
+| **Find files while playing** | zaškrtávátko: hrající surový záznam se analyzuje na pozadí (viz Analýza záznamu) | vždy |
 | **Tape information...** | název, autor a další texty pásky a cílový stroj (viz Informace o pásce) | zastavená páska |
 | **Check tape** | vypíše problémy ve struktuře pásky (viz Kontrola pásky) | vložená páska, v každém stavu |
 | **Eject** (Ctrl+E) | vysune pásku | ne během nahrávání |
@@ -714,6 +715,15 @@ pásky); nové nebo změněné bloky jsou `Unsaved`. Check tape pásku jen čte.
 Analyze recording...** s tímto jediným vybraným řádkem, otevře dialog
 `Analyze recording - block N`.
 
+**Při hraní**: se zapnutou volbou **Tape > Find files while playing**
+(výchozí, klíč `auto_analyze`) se surový záznam analyzuje na pozadí, hned
+jak začne hrát, s výchozími volbami. Páska se tím nemění. Když záznam
+dohraje nebo se páska zastaví a našly se soubory, které jde přidat, řekne
+to řádek zpráv, například `Block 2: files found in the recording: 3. Use
+Analyze recording... to add them to the tape.`; dialog se pak otevře rovnou
+s výsledkem. Záznam se takto analyzuje jednou; neanalyzuje se při nahrávání
+ani přehrávání záznamu vstupů a jen se zobrazeným oknem Virtual CMT.
+
 Analýza začne hned a běží na pozadí: emulace i okno dál pracují, dialog
 ukazuje `Analyzing...` a uplynulý čas. **Cancel**, Escape nebo zavření okna
 Virtual CMT dialog kdykoli opustí; rozběhnutá analýza se opustí, doběhne na
@@ -733,13 +743,27 @@ tabulkou říká, proč soubor jde nebo nejde přidat a co jde zkusit (napříkl
 Když se nic nenajde, dialog napíše `No files found.` a rozbalí **Signal
 details**.
 
-**Co jde přidat**: jen soubor ve standardním formátu Sharp se správným
-součtem hlavičky i těla, nebo soubor, který opravila zapnutá volba opravy.
+**Co jde přidat**: soubor se správným součtem hlavičky i těla, nebo
+soubor, který opravila zapnutá volba opravy, v některém z těchto formátů:
+
+| Formát | Nahrávka | Blok sestaví |
+|--------|----------|--------------|
+| `Sharp standard` | příkaz SAVE z ROM | vlastní signál emulátoru ve výchozí rychlosti |
+| `CPM-CMT` | CMT.COM pod CP/M (standardní formát při 2400 Bd) | vlastní signál emulátoru v rychlosti 2:1 (CP/M) |
+| `TURBO` | TurboCopy, Intercopy TURBO | profil TC-1.21 nebo IC-10.2-TURBO s nahranou rychlostí; s neznámým zapisovačem turbo blok v nejbližší rychlosti |
+| `FASTIPL` | Intercopy FAST IPL | profil IC-10.2-FASTIPL s nahranou rychlostí; s neznámým zapisovačem blok FASTIPL v nejbližší rychlosti |
+| `CPM-TAPE` | TAPE.COM (Pezik / MarVan), Intercopy CPM | profil PEZIK-2.0A (tělo do 16 KB) nebo IC-10.2-CPM |
+| `BSD` | datový soubor BASICu (do 254 kusů po 256 B) | profil BASIC-1Z016 |
+
 Takové soubory jsou zaškrtnuté; zaškrtávátko (nebo mezerník na řádku)
-určuje, které se přidají. Soubor ve standardním formátu s chybou součtu
+určuje, které se přidají. Blok jiného než standardního formátu zapíše
+profil zapisovače znovu: nese stejný soubor (jde exportovat jako MZF, kromě
+datového souboru BSD) a hraje čistý signál, ale časování původní nahrávky
+se nezachová. Řádek pod tabulkou profil jmenuje. Soubor s chybou součtu
 nebo neúplný zůstane v záznamu (`Stays raw`); soubory v jiných formátech
-(například TURBO, FASTIPL, BSD, CP/M nebo ZX Spectrum) jako bloky přidat
-nejde (`Cannot add`) a také zůstanou v záznamu, kde dál hrají tak, jak se
+(MZ-80B, SINCLAIR, FSK, SLOW, DIRECT, ZX Spectrum) a soubor, který profil
+zapsat neumí (například tělo TAPE.COM nad 16 KB), jako bloky přidat nejde
+(`Cannot add`) a také zůstanou v záznamu, kde dál hrají tak, jak se
 nahrály.
 
 **Volby**: **Leader tolerance** (2 až 35 %, výchozí 20 %, **Reset** ji
@@ -748,8 +772,8 @@ ji u opotřebených nebo nestabilních nahrávek. Volby opravy: **Repair
 damaged header** ponechá soubor s neporušenou hlavičkou, jehož tělo chybí
 (tělo se vyplní 00h); **Repair damaged body** ponechá soubor s neúplným
 tělem nebo spojí dvě poškozené kopie (chybějící bajty se vyplní 00h);
-**Repair incomplete BSD file** ponechá ve výsledcích neúplný datový soubor
-BSD (přidat ho dál nejde). Opravený soubor je `Will be added (repaired)`;
+**Repair incomplete BSD file** ponechá neúplný datový soubor BSD
+(chybějící kusy se vyplní 00h). Opravený soubor je `Will be added (repaired)`;
 jeho data mohou mít místo ztracených bajtů 00h. Po změně volby jsou
 výsledky zastaralé: tabulka je ztlumená a nic nejde přidat, dokud
 **Analyze again** nespustí analýzu s novými volbami.
@@ -1158,6 +1182,7 @@ neuložené změny. Kontrola pásky jde i během záznamu vstupů.
 | `[VIRTUAL_CMT_UI] layout` | rozvržení okna: 0 = Compact, 1 = Full | 0 |
 | `[VIRTUAL_CMT_UI] compact_w`, `compact_h`, `full_w`, `full_h` | velikost okna každého rozvržení v pixelech, 0 = výchozí velikost | 0 |
 | `[VIRTUAL_CMT_UI] props_open` | vlastnosti: 0 = sbalené, 1 = rozbalené | 0 |
+| `[VIRTUAL_CMT_UI] auto_analyze` | Find files while playing: 1 = hrající surový záznam se analyzuje na pozadí | 1 |
 
 ## Příkazová řádka
 

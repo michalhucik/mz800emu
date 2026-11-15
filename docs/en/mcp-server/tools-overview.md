@@ -4045,14 +4045,18 @@ There is no time limit; after about 610 s the emulator answers
 `Emulator busy` and the result is unknown (read
 `emulator://periph/cmt/tape` again before repeating `apply`). Each file is a row (`kind` "file"),
 signal without a file of 64 pulses or more is a row of `kind` "unknown".
-Only a standard Sharp file (`format` "NORMAL") with a correct header and
-body checksum (`result` "addable") or repaired by an enabled repair
-option ("addable_repaired") can be added; a NORMAL file with a checksum
-error or incomplete stays raw ("stays_raw"), other formats cannot be
+A file with a correct header and body checksum (`result` "addable") or
+repaired by an enabled repair option ("addable_repaired") can be added
+when its `format` is "NORMAL" (the standard Sharp format), "CPM-CMT",
+"TURBO", "FASTIPL", "CPM-TAPE" or "BSD"; the row field `profile` names the
+writer profile that builds the block (a block of a format other than
+NORMAL is generated again by that profile, the timing of the recording is
+not kept). A file with a checksum error or incomplete stays raw
+("stays_raw"), other formats and files the profile refuses cannot be
 added ("cannot_add"). `apply` "add" inserts every addable file after the
 raw block; "replace" replaces the raw block by the file blocks and keeps
 the rest of the signal in raw blocks in the original order (pieces
-shorter than 64 pulses next to a file are left out, as when recording). File blocks
+shorter than 64 pulses next to a file are left out, as when recording). NORMAL file blocks
 use the emulator profile MZ800EMU-CMT at the default tape speed. When a
 machine info block 0x43 with a CPU clock other than the default 3546895 Hz
 lies before the raw block, the new file blocks play at that clock and

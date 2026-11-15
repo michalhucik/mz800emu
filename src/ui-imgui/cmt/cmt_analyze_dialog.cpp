@@ -593,6 +593,79 @@ static st_CAD s_cad;
 /** @brief Inicializace stavu při prvním použití (statické pole s std::vector se inicializuje konstruktorem). */
 static bool s_cad_init = false;
 
+
+/* ------------------------------------------------------------------------- */
+/*  Analýza na pozadí při hraní surového bloku                               */
+/* ------------------------------------------------------------------------- */
+
+/** @brief Stav analýzy na pozadí (cmt_analyze_dialog_auto()). */
+typedef enum en_CAD_AUTO_STATE {
+    CAD_AUTO_IDLE = 0, /**< nic (klíč neplatí) */
+    CAD_AUTO_COPYING,  /**< čeká na kopii pulzů (zásah fronty) */
+    CAD_AUTO_WAITING,  /**< úloha čeká na volné pracovní vlákno */
+    CAD_AUTO_RUNNING,  /**< analýza běží */
+    CAD_AUTO_READY,    /**< výsledek je připravený (result != NULL) */
+    CAD_AUTO_SPENT,    /**< blok klíče už vyřízen: výsledek převzal dialog, kopie nebo analýza selhala; znovu se nespouští */
+} en_CAD_AUTO_STATE;
+
+/**
+ * @brief Analýza surového bloku na pozadí, zatímco hraje (UI vlákno).
+ *
+ * Klíč (tape_serial, block_id, pulse_count) určuje blok; jiná páska nebo
+ * jiný hrající surový blok stav zahodí a začne znovu. Výsledek čeká na
+ * oznámení (blok dohrál nebo se páska zastavila) a na otevření dialogu
+ * analýzy téhož bloku, který ho převezme bez nové analýzy.
+ *
+ * @invariant state == IDLE => pulses, job i result jsou NULL.
+ * @invariant job != NULL <=> state je WAITING nebo RUNNING; result != NULL <=> state == READY.
+ * @invariant pulses != NULL <=> state je WAITING, RUNNING nebo READY.
+ */
+typedef struct st_CAD_AUTO {
+    en_CAD_AUTO_STATE state;     /**< stav */
+    unsigned tape_serial;        /**< klíč: čítač výměn pásky */
+    int block_id;                /**< klíč: blok */
+    uint32_t pulse_count;        /**< klíč: počet pulzů bloku z kopie stavu okna */
+    uint32_t pulses_seq;         /**< zásah kopie pulzů, na jehož výsledek se čeká (0 = žádný) */
+    st_CAD_PULSES *pulses;       /**< kopie pulzů (vlastní odkaz) */
+    st_CAD_JOB *job;             /**< úloha (vlastní odkaz) */
+    st_CMTTMZ_ANALYSIS *result;  /**< hotová analýza (vlastní ji tento stav) */
+    std::vector<double> row_max; /**< nejdelší pulz rozsahu každého řádku v µs */
+    int addable;                 /**< počet řádků výsledku, které jdou přidat */
+    bool announced;              /**< nález už byl ohlášen v řádku zpráv */
+} st_CAD_AUTO;
+
+/** @brief Stav analýzy na pozadí (UI vlákno). */
+static st_CAD_AUTO s_cad_auto;
+
+/**
+ * @brief Zahodí data analýzy na pozadí (běžící úloha doběhne a uvolní se sama) a nastaví stav.
+ * @param state Nový stav: CAD_AUTO_IDLE (klíč neplatí) nebo CAD_AUTO_SPENT (klíč zůstává, blok se znovu neanalyzuje).
+ */
+static void cad_auto_drop ( en_CAD_AUTO_STATE state )
+{
+    cad_job_unref ( s_cad_auto.job );
+    s_cad_auto.job = NULL;
+    cmttmz_analysis_free ( s_cad_auto.result );
+    s_cad_auto.result = NULL;
+    cad_pulses_unref ( s_cad_auto.pulses );
+    s_cad_auto.pulses = NULL;
+    s_cad_auto.row_max.clear ( );
+    s_cad_auto.pulses_seq = 0;
+    s_cad_auto.addable = 0;
+    s_cad_auto.state = state;
+}
+
+/**
+ * @brief Patří stav analýzy na pozadí danému bloku?
+ * @param tape_serial Čítač výměn pásky. @param block_id Blok. @param pulse_count Počet pulzů bloku.
+ * @return true = klíč souhlasí a stav není IDLE.
+ */
+static bool cad_auto_is ( unsigned tape_serial, int block_id, uint32_t pulse_count )
+{
+    return s_cad_auto.state != CAD_AUTO_IDLE && s_cad_auto.tape_serial == tape_serial && s_cad_auto.block_id == block_id
+        && s_cad_auto.pulse_count == pulse_count;
+}
+
 /**
  * @brief Nastaví výchozí hodnoty polí, která nemají konstruktor (jednou).
  */
@@ -748,6 +821,8 @@ static const char *cad_text_stale ( void )
     return _ ( "Analyze again to apply the new options." );
 }
 
+static bool cad_row_addable ( const st_CMTTMZ_ANALYZE_ROW *r );
+
 /**
  * @brief Text sloupce Result podle výsledku řádku a zaškrtnutí.
  * @param r Řádek. @param use Zaškrtnutí. @param[out] color Barva textu.
@@ -780,18 +855,34 @@ static const char *cad_result_text ( const st_CMTTMZ_ANALYZE_ROW *r, bool use, I
  * @brief Vysvětlení řádku pro tooltip výsledku a řádek nápovědy (bez jména).
  *
  * Důvod jádra (cmttmz_analyze_reason_text(), anglicky, nepřekládá se),
- * u opraveného souboru s popisem opravy; u souboru, který se přidá bez
- * opravy, věta o rychlosti nového bloku.
+ * u opraveného souboru s popisem opravy; u standardního souboru, který se
+ * přidá bez opravy, věta o rychlosti nového bloku; u souboru jiného formátu
+ * (TURBO, FASTIPL, BSD, CP/M), který se přidá, věta o profilu zapisovače
+ * (st_CMTTMZ_ANALYZE_ROW::writer_profile).
  *
  * @param r Řádek. @param speed_text Výchozí rychlost decku ("1:1").
  * @return Text (bez tečky na konci u textu jádra).
  */
 static std::string cad_row_detail ( const st_CMTTMZ_ANALYZE_ROW *r, const std::string &speed_text )
 {
-    if ( r->kind == CMTTMZ_ANALYZE_FILE && r->result == CMTTMZ_ANALYZE_ADDABLE ) {
+    const bool standard = r->format_name && 0 == strcmp ( r->format_name, "NORMAL" );
+    if ( r->kind == CMTTMZ_ANALYZE_FILE && r->result == CMTTMZ_ANALYZE_ADDABLE && standard ) {
         char buf[160];
         snprintf ( buf, sizeof ( buf ), _ ( "Stored as a standard tape block at speed %s." ), speed_text.c_str ( ) );
         return std::string ( buf );
+    }
+    if ( r->kind == CMTTMZ_ANALYZE_FILE && cad_row_addable ( r ) && !standard ) {
+        /* jiný formát: blok vyrobí profil zapisovače znovu, časování nahrávky se nezachová */
+        char buf[320];
+        snprintf ( buf, sizeof ( buf ), _ ( "Stored as a %s tape block built by the writer profile %s; the signal is generated again, the timing of the recording is not kept." ),
+                   r->format_name ? r->format_name : "", ( r->writer_profile && r->writer_profile[0] ) ? r->writer_profile : "-" );
+        std::string t ( buf );
+        if ( r->result == CMTTMZ_ANALYZE_ADDABLE_REPAIRED && r->recovery_text && r->recovery_text[0] ) {
+            t += " (";
+            t += r->recovery_text;
+            t += ")";
+        }
+        return t;
     }
     std::string t = cmttmz_analyze_reason_text ( r->reason );
     if ( r->result == CMTTMZ_ANALYZE_ADDABLE_REPAIRED && r->recovery_text && r->recovery_text[0] ) {
@@ -1069,9 +1160,13 @@ void cmt_analyze_dialog_open ( const st_CMT_VIEW *v, int block_id )
     s_cad.body_content_h = s_cad.footer_h = s_cad.top_h = 0.0f;
     s_cad.last_size = ImVec2 ( 0.0f, 0.0f );
     s_cad.nav_last = 0;
-    s_cad.pulses_seq = cmt_request_analysis_pulses ( v->tape_serial, block_id );
-    s_cad.state = CAD_STATE_COPYING;
     s_cad.run_start = ImGui::GetCurrentContext ( ) ? ImGui::GetTime ( ) : 0.0;
+    const bool from_auto = cad_auto_is ( v->tape_serial, block_id, b->pulse_count )
+        && ( s_cad_auto.state == CAD_AUTO_WAITING || s_cad_auto.state == CAD_AUTO_RUNNING || s_cad_auto.state == CAD_AUTO_READY );
+    if ( !from_auto ) {
+        s_cad.pulses_seq = cmt_request_analysis_pulses ( v->tape_serial, block_id );
+        s_cad.state = CAD_STATE_COPYING;
+    }
     s_cad.open_pending = true;
     s_cad.skipped = false;
     s_cad.focus_add_frames = 3;
@@ -1080,9 +1175,97 @@ void cmt_analyze_dialog_open ( const st_CMT_VIEW *v, int block_id )
     s_cad.body_marks.clear ( );
     /* otevření = objevení modálu: vystředit (dál jen při změně velikosti) */
     s_cad.recenter_frames = 3;
+    if ( from_auto ) {
+        /* analýza téhož bloku na pozadí (výchozí volby): dialog převezme kopii pulzů a hotový výsledek
+         * nebo rozběhnutou úlohu, nová kopie ani analýza se nedělá */
+        st_CMTTMZ_ANALYZE_OPTS o;
+        cmttmz_analyze_opts_default ( &o );
+        s_cad.pulses = s_cad_auto.pulses;
+        s_cad_auto.pulses = NULL;
+        s_cad.pulse_count = s_cad.pulses->p->count;
+        if ( s_cad_auto.state == CAD_AUTO_READY ) {
+            st_CMTTMZ_ANALYSIS *a = s_cad_auto.result;
+            s_cad_auto.result = NULL;
+            cad_take_result ( a, &o, s_cad_auto.row_max.empty ( ) ? NULL : s_cad_auto.row_max.data ( ) );
+        } else {
+            s_cad.job = s_cad_auto.job;
+            s_cad_auto.job = NULL;
+            s_cad.state = ( s_cad_auto.state == CAD_AUTO_RUNNING ) ? CAD_STATE_RUNNING : CAD_STATE_WAITING;
+        }
+        cad_auto_drop ( CAD_AUTO_SPENT );
+        return;
+    }
     if ( !s_cad.pulses_seq ) {
         s_cad.state = CAD_STATE_ERROR;
         s_cad.error = _ ( "The recording could not be read." );
+    }
+}
+
+
+void cmt_analyze_dialog_auto ( const st_CMT_VIEW *v, bool enabled )
+{
+    cad_init_once ( );
+    if ( !v ) return;
+    /* jiná páska nebo vypnutá volba: nic se nedrží */
+    if ( s_cad_auto.state != CAD_AUTO_IDLE && ( !enabled || !v->has_tape || v->tape_serial != s_cad_auto.tape_serial ) ) {
+        cad_auto_drop ( CAD_AUTO_IDLE );
+    }
+    if ( !enabled ) return;
+
+    /* hraje surový blok (v každém režimu načítání; ne při záznamu vstupů a jeho přehrávání - kopii pulzů by fronta odmítla) */
+    const st_CMT_VIEW_BLOCK *cur = ( v->has_tape && v->current_block >= 0 && v->current_block < v->block_count )
+        ? &v->blocks[( size_t ) v->current_block] : NULL;
+    const bool playing_raw = cur && v->state == CMT_VIEW_STATE_PLAY && cur->kind == CMT_VIEW_KIND_RAW && cur->pulse_count > 0
+        && !v->replay_recording && !v->replay_playing;
+    /* dialog analýzy je otevřený: uživatel analyzuje sám, na pozadí se nic nového nespouští */
+    if ( playing_raw && s_cad.state == CAD_STATE_NONE && !cad_auto_is ( v->tape_serial, cur->id, cur->pulse_count ) ) {
+        cad_auto_drop ( CAD_AUTO_IDLE );
+        s_cad_auto.tape_serial = v->tape_serial;
+        s_cad_auto.block_id = cur->id;
+        s_cad_auto.pulse_count = cur->pulse_count;
+        s_cad_auto.announced = false;
+        s_cad_auto.pulses_seq = cmt_request_analysis_pulses ( v->tape_serial, cur->id );
+        s_cad_auto.state = s_cad_auto.pulses_seq ? CAD_AUTO_COPYING : CAD_AUTO_SPENT;
+    }
+
+    /* posun úlohy: nejvýš jedna analýza najednou, dialog má přednost */
+    cad_threads_join ( );
+    if ( s_cad_auto.state == CAD_AUTO_WAITING && s_cad.state != CAD_STATE_WAITING && g_atomic_int_get ( &s_cad_workers ) == 0 ) {
+        if ( cad_job_start ( s_cad_auto.job ) ) s_cad_auto.state = CAD_AUTO_RUNNING;
+        else cad_auto_drop ( CAD_AUTO_SPENT );
+    }
+    if ( s_cad_auto.state == CAD_AUTO_RUNNING && g_atomic_int_get ( &s_cad_auto.job->done ) ) {
+        st_CAD_JOB *job = s_cad_auto.job;
+        s_cad_auto.job = NULL;
+        st_CMTTMZ_ANALYSIS *a = job->result;
+        job->result = NULL;
+        uint32_t n = cmttmz_analysis_row_count ( a );
+        s_cad_auto.row_max.assign ( job->row_max ? job->row_max : NULL, job->row_max ? job->row_max + n : NULL );
+        cad_job_unref ( job );
+        if ( !a || cmttmz_analysis_error ( a )[0] ) {
+            cmttmz_analysis_free ( a );
+            cad_auto_drop ( CAD_AUTO_SPENT );
+        } else {
+            s_cad_auto.result = a;
+            s_cad_auto.addable = 0;
+            for ( uint32_t i = 0; i < n; i++ ) {
+                if ( cad_row_addable ( cmttmz_analysis_row ( a, i ) ) ) s_cad_auto.addable++;
+            }
+            s_cad_auto.state = CAD_AUTO_READY;
+        }
+    }
+
+    /* oznámení: blok dohrál nebo se páska zastavila a v záznamu jsou soubory, které jdou přidat */
+    if ( s_cad_auto.state == CAD_AUTO_READY && !s_cad_auto.announced
+         && !( playing_raw && cur->id == s_cad_auto.block_id ) ) {
+        s_cad_auto.announced = true;
+        if ( s_cad_auto.addable > 0 ) {
+            char buf[256];
+            /* čísla bloků od 1 jako v okně; věta bez množného čísla (katalogy ho nemají) */
+            snprintf ( buf, sizeof ( buf ), _ ( "Block %d: files found in the recording: %d. Use Analyze recording... to add them to the tape." ),
+                       s_cad_auto.block_id + 1, s_cad_auto.addable );
+            cmt_view_post ( buf, CMT_VIEW_MSG_INFO );
+        }
     }
 }
 
@@ -1106,6 +1289,20 @@ bool cmt_analyze_dialog_request_result ( const st_DEVICE_REQ_RESULT *res, const 
     if ( 0 == strcmp ( res->name, CMT_REQUEST_ANALYSIS_PULSES_NAME ) ) {
         /* kopii vyzvednout vždy (i pro opuštěný dialog): jinak by ji modul držel do dalšího zásahu */
         st_CMTTMZ_PULSES *p = ( res->status == DEVICE_REQ_DONE && res->rc == 0 ) ? cmt_request_take_pulses ( res->seq ) : NULL;
+        if ( s_cad_auto.state == CAD_AUTO_COPYING && res->seq == s_cad_auto.pulses_seq ) {
+            /* kopie pro analýzu na pozadí: selhání (záznam vstupů, jiná páska, chyba čtení) se nehlásí */
+            s_cad_auto.pulses_seq = 0;
+            if ( !p ) {
+                cad_auto_drop ( CAD_AUTO_SPENT );
+            } else {
+                st_CMTTMZ_ANALYZE_OPTS o;
+                cmttmz_analyze_opts_default ( &o );
+                s_cad_auto.pulses = cad_pulses_new ( p );
+                s_cad_auto.job = cad_job_new ( s_cad_auto.pulses, &o );
+                s_cad_auto.state = CAD_AUTO_WAITING;
+            }
+            return true;
+        }
         if ( s_cad.state != CAD_STATE_COPYING || res->seq != s_cad.pulses_seq ) {
             cmttmz_pulses_free ( p );
             return true;
@@ -1210,6 +1407,7 @@ void cmt_analyze_dialog_frame ( void )
 void cmt_analyze_dialog_shutdown ( void )
 {
     cad_reset ( );
+    cad_auto_drop ( CAD_AUTO_IDLE );
     /* běžící analýzu nejde zrušit: počkat nejvýš CAD_EXIT_JOIN_MS (testy mez mění) a vlákno připojit, jinak
      * odpojit (doběhne nad vlastní kopií pulzů, na UI nesahá; proces ho ukončí) */
     ( void ) cad_threads_finish ( CAD_EXIT_JOIN_MS_NOW );
@@ -2563,6 +2761,8 @@ void cmt_analyze_dialog_test_open_with_pulses ( const st_CMT_VIEW *v, int block_
 void cmt_analyze_dialog_test_reset ( void )
 {
     cad_reset ( );
+    cad_auto_drop ( CAD_AUTO_IDLE );
+    s_cad_auto.announced = false;
     /* nespuštěné "vlákno" testu: úlohy provést (pustí odkazy a uvolní data) */
     ( void ) cmt_analyze_dialog_test_run_jobs ( );
     if ( device_request_pending ( ) == 0 ) {

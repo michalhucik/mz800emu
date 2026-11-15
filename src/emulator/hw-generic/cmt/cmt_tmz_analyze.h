@@ -190,10 +190,10 @@ extern "C" {
 
     /** @brief Co se s řádkem stane při uplatnění. */
     typedef enum en_CMTTMZ_ANALYZE_RESULT {
-        CMTTMZ_ANALYZE_ADDABLE = 0,       /**< bezchybný soubor NORMAL: jde přidat jako blok 0x46 (Will be added) */
-        CMTTMZ_ANALYZE_ADDABLE_REPAIRED,  /**< soubor NORMAL opravený zapnutou volbou opravy: jde přidat (Will be added (repaired)) */
-        CMTTMZ_ANALYZE_STAYS_RAW,         /**< soubor NORMAL s chybou součtu nebo neúplný, nebo neznámý úsek: zůstává v surovém signálu (Stays raw) */
-        CMTTMZ_ANALYZE_CANNOT_ADD,        /**< soubor jiného formátu (turbo, FSK, BSD, CP/M, ZX ...): jako blok přidat nejde (Cannot add), zůstává surový */
+        CMTTMZ_ANALYZE_ADDABLE = 0,       /**< bezchybný soubor formátu, který jde sestavit jako blok (NORMAL, CPM-CMT, TURBO, FASTIPL, BSD, CPM-TAPE): jde přidat (Will be added) */
+        CMTTMZ_ANALYZE_ADDABLE_REPAIRED,  /**< takový soubor opravený zapnutou volbou opravy: jde přidat (Will be added (repaired)) */
+        CMTTMZ_ANALYZE_STAYS_RAW,         /**< takový soubor s chybou součtu nebo neúplný, nebo neznámý úsek: zůstává v surovém signálu (Stays raw) */
+        CMTTMZ_ANALYZE_CANNOT_ADD,        /**< soubor formátu, který jako blok sestavit nejde (MZ-80B, SINCLAIR, FSK, SLOW, DIRECT, ZX), nebo soubor, který profil zapisovače odmítl: zůstává surový (Cannot add) */
     } en_CMTTMZ_ANALYZE_RESULT;
 
 
@@ -210,7 +210,8 @@ extern "C" {
         CMTTMZ_ANALYZE_REASON_NONE = 0,        /**< ADDABLE: žádný */
         CMTTMZ_ANALYZE_REASON_REPAIRED,        /**< ADDABLE_REPAIRED: data doplněná opravou (recovery_status) */
         CMTTMZ_ANALYZE_REASON_NO_FILE,         /**< UNKNOWN: v úseku není soubor */
-        CMTTMZ_ANALYZE_REASON_FORMAT,          /**< CANNOT_ADD: formát není NORMAL (format_name) */
+        CMTTMZ_ANALYZE_REASON_FORMAT,          /**< CANNOT_ADD: formát nejde sestavit jako blok (format_name) */
+        CMTTMZ_ANALYZE_REASON_PROFILE,         /**< CANNOT_ADD: soubor nejde sestavit profilem zapisovače (např. tělo delší, než formát unese) */
         CMTTMZ_ANALYZE_REASON_NO_MZF,          /**< CANNOT_ADD: záznam bez dat Sharp MZF (ZX) */
         CMTTMZ_ANALYZE_REASON_HEADER_CHECKSUM, /**< STAYS_RAW: chyba součtu hlavičky */
         CMTTMZ_ANALYZE_REASON_BODY_CHECKSUM,   /**< STAYS_RAW: chyba součtu těla (nebo součet těla chybí) */
@@ -239,7 +240,8 @@ extern "C" {
      *
      * @invariant kind == CMTTMZ_ANALYZE_UNKNOWN => result == STAYS_RAW,
      *            reason == NO_FILE, oba součty NOT_AVAILABLE, size 0, jméno "".
-     * @invariant result ADDABLE* => kind FILE, format NORMAL.
+     * @invariant result ADDABLE* => kind FILE, formát NORMAL, CPM-CMT, TURBO,
+     *            FASTIPL, BSD nebo CPM-TAPE a writer_profile != "".
      * @invariant Neznámý řádek: first_pulse < end_pulse a aspoň
      *            CMTTMZ_REC_MIN_EDGES pulzů - výjimka: řádek přes celý blok
      *            při selhání analyzátoru (cmttmz_analysis_error() neprázdné).
@@ -269,6 +271,10 @@ extern "C" {
         double long_pulse_us;                      /**< naměřený dlouhý pulz v µs (0 = neznámo) */
         uint32_t recovery_status;                  /**< stav opravy: bitové OR en_WAV_RECOVERY_STATUS (0 = úplný soubor) */
         const char *recovery_text;                 /**< popis stavu opravy wav_recovery_status_string() ("complete" bez opravy) */
+        const char *writer_profile;                /**< čím se sestaví blok řádku, který jde přidat: ID profilu zapisovače z registru TapeMZ
+                                                        (např. "TC-1.21", "IC-10.2-FASTIPL", "BASIC-1Z016", "MZ800EMU-CMT"), nebo "MZ Turbo Data"
+                                                        u bloku 0x41 (TURBO a FASTIPL bez rozpoznaného zapisovače); "" u řádku, který přidat nejde.
+                                                        Statický řetězec. */
     } st_CMTTMZ_ANALYZE_ROW;
 
 
@@ -297,13 +303,21 @@ extern "C" {
      * st_CMTTMZ_ANALYZE_ROW), a neznámé úseky mezi nimi a kolem nich s aspoň CMTTMZ_REC_MIN_EDGES
      * pulzy (plán cmttmz_rec_plan() v režimu všech souborů se stejnou mezí
      * jako záznam; kratší úsek řádek nedá). Výsledek souboru:
-     * - formát jiný než NORMAL nebo bez dat MZF: CANNOT_ADD,
-     * - přijatý záznamem (cmttmz_rec_file_accepted(): součty OK, bez opravy,
-     *   úplné tělo, platný rozsah): ADDABLE,
+     * - formát, který jako blok sestavit nejde (MZ-80B, SINCLAIR, FSK, SLOW,
+     *   DIRECT, ZX Spectrum), nebo bez dat MZF: CANNOT_ADD,
+     * - NORMAL přijatý záznamem (cmttmz_rec_file_accepted(): součty OK, bez
+     *   opravy, úplné tělo, platný rozsah): ADDABLE,
+     * - CPM-CMT, TURBO, FASTIPL, BSD a CPM-TAPE s platným součtem hlavičky,
+     *   bez chyby součtu těla (BSD: žádný kus bez platné kopie), bez opravy,
+     *   s úplným tělem a platným rozsahem: ADDABLE,
      * - s opravou (recovery_status != 0), kterou dovolují zapnuté volby
-     *   (repair_body: PARTIAL_BODY, COPY_MERGED; repair_header: HEADER_ONLY),
+     *   (repair_body: PARTIAL_BODY, COPY_MERGED; repair_header: HEADER_ONLY;
+     *   repair_bsd u BSD: BSD_INCOMPLETE, BSD_GAPS),
      *   s platným součtem hlavičky, tělem délky fsize a platným rozsahem:
      *   ADDABLE_REPAIRED,
+     * - řádek ADDABLE* jiného formátu než NORMAL, jehož blok profil
+     *   zapisovače nesestaví (zkušební stavba; např. tělo CP/M Pezik nad
+     *   16 KB, BSD nad 254 kusů): CANNOT_ADD s důvodem PROFILE,
      * - jinak STAYS_RAW s důvodem (součet hlavičky, oprava bez volby, součet
      *   těla, neúplný soubor; v tomto pořadí).
      *
@@ -317,8 +331,10 @@ extern "C" {
      * globální stav emulátoru nečte ani nemění, výsledek alokuje sama. Smí
      * běžet v jiném vlákně než emulátor (podmínka ověřená čtením zdrojů
      * knihoven): analyzátor nemá měnitelný statický stav
-     * a nepoužívá alokátor ani error callback knihovny tzx ani paměťový
-     * ovladač generic_driver; varování píše na stderr (zápis FILE je
+     * a nepoužívá paměťový ovladač generic_driver. Zkušební stavba bloků
+     * jiných formátů než NORMAL volá registr profilů TapeMZ a knihovnu tzx
+     * (výchozí alokátor a error callback, které emulátor nikdy nemění;
+     * stav knihoven se nemění); varování píše na stderr (zápis FILE je
      * zamčený, řádky z různých vláken se mohou jen proložit).
      *
      * @param p Kopie pulzů (cmttmz_analyze_copy_pulses()); během volání se

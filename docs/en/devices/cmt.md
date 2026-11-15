@@ -290,6 +290,7 @@ The **Tape** menu:
 | **Export block as WAV...** | saves the signal of the current block as a WAV file | tape stopped |
 | **Export tape as WAV...** | saves the whole tape as a WAV file as it would play | tape stopped with at least one block |
 | **Analyze recording...** | finds programs in the selected raw recording (see Analysing a recording) | tape stopped, one selected raw recording |
+| **Find files while playing** | checkbox: a raw recording that plays is analysed in the background (see Analysing a recording) | always |
 | **Tape information...** | the title, author and other texts of the tape and the target machine (see Tape information) | tape stopped |
 | **Check tape** | lists problems in the structure of the tape (see Checking the tape) | tape inserted, in any state |
 | **Eject** (Ctrl+E) | ejects the tape | not while recording |
@@ -760,6 +761,17 @@ reads the tape.
 **Tape > Analyze recording...** with that single row selected, opens the
 dialog `Analyze recording - block N`.
 
+**While playing**: with **Tape > Find files while playing** on (the
+default, key `auto_analyze`) a raw recording is analysed in the background
+as soon as it starts to play, with the default options. The tape is not
+changed. When the recording has played or the tape is stopped and files
+that can be added were found, the message line says so, for example
+`Block 2: files found in the recording: 3. Use Analyze recording... to add
+them to the tape.`; the dialog then opens with the result at once. A
+recording is analysed this way once; it is not analysed while an input
+replay is recorded or played, and only while the Virtual CMT window is
+shown.
+
 The analysis starts at once and runs in the background: the emulation and
 the window keep working, the dialog shows `Analyzing...` and the elapsed
 time. **Cancel**, Escape or closing the Virtual CMT window leaves the
@@ -781,14 +793,29 @@ what can be tried (for example `Cannot be added. You can try "Repair
 damaged body" and Analyze again.`). When nothing is found, the dialog says
 `No files found.` and expands **Signal details**.
 
-**What can be added**: only a file in the standard Sharp format with a
-correct header and body checksum, or a file repaired by an enabled repair
-option. Such files are checked; the checkbox (or the space bar on the row)
-decides which ones are added. A file in the standard format with a
-checksum error or incomplete stays in the recording (`Stays raw`); files
-in other formats (for example TURBO, FASTIPL, BSD, CP/M or ZX Spectrum)
-cannot be added as blocks (`Cannot add`) and also stay in the recording,
-where they keep playing as they were recorded.
+**What can be added**: a file with a correct header and body checksum,
+or a file repaired by an enabled repair option, in one of these formats:
+
+| Format | Recording | The block is built by |
+|--------|-----------|-----------------------|
+| `Sharp standard` | the ROM SAVE command | the emulator's own signal at the default speed |
+| `CPM-CMT` | CMT.COM under CP/M (standard format at 2400 Bd) | the emulator's own signal at speed 2:1 (CP/M) |
+| `TURBO` | TurboCopy, Intercopy TURBO | profile TC-1.21 or IC-10.2-TURBO with the recorded speed; with an unknown writer a turbo block at the nearest speed |
+| `FASTIPL` | Intercopy FAST IPL | profile IC-10.2-FASTIPL with the recorded speed; with an unknown writer a FASTIPL block at the nearest speed |
+| `CPM-TAPE` | TAPE.COM (Pezik / MarVan), Intercopy CPM | profile PEZIK-2.0A (a body up to 16 KB) or IC-10.2-CPM |
+| `BSD` | a data file of BASIC (up to 254 pieces of 256 B) | profile BASIC-1Z016 |
+
+Such files are checked; the checkbox (or the space bar on the row)
+decides which ones are added. A block of a format other than the standard
+one is written again by the writer profile: it carries the same file (it
+can be exported as MZF, except the BSD data file) and plays a clean
+signal, but the timing of the original recording is not kept. The line
+below the table names the profile. A file with a checksum error or
+incomplete stays in the recording (`Stays raw`); files in other formats
+(MZ-80B, SINCLAIR, FSK, SLOW, DIRECT, ZX Spectrum) and a file the profile
+cannot write (for example a TAPE.COM body over 16 KB) cannot be added as
+blocks (`Cannot add`) and also stay in the recording, where they keep
+playing as they were recorded.
 
 **Options**: **Leader tolerance** (2 to 35 %, default 20 %, **Reset**
 restores it) says how much the pulse lengths in the leader tone may
@@ -797,7 +824,7 @@ differ; raise it for worn or unstable recordings. Repair options:
 is missing (the body is filled with 00h); **Repair damaged body** keeps a
 file with an incomplete body or merges two damaged copies (missing bytes
 are filled with 00h); **Repair incomplete BSD file** keeps an incomplete
-BSD data file in the results (it still cannot be added). A repaired file
+BSD data file (missing pieces are filled with 00h). A repaired file
 is `Will be added (repaired)`; its data may have 00h in place of lost
 bytes. After an option changes the results are outdated: the table is
 dimmed and nothing can be added until **Analyze again** runs the analysis
@@ -1237,6 +1264,7 @@ replay.
 | `[VIRTUAL_CMT_UI] layout` | window layout: 0 = Compact, 1 = Full | 0 |
 | `[VIRTUAL_CMT_UI] compact_w`, `compact_h`, `full_w`, `full_h` | window size of each layout in pixels, 0 = default size | 0 |
 | `[VIRTUAL_CMT_UI] props_open` | properties: 0 = collapsed, 1 = expanded | 0 |
+| `[VIRTUAL_CMT_UI] auto_analyze` | Find files while playing: 1 = a raw recording that plays is analysed in the background | 1 |
 
 ## Command line
 

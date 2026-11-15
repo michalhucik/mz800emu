@@ -121,11 +121,14 @@ extern "C"
 ImVec2 imgui_cmt_window_work_size(void);
 
 /**
- * @brief Umístí příští modál doprostřed okna Virtual CMT, celý uvnitř pracovní plochy jeho viewportu.
+ * @brief Umístí příští modál doprostřed okna Virtual CMT, celý uvnitř pracovní plochy jeho monitoru.
  *
  * Velikost modálu z minulého snímku (@p size) určí levý horní roh tak, aby
  * střed modálu ležel na středu okna kazety a modál nepřesahoval pracovní
- * plochu viewportu okna (velký dialog analýzy u okraje obrazovky). Bez
+ * plochu monitoru, na kterém okno je (bez oken mimo hlavní okno pracovní
+ * plochu viewportu; velký dialog analýzy u okraje obrazovky). Viewport se
+ * nepřipíná: modál větší než okno kazety vytažené jako samostatné okno OS
+ * dostane vlastní okno a jde přetáhnout kamkoli. Bez
  * známé velikosti (první snímek) jako imgui_cmt_window_modal_next_pos()
  * s podmínkou @p cond. Okno kazety se v tomto ani minulém snímku
  * nekreslilo: nic (výchozí poloha ImGui).
@@ -142,7 +145,7 @@ bool imgui_cmt_window_modal_center(ImVec2 size, ImGuiCond cond);
  * @brief Umístí příští nemodální okno vedle okna Virtual CMT tak, aby nezakrylo tabulku bloků (okno Tape check).
  *
  * Pořadí: vpravo od okna
- * kazety, když se tam celé vejde do pracovní plochy jeho viewportu (svisle
+ * kazety, když se tam celé vejde do pracovní plochy monitoru okna kazety (bez oken mimo hlavní okno jeho viewportu) (svisle
  * od horního okraje okna kazety, omezeno do plochy); jinak pod ním; jinak
  * nad ním; jinak vlevo. Nevejde-li se nikam vedle okna (okno kazety zabírá
  * skoro celou plochu, např. 175 % na 1920 x 1040), leží okno v pásu okna

@@ -41,6 +41,9 @@
 #include "libs/tzx/tzx.h"
 #include "libs/tmz/tmz_blocks.h"
 #include "libs/tmz/tmz_player.h"
+#include "libs/tmz/tmz_profile.h"
+#include "libs/mzcmt_bsd/mzcmt_bsd.h"
+#include "libs/cmtspeed/cmtspeed.h"
 #include "libs/wav_analyzer/wav_analyzer.h"
 #include "libs/sharpmz_ascii/sharpmz_ascii.h"
 #include "libs/mzf/mzf.h"
@@ -56,7 +59,7 @@
 /**
  * @brief Výsledek analýzy (neprůhledný typ z cmt_tmz_analyze.h).
  *
- * @invariant rows a mzf mají row_count položek (při row_count 0 NULL).
+ * @invariant rows, mzf a src mají row_count položek (při row_count 0 NULL).
  * @invariant mzf[i] != NULL právě u řádků s výsledkem ADDABLE a ADDABLE_REPAIRED
  *            (tělo aspoň fsize bajtů, hlavička v pořadí hostitele).
  * @invariant block_id, tape_serial, pulse_count, sample_rate, block_length
@@ -65,10 +68,29 @@
  * Vlastnictví: vše patří analýze (cmttmz_analysis_free()); MZF převzala
  * analýza z výsledku analyzátoru.
  */
+/**
+ * @brief Údaje analyzátoru o záznamu souboru, podle kterých se sestaví jeho blok.
+ *
+ * Kopie polí st_WAV_ANALYZER_FILE_RESULT (výsledek analyzátoru se po
+ * sestavení řádků uvolní). U neznámého úseku vynulované (format UNKNOWN).
+ */
+typedef struct st_AN_SOURCE {
+    en_WAV_TAPE_FORMAT format;   /**< formát záznamu */
+    en_WAV_WRITER writer;        /**< rozpoznaný zapisovač (TurboCopy, Intercopy), jinak UNKNOWN */
+    uint8_t tc_a;                /**< TurboCopy: čitatel poměru rychlosti */
+    uint8_t tc_b;                /**< TurboCopy: jmenovatel poměru rychlosti */
+    uint16_t ic_bd;              /**< Intercopy: rychlost v Bd */
+    uint8_t cpmtape_variant;     /**< CPM-TAPE: en_WAV_CPMTAPE_VARIANT */
+    uint16_t cpmtape_bd;         /**< CPM-TAPE: rychlost v Bd (0 = neznámá) */
+    double leader_avg_us;        /**< průměrná půlperioda datového zaváděcího tónu v µs (odhad rychlosti bloku 0x41) */
+} st_AN_SOURCE;
+
+
 struct st_CMTTMZ_ANALYSIS {
     uint32_t row_count;                    /**< počet řádků */
     st_CMTTMZ_ANALYZE_ROW *rows;           /**< řádky v pořadí polohy */
     st_MZF **mzf;                          /**< data souboru řádku, který jde přidat (jinak NULL) */
+    st_AN_SOURCE *src;                     /**< údaje záznamu řádku pro stavbu bloku */
     int block_id;                          /**< číslo bloku kopie */
     unsigned tape_serial;                  /**< čítač výměn pásky kopie */
     uint32_t pulse_count;                  /**< počet pulzů kopie */
@@ -244,6 +266,7 @@ const char* cmttmz_analyze_reason_text ( en_CMTTMZ_ANALYZE_REASON reason ) {
         case CMTTMZ_ANALYZE_REASON_REPAIRED: return "Repaired by the selected repair option";
         case CMTTMZ_ANALYZE_REASON_NO_FILE: return "No file found in this part of the signal";
         case CMTTMZ_ANALYZE_REASON_FORMAT: return "This recording format cannot be added as a file block";
+        case CMTTMZ_ANALYZE_REASON_PROFILE: return "The file cannot be rebuilt as a tape block in this format";
         case CMTTMZ_ANALYZE_REASON_NO_MZF: return "The recording carries no Sharp MZ file";
         case CMTTMZ_ANALYZE_REASON_HEADER_CHECKSUM: return "Checksum error in the header";
         case CMTTMZ_ANALYZE_REASON_BODY_CHECKSUM: return "Checksum error in the body";
@@ -266,18 +289,219 @@ static en_CMTTMZ_ANALYZE_CHECKSUM an_checksum ( en_WAV_CRC_STATUS s ) {
 }
 
 
+/** @brief Jméno bloku 0x41 v st_CMTTMZ_ANALYZE_ROW::writer_profile (TURBO a FASTIPL bez rozpoznaného zapisovače). */
+#define AN_PROFILE_TURBO_DATA "MZ Turbo Data"
+
+/** @brief Půlperioda zaváděcího tónu NORMAL 1200 Bd v µs (měření nahrávek při 44,1 kHz; jako wav2tmz v TapeMZ). */
+#define AN_NORMAL_1200BD_SHORT_US 249.0
+
+/** @brief Okno, ve kterém se rychlost bere jako 1:1 (+-15 %; jako wav2tmz v TapeMZ). */
+#define AN_SPEED_1_1_TOLERANCE 0.15
+
+
+/**
+ * @brief Jde formát záznamu sestavit jako blok jinou cestou než standardní soubor NORMAL?
+ *
+ * CPM-CMT (NORMAL 2400 Bd), TURBO, FASTIPL, BSD a CPM-TAPE: analyzátor dá
+ * MZF a registr TapeMZ má profil, kterým se soubor zapíše znovu. MZ-80B,
+ * SINCLAIR, FSK, SLOW, DIRECT a ZX Spectrum jako blok sestavit nejdou
+ * (emulované stroje je nenačtou nebo je nemá čím hrát).
+ *
+ * @param format Formát. @return 1 = ano.
+ */
+static int an_format_buildable ( en_WAV_TAPE_FORMAT format ) {
+    return format == WAV_TAPE_FORMAT_CPM_CMT || format == WAV_TAPE_FORMAT_TURBO || format == WAV_TAPE_FORMAT_FASTIPL
+           || format == WAV_TAPE_FORMAT_BSD || format == WAV_TAPE_FORMAT_CPM_TAPE;
+}
+
+
+/**
+ * @brief Odhad rychlosti z průměrné půlperiody zaváděcího tónu (stejné pravidlo jako wav2tmz v TapeMZ).
+ * @param leader_avg_us Průměrná půlperioda v µs (<= 0 = neznámá).
+ * @return CMTSPEED_1_1 v okně AN_SPEED_1_1_TOLERANCE a při neznámé půlperiodě, jinak nejbližší poměr en_CMTSPEED.
+ */
+static en_CMTSPEED an_speed_from_leader ( double leader_avg_us ) {
+    if ( !( leader_avg_us > 0.0 ) ) return CMTSPEED_1_1;
+    double ratio = AN_NORMAL_1200BD_SHORT_US / leader_avg_us;
+    if ( ratio >= ( 1.0 - AN_SPEED_1_1_TOLERANCE ) && ratio <= ( 1.0 + AN_SPEED_1_1_TOLERANCE ) ) return CMTSPEED_1_1;
+    en_CMTSPEED best = CMTSPEED_2_1;
+    double best_diff = 1e9;
+    for ( int s = CMTSPEED_1_1; s < CMTSPEED_COUNT; s++ ) {
+        double divisor = cmtspeed_get_divisor ( ( en_CMTSPEED ) s );
+        if ( divisor <= 0.0 ) continue;
+        double diff = fabs ( ratio - divisor );
+        if ( diff < best_diff ) {
+            best_diff = diff;
+            best = ( en_CMTSPEED ) s;
+        }
+    }
+    return best;
+}
+
+
+/**
+ * @brief Sestaví blok souboru v jiném formátu než standardní NORMAL (mapování jako wav2tmz v TapeMZ).
+ *
+ * - CPM-CMT: blok 0x46 MZ800EMU-CMT rychlostí 2:1 CPM (cmttmz_build_mzf_block()),
+ *   záznam rychlosti FIXED.
+ * - TURBO: TurboCopy -> profil TC-1.21 s poměrem tc_a / tc_b a předzavaděčem,
+ *   Intercopy -> IC-10.2-TURBO s rychlostí ic_bd, jinak blok 0x41 formátu
+ *   TURBO s rychlostí odhadnutou ze zaváděcího tónu.
+ * - FASTIPL: Intercopy -> IC-10.2-FASTIPL s ic_bd, jinak blok 0x41 formátu FASTIPL.
+ * - CPM-TAPE: Intercopy -> IC-10.2-CPM, jinak PEZIK-2.0A; rychlost cpmtape_bd (0 = 2400).
+ * - BSD: profil BASIC-1Z016; tělo MZF se rozdělí na kusy po 256 B s ID
+ *   0, 1, ... a posledním FFFFh (jak zapisuje BASIC 1Z-016), hlavička
+ *   s fsize, fstrt a fexec 0. Nejvýš 254 kusů.
+ *
+ * Signál bloku vyrobí profil znovu; časování původní nahrávky se nezachová.
+ * Čistá funkce nad vstupy (registr profilů je statický), smí běžet
+ * v pracovním vlákně analýzy.
+ *
+ * @param mzf Data souboru (hlavička v pořadí hostitele, tělo aspoň fsize bajtů; u BSD body_size bajtů).
+ * @param src Údaje záznamu (formát podle an_format_buildable()).
+ * @param pause_ms Pauza za blokem.
+ * @param[out] block Blok (data vlastní volající, free()); NULL = jen zkouška, blok se zahodí.
+ * @param[out] sp Záznam rychlosti bloku (smí být NULL): FIXED u CPM-CMT, jinak NONE.
+ * @param[out] profile Čím je blok sestaven (statický řetězec, smí být NULL).
+ * @return EXIT_SUCCESS; EXIT_FAILURE, když formát sestavit nejde nebo profil soubor odmítl.
+ */
+static int an_build_format_block ( const st_MZF *mzf, const st_AN_SOURCE *src, uint16_t pause_ms, st_TZX_BLOCK *block,
+                                   st_CMTTMZ_BLOCK_SPEED *sp, const char **profile ) {
+    if ( sp ) memset ( sp, 0, sizeof ( *sp ) );
+    if ( profile ) *profile = "";
+    if ( !mzf || !src ) return EXIT_FAILURE;
+    st_TZX_BLOCK *nb = NULL;
+    const char *id = NULL;
+    st_TMZ_PROFILE_ARGS a;
+    tmz_profile_args_init ( &a );
+    a.pause_ms = pause_ms;
+    uint32_t fsize = mzf->header.fsize;
+
+    switch ( src->format ) {
+        case WAV_TAPE_FORMAT_CPM_CMT:
+            id = TMZ_PROFILE_ID_MZ800EMU_CMT;
+            nb = cmttmz_build_mzf_block ( &mzf->header, mzf->body, fsize, CMTSPEED_2_1_CPM, NULL, pause_ms );
+            if ( nb && sp ) {
+                sp->origin = CMTTMZ_SPEED_ORIGIN_FIXED;
+                sp->speed = CMTSPEED_2_1_CPM;
+                sp->pause_ms = pause_ms;
+            }
+            break;
+
+        case WAV_TAPE_FORMAT_TURBO:
+        case WAV_TAPE_FORMAT_FASTIPL:
+            if ( src->writer == WAV_WRITER_TURBOCOPY && src->format == WAV_TAPE_FORMAT_TURBO ) {
+                id = "TC-1.21";
+                a.tc_a = src->tc_a;
+                a.tc_b = src->tc_b;
+                a.loader = 1;
+            } else if ( src->writer == WAV_WRITER_INTERCOPY ) {
+                id = ( src->format == WAV_TAPE_FORMAT_TURBO ) ? "IC-10.2-TURBO" : "IC-10.2-FASTIPL";
+                a.bd = src->ic_bd;
+            }
+            if ( id ) {
+                nb = tmz_profile_build_block ( id, &a, &mzf->header, mzf->body, fsize, NULL );
+            } else {
+                /* zapisovač neznámý: blok 0x41 s rychlostí odhadnutou z datového zaváděcího tónu */
+                id = AN_PROFILE_TURBO_DATA;
+                if ( fsize > 0xFFFFu ) break;
+                st_TMZ_MZ_TURBO_DATA params;
+                memset ( &params, 0, sizeof ( params ) );
+                params.machine = ( uint8_t ) TMZ_MACHINE_MZ800;
+                params.pulseset = ( uint8_t ) TMZ_PULSESET_800;
+                params.format = ( uint8_t ) ( ( src->format == WAV_TAPE_FORMAT_TURBO ) ? TMZ_FORMAT_TURBO : TMZ_FORMAT_FASTIPL );
+                params.speed = ( uint8_t ) an_speed_from_leader ( src->leader_avg_us );
+                params.pause_ms = pause_ms;
+                memcpy ( &params.mzf_header, &mzf->header, sizeof ( st_MZF_HEADER ) );
+                params.body_size = ( uint16_t ) fsize;
+                nb = tmz_block_create_mz_turbo ( &params, mzf->body, ( uint16_t ) fsize );
+            }
+            break;
+
+        case WAV_TAPE_FORMAT_CPM_TAPE:
+            id = ( src->cpmtape_variant == WAV_CPMTAPE_INTERCOPY ) ? "IC-10.2-CPM" : "PEZIK-2.0A";
+            a.bd = src->cpmtape_bd ? src->cpmtape_bd : 2400;
+            nb = tmz_profile_build_block ( id, &a, &mzf->header, mzf->body, fsize, NULL );
+            break;
+
+        case WAV_TAPE_FORMAT_BSD:
+        {
+            id = "BASIC-1Z016";
+            uint32_t size = ( mzf->body && mzf->body_size ) ? mzf->body_size : 0;
+            uint32_t total = size ? ( size + MZCMT_BSD_CHUNK_DATA_SIZE - 1u ) / MZCMT_BSD_CHUNK_DATA_SIZE : 1u;
+            if ( total > 254u ) break;   /* BASIC-1Z016 unese 254 kusů */
+            uint32_t chunks_size = total * MZCMT_BSD_CHUNK_SIZE;
+            uint8_t *chunks = ( uint8_t* ) calloc ( 1, chunks_size );
+            if ( !chunks ) break;
+            for ( uint32_t i = 0; i < total; i++ ) {
+                uint8_t *chunk = &chunks[i * MZCMT_BSD_CHUNK_SIZE];
+                uint16_t chunk_id = ( i + 1u == total ) ? 0xFFFFu : ( uint16_t ) i;   /* poslední kus ukončuje soubor */
+                chunk[0] = ( uint8_t ) ( chunk_id & 0xFFu );
+                chunk[1] = ( uint8_t ) ( chunk_id >> 8 );
+                uint32_t offset = i * MZCMT_BSD_CHUNK_DATA_SIZE;
+                if ( offset < size ) {
+                    uint32_t n = size - offset;
+                    if ( n > MZCMT_BSD_CHUNK_DATA_SIZE ) n = MZCMT_BSD_CHUNK_DATA_SIZE;
+                    memcpy ( &chunk[2], &mzf->body[offset], n );
+                }
+            }
+            st_MZF_HEADER hdr;
+            memcpy ( &hdr, &mzf->header, sizeof ( hdr ) );
+            hdr.fsize = 0;
+            hdr.fstrt = 0;
+            hdr.fexec = 0;
+            nb = tmz_profile_build_block ( id, &a, &hdr, chunks, chunks_size, NULL );
+            free ( chunks );
+            break;
+        }
+
+        default:
+            break;
+    }
+    if ( !nb ) return EXIT_FAILURE;
+    if ( profile ) *profile = id;
+    if ( block ) {
+        *block = *nb;
+        nb->data = NULL;   /* data převzal volající */
+    }
+    tmz_block_free ( nb );
+    return EXIT_SUCCESS;
+}
+
+
+/**
+ * @brief Je soubor jiného formátu než standardní NORMAL bezchybný a úplný?
+ *
+ * Součet hlavičky musí souhlasit, součet těla nesmí hlásit chybu (formát
+ * bez součtu těla ho nemá k dispozici), BSD nesmí mít kus bez platné kopie,
+ * žádná oprava, tělo aspoň fsize bajtů a platný rozsah pulzů.
+ *
+ * @param f Soubor analyzátoru s MZF. @param npulses Počet pulzů. @return 1 = ano.
+ */
+static int an_format_file_clean ( const st_WAV_ANALYZER_FILE_RESULT *f, uint32_t npulses ) {
+    if ( f->header_crc != WAV_CRC_OK || f->body_crc == WAV_CRC_ERROR ) return 0;
+    if ( f->format == WAV_TAPE_FORMAT_BSD && f->bsd_crc_errors ) return 0;
+    if ( f->recovery_status != WAV_RECOVERY_NONE ) return 0;
+    return cmttmz_rec_file_body_complete ( f ) && cmttmz_rec_file_range_valid ( f, npulses );
+}
+
+
 /**
  * @brief Určí výsledek a důvod řádku souboru.
  *
- * Pořadí pravidel viz cmttmz_analyze_pulses(); přijetí ADDABLE je totéž
- * rozhodnutí jako u záznamu (cmttmz_rec_file_accepted()).
+ * Pořadí pravidel viz cmttmz_analyze_pulses(); přijetí ADDABLE standardního
+ * souboru NORMAL je totéž rozhodnutí jako u záznamu
+ * (cmttmz_rec_file_accepted()), u formátů an_format_buildable() rozhoduje
+ * an_format_file_clean(). Volba Repair incomplete BSD file dovolí přidat
+ * i neúplný soubor BSD (ADDABLE_REPAIRED).
  *
  * @param f Soubor analyzátoru. @param npulses Počet pulzů. @param o Volby.
  * @param[out] row Řádek (result, reason).
  */
 static void an_classify ( const st_WAV_ANALYZER_FILE_RESULT *f, uint32_t npulses, const st_CMTTMZ_ANALYZE_OPTS *o,
                           st_CMTTMZ_ANALYZE_ROW *row ) {
-    if ( f->format != WAV_TAPE_FORMAT_NORMAL ) {
+    int other = an_format_buildable ( f->format );
+    if ( f->format != WAV_TAPE_FORMAT_NORMAL && !other ) {
         row->result = CMTTMZ_ANALYZE_CANNOT_ADD;
         row->reason = CMTTMZ_ANALYZE_REASON_FORMAT;
         return;
@@ -287,7 +511,7 @@ static void an_classify ( const st_WAV_ANALYZER_FILE_RESULT *f, uint32_t npulses
         row->reason = CMTTMZ_ANALYZE_REASON_NO_MZF;
         return;
     }
-    if ( cmttmz_rec_file_accepted ( f, npulses ) ) {
+    if ( other ? an_format_file_clean ( f, npulses ) : cmttmz_rec_file_accepted ( f, npulses ) ) {
         row->result = CMTTMZ_ANALYZE_ADDABLE;
         row->reason = CMTTMZ_ANALYZE_REASON_NONE;
         return;
@@ -296,6 +520,7 @@ static void an_classify ( const st_WAV_ANALYZER_FILE_RESULT *f, uint32_t npulses
     uint32_t allowed = 0;
     if ( o->repair_body ) allowed |= WAV_RECOVERY_PARTIAL_BODY | WAV_RECOVERY_COPY_MERGED;
     if ( o->repair_header ) allowed |= WAV_RECOVERY_HEADER_ONLY;
+    if ( o->repair_bsd && f->format == WAV_TAPE_FORMAT_BSD ) allowed |= WAV_RECOVERY_BSD_INCOMPLETE | WAV_RECOVERY_BSD_GAPS;
     int complete = cmttmz_rec_file_body_complete ( f ) && cmttmz_rec_file_range_valid ( f, npulses );
     int repair_ok = ( f->recovery_status != WAV_RECOVERY_NONE ) && !( f->recovery_status & ~allowed );
     if ( repair_ok && ( f->header_crc == WAV_CRC_OK ) && complete ) {
@@ -336,7 +561,50 @@ static void an_fill_file_row ( const st_WAV_ANALYZER_FILE_RESULT *f, uint32_t np
     } else {
         row->size = f->tap_data_size;
     }
+    row->writer_profile = "";
     an_classify ( f, npulses, o, row );
+}
+
+
+/**
+ * @brief Zapíše údaje záznamu souboru potřebné ke stavbě bloku.
+ * @param f Soubor analyzátoru. @param[out] src Údaje.
+ */
+static void an_fill_source ( const st_WAV_ANALYZER_FILE_RESULT *f, st_AN_SOURCE *src ) {
+    src->format = f->format;
+    src->writer = f->writer;
+    src->tc_a = f->tc_a;
+    src->tc_b = f->tc_b;
+    src->ic_bd = f->ic_bd;
+    src->cpmtape_variant = f->cpmtape_variant;
+    src->cpmtape_bd = f->cpmtape_bd;
+    src->leader_avg_us = f->leader.avg_period_us;
+}
+
+
+/**
+ * @brief U řádku, který jde přidat, určí, čím se blok sestaví, a stavbu vyzkouší.
+ *
+ * Standardní soubor NORMAL: profil MZ800EMU-CMT (cmttmz_rec_build_mzf() při
+ * uplatnění; stavbu nezkouší). Ostatní formáty: zkušební
+ * an_build_format_block(); když profil soubor odmítne, řádek se změní na
+ * CANNOT_ADD s důvodem PROFILE, takže uplatnění na stavbě neselže.
+ *
+ * @param mzf Data souboru. @param src Údaje záznamu. @param[in,out] row Řádek (ADDABLE nebo ADDABLE_REPAIRED).
+ */
+static void an_resolve_profile ( const st_MZF *mzf, const st_AN_SOURCE *src, st_CMTTMZ_ANALYZE_ROW *row ) {
+    if ( src->format == WAV_TAPE_FORMAT_NORMAL ) {
+        row->writer_profile = TMZ_PROFILE_ID_MZ800EMU_CMT;
+        return;
+    }
+    const char *profile = "";
+    if ( EXIT_SUCCESS == an_build_format_block ( mzf, src, CMTTMZ_ANALYZE_FILE_GAP_MS, NULL, NULL, &profile ) ) {
+        row->writer_profile = profile;
+        return;
+    }
+    row->result = CMTTMZ_ANALYZE_CANNOT_ADD;
+    row->reason = CMTTMZ_ANALYZE_REASON_PROFILE;
+    row->writer_profile = "";
 }
 
 
@@ -352,6 +620,7 @@ static void an_fill_unknown_row ( st_CMTTMZ_ANALYZE_ROW *row ) {
     row->result = CMTTMZ_ANALYZE_STAYS_RAW;
     row->reason = CMTTMZ_ANALYZE_REASON_NO_FILE;
     row->recovery_text = wav_recovery_status_string ( WAV_RECOVERY_NONE );
+    row->writer_profile = "";
 }
 
 
@@ -412,7 +681,8 @@ static st_CMTTMZ_ANALYSIS* an_build_rows ( const st_CMTTMZ_PULSES *p, const st_C
     uint32_t nrows = failed ? 1 : nparts;
     a->rows = ( st_CMTTMZ_ANALYZE_ROW* ) calloc ( nrows ? nrows : 1, sizeof ( st_CMTTMZ_ANALYZE_ROW ) );
     a->mzf = ( st_MZF** ) calloc ( nrows ? nrows : 1, sizeof ( st_MZF* ) );
-    if ( !a->rows || !a->mzf ) {
+    a->src = ( st_AN_SOURCE* ) calloc ( nrows ? nrows : 1, sizeof ( st_AN_SOURCE ) );
+    if ( !a->rows || !a->mzf || !a->src ) {
         free ( parts );
         wav_analyzer_result_destroy ( res );
         cmttmz_analysis_free ( a );
@@ -429,6 +699,10 @@ static st_CMTTMZ_ANALYSIS* an_build_rows ( const st_CMTTMZ_PULSES *p, const st_C
         if ( parts[i].kind == CMTTMZ_REC_BLOCK_MZF ) {
             st_WAV_ANALYZER_FILE_RESULT *f = &res->files[parts[i].file];
             an_fill_file_row ( f, p->count, o, r );
+            an_fill_source ( f, &a->src[i] );
+            if ( r->result == CMTTMZ_ANALYZE_ADDABLE || r->result == CMTTMZ_ANALYZE_ADDABLE_REPAIRED ) {
+                an_resolve_profile ( f->mzf, &a->src[i], r );
+            }
             if ( r->result == CMTTMZ_ANALYZE_ADDABLE || r->result == CMTTMZ_ANALYZE_ADDABLE_REPAIRED ) {
                 a->mzf[i] = f->mzf;   /* data převzala analýza */
                 f->mzf = NULL;
@@ -531,6 +805,7 @@ void cmttmz_analysis_free ( st_CMTTMZ_ANALYSIS *a ) {
         for ( uint32_t i = 0; i < a->row_count; i++ ) mzf_free ( a->mzf[i] );
     }
     free ( a->mzf );
+    free ( a->src );
     free ( a->rows );
     free ( a );
 }
@@ -836,7 +1111,12 @@ int cmttmz_analysis_apply ( const st_CMTTMZ_PULSES *p, const st_CMTTMZ_ANALYSIS 
                 pause = p->pause_ms;
                 if ( followed && pause < CMTTMZ_ANALYZE_FILE_GAP_MS ) pause = CMTTMZ_ANALYZE_FILE_GAP_MS;
             }
-            ok = ( EXIT_SUCCESS == an_build_file ( a->mzf[i], &opts, pause, &blocks[k], &speeds[k] ) );
+            if ( a->src[i].format == WAV_TAPE_FORMAT_NORMAL ) {
+                ok = ( EXIT_SUCCESS == an_build_file ( a->mzf[i], &opts, pause, &blocks[k], &speeds[k] ) );
+            } else {
+                /* jiný formát: blok podle profilu zapisovače, signál se vyrobí znovu */
+                ok = ( EXIT_SUCCESS == an_build_format_block ( a->mzf[i], &a->src[i], pause, &blocks[k], &speeds[k], NULL ) );
+            }
             if ( !ok ) an_error_num ( "Can't build a tape block from row %d", ( int ) i );
             continue;
         }

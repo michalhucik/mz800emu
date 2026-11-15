@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mz800emu 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-14 15:20+0100\n"
+"POT-Creation-Date: 2026-11-15 00:13+0100\n"
 "PO-Revision-Date: 2026-03-11 22:00+0100\n"
 "Last-Translator: Claude Code\n"
 "Language-Team: Nederlands\n"
@@ -447,7 +447,7 @@ msgstr "Audio opnemen (%s) start en stopt de opname."
 
 #: src/ui-imgui/audiocap/audio_capture_ui.cpp:249
 #: src/ui-imgui/cmt/ImGuiCmt.cpp:186
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:862
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:953
 #: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:753
 #: src/ui-imgui/cmt/cmt_view.cpp:172
 #: src/ui-imgui/debugger/sections/dbg_cpu_panel.cpp:2421
@@ -465,13 +465,13 @@ msgstr "OK"
 
 #: src/ui-imgui/audiocap/audio_capture_ui.cpp:255
 #: src/ui-imgui/cmt/ImGuiCmt.cpp:198
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2079
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2277
 #: src/ui-imgui/cmt/cmt_convert_dialog.cpp:609
 #: src/ui-imgui/cmt/cmt_tape_actions.cpp:1091
 #: src/ui-imgui/cmt/cmt_tape_actions.cpp:1118
 #: src/ui-imgui/cmt/cmt_tape_actions.cpp:1172
 #: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:754
-#: src/ui-imgui/cmt/cmt_window.cpp:3432
+#: src/ui-imgui/cmt/cmt_window.cpp:3428
 #: src/ui-imgui/debugger/membrowser/membrowser_annot_dialog.cpp:148
 #: src/ui-imgui/debugger/membrowser/membrowser_fill_dialog.cpp:264
 #: src/ui-imgui/debugger/sections/dbg_focus_to.cpp:264
@@ -659,93 +659,103 @@ msgstr "Overeenkomende snelheid: ~%.2f:1 (%.0f Bd)"
 msgid "Each length must be greater than 0 and at most %.0f µs."
 msgstr "Elke lengte moet groter zijn dan 0 en hoogstens %.0f µs."
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:742
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:815
 msgid "The tape changed. Close this dialog and analyze again."
 msgstr "De band is gewijzigd. Sluit dit dialoogvenster en analyseer opnieuw."
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:748
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:821
 msgid "Analyze again to apply the new options."
 msgstr "Klik op Opnieuw analyseren om de nieuwe opties toe te passen."
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:759
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:762
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:766
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:775
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:834
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:837
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:841
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:850
 msgid "Stays raw"
 msgstr "Blijft ruw"
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:764
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:839
 msgid "Will be added"
 msgstr "Wordt toegevoegd"
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:768
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:843
 msgid "Will be added (repaired)"
 msgstr "Wordt toegevoegd (hersteld)"
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:772
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:847
 msgid "Cannot add"
 msgstr "Niet toe te voegen"
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:793
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:871
 #, c-format
 msgid "Stored as a standard tape block at speed %s."
 msgstr "Opgeslagen als standaard bandblok met snelheid %s."
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:821
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:877
+#, c-format
+msgid ""
+"Stored as a %s tape block built by the writer profile %s; the signal is "
+"generated again, the timing of the recording is not kept."
+msgstr ""
+"Opgeslagen als %s-bandblok, gemaakt door het schrijverprofiel %s; het "
+"signaal wordt opnieuw gegenereerd, de timing van de opname blijft niet "
+"behouden."
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:912
 #, c-format
 msgid "Cannot be added. You can try \"%s\" and Analyze again."
 msgstr ""
 "Kan niet worden toegevoegd. U kunt \"%s\" proberen en Opnieuw analyseren."
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:821
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1997
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:912
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2195
 msgid "Repair damaged body"
 msgstr "Beschadigd gegevensdeel herstellen"
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:824
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:915
 msgid "Cannot be added. You can try the repair options and Analyze again."
 msgstr ""
 "Kan niet worden toegevoegd. U kunt de herstelopties proberen en Opnieuw "
 "analyseren."
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:825
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:916
 msgid "Cannot be added."
 msgstr "Kan niet worden toegevoegd."
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:843
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:934
 msgid "Unknown signal"
 msgstr "Onbekend signaal"
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:845
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:936
 #: src/ui-imgui/cmt/cmt_check_window.cpp:252
-#: src/ui-imgui/cmt/cmt_window.cpp:762 src/ui-imgui/cmt/cmt_window.cpp:768
+#: src/ui-imgui/cmt/cmt_window.cpp:769 src/ui-imgui/cmt/cmt_window.cpp:775
 msgid "(no name)"
 msgstr "(geen naam)"
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:848
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:939
 msgid "Sharp standard"
 msgstr "Sharp-standaard"
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:856
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:947
 msgid "Header error"
 msgstr "Headerfout"
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:859
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:950
 msgid "Body error"
 msgstr "Fout in gegevensdeel"
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:875
-#: src/ui-imgui/cmt/cmt_window.cpp:2405
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:966
+#: src/ui-imgui/cmt/cmt_window.cpp:2401
 #: src/ui-imgui/debugger/sections/dbg_stack_panel.cpp:2677
 #: src/ui-imgui/debugger/vars/vars_window.cpp:1502
 #: src/ui-imgui/debugger/watch/watch_window.cpp:1697
 msgid "Name"
 msgstr "Naam"
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:876
-#: src/ui-imgui/cmt/cmt_window.cpp:2406 src/ui-imgui/cmt/cmt_window.cpp:3976
-#: src/ui-imgui/cmt/cmt_window.cpp:3994 src/ui-imgui/cmt/cmt_window.cpp:4001
-#: src/ui-imgui/cmt/cmt_window.cpp:4009
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:967
+#: src/ui-imgui/cmt/cmt_window.cpp:2402 src/ui-imgui/cmt/cmt_window.cpp:3972
+#: src/ui-imgui/cmt/cmt_window.cpp:3990 src/ui-imgui/cmt/cmt_window.cpp:3997
+#: src/ui-imgui/cmt/cmt_window.cpp:4005
 #: src/ui-imgui/debugger/memsearch_window/memsearch_window.cpp:576
 #: src/ui-imgui/debugger/watch/watch_window.cpp:1701
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:132
@@ -755,18 +765,18 @@ msgstr "Naam"
 msgid "Type"
 msgstr "Type"
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:878
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:969
 msgctxt "Analysis column"
 msgid "Format"
 msgstr "Formaat"
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:879
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:970
 msgctxt "Analysis column"
 msgid "Start"
 msgstr "Begin"
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:880
-#: src/ui-imgui/cmt/cmt_window.cpp:2407 src/ui-imgui/cmt/cmt_window.cpp:3977
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:971
+#: src/ui-imgui/cmt/cmt_window.cpp:2403 src/ui-imgui/cmt/cmt_window.cpp:3973
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:133
 #: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:210
 #: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:212
@@ -775,45 +785,54 @@ msgstr "Begin"
 msgid "Size"
 msgstr "Grootte"
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:881
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:972
 msgid "Checksum"
 msgstr "Controlesom"
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:883
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:974
 msgid "Result"
 msgstr "Resultaat"
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:889
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:980
 msgid "Files added from the recording."
 msgstr "Bestanden uit de opname toegevoegd."
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:891
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:982
 #, c-format
 msgid "Files added from the recording: %d"
 msgstr "Bestanden uit de opname toegevoegd: %d"
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1030
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1121
 msgid "The analysis could not be started."
 msgstr "De analyse kon niet worden gestart."
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1044
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1135
 msgid "The analysis failed: not enough memory."
 msgstr "De analyse is mislukt: onvoldoende geheugen."
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1085
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1123
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2281
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1200
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1320
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2479
 msgid "The recording could not be read."
 msgstr "De opname kon niet worden gelezen."
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1116
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1265
+#, c-format
+msgid ""
+"Block %d: files found in the recording: %d. Use Analyze recording... to add "
+"them to the tape."
+msgstr ""
+"Blok %d: bestanden gevonden in de opname: %d. Gebruik Opname analyseren... "
+"om ze aan de band toe te voegen."
+
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1313
 msgid ""
 "The recording cannot be analyzed while an input replay is recorded or played."
 msgstr ""
 "De opname kan niet worden geanalyseerd tijdens het opnemen of afspelen van "
 "een replay."
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1142
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1339
 #: src/ui-imgui/cmt/cmt_convert_dialog.cpp:351
 #: src/ui-imgui/cmt/cmt_tape_actions.cpp:1864
 #: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:450
@@ -822,7 +841,7 @@ msgstr ""
 "De band kan niet worden bewerkt tijdens het opnemen of afspelen van een "
 "replay."
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1146
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1343
 #: src/ui-imgui/cmt/cmt_convert_dialog.cpp:355
 #: src/ui-imgui/cmt/cmt_tape_actions.cpp:714
 #: src/ui-imgui/cmt/cmt_tape_actions.cpp:874
@@ -833,14 +852,14 @@ msgstr ""
 #: src/ui-imgui/cmt/cmt_tape_actions.cpp:2147
 #: src/ui-imgui/cmt/cmt_tape_actions.cpp:2185
 #: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:480
-#: src/ui-imgui/cmt/cmt_window.cpp:2718 src/ui-imgui/cmt/cmt_window.cpp:3125
-#: src/ui-imgui/cmt/cmt_window.cpp:3234 src/ui-imgui/cmt/cmt_window.cpp:3396
-#: src/ui-imgui/cmt/cmt_window.cpp:3724 src/ui-imgui/cmt/cmt_window.cpp:4229
+#: src/ui-imgui/cmt/cmt_window.cpp:2714 src/ui-imgui/cmt/cmt_window.cpp:3121
+#: src/ui-imgui/cmt/cmt_window.cpp:3230 src/ui-imgui/cmt/cmt_window.cpp:3392
+#: src/ui-imgui/cmt/cmt_window.cpp:3720 src/ui-imgui/cmt/cmt_window.cpp:4225
 msgid "The tape changed; the action was cancelled."
 msgstr "De band is gewijzigd; de actie is geannuleerd."
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1150
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2420
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1347
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2618
 #: src/ui-imgui/cmt/cmt_convert_dialog.cpp:360
 #: src/ui-imgui/cmt/cmt_convert_dialog.cpp:658
 #: src/ui-imgui/cmt/cmt_tape_actions.cpp:1876
@@ -849,26 +868,26 @@ msgstr "De band is gewijzigd; de actie is geannuleerd."
 msgid "The tape could not be edited."
 msgstr "De band kon niet worden bewerkt."
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1814
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2012
 #, c-format
 msgid "Pulse lengths, %s"
 msgstr "Pulslengtes, %s"
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1817
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2015
 msgid "Pulse lengths, whole recording"
 msgstr "Pulslengtes, hele opname"
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1906
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2104
 #, c-format
 msgid "Pulses longer than %d µs are not shown."
 msgstr "Pulsen langer dan %d µs worden niet getoond."
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1944
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2082
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2142
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2280
 msgid "Leader tolerance"
 msgstr "Tolerantie aanlooptoon"
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1945
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2143
 msgid ""
 "How much pulse lengths in the leader tone may vary. Raise it for worn or "
 "unstable recordings."
@@ -876,8 +895,8 @@ msgstr ""
 "Hoeveel de pulslengtes in de aanlooptoon mogen variëren. Verhoog dit bij "
 "versleten of instabiele opnamen."
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1976
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2082
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2174
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2280
 #: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:499
 #: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:148
 #: src/ui-imgui/maxspeed_bench_window.cpp:156
@@ -886,20 +905,20 @@ msgstr ""
 msgid "Reset"
 msgstr "Herstellen"
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1982
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2083
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2180
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2281
 msgid "Analyze again"
 msgstr "Opnieuw analyseren"
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1997
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2195
 msgid "Repair damaged header"
 msgstr "Beschadigde header herstellen"
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:1997
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2195
 msgid "Repair incomplete BSD file"
 msgstr "Onvolledig BSD-bestand herstellen"
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2000
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2198
 msgid ""
 "Keeps a file whose header is intact but whose body is missing. The body is "
 "filled with 00h."
@@ -907,7 +926,7 @@ msgstr ""
 "Behoudt een bestand met een intacte header maar zonder gegevensdeel. Het "
 "gegevensdeel wordt gevuld met 00h."
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2001
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2199
 msgid ""
 "Keeps a file whose body is incomplete, or joins two damaged copies. Missing "
 "bytes are filled with 00h."
@@ -915,7 +934,7 @@ msgstr ""
 "Behoudt een bestand met een onvolledig gegevensdeel, of voegt twee "
 "beschadigde kopieën samen. Ontbrekende bytes worden gevuld met 00h."
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2002
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2200
 msgid ""
 "Keeps an incomplete BSD data file in the results. BSD files cannot be added "
 "as blocks and stay in the recording."
@@ -923,71 +942,71 @@ msgstr ""
 "Behoudt een onvolledig BSD-gegevensbestand in de resultaten. BSD-bestanden "
 "kunnen niet als blokken worden toegevoegd en blijven in de opname."
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2054
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2252
 #, c-format
 msgid "Analyze recording - block %d"
 msgstr "Opname analyseren - blok %d"
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2077
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2275
 msgid "Add files after recording"
 msgstr "Bestanden na de opname toevoegen"
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2078
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2276
 msgid "Replace recording"
 msgstr "Opname vervangen"
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2174
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2372
 msgid "Analyzing..."
 msgstr "Bezig met analyseren..."
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2176
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2338
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2374
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2536
 msgid "The recording could not be analyzed."
 msgstr "De opname kon niet worden geanalyseerd."
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2178
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2376
 msgid "No files found."
 msgstr "Geen bestanden gevonden."
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2182
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2380
 msgid "1 file found."
 msgstr "1 bestand gevonden."
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2183
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2381
 #, c-format
 msgid "%d files found."
 msgstr "%d bestanden gevonden."
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2185
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2383
 msgid "1 file found, 1 with a checksum error."
 msgstr "1 bestand gevonden, 1 met een controlesomfout."
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2187
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2385
 #, c-format
 msgid "%d files found, %d with a checksum error."
 msgstr "%d bestanden gevonden, %d met een controlesomfout."
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2209
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2407
 #, c-format
 msgid "%s, %s, %s pulses"
 msgstr "%s, %s, pulsen: %s"
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2238
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2436
 #, c-format
 msgid "Elapsed time: %s"
 msgstr "Verstreken tijd: %s"
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2246
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2444
 msgid "No files found in this recording."
 msgstr "Geen bestanden gevonden in deze opname."
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2247
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2445
 msgid "Try a different leader tolerance, or check the signal details below."
 msgstr ""
 "Probeer een andere tolerantie voor de aanlooptoon, of bekijk de "
 "signaaldetails hieronder."
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2274
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2472
 msgid ""
 "Checked files are added as tape blocks. Everything else stays in the "
 "recording."
@@ -995,26 +1014,26 @@ msgstr ""
 "Aangevinkte bestanden worden als bandblokken toegevoegd. Al het andere "
 "blijft in de opname."
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2281
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2337
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2479
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2535
 msgid "Wait until the analysis finishes."
 msgstr "Wacht tot de analyse klaar is."
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2291
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2489
 msgid "Signal details"
 msgstr "Signaaldetails"
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2332
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2530
 msgid "This recording is not saved yet. Replacing it cannot be undone."
 msgstr ""
 "Deze opname is nog niet opgeslagen. Vervangen kan niet ongedaan worden "
 "gemaakt."
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2341
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2539
 msgid "There are no files to add."
 msgstr "Er zijn geen bestanden om toe te voegen."
 
-#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2342
+#: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2540
 msgid "Check at least one file to add it."
 msgstr "Vink minstens één bestand aan om het toe te voegen."
 
@@ -1029,9 +1048,9 @@ msgstr "Bandcontrole"
 
 #: src/ui-imgui/cmt/cmt_check_window.cpp:363
 #: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:310
-#: src/ui-imgui/cmt/cmt_window.cpp:805 src/ui-imgui/cmt/cmt_window.cpp:1512
-#: src/ui-imgui/cmt/cmt_window.cpp:1531 src/ui-imgui/cmt/cmt_window.cpp:1737
-#: src/ui-imgui/cmt/cmt_window.cpp:1985
+#: src/ui-imgui/cmt/cmt_window.cpp:812 src/ui-imgui/cmt/cmt_window.cpp:1517
+#: src/ui-imgui/cmt/cmt_window.cpp:1536 src/ui-imgui/cmt/cmt_window.cpp:1742
+#: src/ui-imgui/cmt/cmt_window.cpp:1990
 msgid "No tape inserted."
 msgstr "Geen band geplaatst."
 
@@ -1097,8 +1116,8 @@ msgid "(current)"
 msgstr "(huidig)"
 
 #: src/ui-imgui/cmt/cmt_convert_dialog.cpp:545
-#: src/ui-imgui/cmt/cmt_window.cpp:2410 src/ui-imgui/cmt/cmt_window.cpp:3982
-#: src/ui-imgui/cmt/cmt_window.cpp:4010 src/ui-imgui/topmenu/menu_speed.cpp:27
+#: src/ui-imgui/cmt/cmt_window.cpp:2406 src/ui-imgui/cmt/cmt_window.cpp:3978
+#: src/ui-imgui/cmt/cmt_window.cpp:4006 src/ui-imgui/topmenu/menu_speed.cpp:27
 msgid "Speed"
 msgstr "Snelheid"
 
@@ -1246,8 +1265,8 @@ msgstr "Selecteer CMT-bestand om te openen"
 #: src/ui-imgui/cmt/cmt_tape_actions.cpp:1056
 #: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:590
 #: src/ui-imgui/cmt/cmt_view.cpp:391 src/ui-imgui/cmt/cmt_view.cpp:400
-#: src/ui-imgui/cmt/cmt_window.cpp:1807 src/ui-imgui/cmt/cmt_window.cpp:3948
-#: src/ui-imgui/cmt/cmt_window.cpp:4298
+#: src/ui-imgui/cmt/cmt_window.cpp:1812 src/ui-imgui/cmt/cmt_window.cpp:3944
+#: src/ui-imgui/cmt/cmt_window.cpp:4294
 msgid "(new tape)"
 msgstr "(nieuwe band)"
 
@@ -1260,7 +1279,7 @@ msgid "A recording is in progress. Stop and keep it, discard it, or cancel?"
 msgstr "Er loopt een opname. Stoppen en bewaren, weggooien of annuleren?"
 
 #: src/ui-imgui/cmt/cmt_tape_actions.cpp:1101
-#: src/ui-imgui/cmt/cmt_window.cpp:2156
+#: src/ui-imgui/cmt/cmt_window.cpp:2152
 msgid "Stop recording"
 msgstr "Opname stoppen"
 
@@ -1335,7 +1354,7 @@ msgstr "Direct opslaan: uit (een ROM-SAVE heeft Opnemen nodig)"
 
 #: src/ui-imgui/cmt/cmt_tape_actions.cpp:1399
 #: src/ui-imgui/cmt/cmt_tape_actions.cpp:1786 src/ui-imgui/cmt/cmt_view.cpp:668
-#: src/ui-imgui/cmt/cmt_window.cpp:3468
+#: src/ui-imgui/cmt/cmt_window.cpp:3464
 msgid "The tape state changed; the action was cancelled."
 msgstr "De status van de band is gewijzigd; de actie is geannuleerd."
 
@@ -1575,12 +1594,12 @@ msgstr "BASIC-data"
 msgid "CP/M file"
 msgstr "CP/M-bestand"
 
-#: src/ui-imgui/cmt/cmt_view.cpp:158 src/ui-imgui/cmt/cmt_window.cpp:1064
+#: src/ui-imgui/cmt/cmt_view.cpp:158 src/ui-imgui/cmt/cmt_window.cpp:1069
 #: src/ui/cmt/UiCmt.cpp:36
 msgid "Custom pulses"
 msgstr "Eigen pulsen"
 
-#: src/ui-imgui/cmt/cmt_view.cpp:173 src/ui-imgui/cmt/cmt_window.cpp:2466
+#: src/ui-imgui/cmt/cmt_view.cpp:173 src/ui-imgui/cmt/cmt_window.cpp:2462
 msgid "Not decoded"
 msgstr "Niet gedecodeerd"
 
@@ -1588,12 +1607,12 @@ msgstr "Niet gedecodeerd"
 msgid "Unsaved"
 msgstr "Niet opgeslagen"
 
-#: src/ui-imgui/cmt/cmt_view.cpp:175 src/ui-imgui/cmt/cmt_window.cpp:2466
+#: src/ui-imgui/cmt/cmt_view.cpp:175 src/ui-imgui/cmt/cmt_window.cpp:2462
 msgid "Cannot play"
 msgstr "Niet afspeelbaar"
 
-#: src/ui-imgui/cmt/cmt_view.cpp:176 src/ui-imgui/cmt/cmt_window.cpp:757
-#: src/ui-imgui/cmt/cmt_window.cpp:764
+#: src/ui-imgui/cmt/cmt_view.cpp:176 src/ui-imgui/cmt/cmt_window.cpp:764
+#: src/ui-imgui/cmt/cmt_window.cpp:771
 msgid "Control block"
 msgstr "Besturingsblok"
 
@@ -1642,7 +1661,7 @@ msgid "ROM SAVE stored \"%s\" (%u bytes) as tape block %d."
 msgstr "ROM-SAVE heeft \"%s\" (%u bytes) opgeslagen als bandblok %d."
 
 #: src/ui-imgui/cmt/cmt_view.cpp:713 src/ui-imgui/cmt/cmt_view.cpp:1386
-#: src/ui-imgui/cmt/cmt_window.cpp:2465
+#: src/ui-imgui/cmt/cmt_window.cpp:2461
 #, c-format
 msgid "Loop start x%u"
 msgstr "Lusbegin x%u"
@@ -1665,7 +1684,7 @@ msgid "Jump"
 msgstr "Sprong"
 
 #: src/ui-imgui/cmt/cmt_view.cpp:724 src/ui-imgui/cmt/cmt_view.cpp:725
-#: src/ui-imgui/cmt/cmt_view.cpp:1424 src/ui-imgui/cmt/cmt_window.cpp:2466
+#: src/ui-imgui/cmt/cmt_view.cpp:1424 src/ui-imgui/cmt/cmt_window.cpp:2462
 msgid "Stop the tape"
 msgstr "Bandstop"
 
@@ -1689,64 +1708,64 @@ msgstr "WAV-opname"
 msgid "Raw recording"
 msgstr "Ruwe opname"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:693 src/ui-imgui/cmt/cmt_window.cpp:1052
-#: src/ui-imgui/cmt/cmt_window.cpp:1830 src/ui-imgui/cmt/cmt_window.cpp:3947
+#: src/ui-imgui/cmt/cmt_window.cpp:700 src/ui-imgui/cmt/cmt_window.cpp:1058
+#: src/ui-imgui/cmt/cmt_window.cpp:1835 src/ui-imgui/cmt/cmt_window.cpp:3943
 msgid "No tape"
 msgstr "Geen band"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:694
+#: src/ui-imgui/cmt/cmt_window.cpp:701
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:365
 msgid "Stopped"
 msgstr "Gestopt"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:695
+#: src/ui-imgui/cmt/cmt_window.cpp:702
 #: src/ui-imgui/topmenu/replay_window.cpp:213
 msgid "Playing"
 msgstr "Afspelen"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:696
+#: src/ui-imgui/cmt/cmt_window.cpp:703
 msgid "Waiting for motor"
 msgstr "Wacht op motor"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:697
+#: src/ui-imgui/cmt/cmt_window.cpp:704
 msgid "Paused"
 msgstr "Gepauzeerd"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:698
+#: src/ui-imgui/cmt/cmt_window.cpp:705
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:363
 #: src/ui-imgui/topmenu/replay_window.cpp:205
 msgid "Recording"
 msgstr "Opname"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:700
+#: src/ui-imgui/cmt/cmt_window.cpp:707
 msgid "Direct load"
 msgstr "Direct laden"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:763
+#: src/ui-imgui/cmt/cmt_window.cpp:770
 msgid "ZX header"
 msgstr "ZX-header"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:803 src/ui-imgui/cmt/cmt_window.cpp:824
-#: src/ui-imgui/cmt/cmt_window.cpp:830 src/ui-imgui/cmt/cmt_window.cpp:1016
+#: src/ui-imgui/cmt/cmt_window.cpp:810 src/ui-imgui/cmt/cmt_window.cpp:831
+#: src/ui-imgui/cmt/cmt_window.cpp:837 src/ui-imgui/cmt/cmt_window.cpp:1022
 msgid "Elapsed"
 msgstr "Verstreken"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:805 src/ui-imgui/cmt/cmt_window.cpp:1065
-#: src/ui-imgui/cmt/cmt_window.cpp:1984 src/ui-imgui/cmt/cmt_window.cpp:2247
-#: src/ui-imgui/cmt/cmt_window.cpp:2632
+#: src/ui-imgui/cmt/cmt_window.cpp:812 src/ui-imgui/cmt/cmt_window.cpp:1070
+#: src/ui-imgui/cmt/cmt_window.cpp:1989 src/ui-imgui/cmt/cmt_window.cpp:2243
+#: src/ui-imgui/cmt/cmt_window.cpp:2628
 msgid "Not used in Direct mode"
 msgstr "Niet gebruikt in modus Direct"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:810 src/ui-imgui/cmt/cmt_window.cpp:1016
+#: src/ui-imgui/cmt/cmt_window.cpp:817 src/ui-imgui/cmt/cmt_window.cpp:1022
 msgid "Recording time"
 msgstr "Opnametijd"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:811 src/ui-imgui/cmt/cmt_window.cpp:1987
-#: src/ui-imgui/cmt/cmt_window.cpp:2633 src/ui-imgui/cmt/cmt_window.cpp:2648
+#: src/ui-imgui/cmt/cmt_window.cpp:818 src/ui-imgui/cmt/cmt_window.cpp:1992
+#: src/ui-imgui/cmt/cmt_window.cpp:2629 src/ui-imgui/cmt/cmt_window.cpp:2644
 msgid "Not available while recording."
 msgstr "Niet beschikbaar tijdens de opname."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:817
+#: src/ui-imgui/cmt/cmt_window.cpp:824
 msgid ""
 "The remaining time is shown once the lengths of all blocks are known. They "
 "are computed while the tape is stopped."
@@ -1754,389 +1773,380 @@ msgstr ""
 "De resterende tijd wordt getoond zodra de lengtes van alle blokken bekend "
 "zijn. Ze worden berekend terwijl de band stilstaat."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:821 src/ui-imgui/cmt/cmt_window.cpp:1016
+#: src/ui-imgui/cmt/cmt_window.cpp:828 src/ui-imgui/cmt/cmt_window.cpp:1022
 msgid "Remaining"
 msgstr "Resterend"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:827 src/ui-imgui/cmt/cmt_window.cpp:1016
+#: src/ui-imgui/cmt/cmt_window.cpp:834 src/ui-imgui/cmt/cmt_window.cpp:1022
 msgid "Block time"
 msgstr "Bloktijd"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1028 src/ui-imgui/cmt/cmt_window.cpp:1940
+#: src/ui-imgui/cmt/cmt_window.cpp:1034 src/ui-imgui/cmt/cmt_window.cpp:1945
 msgid "Motor on"
 msgstr "Motor aan"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1028 src/ui-imgui/cmt/cmt_window.cpp:1940
+#: src/ui-imgui/cmt/cmt_window.cpp:1034 src/ui-imgui/cmt/cmt_window.cpp:1945
 msgid "Motor off"
 msgstr "Motor uit"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1030 src/ui-imgui/cmt/cmt_window.cpp:1883
+#: src/ui-imgui/cmt/cmt_window.cpp:1036 src/ui-imgui/cmt/cmt_window.cpp:1888
 msgid "No block"
 msgstr "Geen blok"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1030 src/ui-imgui/cmt/cmt_window.cpp:1888
+#: src/ui-imgui/cmt/cmt_window.cpp:1036 src/ui-imgui/cmt/cmt_window.cpp:1893
 msgid "New recording"
 msgstr "Nieuwe opname"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1030 src/ui-imgui/cmt/cmt_window.cpp:1907
+#: src/ui-imgui/cmt/cmt_window.cpp:1036 src/ui-imgui/cmt/cmt_window.cpp:1912
 msgid "Next LOAD takes this block"
 msgstr "Volgende LOAD neemt dit blok"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1030 src/ui-imgui/cmt/cmt_window.cpp:1908
+#: src/ui-imgui/cmt/cmt_window.cpp:1036 src/ui-imgui/cmt/cmt_window.cpp:1913
 msgid "This block cannot be loaded directly"
 msgstr "Dit blok kan niet direct worden geladen"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1038 src/ui-imgui/cmt/cmt_window.cpp:1902
+#: src/ui-imgui/cmt/cmt_window.cpp:1044 src/ui-imgui/cmt/cmt_window.cpp:1907
 #, c-format
 msgid "%s pulses"
 msgstr "%s pulsen"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1050 src/ui-imgui/cmt/cmt_window.cpp:1796
-#: src/ui-imgui/cmt/cmt_window.cpp:4360
+#: src/ui-imgui/cmt/cmt_window.cpp:1056 src/ui-imgui/cmt/cmt_window.cpp:1801
+#: src/ui-imgui/cmt/cmt_window.cpp:4356
 msgid "Open..."
 msgstr "Openen..."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1050 src/ui-imgui/cmt/cmt_window.cpp:1795
+#: src/ui-imgui/cmt/cmt_window.cpp:1056 src/ui-imgui/cmt/cmt_window.cpp:1800
 #: src/ui-imgui/cmt/cmt_window.cpp:4383
 msgid "Eject"
 msgstr "Uitwerpen"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1050 src/ui-imgui/cmt/cmt_window.cpp:1051
-#: src/ui-imgui/cmt/cmt_window.cpp:1785 src/ui-imgui/cmt/cmt_window.cpp:3956
+#: src/ui-imgui/cmt/cmt_window.cpp:1056 src/ui-imgui/cmt/cmt_window.cpp:1057
+#: src/ui-imgui/cmt/cmt_window.cpp:1790 src/ui-imgui/cmt/cmt_window.cpp:3952
 msgid "Blocks"
 msgstr "Blokken"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1051 src/ui-imgui/cmt/cmt_window.cpp:1821
+#: src/ui-imgui/cmt/cmt_window.cpp:1057 src/ui-imgui/cmt/cmt_window.cpp:1826
 msgid "Open tape..."
 msgstr "Band openen..."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1051 src/ui-imgui/cmt/cmt_window.cpp:1820
-#: src/ui-imgui/cmt/cmt_window.cpp:4359
+#: src/ui-imgui/cmt/cmt_window.cpp:1057 src/ui-imgui/cmt/cmt_window.cpp:1825
+#: src/ui-imgui/cmt/cmt_window.cpp:4355
 msgid "New tape"
 msgstr "Nieuwe band"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1052 src/ui-imgui/cmt/cmt_window.cpp:1808
+#: src/ui-imgui/cmt/cmt_window.cpp:1058 src/ui-imgui/cmt/cmt_window.cpp:1813
 msgid "Modified"
 msgstr "Gewijzigd"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1056 src/ui-imgui/cmt/cmt_window.cpp:2150
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:437
-msgid "Echo"
-msgstr "Echo"
-
-#: src/ui-imgui/cmt/cmt_window.cpp:1060 src/ui-imgui/cmt/cmt_window.cpp:2243
+#: src/ui-imgui/cmt/cmt_window.cpp:1065 src/ui-imgui/cmt/cmt_window.cpp:2239
 msgid "Signal speed"
 msgstr "Signaalsnelheid"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1064 src/ui-imgui/cmt/cmt_window.cpp:2249
-#: src/ui-imgui/cmt/cmt_window.cpp:2251 src/ui-imgui/cmt/cmt_window.cpp:3982
+#: src/ui-imgui/cmt/cmt_window.cpp:1069 src/ui-imgui/cmt/cmt_window.cpp:2245
+#: src/ui-imgui/cmt/cmt_window.cpp:2247 src/ui-imgui/cmt/cmt_window.cpp:3978
 msgid "(set in file)"
 msgstr "(bepaald door bestand)"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1065 src/ui-imgui/cmt/cmt_window.cpp:2251
+#: src/ui-imgui/cmt/cmt_window.cpp:1070 src/ui-imgui/cmt/cmt_window.cpp:2247
 msgid "(recorded signal)"
 msgstr "(opgenomen signaal)"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1070 src/ui-imgui/cmt/cmt_window.cpp:2304
+#: src/ui-imgui/cmt/cmt_window.cpp:1075 src/ui-imgui/cmt/cmt_window.cpp:2300
 msgid "Loading"
 msgstr "Laden"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1071 src/ui-imgui/cmt/cmt_window.cpp:2328
-#: src/ui-imgui/cmt/cmt_window.cpp:4356
+#: src/ui-imgui/cmt/cmt_window.cpp:1076 src/ui-imgui/cmt/cmt_window.cpp:2324
+#: src/ui-imgui/cmt/cmt_window.cpp:4352
 msgid "Tape"
 msgstr "Band"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1071 src/ui-imgui/cmt/cmt_window.cpp:2329
+#: src/ui-imgui/cmt/cmt_window.cpp:1076 src/ui-imgui/cmt/cmt_window.cpp:2325
 msgid "Boost"
 msgstr "Boost"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1071 src/ui-imgui/cmt/cmt_window.cpp:2330
+#: src/ui-imgui/cmt/cmt_window.cpp:1076 src/ui-imgui/cmt/cmt_window.cpp:2326
 msgid "Direct"
 msgstr "Direct"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1111 src/ui-imgui/cmt/cmt_window.cpp:1874
-#: src/ui-imgui/cmt/cmt_window.cpp:1877 src/ui-imgui/cmt/cmt_window.cpp:1880
+#: src/ui-imgui/cmt/cmt_window.cpp:1116 src/ui-imgui/cmt/cmt_window.cpp:1879
+#: src/ui-imgui/cmt/cmt_window.cpp:1882 src/ui-imgui/cmt/cmt_window.cpp:1885
 #, c-format
 msgid "Block %d / %d"
 msgstr "Blok %d / %d"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1481 src/ui-imgui/cmt/cmt_window.cpp:2630
-#: src/ui-imgui/cmt/cmt_window.cpp:2646
+#: src/ui-imgui/cmt/cmt_window.cpp:1486 src/ui-imgui/cmt/cmt_window.cpp:2626
+#: src/ui-imgui/cmt/cmt_window.cpp:2642
 msgid "Not available while an input replay is played."
 msgstr "Niet beschikbaar tijdens het afspelen van een replay."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1496 src/ui-imgui/cmt/cmt_window.cpp:1530
-#: src/ui-imgui/cmt/cmt_window.cpp:1547 src/ui-imgui/cmt/cmt_window.cpp:1988
-#: src/ui-imgui/cmt/cmt_window.cpp:2265 src/ui-imgui/cmt/cmt_window.cpp:2309
-#: src/ui-imgui/cmt/cmt_window.cpp:2723
+#: src/ui-imgui/cmt/cmt_window.cpp:1501 src/ui-imgui/cmt/cmt_window.cpp:1535
+#: src/ui-imgui/cmt/cmt_window.cpp:1552 src/ui-imgui/cmt/cmt_window.cpp:1993
+#: src/ui-imgui/cmt/cmt_window.cpp:2261 src/ui-imgui/cmt/cmt_window.cpp:2305
+#: src/ui-imgui/cmt/cmt_window.cpp:2719
 msgid "Not available while an input replay is recorded."
 msgstr "Niet beschikbaar tijdens het opnemen van een replay."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1497 src/ui-imgui/cmt/cmt_window.cpp:1513
-#: src/ui-imgui/cmt/cmt_window.cpp:2023 src/ui-imgui/cmt/cmt_window.cpp:2311
+#: src/ui-imgui/cmt/cmt_window.cpp:1502 src/ui-imgui/cmt/cmt_window.cpp:1518
+#: src/ui-imgui/cmt/cmt_window.cpp:2028 src/ui-imgui/cmt/cmt_window.cpp:2307
 msgid "Stop the recording first."
 msgstr "Stop eerst de opname."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1532 src/ui-imgui/cmt/cmt_window.cpp:1548
-#: src/ui-imgui/cmt/cmt_window.cpp:2017 src/ui-imgui/cmt/cmt_window.cpp:2023
-#: src/ui-imgui/cmt/cmt_window.cpp:2034 src/ui-imgui/cmt/cmt_window.cpp:2312
-#: src/ui-imgui/cmt/cmt_window.cpp:2724
+#: src/ui-imgui/cmt/cmt_window.cpp:1537 src/ui-imgui/cmt/cmt_window.cpp:1553
+#: src/ui-imgui/cmt/cmt_window.cpp:2022 src/ui-imgui/cmt/cmt_window.cpp:2028
+#: src/ui-imgui/cmt/cmt_window.cpp:2039 src/ui-imgui/cmt/cmt_window.cpp:2308
+#: src/ui-imgui/cmt/cmt_window.cpp:2720
 msgid "Stop the tape first."
 msgstr "Stop eerst de band."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1680
+#: src/ui-imgui/cmt/cmt_window.cpp:1685
 msgid "Select a single block to move it."
 msgstr "Selecteer één blok om het te verplaatsen."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1681
+#: src/ui-imgui/cmt/cmt_window.cpp:1686
 msgid "This is the first block."
 msgstr "Dit is het eerste blok."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1682
+#: src/ui-imgui/cmt/cmt_window.cpp:1687
 msgid "This is the last block."
 msgstr "Dit is het laatste blok."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1701
+#: src/ui-imgui/cmt/cmt_window.cpp:1706
 msgid "Select one raw recording in the list of blocks."
 msgstr "Selecteer één ruwe opname in de lijst met blokken."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1702
+#: src/ui-imgui/cmt/cmt_window.cpp:1707
 msgid "Only a raw recording can be analyzed."
 msgstr "Alleen een ruwe opname kan worden geanalyseerd."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1721
+#: src/ui-imgui/cmt/cmt_window.cpp:1726
 msgid "Select a single block to convert it."
 msgstr "Selecteer één blok om het om te zetten."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1722
+#: src/ui-imgui/cmt/cmt_window.cpp:1727
 msgid "This block cannot be converted to another profile."
 msgstr "Dit blok kan niet naar een ander profiel worden omgezet."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1788
+#: src/ui-imgui/cmt/cmt_window.cpp:1793
 msgid "Open or create a tape to see its blocks."
 msgstr "Open of maak een band om de blokken te zien."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1790
+#: src/ui-imgui/cmt/cmt_window.cpp:1795
 msgid "Show only the deck"
 msgstr "Alleen het cassettedeck tonen"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1790
+#: src/ui-imgui/cmt/cmt_window.cpp:1795
 msgid "Show the list of blocks"
 msgstr "Lijst met blokken tonen"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1801 src/ui-imgui/cmt/cmt_window.cpp:1825
+#: src/ui-imgui/cmt/cmt_window.cpp:1806 src/ui-imgui/cmt/cmt_window.cpp:1830
 msgid "Open a tape file"
 msgstr "Een bandbestand openen"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1803
+#: src/ui-imgui/cmt/cmt_window.cpp:1808
 msgid "Eject the tape"
 msgstr "De band uitwerpen"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1817
+#: src/ui-imgui/cmt/cmt_window.cpp:1822
 msgid "The tape has unsaved changes."
 msgstr "De band heeft niet-opgeslagen wijzigingen."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1828
+#: src/ui-imgui/cmt/cmt_window.cpp:1833
 msgid "Insert a new empty tape"
 msgstr "Een nieuwe lege band plaatsen"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1851
+#: src/ui-imgui/cmt/cmt_window.cpp:1856
 msgid "Click to show the time from the start of the tape"
 msgstr "Klik om de tijd vanaf het begin van de band te tonen"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1852
+#: src/ui-imgui/cmt/cmt_window.cpp:1857
 msgid "Click to show the time to the end of the tape"
 msgstr "Klik om de tijd tot het einde van de band te tonen"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1986
+#: src/ui-imgui/cmt/cmt_window.cpp:1991
 msgid "The tape is empty."
 msgstr "De band is leeg."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1998
+#: src/ui-imgui/cmt/cmt_window.cpp:2003
 msgid "The tape has no playable block."
 msgstr "De band heeft geen afspeelbaar blok."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:1999
+#: src/ui-imgui/cmt/cmt_window.cpp:2004
 msgid "There is no playable block before this one."
 msgstr "Er is geen afspeelbaar blok vóór dit blok."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:2000
+#: src/ui-imgui/cmt/cmt_window.cpp:2005
 msgid "There is no playable block after this one."
 msgstr "Er is geen afspeelbaar blok na dit blok."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:2013
+#: src/ui-imgui/cmt/cmt_window.cpp:2018
 msgid "The tape is already stopped."
 msgstr "De band staat al stil."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:2027
+#: src/ui-imgui/cmt/cmt_window.cpp:2032
 msgid "No block is selected on the tape."
 msgstr "Er is geen blok op de band geselecteerd."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:2029 src/ui-imgui/cmt/cmt_window.cpp:2320
+#: src/ui-imgui/cmt/cmt_window.cpp:2034 src/ui-imgui/cmt/cmt_window.cpp:2316
 msgid "The current block does not contain an MZF file."
 msgstr "Het huidige blok bevat geen MZF-bestand."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:2132
+#: src/ui-imgui/cmt/cmt_window.cpp:2134
 msgctxt "cmt"
 msgid "Rewind"
 msgstr "Terugspoelen"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:2135
+#: src/ui-imgui/cmt/cmt_window.cpp:2137
 msgid "Previous block"
 msgstr "Vorig blok"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:2139
+#: src/ui-imgui/cmt/cmt_window.cpp:2141
 msgid "Pause"
 msgstr "Pauze"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:2139
+#: src/ui-imgui/cmt/cmt_window.cpp:2141
 msgid "Play"
 msgstr "Afspelen"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:2142
+#: src/ui-imgui/cmt/cmt_window.cpp:2144
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:423
 msgid "Stop"
 msgstr "Stop"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:2145
+#: src/ui-imgui/cmt/cmt_window.cpp:2147
 msgid "Next block"
 msgstr "Volgend blok"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:2151
-msgid "Play the tape signal through the speaker"
-msgstr "Bandsignaal via de luidspreker afspelen"
-
-#: src/ui-imgui/cmt/cmt_window.cpp:2156
+#: src/ui-imgui/cmt/cmt_window.cpp:2152
 msgid "Record"
 msgstr "Opnemen"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:2266
+#: src/ui-imgui/cmt/cmt_window.cpp:2262
 msgid "Stop the tape to change the speed."
 msgstr "Stop de band om de snelheid te wijzigen."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:2294
+#: src/ui-imgui/cmt/cmt_window.cpp:2290
 msgid "Speed of the tape signal for blocks without their own speed"
 msgstr "Snelheid van het bandsignaal voor blokken zonder eigen snelheid"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:2328
+#: src/ui-imgui/cmt/cmt_window.cpp:2324
 msgid "Play the signal in real time"
 msgstr "Het signaal in realtime afspelen"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:2329
+#: src/ui-imgui/cmt/cmt_window.cpp:2325
 msgid "Run at maximum speed while the motor is on"
 msgstr "Op maximale snelheid draaien zolang de motor aan is"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:2330 src/ui-imgui/cmt/cmt_window.cpp:2747
+#: src/ui-imgui/cmt/cmt_window.cpp:2326 src/ui-imgui/cmt/cmt_window.cpp:2743
 msgid "Copy the program into memory without playing the signal"
 msgstr ""
 "Het programma naar het geheugen kopiëren zonder het signaal af te spelen"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:2408
+#: src/ui-imgui/cmt/cmt_window.cpp:2404
 msgctxt "cmt column"
 msgid "Load"
 msgstr "Laden"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:2409
+#: src/ui-imgui/cmt/cmt_window.cpp:2405
 msgctxt "cmt column"
 msgid "Exec"
 msgstr "Start"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:2411 src/ui-imgui/cmt/cmt_window.cpp:3989
-#: src/ui-imgui/cmt/cmt_window.cpp:3995 src/ui-imgui/cmt/cmt_window.cpp:4011
+#: src/ui-imgui/cmt/cmt_window.cpp:2407 src/ui-imgui/cmt/cmt_window.cpp:3985
+#: src/ui-imgui/cmt/cmt_window.cpp:3991 src/ui-imgui/cmt/cmt_window.cpp:4007
 msgid "Length"
 msgstr "Lengte"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:2413 src/ui-imgui/cmt/cmt_window.cpp:4015
+#: src/ui-imgui/cmt/cmt_window.cpp:2409 src/ui-imgui/cmt/cmt_window.cpp:4011
 msgid "Status"
 msgstr "Status"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:2472 src/ui-imgui/cmt/cmt_window.cpp:3087
+#: src/ui-imgui/cmt/cmt_window.cpp:2468 src/ui-imgui/cmt/cmt_window.cpp:3083
 msgid "Recording..."
 msgstr "Opnemen..."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:2631 src/ui-imgui/cmt/cmt_window.cpp:2647
-#: src/ui-imgui/cmt/cmt_window.cpp:2760
+#: src/ui-imgui/cmt/cmt_window.cpp:2627 src/ui-imgui/cmt/cmt_window.cpp:2643
+#: src/ui-imgui/cmt/cmt_window.cpp:2756
 msgid "This block cannot be played."
 msgstr "Dit blok kan niet worden afgespeeld."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:2725
+#: src/ui-imgui/cmt/cmt_window.cpp:2721
 msgid "This block does not contain an MZF file."
 msgstr "Dit blok bevat geen MZF-bestand."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:2728
+#: src/ui-imgui/cmt/cmt_window.cpp:2724
 msgid "Play from here"
 msgstr "Vanaf hier afspelen"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:2736
+#: src/ui-imgui/cmt/cmt_window.cpp:2732
 msgid "Go to this block"
 msgstr "Naar dit blok gaan"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:2737
+#: src/ui-imgui/cmt/cmt_window.cpp:2733
 msgid ""
 "Move the tape to the start of this block; playback state does not change"
 msgstr ""
 "Verplaatst de band naar het begin van dit blok; de afspeelstatus verandert "
 "niet"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:2746
+#: src/ui-imgui/cmt/cmt_window.cpp:2742
 msgid "Load directly"
 msgstr "Direct laden"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:2755
+#: src/ui-imgui/cmt/cmt_window.cpp:2751
 msgid "Export as MZF..."
 msgstr "Exporteren als MZF..."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:2761
+#: src/ui-imgui/cmt/cmt_window.cpp:2757
 msgid "Export as WAV..."
 msgstr "Exporteren als WAV..."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:2769
+#: src/ui-imgui/cmt/cmt_window.cpp:2765
 msgid "The speed of this block is given by the file."
 msgstr "De snelheid van dit blok wordt bepaald door het bestand."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:2771
+#: src/ui-imgui/cmt/cmt_window.cpp:2767
 msgid "Set speed"
 msgstr "Snelheid instellen"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:2804
+#: src/ui-imgui/cmt/cmt_window.cpp:2800
 msgid "Analyze..."
 msgstr "Analyseren..."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:2806
+#: src/ui-imgui/cmt/cmt_window.cpp:2802
 msgid "Convert to profile..."
 msgstr "Omzetten naar profiel..."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:2814
+#: src/ui-imgui/cmt/cmt_window.cpp:2810
 msgid "Move up"
 msgstr "Omhoog verplaatsen"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:2815
+#: src/ui-imgui/cmt/cmt_window.cpp:2811
 msgid "Move down"
 msgstr "Omlaag verplaatsen"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:2817
+#: src/ui-imgui/cmt/cmt_window.cpp:2813
 msgid "Import file here..."
 msgstr "Bestand hier importeren..."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:2822
+#: src/ui-imgui/cmt/cmt_window.cpp:2818
 #, c-format
 msgid "Delete %d blocks"
 msgstr "%d blokken verwijderen"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:2825
+#: src/ui-imgui/cmt/cmt_window.cpp:2821
 #: src/ui-imgui/debugger/membrowser/membrowser_annot_dialog.cpp:146
 msgid "Delete"
 msgstr "Verwijderen"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:2832
+#: src/ui-imgui/cmt/cmt_window.cpp:2828
 msgid "Properties"
 msgstr "Eigenschappen"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:3404 src/ui-imgui/cmt/cmt_window.cpp:3431
+#: src/ui-imgui/cmt/cmt_window.cpp:3400 src/ui-imgui/cmt/cmt_window.cpp:3427
 msgid "Delete blocks"
 msgstr "Blokken verwijderen"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:3416
+#: src/ui-imgui/cmt/cmt_window.cpp:3412
 #, c-format
 msgid ""
 "Delete blocks: %d. Unsaved: %d. Data of the unsaved blocks is not stored "
@@ -2145,60 +2155,60 @@ msgstr ""
 "Te verwijderen blokken: %d. Niet opgeslagen: %d. De gegevens van de niet-"
 "opgeslagen blokken zijn nergens anders opgeslagen."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:3419
+#: src/ui-imgui/cmt/cmt_window.cpp:3415
 msgid "Delete this unsaved block? Its data is not stored anywhere else."
 msgstr ""
 "Dit niet-opgeslagen blok verwijderen? De gegevens ervan zijn nergens anders "
 "opgeslagen."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:3421
+#: src/ui-imgui/cmt/cmt_window.cpp:3417
 #, c-format
 msgid "Delete %d unsaved blocks? Their data is not stored anywhere else."
 msgstr ""
 "%d niet-opgeslagen blokken verwijderen? Hun gegevens zijn nergens anders "
 "opgeslagen."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:3515 src/ui-imgui/cmt/cmt_window.cpp:3539
+#: src/ui-imgui/cmt/cmt_window.cpp:3511 src/ui-imgui/cmt/cmt_window.cpp:3535
 msgid "Finish the open dialog first."
 msgstr "Rond eerst het geopende dialoogvenster af."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:3542
+#: src/ui-imgui/cmt/cmt_window.cpp:3538
 msgid "Only one file can be opened as a tape."
 msgstr "Er kan maar één bestand als band worden geopend."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:3596
+#: src/ui-imgui/cmt/cmt_window.cpp:3592
 msgid "This tape is empty."
 msgstr "Deze band is leeg."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:3596
+#: src/ui-imgui/cmt/cmt_window.cpp:3592
 msgid "Press Record to save a program from the computer, or open a tape file."
 msgstr ""
 "Druk op Opnemen om een programma van de computer op te slaan, of open een "
 "bandbestand."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:3918
+#: src/ui-imgui/cmt/cmt_window.cpp:3914
 msgid "Imported from MZF"
 msgstr "Geïmporteerd uit MZF"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:3919
+#: src/ui-imgui/cmt/cmt_window.cpp:3915
 msgctxt "cmt"
 msgid "Recorded"
 msgstr "Opgenomen"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:3920
+#: src/ui-imgui/cmt/cmt_window.cpp:3916
 msgctxt "cmt"
 msgid "Imported"
 msgstr "Geïmporteerd"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:3922
+#: src/ui-imgui/cmt/cmt_window.cpp:3918
 msgid "From tape file"
 msgstr "Uit bandbestand"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:3946
+#: src/ui-imgui/cmt/cmt_window.cpp:3942
 msgid "Tape properties"
 msgstr "Bandeigenschappen"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:3951
+#: src/ui-imgui/cmt/cmt_window.cpp:3947
 #: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:110
 #: src/ui-imgui/memext/memext_load_dialog.cpp:112
 #: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:101
@@ -2208,84 +2218,84 @@ msgstr "Bandeigenschappen"
 msgid "File"
 msgstr "Bestand"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:3957
+#: src/ui-imgui/cmt/cmt_window.cpp:3953
 msgid "Total length"
 msgstr "Totale lengte"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:3965
+#: src/ui-imgui/cmt/cmt_window.cpp:3961
 #: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:204
 msgid "Format"
 msgstr "Formaat"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:3968
+#: src/ui-imgui/cmt/cmt_window.cpp:3964
 msgid "Block properties"
 msgstr "Blokeigenschappen"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:3979
+#: src/ui-imgui/cmt/cmt_window.cpp:3975
 msgid "Load address"
 msgstr "Laadadres"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:3981
+#: src/ui-imgui/cmt/cmt_window.cpp:3977
 msgid "Exec address"
 msgstr "Startadres"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:3985
+#: src/ui-imgui/cmt/cmt_window.cpp:3981
 msgid "Long pulse (µs)"
 msgstr "Lange puls (µs)"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:3987
+#: src/ui-imgui/cmt/cmt_window.cpp:3983
 msgid "Short pulse (µs)"
 msgstr "Korte puls (µs)"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:3990 src/ui-imgui/cmt/cmt_window.cpp:3996
-#: src/ui-imgui/cmt/cmt_window.cpp:4003 src/ui-imgui/cmt/cmt_window.cpp:4012
+#: src/ui-imgui/cmt/cmt_window.cpp:3986 src/ui-imgui/cmt/cmt_window.cpp:3992
+#: src/ui-imgui/cmt/cmt_window.cpp:3999 src/ui-imgui/cmt/cmt_window.cpp:4008
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:318
 msgid "Source"
 msgstr "Bron"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:3997
+#: src/ui-imgui/cmt/cmt_window.cpp:3993
 msgid "Sample rate"
 msgstr "Samplefrequentie"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:3998
+#: src/ui-imgui/cmt/cmt_window.cpp:3994
 msgid "Pulse count"
 msgstr "Aantal pulsen"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:4002
+#: src/ui-imgui/cmt/cmt_window.cpp:3998
 #: src/ui-imgui/snapshot/snapshot_load_dialog.cpp:198
 #: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:105
 msgid "Description"
 msgstr "Beschrijving"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:4093
+#: src/ui-imgui/cmt/cmt_window.cpp:4089
 msgid "Hide the properties"
 msgstr "Eigenschappen verbergen"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:4093
+#: src/ui-imgui/cmt/cmt_window.cpp:4089
 msgid "Show the properties"
 msgstr "Eigenschappen tonen"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:4173
+#: src/ui-imgui/cmt/cmt_window.cpp:4169
 msgid "Columns"
 msgstr "Kolommen"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:4174 src/ui-imgui/cmt/cmt_window.cpp:4408
+#: src/ui-imgui/cmt/cmt_window.cpp:4170 src/ui-imgui/cmt/cmt_window.cpp:4408
 msgid "The list of blocks is shown in the Full layout."
 msgstr "De lijst met blokken is zichtbaar in de indeling Volledig."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:4181
+#: src/ui-imgui/cmt/cmt_window.cpp:4177
 msgid "Show all"
 msgstr "Alles tonen"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:4295
+#: src/ui-imgui/cmt/cmt_window.cpp:4291
 msgid "Virtual CMT"
 msgstr "Virtuele CMT"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:4361
+#: src/ui-imgui/cmt/cmt_window.cpp:4357
 msgid "Import file..."
 msgstr "Bestand importeren..."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:4362
+#: src/ui-imgui/cmt/cmt_window.cpp:4358
 #: src/ui-imgui/debugger/breakpoints/bpt_window.cpp:1456
 #: src/ui-imgui/debugger/membrowser/membrowser_annot_dialog.cpp:144
 #: src/ui-imgui/memext/memext_save_dialog.cpp:189
@@ -2293,25 +2303,37 @@ msgstr "Bestand importeren..."
 msgid "Save"
 msgstr "Opslaan"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:4363
+#: src/ui-imgui/cmt/cmt_window.cpp:4359
 msgid "Save as..."
 msgstr "Opslaan als..."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:4365
+#: src/ui-imgui/cmt/cmt_window.cpp:4361
 msgid "Export block as MZF..."
 msgstr "Blok exporteren als MZF..."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:4367
+#: src/ui-imgui/cmt/cmt_window.cpp:4363
 msgid "Export block as WAV..."
 msgstr "Blok exporteren als WAV..."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:4369
+#: src/ui-imgui/cmt/cmt_window.cpp:4365
 msgid "Export tape as WAV..."
 msgstr "Band exporteren als WAV..."
 
-#: src/ui-imgui/cmt/cmt_window.cpp:4376
+#: src/ui-imgui/cmt/cmt_window.cpp:4372
 msgid "Analyze recording..."
 msgstr "Opname analyseren..."
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4376
+msgid "Find files while playing"
+msgstr "Bestanden zoeken tijdens afspelen"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4377
+msgid ""
+"While a raw recording plays, the files in it are looked for in the "
+"background and reported when it stops."
+msgstr ""
+"Terwijl een ruwe opname afspeelt, worden de bestanden erin op de achtergrond "
+"gezocht en gemeld wanneer ze stopt."
 
 #: src/ui-imgui/cmt/cmt_window.cpp:4380
 msgid "Tape information..."
@@ -2337,7 +2359,16 @@ msgstr "Volledig"
 msgid "Reset column widths"
 msgstr "Kolombreedtes herstellen"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:4644
+#: src/ui-imgui/cmt/cmt_window.cpp:4433
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:437
+msgid "Echo"
+msgstr "Echo"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4449
+msgid "Play the tape signal through the speaker"
+msgstr "Bandsignaal via de luidspreker afspelen"
+
+#: src/ui-imgui/cmt/cmt_window.cpp:4698
 #, c-format
 msgid "%d blocks selected"
 msgstr "%d blokken geselecteerd"
@@ -4481,10 +4512,10 @@ msgstr "Laatste Control Word"
 #: src/ui-imgui/debugger/pioz80_window.cpp:268
 #: src/ui-imgui/debugger/pioz80_window.cpp:293
 #: src/ui-imgui/debugger/pioz80_window.cpp:405
-#: src/ui-imgui/debugger/psg_window.cpp:362
-#: src/ui-imgui/debugger/psg_window.cpp:412
-#: src/ui-imgui/debugger/psg_window.cpp:458
-#: src/ui-imgui/debugger/psg_window.cpp:536
+#: src/ui-imgui/debugger/psg_window.cpp:363
+#: src/ui-imgui/debugger/psg_window.cpp:413
+#: src/ui-imgui/debugger/psg_window.cpp:459
+#: src/ui-imgui/debugger/psg_window.cpp:537
 msgid "Field"
 msgstr "Veld"
 
@@ -4495,10 +4526,10 @@ msgstr "Veld"
 #: src/ui-imgui/debugger/memsearch_window/memsearch_window.cpp:701
 #: src/ui-imgui/debugger/pioz80_window.cpp:294
 #: src/ui-imgui/debugger/pioz80_window.cpp:406
-#: src/ui-imgui/debugger/psg_window.cpp:363
-#: src/ui-imgui/debugger/psg_window.cpp:413
-#: src/ui-imgui/debugger/psg_window.cpp:459
-#: src/ui-imgui/debugger/psg_window.cpp:537
+#: src/ui-imgui/debugger/psg_window.cpp:364
+#: src/ui-imgui/debugger/psg_window.cpp:414
+#: src/ui-imgui/debugger/psg_window.cpp:460
+#: src/ui-imgui/debugger/psg_window.cpp:538
 #: src/ui-imgui/debugger/vars/vars_window.cpp:1504
 #: src/ui-imgui/debugger/watch/watch_window.cpp:1703
 msgid "Value"
@@ -9415,28 +9446,28 @@ msgid "no data"
 msgstr "geen data"
 
 #: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1168
-#: src/ui-imgui/debugger/psg_window.cpp:263
+#: src/ui-imgui/debugger/psg_window.cpp:264
 msgid "silent"
 msgstr "stil"
 
 #: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1186
-#: src/ui-imgui/debugger/psg_window.cpp:282
+#: src/ui-imgui/debugger/psg_window.cpp:283
 msgid "DC"
 msgstr "DC"
 
 #: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1435
-#: src/ui-imgui/debugger/psg_window.cpp:73
+#: src/ui-imgui/debugger/psg_window.cpp:74
 msgid "TONE"
 msgstr "TOON"
 
 #: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1437
-#: src/ui-imgui/debugger/psg_window.cpp:74
+#: src/ui-imgui/debugger/psg_window.cpp:75
 msgid "NOISE"
 msgstr "RUIS"
 
 #: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1441
 #: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1772
-#: src/ui-imgui/debugger/psg_window.cpp:594
+#: src/ui-imgui/debugger/psg_window.cpp:595
 msgid "Channel"
 msgstr "Kanaal"
 
@@ -9599,58 +9630,58 @@ msgstr "PSG (chip 0)###PSGScopeMonoHdr"
 msgid "Piano roll###PSGScopePianoRollHdr"
 msgstr "Piano roll###PSGScopePianoRollHdr"
 
-#: src/ui-imgui/debugger/psg_window.cpp:83
+#: src/ui-imgui/debugger/psg_window.cpp:84
 msgid "DIV /16 (fast)"
 msgstr "DIV /16 (snel)"
 
-#: src/ui-imgui/debugger/psg_window.cpp:84
+#: src/ui-imgui/debugger/psg_window.cpp:85
 msgid "DIV /32 (mid)"
 msgstr "DIV /32 (middel)"
 
-#: src/ui-imgui/debugger/psg_window.cpp:85
+#: src/ui-imgui/debugger/psg_window.cpp:86
 msgid "DIV /64 (slow)"
 msgstr "DIV /64 (langzaam)"
 
-#: src/ui-imgui/debugger/psg_window.cpp:86
+#: src/ui-imgui/debugger/psg_window.cpp:87
 msgid "DIV from CH2 tone"
 msgstr "DIV vanaf CH2-toon"
 
-#: src/ui-imgui/debugger/psg_window.cpp:93
+#: src/ui-imgui/debugger/psg_window.cpp:94
 msgid "PERIODIC"
 msgstr "PERIODIEK"
 
-#: src/ui-imgui/debugger/psg_window.cpp:94
+#: src/ui-imgui/debugger/psg_window.cpp:95
 msgid "WHITE"
 msgstr "WIT"
 
-#: src/ui-imgui/debugger/psg_window.cpp:117
+#: src/ui-imgui/debugger/psg_window.cpp:118
 msgid "0 dB (max)"
 msgstr "0 dB (max)"
 
-#: src/ui-imgui/debugger/psg_window.cpp:119
+#: src/ui-imgui/debugger/psg_window.cpp:120
 msgid "silent (off)"
 msgstr "stil (uit)"
 
-#: src/ui-imgui/debugger/psg_window.cpp:364
-#: src/ui-imgui/debugger/psg_window.cpp:414
-#: src/ui-imgui/debugger/psg_window.cpp:460
-#: src/ui-imgui/debugger/psg_window.cpp:538
+#: src/ui-imgui/debugger/psg_window.cpp:365
+#: src/ui-imgui/debugger/psg_window.cpp:415
+#: src/ui-imgui/debugger/psg_window.cpp:461
+#: src/ui-imgui/debugger/psg_window.cpp:539
 msgid "Bin/Note"
 msgstr "Bin/noot"
 
-#: src/ui-imgui/debugger/psg_window.cpp:370
+#: src/ui-imgui/debugger/psg_window.cpp:371
 msgid "Latched channel (CS)"
 msgstr "Gelatched kanaal (CS)"
 
-#: src/ui-imgui/debugger/psg_window.cpp:371
+#: src/ui-imgui/debugger/psg_window.cpp:372
 msgid "Index kanalu (0..3) ktery prijme dalsi DATA byte."
 msgstr "Kanaalindex (0..3) die de volgende DATA-byte ontvangt."
 
-#: src/ui-imgui/debugger/psg_window.cpp:376
+#: src/ui-imgui/debugger/psg_window.cpp:377
 msgid "Next DATA byte targets"
 msgstr "Doel van volgende DATA-byte"
 
-#: src/ui-imgui/debugger/psg_window.cpp:379
+#: src/ui-imgui/debugger/psg_window.cpp:380
 msgid ""
 "Bit [4] posledniho LATCH bytu. 1 = attn, 0 = tone (TONE kanal) / noise cfg "
 "(CH3)."
@@ -9658,44 +9689,44 @@ msgstr ""
 "Bit [4] van laatste LATCH-byte. 1 = attn, 0 = tone (TONE-kanaal) / noise cfg "
 "(CH3)."
 
-#: src/ui-imgui/debugger/psg_window.cpp:382
+#: src/ui-imgui/debugger/psg_window.cpp:383
 msgid "attenuation"
 msgstr "verzwakking"
 
-#: src/ui-imgui/debugger/psg_window.cpp:384
+#: src/ui-imgui/debugger/psg_window.cpp:385
 msgid "tone / noise cfg"
 msgstr "tone / noise cfg"
 
-#: src/ui-imgui/debugger/psg_window.cpp:418
+#: src/ui-imgui/debugger/psg_window.cpp:419
 msgid "Channel type"
 msgstr "Kanaaltype"
 
-#: src/ui-imgui/debugger/psg_window.cpp:420
+#: src/ui-imgui/debugger/psg_window.cpp:421
 msgid "CH0-2 vzdy TONE, CH3 vzdy NOISE (initializace v psg_instance_init)."
 msgstr ""
 "CH0-2 altijd TONE, CH3 altijd NOISE (initialisatie in psg_instance_init)."
 
-#: src/ui-imgui/debugger/psg_window.cpp:425
+#: src/ui-imgui/debugger/psg_window.cpp:426
 msgid "Attenuation"
 msgstr "Verzwakking"
 
-#: src/ui-imgui/debugger/psg_window.cpp:428
+#: src/ui-imgui/debugger/psg_window.cpp:429
 msgid "4-bit volume: 0 = max (0 dB), krok -2 dB, 15 = silent (channel off)."
 msgstr "4-bit volume: 0 = max (0 dB), stap -2 dB, 15 = silent (kanaal uit)."
 
-#: src/ui-imgui/debugger/psg_window.cpp:466
+#: src/ui-imgui/debugger/psg_window.cpp:467
 msgid "Tone divider (10-bit)"
 msgstr "Toonteller (10-bit)"
 
-#: src/ui-imgui/debugger/psg_window.cpp:469
+#: src/ui-imgui/debugger/psg_window.cpp:470
 msgid "10-bit value 0..1023. f_out = CPU_CLOCK / (32 * divider). <2 = DC."
 msgstr "10-bit waarde 0..1023. f_out = CPU_CLOCK / (32 * deler). <2 = DC."
 
-#: src/ui-imgui/debugger/psg_window.cpp:478
+#: src/ui-imgui/debugger/psg_window.cpp:479
 msgid "Frequency"
 msgstr "Frequentie"
 
-#: src/ui-imgui/debugger/psg_window.cpp:481
+#: src/ui-imgui/debugger/psg_window.cpp:482
 msgid ""
 "CPU_CLOCK / (32 * divider). MZ-800: 3.5469 MHz, MZ-700/MZ-1500: 3.5796 MHz "
 "CPU clock."
@@ -9703,15 +9734,15 @@ msgstr ""
 "CPU_CLOCK / (32 * deler). MZ-800: 3.5469 MHz, MZ-700/MZ-1500: 3.5796 MHz CPU-"
 "klok."
 
-#: src/ui-imgui/debugger/psg_window.cpp:484
+#: src/ui-imgui/debugger/psg_window.cpp:485
 msgid "DC (no oscillation)"
 msgstr "DC (geen oscillatie)"
 
-#: src/ui-imgui/debugger/psg_window.cpp:498
+#: src/ui-imgui/debugger/psg_window.cpp:499
 msgid "MIDI note"
 msgstr "MIDI noot"
 
-#: src/ui-imgui/debugger/psg_window.cpp:501
+#: src/ui-imgui/debugger/psg_window.cpp:502
 msgid ""
 "12 * log2(f / 440) + 69. A4 = 440 Hz = 69. Cents = odchylka od rovnomerne "
 "temperace."
@@ -9719,36 +9750,36 @@ msgstr ""
 "12 * log2(f / 440) + 69. A4 = 440 Hz = 69. Cents = afwijking van "
 "gelijkzwevende stemming."
 
-#: src/ui-imgui/debugger/psg_window.cpp:541
+#: src/ui-imgui/debugger/psg_window.cpp:542
 msgid "Noise divider type"
 msgstr "Ruisteler type"
 
-#: src/ui-imgui/debugger/psg_window.cpp:544
+#: src/ui-imgui/debugger/psg_window.cpp:545
 msgid "0..2 = fixed PSG dividery 16/32/64, 3 = CH2 tone divider rizeny shift."
 msgstr ""
 "0..2 = vaste PSG-delers 16/32/64, 3 = shift gestuurd door CH2-toondeler.0..2 "
 "= vaste PSG delers 16/32/64, 3 = shift gestuurd door CH2 toonteller."
 
-#: src/ui-imgui/debugger/psg_window.cpp:546
+#: src/ui-imgui/debugger/psg_window.cpp:547
 msgid "Noise feedback"
 msgstr "Ruis terugkoppeling"
 
-#: src/ui-imgui/debugger/psg_window.cpp:549
+#: src/ui-imgui/debugger/psg_window.cpp:550
 msgid "Periodic = LFSR top bit only, White = XOR feedback (sirsi spektrum)."
 msgstr ""
 "Periodic = alleen bovenste LFSR-bit, White = XOR-terugkoppeling (breder "
 "spectrum).Periodic = alleen LFSR top bit, White = XOR feedback (breder "
 "spectrum)."
 
-#: src/ui-imgui/debugger/psg_window.cpp:554
+#: src/ui-imgui/debugger/psg_window.cpp:555
 msgid "Tone divider: N/A (NOISE channel)"
 msgstr "Tone divider: N/A (NOISE kanaal)"
 
-#: src/ui-imgui/debugger/psg_window.cpp:559
+#: src/ui-imgui/debugger/psg_window.cpp:560
 msgid "Waveform"
 msgstr "Golfvorm"
 
-#: src/ui-imgui/debugger/psg_window.cpp:562
+#: src/ui-imgui/debugger/psg_window.cpp:563
 msgid ""
 "Oscilloscope view: TONE = square wave (4 periods fixed), NOISE = pseudo-"
 "random pattern. Amplitude scaled by attenuation."
@@ -9756,23 +9787,23 @@ msgstr ""
 "Oscilloscoop-weergave: TONE = blokgolf (4 vaste perioden), NOISE = pseudo-"
 "willekeurig patroon. Amplitude geschaald door verzwakking."
 
-#: src/ui-imgui/debugger/psg_window.cpp:578
+#: src/ui-imgui/debugger/psg_window.cpp:579
 msgid "Latch state"
 msgstr "Latch status"
 
-#: src/ui-imgui/debugger/psg_window.cpp:613
+#: src/ui-imgui/debugger/psg_window.cpp:614
 msgid "PSG SN76489 State###PSGState"
 msgstr "PSG SN76489 status###PSGState"
 
-#: src/ui-imgui/debugger/psg_window.cpp:628
+#: src/ui-imgui/debugger/psg_window.cpp:629
 msgid "PSG Left (chip 0)###PSGLeftHdr"
 msgstr "PSG links (chip 0)###PSGLeftHdr"
 
-#: src/ui-imgui/debugger/psg_window.cpp:635
+#: src/ui-imgui/debugger/psg_window.cpp:636
 msgid "PSG Right (chip 1)###PSGRightHdr"
 msgstr "PSG rechts (chip 1)###PSGRightHdr"
 
-#: src/ui-imgui/debugger/psg_window.cpp:645
+#: src/ui-imgui/debugger/psg_window.cpp:646
 msgid "PSG (chip 0)###PSGMonoHdr"
 msgstr "PSG (chip 0)###PSGMonoHdr"
 

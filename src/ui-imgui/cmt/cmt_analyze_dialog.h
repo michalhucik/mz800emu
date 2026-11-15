@@ -109,6 +109,27 @@ bool cmt_analyze_dialog_is_open ( void );
 void cmt_analyze_dialog_draw ( const st_CMT_VIEW *v, const char *edit_reason );
 
 /**
+ * @brief Analýza surového bloku na pozadí, zatímco hraje (každý snímek z kreslení okna Virtual CMT).
+ *
+ * Když páska hraje (v každém režimu načítání; ne při záznamu ani
+ * přehrávání vstupů) surový blok, který ještě analyzovaný nebyl, zařadí
+ * kopii jeho pulzů (cmt_request_analysis_pulses()) a spustí nad ní analýzu
+ * s výchozími volbami v pracovním vlákně (nejvýš jedna analýza najednou;
+ * otevřený dialog má přednost a nic nového se pak nespouští). Jakmile blok
+ * dohraje nebo se páska zastaví a výsledek má aspoň jeden soubor, který
+ * jde přidat, ohlásí to jednou v řádku zpráv okna (cmt_view_post(),
+ * informace). cmt_analyze_dialog_open() pro týž blok hotový výsledek nebo
+ * rozběhnutou úlohu převezme. Jiná páska (čítač výměn) nebo vypnutá volba
+ * rozpracovanou analýzu zahodí; selhání kopie nebo analýzy se nehlásí.
+ * Pásku nemění.
+ *
+ * @param v Kopie stavu okna (NULL = nic).
+ * @param enabled Volba "Find files while playing" (false = nic se nespouští a nedrží).
+ * @pre UI vlákno uvnitř snímku ImGui.
+ */
+void cmt_analyze_dialog_auto ( const st_CMT_VIEW *v, bool enabled );
+
+/**
  * @brief Opustí dialog analýzy (zavřené okno Virtual CMT): jako Cancel.
  *
  * Běžící analýza se opustí (vlákno doběhne a uvolní data samo), kopie

@@ -683,6 +683,94 @@ void tearDown(void)
  * Testy
  * ================================================================ */
 
+/** @brief Spustí přehrávání bloku 1 (surový blok pásky testu). */
+static void at_play_raw(void)
+{
+    device_state_lock();
+    int rc = cmt_tape_seek_block(1);
+    cmt_play();
+    device_state_unlock();
+    TEST_ASSERT_EQUAL_INT(EXIT_SUCCESS, rc);
+    TEST_ASSERT_TRUE(CMT_TEST_PLAY);
+}
+
+/** @brief Zastaví pásku. */
+static void at_stop(void)
+{
+    device_state_lock();
+    cmt_stop();
+    device_state_unlock();
+}
+
+/*
+ * Analýza na pozadí: když hraje surový blok, okno si vezme kopii pulzů
+ * a spustí analýzu; dokud blok hraje, nic nehlásí; po zastavení ohlásí
+ * počet souborů, které jdou přidat; Analyze... pak otevře dialog rovnou
+ * s výsledkem, bez nové kopie a nové analýzy.
+ */
+void test_auto_analyze_while_playing(void)
+{
+    at_setup();
+    TEST_ASSERT_EQUAL_INT(0, cmt_analyze_dialog_test_queued_jobs());
+    at_play_raw();
+    /* snímky: zásah kopie pulzů, jeho výsledek, úloha ve frontě řízeného "vlákna" */
+    at_frames(4);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(1, cmt_analyze_dialog_test_queued_jobs(), "one background analysis while the raw block plays");
+    TEST_ASSERT_FALSE_MESSAGE(cmt_analyze_dialog_is_open(), "the background analysis does not open the dialog");
+    TEST_ASSERT_EQUAL_INT(1, cmt_analyze_dialog_test_run_jobs());
+    at_frames(3);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, cmt_analyze_dialog_test_queued_jobs(), "the block is analyzed once");
+    const st_CMT_WINDOW_TEST_ITEM *msg = w_item("message");
+    TEST_ASSERT_TRUE_MESSAGE(!msg || msg->text.find("files found") == std::string::npos, "nothing is reported while the block plays");
+
+    at_stop();
+    at_frames(3);
+    msg = w_item("message");
+    TEST_ASSERT_NOT_NULL_MESSAGE(msg, "the find is reported after the tape stops");
+    /* AT_SYN_FOUND: LOADER a FLAPPY jdou přidat, HISCORE má chybu těla; čísla bloků od 1 */
+    TEST_ASSERT_TRUE_MESSAGE(msg->text.find("Block 2: files found in the recording: 2") != std::string::npos, msg->text.c_str());
+
+    /* dialog převezme hotový výsledek */
+    const int calls = s_syn_calls;
+    at_open_dialog(1);
+    at_frames(3);
+    TEST_ASSERT_EQUAL_STRING("done", d_text("ad_state").c_str());
+    TEST_ASSERT_EQUAL_INT_MESSAGE(calls, s_syn_calls, "the dialog takes the background result, no new analysis");
+    TEST_ASSERT_EQUAL_INT(0, cmt_analyze_dialog_test_queued_jobs());
+    TEST_ASSERT_EQUAL_INT(1, cmt_analyze_dialog_test_live_pulses());
+    d_click("ad_cancel");
+    at_frames(2);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, cmt_analyze_dialog_test_live_pulses(), "the pulse copy is freed with the dialog");
+
+    /* týž blok znovu: po převzetí výsledku se na pozadí neanalyzuje podruhé */
+    at_play_raw();
+    at_frames(4);
+    TEST_ASSERT_EQUAL_INT(0, cmt_analyze_dialog_test_queued_jobs());
+    at_stop();
+}
+
+/*
+ * Volba Find files while playing vypnutá (menu Tape): hrající surový blok
+ * se neanalyzuje (řádek zpráv okna se mezi testy nemaže, proto se neověřuje).
+ */
+void test_auto_analyze_disabled(void)
+{
+    at_setup();
+    w_click("menu_tape", 0);
+    TEST_ASSERT_NOT_NULL(w_item("menu_auto_analyze"));
+    TEST_ASSERT_EQUAL_STRING("on", w_item("menu_auto_analyze")->text.c_str());
+    w_click("menu_auto_analyze", 0);
+    at_mouse_away();
+    at_frames(2);
+    at_play_raw();
+    at_frames(4);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, cmt_analyze_dialog_test_queued_jobs(), "no background analysis with the option off");
+    TEST_ASSERT_EQUAL_INT(0, cmt_analyze_dialog_test_live_pulses());
+    at_stop();
+    at_frames(2);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(0, cmt_analyze_dialog_test_queued_jobs(), "nothing is analyzed after the stop either");
+}
+
 /*
  * Vstupy: kontextové menu řádku Analyze... (za Set speed, před Move up) a menu
  * Tape > Analyze recording... pro vybraný blok; zákazy s důvodem u jiného než
@@ -2109,6 +2197,8 @@ int main(int argc, char *argv[])
     }
     UNITY_BEGIN();
     RUN_TEST(test_j4_entry_points);
+    RUN_TEST(test_auto_analyze_while_playing);
+    RUN_TEST(test_auto_analyze_disabled);
     RUN_TEST(test_j4_layout_and_texts);
     RUN_TEST(test_j4_enter_adds);
     RUN_TEST(test_j4_replace_unsaved_warning);

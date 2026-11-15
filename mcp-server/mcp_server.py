@@ -3241,12 +3241,20 @@ async def emu_cmt_tape_analyze(block_id: int, tolerance: float = 0.20,
     result is then unknown - read ``emulator://periph/cmt/tape`` again
     before repeating ``apply``); this tool waits up to 640 s.
 
-    Only a file in the standard Sharp format (``format`` "NORMAL") with a
-    correct header and body checksum can be added (``result`` "addable"),
-    or one repaired by an enabled repair option ("addable_repaired"). A
-    NORMAL file with a checksum error stays raw ("stays_raw"); turbo, FSK,
-    BSD, CP/M and other formats cannot be added ("cannot_add"); ``reason``
-    says why (or that a repair was used; "" for "addable").
+    A file with a correct header and body checksum can be added
+    (``result`` "addable"), or one repaired by an enabled repair option
+    ("addable_repaired"), when its ``format`` is "NORMAL" (the standard
+    Sharp format), "CPM-CMT", "TURBO", "FASTIPL", "CPM-TAPE" or "BSD".
+    ``profile`` names the writer profile that builds the block
+    ("MZ800EMU-CMT", "TC-1.21", "IC-10.2-TURBO", "IC-10.2-FASTIPL",
+    "PEZIK-2.0A", "IC-10.2-CPM", "BASIC-1Z016", or "MZ Turbo Data" for a
+    TURBO / FASTIPL file of an unknown writer); a block of a format other
+    than NORMAL carries the same file, but its signal is generated again
+    by the profile (the timing of the recording is not kept). A file with
+    a checksum error stays raw ("stays_raw"); MZ-80B, SINCLAIR, FSK, SLOW,
+    DIRECT and ZX Spectrum files, and a file the profile refuses, cannot
+    be added ("cannot_add", ``profile`` ""); ``reason`` says why (or that
+    a repair was used; "" for "addable").
 
     ``apply``: "none" only analyzes (the tape does not change; allowed in
     any transport state and during an input replay); "add" inserts every
@@ -3257,7 +3265,7 @@ async def emu_cmt_tape_analyze(block_id: int, tolerance: float = 0.20,
     dropped, as when recording). "add" and "replace" need the deck stopped
     ("tape is not stopped" otherwise) and are refused while an input
     replay is recorded or played. New blocks are ``unsaved`` and the tape
-    becomes ``modified``; block numbers after the raw block shift. The
+    becomes ``modified``; block numbers after the raw block shift. NORMAL
     file blocks use the emulator profile MZ800EMU-CMT at the default tape
     speed (as a recording would).
 
@@ -3280,7 +3288,8 @@ async def emu_cmt_tape_analyze(block_id: int, tolerance: float = 0.20,
         "format": str, "start_s": float, "length_s": float, "size": int,
         "header": "ok" | "checksum_error" | "not_available", "body": ...,
         "result": "addable" | "addable_repaired" | "stays_raw" |
-        "cannot_add", "reason": str, "recovery": str}], "applied": int,
+        "cannot_add", "reason": str, "recovery": str, "profile": str}],
+        "applied": int,
         "first_added": int | null, "count": int, "current_block": int}``
         (``analysis_error`` when the analysis found no signal, ``applied``
         = file blocks added, ``first_added`` = number of the first of them;

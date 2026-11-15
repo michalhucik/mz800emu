@@ -272,6 +272,13 @@ typedef struct st_CW_STATE {
     bool col_show_all;            /**< menu View > Columns > Show all: příští vykreslení tabulky zapne všechny sloupce */
 } st_CW_STATE;
 
+/**
+ * @brief Volba "Find files while playing": 1 = hrající surový blok se analyzuje na pozadí (cmt_analyze_dialog_auto()).
+ *
+ * INI [VIRTUAL_CMT_UI] auto_analyze (výchozí 1; prvek konfigurace ukazuje přímo sem), položka menu Tape.
+ */
+static unsigned s_cw_cfg_auto_analyze = 1u;
+
 static st_CW_STATE s_cw = {
     CMT_WINDOW_LAYOUT_COMPACT, 0, {0, 0}, {0, 0}, true, false, false, false, false,
     -1, 0u, 0u, { true, true, true, true, false, false, false, false, true, true }, -1, 0, 0, 0u, false, false, 0, 0u, 0u, false,
@@ -4365,6 +4372,10 @@ static void cw_tape_menu ( const st_CMT_VIEW *v, const st_CW_ACTIONS *a )
         if ( cw_menu_item ( _L ( "Analyze recording..." ), "menu_analyze", NULL, cw_reason_analyze ( v, sb ) ) && sb )
             cmt_analyze_dialog_open ( v, sb->id );
     }
+    /* analýza na pozadí při hraní surového bloku (volba okna, ne úprava pásky) */
+    if ( ImGui::MenuItem ( _L ( "Find files while playing" ), NULL, s_cw_cfg_auto_analyze != 0u ) ) s_cw_cfg_auto_analyze = s_cw_cfg_auto_analyze ? 0u : 1u;
+    cw_tooltip ( NULL, NULL, _ ( "While a raw recording plays, the files in it are looked for in the background and reported when it stops." ) );
+    cw_record ( "menu_auto_analyze", s_cw_cfg_auto_analyze ? "on" : "off", ImGui::GetItemRectMin ( ), ImGui::GetItemRectMax ( ), CW_KIND_POPUP, CW_ANCHOR_LEFT, false );
     /* informace o pásce (úprava pásky) a kontrola pásky (jen čtení) */
     if ( cw_menu_item ( _L ( "Tape information..." ), "menu_tapeinfo", NULL, cw_reason_edit ( v ) ) ) cmt_tapeinfo_dialog_open ( v );
     if ( cw_menu_item ( _L ( "Check tape" ), "menu_check", NULL, cw_reason_check ( v ) ) ) cmt_check_window_open ( );
@@ -4734,6 +4745,8 @@ void imgui_cmt_window_draw ( st_CMT_VIEW *v, bool *p_open )
     /* potvrzení mazání neuložených bloků a soubor přetažený z OS (geometrie tabulky z tohoto snímku) */
     cw_delete_modal ( v );
     cw_os_drop_process ( v );
+    /* analýza hrajícího surového bloku na pozadí (nález ohlásí řádek zpráv) */
+    cmt_analyze_dialog_auto ( v, s_cw_cfg_auto_analyze != 0u );
     /* dialog analýzy surového bloku (modál v kontextu okna, akce s důvodem úprav pásky) */
     cmt_analyze_dialog_draw ( v, cw_reason_edit ( v ) );
     /* informace o pásce a převod profilu (modály v kontextu okna, akce s důvodem úprav pásky) */
@@ -4783,8 +4796,36 @@ void imgui_cmt_window_modal_next_pos ( void )
     /* okno se v tomto ani minulém snímku nekreslilo (zavřené): výchozí poloha ImGui (střed hlavního viewportu) */
     if ( !w || !( w->Active || w->WasActive ) ) return;
     ImVec2 c ( w->Pos.x + w->Size.x * 0.5f, w->Pos.y + w->Size.y * 0.5f );
+    /* jen poloha: viewport si ImGui zvolí sám (modál větší než vytažené okno kazety dostane vlastní
+     * okno OS a jde přetáhnout kamkoli; připnutí k viewportu okna kazety ho v něm věznilo) */
     ImGui::SetNextWindowPos ( c, ImGuiCond_Appearing, ImVec2 ( 0.5f, 0.5f ) );
-    ImGui::SetNextWindowViewport ( w->ViewportId );
+}
+
+/**
+ * @brief Plocha, do které se má vejít modál okna kazety: pracovní plocha monitoru okna, jinak jeho viewportu.
+ *
+ * S okny mimo hlavní okno (ImGuiConfigFlags_ViewportsEnable) je to pracovní
+ * plocha monitoru, na kterém je viewport okna kazety (okno vytažené jako
+ * samostatné okno OS má viewport jen velký jako ono samo); bez nich
+ * pracovní plocha viewportu.
+ *
+ * @param w Okno Virtual CMT. @param[out] a Levý horní roh. @param[out] b Pravý dolní roh.
+ * @return true = plocha známá.
+ */
+static bool cw_modal_area ( const ImGuiWindow *w, ImVec2 *a, ImVec2 *b )
+{
+    ImGuiViewportP *vp = ( ImGuiViewportP * ) ImGui::FindViewportByID ( w->ViewportId );
+    if ( !vp ) return false;
+    *a = vp->WorkPos;
+    *b = ImVec2 ( vp->WorkPos.x + vp->WorkSize.x, vp->WorkPos.y + vp->WorkSize.y );
+    const ImGuiPlatformIO &pio = ImGui::GetPlatformIO ( );
+    if ( ( ImGui::GetIO ( ).ConfigFlags & ImGuiConfigFlags_ViewportsEnable ) && vp->PlatformMonitor >= 0
+         && vp->PlatformMonitor < pio.Monitors.Size ) {
+        const ImGuiPlatformMonitor &mon = pio.Monitors[vp->PlatformMonitor];
+        *a = mon.WorkPos;
+        *b = ImVec2 ( mon.WorkPos.x + mon.WorkSize.x, mon.WorkPos.y + mon.WorkSize.y );
+    }
+    return true;
 }
 
 void imgui_cmt_window_select_block ( int block_id, unsigned tape_serial )
@@ -4810,21 +4851,19 @@ bool imgui_cmt_window_modal_center ( ImVec2 size, ImGuiCond cond )
     ImGuiWindow *w = ImGui::FindWindowByName ( CW_WINDOW_ID );
     if ( !w || !( w->Active || w->WasActive ) ) return false;
     ImVec2 c ( w->Pos.x + w->Size.x * 0.5f, w->Pos.y + w->Size.y * 0.5f );
+    /* viewport se nepřipíná (viz imgui_cmt_window_modal_next_pos()): modál jde přetáhnout mimo okno */
     if ( size.x <= 0.0f || size.y <= 0.0f ) {
         ImGui::SetNextWindowPos ( c, cond, ImVec2 ( 0.5f, 0.5f ) );
-        ImGui::SetNextWindowViewport ( w->ViewportId );
         return true;
     }
     ImVec2 p ( floorf ( c.x - size.x * 0.5f ), floorf ( c.y - size.y * 0.5f ) );
-    /* celý modál v pracovní ploše viewportu okna (velký dialog u okraje obrazovky) */
-    ImGuiViewport *vp = ImGui::FindViewportByID ( w->ViewportId );
-    if ( vp ) {
-        ImVec2 a = vp->WorkPos, b ( vp->WorkPos.x + vp->WorkSize.x, vp->WorkPos.y + vp->WorkSize.y );
+    /* celý modál v pracovní ploše monitoru (nebo viewportu) okna: velký dialog u okraje obrazovky */
+    ImVec2 a, b;
+    if ( cw_modal_area ( w, &a, &b ) ) {
         p.x = ImMax ( a.x, ImMin ( p.x, b.x - size.x ) );
         p.y = ImMax ( a.y, ImMin ( p.y, b.y - size.y ) );
     }
     ImGui::SetNextWindowPos ( p, cond );
-    ImGui::SetNextWindowViewport ( w->ViewportId );
     return true;
 }
 
@@ -4842,9 +4881,10 @@ float imgui_cmt_window_place_beside ( ImVec2 size, ImGuiCond cond, float min_h )
         ( void ) imgui_cmt_window_modal_center ( size, cond );
         return FLT_MAX;
     }
-    ImGuiViewport *vp = ImGui::FindViewportByID ( w->ViewportId );
-    const ImVec2 a = vp ? vp->WorkPos : ImVec2 ( -FLT_MAX, -FLT_MAX );
-    const ImVec2 b = vp ? ImVec2 ( vp->WorkPos.x + vp->WorkSize.x, vp->WorkPos.y + vp->WorkSize.y ) : ImVec2 ( FLT_MAX, FLT_MAX );
+    /* plocha umístění: pracovní plocha monitoru okna kazety (okno vytažené jako samostatné okno OS má
+     * viewport jen velký jako ono samo), jinak jeho viewportu */
+    ImVec2 a ( -FLT_MAX, -FLT_MAX ), b ( FLT_MAX, FLT_MAX );
+    ( void ) cw_modal_area ( w, &a, &b );
     const float gap = ImGui::GetStyle ( ).ItemSpacing.x;
     const ImVec2 w1 ( w->Pos.x + w->Size.x, w->Pos.y + w->Size.y );
     /* vodorovně u levého okraje okna kazety (pod a nad ním), svisle u horního okraje (vpravo a vlevo); omezeno do plochy */
@@ -4880,8 +4920,8 @@ float imgui_cmt_window_place_beside ( ImVec2 size, ImGuiCond cond, float min_h )
             return FLT_MAX;
         }
     }
+    /* viewport se nepřipíná: okno vedle vytaženého okna kazety dostane vlastní okno OS */
     ImGui::SetNextWindowPos ( ImVec2 ( floorf ( p.x ), floorf ( p.y ) ), cond );
-    ImGui::SetNextWindowViewport ( w->ViewportId );
     return max_h;
 }
 
@@ -5001,6 +5041,9 @@ void imgui_cmt_window_cfg_init ( void )
     /* vlastnosti výchozí sbalené (D-G3-9) */
     elm = cfgmodule_register_new_element ( cmod, ( char * ) "props_open", CFGENTYPE_UNSIGNED, 0, 0, 1 );
     cfgelement_set_handlers ( elm, ( void * ) &s_cw.props_open, ( void * ) &s_cw.props_open );
+    /* analýza hrajícího surového bloku na pozadí, výchozí zapnutá */
+    elm = cfgmodule_register_new_element ( cmod, ( char * ) "auto_analyze", CFGENTYPE_UNSIGNED, 1, 0, 1 );
+    cfgelement_set_handlers ( elm, ( void * ) &s_cw_cfg_auto_analyze, ( void * ) &s_cw_cfg_auto_analyze );
     cfgmodule_parse ( cmod );
     cfgmodule_propagate ( cmod );
 }
@@ -5200,6 +5243,7 @@ void imgui_cmt_window_test_reset ( void )
     s_cw.props_open = 0u;
     s_cw.col_toggle = -1;
     s_cw.col_show_all = false;
+    s_cw_cfg_auto_analyze = 1u;
     s_cw.nav_last = 0;
     s_cw.seen_tape_serial = 0u;
     s_cw.scroll_current = true;
