@@ -35,12 +35,12 @@ extern "C" {
 #include "libs/cfgfile/cfgroot.h"
 
     // Povolena konvence a.b.c, nebo a.b.c.d
-#define CFGMAIN_EMULATOR_VERSION_NUM_STRING "2.0.6"
+#define CFGMAIN_EMULATOR_VERSION_NUM_STRING "2.0.7"
 
     // #define CFGMAIN_EMULATOR_VERSION_TAG "preview"
-#define CFGMAIN_EMULATOR_VERSION_TAG "devel"
+// #define CFGMAIN_EMULATOR_VERSION_TAG "devel"
     //#define CFGMAIN_EMULATOR_VERSION_TAG "snapshot"
-    // #define CFGMAIN_EMULATOR_VERSION_TAG "stable"
+    #define CFGMAIN_EMULATOR_VERSION_TAG "stable"
 
 #define EMULATOR_VERSION CFGMAIN_EMULATOR_VERSION_NUM_STRING " " CFGMAIN_EMULATOR_VERSION_TAG
 
