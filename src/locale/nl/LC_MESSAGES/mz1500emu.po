@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mz800emu 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-15 00:13+0100\n"
+"POT-Creation-Date: 2026-11-18 16:41+0100\n"
 "PO-Revision-Date: 2026-03-11 21:00+0100\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -38,7 +38,7 @@ msgstr "Map openen"
 msgid "Untitled File Chooser"
 msgstr "Bestandskiezer"
 
-#: src/emulator/audio.c:133
+#: src/emulator/audio.c:156
 msgid "Audio volume settings:"
 msgstr "Audio volume-instellingen:"
 
@@ -117,6 +117,67 @@ msgstr "Gebruiker"
 #: src/emulator/mzarch/mz1500/memory/mz1500_rom.c:21
 msgid "User Defined ROM"
 msgstr "Door gebruiker gedefinieerde ROM"
+
+#: src/ui/cmt/UiCmt.cpp:31
+msgid "Default"
+msgstr "Standaard"
+
+#: src/ui/cmt/UiCmt.cpp:36
+msgid "Custom pulses..."
+msgstr "Eigen pulsen..."
+
+#: src/ui/cmt/UiCmt.cpp:36 src/ui-imgui/cmt/cmt_view.cpp:158
+#: src/ui-imgui/cmt/cmt_window.cpp:1069
+msgid "Custom pulses"
+msgstr "Eigen pulsen"
+
+#: src/ui/cmt/UiCmt.cpp:49
+msgid "UNKNOWN"
+msgstr "ONBEKEND"
+
+#: src/ui/vkbd/ui_vkbd.c:207
+msgid "PC key: CapsLock"
+msgstr "PC-toets: CapsLock"
+
+#: src/ui/vkbd/ui_vkbd.c:210
+msgid "PC key: \\"
+msgstr "PC-toets: \\"
+
+#: src/ui/vkbd/ui_vkbd.c:213
+msgid "PC key: \\ or Tab"
+msgstr "PC-toets: \\ of Tab"
+
+#: src/ui/vkbd/ui_vkbd.c:216
+msgid "PC key: ~"
+msgstr "PC-toets: ~"
+
+#: src/ui/vkbd/ui_vkbd.c:218
+msgid "PC key: Esc or End"
+msgstr "PC-toets: Esc of End"
+
+#: src/ui/vkbd/ui_vkbd.c:220
+msgid "PC key: Insert"
+msgstr "PC-toets: Insert"
+
+#: src/ui/vkbd/ui_vkbd.c:222
+msgid "PC key: Backspace or Delete"
+msgstr "PC-toets: Backspace of Delete"
+
+#: src/ui/vkbd/ui_vkbd.c:224
+msgid "PC key: F6"
+msgstr "PC-toets: F6"
+
+#: src/ui/vkbd/ui_vkbd.c:226
+msgid "PC key: F7"
+msgstr "PC-toets: F7"
+
+#: src/ui/vkbd/ui_vkbd.c:228
+msgid "PC key: F8"
+msgstr "PC-toets: F8"
+
+#: src/ui/vkbd/ui_vkbd.c:230
+msgid "PC key: F9"
+msgstr "PC-toets: F9"
 
 #: src/ui-imgui/about_window.cpp:258
 msgid "Come closer, my friend."
@@ -277,6 +338,16 @@ msgstr "%.1f dB"
 msgid "%.0f dB"
 msgstr "%.0f dB"
 
+#: src/ui-imgui/audio_window.cpp:214
+msgid "Hardware output filter"
+msgstr "Uitgangsfilter van de echte hardware"
+
+#: src/ui-imgui/audio_window.cpp:220
+msgid ""
+"Low-pass filter of the real MZ-800 audio output (346 Hz). Off = the "
+"previous, brighter sound."
+msgstr "Laagdoorlaatfilter van de audio-uitgang van de echte MZ-800 (346 Hz). Uit = het vorige, helderdere geluid."
+
 #: src/ui-imgui/audiocap/audio_capture_ui.cpp:66
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:172
 #: src/ui-imgui/videorec/videorec_menu.cpp:422
@@ -415,10 +486,9 @@ msgid "Record Audio Capture (%s) starts and stops the capture."
 msgstr "Audio opnemen (%s) start en stopt de opname."
 
 #: src/ui-imgui/audiocap/audio_capture_ui.cpp:249
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:186
 #: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:953
 #: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:753
-#: src/ui-imgui/cmt/cmt_view.cpp:172
+#: src/ui-imgui/cmt/cmt_view.cpp:172 src/ui-imgui/cmt/ImGuiCmt.cpp:186
 #: src/ui-imgui/debugger/sections/dbg_cpu_panel.cpp:2421
 #: src/ui-imgui/dsk/dsk_create_window.cpp:104
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:109
@@ -433,14 +503,13 @@ msgid "OK"
 msgstr "OK"
 
 #: src/ui-imgui/audiocap/audio_capture_ui.cpp:255
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:198
 #: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2277
 #: src/ui-imgui/cmt/cmt_convert_dialog.cpp:609
 #: src/ui-imgui/cmt/cmt_tape_actions.cpp:1091
 #: src/ui-imgui/cmt/cmt_tape_actions.cpp:1118
 #: src/ui-imgui/cmt/cmt_tape_actions.cpp:1172
 #: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:754
-#: src/ui-imgui/cmt/cmt_window.cpp:3428
+#: src/ui-imgui/cmt/cmt_window.cpp:3428 src/ui-imgui/cmt/ImGuiCmt.cpp:198
 #: src/ui-imgui/debugger/membrowser/membrowser_annot_dialog.cpp:148
 #: src/ui-imgui/debugger/membrowser/membrowser_fill_dialog.cpp:264
 #: src/ui-imgui/debugger/sections/dbg_focus_to.cpp:264
@@ -585,48 +654,6 @@ msgstr "Tekens"
 #: src/ui-imgui/autotype/autotype_window.cpp:293
 msgid "Typed"
 msgstr "Getypt"
-
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:117
-msgid "Custom Tape Pulses"
-msgstr "Eigen bandpulsen"
-
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:132
-msgid "Pulse lengths in microseconds (order of the UniCMT CMTSPEED header):"
-msgstr "Pulslengtes in microseconden (volgorde van de UniCMT CMTSPEED-header):"
-
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:136
-msgid "Long pulse high (bit 1)"
-msgstr "Lange puls high (bit 1)"
-
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:137
-msgid "Long pulse low (bit 1)"
-msgstr "Lange puls low (bit 1)"
-
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:138
-msgid "Short pulse high (bit 0)"
-msgstr "Korte puls high (bit 0)"
-
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:139
-msgid "Short pulse low (bit 0)"
-msgstr "Korte puls low (bit 0)"
-
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:148
-msgid "Presets:"
-msgstr "Voorinstellingen:"
-
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:161
-msgid "Revert"
-msgstr "Terugzetten"
-
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:175
-#, c-format
-msgid "Equivalent speed: ~%.2f:1 (%.0f Bd)"
-msgstr "Overeenkomende snelheid: ~%.2f:1 (%.0f Bd)"
-
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:179
-#, c-format
-msgid "Each length must be greater than 0 and at most %.0f µs."
-msgstr "Elke lengte moet groter zijn dan 0 en hoogstens %.0f µs."
 
 #: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:815
 msgid "The tape changed. Close this dialog and analyze again."
@@ -1006,56 +1033,6 @@ msgstr "Er zijn geen bestanden om toe te voegen."
 msgid "Check at least one file to add it."
 msgstr "Vink minstens één bestand aan om het toe te voegen."
 
-#: src/ui-imgui/cmt/cmt_check_window.cpp:258
-#, c-format
-msgid "Block %d"
-msgstr "Blok %d"
-
-#: src/ui-imgui/cmt/cmt_check_window.cpp:350
-msgid "Tape check"
-msgstr "Bandcontrole"
-
-#: src/ui-imgui/cmt/cmt_check_window.cpp:363
-#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:310
-#: src/ui-imgui/cmt/cmt_window.cpp:812 src/ui-imgui/cmt/cmt_window.cpp:1517
-#: src/ui-imgui/cmt/cmt_window.cpp:1536 src/ui-imgui/cmt/cmt_window.cpp:1742
-#: src/ui-imgui/cmt/cmt_window.cpp:1990
-msgid "No tape inserted."
-msgstr "Geen band geplaatst."
-
-#: src/ui-imgui/cmt/cmt_check_window.cpp:367
-#, c-format
-msgid "No problems found. Blocks checked: %d."
-msgstr "Geen problemen gevonden. Gecontroleerde blokken: %d."
-
-#: src/ui-imgui/cmt/cmt_check_window.cpp:373
-#, c-format
-msgid "Blocks checked: %d. Warnings: more than %d."
-msgstr "Gecontroleerde blokken: %d. Waarschuwingen: meer dan %d."
-
-#: src/ui-imgui/cmt/cmt_check_window.cpp:375
-#, c-format
-msgid "Blocks checked: %d. Warnings: %d."
-msgstr "Gecontroleerde blokken: %d. Waarschuwingen: %d."
-
-#: src/ui-imgui/cmt/cmt_check_window.cpp:389
-msgid "The tape changed. Run the check again."
-msgstr "De band is gewijzigd. Voer de controle opnieuw uit."
-
-#: src/ui-imgui/cmt/cmt_check_window.cpp:408
-msgctxt "Tape check severity"
-msgid "Warning"
-msgstr "Waarschuwing"
-
-#: src/ui-imgui/cmt/cmt_check_window.cpp:409
-msgctxt "Tape check severity"
-msgid "Info"
-msgstr "Info"
-
-#: src/ui-imgui/cmt/cmt_check_window.cpp:501
-msgid "Check again"
-msgstr "Opnieuw controleren"
-
 #: src/ui-imgui/cmt/cmt_convert_dialog.cpp:238
 msgid "Profile default"
 msgstr "Standaard van profiel"
@@ -1190,6 +1167,56 @@ msgstr "Opslaan als"
 #: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:398
 msgid "Save MZF file as"
 msgstr "MZF-bestand opslaan als"
+
+#: src/ui-imgui/cmt/cmt_check_window.cpp:258
+#, c-format
+msgid "Block %d"
+msgstr "Blok %d"
+
+#: src/ui-imgui/cmt/cmt_check_window.cpp:350
+msgid "Tape check"
+msgstr "Bandcontrole"
+
+#: src/ui-imgui/cmt/cmt_check_window.cpp:363
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:310
+#: src/ui-imgui/cmt/cmt_window.cpp:812 src/ui-imgui/cmt/cmt_window.cpp:1517
+#: src/ui-imgui/cmt/cmt_window.cpp:1536 src/ui-imgui/cmt/cmt_window.cpp:1742
+#: src/ui-imgui/cmt/cmt_window.cpp:1990
+msgid "No tape inserted."
+msgstr "Geen band geplaatst."
+
+#: src/ui-imgui/cmt/cmt_check_window.cpp:367
+#, c-format
+msgid "No problems found. Blocks checked: %d."
+msgstr "Geen problemen gevonden. Gecontroleerde blokken: %d."
+
+#: src/ui-imgui/cmt/cmt_check_window.cpp:373
+#, c-format
+msgid "Blocks checked: %d. Warnings: more than %d."
+msgstr "Gecontroleerde blokken: %d. Waarschuwingen: meer dan %d."
+
+#: src/ui-imgui/cmt/cmt_check_window.cpp:375
+#, c-format
+msgid "Blocks checked: %d. Warnings: %d."
+msgstr "Gecontroleerde blokken: %d. Waarschuwingen: %d."
+
+#: src/ui-imgui/cmt/cmt_check_window.cpp:389
+msgid "The tape changed. Run the check again."
+msgstr "De band is gewijzigd. Voer de controle opnieuw uit."
+
+#: src/ui-imgui/cmt/cmt_check_window.cpp:408
+msgctxt "Tape check severity"
+msgid "Warning"
+msgstr "Waarschuwing"
+
+#: src/ui-imgui/cmt/cmt_check_window.cpp:409
+msgctxt "Tape check severity"
+msgid "Info"
+msgstr "Info"
+
+#: src/ui-imgui/cmt/cmt_check_window.cpp:501
+msgid "Check again"
+msgstr "Opnieuw controleren"
 
 #: src/ui-imgui/cmt/cmt_tape_actions.cpp:353
 msgid "The tape could not be opened: the file path is too long."
@@ -1562,11 +1589,6 @@ msgstr "BASIC-data"
 #: src/ui-imgui/cmt/cmt_view.cpp:140
 msgid "CP/M file"
 msgstr "CP/M-bestand"
-
-#: src/ui-imgui/cmt/cmt_view.cpp:158 src/ui-imgui/cmt/cmt_window.cpp:1069
-#: src/ui/cmt/UiCmt.cpp:36
-msgid "Custom pulses"
-msgstr "Eigen pulsen"
 
 #: src/ui-imgui/cmt/cmt_view.cpp:173 src/ui-imgui/cmt/cmt_window.cpp:2462
 msgid "Not decoded"
@@ -2341,6 +2363,48 @@ msgstr "Bandsignaal via de luidspreker afspelen"
 #, c-format
 msgid "%d blocks selected"
 msgstr "%d blokken geselecteerd"
+
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:117
+msgid "Custom Tape Pulses"
+msgstr "Eigen bandpulsen"
+
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:132
+msgid "Pulse lengths in microseconds (order of the UniCMT CMTSPEED header):"
+msgstr "Pulslengtes in microseconden (volgorde van de UniCMT CMTSPEED-header):"
+
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:136
+msgid "Long pulse high (bit 1)"
+msgstr "Lange puls high (bit 1)"
+
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:137
+msgid "Long pulse low (bit 1)"
+msgstr "Lange puls low (bit 1)"
+
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:138
+msgid "Short pulse high (bit 0)"
+msgstr "Korte puls high (bit 0)"
+
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:139
+msgid "Short pulse low (bit 0)"
+msgstr "Korte puls low (bit 0)"
+
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:148
+msgid "Presets:"
+msgstr "Voorinstellingen:"
+
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:161
+msgid "Revert"
+msgstr "Terugzetten"
+
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:175
+#, c-format
+msgid "Equivalent speed: ~%.2f:1 (%.0f Bd)"
+msgstr "Overeenkomende snelheid: ~%.2f:1 (%.0f Bd)"
+
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:179
+#, c-format
+msgid "Each length must be greater than 0 and at most %.0f µs."
+msgstr "Elke lengte moet groter zijn dan 0 en hoogstens %.0f µs."
 
 #: src/ui-imgui/debugger/bookmarks/bm_window.cpp:267
 msgid "- Cancel##bm_add_toggle"
@@ -4355,7 +4419,7 @@ msgstr "Conflictbeleid:"
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:2156
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:2682
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:2845
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3160
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3161
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:312
 #: src/ui-imgui/topmenu/menu_replay.cpp:247
 #: src/ui-imgui/topmenu/replay_window.cpp:245
@@ -4481,10 +4545,10 @@ msgstr "Laatste Control Word"
 #: src/ui-imgui/debugger/pioz80_window.cpp:268
 #: src/ui-imgui/debugger/pioz80_window.cpp:293
 #: src/ui-imgui/debugger/pioz80_window.cpp:405
-#: src/ui-imgui/debugger/psg_window.cpp:363
-#: src/ui-imgui/debugger/psg_window.cpp:413
-#: src/ui-imgui/debugger/psg_window.cpp:459
-#: src/ui-imgui/debugger/psg_window.cpp:537
+#: src/ui-imgui/debugger/psg_window.cpp:366
+#: src/ui-imgui/debugger/psg_window.cpp:416
+#: src/ui-imgui/debugger/psg_window.cpp:462
+#: src/ui-imgui/debugger/psg_window.cpp:540
 msgid "Field"
 msgstr "Veld"
 
@@ -4495,10 +4559,10 @@ msgstr "Veld"
 #: src/ui-imgui/debugger/memsearch_window/memsearch_window.cpp:701
 #: src/ui-imgui/debugger/pioz80_window.cpp:294
 #: src/ui-imgui/debugger/pioz80_window.cpp:406
-#: src/ui-imgui/debugger/psg_window.cpp:364
-#: src/ui-imgui/debugger/psg_window.cpp:414
-#: src/ui-imgui/debugger/psg_window.cpp:460
-#: src/ui-imgui/debugger/psg_window.cpp:538
+#: src/ui-imgui/debugger/psg_window.cpp:367
+#: src/ui-imgui/debugger/psg_window.cpp:417
+#: src/ui-imgui/debugger/psg_window.cpp:463
+#: src/ui-imgui/debugger/psg_window.cpp:541
 #: src/ui-imgui/debugger/vars/vars_window.cpp:1504
 #: src/ui-imgui/debugger/watch/watch_window.cpp:1703
 msgid "Value"
@@ -6825,40 +6889,6 @@ msgstr "Kleurlabel"
 msgid "Annotation @ 0x%08X"
 msgstr "Annotatie @ 0x%08X"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:231
-#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:276
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1729
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1733
-msgid "Target:"
-msgstr "Doel:"
-
-#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:239
-msgid "No target callback set"
-msgstr "Geen doel-callback ingesteld"
-
-#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:262
-msgid "No target: open a Memory Browser and right-click in hex/ASCII column"
-msgstr ""
-"Geen doel: open een Memory Browser en klik met de rechtermuisknop in de hex/"
-"ASCII-kolom"
-
-#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:284
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:337
-msgid "Region:"
-msgstr "Regio:"
-
-#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:290
-msgid "Edit ON"
-msgstr "Bewerken AAN"
-
-#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:293
-msgid "Edit OFF / RO"
-msgstr "Bewerken UIT / R/O"
-
-#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:309
-msgid "Char Inserter###mb_char_inserter"
-msgstr "Teken-invoeger###mb_char_inserter"
-
 #: src/ui-imgui/debugger/membrowser/membrowser_diff_window.cpp:404
 msgid "Live"
 msgstr "Live"
@@ -7068,7 +7098,7 @@ msgid "Size (hex)###mb_save_size"
 msgstr "Grootte (hex)###mb_save_size"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_fileio.cpp:473
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1833
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1834
 #: src/ui-imgui/debugger/sections/dbg_coverage.cpp:433
 #: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:307
 #: src/ui-imgui/mz700/devbus/menu_devbus.cpp:231
@@ -7353,6 +7383,40 @@ msgstr "Ongedaan maken  (%d niveaus)\tCtrl+Z"
 #, c-format
 msgid "Redo  (%d levels)\tCtrl+Y"
 msgstr "Opnieuw uitvoeren  (%d niveaus)\tCtrl+Y"
+
+#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:231
+#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:276
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1729
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1733
+msgid "Target:"
+msgstr "Doel:"
+
+#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:239
+msgid "No target callback set"
+msgstr "Geen doel-callback ingesteld"
+
+#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:262
+msgid "No target: open a Memory Browser and right-click in hex/ASCII column"
+msgstr ""
+"Geen doel: open een Memory Browser en klik met de rechtermuisknop in de hex/"
+"ASCII-kolom"
+
+#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:284
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:337
+msgid "Region:"
+msgstr "Regio:"
+
+#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:290
+msgid "Edit ON"
+msgstr "Bewerken AAN"
+
+#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:293
+msgid "Edit OFF / RO"
+msgstr "Bewerken UIT / R/O"
+
+#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:309
+msgid "Char Inserter###mb_char_inserter"
+msgstr "Teken-invoeger###mb_char_inserter"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:312
 msgid "Layers ▼###mb_layers_toggle"
@@ -9410,247 +9474,247 @@ msgid "Coverage###profiler_tab_cov"
 msgstr "Dekking###profiler_tab_cov"
 
 #: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1159
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1314
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1315
 msgid "no data"
 msgstr "geen data"
 
 #: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1168
-#: src/ui-imgui/debugger/psg_window.cpp:264
+#: src/ui-imgui/debugger/psg_window.cpp:266
 msgid "silent"
 msgstr "stil"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1186
-#: src/ui-imgui/debugger/psg_window.cpp:283
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1187
+#: src/ui-imgui/debugger/psg_window.cpp:286
 msgid "DC"
 msgstr "DC"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1435
-#: src/ui-imgui/debugger/psg_window.cpp:74
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1436
+#: src/ui-imgui/debugger/psg_window.cpp:75
 msgid "TONE"
 msgstr "TOON"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1437
-#: src/ui-imgui/debugger/psg_window.cpp:75
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1438
+#: src/ui-imgui/debugger/psg_window.cpp:76
 msgid "NOISE"
 msgstr "RUIS"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1441
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1772
-#: src/ui-imgui/debugger/psg_window.cpp:595
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1442
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1773
+#: src/ui-imgui/debugger/psg_window.cpp:598
 msgid "Channel"
 msgstr "Kanaal"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1773
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1774
 msgid "chip"
 msgstr "chip"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1776
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1777
 msgid "Pitch: Noise"
 msgstr "Toonhoogte: Ruis"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1781
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1782
 msgid "Pitch"
 msgstr "Toonhoogte"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1782
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1783
 msgid "cents"
 msgstr "cents"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1784
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1785
 msgid "Duration"
 msgstr "Duur"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1785
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1786
 msgid "Velocity"
 msgstr "Velocity"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1798
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1799
 msgid "Volume changes"
 msgstr "Volumewijzigingen"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1802
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1803
 msgid "overflowed"
 msgstr "overflow"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1806
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3178
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1807
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3179
 msgid "active"
 msgstr "actief"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1835
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1836
 msgid "Last 10s###PSGScopeRoll10s"
 msgstr "Laatste 10s###PSGScopeRoll10s"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1838
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1839
 msgid "Last 30s###PSGScopeRoll30s"
 msgstr "Laatste 30s###PSGScopeRoll30s"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1841
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1842
 msgid "All###PSGScopeRollAll"
 msgstr "Alles###PSGScopeRollAll"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1845
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1846
 msgid "Channels:"
 msgstr "Kanalen:"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1857
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1858
 msgid "CH3 (Noise)"
 msgstr "CH3 (Ruis)"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1923
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1924
 msgid "No notes recorded yet. Play some audio to populate the piano roll."
 msgstr ""
 "Nog geen noten opgenomen. Speel wat audio af om de piano roll te vullen."
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:2000
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:2001
 msgid "NS"
 msgstr "NS"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:2940
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:2941
 msgid "Export PSG notes as CSV"
 msgstr "PSG-noten exporteren als CSV"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:2968
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:2969
 msgid "Export PSG notes as MIDI"
 msgstr "PSG-noten exporteren als MIDI"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3050
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3051
 msgid "Export error###PSGScopeExportError"
 msgstr "Exportfout###PSGScopeExportError"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3053
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3054
 msgid "Failed to open file for writing"
 msgstr "Kan bestand niet openen voor schrijven"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3057
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3058
 msgid "OK###PSGScopeExportErrorOK"
 msgstr "OK###PSGScopeExportErrorOK"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3087
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3088
 msgid "Export MIDI...###PSGScopeExportMidiBtn"
 msgstr "MIDI exporteren...###PSGScopeExportMidiBtn"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3094
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3106
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3095
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3107
 msgid "No notes recorded yet"
 msgstr "Nog geen noten opgenomen"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3099
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3100
 msgid "Export CSV...###PSGScopeExportCsvBtn"
 msgstr "CSV exporteren...###PSGScopeExportCsvBtn"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3117
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3118
 msgid "Tempo BPM###PSGScopeTempoBpm"
 msgstr "Tempo BPM###PSGScopeTempoBpm"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3128
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3129
 msgid "Clear###PSGScopeClearBtn"
 msgstr "Wissen###PSGScopeClearBtn"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3135
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3136
 msgid "Reset scope sample buffer and recorded notes"
 msgstr "Scope-samplebuffer en opgenomen noten resetten"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3166
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3167
 msgid "Notes"
 msgstr "Noten"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3188
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3189
 msgid "Log samples###PSGScopeLogSamples"
 msgstr "Samples loggen###PSGScopeLogSamples"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3197
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3198
 msgid "Write per-frame sample log to TSV file"
 msgstr "Per-frame samplelog naar TSV-bestand schrijven"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3202
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3203
 msgid "Log events###PSGScopeLogEvents"
 msgstr "Events loggen###PSGScopeLogEvents"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3211
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3212
 msgid "Write state machine event log to TSV file"
 msgstr "State machine event-log naar TSV-bestand schrijven"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3222
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3223
 msgid "Log writes###PSGScopeLogWrites"
 msgstr "Writes loggen###PSGScopeLogWrites"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3257
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3258
 msgid "Log every PSG register write to file (1:1 reconstruction)"
 msgstr "Elke PSG-registerwrite naar bestand loggen (1:1 reconstructie)"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3286
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3287
 msgid "PSG Audio Scope###PSGAudioScope"
 msgstr "PSG Audio Scope###PSGAudioScope"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3357
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3358
 msgid "PSG Left (chip 0)###PSGScopeLeftHdr"
 msgstr "PSG Links (chip 0)###PSGScopeLeftHdr"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3363
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3364
 msgid "PSG Right (chip 1)###PSGScopeRightHdr"
 msgstr "PSG Rechts (chip 1)###PSGScopeRightHdr"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3372
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3373
 msgid "PSG (chip 0)###PSGScopeMonoHdr"
 msgstr "PSG (chip 0)###PSGScopeMonoHdr"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3380
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3381
 msgid "Piano roll###PSGScopePianoRollHdr"
 msgstr "Piano roll###PSGScopePianoRollHdr"
 
-#: src/ui-imgui/debugger/psg_window.cpp:84
+#: src/ui-imgui/debugger/psg_window.cpp:85
 msgid "DIV /16 (fast)"
 msgstr "DIV /16 (snel)"
 
-#: src/ui-imgui/debugger/psg_window.cpp:85
+#: src/ui-imgui/debugger/psg_window.cpp:86
 msgid "DIV /32 (mid)"
 msgstr "DIV /32 (middel)"
 
-#: src/ui-imgui/debugger/psg_window.cpp:86
+#: src/ui-imgui/debugger/psg_window.cpp:87
 msgid "DIV /64 (slow)"
 msgstr "DIV /64 (langzaam)"
 
-#: src/ui-imgui/debugger/psg_window.cpp:87
+#: src/ui-imgui/debugger/psg_window.cpp:88
 msgid "DIV from CH2 tone"
 msgstr "DIV vanaf CH2-toon"
 
-#: src/ui-imgui/debugger/psg_window.cpp:94
+#: src/ui-imgui/debugger/psg_window.cpp:95
 msgid "PERIODIC"
 msgstr "PERIODIEK"
 
-#: src/ui-imgui/debugger/psg_window.cpp:95
+#: src/ui-imgui/debugger/psg_window.cpp:96
 msgid "WHITE"
 msgstr "WIT"
 
-#: src/ui-imgui/debugger/psg_window.cpp:118
+#: src/ui-imgui/debugger/psg_window.cpp:119
 msgid "0 dB (max)"
 msgstr "0 dB (max)"
 
-#: src/ui-imgui/debugger/psg_window.cpp:120
+#: src/ui-imgui/debugger/psg_window.cpp:121
 msgid "silent (off)"
 msgstr "stil (uit)"
 
-#: src/ui-imgui/debugger/psg_window.cpp:365
-#: src/ui-imgui/debugger/psg_window.cpp:415
-#: src/ui-imgui/debugger/psg_window.cpp:461
-#: src/ui-imgui/debugger/psg_window.cpp:539
+#: src/ui-imgui/debugger/psg_window.cpp:368
+#: src/ui-imgui/debugger/psg_window.cpp:418
+#: src/ui-imgui/debugger/psg_window.cpp:464
+#: src/ui-imgui/debugger/psg_window.cpp:542
 msgid "Bin/Note"
 msgstr "Bin/noot"
 
-#: src/ui-imgui/debugger/psg_window.cpp:371
+#: src/ui-imgui/debugger/psg_window.cpp:374
 msgid "Latched channel (CS)"
 msgstr "Gelatched kanaal (CS)"
 
-#: src/ui-imgui/debugger/psg_window.cpp:372
+#: src/ui-imgui/debugger/psg_window.cpp:375
 msgid "Index kanalu (0..3) ktery prijme dalsi DATA byte."
 msgstr "Kanaalindex (0..3) die de volgende DATA-byte ontvangt."
 
-#: src/ui-imgui/debugger/psg_window.cpp:377
+#: src/ui-imgui/debugger/psg_window.cpp:380
 msgid "Next DATA byte targets"
 msgstr "Doel van volgende DATA-byte"
 
-#: src/ui-imgui/debugger/psg_window.cpp:380
+#: src/ui-imgui/debugger/psg_window.cpp:383
 msgid ""
 "Bit [4] posledniho LATCH bytu. 1 = attn, 0 = tone (TONE kanal) / noise cfg "
 "(CH3)."
@@ -9658,44 +9722,44 @@ msgstr ""
 "Bit [4] van laatste LATCH-byte. 1 = attn, 0 = tone (TONE-kanaal) / noise cfg "
 "(CH3)."
 
-#: src/ui-imgui/debugger/psg_window.cpp:383
+#: src/ui-imgui/debugger/psg_window.cpp:386
 msgid "attenuation"
 msgstr "verzwakking"
 
-#: src/ui-imgui/debugger/psg_window.cpp:385
+#: src/ui-imgui/debugger/psg_window.cpp:388
 msgid "tone / noise cfg"
 msgstr "tone / noise cfg"
 
-#: src/ui-imgui/debugger/psg_window.cpp:419
+#: src/ui-imgui/debugger/psg_window.cpp:422
 msgid "Channel type"
 msgstr "Kanaaltype"
 
-#: src/ui-imgui/debugger/psg_window.cpp:421
+#: src/ui-imgui/debugger/psg_window.cpp:424
 msgid "CH0-2 vzdy TONE, CH3 vzdy NOISE (initializace v psg_instance_init)."
 msgstr ""
 "CH0-2 altijd TONE, CH3 altijd NOISE (initialisatie in psg_instance_init)."
 
-#: src/ui-imgui/debugger/psg_window.cpp:426
+#: src/ui-imgui/debugger/psg_window.cpp:429
 msgid "Attenuation"
 msgstr "Verzwakking"
 
-#: src/ui-imgui/debugger/psg_window.cpp:429
+#: src/ui-imgui/debugger/psg_window.cpp:432
 msgid "4-bit volume: 0 = max (0 dB), krok -2 dB, 15 = silent (channel off)."
 msgstr "4-bit volume: 0 = max (0 dB), stap -2 dB, 15 = silent (kanaal uit)."
 
-#: src/ui-imgui/debugger/psg_window.cpp:467
+#: src/ui-imgui/debugger/psg_window.cpp:470
 msgid "Tone divider (10-bit)"
 msgstr "Toonteller (10-bit)"
 
-#: src/ui-imgui/debugger/psg_window.cpp:470
+#: src/ui-imgui/debugger/psg_window.cpp:473
 msgid "10-bit value 0..1023. f_out = CPU_CLOCK / (32 * divider). <2 = DC."
 msgstr "10-bit waarde 0..1023. f_out = CPU_CLOCK / (32 * deler). <2 = DC."
 
-#: src/ui-imgui/debugger/psg_window.cpp:479
+#: src/ui-imgui/debugger/psg_window.cpp:482
 msgid "Frequency"
 msgstr "Frequentie"
 
-#: src/ui-imgui/debugger/psg_window.cpp:482
+#: src/ui-imgui/debugger/psg_window.cpp:485
 msgid ""
 "CPU_CLOCK / (32 * divider). MZ-800: 3.5469 MHz, MZ-700/MZ-1500: 3.5796 MHz "
 "CPU clock."
@@ -9703,15 +9767,15 @@ msgstr ""
 "CPU_CLOCK / (32 * deler). MZ-800: 3.5469 MHz, MZ-700/MZ-1500: 3.5796 MHz CPU-"
 "klok."
 
-#: src/ui-imgui/debugger/psg_window.cpp:485
+#: src/ui-imgui/debugger/psg_window.cpp:488
 msgid "DC (no oscillation)"
 msgstr "DC (geen oscillatie)"
 
-#: src/ui-imgui/debugger/psg_window.cpp:499
+#: src/ui-imgui/debugger/psg_window.cpp:502
 msgid "MIDI note"
 msgstr "MIDI noot"
 
-#: src/ui-imgui/debugger/psg_window.cpp:502
+#: src/ui-imgui/debugger/psg_window.cpp:505
 msgid ""
 "12 * log2(f / 440) + 69. A4 = 440 Hz = 69. Cents = odchylka od rovnomerne "
 "temperace."
@@ -9719,36 +9783,36 @@ msgstr ""
 "12 * log2(f / 440) + 69. A4 = 440 Hz = 69. Cents = afwijking van "
 "gelijkzwevende stemming."
 
-#: src/ui-imgui/debugger/psg_window.cpp:542
+#: src/ui-imgui/debugger/psg_window.cpp:545
 msgid "Noise divider type"
 msgstr "Ruisteler type"
 
-#: src/ui-imgui/debugger/psg_window.cpp:545
+#: src/ui-imgui/debugger/psg_window.cpp:548
 msgid "0..2 = fixed PSG dividery 16/32/64, 3 = CH2 tone divider rizeny shift."
 msgstr ""
 "0..2 = vaste PSG-delers 16/32/64, 3 = shift gestuurd door CH2-toondeler.0..2 "
 "= vaste PSG delers 16/32/64, 3 = shift gestuurd door CH2 toonteller."
 
-#: src/ui-imgui/debugger/psg_window.cpp:547
+#: src/ui-imgui/debugger/psg_window.cpp:550
 msgid "Noise feedback"
 msgstr "Ruis terugkoppeling"
 
-#: src/ui-imgui/debugger/psg_window.cpp:550
+#: src/ui-imgui/debugger/psg_window.cpp:553
 msgid "Periodic = LFSR top bit only, White = XOR feedback (sirsi spektrum)."
 msgstr ""
 "Periodic = alleen bovenste LFSR-bit, White = XOR-terugkoppeling (breder "
 "spectrum).Periodic = alleen LFSR top bit, White = XOR feedback (breder "
 "spectrum)."
 
-#: src/ui-imgui/debugger/psg_window.cpp:555
+#: src/ui-imgui/debugger/psg_window.cpp:558
 msgid "Tone divider: N/A (NOISE channel)"
 msgstr "Tone divider: N/A (NOISE kanaal)"
 
-#: src/ui-imgui/debugger/psg_window.cpp:560
+#: src/ui-imgui/debugger/psg_window.cpp:563
 msgid "Waveform"
 msgstr "Golfvorm"
 
-#: src/ui-imgui/debugger/psg_window.cpp:563
+#: src/ui-imgui/debugger/psg_window.cpp:566
 msgid ""
 "Oscilloscope view: TONE = square wave (4 periods fixed), NOISE = pseudo-"
 "random pattern. Amplitude scaled by attenuation."
@@ -9756,23 +9820,23 @@ msgstr ""
 "Oscilloscoop-weergave: TONE = blokgolf (4 vaste perioden), NOISE = pseudo-"
 "willekeurig patroon. Amplitude geschaald door verzwakking."
 
-#: src/ui-imgui/debugger/psg_window.cpp:579
+#: src/ui-imgui/debugger/psg_window.cpp:582
 msgid "Latch state"
 msgstr "Latch status"
 
-#: src/ui-imgui/debugger/psg_window.cpp:614
+#: src/ui-imgui/debugger/psg_window.cpp:617
 msgid "PSG SN76489 State###PSGState"
 msgstr "PSG SN76489 status###PSGState"
 
-#: src/ui-imgui/debugger/psg_window.cpp:629
+#: src/ui-imgui/debugger/psg_window.cpp:632
 msgid "PSG Left (chip 0)###PSGLeftHdr"
 msgstr "PSG links (chip 0)###PSGLeftHdr"
 
-#: src/ui-imgui/debugger/psg_window.cpp:636
+#: src/ui-imgui/debugger/psg_window.cpp:639
 msgid "PSG Right (chip 1)###PSGRightHdr"
 msgstr "PSG rechts (chip 1)###PSGRightHdr"
 
-#: src/ui-imgui/debugger/psg_window.cpp:646
+#: src/ui-imgui/debugger/psg_window.cpp:649
 msgid "PSG (chip 0)###PSGMonoHdr"
 msgstr "PSG (chip 0)###PSGMonoHdr"
 
@@ -16445,62 +16509,6 @@ msgstr "MZ-1500 Virtueel toetsenbord"
 #: src/ui-imgui/vkbd_window.cpp:229
 msgid "MZ-800 Virtual Keyboard"
 msgstr "MZ-800 Virtueel toetsenbord"
-
-#: src/ui/cmt/UiCmt.cpp:31
-msgid "Default"
-msgstr "Standaard"
-
-#: src/ui/cmt/UiCmt.cpp:36
-msgid "Custom pulses..."
-msgstr "Eigen pulsen..."
-
-#: src/ui/cmt/UiCmt.cpp:49
-msgid "UNKNOWN"
-msgstr "ONBEKEND"
-
-#: src/ui/vkbd/ui_vkbd.c:207
-msgid "PC key: CapsLock"
-msgstr "PC-toets: CapsLock"
-
-#: src/ui/vkbd/ui_vkbd.c:210
-msgid "PC key: \\"
-msgstr "PC-toets: \\"
-
-#: src/ui/vkbd/ui_vkbd.c:213
-msgid "PC key: \\ or Tab"
-msgstr "PC-toets: \\ of Tab"
-
-#: src/ui/vkbd/ui_vkbd.c:216
-msgid "PC key: ~"
-msgstr "PC-toets: ~"
-
-#: src/ui/vkbd/ui_vkbd.c:218
-msgid "PC key: Esc or End"
-msgstr "PC-toets: Esc of End"
-
-#: src/ui/vkbd/ui_vkbd.c:220
-msgid "PC key: Insert"
-msgstr "PC-toets: Insert"
-
-#: src/ui/vkbd/ui_vkbd.c:222
-msgid "PC key: Backspace or Delete"
-msgstr "PC-toets: Backspace of Delete"
-
-#: src/ui/vkbd/ui_vkbd.c:224
-msgid "PC key: F6"
-msgstr "PC-toets: F6"
-
-#: src/ui/vkbd/ui_vkbd.c:226
-msgid "PC key: F7"
-msgstr "PC-toets: F7"
-
-#: src/ui/vkbd/ui_vkbd.c:228
-msgid "PC key: F8"
-msgstr "PC-toets: F8"
-
-#: src/ui/vkbd/ui_vkbd.c:230
-msgid "PC key: F9"
-msgstr "PC-toets: F9"
 
 #~ msgid ""
 #~ "The device code a program gets in register BC when an MZF file is started "

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mz800emu 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-15 00:13+0100\n"
+"POT-Creation-Date: 2026-11-18 16:41+0100\n"
 "PO-Revision-Date: 2026-03-11 21:00+0100\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -39,7 +39,7 @@ msgstr "Відкрити каталог"
 msgid "Untitled File Chooser"
 msgstr "Вибір файлу"
 
-#: src/emulator/audio.c:133
+#: src/emulator/audio.c:156
 msgid "Audio volume settings:"
 msgstr "Налаштування гучності аудіо:"
 
@@ -118,6 +118,67 @@ msgstr "Користувач"
 #: src/emulator/mzarch/mz700/memory/mz700_rom.c:22
 msgid "User Defined ROM"
 msgstr "ROM визначена користувачем"
+
+#: src/ui/cmt/UiCmt.cpp:31
+msgid "Default"
+msgstr "За замовчуванням"
+
+#: src/ui/cmt/UiCmt.cpp:36
+msgid "Custom pulses..."
+msgstr "Власні імпульси..."
+
+#: src/ui/cmt/UiCmt.cpp:36 src/ui-imgui/cmt/cmt_view.cpp:158
+#: src/ui-imgui/cmt/cmt_window.cpp:1069
+msgid "Custom pulses"
+msgstr "Власні імпульси"
+
+#: src/ui/cmt/UiCmt.cpp:49
+msgid "UNKNOWN"
+msgstr "НЕВІДОМО"
+
+#: src/ui/vkbd/ui_vkbd.c:207
+msgid "PC key: CapsLock"
+msgstr "Клавіша ПК: CapsLock"
+
+#: src/ui/vkbd/ui_vkbd.c:210
+msgid "PC key: \\"
+msgstr "Клавіша ПК: \\"
+
+#: src/ui/vkbd/ui_vkbd.c:213
+msgid "PC key: \\ or Tab"
+msgstr "Клавіша ПК: \\ або Tab"
+
+#: src/ui/vkbd/ui_vkbd.c:216
+msgid "PC key: ~"
+msgstr "Клавіша ПК: ~"
+
+#: src/ui/vkbd/ui_vkbd.c:218
+msgid "PC key: Esc or End"
+msgstr "Клавіша ПК: Esc або End"
+
+#: src/ui/vkbd/ui_vkbd.c:220
+msgid "PC key: Insert"
+msgstr "Клавіша ПК: Insert"
+
+#: src/ui/vkbd/ui_vkbd.c:222
+msgid "PC key: Backspace or Delete"
+msgstr "Клавіша ПК: Backspace або Delete"
+
+#: src/ui/vkbd/ui_vkbd.c:224
+msgid "PC key: F6"
+msgstr "Клавіша ПК: F6"
+
+#: src/ui/vkbd/ui_vkbd.c:226
+msgid "PC key: F7"
+msgstr "Клавіша ПК: F7"
+
+#: src/ui/vkbd/ui_vkbd.c:228
+msgid "PC key: F8"
+msgstr "Клавіша ПК: F8"
+
+#: src/ui/vkbd/ui_vkbd.c:230
+msgid "PC key: F9"
+msgstr "Клавіша ПК: F9"
 
 #: src/ui-imgui/about_window.cpp:258
 msgid "Come closer, my friend."
@@ -275,6 +336,16 @@ msgstr "%.1f dB"
 msgid "%.0f dB"
 msgstr "%.0f dB"
 
+#: src/ui-imgui/audio_window.cpp:214
+msgid "Hardware output filter"
+msgstr "Вихідний фільтр справжнього комп'ютера"
+
+#: src/ui-imgui/audio_window.cpp:220
+msgid ""
+"Low-pass filter of the real MZ-800 audio output (346 Hz). Off = the "
+"previous, brighter sound."
+msgstr "Фільтр нижніх частот звукового виходу справжнього MZ-800 (346 Гц). Вимкнено = попередній, яскравіший звук."
+
 #: src/ui-imgui/audiocap/audio_capture_ui.cpp:66
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:172
 #: src/ui-imgui/videorec/videorec_menu.cpp:422
@@ -413,10 +484,9 @@ msgid "Record Audio Capture (%s) starts and stops the capture."
 msgstr "Захопити звук (%s) запускає і зупиняє захоплення."
 
 #: src/ui-imgui/audiocap/audio_capture_ui.cpp:249
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:186
 #: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:953
 #: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:753
-#: src/ui-imgui/cmt/cmt_view.cpp:172
+#: src/ui-imgui/cmt/cmt_view.cpp:172 src/ui-imgui/cmt/ImGuiCmt.cpp:186
 #: src/ui-imgui/debugger/sections/dbg_cpu_panel.cpp:2421
 #: src/ui-imgui/dsk/dsk_create_window.cpp:104
 #: src/ui-imgui/filechooser/headers/CustomImGuiFileDialogConfig.h:109
@@ -431,14 +501,13 @@ msgid "OK"
 msgstr "OK"
 
 #: src/ui-imgui/audiocap/audio_capture_ui.cpp:255
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:198
 #: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2277
 #: src/ui-imgui/cmt/cmt_convert_dialog.cpp:609
 #: src/ui-imgui/cmt/cmt_tape_actions.cpp:1091
 #: src/ui-imgui/cmt/cmt_tape_actions.cpp:1118
 #: src/ui-imgui/cmt/cmt_tape_actions.cpp:1172
 #: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:754
-#: src/ui-imgui/cmt/cmt_window.cpp:3428
+#: src/ui-imgui/cmt/cmt_window.cpp:3428 src/ui-imgui/cmt/ImGuiCmt.cpp:198
 #: src/ui-imgui/debugger/membrowser/membrowser_annot_dialog.cpp:148
 #: src/ui-imgui/debugger/membrowser/membrowser_fill_dialog.cpp:264
 #: src/ui-imgui/debugger/sections/dbg_focus_to.cpp:264
@@ -583,50 +652,6 @@ msgstr "Символи"
 #: src/ui-imgui/autotype/autotype_window.cpp:293
 msgid "Typed"
 msgstr "Написано"
-
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:117
-msgid "Custom Tape Pulses"
-msgstr "Власні імпульси стрічки"
-
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:132
-msgid "Pulse lengths in microseconds (order of the UniCMT CMTSPEED header):"
-msgstr ""
-"Тривалість імпульсів у мікросекундах (порядок як у заголовку CMTSPEED "
-"UniCMT):"
-
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:136
-msgid "Long pulse high (bit 1)"
-msgstr "Довгий імпульс high (біт 1)"
-
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:137
-msgid "Long pulse low (bit 1)"
-msgstr "Довгий імпульс low (біт 1)"
-
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:138
-msgid "Short pulse high (bit 0)"
-msgstr "Короткий імпульс high (біт 0)"
-
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:139
-msgid "Short pulse low (bit 0)"
-msgstr "Короткий імпульс low (біт 0)"
-
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:148
-msgid "Presets:"
-msgstr "Пресети:"
-
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:161
-msgid "Revert"
-msgstr "Повернути"
-
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:175
-#, c-format
-msgid "Equivalent speed: ~%.2f:1 (%.0f Bd)"
-msgstr "Відповідна швидкість: ~%.2f:1 (%.0f Bd)"
-
-#: src/ui-imgui/cmt/ImGuiCmt.cpp:179
-#, c-format
-msgid "Each length must be greater than 0 and at most %.0f µs."
-msgstr "Кожна тривалість має бути більшою за 0 і не більшою за %.0f µs."
 
 #: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:815
 msgid "The tape changed. Close this dialog and analyze again."
@@ -995,56 +1020,6 @@ msgstr "Немає файлів для додавання."
 msgid "Check at least one file to add it."
 msgstr "Позначте принаймні один файл, щоб додати його."
 
-#: src/ui-imgui/cmt/cmt_check_window.cpp:258
-#, c-format
-msgid "Block %d"
-msgstr "Блок %d"
-
-#: src/ui-imgui/cmt/cmt_check_window.cpp:350
-msgid "Tape check"
-msgstr "Перевірка стрічки"
-
-#: src/ui-imgui/cmt/cmt_check_window.cpp:363
-#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:310
-#: src/ui-imgui/cmt/cmt_window.cpp:812 src/ui-imgui/cmt/cmt_window.cpp:1517
-#: src/ui-imgui/cmt/cmt_window.cpp:1536 src/ui-imgui/cmt/cmt_window.cpp:1742
-#: src/ui-imgui/cmt/cmt_window.cpp:1990
-msgid "No tape inserted."
-msgstr "Стрічку не вставлено."
-
-#: src/ui-imgui/cmt/cmt_check_window.cpp:367
-#, c-format
-msgid "No problems found. Blocks checked: %d."
-msgstr "Проблем не знайдено. Перевірено блоків: %d."
-
-#: src/ui-imgui/cmt/cmt_check_window.cpp:373
-#, c-format
-msgid "Blocks checked: %d. Warnings: more than %d."
-msgstr "Перевірено блоків: %d. Попереджень: понад %d."
-
-#: src/ui-imgui/cmt/cmt_check_window.cpp:375
-#, c-format
-msgid "Blocks checked: %d. Warnings: %d."
-msgstr "Перевірено блоків: %d. Попереджень: %d."
-
-#: src/ui-imgui/cmt/cmt_check_window.cpp:389
-msgid "The tape changed. Run the check again."
-msgstr "Стрічка змінилася. Запустіть перевірку знову."
-
-#: src/ui-imgui/cmt/cmt_check_window.cpp:408
-msgctxt "Tape check severity"
-msgid "Warning"
-msgstr "Попередження"
-
-#: src/ui-imgui/cmt/cmt_check_window.cpp:409
-msgctxt "Tape check severity"
-msgid "Info"
-msgstr "Інформація"
-
-#: src/ui-imgui/cmt/cmt_check_window.cpp:501
-msgid "Check again"
-msgstr "Перевірити знову"
-
 #: src/ui-imgui/cmt/cmt_convert_dialog.cpp:238
 msgid "Profile default"
 msgstr "Типово для профілю"
@@ -1177,6 +1152,56 @@ msgstr "Зберегти як"
 #: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:398
 msgid "Save MZF file as"
 msgstr "Зберегти файл MZF як"
+
+#: src/ui-imgui/cmt/cmt_check_window.cpp:258
+#, c-format
+msgid "Block %d"
+msgstr "Блок %d"
+
+#: src/ui-imgui/cmt/cmt_check_window.cpp:350
+msgid "Tape check"
+msgstr "Перевірка стрічки"
+
+#: src/ui-imgui/cmt/cmt_check_window.cpp:363
+#: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:310
+#: src/ui-imgui/cmt/cmt_window.cpp:812 src/ui-imgui/cmt/cmt_window.cpp:1517
+#: src/ui-imgui/cmt/cmt_window.cpp:1536 src/ui-imgui/cmt/cmt_window.cpp:1742
+#: src/ui-imgui/cmt/cmt_window.cpp:1990
+msgid "No tape inserted."
+msgstr "Стрічку не вставлено."
+
+#: src/ui-imgui/cmt/cmt_check_window.cpp:367
+#, c-format
+msgid "No problems found. Blocks checked: %d."
+msgstr "Проблем не знайдено. Перевірено блоків: %d."
+
+#: src/ui-imgui/cmt/cmt_check_window.cpp:373
+#, c-format
+msgid "Blocks checked: %d. Warnings: more than %d."
+msgstr "Перевірено блоків: %d. Попереджень: понад %d."
+
+#: src/ui-imgui/cmt/cmt_check_window.cpp:375
+#, c-format
+msgid "Blocks checked: %d. Warnings: %d."
+msgstr "Перевірено блоків: %d. Попереджень: %d."
+
+#: src/ui-imgui/cmt/cmt_check_window.cpp:389
+msgid "The tape changed. Run the check again."
+msgstr "Стрічка змінилася. Запустіть перевірку знову."
+
+#: src/ui-imgui/cmt/cmt_check_window.cpp:408
+msgctxt "Tape check severity"
+msgid "Warning"
+msgstr "Попередження"
+
+#: src/ui-imgui/cmt/cmt_check_window.cpp:409
+msgctxt "Tape check severity"
+msgid "Info"
+msgstr "Інформація"
+
+#: src/ui-imgui/cmt/cmt_check_window.cpp:501
+msgid "Check again"
+msgstr "Перевірити знову"
 
 #: src/ui-imgui/cmt/cmt_tape_actions.cpp:353
 msgid "The tape could not be opened: the file path is too long."
@@ -1536,11 +1561,6 @@ msgstr "дані BASIC"
 #: src/ui-imgui/cmt/cmt_view.cpp:140
 msgid "CP/M file"
 msgstr "файл CP/M"
-
-#: src/ui-imgui/cmt/cmt_view.cpp:158 src/ui-imgui/cmt/cmt_window.cpp:1069
-#: src/ui/cmt/UiCmt.cpp:36
-msgid "Custom pulses"
-msgstr "Власні імпульси"
 
 #: src/ui-imgui/cmt/cmt_view.cpp:173 src/ui-imgui/cmt/cmt_window.cpp:2462
 msgid "Not decoded"
@@ -2309,6 +2329,50 @@ msgstr "Відтворювати сигнал стрічки через дина
 #, c-format
 msgid "%d blocks selected"
 msgstr "Вибрано блоків: %d"
+
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:117
+msgid "Custom Tape Pulses"
+msgstr "Власні імпульси стрічки"
+
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:132
+msgid "Pulse lengths in microseconds (order of the UniCMT CMTSPEED header):"
+msgstr ""
+"Тривалість імпульсів у мікросекундах (порядок як у заголовку CMTSPEED "
+"UniCMT):"
+
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:136
+msgid "Long pulse high (bit 1)"
+msgstr "Довгий імпульс high (біт 1)"
+
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:137
+msgid "Long pulse low (bit 1)"
+msgstr "Довгий імпульс low (біт 1)"
+
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:138
+msgid "Short pulse high (bit 0)"
+msgstr "Короткий імпульс high (біт 0)"
+
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:139
+msgid "Short pulse low (bit 0)"
+msgstr "Короткий імпульс low (біт 0)"
+
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:148
+msgid "Presets:"
+msgstr "Пресети:"
+
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:161
+msgid "Revert"
+msgstr "Повернути"
+
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:175
+#, c-format
+msgid "Equivalent speed: ~%.2f:1 (%.0f Bd)"
+msgstr "Відповідна швидкість: ~%.2f:1 (%.0f Bd)"
+
+#: src/ui-imgui/cmt/ImGuiCmt.cpp:179
+#, c-format
+msgid "Each length must be greater than 0 and at most %.0f µs."
+msgstr "Кожна тривалість має бути більшою за 0 і не більшою за %.0f µs."
 
 #: src/ui-imgui/debugger/bookmarks/bm_window.cpp:267
 msgid "- Cancel##bm_add_toggle"
@@ -4331,7 +4395,7 @@ msgstr "Політика конфлікту:"
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:2156
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:2682
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:2845
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3160
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3161
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:312
 #: src/ui-imgui/topmenu/menu_replay.cpp:247
 #: src/ui-imgui/topmenu/replay_window.cpp:245
@@ -4457,10 +4521,10 @@ msgstr "Останнє керуюче слово"
 #: src/ui-imgui/debugger/pioz80_window.cpp:268
 #: src/ui-imgui/debugger/pioz80_window.cpp:293
 #: src/ui-imgui/debugger/pioz80_window.cpp:405
-#: src/ui-imgui/debugger/psg_window.cpp:363
-#: src/ui-imgui/debugger/psg_window.cpp:413
-#: src/ui-imgui/debugger/psg_window.cpp:459
-#: src/ui-imgui/debugger/psg_window.cpp:537
+#: src/ui-imgui/debugger/psg_window.cpp:366
+#: src/ui-imgui/debugger/psg_window.cpp:416
+#: src/ui-imgui/debugger/psg_window.cpp:462
+#: src/ui-imgui/debugger/psg_window.cpp:540
 msgid "Field"
 msgstr "Pole"
 
@@ -4471,10 +4535,10 @@ msgstr "Pole"
 #: src/ui-imgui/debugger/memsearch_window/memsearch_window.cpp:701
 #: src/ui-imgui/debugger/pioz80_window.cpp:294
 #: src/ui-imgui/debugger/pioz80_window.cpp:406
-#: src/ui-imgui/debugger/psg_window.cpp:364
-#: src/ui-imgui/debugger/psg_window.cpp:414
-#: src/ui-imgui/debugger/psg_window.cpp:460
-#: src/ui-imgui/debugger/psg_window.cpp:538
+#: src/ui-imgui/debugger/psg_window.cpp:367
+#: src/ui-imgui/debugger/psg_window.cpp:417
+#: src/ui-imgui/debugger/psg_window.cpp:463
+#: src/ui-imgui/debugger/psg_window.cpp:541
 #: src/ui-imgui/debugger/vars/vars_window.cpp:1504
 #: src/ui-imgui/debugger/watch/watch_window.cpp:1703
 msgid "Value"
@@ -6806,40 +6870,6 @@ msgstr "Кольорова мітка"
 msgid "Annotation @ 0x%08X"
 msgstr "Анотація @ 0x%08X"
 
-#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:231
-#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:276
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1729
-#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1733
-msgid "Target:"
-msgstr "Ціль:"
-
-#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:239
-msgid "No target callback set"
-msgstr "Не встановлено цільовий callback"
-
-#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:262
-msgid "No target: open a Memory Browser and right-click in hex/ASCII column"
-msgstr ""
-"Немає цілі: відкрийте Memory Browser і клацніть правою кнопкою у колонці hex/"
-"ASCII"
-
-#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:284
-#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:337
-msgid "Region:"
-msgstr "Регіон:"
-
-#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:290
-msgid "Edit ON"
-msgstr "Редагування УВІМК"
-
-#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:293
-msgid "Edit OFF / RO"
-msgstr "Редагування ВИМК / RO"
-
-#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:309
-msgid "Char Inserter###mb_char_inserter"
-msgstr "Вставка символів###mb_char_inserter"
-
 #: src/ui-imgui/debugger/membrowser/membrowser_diff_window.cpp:404
 msgid "Live"
 msgstr "Наживо"
@@ -7050,7 +7080,7 @@ msgid "Size (hex)###mb_save_size"
 msgstr "Розмір (hex)###mb_save_size"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_fileio.cpp:473
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1833
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1834
 #: src/ui-imgui/debugger/sections/dbg_coverage.cpp:433
 #: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:307
 #: src/ui-imgui/mz700/devbus/menu_devbus.cpp:231
@@ -7333,6 +7363,40 @@ msgstr "Скасувати  (%d рівнів)\tCtrl+Z"
 #, c-format
 msgid "Redo  (%d levels)\tCtrl+Y"
 msgstr "Повторити  (%d рівнів)\tCtrl+Y"
+
+#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:231
+#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:276
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1729
+#: src/ui-imgui/debugger/sections/dbg_disassembled.cpp:1733
+msgid "Target:"
+msgstr "Ціль:"
+
+#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:239
+msgid "No target callback set"
+msgstr "Не встановлено цільовий callback"
+
+#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:262
+msgid "No target: open a Memory Browser and right-click in hex/ASCII column"
+msgstr ""
+"Немає цілі: відкрийте Memory Browser і клацніть правою кнопкою у колонці hex/"
+"ASCII"
+
+#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:284
+#: src/ui-imgui/debugger/membrowser/membrowser_window.cpp:337
+msgid "Region:"
+msgstr "Регіон:"
+
+#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:290
+msgid "Edit ON"
+msgstr "Редагування УВІМК"
+
+#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:293
+msgid "Edit OFF / RO"
+msgstr "Редагування ВИМК / RO"
+
+#: src/ui-imgui/debugger/membrowser/membrowser_char_inserter.cpp:309
+msgid "Char Inserter###mb_char_inserter"
+msgstr "Вставка символів###mb_char_inserter"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:312
 msgid "Layers ▼###mb_layers_toggle"
@@ -9388,246 +9452,246 @@ msgid "Coverage###profiler_tab_cov"
 msgstr "Покриття###profiler_tab_cov"
 
 #: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1159
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1314
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1315
 msgid "no data"
 msgstr "немає даних"
 
 #: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1168
-#: src/ui-imgui/debugger/psg_window.cpp:264
+#: src/ui-imgui/debugger/psg_window.cpp:266
 msgid "silent"
 msgstr "тиша"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1186
-#: src/ui-imgui/debugger/psg_window.cpp:283
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1187
+#: src/ui-imgui/debugger/psg_window.cpp:286
 msgid "DC"
 msgstr "DC"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1435
-#: src/ui-imgui/debugger/psg_window.cpp:74
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1436
+#: src/ui-imgui/debugger/psg_window.cpp:75
 msgid "TONE"
 msgstr "ТОН"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1437
-#: src/ui-imgui/debugger/psg_window.cpp:75
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1438
+#: src/ui-imgui/debugger/psg_window.cpp:76
 msgid "NOISE"
 msgstr "ШУМ"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1441
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1772
-#: src/ui-imgui/debugger/psg_window.cpp:595
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1442
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1773
+#: src/ui-imgui/debugger/psg_window.cpp:598
 msgid "Channel"
 msgstr "Канал"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1773
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1774
 msgid "chip"
 msgstr "чіп"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1776
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1777
 msgid "Pitch: Noise"
 msgstr "Висота: шум"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1781
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1782
 msgid "Pitch"
 msgstr "Висота"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1782
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1783
 msgid "cents"
 msgstr "центів"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1784
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1785
 msgid "Duration"
 msgstr "Тривалість"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1785
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1786
 msgid "Velocity"
 msgstr "Швидкість"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1798
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1799
 msgid "Volume changes"
 msgstr "Зміни гучності"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1802
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1803
 msgid "overflowed"
 msgstr "переповнено"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1806
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3178
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1807
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3179
 msgid "active"
 msgstr "активно"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1835
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1836
 msgid "Last 10s###PSGScopeRoll10s"
 msgstr "Останні 10с###PSGScopeRoll10s"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1838
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1839
 msgid "Last 30s###PSGScopeRoll30s"
 msgstr "Останні 30с###PSGScopeRoll30s"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1841
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1842
 msgid "All###PSGScopeRollAll"
 msgstr "Все###PSGScopeRollAll"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1845
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1846
 msgid "Channels:"
 msgstr "Канали:"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1857
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1858
 msgid "CH3 (Noise)"
 msgstr "CH3 (шум)"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1923
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1924
 msgid "No notes recorded yet. Play some audio to populate the piano roll."
 msgstr "Ще не записано жодних нот. Відтворіть аудіо для заповнення піанорола."
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:2000
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:2001
 msgid "NS"
 msgstr "NS"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:2940
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:2941
 msgid "Export PSG notes as CSV"
 msgstr "Експортувати ноти PSG як CSV"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:2968
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:2969
 msgid "Export PSG notes as MIDI"
 msgstr "Експортувати ноти PSG як MIDI"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3050
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3051
 msgid "Export error###PSGScopeExportError"
 msgstr "Помилка експорту###PSGScopeExportError"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3053
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3054
 msgid "Failed to open file for writing"
 msgstr "Не вдалося відкрити файл для запису"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3057
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3058
 msgid "OK###PSGScopeExportErrorOK"
 msgstr "OK###PSGScopeExportErrorOK"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3087
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3088
 msgid "Export MIDI...###PSGScopeExportMidiBtn"
 msgstr "Експорт MIDI...###PSGScopeExportMidiBtn"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3094
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3106
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3095
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3107
 msgid "No notes recorded yet"
 msgstr "Ще не записано жодних нот"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3099
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3100
 msgid "Export CSV...###PSGScopeExportCsvBtn"
 msgstr "Експорт CSV...###PSGScopeExportCsvBtn"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3117
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3118
 msgid "Tempo BPM###PSGScopeTempoBpm"
 msgstr "Темп BPM###PSGScopeTempoBpm"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3128
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3129
 msgid "Clear###PSGScopeClearBtn"
 msgstr "Очистити###PSGScopeClearBtn"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3135
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3136
 msgid "Reset scope sample buffer and recorded notes"
 msgstr "Скинути буфер семплів осцилоскопа та записані ноти"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3166
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3167
 msgid "Notes"
 msgstr "Ноти"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3188
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3189
 msgid "Log samples###PSGScopeLogSamples"
 msgstr "Журнал семплів###PSGScopeLogSamples"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3197
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3198
 msgid "Write per-frame sample log to TSV file"
 msgstr "Записати журнал семплів на кадр у TSV файл"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3202
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3203
 msgid "Log events###PSGScopeLogEvents"
 msgstr "Журнал подій###PSGScopeLogEvents"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3211
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3212
 msgid "Write state machine event log to TSV file"
 msgstr "Записати журнал подій кінцевого автомата у TSV файл"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3222
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3223
 msgid "Log writes###PSGScopeLogWrites"
 msgstr "Журнал записів###PSGScopeLogWrites"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3257
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3258
 msgid "Log every PSG register write to file (1:1 reconstruction)"
 msgstr "Записувати кожен запис у регістр PSG у файл (реконструкція 1:1)"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3286
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3287
 msgid "PSG Audio Scope###PSGAudioScope"
 msgstr "Аудіо осцилоскоп PSG###PSGAudioScope"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3357
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3358
 msgid "PSG Left (chip 0)###PSGScopeLeftHdr"
 msgstr "PSG Лівий (чіп 0)###PSGScopeLeftHdr"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3363
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3364
 msgid "PSG Right (chip 1)###PSGScopeRightHdr"
 msgstr "PSG Правий (чіп 1)###PSGScopeRightHdr"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3372
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3373
 msgid "PSG (chip 0)###PSGScopeMonoHdr"
 msgstr "PSG (чіп 0)###PSGScopeMonoHdr"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3380
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3381
 msgid "Piano roll###PSGScopePianoRollHdr"
 msgstr "Піанорол###PSGScopePianoRollHdr"
 
-#: src/ui-imgui/debugger/psg_window.cpp:84
+#: src/ui-imgui/debugger/psg_window.cpp:85
 msgid "DIV /16 (fast)"
 msgstr "DIV /16 (швидко)"
 
-#: src/ui-imgui/debugger/psg_window.cpp:85
+#: src/ui-imgui/debugger/psg_window.cpp:86
 msgid "DIV /32 (mid)"
 msgstr "DIV /32 (середньо)"
 
-#: src/ui-imgui/debugger/psg_window.cpp:86
+#: src/ui-imgui/debugger/psg_window.cpp:87
 msgid "DIV /64 (slow)"
 msgstr "DIV /64 (повільно)"
 
-#: src/ui-imgui/debugger/psg_window.cpp:87
+#: src/ui-imgui/debugger/psg_window.cpp:88
 msgid "DIV from CH2 tone"
 msgstr "DIV з тону CH2"
 
-#: src/ui-imgui/debugger/psg_window.cpp:94
+#: src/ui-imgui/debugger/psg_window.cpp:95
 msgid "PERIODIC"
 msgstr "ПЕРІОДИЧНИЙ"
 
-#: src/ui-imgui/debugger/psg_window.cpp:95
+#: src/ui-imgui/debugger/psg_window.cpp:96
 msgid "WHITE"
 msgstr "БІЛИЙ"
 
-#: src/ui-imgui/debugger/psg_window.cpp:118
+#: src/ui-imgui/debugger/psg_window.cpp:119
 msgid "0 dB (max)"
 msgstr "0 дБ (макс)"
 
-#: src/ui-imgui/debugger/psg_window.cpp:120
+#: src/ui-imgui/debugger/psg_window.cpp:121
 msgid "silent (off)"
 msgstr "тиша (вимк)"
 
-#: src/ui-imgui/debugger/psg_window.cpp:365
-#: src/ui-imgui/debugger/psg_window.cpp:415
-#: src/ui-imgui/debugger/psg_window.cpp:461
-#: src/ui-imgui/debugger/psg_window.cpp:539
+#: src/ui-imgui/debugger/psg_window.cpp:368
+#: src/ui-imgui/debugger/psg_window.cpp:418
+#: src/ui-imgui/debugger/psg_window.cpp:464
+#: src/ui-imgui/debugger/psg_window.cpp:542
 msgid "Bin/Note"
 msgstr "Bin/нота"
 
-#: src/ui-imgui/debugger/psg_window.cpp:371
+#: src/ui-imgui/debugger/psg_window.cpp:374
 msgid "Latched channel (CS)"
 msgstr "Зафiксований канал (CS)"
 
-#: src/ui-imgui/debugger/psg_window.cpp:372
+#: src/ui-imgui/debugger/psg_window.cpp:375
 msgid "Index kanalu (0..3) ktery prijme dalsi DATA byte."
 msgstr "Iндекс каналу (0..3) який отримає наступний DATA байт."
 
-#: src/ui-imgui/debugger/psg_window.cpp:377
+#: src/ui-imgui/debugger/psg_window.cpp:380
 msgid "Next DATA byte targets"
 msgstr "Цiль наступного DATA байту"
 
-#: src/ui-imgui/debugger/psg_window.cpp:380
+#: src/ui-imgui/debugger/psg_window.cpp:383
 msgid ""
 "Bit [4] posledniho LATCH bytu. 1 = attn, 0 = tone (TONE kanal) / noise cfg "
 "(CH3)."
@@ -9635,49 +9699,49 @@ msgstr ""
 "Bit [4] останнього LATCH байту. 1 = attn, 0 = tone (TONE канал) / noise cfg "
 "(CH3)."
 
-#: src/ui-imgui/debugger/psg_window.cpp:383
+#: src/ui-imgui/debugger/psg_window.cpp:386
 msgid "attenuation"
 msgstr "послаблення"
 
-#: src/ui-imgui/debugger/psg_window.cpp:385
+#: src/ui-imgui/debugger/psg_window.cpp:388
 msgid "tone / noise cfg"
 msgstr "tone / noise cfg"
 
-#: src/ui-imgui/debugger/psg_window.cpp:419
+#: src/ui-imgui/debugger/psg_window.cpp:422
 msgid "Channel type"
 msgstr "Тип каналу"
 
-#: src/ui-imgui/debugger/psg_window.cpp:421
+#: src/ui-imgui/debugger/psg_window.cpp:424
 msgid "CH0-2 vzdy TONE, CH3 vzdy NOISE (initializace v psg_instance_init)."
 msgstr ""
 "CH0-2 завжди TONE, CH3 завжди NOISE (ініціалізація в "
 "psg_instance_init).CH0-2 завжди TONE, CH3 завжди NOISE (iнiцiалiзацiя у "
 "psg_instance_init)."
 
-#: src/ui-imgui/debugger/psg_window.cpp:426
+#: src/ui-imgui/debugger/psg_window.cpp:429
 msgid "Attenuation"
 msgstr "Послаблення"
 
-#: src/ui-imgui/debugger/psg_window.cpp:429
+#: src/ui-imgui/debugger/psg_window.cpp:432
 msgid "4-bit volume: 0 = max (0 dB), krok -2 dB, 15 = silent (channel off)."
 msgstr ""
 "4-бітна гучність: 0 = макс (0 dB), крок -2 dB, 15 = тиша (канал off).4-bit "
 "гучнiсть: 0 = max (0 dB), крок -2 dB, 15 = silent (канал вимкнено)."
 
-#: src/ui-imgui/debugger/psg_window.cpp:467
+#: src/ui-imgui/debugger/psg_window.cpp:470
 msgid "Tone divider (10-bit)"
 msgstr "Дiльник тону (10-bit)"
 
-#: src/ui-imgui/debugger/psg_window.cpp:470
+#: src/ui-imgui/debugger/psg_window.cpp:473
 msgid "10-bit value 0..1023. f_out = CPU_CLOCK / (32 * divider). <2 = DC."
 msgstr ""
 "10-бітне значення 0..1023. f_out = CPU_CLOCK / (32 * дільник). <2 = DC."
 
-#: src/ui-imgui/debugger/psg_window.cpp:479
+#: src/ui-imgui/debugger/psg_window.cpp:482
 msgid "Frequency"
 msgstr "Частота"
 
-#: src/ui-imgui/debugger/psg_window.cpp:482
+#: src/ui-imgui/debugger/psg_window.cpp:485
 msgid ""
 "CPU_CLOCK / (32 * divider). MZ-800: 3.5469 MHz, MZ-700/MZ-1500: 3.5796 MHz "
 "CPU clock."
@@ -9685,15 +9749,15 @@ msgstr ""
 "CPU_CLOCK / (32 * дільник). MZ-800: 3.5469 МГц, MZ-700/MZ-1500: 3.5796 МГц "
 "тактова частота CPU."
 
-#: src/ui-imgui/debugger/psg_window.cpp:485
+#: src/ui-imgui/debugger/psg_window.cpp:488
 msgid "DC (no oscillation)"
 msgstr "DC (без осциляції)"
 
-#: src/ui-imgui/debugger/psg_window.cpp:499
+#: src/ui-imgui/debugger/psg_window.cpp:502
 msgid "MIDI note"
 msgstr "MIDI нота"
 
-#: src/ui-imgui/debugger/psg_window.cpp:502
+#: src/ui-imgui/debugger/psg_window.cpp:505
 msgid ""
 "12 * log2(f / 440) + 69. A4 = 440 Hz = 69. Cents = odchylka od rovnomerne "
 "temperace."
@@ -9701,37 +9765,37 @@ msgstr ""
 "12 * log2(f / 440) + 69. A4 = 440 Hz = 69. Cents = вiдхилення вiд "
 "рiвномiрної темперацiї."
 
-#: src/ui-imgui/debugger/psg_window.cpp:542
+#: src/ui-imgui/debugger/psg_window.cpp:545
 msgid "Noise divider type"
 msgstr "Тип дiльника шуму"
 
-#: src/ui-imgui/debugger/psg_window.cpp:545
+#: src/ui-imgui/debugger/psg_window.cpp:548
 msgid "0..2 = fixed PSG dividery 16/32/64, 3 = CH2 tone divider rizeny shift."
 msgstr ""
 "0..2 = фіксовані подільники PSG 16/32/64, 3 = зсув з керуванням від CH2 tone "
 "divider.0..2 = фiксованi PSG дiльники 16/32/64, 3 = CH2 tone divider "
 "керований shift."
 
-#: src/ui-imgui/debugger/psg_window.cpp:547
+#: src/ui-imgui/debugger/psg_window.cpp:550
 msgid "Noise feedback"
 msgstr "Зворотний зв`язок шуму"
 
-#: src/ui-imgui/debugger/psg_window.cpp:550
+#: src/ui-imgui/debugger/psg_window.cpp:553
 msgid "Periodic = LFSR top bit only, White = XOR feedback (sirsi spektrum)."
 msgstr ""
 "Periodic = лише верхній біт LFSR, White = XOR зворотний зв'язок (ширший "
 "спектр).Periodic = тiльки верхнiй бiт LFSR, White = XOR feedback (ширший "
 "спектр)."
 
-#: src/ui-imgui/debugger/psg_window.cpp:555
+#: src/ui-imgui/debugger/psg_window.cpp:558
 msgid "Tone divider: N/A (NOISE channel)"
 msgstr "Tone divider: N/A (NOISE канал)"
 
-#: src/ui-imgui/debugger/psg_window.cpp:560
+#: src/ui-imgui/debugger/psg_window.cpp:563
 msgid "Waveform"
 msgstr "Форма хвилі"
 
-#: src/ui-imgui/debugger/psg_window.cpp:563
+#: src/ui-imgui/debugger/psg_window.cpp:566
 msgid ""
 "Oscilloscope view: TONE = square wave (4 periods fixed), NOISE = pseudo-"
 "random pattern. Amplitude scaled by attenuation."
@@ -9739,23 +9803,23 @@ msgstr ""
 "Огляд осцилоскопа: TONE = меандр (фіксовано 4 періоди), NOISE = "
 "псевдовипадковий патерн. Амплітуда масштабована атенюацією."
 
-#: src/ui-imgui/debugger/psg_window.cpp:579
+#: src/ui-imgui/debugger/psg_window.cpp:582
 msgid "Latch state"
 msgstr "Стан latch"
 
-#: src/ui-imgui/debugger/psg_window.cpp:614
+#: src/ui-imgui/debugger/psg_window.cpp:617
 msgid "PSG SN76489 State###PSGState"
 msgstr "Стан PSG SN76489###PSGState"
 
-#: src/ui-imgui/debugger/psg_window.cpp:629
+#: src/ui-imgui/debugger/psg_window.cpp:632
 msgid "PSG Left (chip 0)###PSGLeftHdr"
 msgstr "PSG лiвий (chip 0)###PSGLeftHdr"
 
-#: src/ui-imgui/debugger/psg_window.cpp:636
+#: src/ui-imgui/debugger/psg_window.cpp:639
 msgid "PSG Right (chip 1)###PSGRightHdr"
 msgstr "PSG правий (chip 1)###PSGRightHdr"
 
-#: src/ui-imgui/debugger/psg_window.cpp:646
+#: src/ui-imgui/debugger/psg_window.cpp:649
 msgid "PSG (chip 0)###PSGMonoHdr"
 msgstr "PSG (chip 0)###PSGMonoHdr"
 
@@ -16416,62 +16480,6 @@ msgstr "Віртуальна клавіатура MZ-1500"
 #: src/ui-imgui/vkbd_window.cpp:229
 msgid "MZ-800 Virtual Keyboard"
 msgstr "Віртуальна клавіатура MZ-800"
-
-#: src/ui/cmt/UiCmt.cpp:31
-msgid "Default"
-msgstr "За замовчуванням"
-
-#: src/ui/cmt/UiCmt.cpp:36
-msgid "Custom pulses..."
-msgstr "Власні імпульси..."
-
-#: src/ui/cmt/UiCmt.cpp:49
-msgid "UNKNOWN"
-msgstr "НЕВІДОМО"
-
-#: src/ui/vkbd/ui_vkbd.c:207
-msgid "PC key: CapsLock"
-msgstr "Клавіша ПК: CapsLock"
-
-#: src/ui/vkbd/ui_vkbd.c:210
-msgid "PC key: \\"
-msgstr "Клавіша ПК: \\"
-
-#: src/ui/vkbd/ui_vkbd.c:213
-msgid "PC key: \\ or Tab"
-msgstr "Клавіша ПК: \\ або Tab"
-
-#: src/ui/vkbd/ui_vkbd.c:216
-msgid "PC key: ~"
-msgstr "Клавіша ПК: ~"
-
-#: src/ui/vkbd/ui_vkbd.c:218
-msgid "PC key: Esc or End"
-msgstr "Клавіша ПК: Esc або End"
-
-#: src/ui/vkbd/ui_vkbd.c:220
-msgid "PC key: Insert"
-msgstr "Клавіша ПК: Insert"
-
-#: src/ui/vkbd/ui_vkbd.c:222
-msgid "PC key: Backspace or Delete"
-msgstr "Клавіша ПК: Backspace або Delete"
-
-#: src/ui/vkbd/ui_vkbd.c:224
-msgid "PC key: F6"
-msgstr "Клавіша ПК: F6"
-
-#: src/ui/vkbd/ui_vkbd.c:226
-msgid "PC key: F7"
-msgstr "Клавіша ПК: F7"
-
-#: src/ui/vkbd/ui_vkbd.c:228
-msgid "PC key: F8"
-msgstr "Клавіша ПК: F8"
-
-#: src/ui/vkbd/ui_vkbd.c:230
-msgid "PC key: F9"
-msgstr "Клавіша ПК: F9"
 
 #~ msgid ""
 #~ "The device code a program gets in register BC when an MZF file is started "

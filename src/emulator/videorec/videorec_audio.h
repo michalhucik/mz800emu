@@ -2,7 +2,8 @@
  * @file   videorec_audio.h
  * @brief  Renderer audio událostí na stereo PCM v emulačním čase pro video záznam.
  *
- * Vstupem jsou změny 4bitových hodnot jednotlivých zvukových kanálů s absolutním
+ * Vstupem jsou změny hodnot zvukového logu (0 až 30, viz audio.h
+ * AUDIO_MAXVAL_PER_CHANNEL) jednotlivých zvukových kanálů s absolutním
  * časem v GDG taktech. Výstupem jsou stereo vzorky int16 (prokládané L, R).
  *
  * @par Rozložení kanálů do L/R
@@ -27,14 +28,30 @@
  * @par Řetězec SDL cesty (režim `sdl_chain`)
  * Nahrávka má znít jako výstup emulátoru, proto renderer kopíruje filtry SDL
  * cesty (src/iface/iface_audio_resampler.c, mix v src/iface/iface_audio.c):
- * - kanál 0 (CTC0): parkování -> 1-pólový low-pass (`alpha` 0,4,
+ * - kanál 0 (CTC0): střídavá vazba (horní propust 1. řádu, časová konstanta
+ *   VIDEOREC_AUDIO_CTC0_AC_TAU_MS) -> 1-pólový low-pass (`alpha` 0,4,
  *   iface_audio_lowpass_filter()) -> anti-glitch (0,2, iface_audio_anti_glitch_filter());
  * - kanály 1.. (PSG): parkování -> IIR `y += (x - y) / 6`;
  * - mix: součet kanálů každé strany (úrovně už obsahují gain a průměr přes
  *   4 kanály PSG, viz iface_audio_build_videorec_levels()), ořez shora na 1,0
- *   jako iface_audio_mix_channels_with_gain() / iface_audio_mix_channels_stereo().
+ *   jako iface_audio_mix_channels_with_gain() / iface_audio_mix_channels_stereo();
+ * - výstupní propust (volba, videorec_audio_set_output_filter()): místo
+ *   low-passu, anti-glitch a IIR jednotlivých kanálů projde součet kanálů
+ *   (CTC0 po střídavé vazbě, PSG po parkování) dolní propustí 1. řádu
+ *   s časovou konstantou VIDEOREC_AUDIO_OUT_LP_TAU_US. Obě varianty se počítají
+ *   stále, přepnutí je plynulý přechod VIDEOREC_AUDIO_OUT_XFADE_MS;
+ * - střídavá vazba výstupu (videorec_audio_set_output_coupling(), MZ-800
+ *   a MZ-1500): horní propust 1. řádu VIDEOREC_AUDIO_OUT_AC_TAU_MS na součtu
+ *   kanálů každé strany (kondenzátor v sérii s výstupem čipu PSG); kanály PSG
+ *   se pak neparkují.
  *
- * Parkování: hodnota kanálu na konci vzorku, která je nenulová a beze změny
+ * Střídavá vazba CTC0: na skutečném MZ-800 je CTC0 do výstupu vázaný
+ * střídavě (změřeno osciloskopem 2026-11-18: obdélník souměrný kolem klidu,
+ * stálá úroveň se vrací ke klidu s časovou konstantou 0,8 až 0,9 s). Stav je
+ * střední hodnota kanálu `hp_mean` v jednotkách 0..1 (podíl času v jedničce);
+ * výstup je `x - hp_mean * unit`. Nahrazuje dřívější parkování CTC0.
+ *
+ * Parkování (jen PSG): hodnota kanálu na konci vzorku, která je nenulová a beze změny
  * déle než 45 ms, se během cca 20 ms ve 20 krocích stáhne k 0 (SDL cesta tak
  * odstraňuje trvalou stejnosměrnou úroveň). Koeficienty jsou v SDL cestě
  * definované pro 44 100 Hz; při této frekvenci renderer používá přesně stejné
@@ -49,10 +66,8 @@
  * (zapečenou do tabulky úrovní). Paritu ověřuje
  * tests/videorec/test_videorec_audio_sdl_parity.c.
  *
- * Dřívější DC blok (horní propust cca 4 Hz) je nahrazený parkováním: obojí
- * brání tomu, aby trvalá úroveň (CTC0 držený na 1) zabrala rozsah a přehlušila
- * ostatní kanály, ale jen parkování dává stejný průběh jako výstup emulátoru
- * (unipolární signál, ticho = 0).
+ * Trvalou úroveň (CTC0 držený na 1), která by zabrala rozsah, odstraňuje
+ * u CTC0 střídavá vazba a u PSG parkování, stejně jako v SDL cestě.
  *
  * @par Surový režim (bez `sdl_chain`)
  * Součet box průměrů kanálů bez filtrů (testy časování a box filtru).
@@ -81,8 +96,17 @@ extern "C" {
 /** @brief Maximální počet kanálů, které renderer zpracuje (nadbytečné se při init ořežou). */
 #define VIDEOREC_AUDIO_MAX_CHANNELS 9
 
-/** @brief Počet úrovní na kanál (4bitová hodnota 0..15). */
-#define VIDEOREC_AUDIO_LEVELS 16
+/**
+ * @brief Počet úrovní na kanál (5bitová hodnota 0..31).
+ *
+ * Zvukový log používá hodnoty 0 až 30: 0 až 15 plná výchylka stupně
+ * hlasitosti, 16 až 30 poloviční výchylka stupně `hodnota - 15` (tón PSG
+ * s děličem 001h). Hodnota 31 se nepoužívá (v tabulce má mít úroveň 0).
+ */
+#define VIDEOREC_AUDIO_LEVELS 32
+
+/** @brief Maska platných bitů hodnoty kanálu (VIDEOREC_AUDIO_LEVELS - 1). */
+#define VIDEOREC_AUDIO_VALUE_MASK 0x1Fu
 
 /** @brief Počet kanálů jednoho PSG (PSG_CHANNELS_COUNT); určuje rozložení kanálů do L/R. */
 #define VIDEOREC_AUDIO_PSG_CHANNELS 4u
@@ -97,14 +121,29 @@ extern "C" {
 /** @brief Vzorkovací frekvence, pro kterou jsou definované koeficienty SDL cesty [Hz] (IFACE_AUDIO_SAMPLE_RATE). */
 #define VIDEOREC_AUDIO_SDL_RATE 44100u
 
+/** @brief Časová konstanta střídavé vazby CTC0 [ms] (AUDIO_CTC0_AC_TAU_MS v audio.h; změřeno 0,8 až 0,9 s). */
+#define VIDEOREC_AUDIO_CTC0_AC_TAU_MS 850u
+
+/** @brief Časová konstanta výstupní dolní propusti [us] (AUDIO_OUT_LP_TAU_US v audio.h; změřeno 460 us, zlom 346 Hz). */
+#define VIDEOREC_AUDIO_OUT_LP_TAU_US 460u
+
+/** @brief Časová konstanta střídavé vazby celého výstupu [ms] (AUDIO_OUT_AC_TAU_MS v audio.h). */
+#define VIDEOREC_AUDIO_OUT_AC_TAU_MS 570u
+
+/** @brief Délka plynulého přechodu při přepnutí výstupní propusti [ms]. */
+#define VIDEOREC_AUDIO_OUT_XFADE_MS 10u
+
+/** @brief Hodnota kanálu CTC0 ve stavu "jednička" (AUDIO_MAXVAL_PER_CHANNEL); její úroveň je jednotka střídavé vazby. */
+#define VIDEOREC_AUDIO_CTC0_ON_VALUE 15u
+
 /**
  * @brief Jedna změna hodnoty kanálu ve frontě.
  *
- * Invariant: `value` je v rozsahu 0..15.
+ * Invariant: `value` je v rozsahu 0..31.
  */
 typedef struct st_VIDEOREC_AUDIO_EVENT {
     uint64_t ticks; /**< Absolutní čas změny v GDG taktech. */
-    uint8_t value;  /**< Nová hodnota kanálu (0..15). */
+    uint8_t value;  /**< Nová hodnota kanálu (0..31). */
 } st_VIDEOREC_AUDIO_EVENT;
 
 /**
@@ -125,7 +164,8 @@ typedef struct st_VIDEOREC_AUDIO_QUEUE {
  * @brief Koeficienty řetězce SDL cesty pro danou vzorkovací frekvenci.
  *
  * Invariant: při `rate == VIDEOREC_AUDIO_SDL_RATE` jsou hodnoty přesně ty
- * z SDL cesty (0,4f, 0,2f, 6,0f, 1980, 880).
+ * z SDL cesty (0,4f, 0,2f, 6,0f, 1980, 880; `ctc_ac_k`, `out_lp_k`
+ * a `out_xfade_step` stejným výrazem jako v iface_audio).
  */
 typedef struct st_VIDEOREC_AUDIO_COEF {
     unsigned park_samples; /**< Počet vzorků konstantní nenulové hodnoty před parkováním (`(rate/1000) * 45`). */
@@ -133,6 +173,11 @@ typedef struct st_VIDEOREC_AUDIO_COEF {
     float ctc_lp_alpha;    /**< CTC0 low-pass: `y = alpha*x + (1-alpha)*y`. */
     float ctc_ag_factor;   /**< CTC0 anti-glitch: `y += f*(x - y)`. */
     float psg_iir_div;     /**< PSG IIR: `y += (x - y) / div`. */
+    double ctc_ac_k;       /**< Střídavá vazba CTC0: `mean += (x01 - mean) * k`, `k = 1 - exp(-1000 / (tau_ms * rate))`. */
+    double out_lp_k;       /**< Výstupní propust: `y += (x - y) * k`, `k = 1 - exp(-1e6 / (tau_us * rate))`. */
+    float out_xfade_step;  /**< Krok váhy výstupní propusti na vzorek (`1000 / (xfade_ms * rate)`). */
+    double out_ac_k;       /**< Střídavá vazba výstupu: `mean += (x - mean) * k`; 0 = vazba vypnutá (výchozí). */
+    bool psg_park;         /**< Parkovat stálou úroveň kanálů PSG (výchozí true; false s vazbou výstupu). */
 } st_VIDEOREC_AUDIO_COEF;
 
 /**
@@ -151,24 +196,33 @@ typedef struct st_VIDEOREC_AUDIO_PARK {
 /**
  * @brief Stav filtrů jednoho kanálu.
  *
- * U CTC0 je `lp` výstup low-passu a `ag` výstup anti-glitch filtru; u PSG je
- * `lp` stav IIR a `ag` se nepoužívá (zůstává 0).
+ * U CTC0 je `hp_mean` stav střídavé vazby, `lp` výstup low-passu a `ag` výstup
+ * anti-glitch filtru (`park` se nepoužívá); u PSG je `lp` stav IIR, `park`
+ * parkování a `ag` ani `hp_mean` se nepoužívají (zůstávají 0).
+ *
+ * Invariant: `hp_mean` je v rozsahu 0..1.
  */
 typedef struct st_VIDEOREC_AUDIO_CHSTATE {
-    st_VIDEOREC_AUDIO_PARK park; /**< Parkování. */
+    st_VIDEOREC_AUDIO_PARK park; /**< PSG: parkování; CTC0: nepoužito. */
     float lp;                    /**< CTC0: low-pass; PSG: IIR. */
     float ag;                    /**< CTC0: anti-glitch; PSG: nepoužito. */
+    double hp_mean;              /**< CTC0: střední hodnota kanálu (0..1) pro střídavou vazbu; PSG: nepoužito. */
 } st_VIDEOREC_AUDIO_CHSTATE;
 
 /**
  * @brief Úplný stav rendereru v okamžiku mezi vzorky (pro plynulý retake).
  *
  * Obsahuje vše, na čem závisí další výstup kromě času a čekajících událostí:
- * hodnoty kanálů a stavy filtrů. Kopírovatelná hodnotou (bez ukazatelů).
+ * hodnoty kanálů, stavy filtrů kanálů a stav výstupní propusti. Kopírovatelná
+ * hodnotou (bez ukazatelů).
  */
 typedef struct st_VIDEOREC_AUDIO_STATE {
-    uint8_t value[VIDEOREC_AUDIO_MAX_CHANNELS];                /**< Hodnoty kanálů (0..15). */
+    uint8_t value[VIDEOREC_AUDIO_MAX_CHANNELS];                /**< Hodnoty kanálů (0..31). */
     st_VIDEOREC_AUDIO_CHSTATE ch[VIDEOREC_AUDIO_MAX_CHANNELS]; /**< Stavy filtrů kanálů. */
+    double out_lp[2];                                          /**< Stav výstupní propusti L, R. */
+    double out_ac[2];                                          /**< Stav střídavé vazby výstupu L, R (střední hodnota součtu kanálů). */
+    float out_gain;                                            /**< Váha výstupní propusti v mixu (0..1). */
+    bool out_filter;                                           /**< Cílový stav výstupní propusti. */
 } st_VIDEOREC_AUDIO_STATE;
 
 /**
@@ -183,7 +237,9 @@ typedef struct st_VIDEOREC_AUDIO_STATE {
  * - `n` je počet vzorků vyrenderovaných od `origin`,
  * - `value[c]` je hodnota kanálu na začátku dosud nevyrenderovaného vzorku `n`,
  * - `flt` je stav filtrů po posledním vyrenderovaném vzorku (bez `sdl_chain` se nemění),
- * - `route[c]` je kombinace VIDEOREC_AUDIO_ROUTE_L / _R (0 = kanál se nemixuje).
+ * - `route[c]` je kombinace VIDEOREC_AUDIO_ROUTE_L / _R (0 = kanál se nemixuje),
+ * - `out_gain` je v 0..1 a blíží se k `out_filter ? 1 : 0` krokem
+ *   `coef.out_xfade_step` na vzorek; `out_lp` běží stále (i při `out_gain == 0`).
  *
  * Ownership: struktura vlastní pole událostí ve frontách; uvolňuje je
  * videorec_audio_free().
@@ -192,7 +248,7 @@ typedef struct st_VIDEOREC_AUDIO {
     uint64_t clk_hz;                                                 /**< Frekvence GDG taktů [Hz]. */
     unsigned rate;                                                   /**< Výstupní vzorkovací frekvence [Hz]. */
     unsigned channels;                                               /**< Počet aktivních kanálů. */
-    float level[VIDEOREC_AUDIO_MAX_CHANNELS][VIDEOREC_AUDIO_LEVELS]; /**< Úroveň (amplituda) kanálu pro hodnotu 0..15. */
+    float level[VIDEOREC_AUDIO_MAX_CHANNELS][VIDEOREC_AUDIO_LEVELS]; /**< Úroveň (amplituda) kanálu pro hodnotu 0..31. */
     uint8_t value[VIDEOREC_AUDIO_MAX_CHANNELS];                      /**< Aktuální hodnota kanálu (viz invarianty). */
     st_VIDEOREC_AUDIO_QUEUE q[VIDEOREC_AUDIO_MAX_CHANNELS];          /**< Fronty čekajících změn po kanálech. */
     uint64_t origin;                                                 /**< Čas (takty) začátku vzorku 0. */
@@ -202,6 +258,10 @@ typedef struct st_VIDEOREC_AUDIO {
     st_VIDEOREC_AUDIO_CHSTATE flt[VIDEOREC_AUDIO_MAX_CHANNELS];      /**< Stavy filtrů kanálů. */
     uint8_t route[VIDEOREC_AUDIO_MAX_CHANNELS];                      /**< Strany, do kterých se kanál mixuje (VIDEOREC_AUDIO_ROUTE_*). */
     bool stereo;                                                     /**< Nastavené stereo rozložení SDL cesty (videorec_audio_set_stereo()). */
+    double out_lp[2];                                                /**< Stav výstupní propusti L, R (jen `sdl_chain`). */
+    double out_ac[2];                                                /**< Stav střídavé vazby výstupu L, R: střední hodnota součtu kanálů (jen `sdl_chain`). */
+    float out_gain;                                                  /**< Váha výstupní propusti v mixu (0 = dřívější filtry kanálů, 1 = výstupní propust). */
+    bool out_filter;                                                 /**< Cílový stav výstupní propusti (videorec_audio_set_output_filter()). */
 } st_VIDEOREC_AUDIO;
 
 /**
@@ -234,30 +294,88 @@ void videorec_audio_coef_init(st_VIDEOREC_AUDIO_COEF *c, unsigned rate);
 float videorec_audio_sdl_ctc0_gain(size_t ctc_samples, size_t out_samples);
 
 /**
- * @brief Jeden vzorek řetězce CTC0: parkování -> low-pass -> anti-glitch.
+ * @brief Jeden vzorek řetězce CTC0: střídavá vazba -> low-pass -> anti-glitch.
  *
- * Operace i pořadí ve float jsou shodné s iface_audio_resampler.c:229-283.
+ * Střídavá vazba: `x01 = x / unit` (podíl času v jedničce, 0..1),
+ * `hp_mean += (x01 - hp_mean) * ctc_ac_k`, `ac = x - hp_mean * unit`
+ * (počítáno v double, výsledek float). Při `unit <= 0` (nulová hlasitost)
+ * se stav nemění a `ac = x`. Stejnou funkci volá SDL cesta
+ * (iface_audio_resampler_output_stream_ctc0()), kde `unit` je zesílení
+ * převzorkování daného vzorku `délka / (délka + 1)`; renderer dává úroveň
+ * hodnoty VIDEOREC_AUDIO_CTC0_ON_VALUE.
  *
- * @param s         Stav kanálu (mění se).
- * @param c         Koeficienty.
- * @param x         Vstup (průměrná úroveň kanálu ve vzorku).
- * @param end_value Hodnota kanálu na konci vzorku (pro parkování).
- * @return Výstup kanálu.
+ * @param s    Stav kanálu (mění se).
+ * @param c    Koeficienty.
+ * @param x    Vstup (průměrná úroveň kanálu ve vzorku, 0..unit).
+ * @param unit Úroveň kanálu trvale v jedničce.
+ * @param raw  Výstup po střídavé vazbě před low-passem (vstup výstupní propusti), nebo NULL.
+ * @return Výstup kanálu po low-passu a anti-glitch filtru.
  */
-float videorec_audio_chain_ctc0(st_VIDEOREC_AUDIO_CHSTATE *s, const st_VIDEOREC_AUDIO_COEF *c, float x, uint8_t end_value);
+float videorec_audio_chain_ctc0(st_VIDEOREC_AUDIO_CHSTATE *s, const st_VIDEOREC_AUDIO_COEF *c, float x, float unit, float *raw);
 
 /**
  * @brief Jeden vzorek řetězce PSG: parkování -> IIR `y += (x - y) / div`.
  *
- * Operace i pořadí ve float jsou shodné s iface_audio_resampler.c:342-387.
+ * Operace i pořadí ve float jsou shodné s iface_audio_resampler_process_psg_audio_log().
+ *
+ * Parkování se dělá jen při `c->psg_park`; se střídavou vazbou výstupu
+ * (videorec_audio_set_output_coupling()) odpadá.
  *
  * @param s         Stav kanálu (mění se).
  * @param c         Koeficienty.
  * @param x         Vstup (průměrná úroveň kanálu ve vzorku).
  * @param end_value Hodnota kanálu na konci vzorku (pro parkování).
- * @return Výstup kanálu.
+ * @param raw       Výstup po parkování před IIR (vstup výstupní propusti), nebo NULL.
+ * @return Výstup kanálu po IIR.
  */
-float videorec_audio_chain_psg(st_VIDEOREC_AUDIO_CHSTATE *s, const st_VIDEOREC_AUDIO_COEF *c, float x, uint8_t end_value);
+float videorec_audio_chain_psg(st_VIDEOREC_AUDIO_CHSTATE *s, const st_VIDEOREC_AUDIO_COEF *c, float x, uint8_t end_value, float *raw);
+
+/**
+ * @brief Jeden vzorek výstupního stupně jedné strany: střídavá vazba, ořez, výstupní propust, plynulý přechod.
+ *
+ * Střídavá vazba výstupu (horní propust 1. řádu, VIDEOREC_AUDIO_OUT_AC_TAU_MS):
+ * `*ac += (raw - *ac) * out_ac_k` a střední hodnota `*ac` se odečte od obou
+ * součtů (jejich stejnosměrná složka je stejná, filtry kanálů mají
+ * stejnosměrné zesílení 1). Při `out_ac_k == 0` a `*ac == 0` se nic nemění.
+ * `legacy` (součet kanálů po jejich filtrech) se pak ořízne shora na 1,0 jako
+ * dřív. `raw` (součet kanálů před jejich filtry) projde dolní propustí
+ * `*lp += (raw - *lp) * out_lp_k`, která běží vždy. Výsledek je
+ * `legacy + gain * (lp - legacy)`, oříznutý na [-1, 1]; při `gain == 0` je
+ * přesně `legacy`. Stejnou funkci volá mix SDL cesty (iface_audio.c).
+ *
+ * @param c      Koeficienty.
+ * @param ac     Stav střídavé vazby strany (mění se).
+ * @param lp     Stav výstupní propusti strany (mění se).
+ * @param legacy Součet kanálů po filtrech kanálů.
+ * @param raw    Součet kanálů před filtry kanálů.
+ * @param gain   Váha výstupní propusti 0..1.
+ * @return Vzorek strany v rozsahu [-1, 1].
+ */
+float videorec_audio_output_stage(const st_VIDEOREC_AUDIO_COEF *c, double *ac, double *lp, float legacy, float raw, float gain);
+
+/**
+ * @brief Zapne nebo vypne v koeficientech střídavou vazbu výstupu.
+ *
+ * Zapnuto: `out_ac_k = 1 - exp(-1000 / (VIDEOREC_AUDIO_OUT_AC_TAU_MS * rate))`
+ * a parkování kanálů PSG se vypne (`psg_park = false`) - stálou úroveň
+ * odstraní vazba, jako kondenzátor v sérii s výstupem skutečného MZ-800.
+ * Vypnuto: `out_ac_k = 0`, `psg_park = true` (stav po videorec_audio_coef_init()).
+ *
+ * @param c    Koeficienty po videorec_audio_coef_init().
+ * @param rate Vzorkovací frekvence [Hz]; nenulová.
+ * @param on   true = vazba výstupu (MZ-800, MZ-1500), false = bez ní (MZ-700).
+ */
+void videorec_audio_coef_set_output_coupling(st_VIDEOREC_AUDIO_COEF *c, unsigned rate, bool on);
+
+/**
+ * @brief Posune váhu výstupní propusti o jeden vzorek směrem k cíli.
+ *
+ * @param c    Koeficienty (`out_xfade_step`).
+ * @param gain Dosavadní váha 0..1.
+ * @param on   Cílový stav (true = 1, false = 0).
+ * @return Nová váha v 0..1.
+ */
+float videorec_audio_output_gain_step(const st_VIDEOREC_AUDIO_COEF *c, float gain, bool on);
 
 /**
  * @brief Inicializuje renderer.
@@ -268,16 +386,21 @@ float videorec_audio_chain_psg(st_VIDEOREC_AUDIO_CHSTATE *s, const st_VIDEOREC_A
  * @param channels     Počet kanálů; hodnota nad VIDEOREC_AUDIO_MAX_CHANNELS se ořízne.
  * @param level        Tabulka úrovní `level[kanál][hodnota]`, aspoň `channels` řádků;
  *                     zkopíruje se (po návratu ji volající může uvolnit).
- * @param values       Počáteční hodnoty kanálů (`channels` prvků, bity 0..3), nebo NULL = samé 0.
+ * @param values       Počáteční hodnoty kanálů (`channels` prvků, bity 0..4), nebo NULL = samé 0.
  * @param origin_ticks Čas začátku vzorku 0 v taktech.
  * @param sdl_chain    true = řetězec filtrů SDL cesty (kanál 0 = CTC0, ostatní PSG),
  *                     false = surový součet box průměrů.
  *
  * @pre `a`, `level` nejsou NULL; `clk_hz` a `rate` nenulové.
  * @post Renderer je prázdný, `n == 0`, stavy filtrů nulové (jako SDL cesta po
- *       startu emulátoru), všechny kanály se mixují do obou stran
- *       (`stereo == false`, viz videorec_audio_set_stereo()), nevlastní
- *       žádnou alokovanou paměť.
+ *       startu emulátoru) kromě střídavé vazby CTC0, která začíná ustálená na
+ *       počáteční hodnotě kanálu 0 (`hp_mean` 1 při nenulové hodnotě, jinak 0;
+ *       přesný stav nastaví videorec_audio_set_ctc0_mean()); všechny kanály se
+ *       mixují do obou stran (`stereo == false`, viz videorec_audio_set_stereo()),
+ *       výstupní propust je vypnutá (videorec_audio_set_output_filter()),
+ *       střídavá vazba výstupu je vypnutá a kanály PSG se parkují
+ *       (videorec_audio_set_output_coupling()),
+ *       nevlastní žádnou alokovanou paměť.
  * @note Selhat nemůže (nealokuje).
  */
 void videorec_audio_init(st_VIDEOREC_AUDIO *a, uint64_t clk_hz, unsigned rate, unsigned channels,
@@ -303,6 +426,61 @@ void videorec_audio_init(st_VIDEOREC_AUDIO *a, uint64_t clk_hz, unsigned rate, u
  * @post `a->stereo == stereo`, `route` podle pravidel výše.
  */
 void videorec_audio_set_stereo(st_VIDEOREC_AUDIO *a, bool stereo);
+
+/**
+ * @brief Zapne nebo vypne výstupní dolní propust (věrný výstup MZ-800).
+ *
+ * Zapnuto: výstup je součet kanálů před jejich filtry (CTC0 po střídavé vazbě,
+ * PSG po parkování) po dolní propusti 1. řádu s časovou konstantou
+ * VIDEOREC_AUDIO_OUT_LP_TAU_US. Vypnuto: součet kanálů po jejich dřívějších
+ * filtrech (low-pass a anti-glitch CTC0, IIR PSG). Úroveň nízkých kmitočtů je
+ * v obou stavech stejná. Platí jen v režimu `sdl_chain`.
+ *
+ * @param a         Instance po videorec_audio_init().
+ * @param on        Cílový stav.
+ * @param immediate true = platí hned od dalšího vzorku (start nahrávky);
+ *                  false = plynulý přechod VIDEOREC_AUDIO_OUT_XFADE_MS (přepnutí za běhu).
+ * @post `a->out_filter == on`; při `immediate` navíc `a->out_gain` 1 nebo 0.
+ */
+void videorec_audio_set_output_filter(st_VIDEOREC_AUDIO *a, bool on, bool immediate);
+
+/**
+ * @brief Zapne nebo vypne střídavou vazbu celého výstupu (viz videorec_audio_coef_set_output_coupling()).
+ *
+ * Emulátor ji zapíná u počítačů, které ji mají (MZ-800, MZ-1500); po
+ * videorec_audio_init() je vypnutá a kanály PSG se parkují. Platí jen v režimu
+ * `sdl_chain`. Stav vazby (`out_ac`) se nemění; nastavuje ho
+ * videorec_audio_set_output_mean().
+ *
+ * @param a  Instance po videorec_audio_init().
+ * @param on true = vazba výstupu místo parkování PSG.
+ */
+void videorec_audio_set_output_coupling(st_VIDEOREC_AUDIO *a, bool on);
+
+/**
+ * @brief Nastaví stav střídavé vazby výstupu (střední hodnotu součtu kanálů každé strany).
+ *
+ * Emulátor vede střední hodnoty kanálů v emulovaném čase
+ * (iface_audio_output_ac_means()); nahrávka tak začne bez doznívajícího
+ * stejnosměrného posunu a shodně se SDL cestou.
+ *
+ * @param a Instance po videorec_audio_init().
+ * @param l Střední hodnota levé strany v jednotkách úrovní (`level`).
+ * @param r Střední hodnota pravé strany.
+ */
+void videorec_audio_set_output_mean(st_VIDEOREC_AUDIO *a, double l, double r);
+
+/**
+ * @brief Nastaví stav střídavé vazby CTC0 (střední hodnotu kanálu 0).
+ *
+ * Emulátor vede střední hodnotu CTC0 průběžně v emulovaném čase
+ * (audio_ctc0_ac_mean()); nahrávka, která začne uprostřed doznívání stálé
+ * úrovně, tak naváže stejně jako SDL cesta.
+ *
+ * @param a      Instance po videorec_audio_init().
+ * @param mean01 Střední hodnota 0..1 (podíl času v jedničce); mimo rozsah se ořízne.
+ */
+void videorec_audio_set_ctc0_mean(st_VIDEOREC_AUDIO *a, double mean01);
 
 /**
  * @brief Je nastavené stereo rozložení (videorec_audio_set_stereo(a, true))?
@@ -334,7 +512,8 @@ void videorec_audio_free(st_VIDEOREC_AUDIO *a);
  * @param origin_ticks Nový čas začátku vzorku 0 v taktech.
  * @param values       Hodnoty kanálů k tomuto okamžiku (`channels` prvků), nebo NULL = samé 0.
  *
- * @post Fronty prázdné, `n == 0`, `value[c] = values[c] & 0x0F`, `flt` beze změny.
+ * @post Fronty prázdné, `n == 0`, `value[c] = values[c] & VIDEOREC_AUDIO_VALUE_MASK`, `flt`
+ *       a stav výstupní propusti beze změny.
  */
 void videorec_audio_rebase(st_VIDEOREC_AUDIO *a, uint64_t origin_ticks, const uint8_t *values);
 
@@ -358,7 +537,8 @@ void videorec_audio_get_state(const st_VIDEOREC_AUDIO *a, st_VIDEOREC_AUDIO_STAT
  *
  * @param a  Instance (se stejným počtem kanálů jako při uložení).
  * @param st Uložený stav.
- * @post `value[c] = st->value[c] & 0x0F`, `flt[c] = st->ch[c]` pro c < `channels`.
+ * @post `value[c] = st->value[c] & VIDEOREC_AUDIO_VALUE_MASK`, `flt[c] = st->ch[c]` pro c < `channels`;
+ *       `out_lp`, `out_gain` a `out_filter` podle `st`.
  */
 void videorec_audio_set_state(st_VIDEOREC_AUDIO *a, const st_VIDEOREC_AUDIO_STATE *st);
 
@@ -371,7 +551,7 @@ void videorec_audio_set_state(st_VIDEOREC_AUDIO *a, const st_VIDEOREC_AUDIO_STAT
  *
  * @param a     Instance.
  * @param ch    Index kanálu (< `channels`).
- * @param value Nová hodnota; použijí se jen bity 0..3.
+ * @param value Nová hodnota; použijí se jen bity 0..4.
  * @param ticks Absolutní čas změny v taktech.
  *
  * @return 0 při úspěchu, -1 při neplatném kanálu nebo selhání alokace (instance zůstane konzistentní).

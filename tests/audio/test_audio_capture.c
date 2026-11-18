@@ -517,6 +517,49 @@ void test_audio_capture_memory_frame_summary(void)
 }
 
 
+/**
+ * @brief Poloviční výchylka (tón PSG s děličem 001h, hodnoty 16..30): ring levels
+ *        nese hodnotu zvukového logu, souhrn snímku stupeň hlasitosti a energii x 6 / 25.
+ */
+void test_audio_capture_memory_half_level(void)
+{
+    st_AUDIO_CAPTURE_PARAMS p = params(false, 0);
+    p.psg_writes = p.reference_wav = false;
+    p.memory = true;
+    TEST_ASSERT_TRUE(audio_capture_start(&p, NULL, 0));
+    audio_capture_on_frame(T0);
+    /* hodnota 25 = poloviční výchylka stupně 10, v [1000,2000), [3000,4000), ... */
+    for (unsigned k = 1; k <= 10; k++) {
+        audio_capture_on_change(2, (uint8_t) ((k & 1) ? 25 : 0), T0 + k * 1000u);
+    }
+    audio_capture_on_frame(T0 + T_FRAME);
+    TEST_ASSERT_TRUE(audio_capture_stop());
+
+    gsize len = 0;
+    char *ev = read_file("events.csv", &len);
+    TEST_ASSERT_NOT_NULL(strstr(ev, ",psg0_1,25\n"));
+    g_free(ev);
+
+    st_AUDIO_CAPTURE_STREAM_COPY lv = copy_all(AUDIO_CAPTURE_STREAM_LEVELS);
+    const st_AUDIO_CAPTURE_LEVEL_REC *l = (const st_AUDIO_CAPTURE_LEVEL_REC *) lv.data;
+    TEST_ASSERT_EQUAL_UINT64(AUDIO_SRC_CHANNELS_COUNT + 10, lv.data_count);
+    TEST_ASSERT_EQUAL_UINT8(25, l[AUDIO_SRC_CHANNELS_COUNT].level);
+    TEST_ASSERT_EQUAL_UINT8(0, l[AUDIO_SRC_CHANNELS_COUNT + 1].level);
+    audio_capture_stream_copy_clear(&lv);
+
+    st_AUDIO_CAPTURE_STREAM_COPY c = copy_all(AUDIO_CAPTURE_STREAM_FRAMES);
+    TEST_ASSERT_EQUAL_UINT64(1, c.data_count);
+    const st_AUDIO_CAPTURE_FRAME_REC *f = (const st_AUDIO_CAPTURE_FRAME_REC *) c.data;
+    TEST_ASSERT_EQUAL_UINT32(10, f[0].ch[2].edges);
+    TEST_ASSERT_EQUAL_UINT32(5000, f[0].ch[2].on_ticks);
+    TEST_ASSERT_EQUAL_UINT32(100u * 5000u * 6u / 25u, f[0].ch[2].energy);
+    TEST_ASSERT_EQUAL_UINT8(10, f[0].ch[2].max_level);
+    TEST_ASSERT_EQUAL_UINT8(0, f[0].ch[2].end_level);
+    TEST_ASSERT_TRUE(f[0].ref_rms[0] > 0);
+    audio_capture_stream_copy_clear(&c);
+}
+
+
 /** @brief PCM ringy obsahují bajtově totéž co reference.wav a sdl.wav. */
 void test_audio_capture_memory_pcm_matches_wav(void)
 {
@@ -616,6 +659,7 @@ int main(int argc, char *argv[])
     RUN_TEST(test_audio_capture_memory_segment);
     RUN_TEST(test_audio_capture_memory_only);
     RUN_TEST(test_audio_capture_memory_frame_summary);
+    RUN_TEST(test_audio_capture_memory_half_level);
     RUN_TEST(test_audio_capture_memory_pcm_matches_wav);
     RUN_TEST(test_audio_capture_memory_start_errors);
     RUN_TEST(test_audio_capture_memory_copy_time);

@@ -285,6 +285,39 @@ or 1x to 4x of the window) are set in Settings... Record Changed Frames
 (`Alt + Shift + F`) saves every changed emulated frame, for finding animation
 bugs. For details see [`screenshots.md`](screenshots.md).
 
+## Sound
+
+Interface -> Audio... opens the Audio Mixer window with the volume of the
+speaker (CTC0) and of the PSG channels. The option **Hardware output filter**
+(on by default, `[AUDIO] output_filter` in the INI file) turns on the low-pass
+filter a real MZ-800 has between the sound chip and the amplifier (first
+order, 346 Hz corner with the volume at maximum): the sound is duller, like
+from the computer's own speaker. With the option off you get the previous,
+brighter sound of the emulator. The level of low tones does not change with
+the option, it can be switched at any time while running and it also applies
+to the audio capture and the video recording. The speaker (CTC0, beeps, music
+through the 8253 and the tape signal) is AC coupled as on the real computer:
+a constant level fades out within about a second. A constant level of the
+whole output fades out the same way (MZ-800 and MZ-1500): there is a capacitor
+in series behind the sound chip, the time constant of 0.57 s is calculated
+from the schematic and oscilloscope measurements agree (0.55 s, range 0.44 to
+0.69 s). When the computer is silent the output reaches zero within a few
+seconds.
+
+How well founded the sound output is:
+
+- **MZ-800** - measured on a real computer (levels, filter, speaker coupling).
+- **MZ-1500** - derived from the MZ-800, not measured.
+- **MZ-700** - estimated from the schematic, without measurements. According to
+  the schematic the MZ-700 has no filter in front of the amplifier, so the
+  MZ-700 emulators do not have the option Hardware output filter (neither in
+  the window nor in the INI file) and the sound uses the previous filters of
+  the emulator. On the real computer the speaker is DC coupled; the emulator
+  still lets a constant speaker level fade out, because a sound card cannot
+  reproduce it and steps would click (there is no series capacitor as in the
+  MZ-800). The speaker volume is the same as for an MZ-800 in
+  MZ-700 mode. An MZ-800 in MZ-700 mode uses the sound path of the MZ-800.
+
 ## Audio capture
 
 Tools -> Audio Capture -> Record Audio Capture (`Alt + Q`) records into a new

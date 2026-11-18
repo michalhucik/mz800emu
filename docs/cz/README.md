@@ -297,6 +297,34 @@ zobrazeného v okně; oblast (s borderem nebo bez) a měřítko (nativní body n
 (`Alt + Shift + F`) ukládá každý změněný emulovaný snímek pro hledání chyb
 v animacích. Podrobnosti viz [`screenshots.md`](screenshots.md).
 
+## Zvuk
+
+Interface -> Audio... otevře okno Audio Mixer s hlasitostí reproduktoru (CTC0)
+a kanálů PSG. Volba **Hardware output filter** (výchozí zapnuto, v INI
+`[AUDIO] output_filter`) zapíná dolní propust, kterou má skutečný MZ-800 mezi
+zvukovým čipem a zesilovačem (první řád, zlom 346 Hz při hlasitosti na
+maximum): zvuk je tlumenější, jako z reproduktoru počítače. Vypnutá volba
+dává dřívější, jasnější zvuk emulátoru. Hlasitost hlubokých tónů se přepnutím
+nemění, přepnout jde kdykoli za běhu a platí i pro záznam zvuku a videa.
+Reproduktor (CTC0, pípání, hudba přes 8253 a signál kazety) je jako na
+skutečném počítači vázaný střídavě: stálá úroveň do necelé sekundy dozní.
+Stejně doznívá stálá úroveň celého výstupu (MZ-800 a MZ-1500): za zvukovým
+čipem je v sérii kondenzátor, časová konstanta 0,57 s je spočtená ze schématu
+a měření osciloskopem jí odpovídá (0,55 s, rozsah 0,44 až 0,69 s). Když počítač
+mlčí, je výstup do několika sekund na nule.
+
+Jak moc je zvukový výstup podložený:
+
+- **MZ-800** - změřený na skutečném počítači (úrovně, propust, vazba reproduktoru).
+- **MZ-1500** - odvozený z MZ-800, neměřený.
+- **MZ-700** - odhadnutý podle schématu, bez měření. Podle schématu MZ-700 žádnou
+  propust před zesilovačem nemá, proto v emulátorech MZ-700 volba Hardware output
+  filter není (ani v okně, ani v INI) a zvuk používá dřívější filtry emulátoru.
+  Reproduktor je tam na skutečném počítači připojený stejnosměrně; emulátor
+  stálou úroveň reproduktoru přesto nechává doznít, protože zvuková karta ji
+  nepřenese a při skocích by lupalo (kondenzátor v sérii jako MZ-800 tam není). Hlasitost reproduktoru je stejná jako u MZ-800
+  v režimu MZ-700. MZ-800 v režimu MZ-700 používá zvukovou cestu MZ-800.
+
 ## Zachycení zvuku
 
 Tools -> Audio Capture -> Record Audio Capture (`Alt + Q`) zaznamená do nové

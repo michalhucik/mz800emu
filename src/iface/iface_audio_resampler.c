@@ -13,8 +13,10 @@
 #endif
 
 #include "iface_audio.h"
+#include "iface_audio_resampler.h"
 #include "audio.h"
 #include "emulator.h"
+#include "videorec/videorec_audio.h"
 
 /**
  * Vytvori audio stream z audio logu v sample rate odpovidajicimu output_frequency. Hodnoty ve vystupnim streamu jsou stale unipolarni a v rozsahu 0 az 15.
@@ -177,19 +179,26 @@ static inline float iface_audio_anti_glitch_limiter(int channel, float input)
     return output;
 }
 
-/**
- * Vytvori audio stream ve float formatu z dvouhodnotoveho vstupniho streamu (ctc0).
- *
- * @param input_samples Ukazatel na vstupni stream.
- * @param input_samples_count Pocet vzorku ve vstupnim streamu.
- * @param output_samples_count Pocet vzorku ve vystupnim streamu. (pokud je jiny, nez vstupni, tak dojde k resamplingu na vystupni frequenci)
- * @param parked_samples Pocet vzorku, ktere jsou limitni pro setrvavaní na stejne nenulove hodnotě. Po jeho prekroceni se zacne hodnota snizovat k 0.
- * @param parked_fade Pocet vzorku, ktere se pouziji pro plynuly prechod ze zaparkované hodnoty na 0.
- * @return Ukazatel na alokovany buffer s vystupnim streamem.
- */
-float *iface_audio_resampler_output_stream_ctc0(const uint8_t *input_samples, size_t input_samples_count, size_t output_samples_count, size_t parked_samples, size_t parked_fade)
+/** @brief Stav řetězce CTC0 SDL cesty (střídavá vazba, low-pass, anti-glitch). Jen vlákno, které volá resampler. */
+static st_VIDEOREC_AUDIO_CHSTATE s_ctc0_state;
+/** @brief Koeficienty řetězce pro IFACE_AUDIO_SAMPLE_RATE (videorec_audio_coef_init()). */
+static st_VIDEOREC_AUDIO_COEF s_ctc0_coef;
+/** @brief s_ctc0_coef je spočtené. */
+static bool s_ctc0_coef_ready = false;
+
+/* Doxygen viz iface_audio_resampler.h. */
+void iface_audio_resampler_ctc0_ac_seed(double mean01)
 {
-    int channel = 0;
+    if (mean01 < 0.0)
+        mean01 = 0.0;
+    if (mean01 > 1.0)
+        mean01 = 1.0;
+    s_ctc0_state.hp_mean = mean01;
+}
+
+/* Doxygen viz iface_audio_resampler.h. */
+float *iface_audio_resampler_output_stream_ctc0(const uint8_t *input_samples, size_t input_samples_count, size_t output_samples_count, float *raw_out)
+{
     size_t output_samples_size = output_samples_count * sizeof(float);
     float *output_samples = g_malloc0(output_samples_size);
     if (!output_samples)
@@ -197,8 +206,13 @@ float *iface_audio_resampler_output_stream_ctc0(const uint8_t *input_samples, si
         return NULL;
     };
 
+    if (!s_ctc0_coef_ready)
+    {
+        videorec_audio_coef_init(&s_ctc0_coef, IFACE_AUDIO_SAMPLE_RATE);
+        s_ctc0_coef_ready = true;
+    };
+
     double ratio = (double)input_samples_count / (double)output_samples_count;
-    // static float last_filtered = 0.0f; // Uchováváme poslední filtrovaný vzorek pro plynulost
 
     for (size_t i = 0; i < output_samples_count; i++)
     {
@@ -211,8 +225,6 @@ float *iface_audio_resampler_output_stream_ctc0(const uint8_t *input_samples, si
             end = input_samples_count - 1;
         };
 
-        uint8_t end_value = input_samples[end];
-
         // Počítání jedniček v bloku
         size_t ones_count = 0;
         for (size_t j = start; j < end; j++)
@@ -222,79 +234,29 @@ float *iface_audio_resampler_output_stream_ctc0(const uint8_t *input_samples, si
         };
 
         float resampled = (float)ones_count / (float)(end - start + 1);
+        /* úroveň bloku trvale v jedničce (zesílení převzorkování tohoto vzorku) */
+        float unit = (float)(end - start) / (float)(end - start + 1);
 
-        // Pokud je hodnota zaparkovaná na konstantni hodnote, tak postupne snizujeme hodnotu k 0
-        static uint8_t parking_previous_resampled = 0;
-        static size_t parking_counter = 0;
-        static float parking_gain = 0;
-        static int parking_gain_counter = 0;
-
-        if ((end_value == 0) || (end_value != parking_previous_resampled))
-        {
-            parking_previous_resampled = end_value;
-            parking_counter = 0;
-        }
-        else
-        {
-            // Trvale stejnou hodnotu povolíme jen po dobu parked_samples
-            if (parking_counter < parked_samples)
-            {
-                parking_counter++;
-                parking_gain = 1.0f;
-                parking_gain_counter = 0;
-            }
-            else
-            {
-                // Budeme postupne snizovat hodnotu az k 0 po dobu urcenou parked_fade
-                resampled *= parking_gain;
-                if (parking_gain > 0.0f)
-                {
-                    if (parking_gain_counter-- == 0)
-                    {
-                        parking_gain -= 1.0f / 20;
-                        parking_gain_counter = parked_fade / 20;
-                    };
-                }
-                else
-                {
-                    parking_gain = 0.0f;
-                };
-            };
-        };
-
-        // Aplikujeme jednopólový filtr
-        float filtered1 = iface_audio_lowpass_filter(channel, resampled);
-        // float filtered1 = resampled;
-
-        // float filtered2 = iface_audio_lowpass_filter_2nd_order(filtered1);
-        float filtered2 = filtered1;
-
-        // Aplikujeme Butterworthův filtr
-        // float filtered3 = iface_audio_lowpass_filter_butterworth(filtered2);
-        float filtered3 = filtered2;
-
-        float filtered4 = iface_audio_anti_glitch_filter(channel, filtered3);
-        // float filtered4 = filtered3;
-
-        // float final_output = iface_audio_anti_glitch_limiter(filtered4);
-        float final_output = filtered4;
-
-        // output_samples[i] = final_output;
-        //  output_samples[i] = last_sample_value;
-
-        output_samples[i] = final_output;
-        // output_samples[i] = (last_filtered + final_output) * 0.5f;
-        // last_filtered = final_output;
-
-        // output_samples[i] = resampled;
+        /* Střídavá vazba (místo dřívějšího parkování stálé úrovně), jednopólový
+         * low-pass a anti-glitch - stejná funkce jako v rendereru video záznamu. */
+        float raw = 0.0f;
+        output_samples[i] = videorec_audio_chain_ctc0(&s_ctc0_state, &s_ctc0_coef, resampled, unit, &raw);
+        if (raw_out)
+            raw_out[i] = raw;
     };
 
     return output_samples;
 }
 
-float *iface_audio_resampler_process_psg_audio_log(int channel, const st_AUDIO_SOURCE_LOG *source, uint64_t log_count_samples, float *SN76489_volume_value, size_t output_samples_count, size_t parked_samples, size_t parked_fade)
+/* Doxygen viz iface_audio_resampler.h. */
+float *iface_audio_resampler_process_psg_audio_log(int channel, const st_AUDIO_SOURCE_LOG *source, uint64_t log_count_samples, float *SN76489_volume_value, size_t output_samples_count, size_t parked_samples, size_t parked_fade, float *raw_out)
 {
     size_t samples_count = output_samples_count;
+#if AUDIO_HAVE_OUTPUT_COUPLING
+    (void)channel;
+    (void)parked_samples;
+    (void)parked_fade;
+#endif
 
     size_t samples_size = samples_count * sizeof(float);
     float *samples = g_malloc0(samples_size);
@@ -306,6 +268,8 @@ float *iface_audio_resampler_process_psg_audio_log(int channel, const st_AUDIO_S
         for (size_t i = 0; i < samples_count; i++)
         {
             samples[i] = SN76489_volume_value[source->last_value];
+            if (raw_out)
+                raw_out[i] = samples[i];
         };
         return samples;
     };
@@ -331,7 +295,9 @@ float *iface_audio_resampler_process_psg_audio_log(int channel, const st_AUDIO_S
         uint8_t current_value = source->samples[event_index].value;
         float resampled = SN76489_volume_value[current_value];
 
-#if 1
+#if !AUDIO_HAVE_OUTPUT_COUPLING
+        /* Parkování stálé úrovně jen tam, kde výstup nemá střídavou vazbu;
+         * na MZ-800 a MZ-1500 stálou úroveň odstraní vazba výstupu (mix). */
         uint8_t end_value = current_value;
         // Pokud je hodnota zaparkovaná na konstantni hodnote, tak postupne snizujeme hodnotu k 0
         static uint8_t parking_previous_resampled[AUDIO_SRC_CHANNELS_COUNT] = {0};
@@ -372,6 +338,10 @@ float *iface_audio_resampler_process_psg_audio_log(int channel, const st_AUDIO_S
             };
         };
 #endif
+
+        /* vzorek po parkování, před IIR: vstup výstupní propusti */
+        if (raw_out)
+            raw_out[i] = resampled;
 
         float iir_x = 6.0f;
         static float sample_value[AUDIO_SRC_CHANNELS_COUNT] = {0}; // posledni hodnota pro IIR filtr

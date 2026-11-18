@@ -18,3 +18,11 @@ mz_add_test(audio_analysis
     LABELS   "standalone;audio"
 )
 target_include_directories(test_audio_analysis PRIVATE ${CMAKE_SOURCE_DIR}/src/emulator)
+
+# Střídavá vazba CTC0 vedená emulátorem v emulovaném čase (audio.c), echo
+# kazety stejným kanálem.
+mz_add_test(audio_ctc0_ac
+    TYPE     EMU
+    SOURCES  test_audio_ctc0_ac.c
+    LABELS   "emu;audio"
+)

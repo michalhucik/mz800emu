@@ -58,9 +58,11 @@ gint g_audio_capture_flags = 0;
  * @brief Zvukové snímky rozjezdu SDL cesty před začátkem (jen se sdl.wav).
  *
  * Bez zvukového zařízení (headless) SDL cesta mimo zachycení neběží a její
- * filtry a parkování začínají ze studeného stavu - trvalá úroveň (CTC0 = 15)
- * by první snímky hrála naplno. Během rozjezdu se bloky vyrábějí a zahazují;
- * 6 snímků (100 ms při 60 Hz) pokryje parkování 45 ms + doznění 20 ms.
+ * filtry začínají ze studeného stavu. Během rozjezdu se bloky vyrábějí
+ * a zahazují; 6 snímků (100 ms při 60 Hz) stačí filtrům kanálů a výstupní
+ * propusti. Střídavé vazby (CTC0, celý výstup) mají paměť delší, jejich stav
+ * proto SDL cesta přebírá od emulátoru (st_AUDIO_LOG::ctc0_ac_mean,
+ * out_ac_mean), když log nenavazuje na předchozí zpracovaný.
  */
 #define AC_SDL_WARMUP_FRAMES 6u
 
@@ -90,14 +92,14 @@ typedef struct st_AC_RING {
  * snímek bere rozdíl proti stavu na konci předchozího snímku (*_snap).
  */
 typedef struct st_AC_FRAME_ACC {
-    uint8_t level[AUDIO_CAPTURE_MAX_CHANNELS];      /**< Aktuální úroveň kanálu. */
+    uint8_t level[AUDIO_CAPTURE_MAX_CHANNELS];      /**< Aktuální hodnota kanálu (hodnota zvukového logu 0..30). */
     uint64_t last_t[AUDIO_CAPTURE_MAX_CHANNELS];    /**< Čas, do kterého jsou součty kanálu spočtené. */
     uint64_t on[AUDIO_CAPTURE_MAX_CHANNELS];        /**< Takty s úrovní > 0 od začátku. */
-    uint64_t energy[AUDIO_CAPTURE_MAX_CHANNELS];    /**< Součet úroveň^2 x takty od začátku. */
+    uint64_t energy[AUDIO_CAPTURE_MAX_CHANNELS];    /**< Součet úroveň^2 x takty od začátku (ac_level_sq()). */
     uint64_t on_snap[AUDIO_CAPTURE_MAX_CHANNELS];   /**< `on` na konci předchozího snímku. */
     uint64_t energy_snap[AUDIO_CAPTURE_MAX_CHANNELS]; /**< `energy` na konci předchozího snímku. */
     uint32_t edges[AUDIO_CAPTURE_MAX_CHANNELS];     /**< Změny v aktuálním snímku. */
-    uint8_t max_level[AUDIO_CAPTURE_MAX_CHANNELS];  /**< Největší úroveň v aktuálním snímku. */
+    uint8_t max_level[AUDIO_CAPTURE_MAX_CHANNELS];  /**< Největší stupeň hlasitosti (0..15) v aktuálním snímku. */
     double ref_sq[2];    /**< Součet čtverců vzorků reference L, R ve snímku. */
     uint32_t ref_peak[2]; /**< Špička reference L, R ve snímku. */
     uint32_t ref_n;      /**< Vzorky reference ve snímku. */
@@ -649,7 +651,35 @@ static void ac_note_event(uint64_t abs_ticks)
 }
 
 
-/** @brief Zapíše řádek events.csv a záznam do ringu levels. */
+/** @brief Čitatel a jmenovatel čtverce AUDIO_LEVEL_HALF_FACTOR (0,49^2 = 0,2401, zaokrouhleno na 6 / 25). */
+#define AC_HALF_SQ_NUM 6u
+/** @brief Viz AC_HALF_SQ_NUM. */
+#define AC_HALF_SQ_DEN 25u
+
+/**
+ * @brief Čtverec výchylky hodnoty zvukového logu v jednotkách stupeň^2, krát takty.
+ *
+ * Plná výchylka: stupeň^2 x takty. Poloviční výchylka (hodnoty 16..30, tón PSG
+ * s děličem 001h): stupeň^2 x takty x 6 / 25 (celočíselně, dolů).
+ *
+ * @param value Hodnota zvukového logu 0..30.
+ * @param dt    Doba v taktech GDG.
+ * @return Příspěvek do součtu energie kanálu.
+ */
+static uint64_t ac_level_sq(uint8_t value, uint64_t dt)
+{
+    uint64_t step = audio_level_step(value);
+    uint64_t e = step * step * dt;
+    return audio_level_is_half(value) ? (e * AC_HALF_SQ_NUM) / AC_HALF_SQ_DEN : e;
+}
+
+
+/**
+ * @brief Zapíše řádek events.csv a záznam do ringu levels.
+ * @param rel    Čas od začátku zachycení [takty GDG].
+ * @param src_id Index kanálu.
+ * @param value  Hodnota zvukového logu 0..30 (16..30 = poloviční výchylka stupně value - 15).
+ */
 static void ac_write_event(uint64_t rel, unsigned src_id, uint8_t value)
 {
     if (s_ac.mem) {
@@ -658,14 +688,14 @@ static void ac_write_event(uint64_t rel, unsigned src_id, uint8_t value)
         r.t = s_ac.origin + rel;
         r.frame = (uint32_t) s_ac.frame;
         r.src = (uint8_t) src_id;
-        r.level = (uint8_t) (value & 0x0F);
+        r.level = (uint8_t) (value & VIDEOREC_AUDIO_VALUE_MASK);
         ac_ring_push(&s_ac.ring[AUDIO_CAPTURE_STREAM_LEVELS], &r, 1);
     }
     if (!s_ac.events) return;
     char t[32];
     ac_time_us(rel, t, sizeof(t));
     fprintf(s_ac.events, "%llu,%s,%llu,%s,%u\n", (unsigned long long) rel, t,
-            (unsigned long long) s_ac.frame, ac_channel_name(src_id), (unsigned) (value & 0x0F));
+            (unsigned long long) s_ac.frame, ac_channel_name(src_id), (unsigned) (value & VIDEOREC_AUDIO_VALUE_MASK));
     s_ac.n_events++;
     ac_note_event(s_ac.origin + rel);
 }
@@ -684,14 +714,14 @@ static void ac_on_change(unsigned src_id, uint8_t value, uint64_t ticks)
         st_AC_FRAME_ACC *a = &s_ac.acc;
         if (ticks > a->last_t[src_id]) {
             uint64_t dt = ticks - a->last_t[src_id];
-            uint64_t lv = a->level[src_id];
-            if (lv) a->on[src_id] += dt;
-            a->energy[src_id] += lv * lv * dt;
+            if (a->level[src_id]) a->on[src_id] += dt;
+            a->energy[src_id] += ac_level_sq(a->level[src_id], dt);
             a->last_t[src_id] = ticks;
         }
-        a->level[src_id] = (uint8_t) (value & 0x0F);
+        a->level[src_id] = (uint8_t) (value & VIDEOREC_AUDIO_VALUE_MASK);
         a->edges[src_id]++;
-        if (a->level[src_id] > a->max_level[src_id]) a->max_level[src_id] = a->level[src_id];
+        uint8_t step = (uint8_t) audio_level_step(a->level[src_id]);
+        if (step > a->max_level[src_id]) a->max_level[src_id] = step;
     }
     if ((s_ac.ref.fp || s_ac.mem) && src_id < AUDIO_SRC_CHANNELS_COUNT) {
         if (videorec_audio_event(&s_ac.renderer, src_id, value, ticks) != 0) {
@@ -773,12 +803,12 @@ static void ac_begin(uint64_t horizon)
 
     uint8_t values[AUDIO_SRC_CHANNELS_COUNT];
     for (unsigned i = 0; i < AUDIO_SRC_CHANNELS_COUNT; i++) {
-        values[i] = (uint8_t) (g_audio.log ? (g_audio.log->src[i]->last_value & 0x0F) : 0);
+        values[i] = (uint8_t) (g_audio.log ? (g_audio.log->src[i]->last_value & VIDEOREC_AUDIO_VALUE_MASK) : 0);
         /* Výchozí úrovně všech kanálů, aby byl events.csv sám o sobě úplný. */
         ac_write_event(0, i, values[i]);
         if (i < AUDIO_CAPTURE_MAX_CHANNELS) {
             s_ac.acc.level[i] = values[i];
-            s_ac.acc.max_level[i] = values[i];
+            s_ac.acc.max_level[i] = (uint8_t) audio_level_step(values[i]);
             s_ac.acc.last_t[i] = horizon;
         }
     }
@@ -800,19 +830,31 @@ static void ac_begin(uint64_t horizon)
         memset(level, 0, sizeof(level));
         iface_audio_build_videorec_levels(level, VIDEOREC_AUDIO_MAX_CHANNELS);
         /* Zahřátí: renderer začne AC_WARMUP_TICKS (100 ms) před začátkem se stejnými
-         * úrovněmi a tyto vzorky zahodí. Trvalé úrovně (typicky CTC0 = 15)
-         * tak začnou zaparkované jako v SDL cestě, ne naplno. Vzorky
+         * úrovněmi a tyto vzorky zahodí, aby filtry kanálů začínaly ustálené
+         * (bez vazby výstupu i zaparkované trvalé úrovně PSG). Stav střídavých
+         * vazeb se po zahřátí nastaví podle emulátoru. Vzorky
          * reference.wav pak začínají přesně v `horizon`, protože
          * AC_WARMUP_TICKS je celý počet vzorků. */
         uint64_t warm = (horizon >= AC_WARMUP_TICKS) ? AC_WARMUP_TICKS : 0;
         videorec_audio_init(&s_ac.renderer, GDGCLK_BASE, AUDIO_CAPTURE_WAV_RATE, AUDIO_SRC_CHANNELS_COUNT,
                             (const float (*)[VIDEOREC_AUDIO_LEVELS]) level, values, horizon - warm, true);
         s_ac.renderer_init = true;
+        /* výstupní propust podle volby hned od začátku (bez přechodu) */
+        videorec_audio_set_output_filter(&s_ac.renderer, iface_audio_output_filter_enabled(), true);
+        /* střídavá vazba celého výstupu místo parkování PSG (MZ-800, MZ-1500) */
+        videorec_audio_set_output_coupling(&s_ac.renderer, AUDIO_HAVE_OUTPUT_COUPLING != 0);
         if (warm) {
             int16_t discard[AC_RENDER_CHUNK * 2u];
             while (videorec_audio_render(&s_ac.renderer, horizon, discard, AC_RENDER_CHUNK) == AC_RENDER_CHUNK) {
             }
         }
+        /* Střídavá vazba CTC0 naváže na stav vedený emulátorem (stálá úroveň
+         * může v okamžiku začátku ještě doznívat). */
+        videorec_audio_set_ctc0_mean(&s_ac.renderer, audio_ctc0_ac_mean(horizon));
+        /* totéž střídavá vazba výstupu (bez ní nuly) */
+        double out_mean[2];
+        iface_audio_output_ac_means(horizon, g_psg_module.stereo, out_mean);
+        videorec_audio_set_output_mean(&s_ac.renderer, out_mean[0], out_mean[1]);
     }
     s_ac.sdl_writing = s_ac.sdl_on;
 }
@@ -867,20 +909,19 @@ static void ac_push_frame(uint64_t frame_start, uint64_t horizon)
          * v nich a patří tomuto snímku (viz st_AUDIO_CAPTURE_FRAME_REC). */
         if (horizon > a->last_t[i]) {
             uint64_t dt = horizon - a->last_t[i];
-            uint64_t lv = a->level[i];
-            if (lv) a->on[i] += dt;
-            a->energy[i] += lv * lv * dt;
+            if (a->level[i]) a->on[i] += dt;
+            a->energy[i] += ac_level_sq(a->level[i], dt);
             a->last_t[i] = horizon;
         }
         r.ch[i].edges = a->edges[i];
         r.ch[i].on_ticks = ac_sat32(a->on[i] - a->on_snap[i]);
         r.ch[i].energy = ac_sat32(a->energy[i] - a->energy_snap[i]);
         r.ch[i].max_level = a->max_level[i];
-        r.ch[i].end_level = a->level[i];
+        r.ch[i].end_level = (uint8_t) audio_level_step(a->level[i]);
         a->on_snap[i] = a->on[i];
         a->energy_snap[i] = a->energy[i];
         a->edges[i] = 0;
-        a->max_level[i] = a->level[i];
+        a->max_level[i] = (uint8_t) audio_level_step(a->level[i]);
     }
     if (s_ac.renderer_init) {
         r.flags |= AUDIO_CAPTURE_FRAME_FLAG_REF;
@@ -933,6 +974,8 @@ static void ac_on_frame(uint64_t horizon_ticks)
 #if HAVE_PSG == 2
         videorec_audio_set_stereo(&s_ac.renderer, g_psg_module.stereo);
 #endif
+        /* volbu výstupní propusti lze přepnout za běhu (plynulý přechod jako SDL cesta) */
+        videorec_audio_set_output_filter(&s_ac.renderer, iface_audio_output_filter_enabled(), false);
         int16_t buf[AC_RENDER_CHUNK * 2u];
         size_t n;
         do {

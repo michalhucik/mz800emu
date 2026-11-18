@@ -396,9 +396,11 @@ static inline unsigned psg_tone_effective_divider(unsigned divider)
  * @brief Provede jeden krok PSG (jeden takt vnitřní děličky CLK / 16).
  *
  * Tónový kanál: po `dělič` krocích překlopí výstup (perioda 32 x dělič taktů
- * CPU). Dělič 000h = 1024. Dělič 001h drží výstup trvale v 1 - zjednodušení:
- * skutečný čip dává obdélník 110,8 kHz (změřeno 2026-11-14), jeho úroveň za
- * zesilovačem zatím změřena není.
+ * CPU). Dělič 000h = 1024. Dělič 001h drží výstup trvale v 1 a čítač kanálu
+ * nemění - zjednodušení: skutečný čip dává obdélník 110,8 kHz (změřeno
+ * 2026-11-14), ve slyšitelném pásmu stálou úroveň 0,49 plné výchylky (změřeno
+ * 2026-11-18). Poloviční úroveň dosazuje až zvukový log (audio.c,
+ * audio_psg_channel_log_value()), aby se do něj nepsala změna každý krok.
  *
  * Šumový kanál: čítač posunu vyprší po 32 / 64 / 128 krocích (NF = 0 až 2),
  * tedy posun jednou za 512 / 1024 / 2048 taktů CPU; při NF = 3 po 2 x dělič
@@ -407,8 +409,11 @@ static inline unsigned psg_tone_effective_divider(unsigned divider)
  * (jedna jednička obíhá, perioda 15 posunů). Výstup je bit 0 registru.
  * Změřeno na MZ-800 2026-11-14 (mz800-knowledge hw-measurement/vysledky.md).
  *
- * Kanály s vypnutou hlasitostí (PSG_OUT_OFF) se nekrokují (dosavadní chování
- * emulátoru; skutečný čip čítá dál, neměřeno).
+ * Krokují se všechny kanály bez ohledu na hlasitost: čítače kanálu vypnutého
+ * útlumem 15 běží dál, kanál jen nic nehraje (útlum se uplatní až ve zvukovém
+ * logu). U tónových kanálů změřeno na MZ-800 2026-11-18 (tři tóny se stejným
+ * děličem zapnuté po sobě měly v pěti bězích pět různých fází). U šumového
+ * kanálu [neověřeno] - na HW neměřeno, předpokládá se stejné chování.
  *
  * @param psg Instance PSG.
  * @pre Volá se z emulátorového vlákna.
@@ -420,55 +425,52 @@ void psg_instance_step(st_PSG *psg)
     {
         st_PSG_CHANNEL *channel = &psg->channel[cs];
 
-        if (channel->attn != PSG_OUT_OFF)
+        if (channel->type == PSG_CHTYPE_TONE)
         {
-            if (channel->type == PSG_CHTYPE_TONE)
+            /* tone */
+            st_PSG_TONE *tone = &channel->tone;
+            if (tone->divider == 1)
             {
-                /* tone */
-                st_PSG_TONE *tone = &channel->tone;
-                if (tone->divider == 1)
-                {
-                    channel->output_signal = 1;
-                }
-                else if (0 == channel->timer--)
-                {
-                    channel->timer = psg_tone_effective_divider(tone->divider) - 1;
-                    channel->output_signal = (~channel->output_signal) & 0x01;
-                };
+                channel->output_signal = 1;
             }
-            else
+            else if (0 == channel->timer--)
             {
-                /* noise */
-                unsigned bit0, feedback;
-                st_PSG_NOISE *noise = &channel->noise;
-                unsigned tone2_divider = psg->channel[PSG_CHANNEL_2].tone.divider;
-                if ((noise->div_type == NOISE_DIV_TYPE3) && (tone2_divider == 1))
+                channel->timer = psg_tone_effective_divider(tone->divider) - 1;
+                channel->output_signal = (~channel->output_signal) & 0x01;
+            };
+        }
+        else
+        {
+            /* noise; běh při vypnuté hlasitosti [neověřeno], viz komentář funkce */
+            unsigned bit0, feedback;
+            st_PSG_NOISE *noise = &channel->noise;
+            unsigned tone2_divider = psg->channel[PSG_CHANNEL_2].tone.divider;
+            if ((noise->div_type == NOISE_DIV_TYPE3) && (tone2_divider == 1))
+            {
+                channel->output_signal = 1;
+            }
+            else if (0 == channel->timer--)
+            {
+                if (noise->div_type == NOISE_DIV_TYPE3)
                 {
-                    channel->output_signal = 1;
+                    channel->timer = 2 * psg_tone_effective_divider(tone2_divider) - 1;
                 }
-                else if (0 == channel->timer--)
+                else
                 {
-                    if (noise->div_type == NOISE_DIV_TYPE3)
-                    {
-                        channel->timer = 2 * psg_tone_effective_divider(tone2_divider) - 1;
-                    }
-                    else
-                    {
-                        channel->timer = (0x20 << noise->div_type) - 1;
-                    };
-
-                    bit0 = noise->shiftregister & 0x01;
-                    if (noise->type == NOISE_TYPE_WHITE)
-                    {
-                        feedback = bit0 ^ ((noise->shiftregister >> 1) & 0x01);
-                    }
-                    else
-                    {
-                        feedback = bit0;
-                    };
-                    noise->shiftregister = (uint16_t)((noise->shiftregister >> 1) | (feedback << 14));
-                    channel->output_signal = noise->shiftregister & 0x01;
+                    channel->timer = (0x20 << noise->div_type) - 1;
                 };
+
+                bit0 = noise->shiftregister & 0x01;
+                if (noise->type == NOISE_TYPE_WHITE)
+                {
+                    feedback = bit0 ^ ((noise->shiftregister >> 1) & 0x01);
+                }
+                else
+                {
+                    feedback = bit0;
+                };
+                noise->shiftregister = (uint16_t)((noise->shiftregister >> 1) | (feedback << 14));
+                channel->output_signal = noise->shiftregister & 0x01;
             };
         };
     };

@@ -209,6 +209,20 @@ void imgui_audio(bool *p_open)
 
     ImGui::EndGroup();
 
+#if AUDIO_HAVE_OUTPUT_FILTER
+    /* Věrná výstupní propust (INI [AUDIO] output_filter); přepnutí platí hned.
+     * Samostatný MZ-700 propust nemá, volba se tam nenabízí. */
+    bool output_filter = iface_audio_output_filter_enabled();
+    if (ImGui::Checkbox(_L("Hardware output filter"), &output_filter))
+    {
+        iface_audio_set_output_filter(output_filter);
+    }
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip("%s", _("Low-pass filter of the real MZ-800 audio output (346 Hz). Off = the previous, brighter sound."));
+    }
+#endif /* AUDIO_HAVE_OUTPUT_FILTER */
+
     if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) && ImGui::IsKeyPressed(ImGuiKey_Escape))
     {
         *p_open = false;

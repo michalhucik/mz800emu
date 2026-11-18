@@ -279,6 +279,18 @@ void videorec_pipe_request_capture(st_VIDEOREC_PIPE *p, uint64_t tag);
 void videorec_pipe_set_stereo(st_VIDEOREC_PIPE *p, bool stereo);
 
 /**
+ * @brief Zapne nebo vypne výstupní propust zvuku (viz videorec_audio_set_output_filter()).
+ *
+ * Platí pro zvuk vyrenderovaný od dalšího volání videorec_pipe_horizon()
+ * nebo flush; už předané snímky se nemění.
+ *
+ * @param p         Instance.
+ * @param on        Cílový stav.
+ * @param immediate true = hned (start nahrávky), false = plynulý přechod (přepnutí za běhu).
+ */
+void videorec_pipe_set_output_filter(st_VIDEOREC_PIPE *p, bool on, bool immediate);
+
+/**
  * @brief Nastaví index, který dostane další zapsaný snímek.
  *
  * @param p     Instance.

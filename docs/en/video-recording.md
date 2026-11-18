@@ -125,9 +125,11 @@ matching number of samples per frame. The result is a perfect run of the game re
 emulator really ran.
 
 The recorded sound goes through the same filters as the sound the emulator plays
-(softened sharp edges and a gradual fade of a level that does not change for
-longer than about 45 ms), so it sounds the same as the emulator output. Silence
-is a zero level in the recording.
+(the output filter according to the option Hardware output filter in the window
+Interface -> Audio..., the AC coupling of the speaker and of the whole output,
+which lets a constant level fade out within a few seconds), so it sounds the
+same as the emulator output. Silence is a zero level in the
+recording.
 
 - **Emulation pause** (`Alt + P`) pauses the video as well. No frames are produced
   during the pause.

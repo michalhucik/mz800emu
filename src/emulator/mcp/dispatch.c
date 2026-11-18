@@ -10555,6 +10555,9 @@ static const char *const g_settings_live_keys[] = {
     "AUDIO/volume_psg1_1",
     "AUDIO/volume_psg1_2",
     "AUDIO/volume_psg1_3",
+    /* AUDIO - věrná výstupní propust (dolní propust 460 us), platí hned;
+     * samostatný MZ-700 prvek nemá a klíč tam skončí chybou "nenalezeno" */
+    "AUDIO/output_filter",
     /* DISPLAY - runtime tweaks */
     "DISPLAY/forced_full_screen_redrawing",
     "DISPLAY/locked_window_aspect_ratio",

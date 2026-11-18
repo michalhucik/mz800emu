@@ -61,6 +61,9 @@ je `gdg_clk_hz` v capture.json), `time_us` = totéž v mikrosekundách,
 (reproduktor, úroveň 0 nebo 15), `psg0_0` .. `psg0_3` (PSG, kanál 3 = šum) a na
 MZ-1500 nebo MZ-800 s druhým PSG `psg1_0` .. `psg1_3`. Úroveň 0-15 je výstup
 kanálu (u PSG 15 minus útlum, když je výstup generátoru v jedničce, jinak 0).
+Úroveň 16-30 má tónový kanál PSG s děličem 1: stálá úroveň 0,49 plné výchylky
+stupně `level - 15` (na skutečném čipu výstup kmitá 110,8 kHz, slyšet je jen
+střední úroveň; používá se k přehrávání vzorků přes hlasitost).
 První řádky (`ticks` 0) jsou úrovně na začátku.
 
 **psg_writes.csv** - `ticks,time_us,frame,psg,byte,channel,reg,value`:

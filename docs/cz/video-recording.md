@@ -123,9 +123,10 @@ odpovídajícího množství vzorků na snímek. Výsledkem je dokonalý průcho
 emulátor skutečně běžel.
 
 Zvuk nahrávky prochází stejnými filtry jako zvuk, který emulátor přehrává
-(zjemnění ostrých hran a postupné ztlumení úrovně, která se déle než cca 45 ms
-nemění), takže zní stejně jako výstup emulátoru. Ticho je v nahrávce nulová
-úroveň.
+(výstupní propust podle volby Hardware output filter v okně Interface ->
+Audio..., střídavá vazba reproduktoru a celého výstupu, kterou stálá úroveň
+do několika sekund dozní), takže zní stejně jako výstup emulátoru.
+Ticho je v nahrávce nulová úroveň.
 
 - **Pauza emulace** (`Alt + P`) pozastaví i video. Během pauzy žádné snímky nevznikají.
 - **Zrychlení a MAX SPEED se ve videu neprojeví.** Při zrychlené emulaci se zapíše

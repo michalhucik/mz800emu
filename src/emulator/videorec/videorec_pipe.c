@@ -162,6 +162,11 @@ void videorec_pipe_set_stereo(st_VIDEOREC_PIPE *p, bool stereo)
     videorec_audio_set_stereo(&p->audio, stereo); /* levné (pár kanálů), volá se jednou za horizont */
 }
 
+void videorec_pipe_set_output_filter(st_VIDEOREC_PIPE *p, bool on, bool immediate)
+{
+    videorec_audio_set_output_filter(&p->audio, on, immediate);
+}
+
 void videorec_pipe_set_next_index(st_VIDEOREC_PIPE *p, uint64_t index)
 {
     p->next_index = index;

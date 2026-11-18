@@ -2072,7 +2072,7 @@ and on the command line (`--audio-capture`), see
 
 | File | Content |
 |---|---|
-| `events.csv` | `ticks,time_us,frame,channel,level` - every change of the output level (0-15) of a sound channel |
+| `events.csv` | `ticks,time_us,frame,channel,level` - every change of the output level of a sound channel (0-15; 16-30 = 0.49 of step `level - 15` for a PSG tone with divider 1) |
 | `psg_writes.csv` | `ticks,time_us,frame,psg,byte,channel,reg,value` - every write to the PSG, decoded |
 | `reference.wav` | the sound rendered exactly in emulated time (the renderer of the video recording) |
 | `sdl.wav` | the sound produced by the emulator's audio output path - what the user hears |
@@ -2439,6 +2439,7 @@ Whitelist:
 - `AUDIO/volume_8253` (unsigned)
 - `AUDIO/volume_psg0` .. `AUDIO/volume_psg3` (unsigned)
 - `AUDIO/volume_psg1_0` .. `AUDIO/volume_psg1_3` (MZ-1500, unsigned)
+- `AUDIO/output_filter` (bool; the output low-pass filter of the real MZ-800, 346 Hz, default on; a change applies at once and without a click, also in a running audio capture and video recording; the key does not exist in the MZ-700 emulators, that computer has no such filter)
 - `DISPLAY/forced_full_screen_redrawing` (bool)
 - `DISPLAY/locked_window_aspect_ratio` (bool)
 - `DISPLAY/custom_fps` (unsigned, 50..1000; used in the Custom frame rate mode)

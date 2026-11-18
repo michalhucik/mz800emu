@@ -300,7 +300,7 @@ static inline void psg_events_push(st_PSG_SCOPE_EVENTS *ev,
  * s input clock = CPU clock + interní /16 prescaler + 2x toggle).
  *
  * Divider 0 se počítá jako 1024. Pro `divider == 1` vrací 0 (DC případ,
- * PSG drží output_signal=1, není to oscilace). `GDGCLK_BASE` a `GDGCLK2CPU_DIVIDER` jsou per-arch
+ * stálá úroveň 0,49 plné výchylky, není to slyšitelná oscilace). `GDGCLK_BASE` a `GDGCLK2CPU_DIVIDER` jsou per-arch
  * makra: MZ-800 (17 721 600 Hz, /5 → 3.5469 MHz CPU),
  * MZ-700/MZ-1500 (14 336 640 Hz, /4 → 3.5796 MHz CPU).
  *
@@ -1093,8 +1093,8 @@ static const int PSG_SCOPE_TONE_PERIODS = 4;
  * Render dle typu kanálu:
  *  - TONE + divider != 1: square wave 50% duty, `PSG_SCOPE_TONE_PERIODS`
  *    cyklů, amplituda lineárně `(15 - attn) / 15`.
- *  - TONE + divider == 1: DC (vodorovná čára na horní úrovni amplitudy
- *    + "DC" label).
+ *  - TONE + divider == 1: DC (vodorovná čára na úrovni 0,49 výchylky
+ *    kanálu, AUDIO_LEVEL_HALF_FACTOR, + "DC" label).
  *  - NOISE: deterministický pseudo-random pattern (`seed ^ x` xor-shift),
  *    konzistentní mezi frame-y aby pattern neblikal.
  *  - Silent (attn == 15): vodorovná čára uprostřed + "silent" label.
@@ -1180,7 +1180,8 @@ static void psg_audio_scope_render_channel(unsigned chip, unsigned ch,
 
         if (divider == 1u)
         {
-            float dc_y = mid_y - amp_px;
+            /* výchylka jde od mid_y + amp_px (0) po mid_y - amp_px (1) */
+            float dc_y = mid_y + amp_px - 2.0f * amp_px * AUDIO_LEVEL_HALF_FACTOR;
             dl->AddLine(ImVec2(p0.x + 2.0f, dc_y), ImVec2(p1.x - 2.0f, dc_y),
                         wave_col, 1.5f);
             dl->AddText(ImVec2(p0.x + 4.0f, p0.y + 2.0f), wave_col, _("DC"));

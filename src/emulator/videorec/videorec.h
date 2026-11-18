@@ -335,7 +335,7 @@ extern st_VIDEOREC_SETTINGS g_videorec_settings;
  */
 typedef struct st_VIDEOREC_START {
     char path[1024];                                                 /**< Cílový .avi soubor; prázdné = vygenerované jméno (viz videorec_request_start()). */
-    float level[VIDEOREC_AUDIO_MAX_CHANNELS][VIDEOREC_AUDIO_LEVELS]; /**< Úroveň kanálu pro hodnotu 0..15 (viz iface_audio_build_videorec_levels()). */
+    float level[VIDEOREC_AUDIO_MAX_CHANNELS][VIDEOREC_AUDIO_LEVELS]; /**< Úroveň kanálu pro hodnotu 0..31 (viz iface_audio_build_videorec_levels()). */
     uint64_t stop_after_frames;                                      /**< Po kolika zapsaných snímcích nahrávání ukončit (0 = bez limitu). */
     bool quit_after_stop;                                            /**< Po automatickém ukončení (stop_after_frames) ukončit emulátor. */
 } st_VIDEOREC_START;

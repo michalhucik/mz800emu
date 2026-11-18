@@ -3,25 +3,25 @@
  * @brief  Renderer audio událostí na PCM v emulačním čase (box filtr + řetězec SDL cesty).
  *
  * Řetězec filtrů je kopie aktivní SDL cesty emulátoru (viz videorec_audio.h):
- * - CTC0: iface_audio_resampler_output_stream_ctc0() (iface_audio_resampler.c:193-296),
- *   tj. parkování (:229-266) -> iface_audio_lowpass_filter() (:79-86, alpha 0,4)
- *   -> iface_audio_anti_glitch_filter() (:157-165, 0,2); filtry 2. řádu,
- *   Butterworth a limiter jsou v SDL cestě zakomentované (:272-282);
- * - PSG: iface_audio_resampler_process_psg_audio_log() (:298-417), tj. hlasitostní
- *   tabulka (v rendereru zapečená do `level`) -> parkování (:342-382) -> IIR
- *   `sample += (x - sample) / 6` (:384-387);
- * - mix: iface_audio_mix_channels_with_gain() (iface_audio.c:66-101, mono):
- *   CTC0 * gain + průměr PSG0 kanálů * gain, ořez `<= 1`;
- *   iface_audio_mix_channels_stereo() (iface_audio.c:103-155, stereo):
+ * - CTC0: iface_audio_resampler_output_stream_ctc0() (iface_audio_resampler.c),
+ *   tj. střídavá vazba -> iface_audio_lowpass_filter() (alpha 0,4)
+ *   -> iface_audio_anti_glitch_filter() (0,2); celý řetězec je sdílená funkce
+ *   videorec_audio_chain_ctc0(), kterou SDL cesta volá také;
+ * - PSG: iface_audio_resampler_process_psg_audio_log(), tj. hlasitostní
+ *   tabulka (v rendereru zapečená do `level`) -> parkování -> IIR
+ *   `sample += (x - sample) / 6`;
+ * - výstupní stupeň: videorec_audio_output_stage() (sdílený s mixem SDL cesty);
+ * - mix: iface_audio_mix_channels_with_gain() (iface_audio.c, mono):
+ *   CTC0 * gain * iface_audio_ctc0_mix_level() + průměr PSG0 kanálů * gain,
+ *   ořez `<= 1`; iface_audio_mix_channels_stereo() (iface_audio.c, stereo):
  *   L = CTC0 + průměr PSG0, R = CTC0 + průměr PSG1, ořez každé strany `<= 1`
- *   (rozložení kanálů viz videorec_audio_set_stereo()).
+ *   (rozložení kanálů viz videorec_audio_set_stereo()). Poměr CTC0 k PSG je
+ *   v rendereru zapečený do `level` (iface_audio_build_videorec_levels()).
  * SDL cesta drží stavy filtrů ve `static` proměnných; zde jsou v instanci
  * (st_VIDEOREC_AUDIO_CHSTATE), aby šly uložit a obnovit (plynulý retake).
  *
- * DC blok (horní propust), který tu byl dřív, je odstraněný: trvalou úroveň
- * (CTC0 držený na 1) řeší parkování stejně jako SDL cesta, takže nahrávka
- * zní jako výstup emulátoru a nevzniká přechodový jev DC bloku (doznívání
- * cca 2000 vzorků po každém skoku trvalé úrovně).
+ * Trvalou úroveň CTC0 odstraňuje střídavá vazba (časová konstanta 0,85 s
+ * podle měření na MZ-800), u PSG parkování, obojí stejně jako v SDL cestě.
  *
  * @par Licence: GPLv3
  */
@@ -43,6 +43,11 @@ void videorec_audio_coef_init(st_VIDEOREC_AUDIO_COEF *c, unsigned rate)
 {
     c->park_samples = (rate / 1000u) * VR_PARK_MS;
     c->park_fade = (rate / 1000u) * VR_PARK_FADE_MS;
+    c->ctc_ac_k = 1.0 - exp(-1000.0 / ((double)VIDEOREC_AUDIO_CTC0_AC_TAU_MS * (double)rate));
+    c->out_lp_k = 1.0 - exp(-1.0e6 / ((double)VIDEOREC_AUDIO_OUT_LP_TAU_US * (double)rate));
+    c->out_xfade_step = 1000.0f / ((float)VIDEOREC_AUDIO_OUT_XFADE_MS * (float)rate);
+    c->out_ac_k = 0.0;
+    c->psg_park = true;
     if (rate == VIDEOREC_AUDIO_SDL_RATE) {
         /* Přesně konstanty SDL cesty (bez přepočtu, aby nevznikla odchylka v posledním bitu). */
         c->ctc_lp_alpha = 0.4f;
@@ -104,20 +109,61 @@ static inline float vr_park(st_VIDEOREC_AUDIO_PARK *p, const st_VIDEOREC_AUDIO_C
     return x;
 }
 
-float videorec_audio_chain_ctc0(st_VIDEOREC_AUDIO_CHSTATE *s, const st_VIDEOREC_AUDIO_COEF *c, float x, uint8_t end_value)
+float videorec_audio_chain_ctc0(st_VIDEOREC_AUDIO_CHSTATE *s, const st_VIDEOREC_AUDIO_COEF *c, float x, float unit, float *raw)
 {
-    float r = vr_park(&s->park, c, x, end_value);
+    float r = x;
+    if (unit > 0.0f) {
+        /* střídavá vazba: střední hodnota v jednotkách 0..1, výstup kolem nuly */
+        double x01 = (double)x / (double)unit;
+        s->hp_mean += (x01 - s->hp_mean) * c->ctc_ac_k;
+        r = (float)((double)x - s->hp_mean * (double)unit);
+    }
+    if (raw) *raw = r;
     float alpha = c->ctc_lp_alpha;
     s->lp = alpha * r + (1.0f - alpha) * s->lp;          /* iface_audio_lowpass_filter() */
     s->ag = s->ag + c->ctc_ag_factor * (s->lp - s->ag);  /* iface_audio_anti_glitch_filter() */
     return s->ag;
 }
 
-float videorec_audio_chain_psg(st_VIDEOREC_AUDIO_CHSTATE *s, const st_VIDEOREC_AUDIO_COEF *c, float x, uint8_t end_value)
+void videorec_audio_coef_set_output_coupling(st_VIDEOREC_AUDIO_COEF *c, unsigned rate, bool on)
 {
-    float r = vr_park(&s->park, c, x, end_value);
-    s->lp = s->lp + (r - s->lp) / c->psg_iir_div;        /* iface_audio_resampler.c:384-386 */
+    c->out_ac_k = on ? (1.0 - exp(-1000.0 / ((double)VIDEOREC_AUDIO_OUT_AC_TAU_MS * (double)rate))) : 0.0;
+    c->psg_park = !on;
+}
+
+float videorec_audio_chain_psg(st_VIDEOREC_AUDIO_CHSTATE *s, const st_VIDEOREC_AUDIO_COEF *c, float x, uint8_t end_value, float *raw)
+{
+    float r = c->psg_park ? vr_park(&s->park, c, x, end_value) : x;
+    if (raw) *raw = r;
+    s->lp = s->lp + (r - s->lp) / c->psg_iir_div;        /* IIR PSG v iface_audio_resampler_process_psg_audio_log() */
     return s->lp;
+}
+
+float videorec_audio_output_stage(const st_VIDEOREC_AUDIO_COEF *c, double *ac, double *lp, float legacy, float raw, float gain)
+{
+    /* střídavá vazba výstupu: střední hodnota součtu se odečte od obou variant
+     * (při out_ac_k == 0 a *ac == 0 beze změny) */
+    *ac += ((double)raw - *ac) * c->out_ac_k;
+    legacy -= (float)*ac;
+    raw -= (float)*ac;
+    float l = (legacy <= 1) ? legacy : 1.0f; /* dřívější ořez mixu SDL cesty */
+    *lp += ((double)raw - *lp) * c->out_lp_k;
+    float y = l + gain * ((float)*lp - l);
+    if (y > 1.0f) y = 1.0f;
+    if (y < -1.0f) y = -1.0f;
+    return y;
+}
+
+float videorec_audio_output_gain_step(const st_VIDEOREC_AUDIO_COEF *c, float gain, bool on)
+{
+    if (on) {
+        gain += c->out_xfade_step;
+        if (gain > 1.0f) gain = 1.0f;
+    } else {
+        gain -= c->out_xfade_step;
+        if (gain < 0.0f) gain = 0.0f;
+    }
+    return gain;
 }
 
 /** @brief Vyprázdní frontu bez uvolnění paměti (kapacita zůstává). */
@@ -161,6 +207,32 @@ void videorec_audio_init(st_VIDEOREC_AUDIO *a, uint64_t clk_hz, unsigned rate, u
     a->stereo = false;
     videorec_audio_coef_init(&a->coef, rate);
     videorec_audio_rebase(a, origin_ticks, values);
+    /* střídavá vazba CTC0 začíná ustálená na počáteční hodnotě */
+    a->flt[0].hp_mean = (a->channels && a->value[0]) ? 1.0 : 0.0;
+}
+
+void videorec_audio_set_output_filter(st_VIDEOREC_AUDIO *a, bool on, bool immediate)
+{
+    a->out_filter = on;
+    if (immediate) a->out_gain = on ? 1.0f : 0.0f;
+}
+
+void videorec_audio_set_output_coupling(st_VIDEOREC_AUDIO *a, bool on)
+{
+    videorec_audio_coef_set_output_coupling(&a->coef, a->rate, on);
+}
+
+void videorec_audio_set_output_mean(st_VIDEOREC_AUDIO *a, double l, double r)
+{
+    a->out_ac[0] = l;
+    a->out_ac[1] = r;
+}
+
+void videorec_audio_set_ctc0_mean(st_VIDEOREC_AUDIO *a, double mean01)
+{
+    if (mean01 < 0.0) mean01 = 0.0;
+    if (mean01 > 1.0) mean01 = 1.0;
+    a->flt[0].hp_mean = mean01;
 }
 
 void videorec_audio_set_stereo(st_VIDEOREC_AUDIO *a, bool stereo)
@@ -190,7 +262,7 @@ void videorec_audio_rebase(st_VIDEOREC_AUDIO *a, uint64_t origin_ticks, const ui
 {
     for (unsigned c = 0; c < a->channels; c++) {
         queue_clear(&a->q[c]);
-        a->value[c] = values ? (uint8_t)(values[c] & 0x0F) : 0;
+        a->value[c] = values ? (uint8_t)(values[c] & VIDEOREC_AUDIO_VALUE_MASK) : 0;
     }
     a->origin = origin_ticks;
     a->n = 0;
@@ -203,20 +275,32 @@ void videorec_audio_get_state(const st_VIDEOREC_AUDIO *a, st_VIDEOREC_AUDIO_STAT
         out->value[c] = a->value[c];
         out->ch[c] = a->flt[c];
     }
+    out->out_lp[0] = a->out_lp[0];
+    out->out_lp[1] = a->out_lp[1];
+    out->out_ac[0] = a->out_ac[0];
+    out->out_ac[1] = a->out_ac[1];
+    out->out_gain = a->out_gain;
+    out->out_filter = a->out_filter;
 }
 
 void videorec_audio_set_state(st_VIDEOREC_AUDIO *a, const st_VIDEOREC_AUDIO_STATE *st)
 {
     for (unsigned c = 0; c < a->channels; c++) {
-        a->value[c] = (uint8_t)(st->value[c] & 0x0F);
+        a->value[c] = (uint8_t)(st->value[c] & VIDEOREC_AUDIO_VALUE_MASK);
         a->flt[c] = st->ch[c];
     }
+    a->out_lp[0] = st->out_lp[0];
+    a->out_lp[1] = st->out_lp[1];
+    a->out_ac[0] = st->out_ac[0];
+    a->out_ac[1] = st->out_ac[1];
+    a->out_gain = st->out_gain;
+    a->out_filter = st->out_filter;
 }
 
 int videorec_audio_event(st_VIDEOREC_AUDIO *a, unsigned ch, uint8_t value, uint64_t ticks)
 {
     if (ch >= a->channels) return -1;
-    return queue_push(&a->q[ch], ticks, (uint8_t)(value & 0x0F));
+    return queue_push(&a->q[ch], ticks, (uint8_t)(value & VIDEOREC_AUDIO_VALUE_MASK));
 }
 
 /** @brief Čas (takty) začátku vzorku `n`; počítáno z `n`, aby se zaokrouhlení nekumulovalo. */
@@ -226,17 +310,12 @@ static inline uint64_t sample_start(const st_VIDEOREC_AUDIO *a, uint64_t n)
 }
 
 /**
- * @brief Převede součet jedné strany na vzorek int16 (ořez jako SDL cesta, pak rozsah [-1, 1]).
- * @param a Instance (rozhoduje `sdl_chain`).
- * @param y Součet kanálů strany.
+ * @brief Převede vzorek jedné strany na int16 (ořez na [-1, 1]).
+ * @param y Vzorek strany.
  * @return Vzorek int16.
  */
-static inline int16_t mix_to_s16(const st_VIDEOREC_AUDIO *a, double y)
+static inline int16_t mix_to_s16(double y)
 {
-    if (a->sdl_chain) {
-        float m = (float)y;
-        y = (m <= 1) ? m : 1.0f; /* ořez mixu jako iface_audio_mix_channels_with_gain() / _stereo() */
-    }
     if (y > 1.0) y = 1.0;
     if (y < -1.0) y = -1.0;
     return (int16_t)lrint(y * 32767.0);
@@ -250,7 +329,8 @@ size_t videorec_audio_render(st_VIDEOREC_AUDIO *a, uint64_t horizon_ticks, int16
         uint64_t e = sample_start(a, a->n + 1);
         if (e > horizon_ticks) break;
 
-        double yl = 0.0, yr = 0.0;
+        double yl = 0.0, yr = 0.0;   /* součet po filtrech kanálů (bez sdl_chain surový součet) */
+        double rl = 0.0, rr = 0.0;   /* součet před filtry kanálů (vstup výstupní propusti) */
         for (unsigned c = 0; c < a->channels; c++) {
             st_VIDEOREC_AUDIO_QUEUE *q = &a->q[c];
             uint64_t t = s;
@@ -266,18 +346,26 @@ size_t videorec_audio_render(st_VIDEOREC_AUDIO *a, uint64_t horizon_ticks, int16
             sum += a->level[c][v] * (double)(e - t);
             a->value[c] = v;
             double x = sum / (double)(e - s);
+            float raw = (float)x;
             if (a->sdl_chain) {
                 /* v = hodnota na konci vzorku (parkování, obdoba end_value v SDL cestě);
                  * filtr běží vždy, i u kanálu, který se právě nemixuje */
-                x = (c == 0) ? videorec_audio_chain_ctc0(&a->flt[c], &a->coef, (float)x, v)
-                             : videorec_audio_chain_psg(&a->flt[c], &a->coef, (float)x, v);
+                x = (c == 0) ? videorec_audio_chain_ctc0(&a->flt[c], &a->coef, (float)x,
+                                                         a->level[c][VIDEOREC_AUDIO_CTC0_ON_VALUE], &raw)
+                             : videorec_audio_chain_psg(&a->flt[c], &a->coef, (float)x, v, &raw);
             }
-            if (a->route[c] & VIDEOREC_AUDIO_ROUTE_L) yl += x;
-            if (a->route[c] & VIDEOREC_AUDIO_ROUTE_R) yr += x;
+            if (a->route[c] & VIDEOREC_AUDIO_ROUTE_L) { yl += x; rl += raw; }
+            if (a->route[c] & VIDEOREC_AUDIO_ROUTE_R) { yr += x; rr += raw; }
         }
 
-        out[done * 2] = mix_to_s16(a, yl);
-        out[done * 2 + 1] = mix_to_s16(a, yr);
+        if (a->sdl_chain) {
+            /* výstupní stupeň jako mix SDL cesty: střídavá vazba, ořez, výstupní propust, plynulý přechod */
+            a->out_gain = videorec_audio_output_gain_step(&a->coef, a->out_gain, a->out_filter);
+            yl = videorec_audio_output_stage(&a->coef, &a->out_ac[0], &a->out_lp[0], (float)yl, (float)rl, a->out_gain);
+            yr = videorec_audio_output_stage(&a->coef, &a->out_ac[1], &a->out_lp[1], (float)yr, (float)rr, a->out_gain);
+        }
+        out[done * 2] = mix_to_s16(yl);
+        out[done * 2 + 1] = mix_to_s16(yr);
         a->n++;
         done++;
     }

@@ -75,12 +75,29 @@ typedef struct st_IFACE_AUDIO
     uint32_t played_frame;
 
     AUDIO_OUTPUT_t channel_scan_value;
-    AUDIO_OUTPUT_t SN76489_volume_value[AUDIO_SRC_CHANNELS_COUNT][PSG_COUNT_VOLUME_LEVELS];
+    /** Výchylka kanálu pro hodnotu zvukového logu 0 až 30 (iface_audio_set_src_volume()). */
+    AUDIO_OUTPUT_t SN76489_volume_value[AUDIO_SRC_CHANNELS_COUNT][AUDIO_LEVEL_VALUES_COUNT];
 
     float gain[AUDIO_SRC_CHANNELS_COUNT]; // nastaveni hlasitosti pro jednotlive zdroje
     float level[AUDIO_SRC_CHANNELS_COUNT]; // prumerna uroven zvuku na kanale pro indikaci
     float total_level;
     int output_channels;  /* aktuální počet output kanálů (1=mono, 2=stereo) */
+
+    /**
+     * @brief Volba věrné výstupní propusti (INI [AUDIO] output_filter, výchozí zapnuto).
+     *
+     * Jen při AUDIO_HAVE_OUTPUT_FILTER; na samostatném MZ-700 je vždy false
+     * (stroj propust nemá, volba neexistuje).
+     *
+     * true = smíchaný signál (PSG i CTC0) prochází dolní propustí 1. řádu
+     * s časovou konstantou AUDIO_OUT_LP_TAU_US jako mezi čipem PSG a zesilovačem
+     * skutečného MZ-800 a filtry jednotlivých kanálů se vynechají; false =
+     * dřívější zvuk (low-pass a anti-glitch CTC0, IIR PSG). Platí pro SDL cestu,
+     * video záznam i reference.wav; přepnutí za běhu je plynulý přechod.
+     * Zapisuje UI vlákno nebo vlákno emulátoru, čtou vlákno emulátoru
+     * a vlákno zvukového výstupu (jeden bajt, bez zámku).
+     */
+    bool output_filter;
 
     /**
      * @brief Synchronizace emulace podle monotónních hodin místo audio callbacku.
@@ -151,7 +168,74 @@ extern "C"
      * @post Při ukončování aplikace (sdlapp neběží) může zavolat emulator_quit().
      */
     extern void iface_audio_20ms_sync(void);
+    /**
+     * @brief Naplní tabulku výchylek kanálu pro hodnoty zvukového logu.
+     *
+     * Hodnoty 0 až 15: 0 = ticho, 15 = plná výchylka, mezi nimi krok 2 dB
+     * (stupeň `v` má útlum `2 * (15 - v)` dB). Hodnoty 16 až 30: výchylka
+     * stupně `v - 15` krát AUDIO_LEVEL_HALF_FACTOR (tón PSG s děličem 001h).
+     *
+     * @param id     Index kanálu (0 až AUDIO_SRC_CHANNELS_COUNT - 1).
+     * @param volume Hlasitost v procentech (100 = plná výchylka 1,0).
+     * @post g_iface_audio.SN76489_volume_value[id] je přepsaná; při
+     *       MZ800EMU_CFG_AUDIO_DISABLED se nemění nic.
+     */
     extern void iface_audio_set_src_volume(int id, int volume);
+
+    /**
+     * @brief Je zapnutá věrná výstupní propust (st_IFACE_AUDIO::output_filter)?
+     * @return true = zapnutá; bez AUDIO_HAVE_OUTPUT_FILTER (MZ-700) vždy false.
+     * @note Lze volat z libovolného vlákna.
+     */
+    extern bool iface_audio_output_filter_enabled(void);
+
+    /**
+     * @brief Zapne nebo vypne věrnou výstupní propust.
+     *
+     * Všechny zvukové cesty změnu převezmou u dalšího bloku nebo snímku
+     * a přejdou plynule (10 ms). Do INI se zapíše při ukládání konfigurace.
+     * Bez AUDIO_HAVE_OUTPUT_FILTER (MZ-700) nedělá nic, propust zůstává vypnutá.
+     *
+     * @param on Nový stav.
+     * @note Lze volat z libovolného vlákna.
+     */
+    extern void iface_audio_set_output_filter(bool on);
+
+    /**
+     * @brief Střední hodnota smíchaného signálu pro střídavou vazbu výstupu.
+     *
+     * Ze středních hodnot kanálů vedených emulátorem v emulovaném čase
+     * (audio_out_ac_means()) spočte střední hodnotu součtu kanálů levé
+     * a pravé strany se stejnými vahami jako mix (hlasitosti, poměr CTC0).
+     * Renderer nahrávky ji dostane na začátku
+     * (videorec_audio_set_output_mean()), aby začal bez doznívajícího
+     * stejnosměrného posunu. Bez AUDIO_HAVE_OUTPUT_COUPLING vrací nuly.
+     *
+     * @param now_ticks Čas (osa gdg_get_total_ticks()).
+     * @param stereo    Stereo rozložení (L = CTC0 + PSG0, R = CTC0 + PSG1); mono dává obě strany stejné.
+     * @param out       Výstup: střední hodnota levé a pravé strany.
+     * @pre Vlákno emulátoru, po iface_audio_init() a audio_init().
+     */
+    extern void iface_audio_output_ac_means(uint64_t now_ticks, bool stereo, double out[2]);
+
+    /**
+     * @brief Násobitel kanálu CTC0 v mixu (mimo uživatelskou hlasitost).
+     *
+     * Takový, aby výsledná výchylka CTC0 byla
+     * AUDIO_CTC0_TO_PSG_CHANNEL_RATIO násobek výchylky jednoho kanálu PSG
+     * s útlumem 0. Kanál PSG se v mixu dělí PSG_CHANNELS_COUNT a převzorkování
+     * CTC0 v SDL cestě má střední zesílení videorec_audio_sdl_ctc0_gain()
+     * (asi 0,926), proto
+     * `AUDIO_CTC0_TO_PSG_CHANNEL_RATIO / PSG_CHANNELS_COUNT / zesílení`.
+     * Emulátory bez PSG (MZ-700) nemají CTC0 s čím poměřovat; používají
+     * stejnou absolutní úroveň jen kvůli pohodlí, aby MZ-800 v režimu MZ-700
+     * a samostatný MZ-700 hrály stejně hlasitě (věrnosti se to netýká, na
+     * skutečném MZ-700 úroveň měřena není [neověřeno]).
+     *
+     * @return Násobitel vzorku CTC0 před sečtením s PSG.
+     * @note Čistá funkce konstant překladu; lze volat z libovolného vlákna.
+     */
+    extern float iface_audio_ctc0_mix_level(void);
     extern void iface_audio_set_master_volume(int volume);
 
     /**
@@ -161,13 +245,16 @@ extern "C"
      * - kanál 0 (CTC0): SDL cesta počítá podíl nenulových vzorků dělený
      *   `(délka bloku + 1)`, úroveň je tedy 0 pro hodnotu 0 a pro nenulovou
      *   hodnotu střední zesílení bloku videorec_audio_sdl_ctc0_gain()
-     *   (cca 0,926 u MZ-800), násobené `gain[0]`;
+     *   (cca 0,926 u MZ-800), násobené `gain[0]` a iface_audio_ctc0_mix_level()
+     *   (vychází `gain[0] * AUDIO_CTC0_TO_PSG_CHANNEL_RATIO / PSG_CHANNELS_COUNT`,
+     *   stejně i bez PSG na MZ-700);
      * - kanály PSG: hlasitostní tabulka `SN76489_volume_value` (AUDIO_OUTPUT_t
      *   je při AUDIO_FORMAT_F32 `float` v rozsahu 0..1) krát `gain[ch]`, děleno
-     *   PSG_CHANNELS_COUNT (průměr přes 4 kanály jako v SDL mixu).
-     * Mix PSG0 a PSG1 (stereo PSG na MZ-800 s allow_psg1) se v rendereru sčítá
-     * do mono (L == R). Filtry SDL cesty (parkování, low-pass, IIR) aplikuje
-     * renderer sám (videorec_audio.h), tabulka obsahuje jen úrovně.
+     *   PSG_CHANNELS_COUNT (průměr přes 4 kanály jako v SDL mixu); hodnoty
+     *   16 až 30 (poloviční výchylka, tón s děličem 001h) jsou v tabulce také,
+     *   hodnota 31 má úroveň 0.
+     * Filtry SDL cesty (střídavá vazba CTC0, parkování, low-pass, IIR, výstupní
+     * propust) aplikuje renderer sám (videorec_audio.h), tabulka obsahuje jen úrovně.
      *
      * @param level    Výstup `level[kanál][hodnota]`, aspoň `channels` řádků.
      * @param channels Počet řádků k vyplnění; řádky nad AUDIO_SRC_CHANNELS_COUNT

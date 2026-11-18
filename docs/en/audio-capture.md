@@ -63,8 +63,11 @@ start of the capture (the frequency is `gdg_clk_hz` in capture.json),
 speaker, level 0 or 15), `psg0_0` .. `psg0_3` (PSG, channel 3 = noise) and on
 the MZ-1500 or an MZ-800 with the second PSG `psg1_0` .. `psg1_3`. Level 0-15
 is the output of the channel (for the PSG 15 minus the attenuation while the
-generator output is high, otherwise 0). The first rows (`ticks` 0) are the
-levels at the start.
+generator output is high, otherwise 0). Level 16-30 belongs to a PSG tone
+channel with divider 1: a constant level of 0.49 of the full swing of step
+`level - 15` (on the real chip the output toggles at 110.8 kHz, only the mean
+level is audible; used to play samples through the volume register). The first
+rows (`ticks` 0) are the levels at the start.
 
 **psg_writes.csv** - `ticks,time_us,frame,psg,byte,channel,reg,value`:
 `psg` = target (1 = PSG0, 2 = PSG1, 3 = both), `byte` = written value (hex),

@@ -2014,7 +2014,7 @@ i v GUI (Tools -> Audio Capture, `Alt + Q`) a v příkazové řádce
 
 | Soubor | Obsah |
 |---|---|
-| `events.csv` | `ticks,time_us,frame,channel,level` - každá změna výstupní úrovně (0-15) zvukového kanálu |
+| `events.csv` | `ticks,time_us,frame,channel,level` - každá změna výstupní úrovně zvukového kanálu (0-15; 16-30 = úroveň 0,49 stupně `level - 15` u tónu PSG s děličem 1) |
 | `psg_writes.csv` | `ticks,time_us,frame,psg,byte,channel,reg,value` - každý zápis do PSG s dekódováním |
 | `reference.wav` | zvuk vyrenderovaný přesně v emulovaném čase (renderer video záznamu) |
 | `sdl.wav` | zvuk ze zvukové výstupní cesty emulátoru - to, co slyší uživatel |
@@ -2369,6 +2369,7 @@ Whitelist:
 - `AUDIO/volume_8253` (unsigned)
 - `AUDIO/volume_psg0` .. `AUDIO/volume_psg3` (unsigned)
 - `AUDIO/volume_psg1_0` .. `AUDIO/volume_psg1_3` (MZ-1500, unsigned)
+- `AUDIO/output_filter` (bool; výstupní dolní propust skutečného MZ-800, 346 Hz, výchozí zapnuto; přepnutí platí hned a bez lupnutí, i v běžícím záznamu zvuku a videa; v emulátorech MZ-700 klíč není, ten počítač propust nemá)
 - `DISPLAY/forced_full_screen_redrawing` (bool)
 - `DISPLAY/locked_window_aspect_ratio` (bool)
 - `DISPLAY/custom_fps` (unsigned, 50..1000; platí v režimu snímkové frekvence Custom)

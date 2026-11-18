@@ -5959,6 +5959,7 @@ _VALID_SETTINGS_KEYS = (
     "AUDIO/volume_psg3",
     "AUDIO/volume_psg1_0", "AUDIO/volume_psg1_1", "AUDIO/volume_psg1_2",
     "AUDIO/volume_psg1_3",
+    "AUDIO/output_filter",
     "DISPLAY/forced_full_screen_redrawing",
     "DISPLAY/locked_window_aspect_ratio",
     "DISPLAY/custom_fps",
@@ -5990,6 +5991,12 @@ async def emu_settings_set(key: str, value: str) -> str:
         AUDIO/volume_8253           - 8253 CTC tone volume (0..MAX)
         AUDIO/volume_psg0..psg3     - PSG SN76489 channel volumes
         AUDIO/volume_psg1_0..psg1_3 - MZ-1500 second PSG channels
+        AUDIO/output_filter         - bool, low-pass filter of the real
+                                      MZ-800 audio output (346 Hz, default
+                                      on; off = the previous brighter
+                                      sound); switches without a click.
+                                      Not in the MZ-700 emulators (that
+                                      machine has no such filter)
         DISPLAY/forced_full_screen_redrawing - bool
         DISPLAY/locked_window_aspect_ratio   - bool
         DISPLAY/custom_fps                   - unsigned, 50..1000 (Custom
@@ -10111,8 +10118,10 @@ async def emu_audio_capture_start(dir: str = "", frames: int = 0,
     * ``events.csv`` - ``ticks,time_us,frame,channel,level``: every change
       of the output level (0-15) of a sound channel: ``ctc0`` (speaker,
       0 or 15), ``psg0_0``..``psg0_3`` and on the MZ-1500 or an MZ-800 with
-      the second PSG ``psg1_0``..``psg1_3`` (channel 3 = noise). The first
-      rows (ticks 0) are the levels at the start.
+      the second PSG ``psg1_0``..``psg1_3`` (channel 3 = noise). Level
+      16-30 = 0.49 of the swing of step ``level - 15`` (a PSG tone channel
+      with divider 1, a constant level). The first rows (ticks 0) are the
+      levels at the start.
     * ``psg_writes.csv`` - ``ticks,time_us,frame,psg,byte,channel,reg,value``:
       every write to the PSG (psg = target mask: 1 = PSG0, 2 = PSG1,
       3 = both), decoded from the PSG state after the write: reg

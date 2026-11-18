@@ -139,6 +139,11 @@ def scenario_settings(emu):
     g = emu.call("settings_get", {"key": "AUDIO/volume_8253"})
     check(g["value"] == "37" and "live" not in g,
           f"3: volume_8253 value 37 (callback binding, no live field): {g}")
+    g = emu.call("settings_get", {"key": "AUDIO/output_filter"})
+    check(g["value"] == "true", f"3: output_filter is on by default: {g}")
+    emu.call("settings_set", {"key": "AUDIO/output_filter", "value": "false"})
+    g = emu.call("settings_get", {"key": "AUDIO/output_filter"})
+    check(g["value"] == "false", f"3: output_filter value false: {g}")
 
 
 def check_saved_ini(ini):
@@ -148,6 +153,7 @@ def check_saved_ini(ini):
     cp.read(ini, encoding="utf-8")
     got = {
         "AUDIO/volume_8253": cp.get("AUDIO", "volume_8253", fallback=None),
+        "AUDIO/output_filter": cp.get("AUDIO", "output_filter", fallback=None),
         "DISPLAY/custom_fps": cp.get("DISPLAY", "custom_fps", fallback=None),
         "DISPLAY/forced_full_screen_redrawing":
             cp.get("DISPLAY", "forced_full_screen_redrawing", fallback=None),
@@ -158,6 +164,7 @@ def check_saved_ini(ini):
     }
     want = {
         "AUDIO/volume_8253": "37",
+        "AUDIO/output_filter": "0",
         "DISPLAY/custom_fps": "120",
         "DISPLAY/forced_full_screen_redrawing": "1",
         "MEMEXT/connected": "1",
