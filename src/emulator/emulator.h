@@ -227,6 +227,18 @@ extern "C"
     void emulator_switch_to_normal_speed(void);
     void emulator_switch_to_custom_speed(void);
     const char *emulator_get_speed_status_as_text(void);
+
+    /**
+     * @brief Text značky ztlumeného poslechu pro titulek hlavního okna.
+     *
+     * Čte jen příznak ztlumení zvukového rozhraní (iface_audio_get_mute());
+     * stav emulace nemění a nezávisí na něm (značka platí za běhu i při pauze).
+     *
+     * @return Přeložený text "MUTED" (statický řetězec katalogu, volající ho
+     *         neuvolňuje), nebo NULL, když poslech ztlumený není.
+     * @note Lze volat z libovolného vlákna.
+     */
+    const char *emulator_get_mute_status_as_text(void);
 #ifdef __cplusplus
 }
 #endif

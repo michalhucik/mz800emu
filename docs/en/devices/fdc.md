@@ -34,9 +34,17 @@ available for each drive:
 - **Mount...** - opens the file chooser for selecting a DSK image
   (keyboard shortcut Alt+N, where N is the drive number)
 - **Re-Mount...** - available when something is already mounted
+- **Recent** - a submenu with at most 12 most recently inserted DSK
+  images (file name, full path in the tooltip); a click inserts the image
+  into this drive in the same way as a choice in **Mount...**. A missing
+  file is reported only by the insertion. **Clear recent media** at the
+  end deletes the history of all kinds of media (see overlay-menu.md,
+  "The Recent media history")
 - **Umount** - disconnects the image and clears the persistent record
   in INI (Alt+Shift+N)
-- **Read-only** - per-drive R/O toggle (see "Read-only 3-state model")
+- **Read-only** - per-drive R/O toggle (see "Read-only 3-state model");
+  disabled while the same image is inserted in another drive that may
+  write to it (see "The same image in more than one drive")
 - **Storage mode** - per-drive choice (Cached / Direct / Discard)
 - **Sync now** - explicit flush of the RAM buffer to the file (active
   only in Cached mode with pending changes)
@@ -74,7 +82,11 @@ be discarded), the modal popup "FDC: Unsaved RAM changes" opens with
 three options:
 
 1. **Save and switch** - forcibly write the RAM buffer to the file and
-   only then switch mode
+   only then switch mode. Nothing is written to the file when another
+   drive holds it with write access (see "The same image in more than one
+   drive") or when the drive refers to a different file than the one it
+   loaded the image from (see "Snapshot compatibility"); the emulator
+   reports it with a message and switches the mode without saving
 2. **Switch and discard** - discard RAM changes and switch
 3. **Cancel** - cancel the switch
 
@@ -113,7 +125,8 @@ output (stderr).
 
 ## Read-only 3-state model
 
-Effective R/O = `user_readonly || fs_readonly`.
+Effective R/O = `user_readonly || fs_readonly`, or the image is shared
+with another drive (see "The same image in more than one drive").
 
 | Field         | Meaning                                                                |
 |---------------|------------------------------------------------------------------------|
@@ -132,6 +145,55 @@ fixed ON - the persistent user pref is not changed through this path.
 
 On umount or close of the handler, all three flags are cleared (mount
 cycle from a clean state).
+
+## The same image in more than one drive
+
+The same DSK file can be inserted into more than one drive (also across
+the two controllers). To keep the image file safe, **only one drive may
+write to one image file at any moment**. Drives are numbered across both
+controllers as on the command line: FDD 0-3 belong to FDC0, FDD 4-7 to
+FDC1.
+
+- The drive that holds the file first keeps writing. Every other drive
+  gets the image **write-protected**: the emulated computer sees a
+  write-protected disk and nothing from that drive is ever written to the
+  file.
+- On insertion the emulator shows the message "The image is already
+  inserted in FDD n. It was inserted write-protected here to keep the
+  image file safe." Without a window (`--headless`, disks restored from
+  the INI file or given on the command line at start, MCP, Unicard) the
+  message goes only to the error output (stderr); MCP `emu_media_insert`
+  also returns it in the field `warning`.
+- The drive menu shows "Shared with FDD n, write-protected" under the
+  file name and the item **Read-only** is checked; the overlay menu shows
+  the same note in the drive row and **Write protect** is on.
+- While another drive may write to the file, the protection cannot be
+  turned off: **Read-only** and **Write protect** are disabled and give
+  the reason "The image is also inserted in FDD n, which may write to
+  it."
+- When the first drive ejects the image, or gets **Read-only** itself,
+  the protection of the other drive can be turned off. It never turns off
+  by itself. To move writing to another drive, turn **Read-only** on in
+  the first drive and then off in the second one; the first drive is then
+  locked by the same rule.
+- The protection belongs to the inserted image and is not saved to the
+  INI file (the key `wd279x_fddN_readonly` does not change). Inserting a
+  different image into the drive clears it. At start the disks from the
+  INI file are inserted in the order FDD 0 to 7, so the first drive in
+  this order writes and the others are protected, even if another drive
+  was the writing one before the emulator was closed.
+
+The same file is recognised by the identity of the file, not by the text
+of the path: the absolute path without `.` and `..` (on Windows without
+regard to upper and lower case and to the kind of slash) and, where the
+file system provides it, the file number, which covers hard links,
+symbolic links and 8.3 short names. Not recognised: the same file reached
+through two network paths for which the system gives different file
+numbers or none.
+
+A protected drive in Cached or Discard mode works with the copy of the
+image read when it was inserted: changes saved later by the writing
+drive show up in it only after the image is inserted again.
 
 ## Side / Density / Motor (HW logic ports)
 
@@ -207,7 +269,8 @@ The FDC subsystem snapshot saves:
   MOTOR, SIDE, DENSITY, EINT), buffer_pos, data_counter, sticky flags,
   state machine for WRITE TRACK / READ TRACK
 - informational info per drive: `filename`, `mounted` flag, effective
-  `readonly`, `storage_mode`
+  `readonly` (on load they only serve the comparison with the inserted
+  disks, see below)
 - informational values of the config switches `hd_patch` and
   `bus_xlate`
 
@@ -221,13 +284,61 @@ The FDC subsystem snapshot saves:
   INI is the SSOT for user pref; the snapshot is the SSOT for chip
   continuity
 
-**After snapshot load:** drive mounts are performed from the current
-INI settings (as on emu startup); the snapshot then writes the chip
-state and per-drive flags to the mounted handlers. If the INI contains
-DSK paths different from the snapshot, the resulting state reflects
-the current INI mount + chip continuity from the snapshot - this can
-lead to inconsistency. The recommended approach is to have the same
-INI mount paths before snapshot load as at snapshot save.
+**After snapshot load:** an inserted disk belongs to the emulator, not
+to the state of the emulated computer. Loading a snapshot does not
+insert, exchange or eject disks: every drive keeps the image it held
+before the load, with its file name, write protection, storage mode and
+unsaved changes; an empty drive stays empty. Only the controller state
+is restored from the snapshot (registers, head position, motor, the
+command in progress). Unsaved changes are still saved to the file the
+image was inserted from.
+
+If different disks were inserted when the snapshot was saved (another
+file, an empty drive instead of a loaded one or the other way round),
+the emulator reports it after the load with one message that lists only
+the drives that differ:
+
+```
+The snapshot was saved with different disks:
+FDD 0: game.dsk (now: work.dsk)
+FDD 1: data.dsk (now: empty)
+The inserted disks were kept.
+```
+
+The message is shared with the Quick Disk: when it differs as well, a
+line "Quick Disk: <name in the snapshot> (now: <name now>)" is added (see
+qdisk.md). The names are shown without paths (the full path is shown only
+when the files differ in the directory alone). The emulated program then
+continues over different content than it expects; to continue exactly
+where the snapshot was taken, insert the disks named in the message and
+load the snapshot again. A repeated load with the same difference (for
+example Quick Load several times in a row) does not show the message
+again; in a run without a window the message goes to the standard error
+output.
+
+**A disk is never saved to a file other than the one it was loaded
+from.** The controller has this safeguard in addition: should the file
+name of a drive refer to a different file than the one the drive loaded
+its image from, the emulator does not write the in-memory copy to the
+file (Sync now, reset, eject, exit, "Save and switch") and reports "The
+disk in FDD n was not saved: the drive now refers to a different image
+file than the one it was loaded from. Re-insert the image to continue."
+The unsaved changes then remain in memory only and are discarded on
+eject, on an image exchange or when the emulator exits. This does not
+happen after an ordinary snapshot load. It can happen after playing an
+older input replay that carries no media list, and after going back in
+time while an input replay is being recorded: there the emulator gives
+the drive the file name from the snapshot so that the playback matches
+the recording.
+
+After a snapshot load the write protection follows the disk that is
+really in the drive: the **Read-only** option, the protection of the
+file on the host disk and the sharing of the image with another drive.
+The `readonly` flag stored in the snapshot is not used for a drive with
+an inserted file, so a snapshot load does not take the write access
+from a drive with unsaved changes and does not remove the protection of
+a shared image: after the load, still only one drive may write to one
+image file.
 
 ## DSK format and broken header repair
 

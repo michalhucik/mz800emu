@@ -25,6 +25,7 @@
 
 #include "main.h"
 #include <stdlib.h>
+#include <glib.h>
 
 #include "mzarch/mzarch.h"
 #include "joy.h"
@@ -47,8 +48,40 @@ static uint8_t joy_host_scan_sdl ( en_JOY_DEVID joy_devid ) {
 }
 
 
+/**
+ * @brief Zadržení vstupu hostitelského joysticku (joy_host_hold()); atomicky.
+ *
+ * Zapisuje UI vlákno, čte emu vlákno v joy_host_scan().
+ */
+static gint s_host_hold = 0;
+
+
 uint8_t joy_host_scan ( en_JOY_DEVID joy_devid ) {
+    if ( g_atomic_int_get ( &s_host_hold ) ) return 0xff;
     return g_joy.host_scan ( joy_devid );
+}
+
+
+uint8_t joy_host_scan_raw ( en_JOY_DEVID joy_devid ) {
+    return g_joy.host_scan ( joy_devid );
+}
+
+
+void joy_host_hold ( bool hold ) {
+    g_atomic_int_set ( &s_host_hold, hold ? 1 : 0 );
+}
+
+
+bool joy_host_is_held ( void ) {
+    return g_atomic_int_get ( &s_host_hold ) != 0;
+}
+
+
+int joy_num_keypad_dev ( void ) {
+    for ( int d = 0; d < JOY_DEVID_COUNT; d++ ) {
+        if ( g_joy.dev[d].type == JOY_TYPE_NUM_KEYPAD ) return d;
+    };
+    return -1;
 }
 
 

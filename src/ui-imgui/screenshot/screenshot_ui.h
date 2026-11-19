@@ -37,6 +37,15 @@ void screenshot_ui_save_as(void);
  */
 void screenshot_ui_toggle_series(void);
 
+/**
+ * @brief Otevře výstupní adresář screenshotů ve správci souborů (položka "Open Output Folder").
+ *
+ * Neúspěch ohlásí notifikací.
+ *
+ * @pre UI vlákno.
+ */
+void screenshot_ui_open_output_folder(void);
+
 /** @brief Podmenu "Screenshot" v menu Tools (uložit, uložit jako, série, nastavení, složka). */
 void imgui_screenshot_menu(void);
 

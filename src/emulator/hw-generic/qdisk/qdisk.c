@@ -78,6 +78,7 @@
 #include "baseui/baseui_filechooser.h"
 #include "media_writes.h"
 #include "qdisk_request.h"
+#include "recent_media/recent_media.h"
 
 #define ui_qdisk_set_std_path( x ) {g_free( g_qdisk.ui_std_filepath ); g_qdisk.ui_std_filepath = (x) ? g_strdup( x ) : g_strdup( "" );}
 #define ui_qdisk_set_virt_path( x ) {g_free( g_qdisk.ui_virt_filepath ); g_qdisk.ui_virt_filepath = (x) ? g_strdup( x ) : g_strdup( "" );}
@@ -129,6 +130,22 @@ static const char *qdisk_storage_mode_to_string ( en_QDISK_STORAGE_MODE m ) {
         case QDISK_STORAGE_CACHED:
         default:                    return "cached";
     };
+}
+#endif
+
+
+#ifdef COMPILE_FOR_EMULATOR
+/**
+ * @brief Zapomene původ obrazu (soubor, přehrání vstupů) a uvolní identitu souboru.
+ *
+ * Volá se při zavření obrazu a před nasazením nového.
+ *
+ * @post `file_backed` = 0, `replay_image` = 0, `fileid` je prázdná.
+ */
+static void qdisk_image_origin_clear ( void ) {
+    g_qdisk.file_backed = 0;
+    g_qdisk.replay_image = 0;
+    fdc_fileid_clear ( &g_qdisk.fileid );
 }
 #endif
 
@@ -331,6 +348,7 @@ void qdisk_close ( void ) {
                     generic_driver_close ( &g_qdisk.handler );
                     g_qdisk.handler_valid = 0;
                     g_qdisk.filename[0] = 0x00;
+                    qdisk_image_origin_clear ( );
                     /* Faze 2: reset 3-state R/O polí (handler je pryč, fs/effective
                      * nedává smysl udržovat; user_readonly se obnoví z CFGELM
                      * při dalším mount). */
@@ -481,8 +499,8 @@ void qdisk_virt_open_directory ( char *dirpath ) {
  *
  * @note Volat z UI/lifecycle threadu (ne z hot path - sahá na FS).
  * @note Naplní `g_qdisk.filename`, `g_qdisk.storage_mode`, `g_qdisk.user_readonly`,
- *       `g_qdisk.fs_readonly`, `g_qdisk.readonly`, `g_qdisk.handler*` a
- *       `g_qdisk.status`.
+ *       `g_qdisk.fs_readonly`, `g_qdisk.readonly`, `g_qdisk.handler*`,
+ *       `g_qdisk.file_backed`, `g_qdisk.fileid` a `g_qdisk.status`.
  */
 static void qdisk_open_image_internal ( const char *filepath,
                                         int mode_override,
@@ -556,6 +574,11 @@ static void qdisk_open_image_internal ( const char *filepath,
                 };
             } else {
                 g_qdisk.handler_valid = 1;
+                /* Identita souboru z okamžiku vložení: podle ní se pozná,
+                 * zda `filename` při ukládání pořád označuje tento soubor. */
+                qdisk_image_origin_clear ( );
+                g_qdisk.file_backed = 1;
+                fdc_fileid_init ( &g_qdisk.fileid, filepath );
                 generic_driver_set_handler_readonly_status ( &g_qdisk.handler, readonly_effective );
                 g_qdisk.status = QDSTS_IMG_READY | QDSTS_HEAD_HOME | read_only_flag;
                 if ( ! suppress_cfg_write ) {
@@ -590,6 +613,8 @@ static void qdisk_open_image_internal ( const char *filepath,
  *     pref pro IMAGE mode musí zůstat netknutý)
  *   - `g_qdisk.filename` se naplní `virtual_filename` (= informativní
  *     pseudo-cesta pro diagnostiku, není to skutečný soubor)
+ *   - `file_backed` = 0 a `replay_image` = 0: obraz se do souboru nezapíše
+ *     nikdy a načtení snapshotu ho nechává jako vložené médium
  *
  * @param data              ukazatel na MZQ data v paměti
  * @param size              velikost MZQ (= 92 + body_size)
@@ -651,6 +676,7 @@ static void qdisk_open_image_from_buffer_internal ( const uint8_t *data,
     memcpy ( g_qdisk.handler.spec.memspec.ptr, data, size );
 
     g_qdisk.handler_valid = 1;
+    qdisk_image_origin_clear ( ); /* obraz z paměti: žádný soubor, ne přehrání vstupů */
     generic_driver_set_handler_readonly_status ( &g_qdisk.handler, 1 );
     g_qdisk.status = QDSTS_IMG_READY | QDSTS_HEAD_HOME | read_only_flag;
 }
@@ -785,6 +811,13 @@ int qdisk_mount_path ( const char *path, int is_dir ) {
     } else {
         /* Typ mechaniky se mezi výběrem v dialogu a provedením změnil. */
         rc = -1;
+    };
+
+    /* Jediné místo, kde vložení Quick Disku z cesty uspěje (menu, overlay
+     * menu, MCP): zápis do historie naposledy vložených médií. Médium je
+     * vložené, když je po otevření připravené. */
+    if ( ( rc == 0 ) && ( g_qdisk.status & QDSTS_IMG_READY ) ) {
+        recent_media_add ( RECENT_MEDIA_QD, pathdup );
     };
 
     g_free ( pathdup );
@@ -1761,6 +1794,7 @@ void qdisk_umount_keep_cfg ( void ) {
         generic_driver_close ( &g_qdisk.handler );
         g_qdisk.handler_valid = 0;
     };
+    qdisk_image_origin_clear ( );
     g_qdisk.filename[0] = 0x00;
     g_qdisk.user_readonly = 0;
     g_qdisk.fs_readonly = 0;
@@ -1783,6 +1817,7 @@ int qdisk_mount_image_buffer ( const uint8_t *data, uint32_t size, int readonly,
     };
     memcpy ( g_qdisk.handler.spec.memspec.ptr, data, size );
     g_qdisk.handler_valid = 1;
+    g_qdisk.replay_image = 1;
 
     g_strlcpy ( g_qdisk.filename, label ? label : "replay", sizeof ( g_qdisk.filename ) );
     g_qdisk.storage_mode = QDISK_STORAGE_DISCARD;
@@ -1817,12 +1852,60 @@ int qdisk_drive_has_unsaved_changes ( void ) {
 }
 
 
+/**
+ * @brief Pojistka: smí se kopie obrazu z paměti zapsat do souboru `filename`?
+ *
+ * Obraz se neuloží do jiného souboru, než ze kterého byl načten. Pole
+ * `filename` totiž nemusí označovat soubor, jehož obsah mechanika drží:
+ * načtení snapshotu záznamu vstupů ho přepisuje jménem ze snapshotu a obraz
+ * znovu nevkládá (snap_qdisk.c; běžné načtení snapshotu vložené médium
+ * nemění, pojistka je druhá obrana). Zápis celé kopie do takového souboru
+ * by přepsal cizí obraz.
+ *
+ * Porovnává identitu souboru `filename` zjištěnou teď (fdc_fileid_init():
+ * jedno otevření souboru) s identitou uloženou při vložení (`fileid`):
+ *  - shoda (stejný klíč cesty, nebo stejné číslo souboru) = zápis povolen;
+ *  - cílový soubor neexistuje nebo nejde zjistit jeho číslo: rozhoduje
+ *    jen klíč cesty. Stejná cesta = zápis povolen (soubor smazaný za běhu
+ *    se uložením obnoví jako dřív), jiná cesta = zápis odmítnut;
+ *  - obraz, který ze souboru nepochází (`file_backed == 0`: přehrání
+ *    vstupů, náhradní obraz zavaděče Unicard), žádný soubor nedrží a
+ *    `filename` je jen jmenovka = zápis odmítnut.
+ *
+ * Odmítnutí kvůli jinému souboru ohlásí uživateli (baseui_show_message_tr():
+ * okno se zprávou a stderr; fronta zpráv shodné zprávy po sobě slučuje),
+ * odmítnutí u obrazu z paměti jen záznamem na stderr.
+ *
+ * Co pojistka nepozná: soubor, který jiný program za běhu nahradil jiným
+ * souborem téhož jména (klíč cesty se shoduje dál, fdc_fileid.h).
+ *
+ * @return 1 = zápis do `filename` je bezpečný, 0 = nezapisovat.
+ * @pre Platný handler a neprázdné `filename`. Emu vlákno, pozastavená
+ *      emulace nebo ukončování (qdisk_exit()).
+ * @note Mění jen frontu zpráv; stav mechaniky ani příznak změn nemění.
+ */
+static int qdisk_save_target_ok ( void ) {
+    if ( ! g_qdisk.file_backed ) {
+        fprintf ( stderr, "qdisk: the image '%s' was not loaded from a file, not saved\n", g_qdisk.filename );
+        return 0;
+    };
+    st_FDC_FILEID target;
+    fdc_fileid_init ( &target, g_qdisk.filename );
+    const int same = fdc_fileid_same ( &g_qdisk.fileid, &target ) ? 1 : 0;
+    fdc_fileid_clear ( &target );
+    if ( same ) return 1;
+    baseui_show_message_tr ( 1, N_ ( "The Quick Disk was not saved: the drive now refers to a different image file than the one it was loaded from. Re-insert the image to continue." ) );
+    return 0;
+}
+
+
 int qdisk_sync_drive ( void ) {
     /* Faze 4: verejny equivalent qdisk_flush_image_to_file(). Pouziva stejnou
      * guard logiku pres qdisk_drive_has_unsaved_changes(), takze no-op pripady
      * (DIRECT, DISCARD, R/O, no handler, no dirty) projdou jako uspech bez
      * zapisu. Po flushi vynuluje memspec.updated. */
     if ( ! qdisk_drive_has_unsaved_changes ( ) ) return 1;
+    if ( ! qdisk_save_target_ok ( ) ) return 0; /* jiný soubor, než ze kterého byl obraz načten */
 
     if ( EXIT_SUCCESS != generic_driver_save_memory ( &g_qdisk.handler, g_qdisk.filename ) ) {
         fprintf ( stderr, "%s(%d): qdisk_sync_drive: failed to flush QD image '%s' to file\n",
@@ -1844,6 +1927,7 @@ int qdisk_drive_force_save_to_file ( void ) {
     if ( g_qdisk.handler.type != HANDLER_TYPE_MEMORY )          return 0;
     if ( g_qdisk.status & QDSTS_IMG_READONLY )                  return 0;
     if ( g_qdisk.filename[0] == 0x00 )                          return 0;
+    if ( ! qdisk_save_target_ok ( ) )                           return 0; /* jiný soubor, než ze kterého byl obraz načten */
 
     if ( EXIT_SUCCESS != generic_driver_save_memory ( &g_qdisk.handler, g_qdisk.filename ) ) {
         fprintf ( stderr, "%s(%d): qdisk_drive_force_save_to_file: failed for '%s'\n",

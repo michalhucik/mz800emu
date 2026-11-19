@@ -100,6 +100,27 @@ typedef struct st_IFACE_AUDIO
     bool output_filter;
 
     /**
+     * @brief Hlavní hlasitost poslechu 0 až 1 (INI [AUDIO] volume_master, výchozí 1).
+     *
+     * Násobí hotový smíchaný blok těsně před předáním zvukovému zařízení
+     * (iface_audio_apply_master()), až za odběrem pro video záznam a pro
+     * zachycení zvuku; hlasitosti kanálů (gain[]) ani indikace úrovní
+     * (level[], total_level) se jí nemění. Invariant: 0 <= master_gain <= 1.
+     * Zapisuje UI vlákno nebo vlákno emulátoru (iface_audio_set_master_gain()),
+     * čte vlákno zvukového výstupu (jedna hodnota float, bez zámku).
+     */
+    float master_gain;
+
+    /**
+     * @brief Ztlumení poslechu (výchozí vypnuto; do INI se neukládá, po startu je vždy vypnuto).
+     *
+     * true = zvukové zařízení dostává ticho; master_gain se nemění, takže
+     * zrušení ztlumení vrátí původní hlasitost. Na záznam nemá vliv (viz
+     * master_gain). Vlákna jako master_gain.
+     */
+    bool mute;
+
+    /**
      * @brief Synchronizace emulace podle monotónních hodin místo audio callbacku.
      *
      * true = backend neotevřel žádné audio zařízení (headless režim, nebo
@@ -237,6 +258,84 @@ extern "C"
      */
     extern float iface_audio_ctc0_mix_level(void);
     extern void iface_audio_set_master_volume(int volume);
+
+    /**
+     * @brief Nastaví hlavní hlasitost poslechu (st_IFACE_AUDIO::master_gain).
+     *
+     * Hlasitosti kanálů (gain[], okno Audio Mixer) se nemění; hlavní
+     * hlasitost je další násobitel hotového mixu. Projeví se od dalšího
+     * zvukového bloku plynulým přechodem přes jeden blok. Do INI se zapíše
+     * při ukládání konfigurace. Video záznam ani zachycení zvuku neovlivní.
+     *
+     * @param gain Hlasitost 0 až 1; hodnota mimo rozsah se ořízne, NaN se bere jako 1.
+     * @note Lze volat z libovolného vlákna.
+     */
+    extern void iface_audio_set_master_gain(float gain);
+
+    /**
+     * @brief Hlavní hlasitost poslechu.
+     * @return Hodnota 0 až 1 (výchozí 1); ztlumení ji nemění.
+     * @note Lze volat z libovolného vlákna.
+     */
+    extern float iface_audio_get_master_gain(void);
+
+    /**
+     * @brief Ztlumí nebo obnoví poslech (st_IFACE_AUDIO::mute).
+     *
+     * Hlavní hlasitost ani hlasitosti kanálů se nemění. Projeví se od
+     * dalšího zvukového bloku plynulým přechodem přes jeden blok. Do INI se
+     * neukládá: platí jen do konce běhu emulátoru, který startuje vždy
+     * neztlumený. Video záznam ani zachycení zvuku neovlivní.
+     *
+     * @param mute true = ticho.
+     * @note Lze volat z libovolného vlákna.
+     */
+    extern void iface_audio_set_mute(bool mute);
+
+    /**
+     * @brief Je poslech ztlumený?
+     * @return true = ztlumený (výchozí false).
+     * @note Lze volat z libovolného vlákna.
+     */
+    extern bool iface_audio_get_mute(void);
+
+    /**
+     * @brief Uplatní hlavní hlasitost a ztlumení na hotový smíchaný blok.
+     *
+     * Cílový násobitel je 0 při ztlumení, jinak master_gain. Je-li cílový
+     * i naposledy uplatněný násobitel přesně 1, blok se nemění ani nečte
+     * (výchozí stav: výstup je bitově shodný s mixem). Jinak se vzorky
+     * násobí; liší-li se cílový násobitel od naposledy uplatněného, přejde
+     * se k němu lineárně přes délku bloku (bez lupnutí), další blok už má
+     * násobitel stálý. První blok po startu (a po
+     * iface_audio_master_restart()) začíná rovnou na cílovém násobiteli:
+     * s nižší hlasitostí z INI se nepřechází z plné hlasitosti.
+     *
+     * Volá iface_audio_wait_for_data() na bloku pro zvukové zařízení až po
+     * předání téhož bloku video záznamu (videorec_rt_audio_output()) a
+     * zachycení zvuku (audio_capture_sdl_output()): záznam je na poslechu
+     * nezávislý.
+     *
+     * @param samples  Prokládané vzorky (L, R); NULL se ignoruje.
+     * @param frames   Počet snímků (vzorků na kanál).
+     * @param channels Počet kanálů v prokládání (1 nebo 2); 0 se ignoruje.
+     * @pre Jen vlákno, které volá iface_audio_wait_for_data() (drží stav
+     *      naposledy uplatněného násobitele): vlákno zvukového výstupu, v
+     *      režimu bez zvukového zařízení vlákno emulátoru; testy z jednoho vlákna.
+     * @post Naposledy uplatněný násobitel je cílový násobitel.
+     */
+    extern void iface_audio_apply_master(float *samples, size_t frames, unsigned channels);
+
+    /**
+     * @brief Příští blok iface_audio_apply_master() začne rovnou na cílovém násobiteli (bez přechodu).
+     *
+     * Výchozí stav po startu procesu; volání je potřeba jen tam, kde se má
+     * stav "první blok" obnovit (testy).
+     *
+     * @pre Vlákno, které volá iface_audio_wait_for_data(), právě bloky nezpracovává
+     *      (příznak se nechrání zámkem).
+     */
+    extern void iface_audio_master_restart(void);
 
     /**
      * @brief Sestaví tabulku úrovní zvukových kanálů pro renderer video záznamu.

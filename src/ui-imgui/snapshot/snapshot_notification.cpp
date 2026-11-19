@@ -10,8 +10,10 @@
 #include <SDL3/SDL.h>
 
 #include "libs/imgui/imgui.h"
+#include "libs/imgui/imgui_internal.h"
 #include "ui-imgui/imgui_modal.h"
 #include "ui-imgui/bootstrap/myimgui.h"
+#include "ui-imgui/overlay/overlay.h"
 
 // Lokalizace
 #include "i18n.h"
@@ -73,6 +75,24 @@ extern "C" void snapshot_notification_show(const char *message, bool is_error)
 }
 
 
+/**
+ * @brief Vykreslí čekající notifikaci: toast dole uprostřed, nebo modální chybové okno.
+ *
+ * Toast je okno bez vstupu a bez fokusu. Při otevřeném overlay menu
+ * (imgui_overlay_is_open()) se každý snímek vynáší v pořadí kreslení nad
+ * ostatní okna: overlay kryje celý viewport a bere si fokus, takže toast
+ * vytvořený dřív by jinak zůstal pod ním a potvrzení Quick Save nebo
+ * screenshotu spuštěného z overlaye by nebylo vidět. Při zavřeném overlayi
+ * a při otevřeném popupu (modální dialog nad overlayem) se pořadí oken
+ * nemění (toast může být pod oknem nástroje jako dřív). Při otevřeném
+ * overlayi se toast navíc umisťuje vůči hlavnímu viewportu a připíná se k
+ * němu (při více viewportech by jinak mohl skončit jako samostatné okno
+ * systému mimo hlavní okno); při zavřeném overlayi zůstává pozice z
+ * io.DisplaySize jako dřív.
+ *
+ * @pre UI vlákno, mezi ImGui::NewFrame() a ImGui::Render(), mimo Begin() / End() jiného okna.
+ * @post Po uplynutí doby zobrazení nebo po potvrzení chyby notifikace zaniká.
+ */
 extern "C" void imgui_snapshot_notification(void)
 {
     if (!s_notification_active)
@@ -119,6 +139,16 @@ extern "C" void imgui_snapshot_notification(void)
     ImGuiIO &io = ImGui::GetIO();
     ImVec2 window_pos = ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y - 60.0f);
     ImVec2 window_pivot = ImVec2(0.5f, 1.0f);
+    const bool overlay_open = imgui_overlay_is_open();
+    if (overlay_open) {
+        /* Při otevřeném overlay menu patří toast do hlavního okna: s více viewporty jsou pozice oken v
+         * souřadnicích plochy, proto se počítá od počátku hlavního viewportu, a okno se k němu připne, aby z něj
+         * nevzniklo samostatné okno systému mimo hlavní okno. Bez více viewportů je počátek (0, 0) a pozice
+         * stejná jako dřív. Při zavřeném overlayi se chování nemění. */
+        const ImGuiViewport *main_vp = ImGui::GetMainViewport();
+        window_pos = ImVec2(main_vp->Pos.x + main_vp->Size.x * 0.5f, main_vp->Pos.y + main_vp->Size.y - 60.0f);
+        ImGui::SetNextWindowViewport(main_vp->ID);
+    }
 
     ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pivot);
     ImGui::SetNextWindowBgAlpha(alpha * 0.85f);
@@ -136,6 +166,9 @@ extern "C" void imgui_snapshot_notification(void)
     if (ImGui::Begin("##SnapshotNotification", NULL, flags)) {
         ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.2f, alpha), "%s", s_notification_message);
     }
+    /* nad overlay menu: to kryje celý viewport a fokusem se dostává dopředu; pořadí otevřených popupů se nemění */
+    if (overlay_open && !ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel))
+        ImGui::BringWindowToDisplayFront(ImGui::GetCurrentWindow());
     ImGui::End();
 
     ImGui::PopStyleVar();

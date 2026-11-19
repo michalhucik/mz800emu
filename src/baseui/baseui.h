@@ -7,6 +7,34 @@
 #include <stdarg.h>
 
 void baseui_show_message(bool is_error, char *format, ...);
+
+/**
+ * @brief Zpráva uživateli s přeloženým textem.
+ *
+ * Jako baseui_show_message(), ale formát je anglické msgid označené N_()
+ * v místě volání: do okna se zprávou jde jeho překlad, na stdout / stderr
+ * anglický originál (s koncem řádku). Slouží jádru emulátoru, které samo
+ * nepřekládá.
+ *
+ * @param is_error true = chyba (stderr, okno chyby), false = informace (stdout).
+ * @param format   Formát ve stylu printf (msgid); překlad musí mít stejné
+ *                 konverze ve stejném pořadí.
+ * @note Libovolné vlákno (fronta zpráv má vlastní zámek).
+ */
+void baseui_show_message_tr(bool is_error, const char *format, ...);
+
+/**
+ * @brief Přeloží text do jazyka uživatelského rozhraní.
+ *
+ * Slouží jádru emulátoru, které samo nepřekládá, pro části zprávy skládané
+ * před voláním baseui_show_message_tr() (např. řádky seznamu).
+ *
+ * @param msgid Anglický text označený N_() v místě volání; ne NULL.
+ * @return Překlad, nebo @p msgid, když překlad není. Řetězec patří katalogu
+ *         překladů (neuvolňovat) a platí do změny jazyka.
+ * @note Libovolné vlákno.
+ */
+const char *baseui_translate(const char *msgid);
 void baseui_show_error_message(char *format, ...);
 
 // TODO: Tohle makro by melo postupne nahradit vsechny fprintf(stderr, ...) volani

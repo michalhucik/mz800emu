@@ -129,6 +129,28 @@ void audio_savecfg_volume(void *e, void *data)
     cfgelement_set_unsigned_value((CFGELM *)e, volume);
 }
 
+/**
+ * @brief INI -> hlavní hlasitost poslechu ([AUDIO] volume_master).
+ * @param e    Prvek konfigurace (unsigned, stejné měřítko jako hlasitosti kanálů).
+ * @param data Nepoužito.
+ */
+static void audio_propagatecfg_master_volume(void *e, void *data)
+{
+    (void)data;
+    iface_audio_set_master_gain(audio_uint32_to_float01(cfgelement_get_unsigned_value((CFGELM *)e)));
+}
+
+/**
+ * @brief Hlavní hlasitost poslechu -> INI.
+ * @param e    Prvek konfigurace (unsigned).
+ * @param data Nepoužito.
+ */
+static void audio_savecfg_master_volume(void *e, void *data)
+{
+    (void)data;
+    cfgelement_set_unsigned_value((CFGELM *)e, audio_float01_to_uint32(iface_audio_get_master_gain()));
+}
+
 #if AUDIO_HAVE_OUTPUT_FILTER
 /**
  * @brief INI -> volba věrné výstupní propusti ([AUDIO] output_filter).
@@ -414,6 +436,14 @@ void audio_init(void)
     cfgelement_set_propagate_cb(elm, audio_propagatecfg_output_filter, NULL);
     cfgelement_set_save_cb(elm, audio_savecfg_output_filter, NULL);
 #endif /* AUDIO_HAVE_OUTPUT_FILTER */
+
+    /* Hlavní hlasitost poslechu (násobitel hotového mixu, mimo záznam); výchozí 100 %.
+     * Ztlumení (iface_audio_set_mute()) se do INI neukládá: emulátor startuje vždy neztlumený. Klíč "mute"
+     * ze staršího INI se při čtení tiše přeskočí (cfgmodule_parse() neznámé klíče ignoruje) a při příštím
+     * uložení ze souboru zmizí (cfgroot_save() zapisuje jen registrované prvky). */
+    elm = cfgmodule_register_new_element(cmod, "volume_master", CFGENTYPE_UNSIGNED, DEFAULT_VOLUME, 0, MAX_UINT32);
+    cfgelement_set_propagate_cb(elm, audio_propagatecfg_master_volume, NULL);
+    cfgelement_set_save_cb(elm, audio_savecfg_master_volume, NULL);
 
     cfgmodule_parse(cmod);
     cfgmodule_propagate(cmod);

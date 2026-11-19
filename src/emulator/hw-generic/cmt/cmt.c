@@ -82,6 +82,7 @@
 #include "emulator.h"
 #include "replay.h"
 #include "media_writes.h"
+#include "recent_media/recent_media.h"
 #include "audio.h"
 
 st_CMT g_cmt;
@@ -2435,6 +2436,12 @@ int cmt_open_file(const char *filename, bool *discarded)
         g_cmt.ext = ext;
         g_cmt.ui_base_filename = g_path_get_basename(filename);
         cmt_set_last_filename(filename);
+        /* Jediné místo, kde vložení pásky ze souboru uspěje (menu, okno
+         * Virtual CMT, overlay menu, příkazová řádka, MCP): zápis do historie
+         * naposledy vložených médií. Páska, kterou vrací načtení snapshotu
+         * (tichý režim), nové vložení není. */
+        if (!s_cmt_quiet)
+            recent_media_add(RECENT_MEDIA_CMT, filename);
     }
     else
     {

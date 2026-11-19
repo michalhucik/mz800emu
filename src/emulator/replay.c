@@ -44,6 +44,7 @@
 #include "hw-generic/joy/joy.h"
 #include "snapshot/snapshot.h"
 #include "snapshot/snapshot_mgr.h"
+#include "snapshot/snapshot_media.h"
 #include "hw-generic/unicard/unicard.h"
 #include "hw-generic/cmt/cmt.h"
 #include "hw-generic/cmt/cmtext.h"
@@ -982,7 +983,10 @@ static void replay_ckpt_on_boundary(void)
  *
  * Komponenta "cmt" po dobu načtení použije vloženou pásku (kopii ze
  * záznamu nebo pásku vloženou při startu záznamu) a soubor z cesty ve
- * snapshotu neotevírá (snap_cmt_set_keep_inserted_tape()).
+ * snapshotu neotevírá (snap_cmt_set_keep_inserted_tape()). Komponenty
+ * "fdc" a "qdisk" vracejí mechanikám pole média ze snapshotu jako dřív
+ * (hash `periph` je zahrnuje) a zpráva o jiných médiích se neukazuje
+ * (snapshot_media_set_replay_load()).
  *
  * @param data Snapshot (snapshot_save_to_buffer()). @param size Velikost.
  * @return Výsledek snapshot_load_from_buffer().
@@ -991,7 +995,9 @@ static void replay_ckpt_on_boundary(void)
 static en_SNAPSHOT_RESULT replay_snapshot_load(const uint8_t *data, size_t size)
 {
     snap_cmt_set_keep_inserted_tape(true);
+    snapshot_media_set_replay_load(true);
     en_SNAPSHOT_RESULT sr = snapshot_load_from_buffer(data, size);
+    snapshot_media_set_replay_load(false);
     snap_cmt_set_keep_inserted_tape(false);
     return sr;
 }

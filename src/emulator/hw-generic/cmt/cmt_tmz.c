@@ -3595,8 +3595,29 @@ void cmttmz_test_fail_before_replace ( int fail ) {
 
 
 /**
+ * @brief Ověří, že existující cíl atomického zápisu smí být přepsán.
+ *
+ * Na POSIX systémech rename() nahradí i soubor bez práva zápisu (rozhoduje
+ * právo k adresáři), na Windows nahrazení souboru jen pro čtení selže.
+ * Kontrola předem (g_access() s W_OK) chování sjednocuje: soubor chráněný
+ * proti zápisu se nepřepíše nikde. Neexistující cíl projde. Proces
+ * s právy roota kontrolou projde vždy (access() mu zápis povolí).
+ *
+ * @param path Cíl (UTF-8).
+ * @return 1 = cíl neexistuje nebo do něj jde zapisovat; 0 = existuje a je
+ *         chráněný proti zápisu (errno nastaví g_access(), typicky EACCES).
+ */
+static int cmttmz_target_writable ( const char *path ) {
+    if ( !g_file_test ( path, G_FILE_TEST_EXISTS ) ) return 1;
+    return ( g_access ( path, W_OK ) == 0 );
+}
+
+
+/**
  * @brief Zapíše data do souboru atomicky.
  *
+ * Existující cíl chráněný proti zápisu se odmítne předem
+ * (cmttmz_target_writable()).
  * Data se zapíší do nového dočasného souboru ve stejném adresáři
  * (g_mkstemp_full() s šablonou "<cíl>.XXXXXX", binárně), soubor se zavře
  * a teprve pak g_rename() nahradí cíl (GLib na Windows MoveFileEx
@@ -3609,6 +3630,10 @@ void cmttmz_test_fail_before_replace ( int fail ) {
  * @return EXIT_SUCCESS; EXIT_FAILURE (text do save_message).
  */
 static int cmttmz_write_file_atomic ( const char *path, const uint8_t *data, size_t len ) {
+    if ( !cmttmz_target_writable ( path ) ) {
+        cmttmz_save_msg ( "Can't write file %s: %s", path, g_strerror ( errno ) );
+        return EXIT_FAILURE;
+    }
     gchar *tmp = g_strdup_printf ( "%s.XXXXXX", path );
 #ifdef O_BINARY
     int fd = g_mkstemp_full ( tmp, O_RDWR | O_BINARY, 0666 );
@@ -4281,10 +4306,17 @@ static int cmttmz_export_append ( st_CMT_STREAM **out, st_CMT_STREAM *block, uin
 
 /**
  * @brief Zapíše stream jako WAV atomicky (dočasný soubor ve stejném adresáři a g_rename()).
+ *
+ * Existující cíl chráněný proti zápisu se odmítne předem (cmttmz_target_writable()).
+ *
  * @param stream Stream celé pásky. @param path Cíl (UTF-8).
  * @return EXIT_SUCCESS; EXIT_FAILURE (text do save_message, cíl beze změny).
  */
 static int cmttmz_write_wav_atomic ( st_CMT_STREAM *stream, const char *path ) {
+    if ( !cmttmz_target_writable ( path ) ) {
+        cmttmz_save_msg ( "Can't write WAV file %s", path );
+        return EXIT_FAILURE;
+    }
     gchar *tmp = g_strdup_printf ( "%s.XXXXXX", path );
     int fd = g_mkstemp_full ( tmp, O_RDWR, 0666 );
     if ( fd < 0 ) {

@@ -1,3 +1,11 @@
+/**
+ * @file   menu_display.cpp
+ * @brief  Nabídka Display klasického menu (Interface > Display): fullscreen, barevné schéma, velikost okna při startu, poměr stran a další volby zobrazení.
+ *
+ * Volby mění nastavení zobrazení (display.h) a rozhraní videa
+ * (g_iface_video_callbacks); stav emulovaného stroje neovlivňují.
+ */
+
 #include "main.h"
 #include <stdbool.h>
 #include <stdint.h>
@@ -20,10 +28,30 @@ extern "C"
     void imgui_menu_display(void);
 }
 
+/**
+ * @brief Nakreslí nabídku Display.
+ *
+ * První položka "Fullscreen" přepíná celou obrazovku stejnou funkcí jako
+ * zkratka Alt+Ctrl+Enter (switch_fullscreen()) a je zaškrtnutá podle
+ * skutečného stavu okna (is_fullscreen()); bez rozhraní videa nebo bez
+ * funkce přepnutí je zakázaná. Volba "Window Size on Startup" > "Fullscreen"
+ * je jiné nastavení: platí jen při startu emulátoru.
+ *
+ * @pre UI vlákno, uvnitř otevřené nabídky ImGui.
+ */
 void imgui_menu_display(void)
 {
     if (ImGui::BeginMenu(_L("Display")))
     {
+        const bool can_fullscreen = g_iface_video_callbacks && g_iface_video_callbacks->switch_fullscreen;
+        const bool is_fullscreen = g_iface_video_callbacks && g_iface_video_callbacks->is_fullscreen && g_iface_video_callbacks->is_fullscreen();
+        if (ImGui::MenuItem(_L("Fullscreen"), "Alt+Ctrl+Enter", is_fullscreen, can_fullscreen))
+        {
+            g_iface_video_callbacks->switch_fullscreen();
+        };
+
+        ImGui::Separator();
+
 
         if (ImGui::BeginMenu(_L("Color Schema")))
         {

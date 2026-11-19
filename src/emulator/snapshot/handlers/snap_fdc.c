@@ -5,10 +5,44 @@
  *
  * Ukládá stav chipu WD279x (registry, state machine včetně přechodného
  * RNF na konci stopy `pending_rnf_end` a seznamu ID sektorů READ TRACK
- * `rt_sinfo`) a per-drive
- * informace (mount, R/O flag, filename). Mount cesty disků se primárně
- * obnovují z cfgfile (`wd279x_fddX_dskpath`); snapshot ukládá filename
- * a flagy pouze pro informaci a kontinuitu.
+ * `rt_sinfo`) a per-drive informace (`mounted`, `readonly`, `filename`).
+ *
+ * ## Vložené médium je vlastnost hostitele, ne stavu stroje
+ *
+ * Načtení obnoví stav řadiče a čipu (registry, poloha hlavy, motor, buffer).
+ * Co je vložené v mechanikách, nemění: obrazy znovu nevkládá a pole
+ * `mounted`, `filename` ani `readonly` mechaniky nepřepisuje. Mechanika
+ * s obrazem ze souboru si nechá obraz, jméno, ochranu proti zápisu, režim
+ * ukládání, identitu souboru i neuložené změny; prázdná mechanika zůstane
+ * prázdná. Pole `mounted`, `readonly` a `filename` se do snapshotu dál
+ * zapisují (formát se nemění, starší verze emulátoru je čtou) a při načtení
+ * se přečtou jen kvůli porovnání: liší-li se vložené diskety od těch ze
+ * snapshotu, dostane uživatel jednu souhrnnou zprávu společnou s Quick
+ * Diskem (snapshot_media.h; ukazuje ji správce snapshotů po načtení všech
+ * komponent).
+ *
+ * Výjimka pro záznam vstupů (replay), kde se dosavadní chování nemění.
+ * Hash `periph` záznamu (replay.c, replay_compute_hash()) zahrnuje výstup
+ * této komponenty včetně polí `mounted`, `readonly` a `filename` a spoléhá
+ * na to, že je načtení snapshotu vrátí; jinak by přehrání hlásilo rozjetí.
+ *  - Při načtení snapshotů záznamu vstupů (snapshot_media_set_replay_load():
+ *    startovní snapshot, checkpointy) se `mounted` a neprázdné `filename`
+ *    berou ze snapshotu u každé mechaniky, `readonly` u mechaniky bez obrazu
+ *    ze souboru; zpráva o rozdílu se neukazuje.
+ *  - Mechanika s obrazem nasazeným z paměti (`handler_valid` bez
+ *    `file_backed`, fdc_mount_dsk_buffer(): přehrávání) si tato pole bere
+ *    z každého snapshotu.
+ * Důsledek: při přehrání staršího záznamu bez seznamu médií a po návratu
+ * na checkpoint během nahrávání může `filename` mechaniky s obrazem ze
+ * souboru dál nést jméno ze snapshotu. Zápis takové kopie do cizího souboru
+ * hlídá pojistka řadiče (fdc.c, fdc_drive_save_target_ok(): disk se neuloží
+ * do jiného souboru, než ze kterého byl načten).
+ *
+ * Ochrana proti zápisu mechaniky s obrazem ze souboru (`file_backed`) se
+ * řídí vždy vloženým médiem: volba uživatele NEBO soubor chráněný na disku
+ * NEBO sdílení obrazu mezi mechanikami (fdc.h).
+ * fdc_enforce_single_writer() po načtení zůstává jako pojistka invariantu
+ * jediné zapisující mechaniky.
  *
  * Připojení řadiče (connected) je stav stroje: snapshot ho obnoví pro
  * běh, INI ([FDC] / [FDC1] connected) si drží volbu uživatele
@@ -28,6 +62,7 @@
 #include "snapshot/snapshot_mgr.h"
 #include "snapshot/snapshot_xml.h"
 #include "snapshot/snapshot_config.h"
+#include "snapshot/snapshot_media.h"
 
 #if CFG_HWEXT_HAVE_FDC
 
@@ -37,6 +72,74 @@
 #include <glib.h>
 
 #include "hw-generic/fdc/fdc.h"
+#include "hw-generic/fdc/fdc_fileid.h"
+#include "baseui/baseui.h"
+#include "i18n.h"
+
+
+/* ============================================================
+ * Rozdíl mezi disketami ze snapshotu a vloženými disketami
+ * ============================================================ */
+
+/**
+ * @brief Připojí k rozdílu řádek jedné mechaniky.
+ *
+ * Jména vybírá snapshot_media_notice_names() (bez cest; celé cesty, když
+ * se soubory liší jen adresářem).
+ *
+ * @param drive_no  Číslo mechaniky přes oba řadiče (0-7).
+ * @param snap_path Cesta ze snapshotu, NULL = mechanika byla prázdná.
+ * @param now_path  Cesta vloženého obrazu, NULL = mechanika je prázdná.
+ * @pre Aspoň jedna z cest není NULL. Vlákno emulátoru.
+ */
+static void snap_fdc_media_notice_add(int drive_no, const char *snap_path, const char *now_path)
+{
+    char *was = NULL;
+    char *now = NULL;
+    snapshot_media_notice_names(snap_path, now_path, &was, &now);
+    const char *empty_tr = baseui_translate(N_("empty"));
+    char *line_en = g_strdup_printf("FDD %d: %s (now: %s)", drive_no, was ? was : "empty", now ? now : "empty");
+    char *line_tr = g_strdup_printf(baseui_translate(N_("FDD %d: %s (now: %s)")), drive_no,
+                                    was ? was : empty_tr, now ? now : empty_tr);
+    snapshot_media_notice_add(line_en, line_tr);
+    g_free(line_en);
+    g_free(line_tr);
+    g_free(was);
+    g_free(now);
+}
+
+
+/**
+ * @brief Porovná disketu ze snapshotu s disketou vloženou v mechanice a rozdíl zapíše do zprávy.
+ *
+ * Shoda = obě prázdné, nebo stejná cesta, nebo tentýž soubor podle identity
+ * z vložení (fdc_fileid.h: jiný zápis téže cesty, pevný odkaz). Identita
+ * cesty ze snapshotu je jedno otevření souboru a zjišťuje se jen při
+ * různých cestách.
+ *
+ * @param fdc          Řadič.
+ * @param drive        Mechanika (0..FDC_NUM_DRIVES-1); drží obraz ze souboru, nebo je prázdná.
+ * @param snap_mounted Pole `mounted` ze snapshotu.
+ * @param snap_path    Pole `filename` ze snapshotu (NULL nebo "" = žádné).
+ * @pre Vlákno emulátoru.
+ */
+static void snap_fdc_media_compare(const st_FDC *fdc, unsigned drive, unsigned snap_mounted, const char *snap_path)
+{
+    const st_FDDrive *drv = &fdc->drive[drive];
+    const bool snap_has = snap_mounted && snap_path && snap_path[0] != '\0';
+    const bool now_has = drv->mounted && drv->handler_valid;
+    if (!snap_has && !now_has) return;
+    if (snap_has && now_has) {
+        if (strcmp(snap_path, drv->filename) == 0) return;
+        st_FDC_FILEID id;
+        fdc_fileid_init(&id, snap_path);
+        const bool same = fdc_fileid_same(&drv->fileid, &id);
+        fdc_fileid_clear(&id);
+        if (same) return;
+    }
+    snap_fdc_media_notice_add(FDC_GLOBAL_DRIVE_NO(fdc->index, drive), snap_has ? snap_path : NULL,
+                              now_has ? drv->filename : NULL);
+}
 
 
 /* ============================================================
@@ -214,28 +317,33 @@ static en_SNAPSHOT_RESULT snap_fdc_load_instance(st_SNAPSHOT_CONTEXT *ctx,
             snprintf(elem_name, sizeof(elem_name), "drive_%d", i);
 
             if (snapshot_xml_enter_element(r, elem_name)) {
-                /* Drive filename: pokud byl drive mounted v snapshotu,
-                 * cesta je v cfgfile - mount se obnoví standardní init
-                 * cestou. Zde pouze obnovíme readonly flag a filename
-                 * jako informaci pro UI. */
-                unsigned uval;
-                int rdo;
-                if (snapshot_xml_read_uint(r, "mounted", &uval)) {
-                    fdc->drive[i].mounted = uval;
-                }
-                if (snapshot_xml_read_int(r, "readonly", &rdo)) {
-                    fdc->drive[i].readonly = rdo;
-                }
-
+                /* Pole média se čtou vždy (formát se nemění); co s nimi,
+                 * rozhoduje to, co mechanika drží (viz popis souboru). */
+                st_FDDrive *drv = &fdc->drive[i];
+                unsigned snap_mounted = 0;
+                int snap_rdo = 0;
                 char *fname = NULL;
-                if (snapshot_xml_read_string(r, "filename", &fname)) {
-                    if (fname && fname[0] != '\0') {
-                        strncpy(fdc->drive[i].filename, fname,
-                                sizeof(fdc->drive[i].filename) - 1);
-                        fdc->drive[i].filename[sizeof(fdc->drive[i].filename) - 1] = '\0';
+                const bool have_mounted = snapshot_xml_read_uint(r, "mounted", &snap_mounted);
+                const bool have_rdo = snapshot_xml_read_int(r, "readonly", &snap_rdo);
+                const bool have_fname = snapshot_xml_read_string(r, "filename", &fname);
+
+                const bool buffer_image = drv->handler_valid && !drv->file_backed;
+                if (snapshot_media_is_replay_load() || buffer_image) {
+                    /* Záznam vstupů: dosavadní chování beze změny. Ochranu
+                     * proti zápisu si mechanika s obrazem ze souboru nechává
+                     * podle vloženého média i tady. */
+                    if (have_mounted) drv->mounted = snap_mounted;
+                    if (have_rdo && !drv->file_backed) drv->readonly = snap_rdo;
+                    if (have_fname && fname && fname[0] != '\0') {
+                        strncpy(drv->filename, fname, sizeof(drv->filename) - 1);
+                        drv->filename[sizeof(drv->filename) - 1] = '\0';
                     }
-                    g_free(fname);
+                } else {
+                    /* Vložené médium zůstává; jen zjistit rozdíl pro zprávu. */
+                    snap_fdc_media_compare(fdc, (unsigned)i, have_mounted ? snap_mounted : 0,
+                                           have_fname ? fname : NULL);
                 }
+                g_free(fname);
 
                 snapshot_xml_leave_element(r); /* drive_N */
             }
@@ -345,16 +453,36 @@ static en_SNAPSHOT_RESULT snap_fdc_load_one(st_SNAPSHOT_CONTEXT *ctx, st_FDC *fd
 }
 
 
+/**
+ * @brief Načte stav obou řadičů; vložené diskety zůstávají beze změny.
+ *
+ * Mechaniky s obrazem ze souboru a prázdné mechaniky si nechávají vložené
+ * médium (viz popis souboru). Liší-li se od disket ze snapshotu, připojí
+ * řádky do souhrnné zprávy (snapshot_media.h); při načtení snapshotu
+ * záznamu vstupů (snapshot_media_set_replay_load()) ne.
+ *
+ * @param ctx snapshot kontext.
+ * @return SNAPSHOT_OK, nebo chyba prvního řadiče, který se nepodařilo
+ *         načíst (FDC1 se pak nenačítá).
+ * @post I po chybě platí, že do jednoho souboru obrazu smí zapisovat
+ *       nejvýš jedna mechanika (fdc_enforce_single_writer()).
+ */
 static en_SNAPSHOT_RESULT snap_fdc_load(st_SNAPSHOT_CONTEXT *ctx)
 {
     /* FDC0 - historické entry. */
     en_SNAPSHOT_RESULT res = snap_fdc_load_one(
         ctx, &g_fdc[FDC0], "devices/fdc.xml", "devices/fdc_buffer.bin");
-    if (res != SNAPSHOT_OK) return res;
 
     /* FDC1 - nové entry; starý snapshot ho nemá -> FDC1 zůstane default. */
-    res = snap_fdc_load_one(
-        ctx, &g_fdc[FDC1], "devices/fdc1.xml", "devices/fdc1_buffer.bin");
+    if (res == SNAPSHOT_OK) {
+        res = snap_fdc_load_one(
+            ctx, &g_fdc[FDC1], "devices/fdc1.xml", "devices/fdc1_buffer.bin");
+    }
+
+    /* Mechaniky s obrazem ze souboru si `readonly` nechaly podle vloženého
+     * média, takže invariant jediné mechaniky se zápisem na soubor (fdc.h)
+     * platí dál; volání je pojistka, kdyby ho něco porušilo. */
+    fdc_enforce_single_writer();
     return res;
 }
 

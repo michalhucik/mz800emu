@@ -61,3 +61,21 @@ mz_add_test(snapshot-periph-hidden
     SOURCES  test_snapshot_periph_hidden.c
     LABELS   "emu;snapshot"
 )
+
+# Načtení snapshotu a diskety vložené ze souboru: disk se neuloží do
+# jiného souboru, než ze kterého byl načten, a ochrana proti zápisu se
+# řídí vloženým médiem, ne polem readonly ze snapshotu.
+mz_add_test(snapshot-fdc-media
+    TYPE     EMU
+    SOURCES  test_snapshot_fdc_media.c
+    LABELS   "emu;snapshot"
+)
+
+# Načtení snapshotu a Quick Disk vložený ze souboru: obraz se neuloží do
+# jiného souboru, než ze kterého byl načten, a přítomnost disku i ochrana
+# proti zápisu se řídí vloženým médiem, ne poli ze snapshotu.
+mz_add_test(snapshot-qdisk-media
+    TYPE     EMU
+    SOURCES  test_snapshot_qdisk_media.c
+    LABELS   "emu;snapshot"
+)

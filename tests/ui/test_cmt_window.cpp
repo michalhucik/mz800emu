@@ -146,6 +146,8 @@ extern "C" {
 
 #include "ui-imgui/bootstrap/myimgui.h"
 #include "ui-imgui/cmt/imgui_cmt.h"
+#include "ui-imgui/topmenu/menu_recent.h"
+#include "recent_media/recent_media.h"
 #include "ui-imgui/cmt/cmt_view.h"
 #include "ui-imgui/cmt/cmt_window.h"
 #include "ui-imgui/cmt/cmt_tokens.h"
@@ -5841,6 +5843,140 @@ static ImGuiWindow *g6_open_bootdev_menu(void)
     return bd;
 }
 
+/**
+ * @brief Otevře HW & Devices > CMT > Recent (zanoření z g6_nested_frame()).
+ * @return Okno podnabídky Recent (`###Menu_02`).
+ */
+static ImGuiWindow *g7_open_recent_menu(void)
+{
+    ImGuiIO &io = ImGui::GetIO();
+    io.AddMousePosEvent(-1.0f, -1.0f);
+    for (int i = 0; i < 2; i++) g6_nested_frame();
+    /* nabídky otevřené z předchozího kroku zavřít (klik na lištu by je jinak zavřel místo otevření) */
+    for (int k = 0; k < 6 && ImGui::GetCurrentContext()->OpenPopupStack.Size > 0; k++) {
+        io.AddKeyEvent(ImGuiKey_Escape, true);
+        g6_nested_frame();
+        io.AddKeyEvent(ImGuiKey_Escape, false);
+        g6_nested_frame();
+    }
+    ImGuiWindow *host = ImGui::FindWindowByName("menu host###g6_menu_host");
+    TEST_ASSERT_NOT_NULL(host);
+    const ImGuiStyle &st = ImGui::GetStyle();
+    ImRect mb = host->MenuBarRect();
+    g6_nested_click(ImVec2(mb.Min.x + st.WindowPadding.x + 8.0f, (mb.Min.y + mb.Max.y) * 0.5f));
+    ImGuiWindow *dev = ImGui::FindWindowByName("###Menu_00");
+    TEST_ASSERT_TRUE_MESSAGE(dev && dev->Active, "HW & Devices is open");
+    ImVec2 row;
+    ImGuiWindow *cmt = g6_hover_submenu(dev, "###Menu_01", "CMT", &row);
+    (void)cmt;
+    /* Recent: řádek podle obdélníku zaznamenaného menu_recent.cpp */
+    float x0 = 0, y0 = 0, x1 = 0, y1 = 0;
+    TEST_ASSERT_TRUE_MESSAGE(imgui_menu_recent_test_item_rect("recent_menu", &x0, &y0, &x1, &y1), "the Recent item is drawn");
+    ImVec2 item((x0 + x1) * 0.5f, (y0 + y1) * 0.5f);
+    io.AddMousePosEvent(item.x, item.y);
+    for (int i = 0; i < 3; i++) g6_nested_frame();
+    ImGuiWindow *rc = ImGui::FindWindowByName("###Menu_02");
+    TEST_ASSERT_TRUE_MESSAGE(rc && rc->Active && strncmp(rc->Name, "Recent", 6) == 0, "the Recent submenu is open");
+    io.AddMousePosEvent(rc->DC.CursorStartPos.x + 8.0f, item.y);
+    for (int i = 0; i < 2; i++) g6_nested_frame();
+    return rc;
+}
+
+/** @brief Střed prvku podnabídky Recent podle jména (obdélník z posledního kreslení, menu_recent.cpp). */
+static ImVec2 g7_recent_item_center(const char *name)
+{
+    float x0 = 0, y0 = 0, x1 = 0, y1 = 0;
+    TEST_ASSERT_TRUE_MESSAGE(imgui_menu_recent_test_item_rect(name, &x0, &y0, &x1, &y1), name);
+    return ImVec2((x0 + x1) * 0.5f, (y0 + y1) * 0.5f);
+}
+
+/**
+ * @brief Hlavní menu HW & Devices > CMT > Recent: naposledy vložené pásky.
+ *
+ * Podnabídka ukazuje jen pásky (ne obrazy disket) od naposledy vložené;
+ * klik na položku zavře nabídky a otevře právě tu pásku stejnou cestou jako
+ * dialog Open... (automat akcí, zásah `cmt_open` s její cestou). Prázdná
+ * historie pásek ukáže "(empty)"; "Clear recent media" smaže historii všech
+ * druhů.
+ */
+void test_g7_main_menu_recent(void)
+{
+    w2_fonts();
+    w2_apply_scale(1.0f);
+    w3_drain();
+    device_state_lock();
+    cmt_stop();
+    cmt_eject();
+    device_state_unlock();
+    recent_media_reset();
+
+    gchar *first = g_build_filename(g_get_tmp_dir(), "g7-first-tape.mzf", NULL);
+    gchar *second = g_build_filename(g_get_tmp_dir(), "g7-second-tape.mzf", NULL);
+    gchar *disk = g_build_filename(g_get_tmp_dir(), "g7-disk.dsk", NULL);
+    recent_media_add(RECENT_MEDIA_CMT, first);
+    recent_media_add(RECENT_MEDIA_DSK, disk);
+    recent_media_add(RECENT_MEDIA_CMT, second);
+    TEST_ASSERT_EQUAL_UINT(2, recent_media_count(RECENT_MEDIA_CMT));
+
+    /* položky: druhá (naposledy vložená) nahoře, disketa mezi páskami není */
+    g7_open_recent_menu();
+    std::string log;
+    g6_nested_frame(&log);
+    const size_t at_second = log.find("g7-second-tape.mzf");
+    const size_t at_first = log.find("g7-first-tape.mzf");
+    TEST_ASSERT_TRUE_MESSAGE(at_second != std::string::npos && at_first != std::string::npos, "both tapes are listed");
+    TEST_ASSERT_TRUE_MESSAGE(at_second < at_first, "the most recent tape comes first");
+    TEST_ASSERT_TRUE_MESSAGE(log.find("g7-disk.dsk") == std::string::npos, "disk images are not listed among tapes");
+    TEST_ASSERT_TRUE_MESSAGE(log.find("Clear recent media") != std::string::npos, "Clear recent media row");
+
+    /* klik na starší pásku: nabídky se zavřou a zařadí se otevření právě té pásky */
+    g6_nested_click(g7_recent_item_center("recent_1"));
+    imgui_cmt_tape_run_deferred(); /* automat akcí s páskou běží až po uvolnění zámku */
+    st_DEVICE_REQ_ARGS args;
+    TEST_ASSERT_TRUE_MESSAGE(w3_take_request("cmt_open", &args), "a click on a recent tape queues cmt_open");
+    TEST_ASSERT_EQUAL_STRING(first, args.str);
+    g6_nested_frame();
+    ImGuiWindow *m0 = ImGui::FindWindowByName("###Menu_00");
+    TEST_ASSERT_FALSE_MESSAGE(m0 && m0->Active, "the click closes the menus");
+
+    /* klik na první položku: druhá páska */
+    g7_open_recent_menu();
+    g6_nested_click(g7_recent_item_center("recent_0"));
+    imgui_cmt_tape_run_deferred();
+    TEST_ASSERT_TRUE(w3_take_request("cmt_open", &args));
+    TEST_ASSERT_EQUAL_STRING(second, args.str);
+
+    /* Clear recent media: všechny druhy pryč, nic se nevkládá */
+    g7_open_recent_menu();
+    g6_nested_click(g7_recent_item_center("recent_clear"));
+    imgui_cmt_tape_run_deferred();
+    TEST_ASSERT_EQUAL_UINT(0, recent_media_count(RECENT_MEDIA_CMT));
+    TEST_ASSERT_EQUAL_UINT(0, recent_media_count(RECENT_MEDIA_DSK));
+    TEST_ASSERT_FALSE_MESSAGE(w3_take_request("cmt_open", NULL), "clearing inserts nothing");
+
+    /* prázdná historie: zakázaná položka (empty), Clear zakázané */
+    g7_open_recent_menu();
+    g6_nested_frame(&log);
+    TEST_ASSERT_TRUE_MESSAGE(log.find("(empty)") != std::string::npos, "an empty history shows (empty)");
+    g6_nested_click(g7_recent_item_center("recent_empty"));
+    imgui_cmt_tape_run_deferred();
+    TEST_ASSERT_FALSE_MESSAGE(w3_take_request("cmt_open", NULL), "the (empty) row does nothing");
+
+    ImGuiIO &io = ImGui::GetIO();
+    io.AddMousePosEvent(-1.0f, -1.0f);
+    for (int k = 0; k < 6 && ImGui::GetCurrentContext()->OpenPopupStack.Size > 0; k++) {
+        io.AddKeyEvent(ImGuiKey_Escape, true);
+        g6_nested_frame();
+        io.AddKeyEvent(ImGuiKey_Escape, false);
+        g6_nested_frame();
+    }
+    recent_media_reset();
+    w3_drain();
+    g_free(first);
+    g_free(second);
+    g_free(disk);
+}
+
 /** @brief Smaže text vstupu s fokusem (Backspace po jednom znaku, BOOTDEV_TEXT_MAX krát). */
 static void g6_clear_input(void)
 {
@@ -7950,6 +8086,7 @@ int main(int argc, char *argv[])
     if (s_ui_ok) RUN_TEST(test_g6_main_menu_routing);
     if (s_ui_ok) RUN_TEST(test_g6_main_menu_hack_unsupported_rom);
     if (s_ui_ok) RUN_TEST(test_g6_main_menu_bootdev);
+    if (s_ui_ok) RUN_TEST(test_g7_main_menu_recent);
     RUN_TEST(test_h4_unsaved_by_flag);
     if (s_ui_ok) RUN_TEST(test_h4_multi_select);
     if (s_ui_ok) RUN_TEST(test_h4_delete_saved);

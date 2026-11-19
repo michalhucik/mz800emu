@@ -44,6 +44,7 @@
 
 #ifdef COMPILE_FOR_EMULATOR
 #include "libs/generic_driver/generic_driver.h"
+#include "../fdc/fdc_fileid.h"
 
 /**
  * @brief Storage mode pro IMAGE / UNICARD QD image.
@@ -227,7 +228,19 @@ typedef struct st_QDISK
      * g_memory_driver_static (= CACHED ekvivalent). */
     st_HANDLER handler;        /**< generic_driver handle pro IMAGE / UNICARD */
     int handler_valid;         /**< 1 = handler je otevřený, je třeba close */
-    char filename[1024];       /**< plná cesta k aktuálně mountnutému image souboru */
+    char filename[1024];       /**< plná cesta k aktuálně mountnutému image souboru; u obrazu z paměti jen jmenovka */
+
+    /* Původ obrazu v handleru. Kopie z paměti se smí zapsat jen do souboru,
+     * ze kterého byl obraz načten (qdisk_sync_drive(),
+     * qdisk_drive_force_save_to_file()): `filename` totiž může po načtení
+     * snapshotu záznamu vstupů nést jméno ze snapshotu (snap_qdisk.c).
+     * Invarianty: file_backed != 0 jen při handler_valid != 0 a pak `fileid`
+     * drží identitu souboru z okamžiku vložení; file_backed == 0 znamená
+     * prázdnou `fileid`. replay_image != 0 jen při handler_valid != 0 a
+     * file_backed == 0. Nastavuje vložení, nuluje zavření obrazu. */
+    int file_backed;           /**< 1 = obraz byl načten ze souboru (režim cached, direct i discard) */
+    int replay_image;          /**< 1 = obraz nasadil qdisk_mount_image_buffer() (přehrání vstupů) */
+    st_FDC_FILEID fileid;      /**< identita souboru obrazu z okamžiku vložení (fdc_fileid.h); vlastní ji mechanika */
 
     /* Fáze 2 (qdisk-rewrite): 3-state Read-Only model (paralela k FDC).
      *
@@ -301,6 +314,8 @@ extern "C"
      * Image (`is_dir` == 0, typ IMAGE): neexistující soubor se vytvoří,
      * pak qdisk_open_image() (cesta do INI). Adresář (`is_dir` != 0, typ
      * VIRTUAL): qdisk_virt_open_directory(). Obnoví cestu pro menu.
+     * Je-li médium po otevření připravené, zapíše cestu do historie
+     * naposledy vložených médií (recent_media_add(RECENT_MEDIA_QD)).
      *
      * @param path   Cesta (zkopíruje se).
      * @param is_dir 0 = soubor image, jinak adresář.
@@ -367,7 +382,15 @@ extern "C"
      * (Save now), lifecycle hooků (close, motor-off, exit) a snapshot
      * save pre-flush.
      *
-     * @return 1 = OK (uloženo, nebo nebylo co), 0 = chyba zápisu.
+     * Zapisuje se jen do souboru, ze kterého byl obraz načten: když
+     * `filename` označuje jiný soubor (identita souboru z vložení,
+     * fdc_fileid.h) nebo obraz ze souboru nepochází, nezapíše se nic,
+     * `memspec.updated` zůstane a uživatel dostane zprávu
+     * (baseui_show_message_tr(); u obrazu z paměti jen záznam na stderr).
+     *
+     * @return 1 = OK (uloženo, nebo nebylo co), 0 = chyba zápisu nebo zápis
+     *         odmítnutý kvůli jinému cílovému souboru.
+     * @pre Emu vlákno, pozastavená emulace nebo ukončování.
      */
     int qdisk_sync_drive(void);
 
@@ -380,8 +403,12 @@ extern "C"
      * "Save and switch" akce ve storage switch popupu (DISCARD -> jiný mod),
      * kde user explicitně chce uložit i přes aktuální DISCARD nastavení.
      *
-     * @return 1 = OK, 0 = neaplikovatelné (no handler / file / RO) nebo
-     *         chyba zápisu.
+     * Stejná pojistka cílového souboru jako u qdisk_sync_drive(): do jiného
+     * souboru, než ze kterého byl obraz načten, se nezapíše nic.
+     *
+     * @return 1 = OK, 0 = neaplikovatelné (no handler / file / RO), zápis
+     *         odmítnutý kvůli jinému cílovému souboru, nebo chyba zápisu.
+     * @pre Emu vlákno nebo pozastavená emulace.
      */
     int qdisk_drive_force_save_to_file(void);
 
@@ -412,6 +439,9 @@ extern "C"
      * @param label    jméno pro `filename` (diagnostika)
      * @return EXIT_SUCCESS; EXIT_FAILURE (alokace) - pak bez obrazu
      * @pre Emu vlákno nebo pozastavená emulace.
+     * @post Při úspěchu `replay_image` = 1 a `file_backed` = 0: obraz se do
+     *       souboru nezapíše nikdy a pole média si bere z každého snapshotu
+     *       (snap_qdisk.c).
      */
     int qdisk_mount_image_buffer(const uint8_t *data, uint32_t size, int readonly, const char *label);
 

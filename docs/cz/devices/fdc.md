@@ -33,9 +33,16 @@ dostupné položky:
 - **Mount...** - otevře file chooser pro výběr DSK obrazu (klávesová
   zkratka Alt+N, kde N je číslo mechaniky)
 - **Re-Mount...** - dostupné, pokud je už něco namountováno
+- **Recent** - podnabídka s nejvýš 12 naposledy vloženými obrazy DSK
+  (jméno souboru, celá cesta v tooltipu); klik vloží obraz do této
+  mechaniky stejně jako výběr v **Mount...**. Chybějící soubor ohlásí až
+  vložení. **Clear recent media** na konci smaže historii všech druhů
+  médií (viz overlay-menu.md, "Historie Recent media")
 - **Umount** - odpojí obraz a vyčistí persistentní záznam v INI
   (Alt+Shift+N)
-- **Read-only** - per-drive R/O toggle (viz "Read-Only 3-state model")
+- **Read-only** - per-drive R/O toggle (viz "Read-Only 3-state model");
+  zakázaný, dokud je tentýž obraz vložený v jiné mechanice, která do něj
+  smí zapisovat (viz "Stejný obraz ve více mechanikách")
 - **Storage mode** - per-drive volba (Cached / Direct / Discard)
 - **Sync now** - vyžádaný flush RAM bufferu do souboru (aktivní jen
   v Cached módu s pending změnami)
@@ -97,7 +104,11 @@ pending změny (= byly provedeny zápisy, které by se jinak zahodily),
 otevře se modální popup "FDC: Unsaved RAM changes" se třemi volbami:
 
 1. **Save and switch** - vynuceně zapiš RAM buffer do souboru a teprve
-   pak přepni mode
+   pak přepni mode. Do souboru se nezapíše nic, když ho se zápisem drží
+   jiná mechanika (viz "Stejný obraz ve více mechanikách") nebo když
+   mechanika odkazuje na jiný soubor, než ze kterého obraz načetla (viz
+   "Snapshot kompatibilita"); emulátor to ohlásí zprávou a režim přepne
+   bez uložení
 2. **Switch and discard** - zahodit RAM změny a přepnout
 3. **Cancel** - zrušit přepnutí
 
@@ -106,7 +117,8 @@ DISCARD, se popup nezobrazí - přepnutí proběhne okamžitě.
 
 ## Read-Only 3-state model
 
-Effective R/O = `user_readonly || fs_readonly`.
+Effective R/O = `user_readonly || fs_readonly`, nebo je obraz sdílený
+s jinou mechanikou (viz "Stejný obraz ve více mechanikách").
 
 | Pole          | Význam                                                                 |
 |---------------|------------------------------------------------------------------------|
@@ -125,6 +137,51 @@ zobrazena disabled položka "Read-only (FS write-protected)" s pevně ON
 
 Při umount nebo zavření handleru se všechny tři příznaky vynulují
 (mount cycle z čistého stavu).
+
+## Stejný obraz ve více mechanikách
+
+Tentýž soubor DSK jde vložit do více mechanik (i přes oba řadiče). Aby se
+soubor obrazu nepoškodil, **smí do jednoho souboru v každém okamžiku
+zapisovat jen jedna mechanika**. Mechaniky se číslují přes oba řadiče
+jako v příkazové řádce: FDD 0-3 patří FDC0, FDD 4-7 patří FDC1.
+
+- Mechanika, která soubor drží jako první, si zápis ponechává. Každá
+  další mechanika dostane obraz **chráněný proti zápisu**: emulovaný
+  počítač vidí disketu chráněnou proti zápisu a z této mechaniky se do
+  souboru nikdy nic nezapíše.
+- Při vložení emulátor ukáže zprávu "The image is already inserted in
+  FDD n. It was inserted write-protected here to keep the image file
+  safe." Bez okna (`--headless`, disky obnovené z INI souboru nebo zadané
+  na příkazové řádce při startu, MCP, Unicard) jde zpráva jen na chybový
+  výstup (stderr); MCP `emu_media_insert` ji navíc vrátí v poli
+  `warning`.
+- Menu mechaniky ukazuje pod jménem souboru "Shared with FDD n,
+  write-protected" a položka **Read-only** je zaškrtnutá; overlay menu
+  ukazuje stejnou poznámku v řádku mechaniky a **Write protect** je
+  zapnutý.
+- Dokud smí do souboru zapisovat jiná mechanika, ochranu nejde vypnout:
+  **Read-only** i **Write protect** jsou zakázané a uvádějí důvod "The
+  image is also inserted in FDD n, which may write to it."
+- Když první mechanika obraz vysune, nebo sama dostane **Read-only**,
+  jde ochranu druhé mechaniky vypnout. Sama se nevypne nikdy. Zápis se
+  dá převést na jinou mechaniku: v první zapněte **Read-only** a ve druhé
+  ho pak vypněte; první mechanika je potom zamčená stejným pravidlem.
+- Ochrana patří k vloženému obrazu a do INI souboru se neukládá (klíč
+  `wd279x_fddN_readonly` se nemění). Vložení jiného obrazu do mechaniky
+  ji zruší. Při startu se disky z INI souboru vkládají v pořadí FDD 0 až
+  7, takže zapisuje první mechanika v tomto pořadí a ostatní jsou
+  chráněné, i když před ukončením emulátoru zapisovala jiná.
+
+Tentýž soubor se pozná podle identity souboru, ne podle textu cesty:
+absolutní cesta bez `.` a `..` (na Windows bez ohledu na velká a malá
+písmena a na druh lomítka) a, pokud ho souborový systém vydá, číslo
+souboru, které pokrývá pevné odkazy, symbolické odkazy a krátká jména
+8.3. Nepozná se tentýž soubor dosažený přes dvě síťové cesty, pro které
+systém vydá různá čísla souboru nebo žádná.
+
+Chráněná mechanika v režimu Cached nebo Discard pracuje s kopií obrazu
+načtenou při vložení: změny, které zapisující mechanika uloží později, se
+v ní projeví až po novém vložení obrazu.
 
 ## Side / Density / Motor (HW logic porty)
 
@@ -199,7 +256,8 @@ Snapshot FDC subsystému ukládá:
   MOTOR, SIDE, DENSITY, EINT), buffer_pos, data_counter, sticky flags,
   state machine pro WRITE TRACK / READ TRACK
 - informativní info per drive: `filename`, `mounted` flag, effective
-  `readonly`, `storage_mode`
+  `readonly` (při načtení slouží jen k porovnání s vloženými disketami,
+  viz níže)
 - informativní hodnoty config switchů `hd_patch` a `bus_xlate`
 
 **Co se NEUKLÁDÁ:**
@@ -211,12 +269,56 @@ Snapshot FDC subsystému ukládá:
 - User INI nastavení (`storage_mode`, `user_readonly`, mount cesty) -
   INI je SSOT pro user pref; snapshot je SSOT pro chip kontinuitu
 
-**Po snapshot load:** mount mechanik se provede ze stávajícího INI
-nastavení (jak při startu emu), snapshot dopíše stav chipu a per-drive
-příznaky na mountnuté handlery. Pokud INI obsahuje jiné DSK cesty než
-snapshot, výsledný stav reflektuje aktuální INI mount + chip kontinuitu
-ze snapshotu - takže může dojít k nekonzistenci. Doporučený postup je
-mít před snapshot load stejné INI mount cesty jako při snapshot save.
+**Po snapshot load:** vložená disketa patří k emulátoru, ne ke stavu
+emulovaného počítače. Načtení snapshotu diskety nevkládá, nevyměňuje ani
+nevysouvá: každá mechanika si nechá obraz, který v ní byl před načtením,
+i s jeho jménem souboru, ochranou proti zápisu, režimem ukládání a
+neuloženými změnami; prázdná mechanika zůstane prázdná. Ze snapshotu se
+obnoví jen stav řadiče (registry, poloha hlavy, motor, rozpracovaný
+příkaz). Neuložené změny se dál ukládají do souboru, ze kterého byl obraz
+vložen.
+
+Pokud byly při uložení snapshotu vložené jiné diskety než teď (jiný
+soubor, prázdná mechanika místo plné nebo naopak), emulátor to po načtení
+ohlásí jednou zprávou, která vyjmenuje jen mechaniky s rozdílem:
+
+```
+The snapshot was saved with different disks:
+FDD 0: game.dsk (now: work.dsk)
+FDD 1: data.dsk (now: empty)
+The inserted disks were kept.
+```
+
+Zpráva je společná s Quick Diskem: liší-li se i ten, přibude řádek
+"Quick Disk: <jméno ze snapshotu> (now: <jméno nyní>)" (viz qdisk.md).
+Jména jsou bez cest (celá cesta se uvede jen tehdy, když se soubory liší
+pouze adresářem). Emulovaný program pak pokračuje nad jiným obsahem, než
+s jakým počítal; chcete-li pokračovat přesně tam, kde snapshot vznikl,
+vložte diskety uvedené ve zprávě a snapshot načtěte znovu. Opakované
+načtení se stejným rozdílem (například Quick Load několikrát po sobě)
+zprávu znovu neukazuje; v běhu bez okna jde zpráva na standardní chybový
+výstup.
+
+**Disk se neuloží do jiného souboru, než ze kterého byl načten.** Tuto
+pojistku má řadič navíc: kdyby jméno souboru u mechaniky označovalo jiný
+soubor, než ze kterého mechanika svůj obraz načetla, emulátor kopii
+z paměti do souboru nezapíše (Sync now, reset, vysunutí, ukončení, "Save
+and switch") a ohlásí "The disk in FDD n was not saved: the drive now
+refers to a different image file than the one it was loaded from.
+Re-insert the image to continue." Neuložené změny pak zůstávají jen
+v paměti a při vysunutí, výměně obrazu nebo ukončení emulátoru se zahodí.
+Po běžném načtení snapshotu k tomu nedochází. Nastat to může po přehrání
+staršího záznamu vstupů, který nenese seznam médií, a po návratu zpět
+v čase během nahrávání záznamu vstupů: tam emulátor mechanice vrací jméno
+souboru ze snapshotu, aby přehrání odpovídalo nahrávce.
+
+Ochrana proti zápisu se po načtení snapshotu řídí disketou, která
+v mechanice skutečně je: volbou **Read-only**, ochranou souboru na disku
+a sdílením obrazu s jinou mechanikou. Příznak `readonly` uložený ve
+snapshotu se pro mechaniku s vloženým souborem nepoužije, takže načtení
+snapshotu nevezme zápis mechanice, která má neuložené změny, a nezruší
+ochranu sdíleného obrazu: i po načtení smí do jednoho souboru obrazu
+zapisovat jen jedna mechanika.
 
 ## DSK formát a oprava vadných hlaviček
 

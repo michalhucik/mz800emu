@@ -50,6 +50,8 @@
 #endif
 
 #include "hw-generic/unicard/unicard.h"
+/* MZARCH_INTERRUPT_SETUP_TICKS potřebuje jádro i v buildu bez debuggeru. */
+#include "mzarch/interrupt.h"
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
 #include "debugger/debugger.h"
@@ -68,7 +70,6 @@
 #include "debugger/freeze/freeze.h"
 #include "debugger/run_control/run_control.h"
 #include "debugger/run_control/run_log.h"
-#include "mzarch/interrupt.h"
 #ifdef MZ800EMU_CFG_MCP_SERVER_ENABLED
 #include <json-glib/json-glib.h>
 #include "mcp/event_bus.h"

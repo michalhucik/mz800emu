@@ -23,6 +23,8 @@ typedef struct iface_video_callbacks_t
     void (*set_framerate_mode)(en_DISPLAY_FRAMERATE_MODE mode, int custom_fps);
     void (*set_fullscreen)(bool enabled);
     void (*switch_fullscreen)(void);
+    /* Je hlavní okno právě ve fullscreenu? Volá se z UI vlákna (čte stav okna); NULL = rozhraní dotaz nemá. */
+    bool (*is_fullscreen)(void);
     void (*reset_hdr)(void);
 } iface_video_callbacks_t;
 
@@ -129,6 +131,21 @@ extern "C"
     extern bool iface_video_init(void);
     extern void iface_video_exit(void);
 
+    /**
+     * @brief Sestaví text titulku hlavního okna.
+     *
+     * Tvar: "<stroj> - <stav rychlosti>[: <procenta> %, FB-FPS: <snímky>][, MUTED][ [trace: ...]][ [MCP:port, N clients]]".
+     * Stav rychlosti je text emulator_get_speed_status_as_text() (při pauze
+     * "PAUSED", pak bez procent a FB-FPS); značka "MUTED"
+     * (emulator_get_mute_status_as_text()) se přidá při ztlumeném poslechu, za
+     * běhu i při pauze. Značky trasování a MCP jen v buildu, který je má, a
+     * jen když jsou aktivní.
+     *
+     * Vedlejší efekt: aktualizuje měření GDG (emulator_measuring_gdg_event()).
+     *
+     * @return Nově alokovaný text (UTF-8); volající ho uvolní přes g_free().
+     * @pre Hlavní vlákno (periodický časovač titulku); iface_video_init() proběhl.
+     */
     extern char *iface_video_create_window_title_text(void);
 
 #ifdef __cplusplus

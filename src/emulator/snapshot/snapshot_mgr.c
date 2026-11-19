@@ -24,6 +24,8 @@
 #include "debugger/trace/eventlog.h"
 #endif
 
+#include "snapshot/snapshot_media.h"
+
 #include <glib.h>
 #include <glib/gstdio.h>
 #include <stdio.h>
@@ -578,7 +580,13 @@ static en_SNAPSHOT_RESULT snapshot_load_through_io(snapshot_io_t *io)
         .saving = false
     };
 
-    /* 5. Zavolat load handlery všech registrovaných komponent (priorita) */
+    /* 5. Zavolat load handlery všech registrovaných komponent (priorita).
+     * Handlery médií (fdc, qdisk) při tom sbírají řádky souhrnné zprávy
+     * o tom, čím se vložená média liší od médií ze snapshotu
+     * (snapshot_media.h); zpráva se ukáže po handlerech, i když načtení
+     * skončí chybou pozdější komponenty. Snapshoty záznamu vstupů zprávu
+     * nemají. */
+    snapshot_media_notice_begin();
     for (int i = 0; i < g_snapshot_registry_count; i++) {
         result = g_snapshot_registry[i].load_cb(&ctx);
         if (result != SNAPSHOT_OK) {
@@ -591,9 +599,11 @@ static en_SNAPSHOT_RESULT snapshot_load_through_io(snapshot_io_t *io)
             SNAP_ERR("load", "error in component '%s': %s",
                      g_snapshot_registry[i].name,
                      snapshot_result_to_string(result));
+            if (!snapshot_media_is_replay_load()) snapshot_media_notice_show();
             return result;
         }
     }
+    if (!snapshot_media_is_replay_load()) snapshot_media_notice_show();
 
     /* Po obnově kompletního stavu bezpodmínečně přepočítat RAM fast-path
      * page-table. snap_gdg obnovuje regDMD surovým přiřazením (mimo

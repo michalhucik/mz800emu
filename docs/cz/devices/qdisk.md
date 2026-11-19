@@ -12,6 +12,16 @@ porty 0xF4-0xF7. Emulátor mz800new podporuje tři režimy:
 IMAGE a UNICARD běží přes abstrakci nad memory driverem a file driverem -
 stejný mechanismus jako FDC. VIRTUAL režim má samostatnou I/O cestu.
 
+Médium se vkládá v menu HW & Devices > Quick Disk > QD Drive: **Mount
+Image...** (režim IMAGE) nebo **Mount Directory...** (režim VIRTUAL) a
+podnabídka **Recent** s naposledy vloženými obrazy nebo adresáři (nejvýš
+12, celá cesta v tooltipu). Obojí je dostupné jen s prázdnou mechanikou.
+Recent nabízí jen položky, které mechanika v současném režimu bere (soubor
+obrazu, nebo adresář); soubor, který už neexistuje, se nevloží, z historie
+se odstraní a emulátor to ohlásí. Hned po otevření podnabídky může klik
+skončit zprávou "Still checking whether the file exists. Try again in a
+moment", než emulátor na pozadí zjistí, zda soubory existují.
+
 ## Storage mode (IMAGE / UNICARD)
 
 Volba se persistuje v INI klíči `mz1f11_storage_mode`.
@@ -95,15 +105,63 @@ Snapshot QD subsystému ukládá:
 - informativní info: `filename`, effective `readonly`
 
 **Co se NEUKLÁDÁ:**
-- Memory buffer obsah .MZQ image (= analogie FDC: dirty RAM změny
-  se snapshot save+load **ztratí**, doporučujeme před snapshot save
-  manuální "Save now" pokud máte CACHED + dirty)
+- Memory buffer obsah .MZQ image (snapshot obsah disku nenese; neuložené
+  změny zůstávají po načtení snapshotu v mechanice, viz níže)
 - User INI nastavení (`storage_mode`, `user_readonly`) - INI je SSOT
   pro user pref; snapshot je SSOT pro chip kontinuitu
+- Stav virtuálního Quick Disku (který soubor MZF je rozečtený); snapshot
+  uložený uprostřed čtení nebo zápisu ve virtuálním režimu proto po načtení
+  nemusí pokračovat správně
 
-**Po snapshot load:** mount se provede ze stávajícího INI nastavení
-(jak při startu emu), snapshot dopíše SIO chip state na mountnutý
-handler.
+**Po snapshot load:** vložený Quick Disk patří k emulátoru, ne ke stavu
+emulovaného počítače. Načtení snapshotu disk nevkládá, nevyměňuje ani
+nevysouvá: mechanika si nechá obraz, který v ní byl před načtením, i s jeho
+jménem souboru, ochranou proti zápisu, režimem ukládání a neuloženými
+změnami; prázdná mechanika zůstane prázdná. Ze snapshotu se obnoví stav
+čipu SIO a mechaniky (poloha hlavy, synchronizace). Zda emulovaný počítač
+vidí v mechanice disk a zda je chráněný proti zápisu, se řídí tím, co je
+skutečně vložené, ne snapshotem. Neuložené změny se dál ukládají do
+souboru, ze kterého byl obraz vložen.
+
+Pokud byl při uložení snapshotu vložený jiný Quick Disk než teď (jiný
+soubor, prázdná mechanika místo plné nebo naopak), emulátor to po načtení
+ohlásí řádkem ve zprávě společné s disketami (viz fdc.md):
+
+```
+The snapshot was saved with different disks:
+Quick Disk: game.mzq (now: work.mzq)
+The inserted disks were kept.
+```
+
+Emulovaný program pak pokračuje nad jiným obsahem, než s jakým počítal;
+poloha hlavy zůstává ze snapshotu, takže program, který byl při uložení
+uprostřed čtení, čte od stejného místa jiný disk. Chcete-li pokračovat
+přesně tam, kde snapshot vznikl, vložte disk uvedený ve zprávě a snapshot
+načtěte znovu. Opakované načtení se stejným rozdílem zprávu znovu
+neukazuje. Adresář virtuálního Quick Disku snapshot nenese, proto se
+neporovnává.
+
+Typ mechaniky (obraz, virtuální adresář, Unicard) a její připojení jsou
+součást stavu počítače a berou se ze snapshotu jen pro běh; INI si drží
+volbu uživatele. Když snapshot přepne mechaniku mezi obrazem (nebo
+Unicardem) a virtuálním adresářem, vložené médium k novému druhu mechaniky
+nepatří: emulátor ho zavře jako při vysunutí (neuložené změny uloží do
+jeho souboru) a vloží médium, které má pro nový druh mechaniky v INI,
+stejně jako při startu. Mezi typy obraz a Unicard zůstává vložený obraz
+na místě.
+
+**Obraz se neuloží do jiného souboru, než ze kterého byl načten.** Tuto
+pojistku má mechanika navíc: kdyby jméno souboru u mechaniky označovalo
+jiný soubor, než ze kterého mechanika svůj obraz načetla, emulátor kopii
+z paměti do souboru nezapíše (Save now, vypnutí motoru, vysunutí,
+ukončení, "Save and switch") a ohlásí "The Quick Disk was not saved: the
+drive now refers to a different image file than the one it was loaded
+from. Re-insert the image to continue." Neuložené změny pak zůstávají jen
+v paměti a při vysunutí, výměně obrazu nebo ukončení emulátoru se zahodí.
+Po běžném načtení snapshotu k tomu nedochází. Nastat to může po přehrání
+staršího záznamu vstupů, který nenese seznam médií, a po návratu zpět
+v čase během nahrávání záznamu vstupů: tam emulátor mechanice vrací jméno
+souboru ze snapshotu, aby přehrání odpovídalo nahrávce.
 
 ## Známé limity
 
@@ -113,6 +171,7 @@ handler.
 - **Per-drive struktura není** - QD je fyzicky jedna mechanika, druhý
   disk se nedá mountnout (na rozdíl od FDC, kde jsou dva drive sloty A/B).
 - **Memory buffer .MZQ se ne-persistuje v snapshotu** - viz výše.
+- **Stav virtuálního Quick Disku se v snapshotu neukládá** - viz výše.
 
 ## Referenční INI klíče
 

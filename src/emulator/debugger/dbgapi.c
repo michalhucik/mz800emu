@@ -122,6 +122,7 @@
  * DBGAPI_CMD_MEDIA_* dispatchuje na jednotlivé hw-generic API. Periferie
  * jsou per-arch volitelné přes CFG_HWEXT_HAVE_* makra v mzarch_config.h. */
 #include "hw-generic/cmt/cmt.h"
+#include "recent_media/recent_media.h" /* MCP vložení média se do historie nezapisuje */
 #include "hw-generic/cmt/cmt_tmz.h"
 #include "hw-generic/cmt/cmthack.h"
 #include "hw-generic/cmt/cmt_request.h"
@@ -141,6 +142,12 @@
 #if CFG_HWEXT_HAVE_IDE8
 #include "hw-generic/ide8/ide8.h"
 #endif
+/* Paměťové rozšíření (mapa paměti, připojení periferie), video rozhraní
+ * včetně display.h (otisk snímku, snímek framebufferu) a framebuffer
+ * používá i kód mimo blok MCP, proto se vkládají i v buildu bez MCP serveru. */
+#include "hw-generic/memory/memext.h"
+#include "iface/iface_video.h"
+#include "hw-generic/gdg/framebuffer.h"
 
 #ifdef MZ800EMU_CFG_MCP_SERVER_ENABLED
 #include <json-glib/json-glib.h>
@@ -149,14 +156,10 @@
 #include "mcp/hid_keymap.h"
 /* mcp-inbox-fixes: sekvence vstupu odměřená snímky emulace. */
 #include "mcp/hid_script.h"
-/* V1.D.1 - Core + CPU extras Resources: čte memext + memory + z80 state. */
-#include "hw-generic/memory/memext.h"
-/* V1.D.4 - Input + Frame Resources: joystick, framebuffer, VRAM read. */
+/* V1.D.4 - Input Resources: joystick. */
 #if HAVE_JOY
 #include "hw-generic/joy/joy.h"
 #endif
-#include "iface/iface_video.h"
-#include "hw-generic/gdg/framebuffer.h"
 
 /**
  * @brief Porovnání adres symbolů pro qsort (vzestupně).
@@ -6762,6 +6765,8 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
             /* Mount mění cesty a buffery, které čte menu zařízení v UI
              * vlákně pod stejným zámkem (device_request.h). */
             device_state_lock();
+            /* vložení přes MCP nedělá uživatel: do historie médií se nezapisuje */
+            recent_media_suspend ( );
             switch ( p->slot )
             {
                 case DBGAPI_MEDIA_SLOT_CMT:
@@ -6786,6 +6791,15 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                     dbgapi_media_slot_to_fdc ( p->slot, &fdc, &drive );
                     fdc_mount_dskfile ( fdc, drive, (char *) p->filepath );
                     rc = FDC_TEST_DRIVE_ID_MOUNTED ( fdc, drive ) ? 0 : -3;
+                    /* tentýž soubor už drží jiná mechanika: obraz je vložený
+                     * s ochranou proti zápisu (fdc.h), klient to dostane v out_warning */
+                    int shared_with = fdc_drive_take_share_notice ( fdc, drive );
+                    if ( rc == 0 && shared_with >= 0 )
+                    {
+                        g_snprintf ( p->out_warning, sizeof ( p->out_warning ),
+                                     "The image is already inserted in FDD %d. It was inserted write-protected here to keep the image file safe.",
+                                     shared_with );
+                    };
                     break;
                 };
 #else
@@ -6848,6 +6862,7 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                     rc = -1;
                     break;
             };
+            recent_media_resume ( );
             device_state_unlock();
             p->out_result = rc;
             rq->success = ( rc == 0 );
@@ -10017,7 +10032,10 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
             };
             /* soubor se nejdřív ověří; neúspěch pásku nevysune, úspěch zahodí
              * neuložené změny a nahrávání s varováním */
+            /* otevření přes MCP nedělá uživatel: do historie médií se nezapisuje */
+            recent_media_suspend ( );
             int rc = dbgapi_cmt_open_file ( p->filepath, p->out_warning, sizeof ( p->out_warning ) );
+            recent_media_resume ( );
             if ( rc == EXIT_SUCCESS )
             {
                 if ( p->play_immediately )

@@ -20,6 +20,7 @@
 #include "hw-generic/cmt/cmthack.h"
 #include "hw-generic/cmt/cmt_tmz.h"
 #include "device_request.h"
+#include "recent_media/recent_media.h"
 #include <json-glib/json-glib.h>
 
 
@@ -726,8 +727,12 @@ static const char *replay_media_prepare_cmt_unlocked(const st_REPLAY_DATA *d, ch
              * bloky 0x18 z importu WAV podle "wav" v poli blocks */
             uint32_t wav_count = 0;
             uint8_t *wav = image ? replay_media_wav_blocks_from_json(json_object_get_member(o, "blocks"), &wav_count) : NULL;
-            if (!tmp || !g_file_set_contents(tmp, (const gchar *)data, (gssize)m->size, NULL)
-                || (image ? cmt_open_image(data, m->size, tmp, wav, wav_count) : cmt_open_file_by_extension(tmp)) != EXIT_SUCCESS)
+            /* páska záznamu (dočasný soubor) do historie vložených médií nepatří */
+            recent_media_suspend();
+            const bool tape_failed = !tmp || !g_file_set_contents(tmp, (const gchar *)data, (gssize)m->size, NULL)
+                || (image ? cmt_open_image(data, m->size, tmp, wav, wav_count) : cmt_open_file_by_extension(tmp)) != EXIT_SUCCESS;
+            recent_media_resume();
+            if (tape_failed)
             {
                 err = replay_media_fail(errbuf, errsize, "slot %s: cannot insert the tape of the recording", "cmt");
             }
@@ -900,7 +905,10 @@ static void replay_media_restore_cmt_unlocked(void)
     }
     else if (s_orig_cmt.tape)
     {
+        /* návrat pásky uživatele není nové vložení: historie vložených médií se nemění */
+        recent_media_suspend();
         cmt_open_file_by_extension(s_orig_cmt.tape);
+        recent_media_resume();
     };
     /* rychlosti bloků (jen nad toutéž páskou, jinak varování) */
     if (CMT_TEST_FILLED && s_orig_cmt.blocks) (void)replay_media_cmt_blocks_restore(cmtext_get_container(g_cmt.ext));
@@ -1010,6 +1018,11 @@ const char *replay_media_prepare(const st_REPLAY_DATA *d, char *errbuf, size_t e
     s_prepared = true;
 
 #if CFG_HWEXT_HAVE_FDC
+    /* Výměna obrazů uvolňuje paměť mechanik (jméno, identita souboru), kterou
+     * UI čte pod zámkem stavu zařízení; stejně jako u kazety
+     * (replay_media_prepare_cmt()). Zámek není rekurzivní. */
+    const bool fdc_took_lock = !device_state_lock_held();
+    if (fdc_took_lock) device_state_lock();
     for (int f = 0; f < FDC_INSTANCE_COUNT && !err; f++)
     {
         for (int n = 0; n < FDC_NUM_DRIVES && !err; n++)
@@ -1056,6 +1069,7 @@ const char *replay_media_prepare(const st_REPLAY_DATA *d, char *errbuf, size_t e
             g_free(current);
         };
     };
+    if (fdc_took_lock) device_state_unlock();
 #endif
 
 #if CFG_HWEXT_HAVE_QDISK
@@ -1169,6 +1183,9 @@ void replay_media_restore(void)
     s_prepared = false;
 
 #if CFG_HWEXT_HAVE_FDC
+    /* Pod zámkem stavu zařízení ze stejného důvodu jako v replay_media_prepare(). */
+    const bool fdc_took_lock = !device_state_lock_held();
+    if (fdc_took_lock) device_state_lock();
     for (int f = 0; f < FDC_INSTANCE_COUNT; f++)
     {
         for (int n = 0; n < FDC_NUM_DRIVES; n++)
@@ -1176,12 +1193,19 @@ void replay_media_restore(void)
             st_REPLAY_MEDIA_FDC_ORIG *o = &s_orig_fdc[f][n];
             if (!o->changed) continue;
             o->changed = false;
-            if (o->mounted && o->filename) fdc_mount_dskfile(&g_fdc[f], (unsigned)n, o->filename);
+            if (o->mounted && o->filename)
+            {
+                /* návrat diskety uživatele není nové vložení: historie vložených médií se nemění */
+                recent_media_suspend();
+                fdc_mount_dskfile(&g_fdc[f], (unsigned)n, o->filename);
+                recent_media_resume();
+            }
             else fdc_umount_keep_cfg(&g_fdc[f], (unsigned)n);
             g_free(o->filename);
             o->filename = NULL;
         };
     };
+    if (fdc_took_lock) device_state_unlock();
 #endif
 
 #if CFG_HWEXT_HAVE_QDISK

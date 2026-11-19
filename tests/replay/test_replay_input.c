@@ -362,6 +362,85 @@ void test_host_joystick_sampled_per_frame(void)
 }
 
 
+/* Zadržený hostitelský joystick (overlay menu, joy_host_hold()) se zaznamená
+ * jako klid stejnou cestou jako živý stav a přehrání ho zopakuje. */
+void test_host_joystick_hold_recorded_as_idle(void)
+{
+    char *path = tmp_path("joyhold.mzr");
+    en_JOY_TYPE saved_type = g_joy.dev[0].type;
+    joy_host_read_fn saved_scan = g_joy.host_scan;
+    g_joy.dev[0].type = JOY_TYPE_JOYSTICK;
+    g_joy.host_scan = fake_joy_scan;
+    pio8255_vkbd_matrix_reset();
+    pio8255_keyboard_matrix_reset();
+
+    s_fake_joy = 0xFE;
+    replay_request_record(path, 1, NULL);
+    replay_on_paused();
+    st_REPLAY_STATUS st;
+    replay_get_status(&st);
+    TEST_ASSERT_TRUE_MESSAGE(st.request_ok, st.request_message);
+    TEST_ASSERT_EQUAL_HEX8(0xFE, joy_read_byte(JOY_DEVID_0));
+
+    /* zadržení: tlačítko je dál stisknuté, stroj i záznam vidí klid */
+    joy_host_hold(true);
+    next_frame();
+    TEST_ASSERT_EQUAL_HEX8(0xFF, joy_read_byte(JOY_DEVID_0));
+    next_frame();
+    joy_host_hold(false);
+    next_frame();
+    TEST_ASSERT_EQUAL_HEX8(0xFE, joy_read_byte(JOY_DEVID_0));
+    next_frame();
+
+    replay_request_stop();
+    replay_on_paused();
+    replay_get_status(&st);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(REPLAY_OUTCOME_RECORDED, st.outcome, st.outcome_message);
+
+    char *err = NULL;
+    st_REPLAY_DATA *d = replay_data_read(path, &err);
+    TEST_ASSERT_NOT_NULL_MESSAGE(d, err ? err : "");
+    uint8_t seen[3];
+    int n = 0;
+    for (guint i = 0; i < d->events->len && n < 3; i++)
+    {
+        st_REPLAY_EVENT *e = &g_array_index(d->events, st_REPLAY_EVENT, i);
+        if (e->kind == REPLAY_EV_JOY && e->joy_port == 0) seen[n++] = e->joy_state;
+    };
+    TEST_ASSERT_EQUAL_INT(3, n);
+    TEST_ASSERT_EQUAL_HEX8(0xFE, seen[0]);
+    TEST_ASSERT_EQUAL_HEX8(0xFF, seen[1]);
+    TEST_ASSERT_EQUAL_HEX8(0xFE, seen[2]);
+    replay_data_free(d);
+    g_free(err);
+
+    /* Přehrání: hostitelský joystick se nečte, zadržení na něm nic nemění. */
+    s_fake_joy = 0x00;
+    joy_host_hold(true);
+    replay_request_play(path, true);
+    replay_on_paused();
+    replay_get_status(&st);
+    TEST_ASSERT_TRUE_MESSAGE(st.request_ok, st.request_message);
+    TEST_ASSERT_EQUAL_HEX8(0xFE, joy_read_byte(JOY_DEVID_0));
+    next_frame();
+    TEST_ASSERT_EQUAL_HEX8(0xFF, joy_read_byte(JOY_DEVID_0));
+    next_frame();
+    next_frame();
+    TEST_ASSERT_EQUAL_HEX8(0xFE, joy_read_byte(JOY_DEVID_0));
+    next_frame();
+    replay_get_status(&st);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(REPLAY_OUTCOME_ENDED, st.outcome, st.outcome_message);
+    joy_host_hold(false);
+
+    g_joy.dev[0].type = saved_type;
+    g_joy.host_scan = saved_scan;
+    g_joy.dev[0].state = 0xFF;
+    s_fake_joy = 0xFF;
+    g_remove(path);
+    g_free(path);
+}
+
+
 /** @brief RTC Unicardu jako sekundy od roku 0 (jen pro rozdíly v testu). */
 static gint64 rtc_seconds(void)
 {
@@ -505,6 +584,7 @@ int main(int argc, char **argv)
     RUN_TEST(test_playback_ignores_live_input_and_ends);
     RUN_TEST(test_record_refused_while_autotype_runs);
     RUN_TEST(test_host_joystick_sampled_per_frame);
+    RUN_TEST(test_host_joystick_hold_recorded_as_idle);
     RUN_TEST(test_rtc_follows_emulated_time);
     int result = UNITY_END();
 

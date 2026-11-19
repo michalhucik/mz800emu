@@ -281,6 +281,18 @@ hodnotu na všechny 4 subsystémy najednou. Per-subsystém option
 vyplní pouze ty subsystémy, kde uživatel per-subsys option nepředal.
 
 
+## Overlay menu
+
+Klávesa `F10` (nebo `Alt` + levé tlačítko myši nad obrazem, nebo položka
+**Overlay Menu...** klasického menu) otevře
+celoobrazovkové menu nad obrazem emulátoru; `F10` nebo `Esc` ho zavře. Při
+otevření se emulace zastaví a při zavření se vrátí do stavu před otevřením.
+Šest tabů (číslice `1` až `6`): Media (diskety, kazeta, Quick Disk, naposledy
+vložená média), Machine, Display, Sound, Input a Capture. Klasické menu na
+pravé tlačítko myši funguje dál; nad otevřeným overlay menu pravé tlačítko
+menu zavře a klasické menu otevře. Podrobnosti viz
+[`overlay-menu.md`](overlay-menu.md).
+
 ## Kazetofon (Virtual CMT)
 
 HW & Devices -> CMT -> Show Virtual CMT (`Alt + C`) otevře virtuální
@@ -312,6 +324,15 @@ Stejně doznívá stálá úroveň celého výstupu (MZ-800 a MZ-1500): za zvuko
 čipem je v sérii kondenzátor, časová konstanta 0,57 s je spočtená ze schématu
 a měření osciloskopem jí odpovídá (0,55 s, rozsah 0,44 až 0,69 s). Když počítač
 mlčí, je výstup do několika sekund na nule.
+
+Hlavní hlasitost poslechu (**Master volume**) a ztlumení (**Mute**) jsou
+v overlay menu na tabu Sound (`F10`, viz [`overlay-menu.md`](overlay-menu.md))
+a v okně Audio Mixer. Emulace při otevřeném overlay menu stojí; aby byly
+změny slyšet hned, zapněte na tabu Sound přepínač **Listen**. Uplatní se až na zvukovém výstupu emulátoru, takže
+hlasitosti kanálů nemění a do zvuku videa ani do zachycení zvuku se
+nepromítají. Hlavní hlasitost se ukládá (INI `[AUDIO] volume_master`);
+ztlumení se neukládá, emulátor se vždy spustí neztlumený. Zapnuté ztlumení
+ukazuje značka **MUTED** v titulku hlavního okna, za běhu i při pauze.
 
 Jak moc je zvukový výstup podložený:
 

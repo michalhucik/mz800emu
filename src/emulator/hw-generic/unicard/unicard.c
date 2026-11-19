@@ -57,6 +57,8 @@
 #include "baseui/baseui.h"
 #include "baseui/baseui_filechooser.h"
 #include "unicard_request.h"
+#include "device_request.h"
+#include "recent_media/recent_media.h"
 #include "main.h"   /* g_sdlapp */
 #include "libs/sdlapp/sdlapp_paths.h"
 
@@ -2274,12 +2276,23 @@ void unicard_fdc_mount ( uint8_t drive_id, char *filepath ) {
         if ( !g_file_test ( full_filepath, G_FILE_TEST_EXISTS ) ) {
             fprintf ( stderr, "%s():%d - File not exists '%s'\n", __func__, __LINE__, full_filepath_locale );
         } else {
+            /* vložení emulovaným správcem Unicard nedělá uživatel emulátoru: do historie médií se nezapisuje */
+            recent_media_suspend ( );
+            /* Výměna obrazu uvolňuje paměť (jméno, identita souboru), kterou UI
+             * čte pod zámkem stavu zařízení. Zámek není rekurzivní. */
+            const bool took_lock = !device_state_lock_held ( );
+            if ( took_lock ) device_state_lock ( );
             fdc_mount_dskfile ( fdc, drive_id, full_filepath );
+            if ( took_lock ) device_state_unlock ( );
+            recent_media_resume ( );
         };
         baseui_tools_mem_free ( full_filepath );
         baseui_tools_mem_free ( full_filepath_locale );
     } else {
+        const bool took_lock = !device_state_lock_held ( );
+        if ( took_lock ) device_state_lock ( );
         fdc_umount ( fdc, drive_id );
+        if ( took_lock ) device_state_unlock ( );
     };
 }
 

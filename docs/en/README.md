@@ -269,6 +269,18 @@ mz800emu --cputrack-mode always \
 ```
 
 
+## Overlay menu
+
+The `F10` key (or `Alt` + left mouse button over the picture, or the
+**Overlay Menu...** item of the classic menu) opens a
+full-screen menu over the emulator picture; `F10` or `Esc` closes it. Opening
+the menu pauses the emulation and closing it restores the state from before.
+Six tabs (digits `1` to `6`): Media (floppy disks, cassette, Quick Disk,
+recently inserted media), Machine, Display, Sound, Input and Capture. The
+classic menu on the right mouse button works as before; over the open
+overlay menu the right mouse button closes it and opens the classic menu.
+For details see [`overlay-menu.md`](overlay-menu.md).
+
 ## Cassette recorder (Virtual CMT)
 
 HW & Devices -> CMT -> Show Virtual CMT (`Alt + C`) opens the virtual
@@ -303,6 +315,17 @@ in series behind the sound chip, the time constant of 0.57 s is calculated
 from the schematic and oscilloscope measurements agree (0.55 s, range 0.44 to
 0.69 s). When the computer is silent the output reaches zero within a few
 seconds.
+
+The master listening volume (**Master volume**) and **Mute** are in the
+overlay menu on the Sound tab (`F10`, see [`overlay-menu.md`](overlay-menu.md))
+and in the Audio Mixer window. The emulation is paused while the overlay menu
+is open; to hear the changes at once, turn on the **Listen** switch on the
+Sound tab. They are applied only at the sound output of
+the emulator, so they do not change the channel volumes and do not get into
+the sound of a video or into the audio capture. The master volume is saved
+(`[AUDIO] volume_master` in the INI file); mute is not saved, the emulator
+always starts unmuted. While muted, the title of the main window carries the
+mark **MUTED**, both while running and while paused.
 
 How well founded the sound output is:
 

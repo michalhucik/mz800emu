@@ -41,6 +41,20 @@ extern "C" void snapshot_ui_clear_quickload_request(void) { s_snapshot_quickload
 
 extern "C" bool snapshot_ui_was_running_before_pause(void) { return s_was_running_before_pause; }
 
+/**
+ * @brief Po vyřízení právě vyžádaného uložení snapshotu má emulace běžet.
+ *
+ * Pro volajícího, který emulaci zastavil sám ještě před žádostí o uložení
+ * (overlay menu: žádost pak vidí emulaci stát a běh by po sobě neobnovila)
+ * a mezitím se rozhodl, že má emulace běžet (zavření overlaye). Přepíše
+ * zapamatovaný stav "před pauzou běžela": běh obnoví dokončení uložení
+ * (snapshot_ui_handle_result()) nebo zrušení dialogu Save Snapshot.
+ *
+ * @pre UI vlákno; žádost o Quick Save nebo Save Snapshot čeká nebo se vyřizuje.
+ * @post snapshot_ui_was_running_before_pause() vrací true do příští žádosti.
+ */
+extern "C" void snapshot_ui_run_after_request(void) { s_was_running_before_pause = true; }
+
 /* Pomocná funkce pro pause + nastavení requestu */
 static void snapshot_pause_and_request(bool *request_flag)
 {

@@ -54,6 +54,12 @@ uint32_t fdc_request_umount(unsigned fdc_index, unsigned drive_id);
 
 /**
  * @brief Zařadí změnu volby read-only mechaniky a remount nasazeného obrazu.
+ *
+ * Provede fdc_drive_set_write_protect(): vypnutí zruší i ochranu kvůli
+ * sdílení obrazu, ale odmítne se (výsledek zásahu rc = -1, zpráva
+ * uživateli, stav beze změny), dokud tentýž soubor drží jiná mechanika
+ * se zápisem.
+ *
  * @param fdc_index Index řadiče.
  * @param drive_id  Mechanika 0..3.
  * @param readonly  0 = zápis povolen, jinak jen pro čtení.

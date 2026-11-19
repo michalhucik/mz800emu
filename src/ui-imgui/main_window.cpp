@@ -17,6 +17,7 @@
 #include "ui-imgui/cmt/cmt_window.h"
 #include "ui-imgui/cmt/cmt_check_window.h"
 #include "ui-imgui/main_window_focus.h"
+#include "ui-imgui/overlay/overlay.h"
 #include "emulator/emulator.h"
 #include "emulator/replay.h"
 
@@ -122,76 +123,41 @@ static void imgui_audio_device_notice(void)
     snapshot_notification_show(_("No audio device - running without sound"), false);
 }
 
-static void ShowOverlayWindow(void)
-{
-    const ImGuiViewport *viewport = ImGui::GetMainViewport();
-
-    // vzdy nahore (tohle nechceme, protoze pak nefunguji ostatni okna)
-    // ImGui::SetNextWindowFocus();
-
-    ImGui::SetNextWindowPos(viewport->Pos);
-    ImGui::SetNextWindowSize(viewport->Size);
-    ImGui::SetNextWindowViewport(viewport->ID);
-
-    ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove |
-                             ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBackground |
-                             ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse |
-                             ImGuiWindowFlags_NoCollapse;
-
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0);
-
-    if (ImGui::Begin("##OverlayWindow", NULL, flags))
-    {
-        if (!g_gui->justOpenedOverlay)
-        {
-            if (ImGui::IsKeyPressed(ImGuiKey_Escape) || (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && ImGui::IsKeyDown(ImGuiKey_LeftAlt)))
-            {
-                g_gui->showOverlay = false;
-            }
-        }
-
-        ImGui::GetWindowDrawList()->AddRectFilled(viewport->Pos, ImVec2(viewport->Pos.x + viewport->Size.x, viewport->Pos.y + viewport->Size.y), IM_COL32(10, 10, 10, 230));
-        ImGui::PopStyleVar(2);
-
-        // Centrum okna pro umístění tlačítek
-        ImVec2 windowSize = viewport->Size;
-        ImVec2 buttonSize = ImVec2(150, 50);
-        ImVec2 center = ImVec2(windowSize.x / 2.0f, windowSize.y / 2.0f);
-
-        ImGui::SetCursorPos(ImVec2(center.x - 80, center.y - 110));
-        if (ImGui::Button("Action 1", buttonSize))
-        {
-            g_print("Selected Action 1\n");
-        }
-
-        ImGui::SetCursorPos(ImVec2(center.x - 80, center.y - 50));
-        if (ImGui::Button("Action 2", buttonSize))
-        {
-            g_gui->showOverlay = false;
-            g_print("Selected Action 2\n");
-        }
-
-        ImGui::SetCursorPos(ImVec2(center.x - 80, center.y + 10));
-        if (ImGui::Button("Action 3", buttonSize))
-        {
-            g_print("Selected Action 3\n");
-        }
-
-        ImGui::SetCursorPos(ImVec2(center.x - 80, center.y + 70));
-        if (ImGui::Button("Action 4", buttonSize))
-        {
-            g_print("Selected Action 4\n");
-        }
-
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0);
-        ImGui::End();
-    }
-
-    ImGui::PopStyleVar(2);
-}
-
+/**
+ * @brief Hlavní okno emulátoru: obraz přes celý hlavní viewport, klávesnice stroje, kontextové menu, zkratky.
+ *
+ * Vykreslí texturu obrazu a indikátory nad ní, vyhodnotí, zda emulovaná
+ * klávesnice dostává klávesy (main_window_keyboard_enabled()), při ztrátě
+ * tohoto stavu pošle klidovou matici a při čekajících událostech kláves
+ * naskenuje klávesnici hostitele do matice stroje. Pravé tlačítko myši
+ * (nebo žádost overlay menu, imgui_overlay_take_classic_menu_request())
+ * otevře klasické menu, levý Alt + levé tlačítko overlay menu
+ * (main_window_overlay_open_click()), stejně jako žádost položky
+ * "Overlay Menu..." klasického menu z minulého snímku
+ * (imgui_overlay_take_open_request()); při fokusu a zavřeném overlayi
+ * otevře overlay menu klávesa F10 bez modifikátorů
+ * (main_window_overlay_open_key()) a obslouží se globální zkratky
+ * (imgui_global_shortcuts()). F10 se obsluhuje zde, ne v globálních
+ * zkratkách, aby overlay neotevírala při fokusu okna debuggeru.
+ *
+ * Joystick stroje je po dobu otevření overlay menu a po zavření do klidu
+ * hostitelského joysticku zadržený (imgui_overlay_blocks_joystick()).
+ *
+ * Dokud overlay menu klávesy zadržuje (imgui_overlay_blocks_keyboard():
+ * je otevřené, nebo se zavřelo a klávesa je ještě stisknutá), klávesy do
+ * matice stroje nejdou vůbec a čekající události kláves se zahazují. Když
+ * se při otevřeném overlayi fokus vrátí do hlavního okna (např. po zavření
+ * dialogu) a není otevřený popup, předá ho zpět overlayi; po zavření
+ * overlaye si fokus vezme zpět hlavní okno.
+ *
+ * Přepínání oken ImGui klávesnicí (Ctrl+Tab) je zapnuté, jen když klávesy
+ * nepatří stroji ani overlay menu (main_window_nav_windowing_allowed()):
+ * při fokusu obrazu nebo virtuální klávesnice jdou Ctrl i Tab do stroje
+ * a fokus zůstává, kde je.
+ *
+ * @param texture Textura obrazu emulátoru.
+ * @pre UI vlákno, mezi ImGui::NewFrame() a ImGui::Render().
+ */
 static void ShowFullScreenImageEmulatorWindow(GLuint texture)
 {
     const ImGuiViewport *viewport = ImGui::GetMainViewport();
@@ -203,26 +169,57 @@ static void ShowFullScreenImageEmulatorWindow(GLuint texture)
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0);
 
+    /* Overlay menu se právě zavřelo: fokus zpět obrazu (otevírá se z něj),
+     * ne oknu nástroje, které je v pořadí fokusu výš. Otevřený popup se
+     * nechává být (fokus hlavního okna by ho zavřel). */
+    if (imgui_overlay_take_main_focus_request() && !ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel))
+    {
+        ImGui::SetNextWindowFocus();
+    };
+
     /* příznaky v main_window_focus.h (sdílí je test pravidla fokusu) */
     ImGui::Begin("##MainEmulatorWindow", NULL, MAIN_WINDOW_FLAGS);
 
-// Prozatim nemame nic smysluplneho pro zobrazovani overlay okna
-#if 0
-    // Detekce ALT + kliknutí levým tlačítkem myši
-    if (!g_gui->showOverlay && ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup) && ImGui::IsMouseClicked(ImGuiMouseButton_Left) && ImGui::IsKeyDown(ImGuiKey_LeftAlt))
+    /* Levý Alt + levé tlačítko myši nad obrazem otevře overlay menu (cesta myší vedle F10); pravý Alt (AltGr) ne */
+    if (!imgui_overlay_is_open() && ImGui::IsWindowHovered() && main_window_overlay_open_click())
     {
-        g_gui->showOverlay = true;
-        g_gui->justOpenedOverlay = true; // zamezi okamzitemu zavreni okna pri otevreni
+        imgui_overlay_open();
     };
-#endif
+
+    /* Položka "Overlay Menu..." klasického menu: žádost z minulého snímku, popup menu už je zavřený
+     * (jinak se žádost zahodí, aby popup nezůstal pod overlayem) */
+    if (imgui_overlay_take_open_request())
+    {
+        imgui_overlay_open();
+    };
+
+    /* Stav overlaye pro celý zbytek snímku hlavního okna: otevření zkratkou
+     * F10 níže se projeví až v příštím snímku (klidovou matici pošle už
+     * imgui_overlay_open()). */
+    const bool overlay_open = imgui_overlay_is_open();
+    /* otevřený overlay, nebo po zavření ještě držená klávesa (F10, Esc) */
+    const bool overlay_blocks = imgui_overlay_blocks_keyboard();
+    /* joystick stroje: po zavření overlaye ho uvolní až klid hostitelského joysticku (volat každý snímek) */
+    (void)imgui_overlay_blocks_joystick();
 
     // Zjistíme, zda má okno, ci jeho potomek focus. Pripadne zda ma focus VKBD okno
     if ((!g_gui->showVirtualKeyboardWindow) && (g_gui->VkbdWindowHasFocus))
     {
         g_gui->VkbdWindowHasFocus = false;
     };
-    /* pravidlo v main_window_focus.h (sdílí ho testy oken nástrojů) */
-    g_gui->MainWindowHasFocus = main_window_keyboard_focus(g_gui->VkbdWindowHasFocus);
+    /* pravidlo v main_window_focus.h (sdílí ho testy oken nástrojů a overlaye) */
+    g_gui->MainWindowHasFocus = main_window_keyboard_enabled(g_gui->VkbdWindowHasFocus, overlay_blocks);
+    /* Ctrl+Tab nesmí odnést fokus z obrazu do okna nástroje (Ctrl i Tab jsou
+     * klávesy stroje); při fokusu okna nástroje přepínač oken ImGui funguje */
+    main_window_nav_windowing_set(main_window_nav_windowing_allowed(g_gui->VkbdWindowHasFocus, overlay_blocks));
+
+    /* Otevřený overlay a fokus zpět v hlavním okně (zavřel se dialog):
+     * vrátit fokus overlayi, jinak by jeho klávesy nefungovaly. Otevřený
+     * popup se nechává být (fokus overlaye by ho zavřel). */
+    if (overlay_open && main_window_keyboard_focus(false) && !ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel))
+    {
+        imgui_overlay_request_focus();
+    };
 
     // obsluha klávesnice pro PIO8255 podle zaznamenanych klavesovych udalosti
     static gboolean pvevious_MainWindowHasFocus = FALSE;
@@ -231,11 +228,16 @@ static void ShowFullScreenImageEmulatorWindow(GLuint texture)
         g_gui->haveKeyboardEvents = FALSE;
         /* Ztráta fokusu = žádná klávesa; přes záznam vstupů (replay.h),
          * při záznamu se klidová matice převezme na hranici snímku. */
-        uint8_t idle_matrix[10];
-        memset(idle_matrix, 0xff, sizeof(idle_matrix));
-        replay_host_keyboard_submit(idle_matrix, -1, 0xff);
+        main_window_keyboard_release();
     };
     pvevious_MainWindowHasFocus = g_gui->MainWindowHasFocus;
+    /* Dokud overlay klávesy zadržuje, do matice se neskenují, ani když má
+     * fokus okno virtuální klávesnice (obsluha událostí SDL by příznak
+     * nastavila). */
+    if (overlay_blocks)
+    {
+        g_gui->haveKeyboardEvents = FALSE;
+    };
     if (g_gui->haveKeyboardEvents)
     {
         int numkeys = 0;
@@ -245,8 +247,10 @@ static void ShowFullScreenImageEmulatorWindow(GLuint texture)
         g_gui->haveKeyboardEvents = FALSE;
     };
 
-    // Detekce pravého kliknutí -> otevření popup menu
-    if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right))
+    // Detekce pravého kliknutí -> otevření popup menu; totéž na žádost overlay menu (tlačítko "Open classic menu").
+    // Žádost overlaye platí jen při volnu (imgui_modal_can_open() uvnitř vyzvednutí), jinak se zahodí.
+    const bool classic_menu_request = imgui_overlay_take_classic_menu_request();
+    if (classic_menu_request || (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right)))
     {
         ImGui::OpenPopup("EmulatorPopupMenu");
     };
@@ -274,8 +278,15 @@ static void ShowFullScreenImageEmulatorWindow(GLuint texture)
     // Zjistíme, zda má okno focus (bez popupu)
     // bool hasFocus = ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows) && !isPopupOpen;
 
-    if (g_gui->MainWindowHasFocus && !g_gui->showOverlay)
+    /* MainWindowHasFocus je vždy false, dokud overlay klávesy zadržuje (main_window_keyboard_enabled()) */
+    if (g_gui->MainWindowHasFocus)
     {
+        /* F10 bez modifikátorů otevře overlay menu jen odsud (ne z okna
+         * debuggeru, které globální zkratky volá při svém fokusu) */
+        if (main_window_overlay_open_key())
+        {
+            imgui_overlay_open();
+        };
         imgui_global_shortcuts();
     }
 
@@ -284,19 +295,15 @@ static void ShowFullScreenImageEmulatorWindow(GLuint texture)
 
     ImGui::End();
     ImGui::PopStyleVar(2);
-
-    // Pokud je overlay aktivní, zobrazíme ho
-    if (g_gui->showOverlay)
-    {
-        ShowOverlayWindow();
-        g_gui->justOpenedOverlay = false;
-    }
 }
 
 void imgui_main_window(GLuint texture)
 {
-    // hlavni okno + scanovani klavesnice pro pio8255 + overlay
+    // hlavní okno + scanování klávesnice pro pio8255
     ShowFullScreenImageEmulatorWindow(texture);
+
+    /* Overlay menu nad obrazem (zavřené = jen test příznaku) */
+    imgui_overlay_frame();
 
     if (VERSION_CHECK_TEST_THREAD_DONE)
     {

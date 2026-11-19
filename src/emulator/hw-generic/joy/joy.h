@@ -78,6 +78,13 @@ typedef uint8_t (*joy_host_read_fn)(en_JOY_DEVID joy_devid);
  * se čtení IN nevětví podle režimu. `host_scan` je živý zdroj (SDL); unit
  * testy ho mohou nahradit vlastní funkcí.
  *
+ * Zadržení vstupu (joy_host_hold()): dokud ho UI drží (otevřené overlay
+ * menu), vrací joy_host_scan() klid (0FFh) místo živého stavu, takže stroj
+ * ani záznam vstupů hostitelský joystick nevidí. Joystick z numerické
+ * klávesnice jde přes sken klávesnice a do klidu ho uvádí UI klidovým
+ * skenem (replay_host_keyboard_submit() s číslem portu z
+ * joy_num_keypad_dev()).
+ *
  * @invariant `host_read` a `host_scan` nejsou NULL (nastaví je joy_init()).
  * @note Přístup z emu vlákna (IN, bod hranice snímku replay); UI vlákno
  *       nezapisuje nic: stav joysticku z numerické klávesnice předává přes
@@ -118,6 +125,52 @@ extern "C"
      * @note Volá emu vlákno (jako IN), stejně jako dřívější přímé čtení.
      */
     extern uint8_t joy_host_scan(en_JOY_DEVID joy_devid);
+
+    /**
+     * @brief Živý stav hostitelského joysticku bez ohledu na zadržení vstupu.
+     *
+     * Jako joy_host_scan(), ale joy_host_hold() ho neovlivní. Slouží UI ke
+     * zjištění, zda je joystick po zavření overlay menu v klidu.
+     *
+     * @param joy_devid Port.
+     * @return Stav (0FFh = nic nebo build bez joysticku).
+     * @note Volá UI vlákno; výchozí zdroj iface_joy_scan() je pro obě vlákna
+     *       bezpečný (zámek zařízení jen zkouší).
+     */
+    extern uint8_t joy_host_scan_raw(en_JOY_DEVID joy_devid);
+
+    /**
+     * @brief Zadrží nebo uvolní vstup hostitelského joysticku pro emulovaný stroj.
+     *
+     * Při zadržení vrací joy_host_scan() klid (0FFh): port typu JOYSTICK čte
+     * klid při každém IN a záznam vstupů zapíše klid stejnou cestou jako
+     * živý stav (vzorek na hranici snímku). Přehrávání vstupů hostitelský
+     * joystick nečte vůbec, zadržení se ho netýká.
+     *
+     * @param hold true = zadržet, false = uvolnit.
+     * @note Volá UI vlákno; příznak je atomický (emu vlákno ho čte bez
+     *       zámku, jedno čtení na sken).
+     */
+    extern void joy_host_hold(bool hold);
+
+    /**
+     * @brief Je vstup hostitelského joysticku zadržený (joy_host_hold())?
+     * @return true = joy_host_scan() vrací klid.
+     * @note Libovolné vlákno.
+     */
+    extern bool joy_host_is_held(void);
+
+    /**
+     * @brief Port joysticku emulovaného na numerické klávesnici.
+     *
+     * Stejný výběr jako sken klávesnice (iface_keyboard_full_scan()): první
+     * port typu JOY_TYPE_NUM_KEYPAD.
+     *
+     * @return Index portu, nebo -1, když žádný port typ NUM_KEYPAD nemá.
+     * @note Čte jen typ portu (mění ho emu vlákno při zásahu z GUI); UI
+     *       vlákno ho čte stejně jako sken klávesnice.
+     */
+    extern int joy_num_keypad_dev(void);
 
     /**
      * @brief Přepne zdroj stavu portů typu JOYSTICK.

@@ -140,6 +140,7 @@ void iface_video_exit(void)
     };
 }
 
+/* Doxygen viz iface_video.h. */
 char *iface_video_create_window_title_text(void)
 {
     st_EMULATOR_MEASURING_GDG *msgdg = &g_iface_video->msgdg;
@@ -160,6 +161,14 @@ char *iface_video_create_window_title_text(void)
         {
             g_string_append_printf(status, ", FB-FPS: %.2f", msgdg->current_fps);
         };
+    };
+
+    /* Ztlumený poslech: značka za stavem rychlosti, za běhu i při pauze. Jedno čtení příznaku při periodické
+     * obnově titulku (IFACE_VIDEO_UPDATE_WINDOW_TITLE_INTERVAL_MS), horké cesty emulace se netýká. */
+    const char *mute_text = emulator_get_mute_status_as_text();
+    if (mute_text)
+    {
+        g_string_append_printf(status, ", %s", mute_text);
     };
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED

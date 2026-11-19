@@ -77,6 +77,7 @@
 #include "libs/dsk/dsk.h"
 #include "libs/generic_driver/generic_driver.h"
 #include "libs/sdlapp/sdlapp_options.h"
+#include "recent_media/recent_media.h"
 #include "i18n.h"
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
@@ -113,10 +114,19 @@ st_FDC g_fdc[FDC_INSTANCE_COUNT] = {
     }
 };
 
+/**
+ * @brief Nenulová hodnota = fdc_mount_dskfile() nezapisuje do historie naposledy vložených médií.
+ *
+ * Nastavuje jen fdc_init_instance() po dobu obnovy vložení z INI (hlavní
+ * vlákno při startu, emu vlákno ještě neběží), proto bez zámku.
+ */
+static int s_fdc_recent_hold = 0;
+
 /* Forward declarations: pomocné funkce implementované v Drives / Mount
  * sekci níže. */
 static void fdc_drive_close(st_FDC *fdc, unsigned drive_id);
 static int fdc_drive_flush_to_file(st_FDDrive *drv);
+static int fdc_find_other_holder(const st_FDC *fdc, unsigned drive_id, const st_FDC_FILEID *id, int writers_only);
 
 /**
  * @brief Vrátí název cfgfile sekce pro danou instanci FDC.
@@ -525,7 +535,12 @@ static void fdc_init_instance(st_FDC *fdc, unsigned default_connected)
         char *path = cfgmodule_get_element_text_value_by_name(cmod, (char *)fdc_dskpath_keyname(fdc, i));
         if (path && path[0] != 0x00)
         {
+            /* Obnova vložení z minulého běhu není nové vložení: do historie
+             * naposledy vložených médií se nezapisuje (pořadí ani čas se
+             * startem emulátoru nemění). */
+            s_fdc_recent_hold = 1;
             fdc_mount_dskfile(fdc, i, path);
+            s_fdc_recent_hold = 0;
         }
     }
 }
@@ -849,6 +864,70 @@ static int drive_has_unsaved_changes_internal(st_FDDrive *drv)
 }
 
 /**
+ * @brief Číslo mechaniky přes oba řadiče (0-7) podle ukazatele na její stav.
+ * @param drv mechanika z pole `g_fdc[].drive[]`.
+ * @return FDC_GLOBAL_DRIVE_NO(), nebo -1, když @p drv do `g_fdc` nepatří.
+ */
+static int fdc_drive_global_no(const st_FDDrive *drv)
+{
+    for (unsigned f = 0; f < FDC_INSTANCE_COUNT; f++)
+        for (unsigned n = 0; n < FDC_NUM_DRIVES; n++)
+            if (&g_fdc[f].drive[n] == drv)
+                return FDC_GLOBAL_DRIVE_NO(f, n);
+    return -1;
+}
+
+/**
+ * @brief Pojistka: smí se kopie obrazu z paměti zapsat do souboru `filename`?
+ *
+ * Disk se neuloží do jiného souboru, než ze kterého byl načten. Pole
+ * `filename` mechaniky totiž nemusí označovat soubor, jehož obsah mechanika
+ * drží: načtení snapshotu záznamu vstupů ho přepisuje jménem ze snapshotu
+ * a obraz znovu nevkládá (snap_fdc.c; běžné načtení snapshotu vložená média
+ * nemění, pojistka je druhá obrana). Zápis celé kopie do takového souboru by přepsal
+ * cizí obraz.
+ *
+ * Porovnává identitu souboru `filename` zjištěnou teď (fdc_fileid_init():
+ * jedno otevření souboru) s identitou uloženou při vložení (`fileid`):
+ *  - shoda (stejný klíč cesty, nebo stejné číslo souboru) = zápis povolen;
+ *  - cílový soubor neexistuje nebo nejde zjistit jeho číslo: rozhoduje
+ *    jen klíč cesty. Stejná cesta = zápis povolen (soubor smazaný za běhu
+ *    se uložením obnoví jako dřív), jiná cesta = zápis odmítnut;
+ *  - obraz nasazený z paměti (`file_backed == 0`, přehrání vstupů) žádný
+ *    soubor nedrží a `filename` je jen jmenovka = zápis odmítnut.
+ *
+ * Odmítnutí kvůli jinému souboru ohlásí uživateli (baseui_show_message_tr():
+ * okno se zprávou a stderr; fronta zpráv shodné zprávy po sobě slučuje),
+ * odmítnutí u obrazu z paměti jen záznamem na stderr.
+ *
+ * Co pojistka nepozná: soubor, který jiný program za běhu nahradil jiným
+ * souborem téhož jména (klíč cesty se shoduje dál, fdc_fileid.h).
+ *
+ * @param drv mechanika s platným handlerem a neprázdným `filename`.
+ * @return 1 = zápis do `filename` je bezpečný, 0 = nezapisovat.
+ * @pre Emu vlákno, pozastavená emulace nebo ukončování (fdc_exit()).
+ * @note Mění jen frontu zpráv; stav mechaniky ani příznak změn nemění.
+ */
+static int fdc_drive_save_target_ok(const st_FDDrive *drv)
+{
+    if (!drv->file_backed)
+    {
+        fprintf(stderr, "fdc: the image '%s' in FDD %d was not loaded from a file, not saved\n",
+                drv->filename, fdc_drive_global_no(drv));
+        return 0;
+    }
+    st_FDC_FILEID target;
+    fdc_fileid_init(&target, drv->filename);
+    const int same = fdc_fileid_same(&drv->fileid, &target) ? 1 : 0;
+    fdc_fileid_clear(&target);
+    if (same)
+        return 1;
+    baseui_show_message_tr(1, N_("The disk in FDD %d was not saved: the drive now refers to a different image file than the one it was loaded from. Re-insert the image to continue."),
+                           fdc_drive_global_no(drv));
+    return 0;
+}
+
+/**
  * @brief Pokud byl obsah DSK obrazu v paměti modifikován, ulož ho zpět
  *        do původního souboru.
  *
@@ -857,8 +936,13 @@ static int drive_has_unsaved_changes_internal(st_FDDrive *drv)
  *  - DIRECT: no-op (writes už jdou přímo na disk přes file_driver)
  *  - DISCARD: no-op (změny se zahodí - úmysl)
  *
+ * Zapisuje se jen do souboru, ze kterého byl obraz načten
+ * (fdc_drive_save_target_ok()); jinak se nezapíše nic a změny zůstanou
+ * v paměti i s příznakem neuložených změn.
+ *
  * @param drv mechanika s otevřeným handlerem.
- * @return 1 = OK (nebo nebylo nutné), 0 = selhání zápisu.
+ * @return 1 = OK (nebo nebylo nutné), 0 = selhání zápisu nebo zápis
+ *         odmítnutý pojistkou cílového souboru.
  */
 static int fdc_drive_flush_to_file(st_FDDrive *drv)
 {
@@ -872,6 +956,8 @@ static int fdc_drive_flush_to_file(st_FDDrive *drv)
         return 1; /* Žádné změny - nic neflushovat. */
     if (drv->filename[0] == 0x00)
         return 1;
+    if (!fdc_drive_save_target_ok(drv))
+        return 0; /* jiný soubor, než ze kterého byl obraz načten */
 
     if (EXIT_SUCCESS != generic_driver_save_memory(&drv->handler, drv->filename))
     {
@@ -927,6 +1013,30 @@ int fdc_drive_force_save_to_file(st_FDC *fdc, unsigned drive_id)
         return 0;
     if (drv->filename[0] == 0x00)
         return 0;
+    /* Soubor patří jiné mechanice (invariant jediné mechaniky se zápisem):
+     * paměťový obraz se "změnami" tu může mít i chráněná mechanika, protože
+     * oprava hlavičky DSK při vložení nastavuje memspec.updated. */
+    if (drv->shared_readonly)
+    {
+        fprintf(stderr, "fdc: DSK image '%s' is shared with another drive and write-protected here, not saved\n",
+                drv->filename);
+        return 0;
+    }
+    /* Totéž platí pro mechaniku chráněnou jen volbou uživatele nebo právy
+     * souboru, když tentýž soubor drží se zápisem jiná mechanika: zápis
+     * celé kopie by přepsal, co ta druhá do souboru uložila. */
+    if (drv->file_backed)
+    {
+        const int writer = fdc_find_other_holder(fdc, drive_id, &drv->fileid, 1);
+        if (writer >= 0)
+        {
+            baseui_show_message_tr(1, N_("The disk in FDD %d was not saved: the image is also inserted in FDD %d, which may write to it."),
+                                   FDC_GLOBAL_DRIVE_NO(fdc->index, drive_id), writer);
+            return 0;
+        }
+    }
+    if (!fdc_drive_save_target_ok(drv))
+        return 0; /* jiný soubor, než ze kterého byl obraz načten */
     if (EXIT_SUCCESS != generic_driver_save_memory(&drv->handler, drv->filename))
     {
         fprintf(stderr, "%s(%d): failed to force-save DSK image '%s' to file\n",
@@ -971,11 +1081,52 @@ static void fdc_drive_close(st_FDC *fdc, unsigned drive_id)
     drv->readonly = 0;
     drv->user_readonly = 0;
     drv->fs_readonly = 0;
+    /* Sdílení souboru končí s obrazem: ostatní mechaniky si svou ochranu
+     * kvůli sdílení nechávají (sundá ji jen uživatel), jen už ji sundat jde. */
+    drv->shared_readonly = 0;
+    drv->file_backed = 0;
+    drv->share_notice = 0;
+    fdc_fileid_clear(&drv->fileid);
     drv->storage_mode = FDC_STORAGE_CACHED;
     drv->geometry_valid = 0;
     memset(&drv->geometry, 0, sizeof(drv->geometry));
     /* st_HANDLER strukturu nemažeme - po close je její obsah neplatný
      * a další open ji přepíše. */
+}
+
+/**
+ * @brief Najde jinou mechaniku, která drží tentýž soubor obrazu.
+ *
+ * Prochází všechny mechaniky obou řadičů (i odpojeného: obraz v něm zůstává
+ * vložený a při ukončení se ukládá) v pořadí FDC0 FD0..FD3, FDC1 FD0..FD3.
+ * Počítají se jen obrazy vložené ze souboru (`file_backed`; pole `mounted`
+ * se nepoužívá, načtení snapshotu záznamu vstupů ho přepisuje hodnotou ze snapshotu).
+ *
+ * @param fdc          Řadič mechaniky, která se z hledání vynechá.
+ * @param drive_id     Vynechaná mechanika.
+ * @param id           Hledaná identita souboru.
+ * @param writers_only 1 = jen mechaniky se zápisem (readonly == 0).
+ * @return Číslo mechaniky přes oba řadiče (0-7), nebo -1.
+ * @note Jen porovnává uložené identity; na souborový systém nesahá.
+ */
+static int fdc_find_other_holder(const st_FDC *fdc, unsigned drive_id, const st_FDC_FILEID *id, int writers_only)
+{
+    for (unsigned f = 0; f < FDC_INSTANCE_COUNT; f++)
+    {
+        for (unsigned n = 0; n < FDC_NUM_DRIVES; n++)
+        {
+            const st_FDDrive *o = &g_fdc[f].drive[n];
+            if (&g_fdc[f] == fdc && n == drive_id)
+                continue;
+            if (!o->file_backed)
+                continue;
+            if (writers_only && o->readonly)
+                continue;
+            if (fdc_fileid_same(&o->fileid, id))
+                return FDC_GLOBAL_DRIVE_NO(f, n);
+        }
+    }
+    return -1;
 }
 
 void fdc_mount_dskfile(st_FDC *fdc, unsigned drive_id, char *filename)
@@ -987,11 +1138,24 @@ void fdc_mount_dskfile(st_FDC *fdc, unsigned drive_id, char *filename)
 
     st_FDDrive *drv = &fdc->drive[drive_id];
 
+    /* Nové otevření téhož obrazu (změna volby read-only nebo režimu úložiště)
+     * není nové vložení: historie naposledy vložených médií se nemění. */
+    const int same_image = (drv->mounted && (strcmp(drv->filename, filename) == 0)) ? 1 : 0;
+
+    /* Stejný obraz ve více mechanikách (fdc.h): identita nového souboru a
+     * to, zda mechanika tentýž soubor už drží (pak se její ochrana kvůli
+     * sdílení zachová). Zjišťuje se před zavřením, které identitu smaže. */
+    st_FDC_FILEID new_id;
+    fdc_fileid_init(&new_id, filename);
+    const int same_file = (drv->mounted && drv->file_backed && fdc_fileid_same(&drv->fileid, &new_id)) ? 1 : 0;
+    const int prev_shared = same_file ? drv->shared_readonly : 0;
+
     /* Remount: nejdřív zavřít předchozí mount (uvolní RAM buffer). */
     fdc_drive_close(fdc, drive_id);
 
     if (filename[0] == 0x00)
     {
+        fdc_fileid_clear(&new_id);
         /* Prázdné jméno = umount. Stav je už vyresetovaný, jen UI a INI. */
         fdc_cfg_set_dskpath(fdc, drive_id, "");
         ui_fdc_set_dsk(drive_id, drv->filename);
@@ -1016,7 +1180,17 @@ void fdc_mount_dskfile(st_FDC *fdc, unsigned drive_id, char *filename)
      * se nezapisuje. */
     drv->user_readonly = (fdc_cfg_get_readonly(fdc, drive_id) || fdc_cli_readonly(fdc->index, drive_id)) ? 1 : 0;
     drv->fs_readonly = (g_access(drv->filename, W_OK) == 0) ? 0 : 1;
-    drv->readonly = (drv->user_readonly || drv->fs_readonly) ? 1 : 0;
+
+    /* Ochrana kvůli sdílení: nové vložení ji dostane, když soubor drží
+     * kterákoliv jiná mechanika; nové otevření téhož obrazu si ji ponechá a
+     * dostane ji i tehdy, když soubor mezitím drží se zápisem jiná mechanika
+     * (pojistka invariantu). */
+    const int holder_writer = fdc_find_other_holder(fdc, drive_id, &new_id, 1);
+    const int holder_any = (holder_writer >= 0) ? holder_writer : fdc_find_other_holder(fdc, drive_id, &new_id, 0);
+    const int shared = same_file ? ((prev_shared || holder_writer >= 0) ? 1 : 0) : ((holder_any >= 0) ? 1 : 0);
+    const int share_is_new = (shared && !prev_shared) ? 1 : 0;
+
+    drv->readonly = (drv->user_readonly || drv->fs_readonly || shared) ? 1 : 0;
 
     /* Otevři DSK obraz - způsob závisí na storage_mode:
      *  - CACHED / DISCARD: memory driver (in-RAM kopie)
@@ -1046,11 +1220,16 @@ void fdc_mount_dskfile(st_FDC *fdc, unsigned drive_id, char *filename)
                 generic_driver_error_message(&drv->handler, driver));
         /* Při neúspěchu vrátíme drive do umounted stavu. INI vyčistíme. */
         drv->filename[0] = 0x00;
+        fdc_fileid_clear(&new_id);
         fdc_cfg_set_dskpath(fdc, drive_id, "");
         ui_fdc_set_dsk(drive_id, drv->filename);
         return;
     }
     drv->handler_valid = 1;
+    /* Od teď mechanika soubor drží; identitu uvolní fdc_drive_close(). */
+    drv->fileid = new_id;
+    drv->file_backed = 1;
+    drv->shared_readonly = shared;
 
     /* DSK header repair (in-memory walk přes Track-Info magic stringy)
      * funguje jen pro memory handler. Pro DIRECT mode skip - oprava by
@@ -1084,6 +1263,21 @@ void fdc_mount_dskfile(st_FDC *fdc, unsigned drive_id, char *filename)
      * persistujeme novou cestu pro příští spuštění. */
     fdc_cfg_set_dskpath(fdc, drive_id, drv->filename);
     ui_fdc_set_dsk(drive_id, drv->filename);
+
+    if (share_is_new)
+    {
+        /* Záznam pro běh bez okna (start z INI, příkazová řádka, MCP, Unicard);
+         * okno nebo pole `warning` přidá volající přes fdc_drive_take_share_notice(). */
+        drv->share_notice = holder_any + 1;
+        fprintf(stderr, "fdc: the image '%s' is already inserted in FDD %d, inserted write-protected in FDD %d\n",
+                drv->filename, holder_any, FDC_GLOBAL_DRIVE_NO(fdc->index, drive_id));
+    }
+
+    /* Jediné místo, kde vložení diskety ze souboru uspěje (menu, zkratka,
+     * overlay menu, příkazová řádka, MCP, Unicard): zápis do historie.
+     * MCP a Unicard drží zápis pozastavený (recent_media_suspend()). */
+    if (!same_image && !s_fdc_recent_hold)
+        recent_media_add(RECENT_MEDIA_DSK, drv->filename);
 }
 
 uint8_t *fdc_drive_copy_image(st_FDC *fdc, unsigned drive_id, size_t *size)
@@ -1176,6 +1370,112 @@ void fdc_umount(st_FDC *fdc, unsigned drive_id)
      * startu obraz znovu auto-mountnul z perzistentní cesty). */
     fdc_cfg_set_dskpath(fdc, drive_id, "");
     ui_fdc_set_dsk(drive_id, fdc->drive[drive_id].filename);
+}
+
+/* ------------------------------------------------------------------ */
+/* Stejný obraz ve více mechanikách (kontrakt v fdc.h)                 */
+/* ------------------------------------------------------------------ */
+
+int fdc_drive_shared_readonly(st_FDC *fdc, unsigned drive_id)
+{
+    if (!fdc || drive_id >= FDC_NUM_DRIVES)
+        return 0;
+    const st_FDDrive *drv = &fdc->drive[drive_id];
+    return (drv->file_backed && drv->shared_readonly) ? 1 : 0;
+}
+
+int fdc_drive_shared_with(st_FDC *fdc, unsigned drive_id)
+{
+    if (!fdc_drive_shared_readonly(fdc, drive_id))
+        return -1;
+    const st_FDDrive *drv = &fdc->drive[drive_id];
+    int other = fdc_find_other_holder(fdc, drive_id, &drv->fileid, 1);
+    if (other < 0)
+        other = fdc_find_other_holder(fdc, drive_id, &drv->fileid, 0);
+    return other;
+}
+
+int fdc_drive_write_blocker(st_FDC *fdc, unsigned drive_id)
+{
+    if (!fdc || drive_id >= FDC_NUM_DRIVES)
+        return -1;
+    const st_FDDrive *drv = &fdc->drive[drive_id];
+    if (!drv->file_backed)
+        return -1;
+    return fdc_find_other_holder(fdc, drive_id, &drv->fileid, 1);
+}
+
+int fdc_drive_set_write_protect(st_FDC *fdc, unsigned drive_id, int readonly, int *blocker)
+{
+    if (blocker)
+        *blocker = -1;
+    if (!fdc || drive_id >= FDC_NUM_DRIVES)
+        return -2;
+
+    st_FDDrive *drv = &fdc->drive[drive_id];
+    if (!readonly)
+    {
+        int other = fdc_drive_write_blocker(fdc, drive_id);
+        if (other >= 0)
+        {
+            if (blocker)
+                *blocker = other;
+            fprintf(stderr, "fdc: FDD %d stays write-protected, the image '%s' is also inserted in FDD %d, which may write to it\n",
+                    FDC_GLOBAL_DRIVE_NO(fdc->index, drive_id), drv->filename, other);
+            return -1;
+        }
+    }
+
+    fdc_cfg_set_readonly(fdc, drive_id, readonly ? 1 : 0);
+    if (!drv->mounted)
+        return 0;
+
+    /* Vypnutí ruší i ochranu kvůli sdílení: nové otevření téhož obrazu ji
+     * jinak zachovává (fdc_mount_dskfile()). */
+    if (!readonly)
+        drv->shared_readonly = 0;
+
+    /* Kopie: nové otevření přepisuje `filename` mechaniky. */
+    char *pathdup = g_strdup(drv->filename);
+    fdc_mount_dskfile(fdc, drive_id, pathdup);
+    g_free(pathdup);
+    return 0;
+}
+
+int fdc_drive_take_share_notice(st_FDC *fdc, unsigned drive_id)
+{
+    if (!fdc || drive_id >= FDC_NUM_DRIVES)
+        return -1;
+    st_FDDrive *drv = &fdc->drive[drive_id];
+    int other = drv->share_notice - 1;
+    drv->share_notice = 0;
+    return other;
+}
+
+void fdc_enforce_single_writer(void)
+{
+    for (unsigned f = 0; f < FDC_INSTANCE_COUNT; f++)
+    {
+        for (unsigned n = 0; n < FDC_NUM_DRIVES; n++)
+        {
+            st_FDDrive *drv = &g_fdc[f].drive[n];
+            if (!drv->handler_valid || !drv->file_backed)
+                continue;
+            int protect = drv->shared_readonly;
+            if (!protect && !drv->readonly)
+            {
+                /* Zápis si nechává první v pořadí: hledá se dřívější
+                 * mechanika se zápisem na tentýž soubor. */
+                int other = fdc_find_other_holder(&g_fdc[f], n, &drv->fileid, 1);
+                protect = (other >= 0 && other < FDC_GLOBAL_DRIVE_NO(f, n)) ? 1 : 0;
+            }
+            if (!protect)
+                continue;
+            drv->shared_readonly = 1;
+            drv->readonly = 1;
+            generic_driver_set_handler_readonly_status(&drv->handler, 1);
+        }
+    }
 }
 
 /**

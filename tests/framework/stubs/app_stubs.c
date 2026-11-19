@@ -200,6 +200,22 @@ void baseui_show_message(bool is_error, char *format, ...)
     va_end(args);
 }
 
+void baseui_show_message_tr(bool is_error, const char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    fprintf(stderr, "[stub] baseui_show_message_tr(%d): ", is_error ? 1 : 0);
+    vfprintf(stderr, format, args);
+    fputc(10, stderr);
+    va_end(args);
+}
+
+/** @brief Stub baseui_translate(): testy běží bez překladu, vrací msgid. */
+const char *baseui_translate(const char *msgid)
+{
+    return msgid;
+}
+
 void baseui_show_error_message(char *format, ...)
 {
     va_list args;

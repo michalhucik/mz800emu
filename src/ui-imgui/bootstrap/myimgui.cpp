@@ -37,6 +37,8 @@ extern "C" void imgui_filechooser_settings_init(void);
 #include "ui-imgui/mcp_activity/mcp_activity_window.h"
 #include "ui-imgui/mcp_activity/action_toast.h"
 #endif
+/* Písma overlay menu se načítají v každé sestavě (i bez MCP a bez debuggeru) */
+#include "ui-imgui/overlay/overlay_style.h" /* overlay_style_load_fonts() */
 
 static ImVec4 default_bg_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
@@ -67,11 +69,14 @@ static bool myimgui_font_file_exists(const char *path)
 }
 
 /**
- * @brief Naplní atlas fontů ImGui: základní UI font, sloučené glyfy a monospace font.
+ * @brief Naplní atlas fontů ImGui: základní UI font, sloučené glyfy, monospace font a písma overlay menu.
  *
  * Fonty se hledají v ui_resources/ relativně k home_dir (adresář binárky,
  * případně --home-dir). Základní font DroidSans.ttf je první v atlasu, ostatní
  * (CJK, ikony file chooseru, mzglyphs) se do něj slučují přes MergeMode.
+ * Obsah souboru NotoSansJP-Regular.ttf se drží ve sdílené paměti vizuálního
+ * systému overlay menu (overlay_style_add_shared_font()) do konce procesu;
+ * stejný buffer používají písma overlaye, takže je v paměti jen jednou.
  *
  * Chování při chybě: chybějící soubor fontu nikdy neukončí proces.
  * - Chybí-li DroidSans.ttf, vypíše se chybová hláška s hledanou cestou a radou
@@ -80,6 +85,11 @@ static bool myimgui_font_file_exists(const char *path)
  *   chybějící obrázky.
  * - Chybí-li volitelný font (NotoSansJP, mzglyphs, Cousine), tiše se přeskočí;
  *   myimgui_get_monospace_font() pak vrací NULL.
+ * - Písma overlay menu (Inter, JetBrains Mono, ikony Lucide) přidává
+ *   overlay_style_load_fonts() jako samostatná písma za všechna ostatní;
+ *   chybějící soubor se tiše přeskočí a overlay použije základní písmo.
+ *   Ikony Lucide se do základního písma neslučují (jejich rozsah se
+ *   překrývá s mzglyphs).
  *
  * @param io ImGui IO aktuálního kontextu; jeho atlas (io.Fonts) se doplní.
  *
@@ -138,8 +148,17 @@ void myimgui_set_fonts(ImGuiIO &io)
             cjk_cfg.OversampleH = 2;
             cjk_cfg.OversampleV = 1;
             cjk_cfg.PixelSnapH = true;
-            io.Fonts->AddFontFromFileTTF(cjk_font_path, 28.0f, &cjk_cfg,
-                                         io.Fonts->GetGlyphRangesJapanese());
+            /* Obsah souboru (16 MB) je v paměti jen jednou: stejný buffer
+             * používají i písma overlay menu (overlay_style_load_fonts()).
+             * Nastavení zdroje, velikost, rozsahy a pořadí v atlasu jsou
+             * stejné jako při načtení ze souboru; nejde-li soubor načíst do
+             * sdílené paměti, načte si ho atlas sám. */
+            if (!overlay_style_add_shared_font(io.Fonts, cjk_font_path, 28.0f, &cjk_cfg,
+                                               io.Fonts->GetGlyphRangesJapanese()))
+            {
+                io.Fonts->AddFontFromFileTTF(cjk_font_path, 28.0f, &cjk_cfg,
+                                             io.Fonts->GetGlyphRangesJapanese());
+            }
         }
         g_free(cjk_font_path);
     }
@@ -224,6 +243,13 @@ void myimgui_set_fonts(ImGuiIO &io)
             g_free(mzglyphs2_path);
         }
         g_free(mono_path);
+    }
+
+    /* Písma overlay menu - samostatná, až za základním (to musí zůstat první). */
+    {
+        char *overlay_font_dir = sdlapp_paths_resolve_home(g_sdlapp->paths, "ui_resources/imgui/fonts");
+        overlay_style_load_fonts(io.Fonts, overlay_font_dir);
+        g_free(overlay_font_dir);
     }
 }
 

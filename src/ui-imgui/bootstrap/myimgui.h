@@ -33,10 +33,6 @@ typedef struct MyImGui
     bool VkbdWindowHasFocus;
     bool haveKeyboardEvents;
 
-    // Overlay
-    bool showOverlay;
-    bool justOpenedOverlay;
-
     // Dalsi okna
     bool showVersionCheckSetupWindow;
     bool showVersionCheckResultWindow;

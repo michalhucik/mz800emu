@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mz800emu 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-18 16:41+0100\n"
+"POT-Creation-Date: 2026-11-19 13:40+0100\n"
 "PO-Revision-Date: 2026-03-11 22:00+0100\n"
 "Last-Translator: Claude Code\n"
 "Language-Team: Українська\n"
@@ -37,7 +37,7 @@ msgstr "Відкрити каталог"
 msgid "Untitled File Chooser"
 msgstr "Вибір файлу"
 
-#: src/emulator/audio.c:156
+#: src/emulator/audio.c:181
 msgid "Audio volume settings:"
 msgstr "Налаштування гучності аудіо:"
 
@@ -62,50 +62,92 @@ msgstr ""
 "Адреса = 0x%04x\n"
 "Інструкція = '%s'\n"
 
-#: src/emulator/emulator.c:454
+#: src/emulator/emulator.c:466
 #: src/ui-imgui/mcp_activity/mcp_activity_window.cpp:425
 #: src/ui-imgui/videorec/videorec_menu.cpp:140
 msgid "PAUSED"
 msgstr "ПРИЗУПИНЕНО"
 
-#: src/emulator/emulator.c:457
+#: src/emulator/emulator.c:469 src/ui-imgui/overlay/overlay.cpp:777
 msgid "Max speed"
 msgstr "Максимальна швидкість"
 
-#: src/emulator/emulator.c:460
+#: src/emulator/emulator.c:472 src/ui-imgui/overlay/overlay_actions.cpp:1272
+#: src/ui-imgui/overlay/overlay_tab_machine.cpp:285
 msgid "Custom speed"
 msgstr "Власна швидкість"
 
-#: src/emulator/emulator.c:462
+#: src/emulator/emulator.c:474
 msgid "Normal speed"
 msgstr "Нормальна швидкість"
+
+#: src/emulator/emulator.c:480
+msgid "MUTED"
+msgstr ""
 
 #: src/emulator/hw-generic/cmt/cmthack.c:1046
 msgid "Select a MZF File"
 msgstr "Виберіть MZF файл"
 
-#: src/emulator/hw-generic/fdc/fdc.c:1245
+#: src/emulator/hw-generic/fdc/fdc.c:925
+#, c-format
+msgid ""
+"The disk in FDD %d was not saved: the drive now refers to a different image "
+"file than the one it was loaded from. Re-insert the image to continue."
+msgstr ""
+
+#: src/emulator/hw-generic/fdc/fdc.c:1033
+#, c-format
+msgid ""
+"The disk in FDD %d was not saved: the image is also inserted in FDD %d, "
+"which may write to it."
+msgstr ""
+
+#: src/emulator/hw-generic/fdc/fdc.c:1545
 #, c-format
 msgid "Select DSK image file for FDC%u drive FD%d"
 msgstr "Виберіть файл образу DSK для FDC%u дисковод FD%d"
 
-#: src/emulator/hw-generic/qdisk/qdisk.c:833
+#: src/emulator/hw-generic/fdc/fdc_request.c:85
+#, c-format
+msgid ""
+"The image is already inserted in FDD %d. It was inserted write-protected "
+"here to keep the image file safe."
+msgstr ""
+
+#: src/emulator/hw-generic/fdc/fdc_request.c:137
+#: src/ui-imgui/overlay/overlay_actions.cpp:176
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:288
+#, c-format
+msgid "The image is also inserted in FDD %d, which may write to it."
+msgstr ""
+
+#: src/emulator/hw-generic/qdisk/qdisk.c:866
 msgid "Select existing .MZQ file or create new QD image"
 msgstr "Виберіть існуючий .MZQ файл або створіть новий QD образ"
 
-#: src/emulator/hw-generic/qdisk/qdisk.c:835
+#: src/emulator/hw-generic/qdisk/qdisk.c:868
 msgid "Select directory to mount as virtual Quick Disk"
 msgstr "Виберіть каталог для монтування як віртуальний Quick Disk"
 
-#: src/emulator/hw-generic/unicard/unicard.c:2370
+#: src/emulator/hw-generic/qdisk/qdisk.c:1897
+msgid ""
+"The Quick Disk was not saved: the drive now refers to a different image file "
+"than the one it was loaded from. Re-insert the image to continue."
+msgstr ""
+
+#: src/emulator/hw-generic/unicard/unicard.c:2383
 msgid "Select SD root directory for Unicard"
 msgstr "Виберіть кореневий каталог SD для Unicard"
 
 #: src/emulator/mzarch/mz800/memory/mz800_rom.c:42
+#: src/ui-imgui/overlay/overlay_view.cpp:824
+#: src/ui-imgui/overlay/overlay_view.cpp:925
 msgid "Standard Sharp MZ-800 ROM"
 msgstr "Стандартний Sharp MZ-800 ROM"
 
 #: src/emulator/mzarch/mz800/memory/mz800_rom.c:43
+#: src/ui-imgui/overlay/overlay_view.cpp:825
 msgid "JSS ROMs"
 msgstr "JSS ROMs"
 
@@ -118,36 +160,67 @@ msgid "JSS v1.03 - for Pezik (devel)"
 msgstr "JSS v1.03 - for Pezik (devel)"
 
 #: src/emulator/mzarch/mz800/memory/mz800_rom.c:47
+#: src/ui-imgui/overlay/overlay_view.cpp:826
 msgid "JSS v1.08C - for MZ-1R18"
 msgstr "JSS v1.08C - for MZ-1R18"
 
 #: src/emulator/mzarch/mz800/memory/mz800_rom.c:48
+#: src/ui-imgui/overlay/overlay_view.cpp:827
 msgid "JSS v1.06A - for Pezik"
 msgstr "JSS v1.06A - for Pezik"
 
 #: src/emulator/mzarch/mz800/memory/mz800_rom.c:49
+#: src/ui-imgui/overlay/overlay_view.cpp:828
 msgid "Willy ROMs"
 msgstr "Willy ROMs"
 
 #: src/emulator/mzarch/mz800/memory/mz800_rom.c:50
+#: src/ui-imgui/overlay/overlay_view.cpp:829
 msgid "Willy - English"
 msgstr "Willy - Англійська"
 
 #: src/emulator/mzarch/mz800/memory/mz800_rom.c:51
+#: src/ui-imgui/overlay/overlay_view.cpp:830
 msgid "Willy - German"
 msgstr "Willy - Німецька"
 
 #: src/emulator/mzarch/mz800/memory/mz800_rom.c:52
+#: src/ui-imgui/overlay/overlay_view.cpp:831
 msgid "Willy - Japanese"
 msgstr "Willy - Японська"
 
 #: src/emulator/mzarch/mz800/memory/mz800_rom.c:53
+#: src/ui-imgui/overlay/overlay_view.cpp:832
 msgid "User"
 msgstr "Користувач"
 
 #: src/emulator/mzarch/mz800/memory/mz800_rom.c:54
+#: src/ui-imgui/overlay/overlay_view.cpp:833
 msgid "User Defined ROM"
 msgstr "ROM визначена користувачем"
+
+#: src/emulator/snapshot/handlers/snap_fdc.c:100
+#: src/emulator/snapshot/handlers/snap_qdisk.c:152
+msgid "empty"
+msgstr ""
+
+#: src/emulator/snapshot/handlers/snap_fdc.c:102
+#, c-format
+msgid "FDD %d: %s (now: %s)"
+msgstr ""
+
+#: src/emulator/snapshot/handlers/snap_qdisk.c:154
+#, c-format
+msgid "Quick Disk: %s (now: %s)"
+msgstr ""
+
+#: src/emulator/snapshot/snapshot_media.c:112
+#, c-format
+msgid ""
+"The snapshot was saved with different disks:\n"
+"%s\n"
+"The inserted disks were kept."
+msgstr ""
 
 #: src/ui/cmt/UiCmt.cpp:31
 msgid "Default"
@@ -299,82 +372,142 @@ msgstr "Дивіться GNU General Public License, версію 3 або пі�
 msgid "Close this window"
 msgstr "Закрити це вікно"
 
-#: src/ui-imgui/audio_window.cpp:26 src/ui-imgui/audio_window.cpp:32
-#: src/ui-imgui/audio_window.cpp:38 src/ui-imgui/debugger/ctc_window.cpp:381
+#: src/ui-imgui/audio_window.cpp:41 src/ui-imgui/audio_window.cpp:47
+#: src/ui-imgui/audio_window.cpp:53 src/ui-imgui/debugger/ctc_window.cpp:381
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:71
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:73
 msgid "CTC0"
 msgstr "CTC0"
 
-#: src/ui-imgui/audio_window.cpp:32
+#: src/ui-imgui/audio_window.cpp:47
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:71
 msgid "PSG tone1"
 msgstr "PSG tone1"
 
-#: src/ui-imgui/audio_window.cpp:32
+#: src/ui-imgui/audio_window.cpp:47
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:71
 msgid "PSG tone2"
 msgstr "PSG tone2"
 
-#: src/ui-imgui/audio_window.cpp:32
+#: src/ui-imgui/audio_window.cpp:47
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:71
 msgid "PSG tone3"
 msgstr "PSG tone3"
 
-#: src/ui-imgui/audio_window.cpp:32
+#: src/ui-imgui/audio_window.cpp:47
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:71
 msgid "PSG noise"
 msgstr "PSG noise"
 
-#: src/ui-imgui/audio_window.cpp:39
+#: src/ui-imgui/audio_window.cpp:54
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:73
 msgid "PSG0 tone1"
 msgstr "PSG0 tone1"
 
-#: src/ui-imgui/audio_window.cpp:39
+#: src/ui-imgui/audio_window.cpp:54
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:73
 msgid "PSG0 tone2"
 msgstr "PSG0 tone2"
 
-#: src/ui-imgui/audio_window.cpp:39
+#: src/ui-imgui/audio_window.cpp:54
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:73
 msgid "PSG0 tone3"
 msgstr "PSG0 tone3"
 
-#: src/ui-imgui/audio_window.cpp:39
+#: src/ui-imgui/audio_window.cpp:54
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:73
 msgid "PSG0 noise"
 msgstr "PSG0 noise"
 
-#: src/ui-imgui/audio_window.cpp:40
+#: src/ui-imgui/audio_window.cpp:55
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:74
 msgid "PSG1 tone1"
 msgstr "PSG1 tone1"
 
-#: src/ui-imgui/audio_window.cpp:40
+#: src/ui-imgui/audio_window.cpp:55
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:74
 msgid "PSG1 tone2"
 msgstr "PSG1 tone2"
 
-#: src/ui-imgui/audio_window.cpp:40
+#: src/ui-imgui/audio_window.cpp:55
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:74
 msgid "PSG1 tone3"
 msgstr "PSG1 tone3"
 
-#: src/ui-imgui/audio_window.cpp:40
+#: src/ui-imgui/audio_window.cpp:55
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:74
 msgid "PSG1 noise"
 msgstr "PSG1 noise"
 
-#: src/ui-imgui/audio_window.cpp:89
+#: src/ui-imgui/audio_window.cpp:118
 msgid "Audio Mixer"
 msgstr "Аудіомікшер"
 
-#: src/ui-imgui/audio_window.cpp:118
+#: src/ui-imgui/audio_window.cpp:139
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:185
+msgid "Output"
+msgstr ""
+
+#: src/ui-imgui/audio_window.cpp:141
+#: src/ui-imgui/overlay/overlay_actions.cpp:1293
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:206
+msgid "Mute"
+msgstr ""
+
+#: src/ui-imgui/audio_window.cpp:147
+msgid ""
+"Silences the sound output; the volumes are kept. Not saved: the emulator "
+"always starts unmuted."
+msgstr ""
+
+#: src/ui-imgui/audio_window.cpp:151
+#: src/ui-imgui/overlay/overlay_actions.cpp:1292
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:192
+msgid "Master volume"
+msgstr ""
+
+#: src/ui-imgui/audio_window.cpp:157
+msgid ""
+"Listening volume of the whole mix. The channel volumes and recordings are "
+"not affected."
+msgstr ""
+
+#: src/ui-imgui/audio_window.cpp:161
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:240
+msgid "Channels"
+msgstr ""
+
+#: src/ui-imgui/audio_window.cpp:172
 #, c-format
 msgid "%.1f dB"
 msgstr "%.1f dB"
 
-#: src/ui-imgui/audio_window.cpp:168
+#: src/ui-imgui/audio_window.cpp:222
 #, c-format
 msgid "%.0f dB"
 msgstr "%.0f dB"
 
-#: src/ui-imgui/audio_window.cpp:214
+#: src/ui-imgui/audio_window.cpp:232
+msgid "All channels: sets every channel to the same volume."
+msgstr ""
+
+#: src/ui-imgui/audio_window.cpp:269
+msgid "Level of the mix before the master volume and mute."
+msgstr ""
+
+#: src/ui-imgui/audio_window.cpp:278
+#: src/ui-imgui/overlay/overlay_actions.cpp:1294
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:208
 msgid "Hardware output filter"
 msgstr "Вихідний фільтр справжнього комп'ютера"
 
-#: src/ui-imgui/audio_window.cpp:220
+#: src/ui-imgui/audio_window.cpp:284
 msgid ""
 "Low-pass filter of the real MZ-800 audio output (346 Hz). Off = the "
 "previous, brighter sound."
-msgstr "Фільтр нижніх частот звукового виходу справжнього MZ-800 (346 Гц). Вимкнено = попередній, яскравіший звук."
+msgstr ""
+"Фільтр нижніх частот звукового виходу справжнього MZ-800 (346 Гц). Вимкнено "
+"= попередній, яскравіший звук."
 
 #: src/ui-imgui/audiocap/audio_capture_ui.cpp:66
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:172
@@ -420,6 +553,11 @@ msgstr "Керування записом звуку..."
 #: src/ui-imgui/audiocap/audio_capture_ui.cpp:110
 #: src/ui-imgui/audiocap/audio_capture_ui.cpp:431
 #: src/ui-imgui/mz700/devbus/menu_devbus.cpp:340
+#: src/ui-imgui/overlay/overlay_actions.cpp:1306
+#: src/ui-imgui/overlay/overlay_actions.cpp:1311
+#: src/ui-imgui/overlay/overlay_tab_capture.cpp:102
+#: src/ui-imgui/overlay/overlay_tab_capture.cpp:126
+#: src/ui-imgui/overlay/overlay_tab_capture.cpp:132
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:209
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:658
 #: src/ui-imgui/videorec/videorec_menu.cpp:462
@@ -429,6 +567,11 @@ msgstr "Налаштування..."
 
 #: src/ui-imgui/audiocap/audio_capture_ui.cpp:113
 #: src/ui-imgui/audiocap/audio_capture_ui.cpp:429
+#: src/ui-imgui/overlay/overlay_actions.cpp:1305
+#: src/ui-imgui/overlay/overlay_actions.cpp:1310
+#: src/ui-imgui/overlay/overlay_tab_capture.cpp:102
+#: src/ui-imgui/overlay/overlay_tab_capture.cpp:124
+#: src/ui-imgui/overlay/overlay_tab_capture.cpp:130
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:212
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:656
 #: src/ui-imgui/videorec/videorec_menu.cpp:466
@@ -524,8 +667,8 @@ msgstr "Захопити звук (%s) запускає і зупиняє зах
 #: src/ui-imgui/message/message_window.cpp:222
 #: src/ui-imgui/mz700/devbus/menu_devbus.cpp:243
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:442
-#: src/ui-imgui/snapshot/snapshot_notification.cpp:97
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:300
+#: src/ui-imgui/snapshot/snapshot_notification.cpp:117
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:307
 #: src/ui-imgui/videorec/videorec_setup_dialog.cpp:338
 msgid "OK"
 msgstr "OK"
@@ -548,14 +691,16 @@ msgstr "OK"
 #: src/ui-imgui/memext/memext_map_window.cpp:291
 #: src/ui-imgui/memext/memext_save_dialog.cpp:207
 #: src/ui-imgui/mz700/devbus/menu_devbus.cpp:256
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:676
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:1358
 #: src/ui-imgui/ramdisk/pezik_settings_window.cpp:289
 #: src/ui-imgui/rom/rom_settings_window.cpp:305
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:447
 #: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:129
 #: src/ui-imgui/snapshot/snapshot_setup_dialog.cpp:176
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:303
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:91
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:98
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:310
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:96
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:122
 #: src/ui-imgui/topmenu/menu_replay.cpp:256
 #: src/ui-imgui/videorec/videorec_setup_dialog.cpp:343
 msgid "Cancel"
@@ -584,6 +729,7 @@ msgstr "Запуск"
 #: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:348
 #: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:391
 #: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:488
+#: src/ui-imgui/overlay/overlay_tab_capture.cpp:233
 #: src/ui-imgui/topmenu/replay_window.cpp:217
 #: src/ui-imgui/videorec/videorec_menu.cpp:96
 msgid "Off"
@@ -917,8 +1063,11 @@ msgstr ""
 #: src/ui-imgui/debugger/membrowser/membrowser_layers.cpp:499
 #: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:148
 #: src/ui-imgui/maxspeed_bench_window.cpp:156
+#: src/ui-imgui/overlay/overlay_actions.cpp:1229
+#: src/ui-imgui/overlay/overlay_tab_machine.cpp:194
+#: src/ui-imgui/overlay/overlay_tab_machine.cpp:199
 #: src/ui-imgui/plotter/plotter_window.cpp:432
-#: src/ui-imgui/topmenu/topmenu.cpp:62
+#: src/ui-imgui/topmenu/topmenu.cpp:85
 msgid "Reset"
 msgstr "Скинути"
 
@@ -1080,7 +1229,10 @@ msgstr "(поточний)"
 
 #: src/ui-imgui/cmt/cmt_convert_dialog.cpp:545
 #: src/ui-imgui/cmt/cmt_window.cpp:2406 src/ui-imgui/cmt/cmt_window.cpp:3978
-#: src/ui-imgui/cmt/cmt_window.cpp:4006 src/ui-imgui/topmenu/menu_speed.cpp:27
+#: src/ui-imgui/cmt/cmt_window.cpp:4006
+#: src/ui-imgui/overlay/overlay_actions.cpp:1223
+#: src/ui-imgui/overlay/overlay_tab_machine.cpp:269
+#: src/ui-imgui/topmenu/menu_speed.cpp:27
 msgid "Speed"
 msgstr "Швидкість"
 
@@ -1159,7 +1311,7 @@ msgid "Fix automatically next time"
 msgstr "Наступного разу виправити автоматично"
 
 #: src/ui-imgui/cmt/cmt_fix_mzfsize.cpp:347
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:464
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:486
 msgid ""
 "An MZF file longer than its header says is truncated\n"
 "to the right size without asking."
@@ -1197,6 +1349,11 @@ msgstr "Перевірка стрічки"
 #: src/ui-imgui/cmt/cmt_window.cpp:812 src/ui-imgui/cmt/cmt_window.cpp:1517
 #: src/ui-imgui/cmt/cmt_window.cpp:1536 src/ui-imgui/cmt/cmt_window.cpp:1742
 #: src/ui-imgui/cmt/cmt_window.cpp:1990
+#: src/ui-imgui/overlay/overlay_actions.cpp:277
+#: src/ui-imgui/overlay/overlay_actions.cpp:298
+#: src/ui-imgui/overlay/overlay_actions.cpp:312
+#: src/ui-imgui/overlay/overlay_actions.cpp:323
+#: src/ui-imgui/overlay/overlay_actions.cpp:373
 msgid "No tape inserted."
 msgstr "Стрічку не вставлено."
 
@@ -1291,6 +1448,7 @@ msgstr "Триває запис. Зупинити й зберегти його, 
 
 #: src/ui-imgui/cmt/cmt_tape_actions.cpp:1101
 #: src/ui-imgui/cmt/cmt_window.cpp:2152
+#: src/ui-imgui/overlay/overlay_tab_media.cpp:756
 msgid "Stop recording"
 msgstr "Зупинити запис"
 
@@ -1703,6 +1861,7 @@ msgstr "Сирий запис"
 
 #: src/ui-imgui/cmt/cmt_window.cpp:700 src/ui-imgui/cmt/cmt_window.cpp:1058
 #: src/ui-imgui/cmt/cmt_window.cpp:1835 src/ui-imgui/cmt/cmt_window.cpp:3943
+#: src/ui-imgui/overlay/overlay_tab_media.cpp:694
 msgid "No tape"
 msgstr "Немає стрічки"
 
@@ -1720,7 +1879,8 @@ msgstr "Відтворення"
 msgid "Waiting for motor"
 msgstr "Очікування мотора"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:704
+#: src/ui-imgui/cmt/cmt_window.cpp:704 src/ui-imgui/overlay/overlay.cpp:963
+#: src/ui-imgui/overlay/overlay_tab_machine.cpp:176
 msgid "Paused"
 msgstr "Призупинено"
 
@@ -1746,6 +1906,9 @@ msgstr "Минуло"
 #: src/ui-imgui/cmt/cmt_window.cpp:812 src/ui-imgui/cmt/cmt_window.cpp:1070
 #: src/ui-imgui/cmt/cmt_window.cpp:1989 src/ui-imgui/cmt/cmt_window.cpp:2243
 #: src/ui-imgui/cmt/cmt_window.cpp:2628
+#: src/ui-imgui/overlay/overlay_actions.cpp:297
+#: src/ui-imgui/overlay/overlay_actions.cpp:311
+#: src/ui-imgui/overlay/overlay_actions.cpp:324
 msgid "Not used in Direct mode"
 msgstr "Не використовується в режимі Напряму"
 
@@ -1755,6 +1918,8 @@ msgstr "Час запису"
 
 #: src/ui-imgui/cmt/cmt_window.cpp:818 src/ui-imgui/cmt/cmt_window.cpp:1992
 #: src/ui-imgui/cmt/cmt_window.cpp:2629 src/ui-imgui/cmt/cmt_window.cpp:2644
+#: src/ui-imgui/overlay/overlay_actions.cpp:279
+#: src/ui-imgui/overlay/overlay_actions.cpp:299
 msgid "Not available while recording."
 msgstr "Недоступно під час запису."
 
@@ -1805,11 +1970,19 @@ msgstr "%s імпульсів"
 
 #: src/ui-imgui/cmt/cmt_window.cpp:1056 src/ui-imgui/cmt/cmt_window.cpp:1801
 #: src/ui-imgui/cmt/cmt_window.cpp:4356
+#: src/ui-imgui/overlay/overlay_tab_input.cpp:111
+#: src/ui-imgui/overlay/overlay_tab_input.cpp:114
 msgid "Open..."
 msgstr "Відкрити..."
 
 #: src/ui-imgui/cmt/cmt_window.cpp:1056 src/ui-imgui/cmt/cmt_window.cpp:1800
 #: src/ui-imgui/cmt/cmt_window.cpp:4383
+#: src/ui-imgui/overlay/overlay_actions.cpp:1235
+#: src/ui-imgui/overlay/overlay_actions.cpp:1236
+#: src/ui-imgui/overlay/overlay_actions.cpp:1237
+#: src/ui-imgui/overlay/overlay_actions.cpp:1238
+#: src/ui-imgui/overlay/overlay_actions.cpp:1257
+#: src/ui-imgui/overlay/overlay_actions.cpp:1261
 msgid "Eject"
 msgstr "Вийняти"
 
@@ -1824,6 +1997,8 @@ msgstr "Відкрити стрічку..."
 
 #: src/ui-imgui/cmt/cmt_window.cpp:1057 src/ui-imgui/cmt/cmt_window.cpp:1825
 #: src/ui-imgui/cmt/cmt_window.cpp:4355
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:830
+#: src/ui-imgui/overlay/overlay_tab_media.cpp:695
 msgid "New tape"
 msgstr "Нова стрічка"
 
@@ -1850,19 +2025,23 @@ msgstr "Завантаження"
 
 #: src/ui-imgui/cmt/cmt_window.cpp:1076 src/ui-imgui/cmt/cmt_window.cpp:2324
 #: src/ui-imgui/cmt/cmt_window.cpp:4352
+#: src/ui-imgui/overlay/overlay_actions.cpp:1253
 msgid "Tape"
 msgstr "Стрічка"
 
 #: src/ui-imgui/cmt/cmt_window.cpp:1076 src/ui-imgui/cmt/cmt_window.cpp:2325
+#: src/ui-imgui/overlay/overlay_actions.cpp:1254
 msgid "Boost"
 msgstr "Boost"
 
 #: src/ui-imgui/cmt/cmt_window.cpp:1076 src/ui-imgui/cmt/cmt_window.cpp:2326
+#: src/ui-imgui/overlay/overlay_actions.cpp:1255
 msgid "Direct"
 msgstr "Напряму"
 
 #: src/ui-imgui/cmt/cmt_window.cpp:1116 src/ui-imgui/cmt/cmt_window.cpp:1879
 #: src/ui-imgui/cmt/cmt_window.cpp:1882 src/ui-imgui/cmt/cmt_window.cpp:1885
+#: src/ui-imgui/overlay/overlay_tab_media.cpp:732
 #, c-format
 msgid "Block %d / %d"
 msgstr "Блок %d / %d"
@@ -1881,6 +2060,8 @@ msgstr "Недоступно під час запису повтору."
 
 #: src/ui-imgui/cmt/cmt_window.cpp:1502 src/ui-imgui/cmt/cmt_window.cpp:1518
 #: src/ui-imgui/cmt/cmt_window.cpp:2028 src/ui-imgui/cmt/cmt_window.cpp:2307
+#: src/ui-imgui/overlay/overlay_actions.cpp:350
+#: src/ui-imgui/overlay/overlay_actions.cpp:364
 msgid "Stop the recording first."
 msgstr "Спочатку зупиніть запис."
 
@@ -1888,6 +2069,8 @@ msgstr "Спочатку зупиніть запис."
 #: src/ui-imgui/cmt/cmt_window.cpp:2022 src/ui-imgui/cmt/cmt_window.cpp:2028
 #: src/ui-imgui/cmt/cmt_window.cpp:2039 src/ui-imgui/cmt/cmt_window.cpp:2308
 #: src/ui-imgui/cmt/cmt_window.cpp:2720
+#: src/ui-imgui/overlay/overlay_actions.cpp:335
+#: src/ui-imgui/overlay/overlay_actions.cpp:350
 msgid "Stop the tape first."
 msgstr "Спочатку зупиніть стрічку."
 
@@ -1956,10 +2139,13 @@ msgid "Click to show the time to the end of the tape"
 msgstr "Клацніть, щоб показати час до кінця стрічки"
 
 #: src/ui-imgui/cmt/cmt_window.cpp:1991
+#: src/ui-imgui/overlay/overlay_actions.cpp:278
+#: src/ui-imgui/overlay/overlay_actions.cpp:300
 msgid "The tape is empty."
 msgstr "Стрічка порожня."
 
 #: src/ui-imgui/cmt/cmt_window.cpp:2003
+#: src/ui-imgui/overlay/overlay_actions.cpp:280
 msgid "The tape has no playable block."
 msgstr "На стрічці немає блоку, який можна відтворити."
 
@@ -1972,6 +2158,7 @@ msgid "There is no playable block after this one."
 msgstr "Після цього блоку немає блоку, який можна відтворити."
 
 #: src/ui-imgui/cmt/cmt_window.cpp:2018
+#: src/ui-imgui/overlay/overlay_actions.cpp:324
 msgid "The tape is already stopped."
 msgstr "Стрічку вже зупинено."
 
@@ -1980,10 +2167,12 @@ msgid "No block is selected on the tape."
 msgstr "На стрічці не вибрано жодного блоку."
 
 #: src/ui-imgui/cmt/cmt_window.cpp:2034 src/ui-imgui/cmt/cmt_window.cpp:2316
+#: src/ui-imgui/overlay/overlay_actions.cpp:355
 msgid "The current block does not contain an MZF file."
 msgstr "Поточний блок не містить файлу MZF."
 
 #: src/ui-imgui/cmt/cmt_window.cpp:2134
+#: src/ui-imgui/overlay/overlay_tab_media.cpp:232
 msgctxt "cmt"
 msgid "Rewind"
 msgstr "Перемотати на початок"
@@ -1993,15 +2182,18 @@ msgid "Previous block"
 msgstr "Попередній блок"
 
 #: src/ui-imgui/cmt/cmt_window.cpp:2141
+#: src/ui-imgui/overlay/overlay_actions.cpp:1250
 msgid "Pause"
 msgstr "Пауза"
 
 #: src/ui-imgui/cmt/cmt_window.cpp:2141
+#: src/ui-imgui/overlay/overlay_actions.cpp:1249
 msgid "Play"
 msgstr "Відтворити"
 
 #: src/ui-imgui/cmt/cmt_window.cpp:2144
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:423
+#: src/ui-imgui/overlay/overlay_actions.cpp:1251
 msgid "Stop"
 msgstr "Зупинити"
 
@@ -2010,6 +2202,7 @@ msgid "Next block"
 msgstr "Наступний блок"
 
 #: src/ui-imgui/cmt/cmt_window.cpp:2152
+#: src/ui-imgui/overlay/overlay_actions.cpp:1252
 msgid "Record"
 msgstr "Записати"
 
@@ -2126,6 +2319,7 @@ msgstr "Видалити блоки (%d)"
 
 #: src/ui-imgui/cmt/cmt_window.cpp:2821
 #: src/ui-imgui/debugger/membrowser/membrowser_annot_dialog.cpp:146
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:1356
 msgid "Delete"
 msgstr "Видалити"
 
@@ -2199,7 +2393,7 @@ msgstr "Властивості стрічки"
 #: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:110
 #: src/ui-imgui/memext/memext_load_dialog.cpp:112
 #: src/ui-imgui/snapshot/snapshot_save_dialog.cpp:101
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:254
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:400
 #: src/ui-imgui/topmenu/replay_window.cpp:223
 #: src/ui-imgui/topmenu/replay_window.cpp:229
 msgid "File"
@@ -2347,7 +2541,7 @@ msgid "Reset column widths"
 msgstr "Скинути ширину стовпців"
 
 #: src/ui-imgui/cmt/cmt_window.cpp:4433
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:437
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:459
 msgid "Echo"
 msgstr "Ехо"
 
@@ -4936,6 +5130,7 @@ msgstr "Емуляція byla призупинена. Тепер можете в
 
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:863
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:1903
+#: src/ui-imgui/topmenu/menu_recent.cpp:195
 msgid "(empty)"
 msgstr "(порожньо)"
 
@@ -5337,6 +5532,7 @@ msgstr ""
 
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:2155
 #: src/ui-imgui/joy/joy_setup_window.cpp:433
+#: src/ui-imgui/overlay/overlay_tab_input.cpp:134
 #: src/ui-imgui/topmenu/devices/menu_unicard.cpp:323
 msgid "None"
 msgstr "Жодне"
@@ -5840,13 +6036,13 @@ msgid "FDC State"
 msgstr "Стан FDC"
 
 #: src/ui-imgui/debugger/fdc_window.cpp:198
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:405
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:479
 #: src/ui-imgui/topmenu/devices/menu_unicard.cpp:327
 msgid "FDC0 (standard)"
 msgstr "FDC0 (стандартний)"
 
 #: src/ui-imgui/debugger/fdc_window.cpp:199
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:411
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:485
 #: src/ui-imgui/topmenu/devices/menu_unicard.cpp:331
 msgid "FDC1 (secondary)"
 msgstr "FDC1 (вторинний)"
@@ -6510,6 +6706,7 @@ msgid "Continue emulation"
 msgstr "Продовжити у емуляції"
 
 #: src/ui-imgui/debugger/iconbar/dbg_iconbar.cpp:207
+#: src/ui-imgui/overlay/overlay_actions.cpp:1268
 msgid "Pause emulation"
 msgstr "Призупинити емуляції"
 
@@ -6905,7 +7102,7 @@ msgid "Live"
 msgstr "Наживо"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_diff_window.cpp:405
-#: src/ui-imgui/topmenu/menu_snapshot.cpp:108
+#: src/ui-imgui/topmenu/menu_snapshot.cpp:122
 msgid "Snapshot"
 msgstr "Знімок"
 
@@ -8313,7 +8510,7 @@ msgstr "Підключити"
 #: src/ui-imgui/debugger/memmap/memmap_window.cpp:695
 #: src/ui-imgui/debugger/memmap/memmap_window.cpp:721
 #: src/ui-imgui/debugger/memmap/memmap_window.cpp:734
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:186
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:253
 msgid "Umount"
 msgstr "Демонтувати"
 
@@ -8855,6 +9052,7 @@ msgid "Hide"
 msgstr "Сховати"
 
 #: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:146
+#: src/ui-imgui/overlay/overlay_tab_machine.cpp:173
 msgid "Emulation"
 msgstr "Емуляція"
 
@@ -8863,7 +9061,7 @@ msgid "Max Speed"
 msgstr "Максимальна швидкість"
 
 #: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:160
-#: src/ui-imgui/topmenu/topmenu.cpp:57
+#: src/ui-imgui/topmenu/topmenu.cpp:80
 msgid "Pause Emulation"
 msgstr "Призупинити емуляцію"
 
@@ -9861,6 +10059,8 @@ msgstr "Стан QDisk"
 #: src/ui-imgui/debugger/qdisk_window.cpp:154
 #: src/ui-imgui/joy/joy_setup_window.cpp:256
 #: src/ui-imgui/joy/joy_setup_window.cpp:302
+#: src/ui-imgui/overlay/overlay_actions.cpp:1300
+#: src/ui-imgui/overlay/overlay_tab_input.cpp:132
 msgid "Device"
 msgstr "Пристрій"
 
@@ -9905,6 +10105,8 @@ msgid "MemExt"
 msgstr "MemExt"
 
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:121
+#: src/ui-imgui/overlay/overlay_actions.cpp:1269
+#: src/ui-imgui/overlay/overlay_tab_machine.cpp:207
 #: src/ui-imgui/topmenu/devices/menu_rom.cpp:25
 msgid "ROM"
 msgstr "ROM"
@@ -12859,7 +13061,7 @@ msgid "Cancel##watch_load_cancel"
 msgstr "Скасувати##watch_load_cancel"
 
 #: src/ui-imgui/devices/device_request_ui.cpp:49
-#: src/ui-imgui/topmenu/topmenu.cpp:47
+#: src/ui-imgui/topmenu/topmenu.cpp:70
 msgid ""
 "Machine settings cannot be changed while a replay is recorded or played. "
 "Stop it in the Replay menu first."
@@ -12958,6 +13160,8 @@ msgid "Places"
 msgstr "Місця"
 
 #: src/ui-imgui/filechooser/imgui_filechooser.cpp:198
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:868
+#: src/ui-imgui/topmenu/menu_recent.cpp:168
 msgid "Recent"
 msgstr "Нещодавні"
 
@@ -13100,10 +13304,12 @@ msgid "Rescan Devices"
 msgstr "Znovu переглянути пристрій"
 
 #: src/ui-imgui/joy/joy_setup_window.cpp:557
+#: src/ui-imgui/overlay/overlay_tab_input.cpp:131
+#: src/ui-imgui/overlay/overlay_tab_input.cpp:134
 msgid "Joystick"
 msgstr "Джойстик"
 
-#: src/ui-imgui/main_window.cpp:122
+#: src/ui-imgui/main_window.cpp:123
 msgid "No audio device - running without sound"
 msgstr "Немає аудіопристрою - робота без звуку"
 
@@ -13693,8 +13899,9 @@ msgid "White"
 msgstr "Білий"
 
 #: src/ui-imgui/mz700/devices/kp80/kp80_window.cpp:56
+#: src/ui-imgui/overlay/overlay_tab_display.cpp:268
 #: src/ui-imgui/plotter/plotter_window.cpp:110
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:38
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:66
 msgid "Green"
 msgstr "Зелений"
 
@@ -13873,6 +14080,889 @@ msgstr ""
 "Вмикає другий PSG (SN76489), забезпечуючи стереозвук, подібний до MZ-1500. "
 "Порт 0xF2 як і раніше використовується як моно PSG (лівий + правий канал).\n"
 "Порт 0xF3 — лише PSG0 (лівий), а порт 0xF9 — лише PSG1 (правий)."
+
+#: src/ui-imgui/overlay/overlay.cpp:119
+msgid "Media"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay.cpp:120
+#: src/ui-imgui/overlay/overlay_tab_machine.cpp:171
+msgid "Machine"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay.cpp:121
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:44
+msgid "Display"
+msgstr "Дисплей"
+
+#: src/ui-imgui/overlay/overlay.cpp:122
+msgid "Sound"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay.cpp:123
+msgid "Input"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay.cpp:124
+msgid "Capture"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay.cpp:910 src/ui-imgui/overlay/overlay.cpp:912
+#: src/ui-imgui/overlay/overlay.cpp:971 src/ui-imgui/overlay/overlay.cpp:1100
+#: src/ui-imgui/version_check/imgui_version_check.cpp:390
+msgid "Close"
+msgstr "Закрити"
+
+#: src/ui-imgui/overlay/overlay.cpp:968
+msgid "Muted"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay.cpp:1097
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:1346
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:1352
+msgctxt "overlay footer"
+msgid "to"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay.cpp:1097
+msgid "Tabs"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay.cpp:1098
+msgid "Arrows"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay.cpp:1098
+msgid "Move"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay.cpp:1099
+msgid "Select"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay.cpp:1112
+msgid "Right-click: classic menu"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:131
+msgid "FD controller FDC0 is not connected."
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:146
+#: src/ui-imgui/overlay/overlay_actions.cpp:246
+msgid "The drive is empty."
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:154
+#: src/ui-imgui/overlay/overlay_actions.cpp:255
+msgid "There are no unsaved changes."
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:173
+msgid "The file is write-protected on the disk."
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:211
+msgid ""
+"Browse files opens the disk image dialog, but FD controller FDC0 is not "
+"connected."
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:225
+msgid "Quick Disk is not connected."
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:227
+msgid "Quick Disk is controlled by Unicard."
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:237
+msgid "Eject the disk first."
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:301
+msgid "The tape is already playing."
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:313
+msgid "The tape is not playing."
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:380
+#: src/ui-imgui/overlay/overlay_actions.cpp:1036
+#: src/ui-imgui/overlay/overlay_view.cpp:245
+msgid "Not available while a replay is active."
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:400
+msgid "Set a custom speed with the slider first."
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:407
+msgid "Enable scanlines first."
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:414
+msgid "Select Custom FPS first."
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:923
+msgid ""
+"The emulation was paused before the menu was opened. Resume it to listen."
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:924
+msgid "The emulation is running."
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1076
+msgid "The joystick device could not be opened."
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1128
+msgid "No video recording is running."
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1167
+msgid "A replay is already active."
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1174
+msgid "No replay is active."
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1222
+msgid "Resume"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1224
+#: src/ui-imgui/overlay/overlay_tab_machine.cpp:331
+#: src/ui-imgui/snapshot/snapshot_setup_dialog.cpp:97
+#: src/ui-imgui/topmenu/menu_snapshot.cpp:147
+msgid "Quick Save"
+msgstr "Швидке збереження"
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1225
+#: src/ui-imgui/overlay/overlay_tab_machine.cpp:333
+#: src/ui-imgui/topmenu/menu_snapshot.cpp:141
+msgid "Quick Load"
+msgstr "Швидке завантаження"
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1226
+#: src/ui-imgui/overlay/overlay_tab_capture.cpp:154
+#: src/ui-imgui/screenshot/screenshot_ui.cpp:189
+msgid "Screenshot"
+msgstr "Знімок екрана"
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1227
+#: src/ui-imgui/overlay/overlay_tab_display.cpp:217
+#: src/ui-imgui/overlay/overlay_tab_display.cpp:227
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:48
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:105
+msgid "Fullscreen"
+msgstr "Повний екран"
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1231
+#: src/ui-imgui/overlay/overlay_actions.cpp:1232
+#: src/ui-imgui/overlay/overlay_actions.cpp:1233
+#: src/ui-imgui/overlay/overlay_actions.cpp:1234
+#: src/ui-imgui/overlay/overlay_actions.cpp:1260
+#: src/ui-imgui/overlay/overlay_tab_media.cpp:568
+msgid "Insert disk"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1239
+#: src/ui-imgui/overlay/overlay_actions.cpp:1240
+#: src/ui-imgui/overlay/overlay_actions.cpp:1241
+#: src/ui-imgui/overlay/overlay_actions.cpp:1242
+#: src/ui-imgui/overlay/overlay_actions.cpp:1262
+msgid "Save changes"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1243
+#: src/ui-imgui/overlay/overlay_actions.cpp:1244
+#: src/ui-imgui/overlay/overlay_actions.cpp:1245
+#: src/ui-imgui/overlay/overlay_actions.cpp:1246
+#: src/ui-imgui/overlay/overlay_actions.cpp:1263
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:936
+msgid "Write protect"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1248
+#: src/ui-imgui/topmenu/menu_replay.cpp:155
+#: src/ui-imgui/topmenu/replay_window.cpp:309
+#: src/ui-imgui/topmenu/replay_window.cpp:323
+msgid "Rewind"
+msgstr "Назад до контрольної точки"
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1256
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:827
+msgid "Change tape"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1258
+msgid "Open tape window"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1265
+msgid "Browse files..."
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1266
+#: src/ui-imgui/overlay/overlay_tab_media.cpp:1039
+#: src/ui-imgui/topmenu/menu_recent.cpp:202
+msgid "Clear recent media"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1270
+#: src/ui-imgui/overlay/overlay_tab_display.cpp:224
+#: src/ui-imgui/overlay/overlay_tab_display.cpp:266
+#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:56
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:58
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:93
+msgid "Normal"
+msgstr "Нормальна"
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1271
+msgid "Custom"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1273
+#: src/ui-imgui/overlay/overlay_tab_machine.cpp:290
+msgid "Decrease by 10 %"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1274
+#: src/ui-imgui/overlay/overlay_tab_machine.cpp:298
+msgid "Increase by 10 %"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1275
+#: src/ui-imgui/overlay/overlay_tab_machine.cpp:337
+#: src/ui-imgui/topmenu/menu_snapshot.cpp:134
+msgid "Save Snapshot..."
+msgstr "Зберегти знімок..."
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1276
+#: src/ui-imgui/overlay/overlay_tab_machine.cpp:339
+#: src/ui-imgui/topmenu/menu_snapshot.cpp:125
+msgid "Load Snapshot..."
+msgstr "Завантажити знімок..."
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1277
+#: src/ui-imgui/overlay/overlay_tab_machine.cpp:343
+#: src/ui-imgui/topmenu/menu_snapshot.cpp:154
+msgid "Snapshot Setup..."
+msgstr "Налаштування знімків..."
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1278
+#: src/ui-imgui/overlay/overlay_tab_machine.cpp:375
+msgid "Open classic menu"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1280
+#: src/ui-imgui/overlay/overlay_tab_display.cpp:219
+msgid "Window size on startup"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1281
+#: src/ui-imgui/overlay/overlay_tab_display.cpp:234
+msgid "Lock window aspect ratio"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1282
+#: src/ui-imgui/overlay/overlay_tab_display.cpp:242
+msgid "By width"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1283
+#: src/ui-imgui/overlay/overlay_tab_display.cpp:242
+msgid "By height"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1284
+#: src/ui-imgui/overlay/overlay_tab_display.cpp:263
+msgid "Color schema"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1285
+#: src/ui-imgui/overlay/overlay_tab_display.cpp:296
+msgid "Enable scanlines"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1286
+#: src/ui-imgui/overlay/overlay_tab_display.cpp:300
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:186
+msgid "Intensity"
+msgstr "Інтенсивність"
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1287
+#: src/ui-imgui/overlay/overlay_tab_display.cpp:332
+msgid "Frame rate control"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1288
+#: src/ui-imgui/overlay/overlay_tab_display.cpp:337
+#: src/ui-imgui/overlay/overlay_tab_display.cpp:353
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:228
+msgid "Custom FPS"
+msgstr "Власний FPS"
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1289
+#: src/ui-imgui/overlay/overlay_tab_display.cpp:382
+msgid "Forced redraw every screen"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1291
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:146
+msgid "Listen"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1295
+msgid "Channel volume"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1296
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:262
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:266
+msgid "Reset channels"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1298
+#: src/ui-imgui/overlay/overlay_tab_input.cpp:110
+msgid "Virtual keyboard"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1299
+#: src/ui-imgui/overlay/overlay_tab_input.cpp:113
+msgid "Autotype buffer"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1301
+#: src/ui-imgui/overlay/overlay_tab_input.cpp:154
+#: src/ui-imgui/topmenu/interface/menu_keyjoy.cpp:36
+msgid "Joystick Setup..."
+msgstr "Налаштування joysticku..."
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1303
+#: src/ui-imgui/overlay/overlay_tab_capture.cpp:163
+#: src/ui-imgui/screenshot/screenshot_ui.cpp:193
+#: src/ui-imgui/screenshot/screenshot_ui.cpp:635
+#: src/ui-imgui/screenshot/screenshot_ui.cpp:645
+msgid "Save Screenshot As..."
+msgstr "Зберегти знімок екрана як..."
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1304
+#: src/ui-imgui/overlay/overlay_tab_capture.cpp:166
+#: src/ui-imgui/screenshot/screenshot_ui.cpp:198
+msgid "Record Changed Frames"
+msgstr "Записувати змінені кадри"
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1307
+#: src/ui-imgui/overlay/overlay_tab_capture.cpp:190
+#: src/ui-imgui/videorec/videorec_menu.cpp:113
+#: src/ui-imgui/videorec/videorec_remote_window.cpp:229
+msgid "Start Recording"
+msgstr "Почати запис"
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1308
+#: src/ui-imgui/overlay/overlay_tab_capture.cpp:195
+#: src/ui-imgui/videorec/videorec_menu.cpp:133
+#: src/ui-imgui/videorec/videorec_menu.cpp:440
+#: src/ui-imgui/videorec/videorec_remote_window.cpp:230
+msgid "Pause Recording"
+msgstr "Призупинити запис"
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1309
+#: src/ui-imgui/overlay/overlay_tab_capture.cpp:199
+#: src/ui-imgui/videorec/videorec_menu.cpp:451
+msgid "Record in Real Time"
+msgstr "Записувати в реальному часі"
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1312
+#: src/ui-imgui/overlay/overlay_tab_capture.cpp:266
+#: src/ui-imgui/topmenu/menu_replay.cpp:139
+#: src/ui-imgui/topmenu/replay_window.cpp:309
+#: src/ui-imgui/topmenu/replay_window.cpp:320
+msgid "Record Inputs..."
+msgstr "Записати введення..."
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1313
+#: src/ui-imgui/overlay/overlay_tab_capture.cpp:267
+#: src/ui-imgui/topmenu/menu_replay.cpp:145
+#: src/ui-imgui/topmenu/replay_window.cpp:309
+#: src/ui-imgui/topmenu/replay_window.cpp:321
+msgid "Play Replay..."
+msgstr "Відтворити повтор..."
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1314
+#: src/ui-imgui/overlay/overlay_tab_capture.cpp:268
+#: src/ui-imgui/topmenu/menu_replay.cpp:149
+#: src/ui-imgui/topmenu/replay_window.cpp:309
+#: src/ui-imgui/topmenu/replay_window.cpp:322
+msgid "Stop Replay"
+msgstr "Зупинити повтор"
+
+#: src/ui-imgui/overlay/overlay_actions.cpp:1315
+#: src/ui-imgui/overlay/overlay_tab_capture.cpp:269
+#: src/ui-imgui/topmenu/menu_replay.cpp:168
+msgid "Replay Control..."
+msgstr "Керування повтором..."
+
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:376
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:313
+msgid "The Quick Disk is set to a mapped directory."
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:376
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:313
+msgid "The Quick Disk is set to a disk image."
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:437
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:302
+#, c-format
+msgid ""
+"Still checking whether the file exists. Try again in a moment:\n"
+"%s"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:443
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:308
+#, c-format
+msgid ""
+"The file no longer exists and was removed from the recent media:\n"
+"%s"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:450
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:243
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:297
+#, c-format
+msgid ""
+"The file path is too long:\n"
+"%s"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:456
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:436
+#, c-format
+msgid ""
+"Another tape dialog is still open. The tape was not changed:\n"
+"%s"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:535
+msgid "just now"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:536
+#, c-format
+msgid "%d min ago"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:537
+#, c-format
+msgid "%d h ago"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:538
+msgid "yesterday"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:539
+#, c-format
+msgid "%d days ago"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:540
+msgid "last week"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:541
+#, c-format
+msgid "%d weeks ago"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:542
+#, c-format
+msgid "%d months ago"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:543
+msgid "over a year ago"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:822
+msgctxt "overlay media"
+msgid "empty"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:828
+msgid "Type to filter recent tapes"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:829
+msgid "No recent tapes yet. Use Browse files..."
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:835
+msgid "Insert into Quick Disk"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:836
+msgid "Type to filter recent directories"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:836
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:846
+msgid "Type to filter recent disks"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:837
+msgid "No recent directories yet. Use Browse files..."
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:837
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:847
+msgid "No recent disks yet. Use Browse files..."
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:845
+#, c-format
+msgid "Insert into FDD %d"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:849
+msgctxt "overlay drive"
+msgid "empty"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:859
+#, c-format
+msgid "Now: %s"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:902
+#: src/ui-imgui/overlay/overlay_tab_media.cpp:959
+msgid "File not found"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:925
+msgid "No recent file matches the filter."
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:1042
+msgid "Insert into"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:1061
+#: src/ui-imgui/overlay/overlay_tab_media.cpp:523
+#: src/ui-imgui/overlay/overlay_tab_media.cpp:528
+#, c-format
+msgid "FDD %d"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:1066
+#: src/ui-imgui/overlay/overlay_tab_media.cpp:606
+#: src/ui-imgui/overlay/overlay_tab_media.cpp:878
+msgctxt "overlay drive"
+msgid "Empty"
+msgstr "Порожньо"
+
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:1346
+msgid "Insert into drive"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:1347
+msgid "Insert into selected"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:1352
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:1353
+msgid "Insert"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_insert_sheet.cpp:1355
+msgid "Insert selected"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_tab_capture.cpp:159
+#: src/ui-imgui/screenshot/screenshot_ui.cpp:158
+#: src/ui-imgui/screenshot/screenshot_ui.cpp:190
+#: src/ui-imgui/screenshot/screenshot_ui.cpp:635
+#: src/ui-imgui/screenshot/screenshot_ui.cpp:644
+msgid "Save Screenshot"
+msgstr "Зберегти знімок екрана"
+
+#: src/ui-imgui/overlay/overlay_tab_capture.cpp:183
+#: src/ui-imgui/videorec/videorec_menu.cpp:432
+msgid "Video Recording"
+msgstr "Запис відео"
+
+#: src/ui-imgui/overlay/overlay_tab_capture.cpp:190
+#: src/ui-imgui/videorec/videorec_menu.cpp:113
+#: src/ui-imgui/videorec/videorec_remote_window.cpp:229
+msgid "Stop Recording"
+msgstr "Зупинити запис"
+
+#: src/ui-imgui/overlay/overlay_tab_capture.cpp:223
+#: src/ui-imgui/topmenu/menu_replay.cpp:176
+#, c-format
+msgid "Recording: frame %u, %u events"
+msgstr "Запис: кадр %u, %u подій"
+
+#: src/ui-imgui/overlay/overlay_tab_capture.cpp:225
+#: src/ui-imgui/topmenu/menu_replay.cpp:184
+#, c-format
+msgid "Playing: frame %u / %u"
+msgstr "Відтворення: кадр %u / %u"
+
+#: src/ui-imgui/overlay/overlay_tab_capture.cpp:228
+#: src/ui-imgui/topmenu/menu_replay.cpp:191
+#, c-format
+msgid "Deviated: %s"
+msgstr "Відхилено: %s"
+
+#: src/ui-imgui/overlay/overlay_tab_capture.cpp:231
+#: src/ui-imgui/topmenu/menu_replay.cpp:196
+#, c-format
+msgid "Last: %s"
+msgstr "Останній: %s"
+
+#: src/ui-imgui/overlay/overlay_tab_capture.cpp:235
+msgid "Status:"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_tab_capture.cpp:260
+#: src/ui-imgui/topmenu/menu_replay.cpp:131
+msgid "Replay"
+msgstr "Повтор"
+
+#: src/ui-imgui/overlay/overlay_tab_display.cpp:215
+msgid "Window"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_tab_display.cpp:222
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:85
+msgid "Half"
+msgstr "Половина"
+
+#: src/ui-imgui/overlay/overlay_tab_display.cpp:223
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:89
+msgid "Native"
+msgstr "Рідний"
+
+#: src/ui-imgui/overlay/overlay_tab_display.cpp:225
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:97
+msgid "Bigger"
+msgstr "Більший"
+
+#: src/ui-imgui/overlay/overlay_tab_display.cpp:226
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:101
+msgid "Big"
+msgstr "Великий"
+
+#: src/ui-imgui/overlay/overlay_tab_display.cpp:236
+msgid "Fix aspect ratio"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_tab_display.cpp:262
+msgid "Colors"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_tab_display.cpp:267
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:62
+msgid "Grayscale"
+msgstr "Градації сірого"
+
+#: src/ui-imgui/overlay/overlay_tab_display.cpp:295
+msgid "CRT scanlines"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_tab_display.cpp:331
+msgid "Frame rate"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_tab_display.cpp:335
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:203
+#, c-format
+msgid "Slave (%dHz)"
+msgstr "Веденій (%dHz)"
+
+#: src/ui-imgui/overlay/overlay_tab_display.cpp:337
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:210
+msgid "Swap With V-Sync"
+msgstr "Обмін з V-Sync"
+
+#: src/ui-imgui/overlay/overlay_tab_display.cpp:337
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:216
+msgid "Swap With V-Sync (Adaptive)"
+msgstr "Обмін з V-Sync (адаптивний)"
+
+#: src/ui-imgui/overlay/overlay_tab_display.cpp:337
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:222
+msgid "Immediate Swap"
+msgstr "Негайний обмін"
+
+#: src/ui-imgui/overlay/overlay_tab_display.cpp:365
+msgid "Decrease by 1 Hz"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_tab_display.cpp:377
+msgid "Increase by 1 Hz"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_tab_display.cpp:402
+msgid "Changes apply immediately."
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_tab_input.cpp:65
+msgid "While this menu is open, keys do not reach the emulated computer."
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_tab_input.cpp:107
+msgid "Keyboard"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_tab_input.cpp:134
+msgid "Numeric keypad"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_tab_input.cpp:137
+msgid "No joystick found. Use Joystick Setup to rescan devices."
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_tab_input.cpp:153
+msgid "Mapping and calibration"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_tab_machine.cpp:144
+msgid ""
+"ROM settings, memory disks, memory extensions, IDE and DIP switches are in "
+"the classic menu."
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_tab_machine.cpp:176
+msgctxt "overlay emulation"
+msgid "Running"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_tab_machine.cpp:270
+msgid "CPU speed"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_tab_machine.cpp:273
+msgctxt "overlay speed"
+msgid "Normal"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_tab_machine.cpp:273
+msgctxt "overlay speed"
+msgid "Custom"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_tab_machine.cpp:273
+msgctxt "overlay speed"
+msgid "Max"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_tab_machine.cpp:322
+msgid "Snapshots"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_tab_machine.cpp:358
+msgid "More hardware"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_tab_media.cpp:568
+msgctxt "overlay media"
+msgid "Change"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_tab_media.cpp:598
+#: src/ui-imgui/overlay/overlay_tab_media.cpp:703
+#: src/ui-imgui/overlay/overlay_tab_media.cpp:874
+msgid "Unsaved changes"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_tab_media.cpp:619
+#, c-format
+msgid "%u KB"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_tab_media.cpp:623
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:212
+#, c-format
+msgid "Shared with FDD %d, write-protected"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_tab_media.cpp:624
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:282
+msgid "Read-only"
+msgstr "Тільки для читання"
+
+#: src/ui-imgui/overlay/overlay_tab_media.cpp:638
+msgid "Floppy drives"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_tab_media.cpp:674
+msgid "Cassette"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_tab_media.cpp:729
+msgid "Empty tape"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_tab_media.cpp:730
+#, c-format
+msgid "Recording block %d"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_tab_media.cpp:731
+#, c-format
+msgid "Block - / %d"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_tab_media.cpp:821
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:334
+msgid "Quick Disk"
+msgstr "Quick Disk"
+
+#: src/ui-imgui/overlay/overlay_tab_media.cpp:1002
+msgid "Recent media"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_tab_media.cpp:1012
+msgid "No recent media yet. Use Browse files..."
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_tab_media.cpp:1017
+msgid "Clear history"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_tab_media.cpp:1107
+msgid "Speed Max"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_tab_media.cpp:1108
+#, c-format
+msgid "Speed %u %%"
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:101
+msgid "The filter models the audio output stage of the real machine."
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:123
+msgid "The emulation is running so that you can hear the changes."
+msgstr ""
+
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:124
+msgid ""
+"Turn on Listen to hear the changes while the menu is open. The emulated "
+"computer keeps running without keyboard input."
+msgstr ""
 
 #: src/ui-imgui/plotter/plotter_window.cpp:108
 msgid "Black"
@@ -14074,27 +15164,6 @@ msgstr "Не вдалося зберегти знімок екрана до '%s'
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:271
 msgid "Screenshot Error"
 msgstr "Помилка знімка екрана"
-
-#: src/ui-imgui/screenshot/screenshot_ui.cpp:158
-#: src/ui-imgui/screenshot/screenshot_ui.cpp:190
-#: src/ui-imgui/screenshot/screenshot_ui.cpp:635
-#: src/ui-imgui/screenshot/screenshot_ui.cpp:644
-msgid "Save Screenshot"
-msgstr "Зберегти знімок екрана"
-
-#: src/ui-imgui/screenshot/screenshot_ui.cpp:189
-msgid "Screenshot"
-msgstr "Знімок екрана"
-
-#: src/ui-imgui/screenshot/screenshot_ui.cpp:193
-#: src/ui-imgui/screenshot/screenshot_ui.cpp:635
-#: src/ui-imgui/screenshot/screenshot_ui.cpp:645
-msgid "Save Screenshot As..."
-msgstr "Зберегти знімок екрана як..."
-
-#: src/ui-imgui/screenshot/screenshot_ui.cpp:198
-msgid "Record Changed Frames"
-msgstr "Записувати змінені кадри"
 
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:202
 msgid ""
@@ -14299,7 +15368,7 @@ msgstr "Неможливо прочитати метадані знімка"
 msgid "Load Snapshot"
 msgstr "Завантажити знімок"
 
-#: src/ui-imgui/snapshot/snapshot_notification.cpp:88
+#: src/ui-imgui/snapshot/snapshot_notification.cpp:108
 msgid "Snapshot Error"
 msgstr "Помилка знімка"
 
@@ -14367,11 +15436,6 @@ msgstr "Стандартні параметри збереження"
 msgid "Compression level"
 msgstr "Рівень стиснення"
 
-#: src/ui-imgui/snapshot/snapshot_setup_dialog.cpp:97
-#: src/ui-imgui/topmenu/menu_snapshot.cpp:133
-msgid "Quick Save"
-msgstr "Швидке збереження"
-
 #: src/ui-imgui/snapshot/snapshot_setup_dialog.cpp:112
 msgid "Quick save filename"
 msgstr "Ім'я файлу швидкого збереження"
@@ -14400,32 +15464,32 @@ msgstr "Поточна швидкість"
 msgid "Reset sliders"
 msgstr "Скинути повзунки"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:175
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:182
 msgid "Device for Direct MZF Start"
 msgstr "Пристрій для прямого запуску MZF"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:194
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:201
 msgid "CMT - cassette"
 msgstr "CMT - касета"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:195
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:202
 msgid "FD - floppy disk"
 msgstr "FD - дискета"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:196
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:203
 msgid "QD - Quick Disk"
 msgstr "QD - Quick Disk"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:197
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:204
 msgid "RD - SRAM"
 msgstr "RD - SRAM"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:216
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:218
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:223
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:225
 msgid "Custom value"
 msgstr "Власне значення"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:236
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:243
 msgid ""
 "The device code a program gets in register BC when an MZF file\n"
 "is started directly (command line --run-mzf, MCP emu_media_run_mzf),\n"
@@ -14437,24 +15501,24 @@ msgstr ""
 "ніби її завантажено з цього пристрою.\n"
 "Деякі програми за ним вибирають пристрій за замовчуванням."
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:270
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:277
 msgid "Device Code for Direct MZF Start"
 msgstr "Код пристрою для прямого запуску MZF"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:276
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:283
 #, c-format
 msgid "Current value: %04Xh (%s)"
 msgstr "Поточне значення: %04Xh (%s)"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:277
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:284
 msgid "Decimal (512) or hexadecimal (0x0200 or 0200h), 0 to 65535."
 msgstr "Десятково (512) або шістнадцятково (0x0200 або 0200h), від 0 до 65535."
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:294
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:301
 msgid "Invalid value"
 msgstr "Недійсне значення"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:297
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:304
 msgid ""
 "A number with a leading zero is not accepted: write hexadecimal as 0x0200 or "
 "0200h."
@@ -14462,59 +15526,59 @@ msgstr ""
 "Число з початковим нулем не приймається: шістнадцяткове пишіть як 0x0200 або "
 "0200h."
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:349
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:359
 msgid "CMT"
 msgstr "CMT"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:365
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:375
 msgid "Use CMT Hack"
 msgstr "Використовувати CMT Hack"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:377
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:387
 msgid "Set Default CMT MZ Speed"
 msgstr "Встановити стандартну швидкість MZ CMT"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:379
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:389
 msgid "1:1 - 1200 Bd"
 msgstr "1:1 - 1200 Bd"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:384
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:394
 msgid "2:1 - 2 400 Bd"
 msgstr "2:1 - 2 400 Bd"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:389
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:399
 msgid "2:1 - 2 400 Bd (cp/m)"
 msgstr "2:1 - 2 400 Bd (cp/m)"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:394
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:404
 msgid "7:3 - 2 800 Bd"
 msgstr "7:3 - 2 800 Bd"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:399
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:409
 msgid "8:3 - 3 200 Bd"
 msgstr "8:3 - 3 200 Bd"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:404
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:414
 msgid "3:1 - 3 600 Bd"
 msgstr "3:1 - 3 600 Bd"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:414
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:424
 msgid "Fast Open CMT File & Play..."
 msgstr "Швидко відкрити файл CMT і відтворити..."
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:420
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:442
 msgid "Show Virtual CMT"
 msgstr "Показати віртуальний CMT"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:427
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:449
 msgid "CMT Options"
 msgstr "Параметри CMT"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:429
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:451
 msgid "Enable CPU Boost"
 msgstr "Увімкнути прискорення CPU"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:444
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:466
 msgid ""
 "Plays the tape signal through the speaker while the tape\n"
 "is playing or recording. Direct loading and saving have no signal."
@@ -14522,37 +15586,37 @@ msgstr ""
 "Відтворює сигнал стрічки через динамік, коли стрічка відтворюється\n"
 "або записується. Пряме завантаження і збереження сигналу не мають."
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:448
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:470
 msgid "MZF"
 msgstr "MZF"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:450
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:472
 msgid "Enable MZF Size Check"
 msgstr "Увімкнути перевірку розміру MZF"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:456
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:478
 msgid "Fix MZF Size Automatically"
 msgstr "Автоматично виправляти розмір MZF"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:468
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:490
 msgid "Fix FNAME Terminator"
 msgstr "Виправити термінатор FNAME"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:477
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:499
 msgid "Direct Save"
 msgstr "Пряме збереження"
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:485
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:507
 msgid "Direct Save works only with Direct loading: turn on Use CMT Hack first."
 msgstr ""
 "Пряме збереження працює лише з прямим завантаженням: спочатку увімкніть "
 "Використовувати CMT Hack."
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:487
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:509
 msgid "The selected ROM does not support direct saving."
 msgstr "Вибраний ROM не підтримує пряме збереження."
 
-#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:489
+#: src/ui-imgui/topmenu/devices/menu_cmt.cpp:511
 msgid ""
 "Without Record, a ROM SAVE stores the file at once as a new block at the end "
 "of the tape.\n"
@@ -14569,111 +15633,107 @@ msgstr "HW та пристрої"
 msgid "Bus Map"
 msgstr "Карта шини"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:74
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:76
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:79
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:81
 msgid "FDC: Unsaved RAM changes"
 msgstr "FDC: незбережені зміни у RAM"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:79
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:84
 #, c-format
 msgid "Drive %d is in Discard mode and has unsaved RAM changes."
 msgstr "Пристрій %d je у режимu Discard a містить незбережені зміни у RAM."
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:80
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:89
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:85
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:113
 #, c-format
 msgid "Switching to '%s' mode will close the current RAM buffer."
 msgstr "Перемикання до режимu '%s' закриє поточний RAM buffer."
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:83
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:91
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:88
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:115
 msgid "What to do with the changes?"
 msgstr "Що виконати себе змінами?"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:89
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:96
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:94
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:120
 msgid "Save and switch"
 msgstr "Зберегти a перемикнути"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:90
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:97
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:95
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:121
 msgid "Switch and discard"
 msgstr "Перемикнути a відкинути"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:166
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:198
 #: src/ui-imgui/topmenu/devices/menu_ide8.cpp:42
 msgid "No image"
 msgstr "Немає образу"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:179
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:230
 msgid "Mount..."
 msgstr "Змонтувати..."
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:179
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:230
 msgid "Re-Mount..."
 msgstr "Перемонтувати..."
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:204
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:271
 msgid "Read-only (FS write-protected)"
 msgstr "Тільки для читання (файл захищено proti запису)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:210
-msgid "Read-only"
-msgstr "Тільки для читання"
-
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:223
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:348
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:297
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:501
 msgid "Storage mode"
 msgstr "Режим сховище"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:241
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:370
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:315
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:523
 msgid "Cached (sync at reset/umount/exit)"
 msgstr "Cached (sync при скидання/відключення/кінці)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:246
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:375
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:320
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:528
 msgid "Direct (write-through to file)"
 msgstr "Direct (прямий запис до файлу)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:251
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:380
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:325
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:533
 msgid "Discard changes (in-RAM, no sync)"
 msgstr "Discard (тільки у RAM, без synchronizace)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:259
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:333
 msgid "Sync now"
 msgstr "Synchronizovat тепер"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:273
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:347
 msgid "FDD "
 msgstr "FDD "
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:281
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:355
 msgid "(Empty)"
 msgstr "(Порожньо)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:310
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:384
 msgid "Hardware options"
 msgstr "Налаштування hardwaru"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:313
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:387
 msgid "HD Patch enabled"
 msgstr "HD Патч povolen"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:319
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:393
 msgid "Bus translation: invert (Sharp)"
 msgstr "Переклад шина: invertovat (Sharp)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:324
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:398
 msgid "Sharp MZ default - XOR 0xFF between CPU bus and WD279x chip."
 msgstr "За замовчуванням для Sharp MZ - XOR 0xFF між CPU шиною a чипом WD279x."
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:326
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:400
 msgid "Bus translation: passthrough"
 msgstr "Переклад шина: passthrough"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:334
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:408
 msgid ""
 "NOT compatible with Sharp MZ - no inversion between CPU bus and WD279x chip. "
 "Reserved for future 'true bus' ROMs / experiments."
@@ -14681,43 +15741,43 @@ msgstr ""
 "Не є сумісний себе Sharp MZ - без inverze між CPU шиною a чипом WD279x. "
 "Зарезервовано для майбутній 'true bus' ROM / experimenty."
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:353
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:427
 msgid "Floppy Drives"
 msgstr "Дисководи"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:367
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:441
 msgid "FD Controller"
 msgstr "Контролер FD"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:377
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:451
 #: src/ui-imgui/topmenu/devices/menu_memext.cpp:64
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:190
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:336
 #: src/ui-imgui/topmenu/devices/menu_ramdisk.cpp:70
 msgid "Not Connected"
 msgstr "Не підключено"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:387
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:461
 msgid "WD279x (standard)"
 msgstr "WD279x (стандартний)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:392
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:466
 msgid "Default FDC on ports 0xD8 - 0xDF"
 msgstr "Типовий FDC на портах 0xD8 - 0xDF"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:394
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:468
 msgid "WD279x (secondary)"
 msgstr "WD279x (вторинний)"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:399
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:473
 msgid "Unicard alternate FDC ports 0x58 - 0x5F"
 msgstr "Альтернативні порти FDC Unicard 0x58 - 0x5F"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:418
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:492
 #: src/ui-imgui/topmenu/menu_tools.cpp:32
 msgid "Tools"
 msgstr "Інструменти"
 
-#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:420
+#: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:494
 msgid "FDC State (debugger)..."
 msgstr "Стан FDC (debugger)..."
 
@@ -14890,123 +15950,119 @@ msgstr "Плотер MZ-1P16 під'єднано"
 msgid "Open plotter window"
 msgstr "Відкрити вікно плотера"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:83
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:85
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:107
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:109
 msgid "QD: Unsaved RAM changes"
 msgstr "QD: незбережені зміни у RAM"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:88
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:112
 msgid "Quick Disk is in Discard mode and has unsaved RAM changes."
 msgstr "Quick Диск je у режимu Discard a містить незбережені зміни у RAM."
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:178
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:202
 msgid "Create new QD image"
 msgstr "Створити новий QD образ"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:178
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:202
 msgid "qdimage.mzq"
 msgstr "qdimage.mzq"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:188
-msgid "Quick Disk"
-msgstr "Quick Disk"
-
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:195
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:341
 msgid "MZ 1F11"
 msgstr "MZ 1F11"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:200
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:346
 msgid "Virtual - Mapped Directory"
 msgstr "Віртуальний - Прив'язаний каталог"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:212
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:358
 msgid "Unicard Boot Loader"
 msgstr "Завантажувач Unicard"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:225
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:371
 msgid "Empty"
 msgstr "Порожньо"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:229
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:375
 msgid "image"
 msgstr "образ"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:233
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:379
 msgid "directory"
 msgstr "каталог"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:237
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:383
 #: src/ui-imgui/topmenu/devices/menu_unicard.cpp:235
 msgid "Unicard"
 msgstr "Unicard"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:240
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:386
 msgid "QD Drive"
 msgstr "Привід QD"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:243
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:389
 #, c-format
 msgid " (%s)"
 msgstr " (%s)"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:254
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:400
 msgid "Dir"
 msgstr "Кат."
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:261
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:407
 #, c-format
 msgid "%s: %s..."
 msgstr "%s: %s..."
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:265
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:411
 #, c-format
 msgid "%s: %s"
 msgstr "%s: %s"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:275
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:421
 msgid "Mount Image..."
 msgstr "Змонтувати образ..."
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:275
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:421
 msgid "Mount Directory..."
 msgstr "Змонтувати каталог..."
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:282
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:435
 msgid "Unmount"
 msgstr "Демонтувати"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:299
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:452
 msgid "Write Protected"
 msgstr "Захищено від запису"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:305
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:458
 msgid "Forced R/O by UNICARD - cannot be changed."
 msgstr "Примусово тільки для читання через UNICARD - не вдається змінити."
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:315
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:468
 msgid "    [FS R/O]"
 msgstr "    [FS R/O]"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:319
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:472
 msgid ""
 "File on disk is not writable - effective R/O regardless of user setting."
 msgstr ""
 "Файл на диска не є доступний для запису - ефективно тільки для читання без "
 "врахування на користувацькі налаштування."
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:332
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:485
 msgid "Save now"
 msgstr "Зберегти тепер"
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:389
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:542
 msgid "UNICARD mode is locked to Cached storage."
 msgstr "Режим UNICARD je заблоковано на сховище Cached."
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:394
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:547
 msgid "Create New Image..."
 msgstr "Створити новий образ..."
 
-#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:402
+#: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:555
 msgid "QDisk State (debugger)..."
 msgstr "Стан QDisk (debugger)..."
 
@@ -15097,12 +16153,6 @@ msgstr "Полярність CMT: "
 #: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:52
 msgid "Inverted"
 msgstr "Інвертована"
-
-#: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:56
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:30
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:65
-msgid "Normal"
-msgstr "Нормальна"
 
 #: src/ui-imgui/topmenu/devices/menu_rear_dip_switch.cpp:72
 msgid "Printer Standard: "
@@ -15295,55 +16345,27 @@ msgstr "Виберіть мову"
 msgid "System default"
 msgstr "Системне за замовчуванням"
 
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:25
-msgid "Display"
-msgstr "Дисплей"
-
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:28
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:56
 msgid "Color Schema"
 msgstr "Колірна схема"
 
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:34
-msgid "Grayscale"
-msgstr "Градації сірого"
-
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:47
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:75
 msgid "Custom Colormap..."
 msgstr "Користувацька палітра..."
 
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:55
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:83
 msgid "Window Size on Startup"
 msgstr "Розмір вікна при запуску"
 
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:57
-msgid "Half"
-msgstr "Половина"
-
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:61
-msgid "Native"
-msgstr "Рідний"
-
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:69
-msgid "Bigger"
-msgstr "Більший"
-
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:73
-msgid "Big"
-msgstr "Великий"
-
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:77
-msgid "Fullscreen"
-msgstr "Повний екран"
-
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:87
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:115
 msgid "Windows HDR"
 msgstr "Windows HDR"
 
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:89
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:117
 msgid "Forced Auto Reset HDR After Fullscreen"
 msgstr "Примусове скидання HDR після повноекранного режиму"
 
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:91
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:119
 msgid ""
 "Windows sometimes switches to HDR mode when application is in fullscreen and "
 "does not reset after leaving FS mode.\n"
@@ -15355,35 +16377,35 @@ msgstr ""
 "Ця опція змусить Windows скинути режим HDR після виходу з повноекранного "
 "режиму."
 
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:95
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:123
 msgid "Reset HDR Mode Now..."
 msgstr "Скинути режим HDR зараз..."
 
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:97
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:125
 msgid "Try reset HDR mode now."
 msgstr "Спробувати скинути режим HDR зараз."
 
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:113
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:141
 msgid "Fix Window Aspect Ratio by Width"
 msgstr "Фіксувати співвідношення сторін за шириною"
 
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:125
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:153
 msgid "Fix Window Aspect Ratio by Height"
 msgstr "Фіксувати співвідношення сторін за висотою"
 
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:137
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:165
 msgid "Lock Window Aspect Ratio"
 msgstr "Заблокувати співвідношення сторін вікна"
 
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:145
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:173
 msgid "CRT Scanlines"
 msgstr "Лінії розгортки CRT"
 
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:147
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:175
 msgid "Enable Scanlines"
 msgstr "Увімкнути лінії розгортки"
 
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:151
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:179
 msgid ""
 "Darkens the gaps between raster lines like a CRT screen.\n"
 "Display only - screenshots and video recordings are not affected."
@@ -15391,25 +16413,16 @@ msgstr ""
 "Затемнює проміжки між рядками растра, як на екрані CRT.\n"
 "Лише відображення - знімки екрана та відеозаписи не змінюються."
 
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:158
-msgid "Intensity"
-msgstr "Інтенсивність"
-
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:162
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:190
 #, c-format
 msgid "How much the gap between raster lines is darkened (100 %% = black)."
 msgstr "Наскільки затемнюється проміжок між рядками растра (100 %% = чорний)."
 
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:172
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:200
 msgid "Frame Rate Control"
 msgstr "Керування частотою кадрів"
 
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:175
-#, c-format
-msgid "Slave (%dHz)"
-msgstr "Веденій (%dHz)"
-
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:180
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:208
 msgid ""
 "The interface will attempt to refresh the image at the frequency set by the "
 "emulator."
@@ -15417,19 +16430,11 @@ msgstr ""
 "Інтерфейс намагатиметься оновлювати зображення з частотою, встановленою "
 "емулятором."
 
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:182
-msgid "Swap With V-Sync"
-msgstr "Обмін з V-Sync"
-
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:186
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:214
 msgid "Synchronized swap interval with the vertical retrace."
 msgstr "Синхронізований інтервал обміну з вертикальним оновленням."
 
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:188
-msgid "Swap With V-Sync (Adaptive)"
-msgstr "Обмін з V-Sync (адаптивний)"
-
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:192
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:220
 msgid ""
 "Adaptive vsync works the same as Vsync, but if is already missed the "
 "vertical retrace for a given frame,\n"
@@ -15443,21 +16448,13 @@ msgstr ""
 "падінь частоти кадрів.\n"
 "Ця функція повинна підтримуватися вашою системою."
 
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:194
-msgid "Immediate Swap"
-msgstr "Негайний обмін"
-
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:198
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:226
 msgid "Immediate swap interval using a maximum available refresh rate."
 msgstr ""
 "Негайний інтервал обміну з використанням максимальної доступної частоти "
 "оновлення."
 
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:200
-msgid "Custom FPS"
-msgstr "Власний FPS"
-
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:204
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:232
 msgid ""
 "The interface will attempt to refresh the image at the frequency set by the "
 "user."
@@ -15465,11 +16462,11 @@ msgstr ""
 "Інтерфейс намагатиметься оновлювати зображення з частотою, встановленою "
 "користувачем."
 
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:231
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:259
 msgid "Forced Redraw Every Screen"
 msgstr "Примусове перемальовування кожного екрану"
 
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:235
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:263
 msgid ""
 "A frame redraw will be forced regardless of whether the framebuffer has "
 "changed.\n"
@@ -15480,7 +16477,7 @@ msgstr ""
 "фреймбуфер.\n"
 "Цей режим трохи більше навантажить GPU та зменшить FPS інтерфейсу."
 
-#: src/ui-imgui/topmenu/interface/menu_display.cpp:239
+#: src/ui-imgui/topmenu/interface/menu_display.cpp:267
 msgid "FPS Measurement..."
 msgstr "Вимірювання FPS..."
 
@@ -15503,10 +16500,6 @@ msgstr "Клавіатура та джойстик"
 #: src/ui-imgui/topmenu/interface/menu_keyjoy.cpp:24
 msgid "Virtual Keyboard..."
 msgstr "Віртуальна клавіатура..."
-
-#: src/ui-imgui/topmenu/interface/menu_keyjoy.cpp:36
-msgid "Joystick Setup..."
-msgstr "Налаштування joysticku..."
 
 #: src/ui-imgui/topmenu/menu_debugger.cpp:62
 msgid "DbgTool"
@@ -15679,16 +16672,6 @@ msgstr "Режим розробника"
 msgid "ImGui Demo"
 msgstr "ImGui Demo"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:131
-msgid "Replay"
-msgstr "Повтор"
-
-#: src/ui-imgui/topmenu/menu_replay.cpp:139
-#: src/ui-imgui/topmenu/replay_window.cpp:309
-#: src/ui-imgui/topmenu/replay_window.cpp:320
-msgid "Record Inputs..."
-msgstr "Записати введення..."
-
 #: src/ui-imgui/topmenu/menu_replay.cpp:143
 msgid ""
 "Record keyboard, joystick, resets and debugger writes from a start snapshot, "
@@ -15696,24 +16679,6 @@ msgid ""
 msgstr ""
 "Записує клавіатуру, джойстик, скидання та записи налагоджувача від "
 "стартового знімка, щоб пізніше точно повторити запуск."
-
-#: src/ui-imgui/topmenu/menu_replay.cpp:145
-#: src/ui-imgui/topmenu/replay_window.cpp:309
-#: src/ui-imgui/topmenu/replay_window.cpp:321
-msgid "Play Replay..."
-msgstr "Відтворити повтор..."
-
-#: src/ui-imgui/topmenu/menu_replay.cpp:149
-#: src/ui-imgui/topmenu/replay_window.cpp:309
-#: src/ui-imgui/topmenu/replay_window.cpp:322
-msgid "Stop Replay"
-msgstr "Зупинити повтор"
-
-#: src/ui-imgui/topmenu/menu_replay.cpp:155
-#: src/ui-imgui/topmenu/replay_window.cpp:309
-#: src/ui-imgui/topmenu/replay_window.cpp:323
-msgid "Rewind"
-msgstr "Назад до контрольної точки"
 
 #: src/ui-imgui/topmenu/menu_replay.cpp:159
 msgid ""
@@ -15737,39 +16702,15 @@ msgstr ""
 "Переводить відтворення на кадр: назад через контрольну точку, вперед на "
 "максимальній швидкості."
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:168
-msgid "Replay Control..."
-msgstr "Керування повтором..."
-
-#: src/ui-imgui/topmenu/menu_replay.cpp:176
-#, c-format
-msgid "Recording: frame %u, %u events"
-msgstr "Запис: кадр %u, %u подій"
-
 #: src/ui-imgui/topmenu/menu_replay.cpp:179
 #, c-format
 msgid "Rewinds: %u"
 msgstr "Повернень: %u"
 
-#: src/ui-imgui/topmenu/menu_replay.cpp:184
-#, c-format
-msgid "Playing: frame %u / %u"
-msgstr "Відтворення: кадр %u / %u"
-
 #: src/ui-imgui/topmenu/menu_replay.cpp:187
 #, c-format
 msgid "Seeking to frame %u"
 msgstr "Перехід до кадру %u"
-
-#: src/ui-imgui/topmenu/menu_replay.cpp:191
-#, c-format
-msgid "Deviated: %s"
-msgstr "Відхилено: %s"
-
-#: src/ui-imgui/topmenu/menu_replay.cpp:196
-#, c-format
-msgid "Last: %s"
-msgstr "Останній: %s"
 
 #: src/ui-imgui/topmenu/menu_replay.cpp:200
 msgid "No replay"
@@ -15853,25 +16794,9 @@ msgstr "ПОВТОР ВІДТ %u / %u%s"
 msgid " (deviated)"
 msgstr " (відхилено)"
 
-#: src/ui-imgui/topmenu/menu_snapshot.cpp:111
-msgid "Load Snapshot..."
-msgstr "Завантажити знімок..."
-
-#: src/ui-imgui/topmenu/menu_snapshot.cpp:117
+#: src/ui-imgui/topmenu/menu_snapshot.cpp:131
 msgid "Not available while a replay is recorded or played."
 msgstr "Недоступно під час запису або відтворення повтору."
-
-#: src/ui-imgui/topmenu/menu_snapshot.cpp:120
-msgid "Save Snapshot..."
-msgstr "Зберегти знімок..."
-
-#: src/ui-imgui/topmenu/menu_snapshot.cpp:127
-msgid "Quick Load"
-msgstr "Швидке завантаження"
-
-#: src/ui-imgui/topmenu/menu_snapshot.cpp:140
-msgid "Snapshot Setup..."
-msgstr "Налаштування знімків..."
 
 #: src/ui-imgui/topmenu/menu_speed.cpp:29
 msgid "Normal CPU Speed"
@@ -15989,7 +16914,11 @@ msgstr ""
 msgid "Available while playing a replay."
 msgstr "Доступно під час відтворення повтору."
 
-#: src/ui-imgui/topmenu/topmenu.cpp:78
+#: src/ui-imgui/topmenu/topmenu.cpp:50
+msgid "Overlay Menu..."
+msgstr ""
+
+#: src/ui-imgui/topmenu/topmenu.cpp:101
 msgid "About..."
 msgstr "Про програму..."
 
@@ -16089,10 +17018,6 @@ msgstr "Дата збірки"
 msgid "Setup"
 msgstr "Налаштування"
 
-#: src/ui-imgui/version_check/imgui_version_check.cpp:390
-msgid "Close"
-msgstr "Закрити"
-
 #: src/ui-imgui/videorec/videorec_menu.cpp:41
 msgid "Video recording is not initialized"
 msgstr "Запис відео не ініціалізовано"
@@ -16137,26 +17062,10 @@ msgstr "Відкинути кадри (без шва)"
 msgid "Keep as cut with transition"
 msgstr "Залишити як склейку з переходом"
 
-#: src/ui-imgui/videorec/videorec_menu.cpp:113
-#: src/ui-imgui/videorec/videorec_remote_window.cpp:229
-msgid "Stop Recording"
-msgstr "Зупинити запис"
-
-#: src/ui-imgui/videorec/videorec_menu.cpp:113
-#: src/ui-imgui/videorec/videorec_remote_window.cpp:229
-msgid "Start Recording"
-msgstr "Почати запис"
-
 #: src/ui-imgui/videorec/videorec_menu.cpp:133
 #: src/ui-imgui/videorec/videorec_remote_window.cpp:230
 msgid "Resume Recording"
 msgstr "Продовжити запис"
-
-#: src/ui-imgui/videorec/videorec_menu.cpp:133
-#: src/ui-imgui/videorec/videorec_menu.cpp:440
-#: src/ui-imgui/videorec/videorec_remote_window.cpp:230
-msgid "Pause Recording"
-msgstr "Призупинити запис"
 
 #: src/ui-imgui/videorec/videorec_menu.cpp:136
 #: src/ui-imgui/videorec/videorec_menu.cpp:203
@@ -16238,19 +17147,11 @@ msgstr "Запис почнеться після відновлення емул
 msgid "Recording time base: %s"
 msgstr "Часова база запису: %s"
 
-#: src/ui-imgui/videorec/videorec_menu.cpp:432
-msgid "Video Recording"
-msgstr "Запис відео"
-
 #: src/ui-imgui/videorec/videorec_menu.cpp:444
 #: src/ui-imgui/videorec/videorec_remote_window.cpp:230
 #: src/ui-imgui/videorec/videorec_remote_window.cpp:260
 msgid "Add Marker"
 msgstr "Додати мітку"
-
-#: src/ui-imgui/videorec/videorec_menu.cpp:451
-msgid "Record in Real Time"
-msgstr "Записувати в реальному часі"
 
 #: src/ui-imgui/videorec/videorec_menu.cpp:456
 msgid ""

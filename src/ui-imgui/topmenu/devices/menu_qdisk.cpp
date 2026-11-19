@@ -1,3 +1,21 @@
+/**
+ * @file   menu_qdisk.cpp
+ * @brief  Nabídka Quick Disk klasického menu (HW & Devices > Quick Disk): připojení, mechanika, ochrana proti zápisu, režim ukládání.
+ *
+ * Stav jádra nabídka čte pod device_state_lock(), který drží
+ * imgui_topmenu_body() po dobu kreslení menu zařízení; změny jdou zásahy
+ * fronty zařízení (qdisk_request_*()), které provede emu vlákno.
+ *
+ * Podnabídka QD Drive > Recent nabízí naposledy vložené obrazy nebo
+ * adresáře se stejnými omezeními jako overlay menu: jen do prázdné
+ * mechaniky, jen položky odpovídající typu mechaniky (soubor obrazu pro MZ
+ * 1F11, adresář pro virtuální Quick Disk) a soubor, který už neexistuje,
+ * se nevkládá (vložení obrazu by ho jinak založilo jako nový). Zda cesta
+ * existuje a je-li to adresář, nezjišťuje UI vlákno: bere se z mezipaměti
+ * nedávných médií overlay menu (overlay_view_fill_recent()), kterou plní
+ * pracovní vlákno.
+ */
+
 #include "main.h"
 #include <stdbool.h>
 #include <stdint.h>
@@ -11,8 +29,14 @@
 #include "i18n.h"
 
 #include "ui-imgui/topmenu/topmenu.h"
+#include "ui-imgui/topmenu/menu_recent.h"
+#include "ui-imgui/overlay/overlay_view.h"
 #include "ui-imgui/bootstrap/myimgui.h"
 #include "ui-imgui/mywidgets/mywidgets.h"
+extern "C"
+{
+#include "baseui/baseui.h"
+}
 #include "emulator/hw-generic/qdisk/qdisk.h"
 #include "emulator/hw-generic/qdisk/qdisk_request.h"
 #include "emulator/hw-generic/unicard/unicard.h"
@@ -183,6 +207,128 @@ void imgui_qdisk_create_image(void)
     };
 }
 
+/**
+ * @brief Kopie nedávných médií se stavem existence souborů pro podnabídku Recent.
+ *
+ * Používají se jen pole recent, recent_count a recent_now; plní je
+ * overlay_view_fill_recent() nejvýš jednou za snímek při otevřené
+ * podnabídce (menu_qdisk_recent_state()). Patří jen UI vláknu.
+ */
+static st_OVERLAY_VIEW s_qd_recent_view;
+/** @brief Číslo snímku ImGui posledního plnění s_qd_recent_view (-1 = ještě nikdy). */
+static int s_qd_recent_frame = -1;
+
+/**
+ * @brief Položka Quick Disku v kopii nedávných médií podle cesty.
+ *
+ * Při prvním volání ve snímku kopii obnoví z mezipaměti a nechá pracovní
+ * vlákno zjišťovat existenci souborů (podnabídka je vidět); na disk nečeká.
+ *
+ * @param path Cesta z historie (UTF-8).
+ * @return Položka, nebo NULL (cesta se do kopie nevešla nebo z historie mezitím zmizela).
+ * @pre UI vlákno, uvnitř snímku ImGui.
+ * @note Volá se pod device_state_lock() (menu zařízení): bere jen krátké
+ *       zámky historie a mezipaměti, žádný z nich se nedrží přes volání do
+ *       jádra zařízení.
+ */
+static const st_OVERLAY_VIEW_RECENT *menu_qdisk_recent_state(const char *path)
+{
+    const int frame = ImGui::GetFrameCount();
+    if (frame != s_qd_recent_frame)
+    {
+        s_qd_recent_frame = frame;
+        overlay_view_fill_recent(&s_qd_recent_view, true);
+    };
+    for (unsigned i = 0; i < s_qd_recent_view.recent_count; i++)
+    {
+        const st_OVERLAY_VIEW_RECENT *r = &s_qd_recent_view.recent[i];
+        if (r->kind == OVERLAY_MEDIA_QD && strcmp(r->path, path) == 0) return r;
+    };
+    return NULL;
+}
+
+/**
+ * @brief Výběr položek podnabídky Recent: vynechá cesty jiného druhu, než jaký mechanika bere.
+ *
+ * Jako overlay menu: položka se známým stavem, která existuje a je adresář
+ * při mechanice s obrazem (nebo soubor při virtuálním Quick Disku), se
+ * nenabízí. Položky s neznámým stavem a chybějící položky zůstávají.
+ *
+ * @param path Cesta položky. @param user Nepoužívá se.
+ * @return true = nabídnout.
+ */
+static bool menu_qdisk_recent_filter(const char *path, void *user)
+{
+    (void)user;
+    const st_OVERLAY_VIEW_RECENT *r = menu_qdisk_recent_state(path);
+    if (r && r->checked && !r->missing && r->is_dir != (QDISK_TEST_TYPE_VIRTUAL != 0)) return false;
+    return true;
+}
+
+/**
+ * @brief Ohlásí zprávou text s jednou cestou.
+ * @param format Přeložený formát s jedním `%s`. @param path Cesta dosazená za `%s`.
+ */
+static void menu_qdisk_message(const char *format, const char *path) __attribute__((format(printf, 1, 0)));
+static void menu_qdisk_message(const char *format, const char *path)
+{
+    gchar *text = g_strdup_printf(format, path);
+    baseui_show_message(false, (char *)"%s", text);
+    g_free(text);
+}
+
+/**
+ * @brief Vloží Quick Disk zvolený v podnabídce Recent (stejná pravidla jako list výměny média overlay menu).
+ *
+ * Stav souboru ještě není známý nebo je údaj "chybí" starší než
+ * OVERLAY_VIEW_RECENT_FRESH_US: nic se nevkládá, vyžádá se nové zjištění a
+ * uživatel dostane zprávu. Soubor neexistuje: položka se z historie
+ * odstraní a ohlásí. Jinak zařadí qdisk_request_mount() s druhem cesty
+ * podle zjištěného stavu.
+ *
+ * @param path Zvolená cesta (UTF-8).
+ * @pre UI vlákno, mechanika je prázdná (podnabídka je jinak zakázaná).
+ */
+static void menu_qdisk_recent_insert(const char *path)
+{
+    const st_OVERLAY_VIEW_RECENT *r = menu_qdisk_recent_state(path);
+    if (!r)
+    {
+        menu_qdisk_message(_("The file path is too long:\n%s"), path);
+    }
+    else if (!r->checked || (r->missing && g_get_monotonic_time() - (gint64)r->checked_us > OVERLAY_VIEW_RECENT_FRESH_US))
+    {
+        overlay_view_recent_recheck();
+        menu_qdisk_message(_("Still checking whether the file exists. Try again in a moment:\n%s"), path);
+    }
+    else if (r->missing)
+    {
+        recent_media_remove_path(RECENT_MEDIA_QD, path);
+        overlay_view_recent_recheck();
+        menu_qdisk_message(_("The file no longer exists and was removed from the recent media:\n%s"), path);
+    }
+    else if (r->is_dir != (QDISK_TEST_TYPE_VIRTUAL != 0))
+    {
+        /* typ mechaniky se změnil mezi kreslením a kliknutím */
+        baseui_show_message(false, (char *)"%s", r->is_dir ? _("The Quick Disk is set to a disk image.") : _("The Quick Disk is set to a mapped directory."));
+    }
+    else
+    {
+        qdisk_request_mount(path, r->is_dir ? 1 : 0);
+    };
+}
+
+/**
+ * @brief Nakreslí nabídku Quick Disk.
+ *
+ * Připojení (Not Connected / MZ 1F11 / Virtual - Mapped Directory / Unicard
+ * Boot Loader), podnabídka QD Drive (vložené médium, Mount..., Recent,
+ * Unmount), Write Protected, režim ukládání a Save now. Podnabídka Recent
+ * je dostupná jen s prázdnou mechanikou, stejně jako Mount...
+ *
+ * @pre UI vlákno uvnitř lišty nebo popupu menu ImGui, pod device_state_lock().
+ * @post Stav jádra se nemění přímo; změny provede emu vlákno zásahy.
+ */
 void imgui_menu_qdisk(void)
 {
     if (ImGui::BeginMenu(_L("Quick Disk")))
@@ -277,6 +423,13 @@ void imgui_menu_qdisk(void)
             if (ImGui::MenuItem(mount_label, NULL, false, (drive_option == drive_empty)))
             {
                 qdisk_ui_mount();
+            };
+
+            /* Naposledy vložené obrazy nebo adresáře: jen do prázdné mechaniky, jako Mount... a overlay menu. */
+            char recent_path[OVERLAY_VIEW_PATH_SIZE];
+            if (imgui_menu_recent(RECENT_MEDIA_QD, (drive_option == drive_empty), menu_qdisk_recent_filter, NULL, recent_path, sizeof(recent_path)))
+            {
+                menu_qdisk_recent_insert(recent_path);
             };
 
             if (ImGui::MenuItem(_L("Unmount"), NULL, false, (drive_option != drive_empty)))

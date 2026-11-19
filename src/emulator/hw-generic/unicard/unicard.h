@@ -655,6 +655,23 @@ extern "C" {
      */
     extern FRESULT unicard_chmod ( const char *path, uint8_t attr, uint8_t mask );
 
+    /**
+     * @brief Vloží nebo vysune obraz diskety na příkaz emulovaného správce Unicard.
+     *
+     * Míří na řadič spravovaný Unicard API (bez něj nedělá nic). Cesta se
+     * převádí vůči kořeni SD karty; cesta mimo kořen nebo neexistující soubor
+     * mechaniku nezmění (záznam na stderr). Do historie naposledy vložených
+     * médií se nezapisuje. Platí pravidla sdíleného obrazu (fdc.h).
+     *
+     * Výměnu obrazu provede pod device_state_lock(): uvolňuje paměť mechaniky
+     * (jméno, identita souboru), kterou UI čte pod týmž zámkem. Zámek si vezme
+     * sama, pokud ho volající vlákno ještě nedrží (device_state_lock_held()).
+     *
+     * @param drive_id Mechanika (0..3).
+     * @param filepath Cesta na SD kartě (UTF-8); "" = vysunout.
+     * @pre Emu vlákno. UI vlákno pod zámkem na emu vlákno nečeká
+     *      (device_request.h), takže čekání na zámek skončí.
+     */
     extern void unicard_fdc_mount ( uint8_t drive_id, char *filepath );
     void unicard_ui_select_sd_root_directory(void);
 

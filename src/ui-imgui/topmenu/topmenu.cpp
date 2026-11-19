@@ -17,6 +17,7 @@
 #include "topmenu.h"
 #include "ui-imgui/debugger/dbgapi_helpers.h"
 #include "ui-imgui/cmt/imgui_cmt.h"
+#include "ui-imgui/overlay/overlay.h"
 
 // #if HAVE_JOY
 // #include "iface/iface_joy.h"
@@ -28,8 +29,34 @@ extern "C"
     void imgui_topmenu_body(void);
 } // extern "C"
 
+/**
+ * @brief Obsah klasického menu emulátoru (popup pravého tlačítka myši nad obrazem).
+ *
+ * První položka "Overlay Menu..." otevírá overlay menu: zvolení popup
+ * zavře a overlay otevře hlavní okno až v příštím snímku
+ * (imgui_overlay_request_open()), aby popup nezůstal pod overlayem a
+ * overlay dostal fokus. Sloupec zkratek položky ("F10, Alt+Click")
+ * připomíná obě cesty mimo menu: klávesu F10 a levý Alt s levým
+ * tlačítkem myši nad obrazem (main_window_overlay_open_click()).
+ * Následují nabídky zařízení (pod
+ * device_state_lock(); při aktivním záznamu nebo přehrávání vstupů
+ * zakázané), rozhraní, rychlosti, emulátoru, snapshotů a replay, položky
+ * Pause Emulation a Reset, nabídka debuggeru (jen v buildu s debuggerem),
+ * nástroje a About.
+ *
+ * @pre UI vlákno; uvnitř otevřeného popupu (po úspěšném ImGui::BeginPopup()).
+ * @post Popup je uzavřen (ImGui::EndPopup()).
+ */
 void imgui_topmenu_body(void)
 {
+    /* Overlay menu: stejná cesta jako F10 nebo levý Alt + klik nad obrazem; při otevřeném overlayi položka
+     * nemá co dělat. Názvy kláves ve sloupci zkratek se nepřekládají. */
+    if (ImGui::MenuItem(_L("Overlay Menu..."), "F10, Alt+Click", false, !imgui_overlay_is_open()))
+    {
+        imgui_overlay_request_open();
+    };
+    ImGui::Separator();
+
     /* Záznam a přehrání vstupů: nastavení stroje se během nich měnit nesmí
      * (záznam by změnu nezopakoval, rozhodnutí M6a v1). */
     bool replay_active = replay_is_active();

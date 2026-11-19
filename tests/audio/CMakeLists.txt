@@ -26,3 +26,12 @@ mz_add_test(audio_ctc0_ac
     SOURCES  test_audio_ctc0_ac.c
     LABELS   "emu;audio"
 )
+
+# Hlavní hlasitost a ztlumení poslechu (iface_audio_apply_master()): výchozí
+# stav nechá blok bitově shodný, ztlumení dá ticho, zisk 0,5 poloviční
+# amplitudu, změna je plynulý přechod přes jeden blok; meze nastavení.
+mz_add_test(audio_master
+    TYPE     EMU
+    SOURCES  test_audio_master.c
+    LABELS   "emu;audio"
+)

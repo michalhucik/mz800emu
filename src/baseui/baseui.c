@@ -6,6 +6,7 @@
 #include "baseui/baseui.h"
 #include "ui-imgui/cmt/imgui_cmt.h"
 #include "ui-imgui/message/message_window.h"
+#include "i18n.h"
 
 #ifdef USE_NFDIALOG
 // #include "nfd.h"
@@ -26,6 +27,25 @@ void baseui_show_message(bool is_error, char *format, ...)
     imgui_message_vprintf(msg_type, format, args_copy);
     va_end(args_copy);
     va_end(args);
+}
+
+void baseui_show_message_tr(bool is_error, const char *format, ...)
+{
+    FILE *stream = is_error ? stderr : stdout;
+    va_list args, args_copy;
+    va_start(args, format);
+    va_copy(args_copy, args);
+    vfprintf(stream, format, args);
+    fputc(10, stream);
+    ui_message_type_t msg_type = is_error ? MESSAGE_TYPE_ERROR : MESSAGE_TYPE_INFO;
+    imgui_message_vprintf(msg_type, _(format), args_copy);
+    va_end(args_copy);
+    va_end(args);
+}
+
+const char *baseui_translate(const char *msgid)
+{
+    return _(msgid);
 }
 
 /**

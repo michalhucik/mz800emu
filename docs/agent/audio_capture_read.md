@@ -76,6 +76,15 @@ The memory stays readable after the capture ends, until the next
   affected. The MZ-700 emulators have no such key (`settings_set` fails):
   that machine has no output filter, the PCM always uses the older
   per-channel smoothing.
+- The user's master volume and mute (overlay menu, Sound tab, and the
+  Audio Mixer window) are applied only to what the sound device plays.
+  The capture files (`reference.wav`, `sdl.wav`), the level events and
+  the sound of a video recording do not contain them: a capture has the
+  full level even while the user has muted the emulator. The master
+  volume is the INI key `[AUDIO] volume_master`; it is not in the
+  `emu_settings_set` whitelist, `emu_settings_get` reads it. Mute is not
+  a setting: it is not saved, has no key, and the emulator always starts
+  unmuted.
 - How well founded the sound path is: MZ-800 measured on a real machine,
   MZ-1500 derived from the MZ-800, MZ-700 estimated from the schematic
   (nothing measured). On the MZ-700 the AC coupling of the speaker is an

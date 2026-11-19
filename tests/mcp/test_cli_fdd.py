@@ -7,8 +7,11 @@ Ověřuje na skutečném emulátoru (MZ-800):
      ``--fdd 0=a.dsk``, ``--fdd1 b.dsk`` (nahradí disk z INI), ``--fdd5
      b.dsk`` (FDC1, mechanika 1), ``--fdd-readonly 0``; disk z INI
      v mechanice 2 zůstane; ``media_state`` a ``get_periph_wd1793``
-     ukážou disky a read-only; po ukončení INI obsahuje cesty z CLI
-     a read-only z CLI v něm není;
+     ukážou disky a read-only; tentýž soubor ve dvou mechanikách
+     (``b.dsk`` v 1 a 5) má zápis jen v první, druhá je chráněná;
+     ``media_insert`` téhož souboru do další mechaniky vrátí ``warning``
+     a vloží ho chráněný, jiný soubor ``warning`` nemá; po ukončení INI
+     obsahuje cesty z CLI a read-only z CLI v něm není;
   2  chyby voleb (konec s kódem 1 před startem): chybějící soubor, číslo
      mechaniky mimo 0-7, ``--fdd`` bez ``=``, mechanika dvakrát (``--fdd``
      i ``--fdd<N>``), ``--fdd-readonly`` mimo 0-7;
@@ -130,12 +133,30 @@ def case_mount(exe, tmp):
                for k, v in slots.items() if k.startswith("fdc")}
         want = {"fdc0_fd0": ("a.dsk", True), "fdc0_fd1": ("b.dsk", False),
                 "fdc0_fd2": ("c.dsk", False), "fdc0_fd3": (None, False),
-                "fdc1_fd0": (None, False), "fdc1_fd1": ("b.dsk", False),
+                "fdc1_fd0": (None, False), "fdc1_fd1": ("b.dsk", True),
                 "fdc1_fd2": (None, False), "fdc1_fd3": (None, False)}
-        check(got == want, f"drives after start ({got})")
+        check(got == want, "drives after start; b.dsk is in drives 1 and 5, only the first one "
+                           f"may write ({got})")
         drv = emu.call("get_periph_wd1793")["drives"][0]
         check(drv["present"] and drv["user_readonly"] and drv["tracks"] == 2,
               f"drive 0: DSK geometry read, write-protected by --fdd-readonly ({drv})")
+        # tentýž soubor do další mechaniky přes MCP: chráněný, odpověď nese warning
+        r = emu.call("media_insert", {"slot": "fdc0_fd3", "path": str(b)})
+        check("already inserted in FDD 1" in r.get("warning", "")
+              and "write-protected" in r.get("warning", ""),
+              f"media_insert of an image held by another drive returns a warning ({r})")
+        slots = {s["slot"]: s for s in emu.call("media_state")["slots"]}
+        check(slots["fdc0_fd3"]["inserted"] and slots["fdc0_fd3"]["ro"] and not slots["fdc0_fd1"]["ro"],
+              "the image inserted again is write-protected, the first drive keeps writing")
+        # jiný soubor: žádné warning, zápis povolen
+        d2 = d / "d.dsk"
+        make_dsk(d2)
+        r = emu.call("media_insert", {"slot": "fdc0_fd3", "path": str(d2)})
+        check("warning" not in r, f"media_insert of a different image has no warning ({r})")
+        slots = {s["slot"]: s for s in emu.call("media_state")["slots"]}
+        check(slots["fdc0_fd3"]["inserted"] and not slots["fdc0_fd3"]["ro"],
+              "a different image in the same drive is writable again")
+        emu.call("media_eject", {"slot": "fdc0_fd3"})
     finally:
         emu.close()
     check(_same_path(_ini_value(ini, "FDC", "wd279x_fdd0_dskpath"), a)

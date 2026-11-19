@@ -7,7 +7,9 @@
  * výchozí rychlost, Fix FNAME Terminator a Direct Save mění zásahy fronty zařízení
  * (cmt_request_*(), imgui_cmt_menu_set_cpu_boost()), které provede emu
  * vlákno; Fast Open CMT File & Play... jde automatem akcí okna kazety
- * (imgui_cmt_tape_action()). Přímo z UI vlákna mění jádro jen Enable MZF
+ * (imgui_cmt_tape_action()) a podnabídka Recent (naposledy vložené pásky,
+ * imgui_menu_recent()) stejným automatem přes imgui_cmt_tape_open_path(),
+ * jako list výměny pásky v overlay menu. Přímo z UI vlákna mění jádro jen Enable MZF
  * Size Check (cmt_mzfsize_check_set()) a Device for Direct MZF Start
  * (bootdev_setting_set_text(), nastavení s vlastním zámkem, stroj nemění);
  * Show Virtual CMT přepíná jen příznak okna (g_gui->showVirtualCmtWindow).
@@ -24,8 +26,13 @@
 #include "i18n.h"
 
 #include "ui-imgui/topmenu/topmenu.h"
+#include "ui-imgui/topmenu/menu_recent.h"
 #include "ui-imgui/bootstrap/myimgui.h"
 #include "ui-imgui/mywidgets/mywidgets.h"
+extern "C"
+{
+#include "baseui/baseui.h"
+}
 
 #include "emulator/hw-generic/cmt/cmt.h"
 #include "emulator/hw-generic/cmt/cmthack.h"
@@ -327,7 +334,10 @@ void imgui_menu_cmt_bootdev_popup(void)
  * hackem je položka zakázaná s tooltipem cmt_view_direct_unsupported_reason()
  * (týž důvod jako segment Direct okna); zapnutý hack s takovou ROM nastat
  * nemá (rom_reinstall() ho vypne). Ostatní položky: výchozí rychlost (jen ve
- * STOP), Fast Open CMT File & Play..., Show Virtual CMT, CMT Options (CPU
+ * STOP), Fast Open CMT File & Play..., Recent (naposledy vložené pásky:
+ * klik otevře pásku obvyklým postupem s dotazy na nahrávání a neuložené
+ * změny, imgui_cmt_tape_open_path(); běží-li jiný dotaz automatu, páska se
+ * nezmění a ohlásí se to zprávou), Show Virtual CMT, CMT Options (CPU
  * Boost, Echo, kontrola velikosti MZF a její automatická oprava, Fix FNAME
  * Terminator, Direct Save, Device for Direct MZF Start). Echo
  * (cmt_echo_set()) a Fix MZF Size Automatically (cmt_mzfsize_autofix_set(),
@@ -415,6 +425,18 @@ void imgui_menu_cmt(void)
         {
             /* páska se změnami se nejdřív zeptá na uložení */
             imgui_cmt_tape_action(IMGUI_CMT_TAPE_ACTION_OPEN_PLAY);
+        };
+
+        /* Naposledy vložené pásky: jako návrat dialogu Open... okna Virtual CMT (stejná cesta jako overlay menu). */
+        char recent_path[4096];
+        if (imgui_menu_recent(RECENT_MEDIA_CMT, true, NULL, NULL, recent_path, sizeof(recent_path)))
+        {
+            if (!imgui_cmt_tape_open_path(recent_path))
+            {
+                gchar *text = g_strdup_printf(_("Another tape dialog is still open. The tape was not changed:\n%s"), recent_path);
+                baseui_show_message(false, (char *)"%s", text);
+                g_free(text);
+            };
         };
 
         if (ImGui::MenuItem(_L("Show Virtual CMT"), "Alt+C", g_gui->showVirtualCmtWindow))

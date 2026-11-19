@@ -2281,6 +2281,19 @@ emu_media_insert(slot="qd", path="/disks/hra.mzq", ro=True)
 
 Vrací `{"ok": true, "slot": "fdc0_fd0", "result_code": 0}`.
 
+Do historie naposledy vložených médií (Recent media v overlay menu, sekce
+INI `[RECENT_MEDIA]`) se vložení přes MCP nezapisuje; totéž platí pro
+`emu_cmt_open`.
+
+Sloty `fdc0_fd*` a `fdc1_fd*`: když je tentýž soubor obrazu už vložený
+v jiné disketové mechanice, vloží se obraz **chráněný proti zápisu** (do
+jednoho souboru obrazu smí zapisovat jen jedna mechanika) a odpověď má
+`warning`: "The image is already inserted in FDD n. It was inserted
+write-protected here to keep the image file safe." (n = 0-3 pro FDC0,
+4-7 pro FDC1). `emu_media_state` pak u slotu ukazuje `ro: true`. Jinak
+odpověď `warning` nemá. Viz devices/fdc.md, oddíl "Stejný obraz ve více
+mechanikách".
+
 Slot `cmt` se chová jako `emu_cmt_open`: nový soubor se nejdřív načte
 a ověří, takže soubor, který nejde otevřít (chybí, je poškozený nebo
 nepodporovaný), vrátí chybu a vloženou pásku, její neuložené změny
@@ -2369,6 +2382,9 @@ Whitelist:
 - `AUDIO/volume_8253` (unsigned)
 - `AUDIO/volume_psg0` .. `AUDIO/volume_psg3` (unsigned)
 - `AUDIO/volume_psg1_0` .. `AUDIO/volume_psg1_3` (MZ-1500, unsigned)
+- hlavní hlasitost poslechu (`AUDIO/volume_master`) ve whitelistu není;
+  `emu_settings_get` ji přečte. Ztlumení poslechu klíč nemá (neukládá se,
+  emulátor se vždy spustí neztlumený)
 - `AUDIO/output_filter` (bool; výstupní dolní propust skutečného MZ-800, 346 Hz, výchozí zapnuto; přepnutí platí hned a bez lupnutí, i v běžícím záznamu zvuku a videa; v emulátorech MZ-700 klíč není, ten počítač propust nemá)
 - `DISPLAY/forced_full_screen_redrawing` (bool)
 - `DISPLAY/locked_window_aspect_ratio` (bool)

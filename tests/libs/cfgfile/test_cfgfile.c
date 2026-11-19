@@ -788,6 +788,42 @@ void test_ini_parse_float_out_of_range ( void ) {
 }
 
 
+/**
+ * @brief Klíč, který modul neregistruje, se při čtení tiše přeskočí a při uložení ze souboru zmizí.
+ *
+ * Vzor: starší INI se zrušeným klíčem "[AUDIO] mute" (ztlumení se už
+ * neukládá). Čtení skončí úspěchem, klíče před neznámým klíčem i za ním
+ * se načtou a cfgroot_save() zapíše jen registrované prvky.
+ */
+void test_ini_parse_unknown_key_ignored ( void ) {
+    create_test_ini (
+        "[AUDIO]\n"
+        "volume_master = 0x80000000\n"
+        "mute = 1\n"
+        "output_filter = 0\n"
+    );
+
+    st_CFGROOT *r = cfgroot_new ( test_ini_file );
+    st_CFGMODULE *m = cfgroot_register_new_module ( r, "AUDIO" );
+    cfgmodule_register_new_element ( m, "volume_master", CFGENTYPE_UNSIGNED, 0xFFFFFFFF, 0, 0xFFFFFFFF );
+    cfgmodule_register_new_element ( m, "output_filter", CFGENTYPE_BOOL, 1 );
+
+    TEST_ASSERT_EQUAL_INT ( EXIT_SUCCESS, cfgmodule_parse ( m ) );
+    TEST_ASSERT_NULL ( cfgmodule_get_element_by_name ( m, "mute" ) );
+    TEST_ASSERT_EQUAL_UINT ( 0x80000000, cfgmodule_get_element_unsigned_value_by_name ( m, "volume_master" ) );
+    TEST_ASSERT_EQUAL_INT ( 0, cfgmodule_get_element_bool_value_by_name ( m, "output_filter" ) );
+
+    cfgroot_save ( r );
+    cfgroot_destroy ( r );
+
+    gchar *saved = NULL;
+    TEST_ASSERT_TRUE ( g_file_get_contents ( test_ini_file, &saved, NULL, NULL ) );
+    TEST_ASSERT_NULL_MESSAGE ( strstr ( saved, "mute" ), "an unregistered key is not written back" );
+    TEST_ASSERT_NOT_NULL ( strstr ( saved, "volume_master" ) );
+    g_free ( saved );
+}
+
+
 /* ========================================================================
  * TESTY SAVE/LOAD ROUNDTRIP
  * ======================================================================== */
@@ -1155,6 +1191,7 @@ int main ( int argc, char *argv[] ) {
     RUN_TEST ( test_ini_parse_multiple_modules );
     RUN_TEST ( test_ini_parse_unsigned_out_of_range );
     RUN_TEST ( test_ini_parse_float_out_of_range );
+    RUN_TEST ( test_ini_parse_unknown_key_ignored );
 
     /* Save/load roundtrip */
     RUN_TEST ( test_ini_save_load_roundtrip );

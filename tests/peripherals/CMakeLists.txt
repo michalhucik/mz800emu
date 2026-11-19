@@ -214,6 +214,14 @@ mz_add_test(fdc-request
     LABELS   "emu;peripherals"
 )
 
+# Tentýž soubor obrazu diskety ve více mechanikách (fdc.h): druhé vložení
+# je chráněné proti zápisu, zápis do souboru smí jen jedna mechanika.
+mz_add_test(fdc-shared-image
+    TYPE     EMU
+    SOURCES  test_fdc_shared_image.c
+    LABELS   "emu;peripherals"
+)
+
 # Zásahy GUI do Quick Disku (qdisk_request.h): stav QD se změní až
 # v device_request_poll(), při replay se zásah neprovede.
 mz_add_test(qdisk-request

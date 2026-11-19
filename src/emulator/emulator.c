@@ -135,11 +135,22 @@ void emulator_quit_with_code(int exit_value)
     };
 }
 
+/**
+ * @brief Vypíše na standardní výstup tipy a přehled užitečných klávesových zkratek.
+ *
+ * Volá se jednou při startu emulátorového vlákna po inicializaci modulů.
+ * Texty jsou anglicky a nepřekládají se (jádro emulátoru je bez
+ * lokalizačních maker); řádky debuggeru jen v buildu s debuggerem.
+ *
+ * @post Na stdout jsou oddíly "Tips:" a "Some useful shortcut keys:".
+ */
 static void emulator_print_hint(void)
 {
 
     printf("\nTips:\n");
     printf("   - use right-click on the emulator window for the Menu.\n");
+    printf("   - press F10 (or left Alt + left-click on the emulator window) for the Overlay Menu:\n");
+    printf("     quick disk and tape swapping, display and sound settings - handy in fullscreen.\n");
     printf("   - ImGui window sizes and positions are stored in mz800emu-imgui.ini\n");
 
     printf("\nSome useful shortcut keys:\n");
@@ -165,6 +176,7 @@ static void emulator_print_hint(void)
     printf("   Alt + [1..4]           - mount FD image\n"); // Pokud je FDC odpojeno, tak se automaticky zapne WD279x
     printf("   Alt + Shift + [1..4]   - umount FD image\n");
     printf("   Alt + Ctrl + Enter     - switch fullscreen\n");
+    printf("   F10                    - open / close the Overlay Menu\n");
 
 #ifdef WINDOWS
     if (IsDebuggerPresent())
@@ -460,4 +472,10 @@ const char *emulator_get_speed_status_as_text(void)
         return _("Custom speed");
 
     return _("Normal speed");
+}
+
+/* Doxygen viz emulator.h. */
+const char *emulator_get_mute_status_as_text(void)
+{
+    return iface_audio_get_mute() ? _("MUTED") : NULL;
 }

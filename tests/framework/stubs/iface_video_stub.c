@@ -68,6 +68,12 @@ static void stub_video_switch_fullscreen(void)
     /* nic */
 }
 
+/* dotaz na fullscreen: testovací okno ve fullscreenu není */
+static bool stub_video_is_fullscreen(void)
+{
+    return false;
+}
+
 static void stub_video_reset_hdr(void)
 {
     /* nic */
@@ -84,6 +90,7 @@ static iface_video_callbacks_t stub_video_callbacks = {
     .set_framerate_mode = stub_video_set_framerate_mode,
     .set_fullscreen = stub_video_set_fullscreen,
     .switch_fullscreen = stub_video_switch_fullscreen,
+    .is_fullscreen = stub_video_is_fullscreen,
     .reset_hdr = stub_video_reset_hdr,
 };
 

@@ -118,6 +118,7 @@ mz_glob_sources(_test_emu_sources
     src/emulator/snapshot
     src/emulator/videorec
     src/emulator/screenshot
+    src/emulator/recent_media
     src/emulator/mzarch/mz800
     src/emulator/mcp
 )

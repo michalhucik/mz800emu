@@ -5,6 +5,12 @@
  * Argumenty zásahu (st_DEVICE_REQ_ARGS): i[0] = index řadiče, i[1] =
  * mechanika, i[2] = hodnota volby, i[3] = příznak (save_first), str =
  * cesta nebo režim úložiště.
+ *
+ * Stejný obraz ve více mechanikách (fdc.h): zásah vložení ohlásí oknem
+ * se zprávou, že obraz dostal ochranu kvůli sdílení; zásah read-only
+ * odmítne sundání ochrany, dokud soubor drží jiná mechanika se zápisem.
+ * Texty zpráv jsou anglické msgid označené N_(), překládá je až
+ * baseui_show_message_tr() (jádro samo nepřekládá).
  */
 
 #include <string.h>
@@ -15,6 +21,7 @@
 #include "fdc_request.h"
 #include "device_request.h"
 #include "baseui/baseui.h"
+#include "i18n.h"
 
 
 /**
@@ -30,7 +37,7 @@ static bool fdc_request_valid(unsigned fdc_index, unsigned drive_id)
 
 
 /**
- * @brief Remount nasazeného obrazu (nová volba read-only / úložiště).
+ * @brief Remount nasazeného obrazu (nová volba úložiště).
  * @param fdc      Řadič.
  * @param drive_id Mechanika.
  * @pre Emu vlákno (zásah).
@@ -47,7 +54,15 @@ static void fdc_request_remount(st_FDC *fdc, unsigned drive_id)
 }
 
 
-/** @brief Zásah: mount DSK (i[0] řadič, i[1] mechanika, str cesta). */
+/**
+ * @brief Zásah: mount DSK (i[0] řadič, i[1] mechanika, str cesta).
+ *
+ * Když soubor už drží jiná mechanika, obraz se vloží s ochranou kvůli
+ * sdílení a uživatel dostane zprávu (návratová hodnota zůstává 0).
+ *
+ * @return 0 = zásah proběhl (i když se obraz nepodařilo otevřít, jako dřív);
+ *         -1 = odpojený řadič nebo příliš dlouhá cesta.
+ */
 static int fdc_request_exec_mount(const st_DEVICE_REQ_ARGS *a)
 {
     st_FDC *fdc = &g_fdc[a->i[0]];
@@ -65,6 +80,11 @@ static int fdc_request_exec_mount(const st_DEVICE_REQ_ARGS *a)
     char *path = g_strdup(a->str);
     fdc_mount_dskfile(fdc, drive_id, path);
     g_free(path);
+    int other = fdc_drive_take_share_notice(fdc, drive_id);
+    if (other >= 0) {
+        baseui_show_message_tr(0, N_("The image is already inserted in FDD %d. It was inserted write-protected here to keep the image file safe."),
+                               other);
+    }
     return 0;
 }
 
@@ -99,14 +119,24 @@ uint32_t fdc_request_umount(unsigned fdc_index, unsigned drive_id)
 }
 
 
-/** @brief Zásah: read-only (i[0] řadič, i[1] mechanika, i[2] hodnota). */
+/**
+ * @brief Zásah: read-only (i[0] řadič, i[1] mechanika, i[2] hodnota).
+ *
+ * Volá fdc_drive_set_write_protect(). Sundání ochrany odmítnuté kvůli jiné
+ * mechanice se zápisem na tentýž soubor nic nezmění a ohlásí se zprávou.
+ *
+ * @return 0 = provedeno; -1 = odmítnuto.
+ */
 static int fdc_request_exec_set_readonly(const st_DEVICE_REQ_ARGS *a)
 {
     st_FDC *fdc = &g_fdc[a->i[0]];
     unsigned drive_id = (unsigned)a->i[1];
-    fdc_cfg_set_readonly(fdc, drive_id, a->i[2] ? 1 : 0);
-    fdc_request_remount(fdc, drive_id);
-    return 0;
+    int blocker = -1;
+    int rc = fdc_drive_set_write_protect(fdc, drive_id, a->i[2] ? 1 : 0, &blocker);
+    if (rc == -1) {
+        baseui_show_message_tr(1, N_("The image is also inserted in FDD %d, which may write to it."), blocker);
+    }
+    return (rc == 0) ? 0 : -1;
 }
 
 

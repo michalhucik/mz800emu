@@ -100,7 +100,11 @@ extern "C"
      * @param errsize Velikost bufferu.
      * @return NULL = v pořádku; jinak text chyby (v @p errbuf), média jsou
      *         pak vrácená do původního stavu.
-     * @pre Emu vlákno, emulace stojí.
+     * @pre Emu vlákno, emulace stojí. Volající nedrží device_state_lock():
+     *      kazetová část si zámek bere sama, disketová také (ta jen tehdy,
+     *      když ho vlákno ještě nedrží).
+     * @note Výměna disket a pásky běží pod device_state_lock(), protože
+     *       uvolňuje paměť, kterou UI čte pod týmž zámkem.
      */
     const char *replay_media_prepare(const st_REPLAY_DATA *d, char *errbuf, size_t errsize);
 
@@ -108,8 +112,14 @@ extern "C"
      * @brief Vrátí obrazy podle INI a smaže dočasné kopie (konec přehrání).
      *
      * Bez předchozího úspěšného replay_media_prepare() nedělá nic.
+     * Diskety se vracejí v pořadí FDC0 FD0..FD3, FDC1 FD0..FD3: měl-li
+     * uživatel tentýž soubor ve více mechanikách, zápis dostane první
+     * v pořadí a ostatní ochranu kvůli sdílení (fdc.h), i když před
+     * přehráním zapisovala jiná. Známé omezení; data se neztratí, obrazy se
+     * čtou znovu ze souboru.
      *
-     * @pre Emu vlákno, emulace stojí nebo končí.
+     * @pre Emu vlákno, emulace stojí nebo končí. Volající nedrží
+     *      device_state_lock() (viz replay_media_prepare()).
      */
     void replay_media_restore(void);
 

@@ -12,7 +12,8 @@
  *  - nastavení: výchozí `cmt`, zápis platné / odmítnutí neplatné hodnoty,
  *    bootdev_setting_bc() pro MZ-800 (testovací jádro je MZARCH=800),
  *  - klíč INI: element `[CMT] run_mzf_device` existuje (registrace
- *    v cmt_init()), save callback zapíše aktuální text,
+ *    v cmt_init()), save callback zapíše aktuální text (do dočasného
+ *    souboru podstrčeného kořeni konfigurace),
  *  - bootstrap: mzarch_main_reset_and_run_mzf() s volbou i bez ní nastaví
  *    BC (MZF ze souboru v dočasném adresáři).
  *
@@ -23,6 +24,7 @@
 
 #include <glib.h>
 #include <glib/gstdio.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "cfgmain.h"
@@ -241,6 +243,10 @@ void test_setting(void)
 
 /**
  * @brief Klíč INI [CMT] run_mzf_device existuje (TEXT) a save callback zapíše aktuální text.
+ *
+ * cfgelement_save() zapisuje do st_CFGROOT::ini_fp, který je otevřený jen
+ * uvnitř cfgroot_save(). Test proto kořeni na dobu volání podstrčí dočasný
+ * soubor (jinak fprintf() s NULL) a ověří i zapsaný řádek.
  */
 void test_cfg_element(void)
 {
@@ -256,7 +262,23 @@ void test_cfg_element(void)
     TEST_ASSERT_EQUAL_INT(CFGENTYPE_TEXT, elm->type);
 
     TEST_ASSERT_TRUE(bootdev_setting_set_text("0200h"));
+    gchar *dir = g_dir_make_tmp("mz_bootdev_XXXXXX", NULL);
+    TEST_ASSERT_NOT_NULL(dir);
+    gchar *ini = g_build_filename(dir, "save.ini", NULL);
+    FILE *fp = g_fopen(ini, "wb");     /* binárně: na Windows by "w" zapsalo CR LF */
+    TEST_ASSERT_NOT_NULL(fp);
+    g_cfgmain->ini_fp = fp;
     cfgelement_save(elm);
+    g_cfgmain->ini_fp = NULL;
+    fclose(fp);
+    gchar *written = NULL;
+    TEST_ASSERT_TRUE(g_file_get_contents(ini, &written, NULL, NULL));
+    g_unlink(ini);
+    g_rmdir(dir);
+    g_free(ini);
+    g_free(dir);
+    TEST_ASSERT_EQUAL_STRING(BOOTDEV_CFG_ELEMENT " = 0200h\n", written);
+    g_free(written);
     TEST_ASSERT_EQUAL_STRING("0200h", cfgelement_get_text_value(elm));
     /* propagate z INI: neplatná hodnota -> výchozí cmt */
     cfgelement_set_text_value(elm, "garbage");

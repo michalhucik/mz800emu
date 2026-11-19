@@ -110,6 +110,38 @@ compatibility and does **not** mean the ID is unknown.
   `emu_run_until_event` end after at most 20 s of wall-clock time with
   `time_limited: true`. See `emulator://docs/run_control`.
 - Send the next request only after the previous response arrived.
+- `emu_snapshot_load` and `emu_snapshot_load_buffer` do not touch the
+  floppy drives or the Quick Disk drive: every drive
+  keeps the image that is inserted (file, write protection, unsaved
+  changes) and an empty drive stays empty, whatever was inserted when
+  the snapshot was saved. Only the controller state is restored (for the
+  Quick Disk the SIO chip and the head position; disk presence and write
+  protection seen by the machine follow the inserted medium). When
+  the inserted disks differ from the snapshot, the load still succeeds;
+  the difference is reported in a GUI message and on the emulator's
+  stderr ("Snapshot [media]: the snapshot was saved with different disks,
+  the inserted disks were kept:" and one line per drive, `FDD n: <name
+  in the snapshot> (now: <name now or empty>)` or `Quick Disk: <name in
+  the snapshot> (now: <name now or empty>)`), not in the tool result.
+  A snapshot saved with another kind of Quick Disk drive (image or
+  Unicard versus virtual directory) switches the drive kind for the run:
+  the inserted medium is closed (unsaved changes are saved to its file)
+  and the medium configured for the new kind is inserted.
+  To reproduce a state exactly, insert the same images with
+  `emu_media_insert` before the load and check `emu_media_state`. The
+  tape is different: a snapshot load reopens it, see
+  `emulator://docs/cmt_workflow`.
+- `emu_media_insert` of a disk image whose file is already inserted in
+  another floppy drive succeeds, but the image is inserted
+  **write-protected** and the result carries `warning` ("The image is
+  already inserted in FDD n. It was inserted write-protected here to
+  keep the image file safe."; n = 0-3 for FDC0, 4-7 for FDC1). Only one
+  drive may write to one image file: the first one that holds it.
+  `emu_media_state` shows `ro: true` for the second slot and writes of
+  the emulated program to that drive end with a write-protect error. The
+  protection stays until the image leaves that drive: to write through
+  the second drive, `emu_media_eject` the image from both drives and
+  insert it into the second one only, or insert a copy of the file.
 - Bundled Python wrapper: any tool result may carry `restarted: true`
   and `restart_reason` (a failed call: error text ending with
   `[restarted: true; ...]`). It means the previous backend ended

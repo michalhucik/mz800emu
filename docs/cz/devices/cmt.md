@@ -43,6 +43,11 @@ Konkrétní blok vyberete v seznamu bloků (tlačítko **Blocks**) dvojklikem
 (pustí ho), **Ctrl+Enter** (jen na něj pásku přesune) nebo položkou **Load
 directly** v kontextovém menu (přepne do režimu Direct a vybere ho).
 
+Naposledy vložené pásky nabízí hlavní menu v podnabídce **HW & Devices >
+CMT > Recent** (nejvýš 12, celá cesta v tooltipu): klik pásku otevře
+stejně jako **Open...** v okně Virtual CMT, včetně dotazů na neuložené
+změny a běžící nahrávání.
+
 Rychlejší cesta z hlavního menu: **HW & Devices > CMT > Fast Open CMT
 File & Play...** otevře soubor pásky a hned ho pustí (Play). Páska pak
 hraje od chvíle otevření; nahrávání přes ROM, které najde motor už

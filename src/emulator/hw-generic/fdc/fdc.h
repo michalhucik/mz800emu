@@ -34,6 +34,60 @@
  * `FDC_TEST_DRIVE_ID_MOUNTED(fdc, drive_id)` expanduje na volání funkce
  * `fdc_test_drive_id_mounted(fdc, drive_id)`.
  *
+ * ## Stejný obraz ve více mechanikách
+ *
+ * Tentýž soubor obrazu smí být vložený ve více mechanikách (i přes oba
+ * řadiče), ale platí invariant: **do jednoho souboru smí v každém okamžiku
+ * zapisovat nejvýš jedna mechanika.** Shodu souboru určuje identita souboru
+ * (fdc_fileid.h), ne text cesty.
+ *
+ *  - Vložení souboru, který už drží jiná mechanika, dostane ochranu proti
+ *    zápisu kvůli sdílení (`shared_readonly`); emulovaný stroj vidí disketu
+ *    chráněnou proti zápisu a mechanika do souboru nikdy nezapíše.
+ *  - Ochranu takové mechaniky nejde sundat, dokud tentýž soubor drží jiná
+ *    mechanika se zápisem (fdc_drive_set_write_protect() vrátí chybu,
+ *    fdc_drive_write_blocker() řekne, která to je).
+ *  - Ochrana kvůli sdílení se sama nesundá: zůstane, dokud ji uživatel
+ *    nevypne (fdc_drive_set_write_protect(..., 0)) nebo dokud se z mechaniky
+ *    obraz nevysune či nenahradí jiným. Do INI se neukládá; po startu se
+ *    obrazy z INI vkládají v pořadí FDC0 FD0..FD3, FDC1 FD0..FD3 a ochranu
+ *    dostane každá další mechanika se stejným souborem.
+ *  - Obrazy nasazené z paměti (fdc_mount_dsk_buffer(), přehrání vstupů)
+ *    soubor nedrží a pravidlo se jich netýká.
+ *
+ * Známá omezení:
+ *  - Záznam vstupů: vloží-li emulovaný správce Unicard během nahrávání
+ *    obraz, který už drží jiná mechanika, dostane ochranu kvůli sdílení.
+ *    Při přehrání běží mechaniky nad kopiemi z paměti, kterých se pravidlo
+ *    netýká, takže totéž vložení chráněné není a přehrání se od záznamu
+ *    může rozejít. Záznamy pořízené dřív se nemění.
+ *  - Návrat disket uživatele po přehrání vstupů (replay_media_restore())
+ *    vkládá v pořadí mechanik; role zapisující a chráněné mechaniky se
+ *    proti stavu před přehráním mohou prohodit. O data se nepřijde, obrazy
+ *    se čtou znovu ze souboru.
+ *
+ * Kontrola běží jen při vložení, vysunutí a změně ochrany; čtení a zápis
+ * sektorů se řídí jen polem `readonly` jako dřív.
+ *
+ * Mechaniky se v hlášeních číslují přes oba řadiče jako v příkazové řádce
+ * (fdc_cli.h): 0-3 = FDC0, 4-7 = FDC1 (FDC_GLOBAL_DRIVE_NO()).
+ *
+ * ## Disk se neuloží do jiného souboru, než ze kterého byl načten
+ *
+ * Kopie obrazu z paměti (režimy cached a discard) se do souboru `filename`
+ * zapíše jen tehdy, když je to tentýž soubor, ze kterého mechanika obraz
+ * načetla (porovnání s identitou `fileid` z okamžiku vložení). Pole
+ * `filename` se s vloženým obrazem za běžného provozu nerozchází (načtení
+ * snapshotu vložená média nemění, snap_fdc.c); rozejít se může jen při
+ * načtení snapshotu záznamu vstupů (přehrání staršího záznamu bez seznamu
+ * médií, návrat na checkpoint při nahrávání), které jméno ze snapshotu
+ * mechanice vrací. Pojistka je druhá obrana. Při neshodě se
+ * nezapíše nic (uložení, reset, vysunutí, ukončení, "Save and switch"),
+ * změny zůstanou v paměti s příznakem neuložených změn a uživatel dostane
+ * zprávu; vysunutí nebo výměna obrazu pak tyto změny zahodí. Režim direct
+ * zapisuje přes soubor otevřený při vložení a na `filename` už nesahá,
+ * takže se ho pojistka netýká.
+ *
  * License: GPLv3.
  */
 
@@ -50,6 +104,7 @@ extern "C"
 #include "libs/generic_driver/generic_driver.h"
 #include "libs/dsk/dsk.h"
 #include "wd279x.h"
+#include "fdc_fileid.h"
 
     /** Hodnota flagu `connected` - radič je připojený. */
 #define FDC_CONNECTED 1
@@ -61,6 +116,14 @@ extern "C"
 
     /** Počet instancí FDC řadiče (FDC0 = standard, FDC1 = secondary). */
 #define FDC_INSTANCE_COUNT 2
+
+    /**
+     * @brief Číslo mechaniky přes oba řadiče (0-3 = FDC0, 4-7 = FDC1), jako `--fdd<N>`.
+     * @param fdc_index index řadiče (FDC0 / FDC1)
+     * @param drive_id  index mechaniky (0..3)
+     * @note Každý argument se vyhodnotí jednou; bez vedlejších efektů.
+     */
+#define FDC_GLOBAL_DRIVE_NO(fdc_index, drive_id) ((int)((fdc_index) * FDC_NUM_DRIVES + (drive_id)))
 
     /**
      * @brief Index instance FDC řadiče.
@@ -112,32 +175,56 @@ extern "C"
      * podle storage_mode) a načtenou geometrii. Po úspěšném mountu
      * platí (mounted == 1) && (handler_valid == 1).
      *
-     * R/O state - tři nezávislé příznaky:
-     *  - user_readonly: persistent user preference (cfgkey wd279x_fddX_readonly)
-     *  - fs_readonly:   runtime auto-detected (FS write-protect attribute)
-     *  - readonly:      effective R/O = user_readonly OR fs_readonly
-     *                   (= co chip respektuje pro WRITE odmítnutí)
+     * R/O state - čtyři příznaky:
+     *  - user_readonly:   persistent user preference (cfgkey wd279x_fddX_readonly)
+     *  - fs_readonly:     runtime auto-detected (FS write-protect attribute)
+     *  - shared_readonly: ochrana kvůli sdílení - tentýž soubor byl při vložení
+     *                     už v jiné mechanice (viz popis souboru); stav běhu,
+     *                     do INI se neukládá
+     *  - readonly:        effective R/O = user_readonly OR fs_readonly OR
+     *                     shared_readonly (= co chip respektuje pro WRITE odmítnutí)
      *
      * Invarianty:
      *  - mounted == 1   <=> filename neprázdné a handler je v READY stavu.
+     *    Načtení snapshotu vložená média nemění (snap_fdc.c). Výjimka: při
+     *    načtení snapshotu záznamu vstupů a u obrazu nasazeného z paměti se
+     *    `mounted` a `filename` berou ze snapshotu a obraz se nemění;
+     *    `filename` pak nemusí označovat soubor, jehož obsah mechanika drží.
+     *    Co mechanika skutečně drží, říkají `handler_valid`, `file_backed`
+     *    a `fileid`.
      *  - handler_valid == 1 vyžaduje generic_driver_close() před dalším open.
      *  - readonly == 1 mapuje na HANDLER_STATUS_READ_ONLY na handleru.
      *  - storage_mode == DIRECT vyžaduje file_driver (= file handle, ne mem buffer).
+     *  - file_backed == 1 jen u obrazu vloženého ze souboru (fdc_mount_dskfile());
+     *    jen tehdy je `fileid` neprázdná a platí handler_valid == 1. Obraz
+     *    z paměti má file_backed == 0.
+     *  - shared_readonly == 1 vyžaduje file_backed == 1 a znamená
+     *    readonly == 1.
+     *  - Přes všechny mechaniky obou řadičů: mezi mechanikami se shodnou
+     *    `fileid` má nejvýš jedna readonly == 0.
      *
      * Ownership:
      *  - Paměť bufferu (CACHED/DISCARD) nebo FILE* (DIRECT) vlastní generic_driver
      *    (uvolní ji generic_driver_close()).
      *  - Strukturu st_HANDLER vlastní st_FDDrive (alokována inline).
+     *  - `fileid` vlastní st_FDDrive (uvolní ji odpojení obrazu).
+     *
+     * Vlákna: stav mění emu vlákno (nebo příkaz MCP) pod device_state_lock();
+     * UI ho čte pod stejným zámkem.
      */
     typedef struct st_FDDrive
     {
         unsigned mounted;            /**< 1 = drive má úspěšně otevřený DSK obraz. */
-        char filename[1024];         /**< Cesta k DSK souboru (full path). */
+        char filename[1024];         /**< Cesta k DSK souboru (full path); u záznamu vstupů může nést jméno ze snapshotu (viz invarianty). */
         st_HANDLER handler;          /**< Handler s obsahem DSK obrazu (paměťový nebo souborový). */
         int handler_valid;           /**< 1 = handler je v platném stavu (otevřený, je nutné jej zavřít). */
-        int readonly;                /**< Effective R/O = user_readonly || fs_readonly. Chip odmítá WRITE. */
+        int readonly;                /**< Effective R/O = user_readonly || fs_readonly || shared_readonly (obraz z paměti: hodnota z nasazení nebo ze snapshotu). Chip odmítá WRITE. */
         int user_readonly;           /**< Persistent user pref z cfgkey wd279x_fddX_readonly. */
         int fs_readonly;             /**< Runtime auto-detect z FS atributů (write-protect). */
+        int shared_readonly;         /**< 1 = ochrana kvůli sdílení: soubor byl při vložení už v jiné mechanice. */
+        int file_backed;             /**< 1 = obraz je vložený ze souboru `filename` (ne z paměti). */
+        int share_notice;            /**< Nevyzvednuté upozornění na sdílení: 0 = žádné, jinak číslo druhé mechaniky (0-7) + 1; viz fdc_drive_take_share_notice(). */
+        st_FDC_FILEID fileid;        /**< Identita souboru obrazu z okamžiku vložení (prázdná bez file_backed). */
         en_FDC_STORAGE_MODE storage_mode; /**< Cached / direct / discard. */
         st_DSK_GEOMETRY geometry;    /**< Geometrie DSK obrazu (tracks, sides, total_data_bytes...). */
         int geometry_valid;          /**< 1 = pole `geometry` obsahuje validní data načtená z DSK. */
@@ -291,11 +378,27 @@ extern "C"
      * stav do `g_fdc[FDC0].drive[drive_id]`. Při remount nejdřív zavře předchozí
      * mount. Při neúspěchu open zůstává mechanika v umounted stavu.
      *
+     * Úspěšné vložení zapíše cestu do historie naposledy vložených médií
+     * (recent_media_add(RECENT_MEDIA_DSK)); nezapisuje se obnova vložení
+     * z INI při startu (fdc_init()) a nové otevření obrazu, který v mechanice
+     * už je (změna volby read-only nebo režimu úložiště).
+     *
      * Pokud filename[0] == 0, provede umount (ekvivalent fdc_umount).
+     *
+     * Stejný obraz ve více mechanikách (viz popis souboru): drží-li tentýž
+     * soubor už jiná mechanika, vloží se obraz s ochranou kvůli sdílení
+     * (`shared_readonly`), na stderr se vypíše záznam a mechanika si zapamatuje
+     * upozornění pro volajícího (fdc_drive_take_share_notice()); okno se
+     * zprávou tato funkce neotevírá. Nové otevření obrazu, který v mechanice
+     * už je, ochranu kvůli sdílení zachová (a vynutí ji, kdyby tentýž soubor
+     * mezitím držela se zápisem jiná mechanika).
      *
      * @param fdc instance FDC řadiče (NULL = no-op)
      * @param drive_id index mechaniky (0..3)
      * @param filename cesta k DSK souboru (prázdný řetězec = umount)
+     * @pre Emu vlákno nebo pozastavená emulace; volající drží
+     *      device_state_lock(), pokud běží UI.
+     * @post Platí invariant jediné mechaniky se zápisem na soubor.
      */
     extern void fdc_mount_dskfile(st_FDC *fdc, unsigned drive_id, char *filename);
 
@@ -474,9 +577,15 @@ extern "C"
      * mode no-op (writes jdou rovnou přes file driver). Pro DISCARD mode
      * no-op (změny se zahodí).
      *
+     * Zapisuje jen do souboru, ze kterého byl obraz načten (viz popis
+     * souboru): když `filename` mechaniky označuje jiný soubor (po načtení
+     * snapshotu záznamu vstupů), nezapíše nic, změny nechá v paměti, ohlásí to zprávou
+     * uživateli a vrátí 0.
+     *
      * @param fdc instance FDC řadiče (NULL = vrátí 0)
      * @param drive_id index mechaniky (0..3)
-     * @return 1 = OK (nebo no-op), 0 = chyba zápisu.
+     * @return 1 = OK (nebo no-op), 0 = chyba zápisu nebo zápis odmítnutý
+     *         pojistkou cílového souboru.
      */
     extern int fdc_sync_drive(st_FDC *fdc, unsigned drive_id);
 
@@ -517,12 +626,113 @@ extern "C"
      * @brief Vynucený zápis RAM bufferu do DSK souboru (bypass mode gate).
      *
      * Pro UI "Save and switch" v dialog při přepnutí z Discard módu.
+     * Mechanika s ochranou kvůli sdílení (`shared_readonly`) do souboru
+     * nezapíše nikdy: funkce vrátí 0. Nezapíše ani tehdy, když tentýž
+     * soubor drží se zápisem jiná mechanika (fdc_drive_write_blocker();
+     * se zprávou uživateli) - týká se mechaniky chráněné volbou uživatele
+     * nebo právy souboru. Stejně tak nezapíše obraz nasazený
+     * z paměti (soubor nedrží) a obraz, jehož `filename` označuje jiný
+     * soubor, než ze kterého byl načten (viz popis souboru; se zprávou
+     * uživateli). Příznak změn v paměti při odmítnutí zůstává.
      *
      * @param fdc instance FDC řadiče (NULL = vrátí 0)
      * @param drive_id index mechaniky (0..3)
-     * @return 1 = OK, 0 = chyba.
+     * @return 1 = OK, 0 = chyba nebo odmítnuto.
      */
     extern int fdc_drive_force_save_to_file(st_FDC *fdc, unsigned drive_id);
+
+    /**
+     * @brief Test: má mechanika ochranu proti zápisu kvůli sdílení obrazu.
+     *
+     * @param fdc instance FDC řadiče (NULL = vrátí 0)
+     * @param drive_id index mechaniky (0..3)
+     * @return 1 = ano (`shared_readonly`), 0 = ne nebo prázdná mechanika.
+     * @pre Volající drží device_state_lock(), pokud není emu vlákno.
+     */
+    extern int fdc_drive_shared_readonly(st_FDC *fdc, unsigned drive_id);
+
+    /**
+     * @brief Mechanika, se kterou tato sdílí soubor obrazu (pro poznámku v UI).
+     *
+     * Hledá jen pro mechaniku s ochranou kvůli sdílení. Drží-li soubor víc
+     * jiných mechanik, vrátí tu se zápisem, jinak první v pořadí.
+     *
+     * @param fdc instance FDC řadiče (NULL = vrátí -1)
+     * @param drive_id index mechaniky (0..3)
+     * @return Číslo mechaniky přes oba řadiče (FDC_GLOBAL_DRIVE_NO(), 0-7),
+     *         nebo -1: mechanika ochranu kvůli sdílení nemá, nebo soubor už
+     *         žádná jiná mechanika nedrží.
+     * @pre Volající drží device_state_lock(), pokud není emu vlákno.
+     * @note Porovnává uložené identity, na souborový systém nesahá.
+     */
+    extern int fdc_drive_shared_with(st_FDC *fdc, unsigned drive_id);
+
+    /**
+     * @brief Mechanika, která brání sundání ochrany proti zápisu.
+     *
+     * @param fdc instance FDC řadiče (NULL = vrátí -1)
+     * @param drive_id index mechaniky (0..3)
+     * @return Číslo jiné mechaniky přes oba řadiče (0-7), která drží tentýž
+     *         soubor se zápisem (readonly == 0); -1 = žádná taková není
+     *         nebo mechanika nemá obraz ze souboru.
+     * @pre Volající drží device_state_lock(), pokud není emu vlákno.
+     * @note Porovnává uložené identity, na souborový systém nesahá.
+     */
+    extern int fdc_drive_write_blocker(st_FDC *fdc, unsigned drive_id);
+
+    /**
+     * @brief Nastaví ochranu mechaniky proti zápisu (volba uživatele) a nasazený obraz znovu otevře.
+     *
+     * Jediná cesta, kterou se ochrana mění za běhu (menu, overlay; zásah
+     * fdc_request_set_readonly()). Zapnutí: zapíše volbu do INI klíče
+     * `<prefix>_fddX_readonly`. Vypnutí: zapíše volbu a zruší i ochranu kvůli
+     * sdílení - pokud ale tentýž soubor drží jiná mechanika se zápisem,
+     * nezmění nic a vrátí chybu. Prázdné mechanice se jen zapíše volba.
+     *
+     * @param fdc instance FDC řadiče
+     * @param drive_id index mechaniky (0..3)
+     * @param readonly 0 = povolit zápis, jinak chránit
+     * @param[out] blocker při návratu -1 číslo mechaniky (0-7), která drží
+     *             soubor se zápisem; jinak -1. Smí být NULL.
+     * @return 0 = provedeno; -1 = odmítnuto kvůli jiné mechanice se zápisem;
+     *         -2 = neplatný argument.
+     * @pre Emu vlákno nebo pozastavená emulace; volající drží
+     *      device_state_lock(), pokud běží UI.
+     * @post Při 0 platí invariant jediné mechaniky se zápisem; cached změny
+     *       obrazu se před novým otevřením zapsaly jako při odpojení.
+     */
+    extern int fdc_drive_set_write_protect(st_FDC *fdc, unsigned drive_id, int readonly, int *blocker);
+
+    /**
+     * @brief Vyzvedne upozornění, že obraz byl vložen s ochranou kvůli sdílení.
+     *
+     * Upozornění vznikne ve fdc_mount_dskfile() a platí do vyzvednutí nebo
+     * do odpojení obrazu. Volá ten, kdo vložení vyvolal a umí ho ohlásit
+     * (zásah z GUI oknem se zprávou, MCP polem `warning`).
+     *
+     * @param fdc instance FDC řadiče (NULL = vrátí -1)
+     * @param drive_id index mechaniky (0..3)
+     * @return Číslo mechaniky (0-7), která soubor už držela; -1 = žádné
+     *         upozornění.
+     * @post Upozornění mechaniky je smazané.
+     * @pre Emu vlákno nebo pozastavená emulace.
+     */
+    extern int fdc_drive_take_share_notice(st_FDC *fdc, unsigned drive_id);
+
+    /**
+     * @brief Obnoví invariant jediné mechaniky se zápisem po zásahu, který přepsal pole `readonly`.
+     *
+     * Pojistka po načtení snapshotu. To vložená média ani pole `readonly`
+     * mechaniky s obrazem ze souboru nemění (snap_fdc.c),
+     * takže funkce za běžných okolností nic nezmění. Kdyby invariant přesto
+     * neplatil: mechanice s ochranou kvůli sdílení vrátí readonly = 1;
+     * kdyby tentýž soubor vycházel se zápisem ve více mechanikách, nechá
+     * zápis první v pořadí (FDC0 FD0..FD3, FDC1 FD0..FD3) a ostatním dá
+     * ochranu kvůli sdílení. Mechanik bez sdíleného souboru se netýká.
+     *
+     * @pre Emu vlákno nebo pozastavená emulace.
+     */
+    extern void fdc_enforce_single_writer(void);
 
 #ifdef __cplusplus
 }

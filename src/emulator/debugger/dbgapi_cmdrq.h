@@ -3609,7 +3609,11 @@ typedef enum en_DBGAPI_MEDIA_SLOT
  *                     může být přepnutá, viz out_qd_switched).
  *                     U slotu CMT -1 = soubor pásky nejde otevřít
  *                     (vložená páska beze změny).
- * @field out_warning  OUT: jen slot CMT (INSERT i EJECT), jinak prázdné:
+ * @field out_warning  OUT: u INSERT do slotu FDC text "The image is already
+ *                     inserted in FDD n. It was inserted write-protected
+ *                     here to keep the image file safe.", když tentýž
+ *                     soubor už drží jiná mechanika (n = 0-7 přes oba
+ *                     řadiče; fdc.h). Slot CMT (INSERT i EJECT):
  *                     "Unsaved tape changes were discarded"
  *                     (CMT_WARNING_DISCARDED), když operace zahodila
  *                     neuložené změny pásky nebo nahrávání, u INSERT za ním

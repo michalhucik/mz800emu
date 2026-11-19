@@ -53,6 +53,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifndef _WIN32
+#include <unistd.h>     /* geteuid() - test souboru jen pro čtení pod rootem */
+#endif
 
 #include "emulator/emulator.h"
 #include "hw-generic/cmt/cmt.h"
@@ -3543,7 +3546,8 @@ void test_save_mzt_roundtrip_with_cmtspeed(void)
  * Uložení do neexistujícího adresáře = chyba,
  * Modified zůstane 1, cesta pásky se nezmění; cíl je adresář stejného jména
  * = chyba, adresář zůstane; cíl je soubor jen pro čtení = chyba a soubor má
- * původní obsah.
+ * původní obsah. Část se souborem jen pro čtení se mimo Windows pod rootem
+ * vynechá (root smí zapisovat i do souboru s právy 0444).
  */
 void test_save_failure_keeps_original(void)
 {
@@ -3567,20 +3571,26 @@ void test_save_failure_keeps_original(void)
     TEST_ASSERT_EQUAL_INT(1, cmttmz_is_modified());
 
     char *ro = b4_path("readonly.tmz");
-    TEST_ASSERT_TRUE(g_file_set_contents(ro, "ORIGINAL", 8, NULL));
-    TEST_ASSERT_EQUAL_INT(0, g_chmod(ro, 0444));
-    int rc = cmttmz_save(ro);
-    gchar *data = NULL;
-    gsize len = 0;
-    TEST_ASSERT_TRUE(g_file_get_contents(ro, &data, &len, NULL));
-    g_chmod(ro, 0666);
-    TEST_ASSERT_EQUAL_INT_MESSAGE(EXIT_FAILURE, rc, "saving over a read-only file must fail");
-    TEST_ASSERT_EQUAL_size_t(8, len);
-    TEST_ASSERT_EQUAL_MEMORY("ORIGINAL", data, 8);
-    TEST_ASSERT_EQUAL_INT(1, cmttmz_is_modified());
-    g_free(data);
+    bool ro_enforced = true;
+#ifndef _WIN32
+    ro_enforced = (geteuid() != 0);
+#endif
+    if (ro_enforced) {
+        TEST_ASSERT_TRUE(g_file_set_contents(ro, "ORIGINAL", 8, NULL));
+        TEST_ASSERT_EQUAL_INT(0, g_chmod(ro, 0444));
+        int rc = cmttmz_save(ro);
+        gchar *data = NULL;
+        gsize len = 0;
+        TEST_ASSERT_TRUE(g_file_get_contents(ro, &data, &len, NULL));
+        g_chmod(ro, 0666);
+        TEST_ASSERT_EQUAL_INT_MESSAGE(EXIT_FAILURE, rc, "saving over a read-only file must fail");
+        TEST_ASSERT_EQUAL_size_t(8, len);
+        TEST_ASSERT_EQUAL_MEMORY("ORIGINAL", data, 8);
+        TEST_ASSERT_EQUAL_INT(1, cmttmz_is_modified());
+        g_free(data);
+        g_remove(ro);
+    }
 
-    g_remove(ro);
     g_rmdir(asdir);
     g_free(dir);
     g_free(in_missing);

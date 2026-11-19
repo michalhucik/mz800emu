@@ -48,6 +48,12 @@ button) by a double click (plays it), **Ctrl+Enter** (only moves the tape
 to it) or the context menu item **Load directly** (switches to Direct mode
 and selects it).
 
+The main menu offers the most recently inserted tapes in the submenu
+**HW & Devices > CMT > Recent** (at most 12, full path in the tooltip): a
+click opens the tape in the same way as **Open...** in the Virtual CMT
+window, including the questions about unsaved changes and a running
+recording.
+
 A faster way from the main menu: **HW & Devices > CMT > Fast Open CMT
 File & Play...** opens a tape file and plays it at once (Play). The tape
 then plays from the moment it is opened; a ROM load that finds the motor

@@ -21,6 +21,12 @@
 
 #include "emulator/videorec/videorec_audio.h"
 
+/* M_PI není součást ISO C; glibc ho při _POSIX_C_SOURCE bez _XOPEN_SOURCE
+ * nenabízí (stejné řešení jako src/iface/iface_audio.c). */
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 /* clk = 48000 * 400 => přesně 400 taktů na vzorek */
 #define CLK 19200000ull
 #define RATE 48000u

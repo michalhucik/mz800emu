@@ -2350,6 +2350,19 @@ emu_media_insert(slot="qd", path="/disks/game.mzq", ro=True)
 
 Returns `{"ok": true, "slot": "fdc0_fd0", "result_code": 0}`.
 
+An insertion over MCP is not written to the history of recently inserted
+media (Recent media in the overlay menu, INI section `[RECENT_MEDIA]`);
+the same holds for `emu_cmt_open`.
+
+Slots `fdc0_fd*` and `fdc1_fd*`: when the same image file is already
+inserted in another floppy drive, the image is inserted
+**write-protected** (only one drive may write to one image file) and the
+response has `warning`: "The image is already inserted in FDD n. It was
+inserted write-protected here to keep the image file safe." (n = 0-3 for
+FDC0, 4-7 for FDC1). `emu_media_state` then shows `ro: true` for the
+slot. Without this case the response has no `warning`. See
+devices/fdc.md, section "The same image in more than one drive".
+
 Slot `cmt` works like `emu_cmt_open`: the new file is read and checked
 first, so a file that cannot be opened (missing, damaged, unsupported)
 returns an error and leaves the inserted tape, its unsaved changes and a
@@ -2439,6 +2452,9 @@ Whitelist:
 - `AUDIO/volume_8253` (unsigned)
 - `AUDIO/volume_psg0` .. `AUDIO/volume_psg3` (unsigned)
 - `AUDIO/volume_psg1_0` .. `AUDIO/volume_psg1_3` (MZ-1500, unsigned)
+- the master listening volume (`AUDIO/volume_master`) is not in the
+  whitelist; `emu_settings_get` reads it. Mute has no key (it is not saved,
+  the emulator always starts unmuted)
 - `AUDIO/output_filter` (bool; the output low-pass filter of the real MZ-800, 346 Hz, default on; a change applies at once and without a click, also in a running audio capture and video recording; the key does not exist in the MZ-700 emulators, that computer has no such filter)
 - `DISPLAY/forced_full_screen_redrawing` (bool)
 - `DISPLAY/locked_window_aspect_ratio` (bool)

@@ -1,3 +1,18 @@
+/**
+ * @file   audio_window.cpp
+ * @brief  Okno Audio Mixer: ztlumení a hlavní hlasitost poslechu, hlasitosti kanálů, indikace úrovní a výstupní propust.
+ *
+ * Oddíl Output má přepínač Mute a posuvník Master volume: stejné veličiny
+ * zvukového rozhraní jako tab Sound overlay menu (iface_audio_set_mute(),
+ * iface_audio_set_master_gain()). Násobí hotový mix těsně před zvukovým
+ * zařízením, hlasitosti kanálů ani záznam nemění; ztlumení se neukládá.
+ * Oddíl Channels má vodorovný posuvník a indikátor úrovně pro každý kanál
+ * (g_iface_audio.gain[], level[]) a vpravo svislý posuvník, který všem
+ * kanálům zapíše stejnou hlasitost, s indikátorem celkové úrovně
+ * (total_level, úroveň před hlavní hlasitostí a ztlumením). Pod nimi je
+ * volba věrné výstupní propusti (jen na stroji, který ji má).
+ */
+
 #include "main.h"
 #include "libs/sdlapp/sdlapp.h"
 #include "ui-imgui/bootstrap/myimgui.h"
@@ -79,6 +94,20 @@ float get_max_channel_db()
     return maxGain;
 }
 
+/**
+ * @brief Vykreslí okno Audio Mixer.
+ *
+ * Změny se uplatní hned: Mute a Master volume přes zvukové rozhraní
+ * (iface_audio_set_mute(), iface_audio_set_master_gain(); stav čte každý
+ * snímek, takže souhlasí s tabem Sound overlay menu), posuvníky kanálů
+ * zápisem g_iface_audio.gain[], propust přes iface_audio_set_output_filter().
+ * Svislý posuvník přepíše hlasitosti všech kanálů jednou hodnotou; jeho
+ * poloha se po otevření okna sama neobnovuje podle kanálů (výchozí hodnotu
+ * bere jen při prvním vykreslení v běhu programu). Esc při fokusu okno zavře.
+ *
+ * @param p_open Příznak zobrazení okna; false = nic se nekreslí. Zavření okna ho shodí.
+ * @pre UI vlákno, mezi ImGui::NewFrame() a ImGui::Render(); p_open není NULL.
+ */
 void imgui_audio(bool *p_open)
 {
     if (!*p_open)
@@ -105,6 +134,31 @@ void imgui_audio(bool *p_open)
 
     // Správná inicializace globálního slideru podle nejvyšší aktuální hlasitosti
     static float globalDbGain = get_max_channel_db();
+
+    /* Výstup: ztlumení a hlavní hlasitost poslechu (stejné veličiny jako tab Sound overlay menu) */
+    ImGui::SeparatorText(_("Output"));
+    bool mute = iface_audio_get_mute();
+    if (ImGui::Checkbox(_L("Mute"), &mute))
+    {
+        iface_audio_set_mute(mute);
+    }
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip("%s", _("Silences the sound output; the volumes are kept. Not saved: the emulator always starts unmuted."));
+    }
+    float masterPercent = floorf(iface_audio_get_master_gain() * 100.0f + 0.5f);
+    ImGui::SetNextItemWidth(sliderWidth);
+    if (ImGui::SliderFloat(_L("Master volume"), &masterPercent, 0.0f, 100.0f, "%.0f %%", ImGuiSliderFlags_AlwaysClamp))
+    {
+        iface_audio_set_master_gain(masterPercent / 100.0f);
+    }
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip("%s", _("Listening volume of the whole mix. The channel volumes and recordings are not affected."));
+    }
+
+    /* Kanály: vodorovné posuvníky a úrovně, vpravo svislý posuvník pro všechny kanály najednou */
+    ImGui::SeparatorText(_("Channels"));
 
     // Horizontální slidery a LED bary (hlavní obsah)
     ImGui::BeginGroup();
@@ -173,6 +227,10 @@ void imgui_audio(bool *p_open)
             g_iface_audio.gain[i] = globalGain;
         }
     }
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip("%s", _("All channels: sets every channel to the same volume."));
+    }
 
     ImGui::SameLine();
 
@@ -206,6 +264,10 @@ void imgui_audio(bool *p_open)
         g_string_free(global_led_id, TRUE);
     }
     ImGui::EndGroup();
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip("%s", _("Level of the mix before the master volume and mute."));
+    }
 
     ImGui::EndGroup();
 

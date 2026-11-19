@@ -200,7 +200,28 @@ static uint8_t ide8_peek(int drive, uint32_t off)
 }
 
 
-/* Záznam uloží obsah DSK a IDE8, přehrání pracuje nad kopiemi. */
+/** @brief Počet volání ui_fdc_set_dsk() pod zámkem stavu zařízení. */
+static int s_fdc_ui_locked = 0;
+/** @brief Počet volání ui_fdc_set_dsk() bez zámku stavu zařízení. */
+static int s_fdc_ui_unlocked = 0;
+
+/**
+ * @brief Náhrada slabého ui_fdc_set_dsk() z fdc.c: počítá, zda výměna obrazu v mechanice běží pod zámkem.
+ *
+ * Řadič ji volá po každé změně obrazu; výměna uvolňuje paměť mechaniky,
+ * kterou UI čte pod device_state_lock().
+ */
+void ui_fdc_set_dsk(unsigned drive_id, char *dsk_filename)
+{
+    (void)drive_id;
+    (void)dsk_filename;
+    if (device_state_lock_held()) s_fdc_ui_locked++;
+    else s_fdc_ui_unlocked++;
+}
+
+
+/* Záznam uloží obsah DSK a IDE8, přehrání pracuje nad kopiemi. Výměna
+ * disket při startu a konci přehrání běží pod zámkem stavu zařízení. */
 void test_media_recorded_and_played_on_copies(void)
 {
     char *dsk = tmp_path("a.dsk");
@@ -265,10 +286,15 @@ void test_media_recorded_and_played_on_copies(void)
     TEST_ASSERT_TRUE(fdc_test_drive_id_mounted(&g_fdc[0], 2));
 
     /* --- přehrání --- */
+    s_fdc_ui_locked = s_fdc_ui_unlocked = 0;
     replay_request_play(mzr, true);
     replay_on_paused();
     replay_get_status(&st);
     TEST_ASSERT_TRUE_MESSAGE(st.request_ok, st.request_message);
+    /* nasazení kopií (mechanika 1) a odpojení (mechanika 2) pod zámkem */
+    TEST_ASSERT_GREATER_OR_EQUAL_INT(2, s_fdc_ui_locked);
+    TEST_ASSERT_EQUAL_INT(0, s_fdc_ui_unlocked);
+    TEST_ASSERT_FALSE(device_state_lock_held());
     /* Obsah ze záznamu (stav při startu), discard, INI beze změny. */
     TEST_ASSERT_EQUAL_HEX8(orig ^ 0x5A, drive_mem(1)[off]);
     TEST_ASSERT_EQUAL_INT(FDC_STORAGE_DISCARD, g_fdc[0].drive[1].storage_mode);
@@ -279,9 +305,14 @@ void test_media_recorded_and_played_on_copies(void)
     /* Zápisy přehrání. */
     drive_poke(1, off, 0x99);
     ide8_poke(0, 100, 0x33);
+    s_fdc_ui_locked = s_fdc_ui_unlocked = 0;
     next_frame();
     replay_get_status(&st);
     TEST_ASSERT_EQUAL_INT_MESSAGE(REPLAY_OUTCOME_ENDED, st.outcome, st.outcome_message);
+    /* návrat disket uživatele pod zámkem */
+    TEST_ASSERT_GREATER_OR_EQUAL_INT(2, s_fdc_ui_locked);
+    TEST_ASSERT_EQUAL_INT(0, s_fdc_ui_unlocked);
+    TEST_ASSERT_FALSE(device_state_lock_held());
 
     /* Po konci: originály podle INI, zápisy přehrání v nich nejsou. Změny
      * ze záznamu (cached) se při odpojení před přehráním zapsaly. */

@@ -10,8 +10,13 @@
 #include "i18n.h"
 
 #include "ui-imgui/topmenu/topmenu.h"
+#include "ui-imgui/topmenu/menu_recent.h"
 #include "ui-imgui/bootstrap/myimgui.h"
 #include "ui-imgui/mywidgets/mywidgets.h"
+extern "C"
+{
+#include "baseui/baseui.h"
+}
 
 #if CFG_HWEXT_HAVE_FDC
 #include "hw-generic/fdc/fdc.h"
@@ -141,6 +146,33 @@ void imgui_fdc_storage_switch_popup(bool *p_open)
     }
 }
 
+/**
+ * @brief Obsah podmenu jedné mechaniky: jméno obrazu, Mount / Recent / Umount, R/O a režim ukládání.
+ *
+ * Podnabídka "Recent" (imgui_menu_recent()) nabízí naposledy vložené obrazy
+ * DSK; klik vloží obraz do této mechaniky stejným zásahem jako výběr
+ * v souborovém dialogu (fdc_request_mount()), takže platí i pravidlo
+ * sdíleného obrazu. Cesta delší než jméno obrazu mechaniky se nevkládá a
+ * ohlásí se zprávou, jako v overlay menu.
+ *
+ * U položek Mount a Umount ukazuje klávesovou zkratku, kterou obsluhuje
+ * global_shortcuts.cpp: Alt+1 až Alt+4 (vložení) a Alt+Shift+1 až Alt+Shift+4
+ * (vysunutí) pro mechaniky 0 až 3 řadiče FDC0. Mechaniky řadiče FDC1 zkratku
+ * nemají, popisek se u nich neukazuje.
+ *
+ * U obrazu, který má ochranu proti zápisu kvůli sdílení souboru s jinou
+ * mechanikou (fdc.h), ukazuje pod jménem poznámku "Shared with FDD n,
+ * write-protected" a položka "Read-only" je zaškrtnutá; dokud druhá
+ * mechanika do souboru smí zapisovat, je položka zakázaná s důvodem
+ * v tooltipu.
+ *
+ * Do stavu řadiče nezapisuje přímo; změny jdou přes fdc_ui_mount() a
+ * fdc_request_*() do emulačního vlákna.
+ *
+ * @param fdc instance řadiče, které mechanika patří (nesmí být NULL).
+ * @param drive_id číslo mechaniky 0 až 3.
+ * @pre Volá se z UI vlákna uvnitř otevřeného menu ImGui (mezi BeginMenu a EndMenu).
+ */
 void SubmenuFDDriveImage(st_FDC *fdc, int drive_id)
 {
 #if CFG_HWEXT_HAVE_FDC
@@ -167,20 +199,55 @@ void SubmenuFDDriveImage(st_FDC *fdc, int drive_id)
     };
 
     ImGui::MenuItem(image_basename->str, NULL, false, false);
-    
+
+    /* Tentýž soubor obrazu ve více mechanikách (fdc.h): do souboru smí
+     * zapisovat jen jedna, tahle má ochranu kvůli sdílení. Mechaniky se
+     * číslují přes oba řadiče (0-3 = FDC0, 4-7 = FDC1). */
+    const bool shared_ro = fdc_drive_shared_readonly(fdc, drive_id) != 0;
+    const int shared_with = fdc_drive_shared_with(fdc, drive_id);
+    const int wp_blocker = fdc_drive_write_blocker(fdc, drive_id);
+    if (shared_ro && shared_with >= 0)
+    {
+        char note[128];
+        g_snprintf(note, sizeof(note), _("Shared with FDD %d, write-protected"), shared_with);
+        ImGui::MenuItem(note, NULL, false, false);
+    };
+
     ImGui::Separator();
 
+    /* Popisky zkratek musí odpovídat obsluze v global_shortcuts.cpp: mechaniky
+     * FDD 0 až 3 mají klávesy Alt+1 až Alt+4 (s Shiftem vysunutí) a zkratky
+     * pracují jen s řadičem FDC0. U mechanik řadiče FDC1 se proto popisek
+     * neukazuje (prázdný řetězec ImGui nekreslí). */
     GString *mount_accel = g_string_new(NULL);
-    g_string_append_printf(mount_accel, "Alt+%d", drive_id);
-    
     GString *umount_accel = g_string_new(NULL);
-    g_string_append_printf(umount_accel, "Alt+Shift+%d", drive_id);
+    if (fdc->index == FDC0)
+    {
+        g_string_append_printf(mount_accel, "Alt+%d", drive_id + 1);
+        g_string_append_printf(umount_accel, "Alt+Shift+%d", drive_id + 1);
+    };
 
     const char *mount_text = (!FDC_TEST_DRIVE_ID_MOUNTED(fdc, drive_id)) ? _("Mount...") : _("Re-Mount...");
 
     if (ImGui::MenuItem(mount_text, mount_accel->str, false))
     {
         fdc_ui_mount(fdc, drive_id);
+    };
+
+    /* Naposledy vložené obrazy: vložení do této mechaniky jako po výběru v dialogu (fdc_ui_mount_cb()). */
+    char recent_path[4096];
+    if (imgui_menu_recent(RECENT_MEDIA_DSK, true, NULL, NULL, recent_path, sizeof(recent_path)))
+    {
+        if (strlen(recent_path) >= sizeof(fdc->drive[drive_id].filename))
+        {
+            gchar *text = g_strdup_printf(_("The file path is too long:\n%s"), recent_path);
+            baseui_show_message(false, (char *)"%s", text);
+            g_free(text);
+        }
+        else
+        {
+            fdc_request_mount(fdc->index, (unsigned)drive_id, recent_path);
+        };
     };
 
     if (ImGui::MenuItem(_L("Umount"), umount_accel->str, false, FDC_TEST_DRIVE_ID_MOUNTED(fdc, drive_id)))
@@ -206,12 +273,19 @@ void SubmenuFDDriveImage(st_FDC *fdc, int drive_id)
     }
     else
     {
-        bool ro_pref = (user_ro_cfg != 0);
-        if (ImGui::MenuItem(_L("Read-only"), NULL, &ro_pref, true))
+        /* Zaškrtnuto i při ochraně kvůli sdílení; odškrtnutí ruší obojí
+         * (fdc_drive_set_write_protect()). Dokud tentýž soubor drží jiná
+         * mechanika se zápisem, ochranu sundat nejde: položka je zakázaná
+         * a důvod ukáže tooltip. */
+        bool ro_pref = (user_ro_cfg != 0) || shared_ro;
+        const bool locked = ro_pref && is_mounted && (wp_blocker >= 0);
+        if (ImGui::MenuItem(_L("Read-only"), NULL, &ro_pref, !locked))
         {
             /* Zápis volby a remount nasazeného obrazu provede emu vlákno. */
             fdc_request_set_readonly(fdc->index, (unsigned)drive_id, ro_pref ? 1 : 0);
         }
+        if (locked && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+            ImGui::SetTooltip(_("The image is also inserted in FDD %d, which may write to it."), wp_blocker);
     }
 
     /* Storage mode: combo přes 3 radio položky. */

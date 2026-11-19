@@ -65,6 +65,7 @@ add_subdirectory(peripherals)
 add_subdirectory(snapshot)
 add_subdirectory(replay)
 add_subdirectory(baseui)
+add_subdirectory(recent_media)
 
 # UI
 add_subdirectory(ui)

@@ -8,6 +8,36 @@ Globální klávesové zkratky dostupné napříč celým oknem emulátoru.
 |----------------------------|-----------------------------------------------------------------------------|
 | `F12`                      | Reset emulovaného počítače                                                  |
 | `F11`                      | Kalibrace joysticku (nebo Reset, pokud emulátor běží pod Windows Debugger)  |
+| `F10`                      | Otevřít / zavřít overlay menu                                               |
+
+## Overlay menu
+
+Celoobrazovkové menu nad obrazem emulátoru; otevře ho také `Alt` + levé
+tlačítko myši nad obrazem. Dokud je otevřené, emulovaný počítač nedostává
+žádné klávesy a z globálních zkratek fungují jen ty, které menu samo nabízí
+(`F12`, `Alt + P`, `Alt + N`, `Alt + M`, `Alt + [1..4]`, `Alt + Shift + [1..4]`,
+`Alt + C`, `Alt + K`, `Alt + F6` až `Alt + F9`, `Alt + F`, `Alt + Shift + F`,
+`Alt + O`, `Alt + Shift + O`, `Alt + U`, `Alt + J`, `Alt + Ctrl + Enter`,
+`Alt + W`, `Alt + H`). Podrobnosti viz [`overlay-menu.md`](overlay-menu.md).
+
+| Klávesa                    | Akce                                                                        |
+|----------------------------|-----------------------------------------------------------------------------|
+| `F10`, `Esc`               | Zavřít overlay menu                                                         |
+| `1` až `6`                 | Přepnout tab: Media, Machine, Display, Sound, Input, Capture                |
+| `Ctrl + Tab`               | Další tab                                                                   |
+| `Ctrl + Shift + Tab`       | Předchozí tab                                                               |
+| šipky                      | Pohyb mezi prvky                                                            |
+| `Enter`, mezerník          | Zvolit prvek                                                                |
+
+V listu výměny média (tlačítka Change, Insert disk, Change tape na tabu Media):
+
+| Klávesa                    | Akce                                                                        |
+|----------------------------|-----------------------------------------------------------------------------|
+| `1` až `6`                 | Vložit naposledy použitý soubor s tímto číslem (dokud je filtr prázdný)     |
+| psaní, `Backspace`         | Filtrovat seznam podle textu                                                |
+| `Enter`                    | Vložit vybraný soubor                                                       |
+| `Esc`                      | Zavřít list (menu zůstane otevřené)                                         |
+| `F10`                      | Zavřít celé menu                                                            |
 
 ## Okno a zobrazení
 

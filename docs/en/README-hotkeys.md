@@ -8,6 +8,38 @@ Global keyboard shortcuts available across the entire emulator window.
 |----------------------------|-----------------------------------------------------------------------------|
 | `F12`                      | Emulated computer reset                                                     |
 | `F11`                      | Joystick calibration (or Reset when emulator runs under Windows Debugger)   |
+| `F10`                      | Open / close the overlay menu                                               |
+
+## Overlay menu
+
+A full-screen menu over the emulator picture; `Alt` + left mouse button over
+the picture opens it as well. While it is open, the emulated computer
+receives no keys and only those global shortcuts work that the menu offers
+itself (`F12`, `Alt + P`, `Alt + N`, `Alt + M`, `Alt + [1..4]`,
+`Alt + Shift + [1..4]`, `Alt + C`, `Alt + K`, `Alt + F6` to `Alt + F9`,
+`Alt + F`, `Alt + Shift + F`, `Alt + O`, `Alt + Shift + O`, `Alt + U`,
+`Alt + J`, `Alt + Ctrl + Enter`, `Alt + W`, `Alt + H`). For details see
+[`overlay-menu.md`](overlay-menu.md).
+
+| Key                        | Action                                                                      |
+|----------------------------|-----------------------------------------------------------------------------|
+| `F10`, `Esc`               | Close the overlay menu                                                      |
+| `1` to `6`                 | Switch the tab: Media, Machine, Display, Sound, Input, Capture              |
+| `Ctrl + Tab`               | Next tab                                                                    |
+| `Ctrl + Shift + Tab`       | Previous tab                                                                |
+| arrows                     | Move between the controls                                                   |
+| `Enter`, space             | Select the control                                                          |
+
+In the media exchange sheet (the buttons Change, Insert disk, Change tape on
+the Media tab):
+
+| Key                        | Action                                                                      |
+|----------------------------|-----------------------------------------------------------------------------|
+| `1` to `6`                 | Insert the recently used file with that number (while the filter is empty)  |
+| typing, `Backspace`        | Filter the list by text                                                     |
+| `Enter`                    | Insert the selected file                                                    |
+| `Esc`                      | Close the sheet (the menu stays open)                                       |
+| `F10`                      | Close the whole menu                                                        |
 
 ## Window and display
 

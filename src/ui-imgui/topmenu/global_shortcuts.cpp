@@ -86,6 +86,13 @@ void imgui_global_shortcuts(void)
 #endif
     };
 
+    /*
+     * Overlay menu (F10) se zde záměrně neobsluhuje: tyto zkratky volá i
+     * okno debuggeru při svém fokusu, kde F10 overlay otevírat nesmí.
+     * Otevření F10 je v hlavním okně (main_window.cpp,
+     * main_window_overlay_open_key()), zavření obsluhuje overlay sám.
+     */
+
     // Alt + xx klavesove zkratky
     if (io.KeyAlt)
     {

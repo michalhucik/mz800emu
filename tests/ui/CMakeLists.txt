@@ -117,6 +117,7 @@ mz_add_test(ui-cmt-window
              ${CMAKE_SOURCE_DIR}/src/ui-imgui/auto_layout.cpp
              ${CMAKE_SOURCE_DIR}/src/ui-imgui/message/message_window.cpp
              ${CMAKE_SOURCE_DIR}/src/ui-imgui/topmenu/devices/menu_cmt.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/topmenu/menu_recent.cpp
              ${CMAKE_SOURCE_DIR}/src/ui-imgui/mywidgets/imgui_MenuRadioItem.cpp
     LIBS     mzlib_imgui mzlib_igfd mzlib_imwidgets
     LABELS   "ui;cmt"
@@ -179,6 +180,7 @@ mz_add_test(ui-cmt-analyze
              ${CMAKE_SOURCE_DIR}/src/ui-imgui/auto_layout.cpp
              ${CMAKE_SOURCE_DIR}/src/ui-imgui/message/message_window.cpp
              ${CMAKE_SOURCE_DIR}/src/ui-imgui/topmenu/devices/menu_cmt.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/topmenu/menu_recent.cpp
              ${CMAKE_SOURCE_DIR}/src/ui-imgui/mywidgets/imgui_MenuRadioItem.cpp
     LIBS     mzlib_imgui mzlib_igfd mzlib_imwidgets
     LABELS   "ui;cmt"
@@ -214,6 +216,7 @@ mz_add_test(ui-cmt-tools
              ${CMAKE_SOURCE_DIR}/src/ui-imgui/auto_layout.cpp
              ${CMAKE_SOURCE_DIR}/src/ui-imgui/message/message_window.cpp
              ${CMAKE_SOURCE_DIR}/src/ui-imgui/topmenu/devices/menu_cmt.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/topmenu/menu_recent.cpp
              ${CMAKE_SOURCE_DIR}/src/ui-imgui/mywidgets/imgui_MenuRadioItem.cpp
     LIBS     mzlib_imgui mzlib_igfd mzlib_imwidgets
     LABELS   "ui;cmt"
@@ -224,4 +227,72 @@ if(TARGET test_ui-cmt-tools)
         MZTEST_FONT_DIR="${CMAKE_SOURCE_DIR}/ui_resources/imgui/fonts"
     )
     set_property(TEST ui-cmt-tools APPEND PROPERTY ENVIRONMENT "MZ_CMT_SHOT_DIR=")
+endif()
+
+# Overlay menu (src/ui-imgui/overlay/): kopie stavu nad skutečným jádrem,
+# otevření a zavření, tři snímky bez pádu, klávesy (F10, Esc, číslice,
+# Ctrl+Tab) a myš, pravidlo klávesnice emulovaného stroje s náhradou
+# hlavního okna, pauza se zapamatováním stavu (dbg_ui_pause / dbg_ui_run
+# stubuje test); vizuální systém a widgety: jednotka, kontrasty z tokenů,
+# geometrie ve třech rozměrech okna, ovládání myší a klávesnicí, výpustka,
+# náhradní písmo; tab Media a tabulka akcí: kopie stavu nad skutečným
+# jádrem (mechaniky, kazeta přes cmt_view.cpp, Quick Disk), testovací stavy,
+# geometrie, požadavky tlačítek a zkratek ve frontách jádra, zakázané karty,
+# obnova pauzy při selhání; nedávná média a výsuvný list výměny média:
+# kopie historie jádra, geometrie listu, číslice, Enter, filtr, Esc,
+# vypnuté zkratky, vložení do správné mechaniky, chybějící soubor, pruh
+# nedávných médií, modální dialog nad overlayem; krok emulace mezi dvěma
+# snímky (číslo běhu jádra) a toast potvrzení nad overlayem; taby Machine
+# a Display: kopie stavu, geometrie, prvky volají funkce klasického menu,
+# rozbalovací výběr myší i klávesnicí, nové zkratky. S proměnnou
+# MZ_OVERLAY_SHOT_DIR snímky tabů a galerie widgetů, s
+# MZ_OVERLAY_SHOT_SET=media stavy tabu Media a s MZ_OVERLAY_SHOT_SET=sheet
+# výsuvný list (mimo CTest).
+mz_add_test(ui-overlay
+    TYPE     UI
+    SOURCES  test_overlay.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/overlay/overlay.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/overlay/overlay_view.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/overlay/overlay_style.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/overlay/overlay_widgets.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/overlay/overlay_actions.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/overlay/overlay_tab_media.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/overlay/overlay_tab_machine.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/overlay/overlay_tab_display.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/overlay/overlay_tab_util.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/overlay/overlay_tab_sound.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/overlay/overlay_tab_input.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/overlay/overlay_tab_capture.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/overlay/overlay_insert_sheet.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/cmt/cmt_view.cpp
+             ${CMAKE_SOURCE_DIR}/src/ui-imgui/snapshot/snapshot_notification.cpp
+    LIBS     mzlib_imgui mzlib_igfd mzlib_imwidgets
+    LABELS   "ui;overlay"
+)
+# Bez SDL/GL (CI bez displeje) proběhnou jen testy bez kreslení a test vrátí
+# 77: ctest ho ukáže jako přeskočený, ne jako úspěch.
+set_tests_properties(ui-overlay PROPERTIES SKIP_RETURN_CODE 77)
+if(TARGET test_ui-overlay)
+    target_compile_definitions(test_ui-overlay PRIVATE
+        MZTEST_FONT_DIR="${CMAKE_SOURCE_DIR}/ui_resources/imgui/fonts"
+        MZTEST_LOCALE_DIR="${CMAKE_SOURCE_DIR}/src/locale"
+    )
+    # Druhý běh téže binárky: jen geometrie rámce, tabů Media, Machine a
+    # Display, výsuvného listu a rozbalovacího výběru v němčině.
+    add_test(NAME ui-overlay-de
+        COMMAND test_ui-overlay
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/build-tests
+    )
+    if(WIN32)
+        get_filename_component(_ov_cc_dir "${CMAKE_C_COMPILER}" DIRECTORY)
+        set_tests_properties(ui-overlay-de PROPERTIES
+            ENVIRONMENT "MZ_OVERLAY_TEST_LANG=de;PATH=${_ov_cc_dir};$ENV{PATH}"
+        )
+    else()
+        set_tests_properties(ui-overlay-de PROPERTIES ENVIRONMENT "MZ_OVERLAY_TEST_LANG=de")
+    endif()
+    set_tests_properties(ui-overlay-de PROPERTIES LABELS "ui;overlay;i18n" SKIP_RETURN_CODE 77)
+    # MZ_OVERLAY_SHOT_DIR exportovaná ve shellu vývojáře by v CTest přepnula
+    # test do režimu snímků (testy by neběžely): prázdná hodnota = vypnuto.
+    set_property(TEST ui-overlay ui-overlay-de APPEND PROPERTY ENVIRONMENT "MZ_OVERLAY_SHOT_DIR=")
 endif()

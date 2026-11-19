@@ -196,7 +196,12 @@ content of disk, Quick Disk and IDE8 images, MemExt FLASH and RAM disks
 (serialised from memory with its unsaved changes, never the file on
 disk). The tape path in the `media` part is the original path also in a
 replay (not the replay's temporary copy), so a live run and its replay
-give the same value. `parts: [...]` computes only the listed parts. Compare two fingerprints only when both were taken in pause
+give the same value. Floppy disks and the Quick Disk in the `media` part
+are the disks that are really inserted: a snapshot load keeps them, so
+after loading a snapshot saved with other disks the `media` part differs
+from the value taken when the snapshot was saved (and the `periph` part
+too, because it covers the file names and the Quick Disk status bits
+"disk present" and "write-protected"). `parts: [...]` computes only the listed parts. Compare two fingerprints only when both were taken in pause
 (`stable: true`) with the same parameters.
 
 The answer lists `covered` parts and `not_covered` areas the fingerprint

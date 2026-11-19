@@ -781,6 +781,24 @@ static void sdlapp_imgui_video_set_fullscreen(bool enabled)
     sdlapp_send_message_for_SDL_windowID(SDL_GetWindowID(sdl_window), SDLAPP_WINDOW_EVENT_WINDOW_CALLBACK_REQUEST, 1, (gpointer)sdlapp_imgui_video_set_fullscreen_cb, GINT_TO_POINTER(value));
 }
 
+/**
+ * @brief Je hlavní okno právě ve fullscreenu?
+ *
+ * Čte příznaky okna SDL (SDL_WINDOW_FULLSCREEN), stejné, podle kterých
+ * přepíná sdlapp_imgui_video_switch_fullscreen_cb(). Přepnutí fullscreenu
+ * je požadavek vyřízený ve smyčce událostí, stav se tedy mění až po něm.
+ *
+ * @return true = okno je ve fullscreenu; false = v okně, nebo hlavní okno není.
+ * @pre UI vlákno (vlákno smyčky událostí SDL).
+ */
+static bool sdlapp_imgui_video_is_fullscreen(void)
+{
+    SDL_Window *sdl_window = getSDL_Window_by_name("main_window");
+    if (!sdl_window)
+        return false;
+    return (SDL_GetWindowFlags(sdl_window) & SDL_WINDOW_FULLSCREEN) != 0;
+}
+
 static void sdlapp_imgui_video_switch_fullscreen(void)
 {
     SDL_Window *sdl_window = getSDL_Window_by_name("main_window");
@@ -993,6 +1011,7 @@ static iface_video_callbacks_t sdl3_iface_video_callbacks = {
     .set_framerate_mode = sdlapp_imgui_video_set_framerate_mode,
     .set_fullscreen = sdlapp_imgui_video_set_fullscreen,
     .switch_fullscreen = sdlapp_imgui_video_switch_fullscreen,
+    .is_fullscreen = sdlapp_imgui_video_is_fullscreen,
     .reset_hdr = sdlapp_imgui_video_DisableHDR,
 };
 

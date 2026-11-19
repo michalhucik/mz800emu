@@ -13,6 +13,17 @@ IMAGE and UNICARD run through the abstraction over the memory driver
 and file driver - the same mechanism as FDC. VIRTUAL mode has a
 separate I/O path.
 
+A medium is inserted in the menu HW & Devices > Quick Disk > QD Drive:
+**Mount Image...** (IMAGE mode) or **Mount Directory...** (VIRTUAL mode)
+and the **Recent** submenu with the most recently inserted images or
+directories (at most 12, full path in the tooltip). Both are available
+only with an empty drive. Recent offers only the items the drive accepts
+in its current mode (an image file, or a directory); a file that no longer
+exists is not inserted, it is removed from the history and the emulator
+reports it. Right after the submenu opens, a click may end with the
+message "Still checking whether the file exists. Try again in a moment"
+until the emulator finds out in the background whether the files exist.
+
 ## Storage mode (IMAGE / UNICARD)
 
 The choice is persisted in the INI key `mz1f11_storage_mode`.
@@ -98,15 +109,68 @@ The QD subsystem snapshot saves:
 - informational info: `filename`, effective `readonly`
 
 **What is NOT saved:**
-- Memory buffer content of the .MZQ image (= analogous to FDC: dirty
-  RAM changes are **lost** on snapshot save+load; we recommend a manual
-  "Save now" before snapshot save if you have CACHED + dirty)
+- Memory buffer content of the .MZQ image (a snapshot does not carry the
+  disk content; unsaved changes stay in the drive after a snapshot load,
+  see below)
 - User INI settings (`storage_mode`, `user_readonly`) - INI is the
   SSOT for user pref; the snapshot is the SSOT for chip continuity
+- The state of the virtual Quick Disk (which MZF file is being read); a
+  snapshot saved in the middle of a read or write in virtual mode may
+  therefore not continue correctly after it is loaded
 
-**After snapshot load:** the mount is performed from the current INI
-settings (as on emu startup); the snapshot then writes the SIO chip
-state to the mounted handler.
+**After snapshot load:** the inserted Quick Disk belongs to the emulator,
+not to the state of the emulated computer. A snapshot load does not
+insert, exchange or eject the disk: the drive keeps the image that was in
+it before the load, with its file name, write protection, storage mode
+and unsaved changes; an empty drive stays empty. The state of the SIO
+chip and of the drive (head position, synchronisation) is restored from
+the snapshot. Whether the emulated computer sees a disk in the drive and
+whether it is write-protected follows what is really inserted, not the
+snapshot. Unsaved changes are still saved to the file the image was
+inserted from.
+
+If a different Quick Disk was inserted when the snapshot was saved
+(another file, an empty drive instead of a loaded one or the other way
+round), the emulator reports it after the load with a line in the message
+shared with the floppy disks (see fdc.md):
+
+```
+The snapshot was saved with different disks:
+Quick Disk: game.mzq (now: work.mzq)
+The inserted disks were kept.
+```
+
+The emulated program then continues over different content than it
+expects; the head position stays as in the snapshot, so a program that
+was in the middle of a read when the snapshot was saved reads the other
+disk from the same place. To continue exactly where the snapshot was
+taken, insert the disk named in the message and load the snapshot again.
+A repeated load with the same difference does not show the message
+again. The directory of a virtual Quick Disk is not stored in the
+snapshot and is therefore not compared.
+
+The drive type (image, virtual directory, Unicard) and its connection are
+part of the computer state and are taken from the snapshot for the run
+only; the INI keeps the user's choice. When the snapshot switches the
+drive between an image (or Unicard) and a virtual directory, the inserted
+medium does not belong to the new kind of drive: the emulator closes it
+as on eject (unsaved changes are saved to its file) and inserts the
+medium the INI holds for the new kind of drive, as on startup. Between
+the image and Unicard types the inserted image stays in place.
+
+**An image is never saved to a file other than the one it was loaded
+from.** The drive has this safeguard in addition: should the file name of
+the drive refer to a different file than the one the drive loaded its
+image from, the emulator does not write the in-memory copy to the file
+(Save now, motor off, eject, exit, "Save and switch") and reports "The
+Quick Disk was not saved: the drive now refers to a different image file
+than the one it was loaded from. Re-insert the image to continue." The
+unsaved changes then remain in memory only and are discarded on eject, on
+an image exchange or when the emulator exits. This does not happen after
+an ordinary snapshot load. It can happen after playing an older input
+replay that carries no media list, and after going back in time while an
+input replay is being recorded: there the emulator gives the drive the
+file name from the snapshot so that the playback matches the recording.
 
 ## Known limitations
 
@@ -118,6 +182,8 @@ state to the mounted handler.
   A/B).
 - **Memory buffer of .MZQ is not persisted in the snapshot** - see
   above.
+- **The state of the virtual Quick Disk is not stored in the snapshot** -
+  see above.
 
 ## INI keys reference
 

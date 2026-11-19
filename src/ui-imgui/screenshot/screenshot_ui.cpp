@@ -161,8 +161,8 @@ void screenshot_ui_save_as(void)
     if (!fch) fprintf(stderr, "%s(%d): filechooser error\n", __FILE__, __LINE__);
 }
 
-/** @brief Otevře výstupní adresář screenshotů ve správci souborů. */
-static void ss_ui_open_output_folder(void)
+/* Doxygen viz screenshot_ui.h. */
+void screenshot_ui_open_output_folder(void)
 {
     char dir[1024];
     bool ok = screenshot_resolve_output_dir(dir, sizeof(dir));
@@ -210,7 +210,7 @@ void imgui_screenshot_menu(void)
         g_gui->showScreenshotSetupWindow = true;
     }
     if (ImGui::MenuItem(_L("Open Output Folder"))) {
-        ss_ui_open_output_folder();
+        screenshot_ui_open_output_folder();
     }
     ImGui::EndMenu();
 }
@@ -653,7 +653,7 @@ void imgui_screenshot_window(void)
     ImGui::TextDisabled("%s", _("The frame series saves a PNG of every changed emulated frame into a new folder."));
 
     ImGui::Separator();
-    if (ImGui::Button(_L("Open Output Folder"))) ss_ui_open_output_folder();
+    if (ImGui::Button(_L("Open Output Folder"))) screenshot_ui_open_output_folder();
     ImGui::SameLine();
     if (ImGui::Button(_L("Settings..."))) g_gui->showScreenshotSetupWindow = true;
 

@@ -103,6 +103,97 @@ void iface_audio_set_output_filter(bool on)
 }
 
 /**
+ * @brief Násobitel hlavní hlasitosti uplatněný na konci posledního bloku (iface_audio_apply_master()).
+ *
+ * Čte a zapisuje jen vlákno, které volá iface_audio_wait_for_data().
+ */
+static float s_master_applied = 1.0f;
+
+/**
+ * @brief Příští blok nemá přecházet z naposledy uplatněného násobitele, ale začít rovnou na cílovém.
+ *
+ * Platí pro první blok po startu (a po iface_audio_master_restart()):
+ * s nižší hlasitostí z INI by jinak první blok byl přechod
+ * z plné hlasitosti. Čte a zapisuje vlákno, které volá
+ * iface_audio_wait_for_data(); iface_audio_master_restart() ho smí nastavit
+ * jen tehdy, když toto vlákno bloky nezpracovává (start, testy).
+ */
+static bool s_master_restart = true;
+
+/* Doxygen viz iface_audio.h. */
+void iface_audio_master_restart(void)
+{
+    s_master_restart = true;
+}
+
+/* Doxygen viz iface_audio.h. */
+void iface_audio_set_master_gain(float gain)
+{
+    if (isnan(gain))
+        gain = 1.0f;
+    if (gain < 0.0f)
+        gain = 0.0f;
+    if (gain > 1.0f)
+        gain = 1.0f;
+    g_iface_audio.master_gain = gain;
+}
+
+/* Doxygen viz iface_audio.h. */
+float iface_audio_get_master_gain(void)
+{
+    return g_iface_audio.master_gain;
+}
+
+/* Doxygen viz iface_audio.h. */
+void iface_audio_set_mute(bool mute)
+{
+    g_iface_audio.mute = mute;
+}
+
+/* Doxygen viz iface_audio.h. */
+bool iface_audio_get_mute(void)
+{
+    return g_iface_audio.mute;
+}
+
+/* Doxygen viz iface_audio.h. */
+void iface_audio_apply_master(float *samples, size_t frames, unsigned channels)
+{
+    if (!samples || frames == 0 || channels == 0)
+        return;
+    const float target = g_iface_audio.mute ? 0.0f : g_iface_audio.master_gain;
+    if (s_master_restart)
+    {
+        /* první blok: žádný přechod z plné hlasitosti */
+        s_master_restart = false;
+        s_master_applied = target;
+    };
+    const float from = s_master_applied;
+    /* výchozí stav: blok zůstává bitově shodný s mixem */
+    if (target == 1.0f && from == 1.0f)
+        return;
+    if (target == from)
+    {
+        for (size_t i = 0; i < frames * channels; i++)
+        {
+            samples[i] *= target;
+        };
+        return;
+    };
+    /* změna hlasitosti: lineární přechod přes blok, poslední snímek už má cílový násobitel */
+    const float step = (target - from) / (float)frames;
+    for (size_t i = 0; i < frames; i++)
+    {
+        const float g = (i + 1 == frames) ? target : (from + step * (float)(i + 1));
+        for (unsigned c = 0; c < channels; c++)
+        {
+            samples[i * channels + c] *= g;
+        };
+    };
+    s_master_applied = target;
+}
+
+/**
  * @brief Střední hodnota součtu kanálů každé strany ze středních hodnot kanálů.
  *
  * Váží střední hodnoty kanálů stejně jako mix: CTC0 hlasitostí, násobitelem
@@ -448,6 +539,9 @@ float *iface_audio_wait_for_data(size_t *output_samples_size)
     videorec_rt_audio_output(output_samples, output_samples_count);
     /* Zachycení zvuku: stejný blok do sdl.wav (mimo zachycení 1 čtení příznaku). */
     audio_capture_sdl_output(output_samples, output_samples_count);
+    /* Hlavní hlasitost a ztlumení poslechu: až za odběrem pro záznam, který je na poslechu nezávislý
+     * (ve výchozím stavu jedno porovnání na blok, blok se nemění). */
+    iface_audio_apply_master(output_samples, output_samples_count, 2);
     return output_samples;
 }
 
@@ -548,6 +642,9 @@ void iface_audio_buffer_init(void)
 
 bool iface_audio_init(void)
 {
+    /* hlavní hlasitost a ztlumení: výchozí stav nemění výstup (platí i bez zvuku) */
+    g_iface_audio.master_gain = 1.0f;
+    g_iface_audio.mute = false;
 #ifndef MZ800EMU_CFG_AUDIO_DISABLED
     iface_audio_buffer_init();
 

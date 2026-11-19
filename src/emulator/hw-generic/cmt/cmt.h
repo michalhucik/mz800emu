@@ -261,7 +261,9 @@ extern "C" {
      * změny (verze 2.0.6 pásku i při neúspěchu vysunula).
      *
      * Po úspěchu: g_cmt.ext, jméno pro UI, last_filename, transport STOP;
-     * u .mzf / .m12 kontrola velikosti MZF (mimo tichý režim).
+     * u .mzf / .m12 kontrola velikosti MZF (mimo tichý režim) a zápis cesty
+     * do historie naposledy vložených médií (recent_media_add(RECENT_MEDIA_CMT),
+     * mimo tichý režim).
      *
      * @param filename Cesta (UTF-8).
      * @param[out] discarded true = otevření zahodilo neuložené změny nebo

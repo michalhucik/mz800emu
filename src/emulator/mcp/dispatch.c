@@ -10346,6 +10346,11 @@ static en_MCP_DISPATCH_RESULT _handle_media_load_binary(const st_JSONL_MESSAGE *
  * ověří (neúspěch vloženou pásku nevysune), odpověď nese `warning`
  * ("Unsaved tape changes were discarded", když se zahodila páska Modified
  * nebo nahrávání, a varování otevření pásky).
+ *
+ * Sloty `fdc0` / `fdc1`: je-li tentýž soubor už vložený v jiné mechanice,
+ * vloží se obraz s ochranou proti zápisu a odpověď nese `warning`
+ * ("The image is already inserted in FDD n. ..."); pole přibývá jen
+ * v tomto případě, jinak je odpověď beze změny.
  */
 static en_MCP_DISPATCH_RESULT _handle_media_insert(const st_JSONL_MESSAGE *req,
                                                     char **out_response) {
@@ -10425,7 +10430,8 @@ static en_MCP_DISPATCH_RESULT _handle_media_insert(const st_JSONL_MESSAGE *req,
     json_object_set_string_member(resp, "slot", _media_slot_str(slot));
     json_object_set_int_member(resp, "result_code", rc);
     if (param.out_warning[0]) {
-        /* slot cmt: zahozené neuložené změny pásky, varování otevření */
+        /* slot cmt: zahozené neuložené změny pásky, varování otevření;
+         * slot fdc: obraz sdílený s jinou mechanikou vložen s ochranou proti zápisu */
         json_object_set_string_member(resp, "warning", param.out_warning);
     }
     if (slot == DBGAPI_MEDIA_SLOT_QD) {
