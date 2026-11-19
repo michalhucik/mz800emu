@@ -58,12 +58,17 @@ je `gdg_clk_hz` v capture.json), `time_us` = totéž v mikrosekundách,
 `frame` = snímek od začátku (20 ms PAL, 16,7 ms NTSC).
 
 **events.csv** - `ticks,time_us,frame,channel,level`. Kanály: `ctc0`
-(reproduktor, úroveň 0 nebo 15), `psg0_0` .. `psg0_3` (PSG, kanál 3 = šum) a na
+(reproduktor, úroveň 0, 15 nebo 31), `psg0_0` .. `psg0_3` (PSG, kanál 3 = šum) a na
 MZ-1500 nebo MZ-800 s druhým PSG `psg1_0` .. `psg1_3`. Úroveň 0-15 je výstup
 kanálu (u PSG 15 minus útlum, když je výstup generátoru v jedničce, jinak 0).
 Úroveň 16-30 má tónový kanál PSG s děličem 1: stálá úroveň 0,49 plné výchylky
 stupně `level - 15` (na skutečném čipu výstup kmitá 110,8 kHz, slyšet je jen
 střední úroveň; používá se k přehrávání vzorků přes hlasitost).
+Úroveň 31 má jen kanál `ctc0`, když čítač CTC0 běží v režimu 3 s děličem 2
+a bit PC0 je 1: obdélník 554 kHz se nezapisuje po hranách, kanál drží stálou
+úroveň 0,64 úrovně 15 (změřeno na skutečném MZ-800); při PC0 = 0 je úroveň 0.
+V emulátorech MZ-700 znamená úroveň 31 polovinu úrovně 15 (0,50, odvozeno ze
+schématu) a bit PC0 na ni nemá vliv.
 První řádky (`ticks` 0) jsou úrovně na začátku.
 
 **psg_writes.csv** - `ticks,time_us,frame,psg,byte,channel,reg,value`:

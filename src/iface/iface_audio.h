@@ -75,7 +75,7 @@ typedef struct st_IFACE_AUDIO
     uint32_t played_frame;
 
     AUDIO_OUTPUT_t channel_scan_value;
-    /** Výchylka kanálu pro hodnotu zvukového logu 0 až 30 (iface_audio_set_src_volume()). */
+    /** Výchylka kanálu pro hodnotu zvukového logu 0 až 31 (iface_audio_set_src_volume()). */
     AUDIO_OUTPUT_t SN76489_volume_value[AUDIO_SRC_CHANNELS_COUNT][AUDIO_LEVEL_VALUES_COUNT];
 
     float gain[AUDIO_SRC_CHANNELS_COUNT]; // nastaveni hlasitosti pro jednotlive zdroje
@@ -195,6 +195,8 @@ extern "C"
      * Hodnoty 0 až 15: 0 = ticho, 15 = plná výchylka, mezi nimi krok 2 dB
      * (stupeň `v` má útlum `2 * (15 - v)` dB). Hodnoty 16 až 30: výchylka
      * stupně `v - 15` krát AUDIO_LEVEL_HALF_FACTOR (tón PSG s děličem 001h).
+     * Hodnota 31 (AUDIO_LEVEL_CTC0_DIV2) má výchylku 0: píše ji jen kanál
+     * CTC0, který tuto tabulku nepoužívá.
      *
      * @param id     Index kanálu (0 až AUDIO_SRC_CHANNELS_COUNT - 1).
      * @param volume Hlasitost v procentech (100 = plná výchylka 1,0).
@@ -347,11 +349,13 @@ extern "C"
      *   (cca 0,926 u MZ-800), násobené `gain[0]` a iface_audio_ctc0_mix_level()
      *   (vychází `gain[0] * AUDIO_CTC0_TO_PSG_CHANNEL_RATIO / PSG_CHANNELS_COUNT`,
      *   stejně i bez PSG na MZ-700);
+     *   hodnota 31 (AUDIO_LEVEL_CTC0_DIV2, režim 3 s děličem 2) má úroveň
+     *   AUDIO_CTC0_DIV2_FACTOR krát úroveň ostatních nenulových hodnot;
      * - kanály PSG: hlasitostní tabulka `SN76489_volume_value` (AUDIO_OUTPUT_t
      *   je při AUDIO_FORMAT_F32 `float` v rozsahu 0..1) krát `gain[ch]`, děleno
      *   PSG_CHANNELS_COUNT (průměr přes 4 kanály jako v SDL mixu); hodnoty
      *   16 až 30 (poloviční výchylka, tón s děličem 001h) jsou v tabulce také,
-     *   hodnota 31 má úroveň 0.
+     *   hodnotu 31 kanály PSG nepíšou a má u nich úroveň 0.
      * Filtry SDL cesty (střídavá vazba CTC0, parkování, low-pass, IIR, výstupní
      * propust) aplikuje renderer sám (videorec_audio.h), tabulka obsahuje jen úrovně.
      *

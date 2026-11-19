@@ -290,7 +290,7 @@ void pio8255_write(int addr, uint8_t value)
         /* blokovani CTC0 - zvukovy vystup */
         g_pio8255.signal_pc00 = (value >> 0) & 0x01;
         DBGPRINTF(DBGINF, "audio ctc0 mask (pc00): %d\n", g_pio8255.signal_pc00);
-        audio_ctc0_changed((CTC8253_OUT(0) & CTC_AUDIO_MASK), gdg_compute_total_ticks(gdg_get_insigeop_ticks()));
+        ctc8253_ctc0_audio_update(gdg_get_insigeop_ticks());
 
         /* data do CMT */
         pio8255_set_pc01((value >> 1) & 0x01);
@@ -367,7 +367,7 @@ void pio8255_write(int addr, uint8_t value)
                 g_pio8255.signal_pc02 = 0;
                 DBGPRINTF(DBGINF, "reset - pc00 - pc03 = 0x00\n");
 
-                audio_ctc0_changed((CTC8253_OUT(0) & CTC_AUDIO_MASK), gdg_compute_total_ticks((gdg_get_insigeop_ticks())));
+                ctc8253_ctc0_audio_update(gdg_get_insigeop_ticks());
                 mzarch_interrupt_manager();
 #if (DBGLEVEL & DBGWAR)
             }
@@ -385,7 +385,7 @@ void pio8255_write(int addr, uint8_t value)
             {
                 g_pio8255.signal_pc00 = value & 0x01;
                 DBGPRINTF(DBGINF, "audio ctc0 mask (pc00): %d\n", g_pio8255.signal_pc00);
-                audio_ctc0_changed((CTC8253_OUT(0) & CTC_AUDIO_MASK), gdg_compute_total_ticks(gdg_get_insigeop_ticks()));
+                ctc8253_ctc0_audio_update(gdg_get_insigeop_ticks());
             }
             else if (bit_setres == 1)
             {

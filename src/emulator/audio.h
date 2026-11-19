@@ -55,15 +55,26 @@ extern "C"
  * - 0 = ticho (výstup v nule nebo vypnutý kanál),
  * - 1 až 15 = plná výchylka stupně hlasitosti `15 - útlum` (CTC0 jen 0 a 15),
  * - 16 až 30 = poloviční výchylka stupně `hodnota - 15`
- *   (AUDIO_LEVEL_HALF_FACTOR); píše ji jen tónový kanál PSG s děličem 001h.
+ *   (AUDIO_LEVEL_HALF_FACTOR); píše ji jen tónový kanál PSG s děličem 001h,
+ * - 31 (AUDIO_LEVEL_CTC0_DIV2) = výchylka AUDIO_CTC0_DIV2_FACTOR stupně 15;
+ *   píše ji jen kanál CTC0, když čítač běží v režimu 3 s děličem 2.
  */
 #define AUDIO_MAXVAL_PER_CHANNEL 15
 
 /** @brief Posun hodnot poloviční výchylky: hodnota = AUDIO_LEVEL_HALF_BASE + stupeň (1 až 15). */
 #define AUDIO_LEVEL_HALF_BASE AUDIO_MAXVAL_PER_CHANNEL
 
-/** @brief Počet hodnot zvukového logu (0 až 30); velikost tabulek úrovní. */
-#define AUDIO_LEVEL_VALUES_COUNT (AUDIO_LEVEL_HALF_BASE + AUDIO_MAXVAL_PER_CHANNEL + 1)
+/**
+ * @brief Hodnota zvukového logu kanálu CTC0 při režimu 3 s děličem 2.
+ *
+ * Výchylka AUDIO_CTC0_DIV2_FACTOR plného kroku CTC0 (hodnoty
+ * AUDIO_MAXVAL_PER_CHANNEL). Do logu ji píše audio_ctc0_div2_changed() místo
+ * hran obdélníku 554 kHz; kanály PSG ji nepoužívají.
+ */
+#define AUDIO_LEVEL_CTC0_DIV2 (AUDIO_LEVEL_HALF_BASE + AUDIO_MAXVAL_PER_CHANNEL + 1)
+
+/** @brief Počet hodnot zvukového logu (0 až 31); velikost tabulek úrovní. */
+#define AUDIO_LEVEL_VALUES_COUNT (AUDIO_LEVEL_CTC0_DIV2 + 1)
 
 /**
  * @brief Výchylka tónového kanálu PSG s děličem 001h proti plné výchylce stupně.
@@ -74,6 +85,27 @@ extern "C"
  * slabší než běžný tón se stejným útlumem (úroveň 0,49) pro útlumy 0 až 14.
  */
 #define AUDIO_LEVEL_HALF_FACTOR 0.49f
+
+/**
+ * @brief Výchylka CTC0 v režimu 3 s děličem 2 proti plnému kroku CTC0.
+ *
+ * CTC0 s děličem 2 dává obdélník 554 kHz, který výstup zvukového čipu
+ * nestíhá; ve slyšitelném pásmu z něj zbyde stálá úroveň. Změřeno na MZ-800
+ * (2026-11-19): klíčování bitem PC0 na 440 Hz dává čistý tón o úrovni 0,64
+ * téhož klíčování při OUT0 trvale v jedničce (nahrávka přes line-in,
+ * -3,92 dB, tři běhy; osciloskop na vývodu čipu 0,62). Stálý signál slyšet
+ * není. MZ-1500 neměřen, hodnota je převzatá z MZ-800 [neověřeno].
+ *
+ * Samostatný MZ-700 (MZARCH 700) zvukový čip v cestě nemá (OUT0 jde přes
+ * hradlo LS00 na potenciometr, servisní manuál MZ-700 str. 31), takže tam
+ * zbyde prostá střední hodnota obdélníku se střídou 1:1, tedy 0,50. Odvozeno
+ * ze schématu, neměřeno [neověřeno].
+ */
+#if MZARCH == 700
+#define AUDIO_CTC0_DIV2_FACTOR 0.50f
+#else
+#define AUDIO_CTC0_DIV2_FACTOR 0.64f
+#endif
 
 /**
  * @brief Poměr výchylky CTC0 k výchylce jednoho kanálu PSG s útlumem 0.
@@ -197,33 +229,47 @@ extern "C"
 
     /**
      * @brief Je hodnota zvukového logu poloviční výchylka (16 až 30)?
-     * @param value Hodnota zvukového logu (0 až 30).
-     * @return true = poloviční výchylka stupně audio_level_step().
+     * @param value Hodnota zvukového logu (0 až 31).
+     * @return true = poloviční výchylka stupně audio_level_step(); hodnota
+     *         AUDIO_LEVEL_CTC0_DIV2 mezi ně nepatří.
      */
     static inline bool audio_level_is_half(unsigned value)
     {
-        return value > AUDIO_MAXVAL_PER_CHANNEL;
+        return (value > AUDIO_MAXVAL_PER_CHANNEL) && (value < AUDIO_LEVEL_CTC0_DIV2);
+    }
+
+    /**
+     * @brief Je hodnota zvukového logu úroveň CTC0 s děličem 2 (31)?
+     * @param value Hodnota zvukového logu (0 až 31).
+     * @return true = výchylka AUDIO_CTC0_DIV2_FACTOR stupně 15.
+     */
+    static inline bool audio_level_is_ctc0_div2(unsigned value)
+    {
+        return value == AUDIO_LEVEL_CTC0_DIV2;
     }
 
     /**
      * @brief Stupeň hlasitosti hodnoty zvukového logu.
-     * @param value Hodnota zvukového logu (0 až 30).
-     * @return Stupeň 0 až 15 (15 = útlum 0); u poloviční výchylky stupeň bez snížení.
+     * @param value Hodnota zvukového logu (0 až 31).
+     * @return Stupeň 0 až 15 (15 = útlum 0); u poloviční výchylky stupeň bez
+     *         snížení, u AUDIO_LEVEL_CTC0_DIV2 stupeň 15.
      */
     static inline unsigned audio_level_step(unsigned value)
     {
-        return audio_level_is_half(value) ? (value - AUDIO_LEVEL_HALF_BASE) : value;
+        if (value <= AUDIO_MAXVAL_PER_CHANNEL)
+            return value;
+        return audio_level_is_half(value) ? (value - AUDIO_LEVEL_HALF_BASE) : AUDIO_MAXVAL_PER_CHANNEL;
     }
 
     /**
      * @brief Úsek stálé hodnoty kanálu ve zvukovém logu.
      *
-     * Invariant: `value` je 0 až 30 (viz AUDIO_MAXVAL_PER_CHANNEL).
+     * Invariant: `value` je 0 až 31 (viz AUDIO_MAXVAL_PER_CHANNEL).
      */
     typedef struct st_AUDIO_LOG_EVENT
     {
         uint32_t count_ticks; /**< Délka úseku v ticích GDG. */
-        AUDIO_BUF_t value;    /**< Hodnota kanálu (0 až 30). */
+        AUDIO_BUF_t value;    /**< Hodnota kanálu (0 až 31). */
     } st_AUDIO_LOG_EVENT;
 
     typedef struct st_AUDIO_SOURCE_LOG
@@ -256,7 +302,7 @@ extern "C"
      * @brief Stav střídavé vazby CTC0 vedený v emulovaném čase.
      *
      * Střední hodnota kanálu CTC0 (dolní propust 1. řádu s časovou konstantou
-     * AUDIO_CTC0_AC_TAU_MS nad úrovní 0/1); výstup střídavé vazby je úroveň
+     * AUDIO_CTC0_AC_TAU_MS nad úrovní kanálu 0..1); výstup střídavé vazby je úroveň
      * minus střední hodnota. Počítá se přesně z časů hran, nezávisle na tom,
      * zda nějaká zvuková cesta právě běží, aby šlo stav kdykoli předat SDL
      * cestě i rendereru nahrávky.
@@ -265,8 +311,9 @@ extern "C"
      * (AUDIO_OUT_AC_TAU_MS): střední hodnota výstupu vazby CTC0
      * (`level - mean`), vedená se stejnými časy hran.
      *
-     * Invarianty: `mean` je v 0..1 a platí k času `ticks`; `level` je 0 nebo 1
-     * a rovná se ctc0_output XOR cmt_echo; `out_mean` je v -1..1 (bez
+     * Invarianty: `mean` je v 0..1 a platí k času `ticks`; `level` je výchylka
+     * hodnoty, kterou kanál CTC0 nese ve zvukovém logu (0, 1 nebo
+     * AUDIO_CTC0_DIV2_FACTOR); `out_mean` je v -1..1 (bez
      * AUDIO_HAVE_OUTPUT_COUPLING 0).
      */
     typedef struct st_AUDIO_CTC0_AC
@@ -274,7 +321,7 @@ extern "C"
         uint64_t ticks;  /**< Čas, ke kterému platí `mean` a `out_mean` (tiky GDG). */
         double mean;     /**< Střední hodnota úrovně (0..1). */
         double out_mean; /**< Střední hodnota výstupu vazby CTC0 pro vazbu výstupu (-1..1). */
-        unsigned level;  /**< Úroveň kanálu od času `ticks` (0/1). */
+        double level;    /**< Úroveň kanálu od času `ticks` (0, 1 nebo AUDIO_CTC0_DIV2_FACTOR). */
     } st_AUDIO_CTC0_AC;
 
     /**
@@ -296,9 +343,17 @@ extern "C"
 
     typedef struct st_AUDIO
     {
-        unsigned ctc0_output; // Indikuje aktualni stav vystupu z ctc0 (0/1)
+        /** Stav výstupu CTC0 po hradlování bitem PC0 (0/1). Při ctc0_div2 = 1
+         *  je to samotný bit PC0 (OUT0 se nahrazuje stálou úrovní). */
+        unsigned ctc0_output;
+        /** 1 = CTC0 běží v režimu 3 s děličem 2 (audio_ctc0_div2_changed()):
+         *  kanál CTC0 nese při ctc0_output = 1 hodnotu AUDIO_LEVEL_CTC0_DIV2
+         *  místo hran OUT0. Nuluje ho audio_ctc0_changed(). Není ve snapshotu,
+         *  po načtení se odvodí z čítače (audio_ctc0_restore()). */
+        unsigned ctc0_div2;
         /** Úroveň echa kazety (0/1, audio_cmt_echo_changed()); v klidu 0.
-         *  Kanál CTC0 zvukového logu nese ctc0_output XOR cmt_echo. */
+         *  Kanál CTC0 zvukového logu nese ctc0_output XOR cmt_echo; při
+         *  ctc0_div2 = 1 a ctc0_output = 1 echo hodnotu kanálu nemění. */
         unsigned cmt_echo;
         /** Střídavá vazba CTC0 (viz st_AUDIO_CTC0_AC); není ve snapshotu, po
          *  načtení a po resetu logu začíná ustálená. */
@@ -316,7 +371,54 @@ extern "C"
 
     extern void audio_init(void);
 
+    /**
+     * @brief Změna výstupu CTC0 po hradlování bitem PC0.
+     *
+     * Kanál CTC0 zvukového logu dostane hodnotu ctc0_state XOR echo kazety
+     * (0 nebo AUDIO_MAXVAL_PER_CHANNEL). Ukončí stav "režim 3 s děličem 2"
+     * (audio_ctc0_div2_changed()).
+     *
+     * @param ctc0_state OUT0 AND PC0 (na samostatném MZ-700 jen OUT0).
+     * @param total_event_ticks Čas hrany (osa gdg_get_total_ticks()).
+     * @pre Vlákno emulátoru.
+     * @post g_audio.ctc0_output == ctc0_state, g_audio.ctc0_div2 == 0.
+     */
     extern void audio_ctc0_changed(bool ctc0_state, uint64_t total_event_ticks);
+
+    /**
+     * @brief CTC0 běží v režimu 3 s děličem 2: kanál nese stálou úroveň místo hran.
+     *
+     * Obdélník 554 kHz se do zvukového logu nepíše. Při @p pc0 = true dostane
+     * kanál hodnotu AUDIO_LEVEL_CTC0_DIV2 (výchylka AUDIO_CTC0_DIV2_FACTOR
+     * plného kroku CTC0, změřeno na MZ-800), při false hodnotu echa kazety
+     * (v klidu 0). Stálou úroveň pak nechá doznít střídavá vazba CTC0.
+     *
+     * Echo kazety při @p pc0 = true hodnotu kanálu nemění: XOR obdélníku
+     * 554 kHz s úrovní pásky je zase obdélník 554 kHz (na HW neměřeno
+     * [neověřeno]).
+     *
+     * @param pc0 Bit PC0 (na samostatném MZ-700 vždy true).
+     * @param total_event_ticks Čas změny (osa gdg_get_total_ticks()); starší
+     *        než poslední událost kanálu se posune na ni.
+     * @pre Vlákno emulátoru. Volá jen 8253 (ctc8253.c), který stav čítače zná.
+     * @post g_audio.ctc0_div2 == 1, g_audio.ctc0_output == pc0. Stav trvá do
+     *       nejbližšího audio_ctc0_changed().
+     */
+    extern void audio_ctc0_div2_changed(bool pc0, uint64_t total_event_ticks);
+
+    /**
+     * @brief Nastaví stav kanálu CTC0 bez zápisu do zvukového logu.
+     *
+     * Po načtení snapshotu: g_audio.ctc0_output a g_audio.ctc0_div2 ve
+     * snapshotu nejsou a odvozují se ze stavu 8253 a PC0
+     * (ctc8253_ctc0_audio_restore()). Volat před audio_reset_log(), která
+     * podle nich ustálí střídavou vazbu.
+     *
+     * @param ctc0_state OUT0 AND PC0; při @p div2 = true samotný PC0.
+     * @param div2 true = CTC0 běží v režimu 3 s děličem 2.
+     * @pre Vlákno emulátoru (nebo stojící emulace).
+     */
+    extern void audio_ctc0_restore(bool ctc0_state, bool div2);
 
     /**
      * @brief Změna úrovně echa kazety (signál pásky do reproduktoru).
@@ -347,13 +449,16 @@ extern "C"
     extern double audio_ctc0_ac_mean(uint64_t now_ticks);
 
     /**
-     * @brief Výchylka hodnoty zvukového logu kanálu PSG při plné hlasitosti.
+     * @brief Výchylka hodnoty zvukového logu při plné hlasitosti kanálu.
      *
      * 0 = ticho, 15 = 1,0, mezi nimi krok 2 dB; hodnoty 16 až 30 výchylka
-     * stupně `value - 15` krát AUDIO_LEVEL_HALF_FACTOR. Stejný předpis jako
-     * tabulka SDL cesty (iface_audio_set_src_volume()) při hlasitosti 100 %.
+     * stupně `value - 15` krát AUDIO_LEVEL_HALF_FACTOR; hodnota 31
+     * (AUDIO_LEVEL_CTC0_DIV2, jen kanál CTC0) AUDIO_CTC0_DIV2_FACTOR. Pro
+     * hodnoty 0 až 30 stejný předpis jako tabulka SDL cesty
+     * (iface_audio_set_src_volume()) při hlasitosti 100 %; hodnotu 31 má
+     * tabulka kanálů PSG nulovou.
      *
-     * @param value Hodnota zvukového logu 0 až 30; větší se bere jako 0.
+     * @param value Hodnota zvukového logu 0 až 31; větší se bere jako 0.
      * @return Výchylka 0..1.
      */
     extern double audio_level_amplitude(unsigned value);

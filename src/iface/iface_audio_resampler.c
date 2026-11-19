@@ -225,15 +225,22 @@ float *iface_audio_resampler_output_stream_ctc0(const uint8_t *input_samples, si
             end = input_samples_count - 1;
         };
 
-        // Počítání jedniček v bloku
+        /* Počítání jedniček v bloku; vzorky s hodnotou AUDIO_LEVEL_CTC0_DIV2
+         * (režim 3 s děličem 2) zvlášť, mají váhu AUDIO_CTC0_DIV2_FACTOR. */
         size_t ones_count = 0;
+        size_t div2_count = 0;
         for (size_t j = start; j < end; j++)
         {
             if (input_samples[j])
-                ones_count++;
+            {
+                if (input_samples[j] == AUDIO_LEVEL_CTC0_DIV2)
+                    div2_count++;
+                else
+                    ones_count++;
+            };
         };
 
-        float resampled = (float)ones_count / (float)(end - start + 1);
+        float resampled = ((float)ones_count + AUDIO_CTC0_DIV2_FACTOR * (float)div2_count) / (float)(end - start + 1);
         /* úroveň bloku trvale v jedničce (zesílení převzorkování tohoto vzorku) */
         float unit = (float)(end - start) / (float)(end - start + 1);
 

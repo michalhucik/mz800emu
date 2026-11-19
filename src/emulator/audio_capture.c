@@ -92,7 +92,7 @@ typedef struct st_AC_RING {
  * snímek bere rozdíl proti stavu na konci předchozího snímku (*_snap).
  */
 typedef struct st_AC_FRAME_ACC {
-    uint8_t level[AUDIO_CAPTURE_MAX_CHANNELS];      /**< Aktuální hodnota kanálu (hodnota zvukového logu 0..30). */
+    uint8_t level[AUDIO_CAPTURE_MAX_CHANNELS];      /**< Aktuální hodnota kanálu (hodnota zvukového logu 0..31). */
     uint64_t last_t[AUDIO_CAPTURE_MAX_CHANNELS];    /**< Čas, do kterého jsou součty kanálu spočtené. */
     uint64_t on[AUDIO_CAPTURE_MAX_CHANNELS];        /**< Takty s úrovní > 0 od začátku. */
     uint64_t energy[AUDIO_CAPTURE_MAX_CHANNELS];    /**< Součet úroveň^2 x takty od začátku (ac_level_sq()). */
@@ -656,13 +656,24 @@ static void ac_note_event(uint64_t abs_ticks)
 /** @brief Viz AC_HALF_SQ_NUM. */
 #define AC_HALF_SQ_DEN 25u
 
+/** @brief Čitatel a jmenovatel čtverce AUDIO_CTC0_DIV2_FACTOR (0,64^2 = 0,4096, zaokrouhleno na 41 / 100; samostatný MZ-700 0,50^2 = 25 / 100). */
+#if MZARCH == 700
+#define AC_DIV2_SQ_NUM 25u
+#else
+#define AC_DIV2_SQ_NUM 41u
+#endif
+/** @brief Viz AC_DIV2_SQ_NUM. */
+#define AC_DIV2_SQ_DEN 100u
+
 /**
  * @brief Čtverec výchylky hodnoty zvukového logu v jednotkách stupeň^2, krát takty.
  *
  * Plná výchylka: stupeň^2 x takty. Poloviční výchylka (hodnoty 16..30, tón PSG
- * s děličem 001h): stupeň^2 x takty x 6 / 25 (celočíselně, dolů).
+ * s děličem 001h): stupeň^2 x takty x 6 / 25 (celočíselně, dolů). Hodnota 31
+ * (CTC0 v režimu 3 s děličem 2): 15^2 x takty x 41 / 100 (celočíselně, dolů;
+ * samostatný MZ-700 x 25 / 100).
  *
- * @param value Hodnota zvukového logu 0..30.
+ * @param value Hodnota zvukového logu 0..31.
  * @param dt    Doba v taktech GDG.
  * @return Příspěvek do součtu energie kanálu.
  */
@@ -670,6 +681,8 @@ static uint64_t ac_level_sq(uint8_t value, uint64_t dt)
 {
     uint64_t step = audio_level_step(value);
     uint64_t e = step * step * dt;
+    if (audio_level_is_ctc0_div2(value))
+        return (e * AC_DIV2_SQ_NUM) / AC_DIV2_SQ_DEN;
     return audio_level_is_half(value) ? (e * AC_HALF_SQ_NUM) / AC_HALF_SQ_DEN : e;
 }
 
@@ -678,7 +691,8 @@ static uint64_t ac_level_sq(uint8_t value, uint64_t dt)
  * @brief Zapíše řádek events.csv a záznam do ringu levels.
  * @param rel    Čas od začátku zachycení [takty GDG].
  * @param src_id Index kanálu.
- * @param value  Hodnota zvukového logu 0..30 (16..30 = poloviční výchylka stupně value - 15).
+ * @param value  Hodnota zvukového logu 0..31 (16..30 = poloviční výchylka stupně value - 15,
+ *               31 = výchylka 0,64 stupně 15 u CTC0 v režimu 3 s děličem 2).
  */
 static void ac_write_event(uint64_t rel, unsigned src_id, uint8_t value)
 {

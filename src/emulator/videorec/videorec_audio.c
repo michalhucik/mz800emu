@@ -207,8 +207,14 @@ void videorec_audio_init(st_VIDEOREC_AUDIO *a, uint64_t clk_hz, unsigned rate, u
     a->stereo = false;
     videorec_audio_coef_init(&a->coef, rate);
     videorec_audio_rebase(a, origin_ticks, values);
-    /* střídavá vazba CTC0 začíná ustálená na počáteční hodnotě */
-    a->flt[0].hp_mean = (a->channels && a->value[0]) ? 1.0 : 0.0;
+    /* střídavá vazba CTC0 začíná ustálená na počáteční hodnotě: úroveň
+     * hodnoty v jednotkách úrovně "jedničky" (hodnota 31 dá 0,64) */
+    a->flt[0].hp_mean = 0.0;
+    if (a->channels && a->value[0]) {
+        float unit = a->level[0][VIDEOREC_AUDIO_CTC0_ON_VALUE];
+        double m = (unit > 0.0f) ? ((double)a->level[0][a->value[0]] / (double)unit) : 1.0;
+        a->flt[0].hp_mean = (m < 0.0) ? 0.0 : ((m > 1.0) ? 1.0 : m);
+    }
 }
 
 void videorec_audio_set_output_filter(st_VIDEOREC_AUDIO *a, bool on, bool immediate)

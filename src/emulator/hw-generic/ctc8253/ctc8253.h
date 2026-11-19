@@ -189,6 +189,35 @@ extern "C"
     extern void ctc8253_gate(unsigned addr, unsigned gate, unsigned event_screen_ticks);
     extern void ctc8253_clkfall(unsigned cs, unsigned event_ticks);
 
+    /**
+     * @brief Zapíše do zvukového kanálu CTC0 úroveň podle stavu čítače a bitu PC0.
+     *
+     * Pro změny, které nepřicházejí hranou OUT0: zápis bitu PC0 (8255),
+     * zastavení bránou a řídicí slovo. Běží-li CTC0 v režimu 3 s děličem 2
+     * (stav ohlášený hranou OUT0, viz audio_ctc0_div2_changed(), a čítač dál
+     * čítá v režimu 3 s GATE0 = 1), jde do kanálu stálá úroveň maskovaná PC0;
+     * jinak OUT0 AND PC0 (audio_ctc0_changed()). Okamžitý stav OUT0 se při
+     * děliči 2 nebere: obdélník 554 kHz je proti klíčování náhodný.
+     *
+     * @param event_ticks Okamžik změny v tikách snímku (gdg_get_insigeop_ticks()).
+     * @pre Vlákno emulátoru; zvukový log existuje (audio_init()).
+     * @post Kanál CTC0 zvukového logu odpovídá stavu čítače a PC0.
+     */
+    extern void ctc8253_ctc0_audio_update(unsigned event_ticks);
+
+    /**
+     * @brief Odvodí stav zvukového kanálu CTC0 ze stavu čítače po načtení snapshotu.
+     *
+     * Stav "režim 3 s děličem 2" ani úroveň kanálu ve snapshotu nejsou.
+     * Dělič se bere ze st_CTC8253.preset_value: liší se od právě odpočítávaného
+     * nejvýš do konce jedné půlperiody, pak ho opraví nejbližší hrana OUT0.
+     * Do zvukového logu nepíše (audio_ctc0_restore()).
+     *
+     * @pre g_ctc8253 a PC0 (g_pio8255) jsou už načtené; volat před
+     *      audio_reset_log().
+     */
+    extern void ctc8253_ctc0_audio_restore(void);
+
 
 #define CTC8253_OUT(cs) g_ctc8253[cs].out
 

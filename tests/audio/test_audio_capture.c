@@ -560,6 +560,50 @@ void test_audio_capture_memory_half_level(void)
 }
 
 
+/**
+ * @brief CTC0 v režimu 3 s děličem 2 (hodnota 31): ring levels a events.csv nesou
+ *        hodnotu zvukového logu, souhrn snímku stupeň 15 a energii x 41 / 100.
+ */
+void test_audio_capture_memory_ctc0_div2_level(void)
+{
+    st_AUDIO_CAPTURE_PARAMS p = params(false, 0);
+    p.psg_writes = p.reference_wav = false;
+    p.memory = true;
+    TEST_ASSERT_TRUE(audio_capture_start(&p, NULL, 0));
+    audio_capture_on_frame(T0);
+    /* hodnota 31 v [1000,2000), [3000,4000), ... */
+    for (unsigned k = 1; k <= 10; k++) {
+        audio_capture_on_change(0, (uint8_t) ((k & 1) ? AUDIO_LEVEL_CTC0_DIV2 : 0), T0 + k * 1000u);
+    }
+    audio_capture_on_frame(T0 + T_FRAME);
+    TEST_ASSERT_TRUE(audio_capture_stop());
+
+    gsize len = 0;
+    char *ev = read_file("events.csv", &len);
+    TEST_ASSERT_NOT_NULL(strstr(ev, ",ctc0,31\n"));
+    g_free(ev);
+
+    st_AUDIO_CAPTURE_STREAM_COPY lv = copy_all(AUDIO_CAPTURE_STREAM_LEVELS);
+    const st_AUDIO_CAPTURE_LEVEL_REC *l = (const st_AUDIO_CAPTURE_LEVEL_REC *) lv.data;
+    TEST_ASSERT_EQUAL_UINT64(AUDIO_SRC_CHANNELS_COUNT + 10, lv.data_count);
+    TEST_ASSERT_EQUAL_UINT8(31, l[AUDIO_SRC_CHANNELS_COUNT].level);
+    TEST_ASSERT_EQUAL_UINT8(0, l[AUDIO_SRC_CHANNELS_COUNT + 1].level);
+    audio_capture_stream_copy_clear(&lv);
+
+    st_AUDIO_CAPTURE_STREAM_COPY c = copy_all(AUDIO_CAPTURE_STREAM_FRAMES);
+    TEST_ASSERT_EQUAL_UINT64(1, c.data_count);
+    const st_AUDIO_CAPTURE_FRAME_REC *f = (const st_AUDIO_CAPTURE_FRAME_REC *) c.data;
+    TEST_ASSERT_EQUAL_UINT32(10, f[0].ch[0].edges);
+    TEST_ASSERT_EQUAL_UINT32(5000, f[0].ch[0].on_ticks);
+    /* součet po úsecích, každý zaokrouhlený dolů: 5 x (225 x 1000 x 41 / 100) */
+    TEST_ASSERT_EQUAL_UINT32(5u * (225u * 1000u * 41u / 100u), f[0].ch[0].energy);
+    TEST_ASSERT_EQUAL_UINT8(15, f[0].ch[0].max_level);
+    TEST_ASSERT_EQUAL_UINT8(0, f[0].ch[0].end_level);
+    TEST_ASSERT_TRUE(f[0].ref_rms[0] > 0);
+    audio_capture_stream_copy_clear(&c);
+}
+
+
 /** @brief PCM ringy obsahují bajtově totéž co reference.wav a sdl.wav. */
 void test_audio_capture_memory_pcm_matches_wav(void)
 {
@@ -660,6 +704,7 @@ int main(int argc, char *argv[])
     RUN_TEST(test_audio_capture_memory_only);
     RUN_TEST(test_audio_capture_memory_frame_summary);
     RUN_TEST(test_audio_capture_memory_half_level);
+    RUN_TEST(test_audio_capture_memory_ctc0_div2_level);
     RUN_TEST(test_audio_capture_memory_pcm_matches_wav);
     RUN_TEST(test_audio_capture_memory_start_errors);
     RUN_TEST(test_audio_capture_memory_copy_time);

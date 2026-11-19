@@ -231,7 +231,7 @@ static inline void audio_ctc0_ac_advance(uint64_t ticks)
      * out_mean' = (a * exp(-t / tau1) - out_mean) / tau2:
      * out_mean(t) = out_mean(0) * e2 + a * tau1 / (tau1 - tau2) * (e1 - e2). */
     {
-        double a = (double)ac->level - ac->mean;
+        double a = ac->level - ac->mean;
         double d2 = d * (double)AUDIO_CTC0_AC_TAU_MS / (double)AUDIO_OUT_AC_TAU_MS;
         if (d2 < AUDIO_CTC0_AC_LINEAR_LIMIT)
         {
@@ -246,20 +246,49 @@ static inline void audio_ctc0_ac_advance(uint64_t ticks)
     }
 #endif /* AUDIO_HAVE_OUTPUT_COUPLING */
     double f = (d < AUDIO_CTC0_AC_LINEAR_LIMIT) ? d : (1.0 - exp(-d));
-    ac->mean += ((double)ac->level - ac->mean) * f;
+    ac->mean += (ac->level - ac->mean) * f;
     ac->ticks = ticks;
 }
 
 /**
  * @brief Změna úrovně kanálu CTC0 pro střídavou vazbu.
- * @param level Nová úroveň (ctc0_output XOR cmt_echo).
+ * @param level Nová úroveň: výchylka hodnoty kanálu ve zvukovém logu
+ *              (0, 1 nebo AUDIO_CTC0_DIV2_FACTOR).
  * @param ticks Čas změny (tiky GDG).
  * @pre Vlákno emulátoru.
  */
-static inline void audio_ctc0_ac_set_level(bool level, uint64_t ticks)
+static inline void audio_ctc0_ac_set_level(double level, uint64_t ticks)
 {
     audio_ctc0_ac_advance(ticks);
-    g_audio.ctc0_ac.level = level ? 1 : 0;
+    g_audio.ctc0_ac.level = level;
+}
+
+/**
+ * @brief Hodnota, kterou má kanál CTC0 nést ve zvukovém logu.
+ *
+ * - CTC0 v režimu 3 s děličem 2 (ctc0_div2) a PC0 = 1: AUDIO_LEVEL_CTC0_DIV2
+ *   bez ohledu na echo kazety (viz audio_ctc0_div2_changed()),
+ * - jinak ctc0_output XOR cmt_echo: AUDIO_MAXVAL_PER_CHANNEL nebo 0.
+ *
+ * @return 0, AUDIO_MAXVAL_PER_CHANNEL nebo AUDIO_LEVEL_CTC0_DIV2.
+ */
+static inline AUDIO_BUF_t audio_ctc0_channel_value(void)
+{
+    if (g_audio.ctc0_div2 && g_audio.ctc0_output)
+        return AUDIO_LEVEL_CTC0_DIV2;
+    return (g_audio.ctc0_output ^ g_audio.cmt_echo) ? AUDIO_MAXVAL_PER_CHANNEL : 0;
+}
+
+/**
+ * @brief Výchylka hodnoty kanálu CTC0 pro střídavou vazbu.
+ * @param value Hodnota z audio_ctc0_channel_value().
+ * @return 0, 1 nebo AUDIO_CTC0_DIV2_FACTOR.
+ */
+static inline double audio_ctc0_value_level(AUDIO_BUF_t value)
+{
+    if (value == AUDIO_LEVEL_CTC0_DIV2)
+        return (double)AUDIO_CTC0_DIV2_FACTOR;
+    return value ? 1.0 : 0.0;
 }
 
 /**
@@ -272,8 +301,8 @@ static inline void audio_ctc0_ac_set_level(bool level, uint64_t ticks)
  */
 static void audio_ctc0_ac_settle(uint64_t ticks)
 {
-    g_audio.ctc0_ac.level = (g_audio.ctc0_output ^ g_audio.cmt_echo) ? 1 : 0;
-    g_audio.ctc0_ac.mean = (double)g_audio.ctc0_ac.level;
+    g_audio.ctc0_ac.level = audio_ctc0_value_level(audio_ctc0_channel_value());
+    g_audio.ctc0_ac.mean = g_audio.ctc0_ac.level;
     g_audio.ctc0_ac.out_mean = 0.0;
     g_audio.ctc0_ac.ticks = ticks;
 }
@@ -293,10 +322,11 @@ double audio_level_amplitude(unsigned value)
         {
             s_audio_level_amp[v] = pow(10.0, -((double)(AUDIO_MAXVAL_PER_CHANNEL - v) / 10.0));
         };
-        for (unsigned v = AUDIO_MAXVAL_PER_CHANNEL + 1; v < AUDIO_LEVEL_VALUES_COUNT; v++)
+        for (unsigned v = AUDIO_MAXVAL_PER_CHANNEL + 1; v < AUDIO_LEVEL_CTC0_DIV2; v++)
         {
             s_audio_level_amp[v] = (double)AUDIO_LEVEL_HALF_FACTOR * s_audio_level_amp[v - AUDIO_LEVEL_HALF_BASE];
         };
+        s_audio_level_amp[AUDIO_LEVEL_CTC0_DIV2] = (double)AUDIO_CTC0_DIV2_FACTOR;
         s_audio_level_amp_ready = true;
     };
     return (value < AUDIO_LEVEL_VALUES_COUNT) ? s_audio_level_amp[value] : 0.0;
@@ -458,6 +488,7 @@ void audio_init(void)
     APP_MUTEX_CREATE(g_audio.old_log_mutex);
 
     g_audio.ctc0_output = 0;
+    g_audio.ctc0_div2 = 0;
     g_audio.cmt_echo = 0;
     audio_ctc0_ac_settle(0);
     audio_psg_ac_settle(0);
@@ -475,6 +506,10 @@ void audio_reset_log(uint64_t new_timestamp)
     for (int src_id = 0; src_id < AUDIO_SRC_CHANNELS_COUNT; src_id++) {
         audio_log_init_src(g_audio.log, src_id, 0);
     }
+    /* Kanál CTC0 nese hned svou úroveň: na rozdíl od PSG, které log doplní
+     * prvním krokem, nemusí další událost CTC0 dlouho přijít a log s nulou
+     * by se proti ustálené vazbě lišil o stálou úroveň (skok ve zvuku). */
+    audio_log_init_src(g_audio.log, audio_source_id(AUDIO_SRC_CTC0), audio_ctc0_channel_value());
     /* Střídavá vazba CTC0 není ve snapshotu: začíná ustálená na aktuální úrovni. */
     audio_ctc0_ac_settle(new_timestamp);
     audio_psg_ac_settle(new_timestamp);
@@ -578,34 +613,52 @@ static inline void audio_changed(st_AUDIO_LOG *log, en_AUDIO_SOURCE audio_source
 }
 
 /**
- * @brief Zapíše do kanálu CTC0 zvukového logu hodnotu ctc0_output XOR cmt_echo
+ * @brief Zapíše do kanálu CTC0 zvukového logu hodnotu audio_ctc0_channel_value()
  *        a ohlásí ji střídavé vazbě (audio_ctc0_ac_set_level()).
  *
  * @param total_event_ticks Čas události; starší než poslední událost kanálu
  *        se posune na ni (echo kazety doručuje hrany zpětně).
- * @pre Vlákno emulátoru; g_audio.ctc0_output a g_audio.cmt_echo jsou 0/1.
+ * @pre Vlákno emulátoru; g_audio.ctc0_output, g_audio.ctc0_div2
+ *      a g_audio.cmt_echo jsou 0/1.
  */
 static inline void audio_ctc0_channel_update(uint64_t total_event_ticks)
 {
     st_AUDIO_SOURCE_LOG *src = g_audio.log->src[audio_source_id(AUDIO_SRC_CTC0)];
     if (total_event_ticks < src->last_timestamp)
         total_event_ticks = src->last_timestamp;
-    AUDIO_BUF_t value = (g_audio.ctc0_output ^ g_audio.cmt_echo) ? AUDIO_MAXVAL_PER_CHANNEL : 0;
-    audio_ctc0_ac_set_level(value != 0, total_event_ticks);
+    AUDIO_BUF_t value = audio_ctc0_channel_value();
+    audio_ctc0_ac_set_level(audio_ctc0_value_level(value), total_event_ticks);
     audio_changed(g_audio.log, AUDIO_SRC_CTC0, value, total_event_ticks);
 }
 
+/* Doxygen viz audio.h. */
 void audio_ctc0_changed(bool ctc0_state, uint64_t total_event_ticks)
 {
     g_audio.ctc0_output = ctc0_state;
+    g_audio.ctc0_div2 = 0;
     if (!g_audio.cmt_echo)
     {
         /* bez echa beze změny: čas události se neupravuje */
-        audio_ctc0_ac_set_level(ctc0_state, total_event_ticks);
+        audio_ctc0_ac_set_level(ctc0_state ? 1.0 : 0.0, total_event_ticks);
         audio_changed(g_audio.log, AUDIO_SRC_CTC0, (ctc0_state) ? AUDIO_MAXVAL_PER_CHANNEL : 0, total_event_ticks);
         return;
     };
     audio_ctc0_channel_update(total_event_ticks);
+}
+
+/* Doxygen viz audio.h. */
+void audio_ctc0_div2_changed(bool pc0, uint64_t total_event_ticks)
+{
+    g_audio.ctc0_output = pc0;
+    g_audio.ctc0_div2 = 1;
+    audio_ctc0_channel_update(total_event_ticks);
+}
+
+/* Doxygen viz audio.h. */
+void audio_ctc0_restore(bool ctc0_state, bool div2)
+{
+    g_audio.ctc0_output = ctc0_state;
+    g_audio.ctc0_div2 = div2;
 }
 
 /* Doxygen viz audio.h. */
@@ -628,7 +681,7 @@ void audio_cmt_echo_changed(bool level, uint64_t total_event_ticks)
  * dávají stupeň hlasitosti při výstupu v 1 a 0 při výstupu v 0.
  *
  * @param channel Kanál PSG po kroku psg_step().
- * @return Hodnota zvukového logu 0 až 30.
+ * @return Hodnota zvukového logu 0 až 30 (hodnotu 31 kanály PSG nepíšou).
  */
 static inline AUDIO_BUF_t audio_psg_channel_log_value(const st_PSG_CHANNEL *channel)
 {

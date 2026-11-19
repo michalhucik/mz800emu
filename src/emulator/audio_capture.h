@@ -127,7 +127,7 @@ typedef struct st_AUDIO_CAPTURE_LEVEL_REC {
     uint64_t t;           /**< Absolutní čas změny [takty GDG] (origin_ticks = čas 0 v CSV). */
     uint32_t frame;       /**< Zvukový snímek od začátku zachycení. */
     uint8_t src;          /**< Kanál 0 = ctc0, 1..4 = psg0_0..3, 5..8 = psg1_0..3. */
-    uint8_t level;        /**< Hodnota zvukového logu: 0..15 plná výchylka stupně hlasitosti, 16..30 výchylka 0,49 stupně `level - 15` (tón PSG s děličem 001h). */
+    uint8_t level;        /**< Hodnota zvukového logu: 0..15 plná výchylka stupně hlasitosti, 16..30 výchylka 0,49 stupně `level - 15` (tón PSG s děličem 001h), 31 výchylka 0,64 stupně 15 (CTC0 v režimu 3 s děličem 2). */
     uint8_t reserved[2];  /**< 0. */
 } st_AUDIO_CAPTURE_LEVEL_REC;
 
@@ -155,9 +155,9 @@ typedef struct st_AUDIO_CAPTURE_PSG_REC {
 typedef struct st_AUDIO_CAPTURE_FRAME_CH {
     uint32_t edges;       /**< Změny úrovně ve snímku (jako řádky events.csv s tímto `frame`). */
     uint32_t on_ticks;    /**< Takty GDG s úrovní > 0. */
-    uint32_t energy;      /**< Součet úroveň^2 x takty (RMS úrovně = sqrt(energy / len_ticks)); úroveň = stupeň hlasitosti, u poloviční výchylky (tón PSG s děličem 001h) stupeň^2 x 6 / 25. */
-    uint8_t max_level;    /**< Největší stupeň hlasitosti 0..15 ve snímku (u poloviční výchylky stupeň bez snížení). */
-    uint8_t end_level;    /**< Stupeň hlasitosti 0..15 na konci snímku (u poloviční výchylky stupeň bez snížení). */
+    uint32_t energy;      /**< Součet úroveň^2 x takty (RMS úrovně = sqrt(energy / len_ticks)); úroveň = stupeň hlasitosti, u poloviční výchylky (tón PSG s děličem 001h) stupeň^2 x 6 / 25, u hodnoty 31 (CTC0 v režimu 3 s děličem 2) 15^2 x 41 / 100. */
+    uint8_t max_level;    /**< Největší stupeň hlasitosti 0..15 ve snímku (u poloviční výchylky stupeň bez snížení, u hodnoty 31 stupeň 15). */
+    uint8_t end_level;    /**< Stupeň hlasitosti 0..15 na konci snímku (u poloviční výchylky stupeň bez snížení, u hodnoty 31 stupeň 15). */
     uint8_t reserved[2];  /**< 0. */
 } st_AUDIO_CAPTURE_FRAME_CH;
 
@@ -365,7 +365,8 @@ void audio_capture_get_status(st_AUDIO_CAPTURE_STATUS *out);
 /**
  * @brief Háček: změna výstupní úrovně zvukového kanálu (volá audio_changed()).
  * @param src_id Index kanálu (0 = CTC0, 1..4 = PSG0, 5..8 = PSG1).
- * @param value  Nová hodnota zvukového logu 0..30 (16..30 = výchylka 0,49 stupně value - 15).
+ * @param value  Nová hodnota zvukového logu 0..31 (16..30 = výchylka 0,49 stupně value - 15,
+ *               31 = výchylka 0,64 stupně 15 u CTC0 v režimu 3 s děličem 2).
  * @param ticks  Absolutní čas změny v taktech GDG.
  * @pre Emu vlákno, audio_capture_wanted().
  */

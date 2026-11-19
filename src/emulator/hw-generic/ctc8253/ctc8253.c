@@ -57,6 +57,42 @@ uint8_t g_ctc8253_last_cw_byte = 0x00;
 // mame audio?
 //#define audio_ctc0_changed(value, event_ticks)
 
+/**
+ * @brief Čítá CTC0 v režimu 3 (nutná podmínka stavu "dělič 2" zvukového kanálu)?
+ *
+ * @return 1 = režim 3, stav CTC_STATE_COUNTDOWN a GATE0 = 1.
+ * @note Sama o děliči nic neříká; jaký dělič čítač právě odpočítává, je vidět
+ *       jen na hraně nahrání (viz ctc8253_ctc0_output_event()).
+ */
+static inline int ctc8253_ctc0_mode3_counting(void)
+{
+    const st_CTC8253 *ctc0 = &g_ctc8253[CTC_CS0];
+    return (ctc0->mode == CTC_MODE3) && (ctc0->state == CTC_STATE_COUNTDOWN) && (ctc0->gate == 1);
+}
+
+/**
+ * @brief Změna OUT0: vstup PA4 Z80 PIO a zvukový kanál CTC0.
+ *
+ * Režim 3 s děličem 2 (obdélník 554 kHz; hra Ralye, Tatra-sys HD CP/M disk 5,
+ * ho nastaví a povolí reproduktor bitem PC0) se do zvuku po hranách neposílá.
+ * Výstup zvukového čipu takový obdélník nestíhá a zbyde z něj stálá úroveň
+ * (změřeno na MZ-800, viz AUDIO_CTC0_DIV2_FACTOR): první hrana s děličem 2
+ * ohlásí audio_ctc0_div2_changed(), další hrany už zvuk nevolají. Stálá úroveň
+ * je neslyšitelná (odezní střídavou vazbou), klíčování bitem PC0 dává čistý tón.
+ *
+ * Dělič platí od nahrání do čítače, ne od zápisu: v režimu 3 mění OUT0 jen
+ * hrana, která zároveň nahrála preset, takže st_CTC8253.value je tu právě
+ * nahraný dělič. Hrana s jiným děličem, zvednutí OUT0 bránou (GATE0 = 0) nebo
+ * řídicím slovem (stav CTC_STATE_INIT) vrací kanál ke skutečnému OUT0. Když
+ * se při tom OUT0 nezmění (byl v jedničce), callback nepřijde a stav srovná
+ * ctc8253_ctc0_audio_update() volaná z ctc8253_gate() a ctc8253_write_byte().
+ *
+ * @param value Nová úroveň OUT0 (0/1).
+ * @param event_ticks Okamžik hrany v tikách snímku.
+ * @note Volá se na každé hraně OUT0 (horká cesta). Běžný tón vyhodnotí stejně
+ *       jako dřív jednu podmínku (režim 3 a hodnota 2); zbylé testy se čtou
+ *       jen s děličem 2.
+ */
 static inline void ctc8253_ctc0_output_event(unsigned value, unsigned event_ticks)
 {
     //    DBGPRINTF ( DBGINF, "CTC0 output event! (%d) - ticks: %d\n", value, event_ticks );
@@ -65,11 +101,40 @@ static inline void ctc8253_ctc0_output_event(unsigned value, unsigned event_tick
 
     pioz80_port_id_event(PIOZ80_PORT_A, PIOZ80_PORT_EVENT_PA4_CTC0, ~value & 0x01);
 
-    /* Bugfix pro hru Ralye (Tatra-sys HD cpm disk 5) - nastavi ctc0 mode: 3, preset: 2 a povoli audio (pc00) - na Sharpu ten zvuk zrejme neprojde filtrem */
-    if (!((g_ctc8253[CTC_CS0].mode == CTC_MODE3) && (g_ctc8253[CTC_CS0].preset_value == 2)))
+    const st_CTC8253 *ctc0 = &g_ctc8253[CTC_CS0];
+
+    if (!((ctc0->mode == CTC_MODE3) && (ctc0->value == 2) && (ctc0->state == CTC_STATE_COUNTDOWN) && (ctc0->gate == 1)))
     {
         audio_ctc0_changed((value & CTC_AUDIO_MASK), gdg_compute_total_ticks(event_ticks));
+    }
+    else if (!g_audio.ctc0_div2)
+    {
+        /* první hrana s děličem 2: dál jde do zvuku stálá úroveň maskovaná PC0 */
+        audio_ctc0_div2_changed(CTC_AUDIO_MASK, gdg_compute_total_ticks(event_ticks));
     };
+}
+
+/* Doxygen viz ctc8253.h. */
+void ctc8253_ctc0_audio_update(unsigned event_ticks)
+{
+    uint64_t total_ticks = gdg_compute_total_ticks(event_ticks);
+
+    if (g_audio.ctc0_div2 && ctc8253_ctc0_mode3_counting())
+    {
+        audio_ctc0_div2_changed(CTC_AUDIO_MASK, total_ticks);
+    }
+    else
+    {
+        audio_ctc0_changed((CTC8253_OUT(0) & CTC_AUDIO_MASK), total_ticks);
+    };
+}
+
+/* Doxygen viz ctc8253.h. */
+void ctc8253_ctc0_audio_restore(void)
+{
+    const st_CTC8253 *ctc0 = &g_ctc8253[CTC_CS0];
+    bool div2 = ctc8253_ctc0_mode3_counting() && (ctc0->preset_value == 2);
+    audio_ctc0_restore(div2 ? (CTC_AUDIO_MASK != 0) : ((ctc0->out & CTC_AUDIO_MASK) != 0), div2);
 }
 
 static inline void ctc8253_ctc1_output_event(unsigned value, unsigned event_ticks)
@@ -363,6 +428,12 @@ static inline int ctc8253_is_counting(const st_CTC8253 *ctc)
 void ctc8253_init(void)
 {
     g_ctc8253_last_cw_byte = 0x00;
+
+    /* Reset: stav "dělič 2" zvukového kanálu končí bez události ve zvukovém
+     * logu (čas resetu tu není k dispozici a log při prvním volání ještě
+     * neexistuje). Kanál se srovná při nejbližší změně OUT0 nebo PC0. */
+    audio_ctc0_restore(g_audio.ctc0_output != 0, false);
+
     g_ctc8253[CTC_CS0].output_cb = ctc8253_ctc0_output_event;
     g_ctc8253[CTC_CS1].output_cb = ctc8253_ctc1_output_event;
     g_ctc8253[CTC_CS2].output_cb = ctc8253_ctc2_output_event;
@@ -679,7 +750,9 @@ uint8_t ctc8253_peek_byte(unsigned cs)
  * @param addr Adresa v rámci 8253 (spodní 2 bity: CTCADDR_CTC0..CTCADDR_CWREG).
  * @param value Zapisovaný bajt.
  * @note Vedlejší efekty: změna OUT (callback), u CTC0 v rychlé cestě
- *       přeplánování eventu MZEVENT_CTC0, záznam do hwlog (debugger).
+ *       přeplánování eventu MZEVENT_CTC0, záznam do hwlog (debugger). Řídicí
+ *       slovo pro CTC0 ukončí stav "dělič 2" zvukového kanálu
+ *       (ctc8253_ctc0_audio_update()).
  * @note Řídicí slovo pro jiný čítač mezi dvěma bajty hodnoty dá na HW
  *       náhodný dělič (ctc-meas testy G a V); emulátor to nemodeluje
  *       a hodnotu nahraje správně.
@@ -791,6 +864,12 @@ void ctc8253_write_byte(unsigned addr, uint8_t value)
 
         unsigned output_state = (g_ctc8253[cs].mode == CTC_MODE0) ? 0 : 1;
         ctc8253_set_out(cs, output_state, gdg_get_insigeop_ticks());
+
+        if ((cs == CTC_CS0) && g_audio.ctc0_div2)
+        {
+            /* řídicí slovo ukončilo režim 3 s děličem 2; OUT0 se měnit nemusel */
+            ctc8253_ctc0_audio_update(gdg_get_insigeop_ticks());
+        };
     }
     else
     {
@@ -1217,7 +1296,8 @@ void ctc8253_clkfall(unsigned cs, unsigned event_ticks)
  * @param gate Nová úroveň (bit 0).
  * @param event_ticks Okamžik změny v tikách snímku (konec M-cyklu zápisu).
  * @note Vedlejší efekty: změna OUT (callback), u CTC0 přeplánování eventu
- *       MZEVENT_CTC0 a případné zpracování hrany CLK0 v předstihu.
+ *       MZEVENT_CTC0 a případné zpracování hrany CLK0 v předstihu. GATE0 = 0
+ *       ukončí stav "dělič 2" zvukového kanálu (ctc8253_ctc0_audio_update()).
  * @pre Volat z emu vlákna.
  */
 void ctc8253_gate(unsigned cs, unsigned gate, unsigned event_ticks)
@@ -1335,6 +1415,12 @@ void ctc8253_gate(unsigned cs, unsigned gate, unsigned event_ticks)
             ctc->state = CTC_STATE_PRESET;
         };
         break;
+    };
+
+    if ((cs == CTC_CS0) && g_audio.ctc0_div2)
+    {
+        /* brána zastavila režim 3 s děličem 2; OUT0 se měnit nemusel */
+        ctc8253_ctc0_audio_update(event_ticks);
     };
 
 #ifdef MZ800EMU_CFG_CLK1M1_FAST

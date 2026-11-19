@@ -2072,7 +2072,7 @@ and on the command line (`--audio-capture`), see
 
 | File | Content |
 |---|---|
-| `events.csv` | `ticks,time_us,frame,channel,level` - every change of the output level of a sound channel (0-15; 16-30 = 0.49 of step `level - 15` for a PSG tone with divider 1) |
+| `events.csv` | `ticks,time_us,frame,channel,level` - every change of the output level of a sound channel (0-15; 16-30 = 0.49 of step `level - 15` for a PSG tone with divider 1; 31 = 0.64 of step 15 for `ctc0` while CTC0 runs in mode 3 with divider 2, 0.50 in the MZ-700 emulators) |
 | `psg_writes.csv` | `ticks,time_us,frame,psg,byte,channel,reg,value` - every write to the PSG, decoded |
 | `reference.wav` | the sound rendered exactly in emulated time (the renderer of the video recording) |
 | `sdl.wav` | the sound produced by the emulator's audio output path - what the user hears |
@@ -2083,10 +2083,10 @@ and on the command line (`--audio-capture`), see
   `frame` the audio frame (= video frame, 20 ms PAL / 16.7 ms NTSC)
   since the start.
 - Channels: `ctc0` (the speaker driven by CTC0 and the PIO, level 0 or
-  15), `psg0_0`..`psg0_3` and, on the MZ-1500 or an MZ-800 with the
-  second PSG, `psg1_0`..`psg1_3`. Channel 3 of a PSG is the noise
-  channel. The first rows of events.csv (ticks 0) are the levels at the
-  start.
+  15; 31 while CTC0 runs in mode 3 with divider 2 and PC0 = 1),
+  `psg0_0`..`psg0_3` and, on the MZ-1500 or an MZ-800 with the second
+  PSG, `psg1_0`..`psg1_3`. Channel 3 of a PSG is the noise channel. The
+  first rows of events.csv (ticks 0) are the levels at the start.
 - psg_writes.csv: `psg` is the target (1 = PSG0, 2 = PSG1, 3 = both),
   `byte` the written value in hex. Decoding from the PSG state after the
   write (for both PSGs from PSG0): `reg` = `tone_lo` (latch byte of a

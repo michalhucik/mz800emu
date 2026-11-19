@@ -11,9 +11,11 @@ extern "C"
 
     uint8_t *iface_audio_resampler_process_audio_log(const st_AUDIO_SOURCE_LOG *source, uint64_t log_count_samples, size_t output_samples_count);
     /**
-     * @brief Vytvoří zvukový proud CTC0 ve float z dvouhodnotového vstupního proudu.
+     * @brief Vytvoří zvukový proud CTC0 ve float ze vstupního proudu hodnot zvukového logu.
      *
-     * Vzorek je podíl nenulových vstupních vzorků bloku dělený `(délka bloku + 1)`,
+     * Vstup nese hodnoty kanálu CTC0: 0, AUDIO_MAXVAL_PER_CHANNEL (váha 1)
+     * a AUDIO_LEVEL_CTC0_DIV2 (režim 3 s děličem 2, váha AUDIO_CTC0_DIV2_FACTOR).
+     * Vzorek je součet vah vstupních vzorků bloku dělený `(délka bloku + 1)`,
      * pak střídavá vazba (horní propust 1. řádu, AUDIO_CTC0_AC_TAU_MS; výstup je
      * souměrný kolem nuly a stálá úroveň doznívá), jednopólový low-pass
      * a anti-glitch filtr - sdílená funkce videorec_audio_chain_ctc0(). Stav
@@ -55,7 +57,7 @@ extern "C"
      * @param channel              Index kanálu (1 až AUDIO_SRC_CHANNELS_COUNT - 1).
      * @param source               Log kanálu.
      * @param log_count_samples    Délka logu v ticích GDG.
-     * @param SN76489_volume_value Tabulka výchylek pro hodnoty logu 0 až 30.
+     * @param SN76489_volume_value Tabulka výchylek pro hodnoty logu 0 až 31.
      * @param output_samples_count Počet výstupních vzorků; nenulový.
      * @param parked_samples       Počet vzorků stálé nenulové hodnoty před parkováním.
      * @param parked_fade          Délka útlumu zaparkované hodnoty ve vzorcích.

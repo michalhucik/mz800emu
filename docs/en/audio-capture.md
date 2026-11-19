@@ -60,14 +60,20 @@ start of the capture (the frequency is `gdg_clk_hz` in capture.json),
 (20 ms PAL, 16.7 ms NTSC).
 
 **events.csv** - `ticks,time_us,frame,channel,level`. Channels: `ctc0` (the
-speaker, level 0 or 15), `psg0_0` .. `psg0_3` (PSG, channel 3 = noise) and on
+speaker, level 0, 15 or 31), `psg0_0` .. `psg0_3` (PSG, channel 3 = noise) and on
 the MZ-1500 or an MZ-800 with the second PSG `psg1_0` .. `psg1_3`. Level 0-15
 is the output of the channel (for the PSG 15 minus the attenuation while the
 generator output is high, otherwise 0). Level 16-30 belongs to a PSG tone
 channel with divider 1: a constant level of 0.49 of the full swing of step
 `level - 15` (on the real chip the output toggles at 110.8 kHz, only the mean
-level is audible; used to play samples through the volume register). The first
-rows (`ticks` 0) are the levels at the start.
+level is audible; used to play samples through the volume register). Level 31
+belongs only to the `ctc0` channel while counter CTC0 runs in mode 3 with
+divider 2 and bit PC0 is 1: the 554 kHz square wave is not written edge by
+edge, the channel holds a constant level of 0.64 of level 15 (measured on a
+real MZ-800); with PC0 = 0 the level is 0. In the MZ-700 emulators level 31
+means half of level 15 (0.50, derived from the schematic) and bit PC0 has no
+effect on it. The first rows (`ticks` 0) are the
+levels at the start.
 
 **psg_writes.csv** - `ticks,time_us,frame,psg,byte,channel,reg,value`:
 `psg` = target (1 = PSG0, 2 = PSG1, 3 = both), `byte` = written value (hex),

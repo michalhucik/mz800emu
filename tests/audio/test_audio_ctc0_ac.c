@@ -38,6 +38,7 @@ void setUp(void)
     /* Čistý log a ustálená vazba v čase za dosavadními událostmi. */
     s_t0 = g_audio.log->last_psg_timestamp + 10u * (uint64_t)GDGCLK_BASE;
     g_audio.ctc0_output = 0;
+    g_audio.ctc0_div2 = 0;
     g_audio.cmt_echo = 0;
     audio_reset_log(s_t0);
 }
@@ -54,7 +55,7 @@ static int ctc0_log_value(void)
 static double ac_output(uint64_t t)
 {
     double mean = audio_ctc0_ac_mean(t);
-    return (double)g_audio.ctc0_ac.level - mean;
+    return g_audio.ctc0_ac.level - mean;
 }
 
 /* Po resetu logu je vazba ustálená: stálá úroveň nedává nic. */
@@ -66,7 +67,9 @@ void test_ctc0_ac_settled_after_reset(void)
 
     g_audio.ctc0_output = 1;
     audio_reset_log(s_t0 + 2 * TAU_TICKS);
-    TEST_ASSERT_EQUAL_UINT(1, g_audio.ctc0_ac.level);
+    TEST_ASSERT_DOUBLE_WITHIN(1e-12, 1.0, g_audio.ctc0_ac.level);
+    /* log po resetu nese úroveň kanálu hned, bez čekání na další hranu */
+    TEST_ASSERT_EQUAL_INT(AUDIO_MAXVAL_PER_CHANNEL, ctc0_log_value());
     TEST_ASSERT_DOUBLE_WITHIN(1e-12, 0.0, ac_output(s_t0 + 3 * TAU_TICKS));
     TEST_ASSERT_DOUBLE_WITHIN(1e-12, 1.0, g_audio.log->ctc0_ac_mean);
 }
@@ -122,10 +125,10 @@ void test_cmt_echo_plays_through_ac_coupling(void)
     uint64_t t = s_t0 + 1000;
     audio_cmt_echo_changed(true, t);
     TEST_ASSERT_EQUAL_INT(AUDIO_MAXVAL_PER_CHANNEL, ctc0_log_value());
-    TEST_ASSERT_EQUAL_UINT(1, g_audio.ctc0_ac.level);
+    TEST_ASSERT_DOUBLE_WITHIN(1e-12, 1.0, g_audio.ctc0_ac.level);
     audio_cmt_echo_changed(false, t + 5000);
     TEST_ASSERT_EQUAL_INT(0, ctc0_log_value());
-    TEST_ASSERT_EQUAL_UINT(0, g_audio.ctc0_ac.level);
+    TEST_ASSERT_DOUBLE_WITHIN(1e-12, 0.0, g_audio.ctc0_ac.level);
     /* události echa jsou ve zvukovém logu jako hrany CTC0 */
     TEST_ASSERT_EQUAL_UINT(3, g_audio.log->src[audio_source_id(AUDIO_SRC_CTC0)]->samples_count);
 
@@ -171,9 +174,12 @@ void test_audio_level_amplitude_matches_sdl_table(void)
     MZTEST_REQUIRE_LEVEL(MZTEST_LEVEL_UNIT);
 
     iface_audio_set_src_volume(1, 100);
-    for (unsigned v = 0; v < AUDIO_LEVEL_VALUES_COUNT; v++) {
+    /* hodnoty kanálů PSG (0 až 30); hodnota 31 patří jen kanálu CTC0 */
+    for (unsigned v = 0; v < AUDIO_LEVEL_CTC0_DIV2; v++) {
         TEST_ASSERT_DOUBLE_WITHIN(1e-6, (double)g_iface_audio.SN76489_volume_value[1][v], audio_level_amplitude(v));
     }
+    TEST_ASSERT_DOUBLE_WITHIN(1e-12, 0.0, (double)g_iface_audio.SN76489_volume_value[1][AUDIO_LEVEL_CTC0_DIV2]);
+    TEST_ASSERT_DOUBLE_WITHIN(1e-6, 0.64, audio_level_amplitude(AUDIO_LEVEL_CTC0_DIV2));
     TEST_ASSERT_DOUBLE_WITHIN(1e-12, 0.0, audio_level_amplitude(AUDIO_LEVEL_VALUES_COUNT));
 }
 

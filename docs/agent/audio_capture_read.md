@@ -50,9 +50,14 @@ The memory stays readable after the capture ends, until the next
   samples through the volume register.
 - `audio_levels` / events.csv `level`: 0 = silent, 1-15 = full swing of
   the volume step (15 minus attenuation), 16-30 = 0.49 of the swing of
-  step `level - 15` (a PSG tone channel with divider 1). In `audio_frames`
-  and in the summary `max_level` is the volume step 0-15 and `rms_level`
-  counts a half-swing level with its real amplitude.
+  step `level - 15` (a PSG tone channel with divider 1), 31 = 0.64 of the
+  swing of step 15 (only the `ctc0` channel, while CTC0 runs in mode 3
+  with divider 2 and PC0 is 1: the 554 kHz square wave is not logged edge
+  by edge, the channel holds this constant level instead, as measured on
+  a real MZ-800; PC0 = 0 gives 0; in the MZ-700 emulators level 31 is
+  0.50 of step 15 and PC0 has no effect). In `audio_frames` and in the summary
+  `max_level` is the volume step 0-15 (15 for level 31) and `rms_level`
+  counts levels 16-31 with their real amplitude.
 - Levels between sources: the speaker (`ctc0`, level 15) is 1.49 times
   the swing of one PSG channel at attenuation 0 (+3.5 dB, measured on a
   real MZ-800); the user volumes in the INI multiply this.

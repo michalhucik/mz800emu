@@ -16,6 +16,10 @@
  * založí v čase (aktuální tiky - fáze), takže další krok PSG přijde ve
  * stejném čase jako bez načtení. Snapshot bez `hw/audio.xml` (starší) má
  * fázi 0 (dřívější chování).
+ *
+ * Stav kanálu CTC0 (úroveň po hradlování PC0 a příznak "režim 3 s děličem 2")
+ * se neukládá; před resetem logu se odvodí ze stavu 8253 a 8255
+ * (ctc8253_ctc0_audio_restore()), které se načítají dřív.
  */
 
 #include <stdio.h>
@@ -26,6 +30,7 @@
 #include "snapshot/snapshot_io.h"
 #include "audio.h"
 #include "hw-generic/gdg/gdg.h"
+#include "hw-generic/ctc8253/ctc8253.h"
 
 
 /** @brief Položka archivu s fází PSG. */
@@ -81,6 +86,8 @@ static en_SNAPSHOT_RESULT snap_audio_load(st_SNAPSHOT_CONTEXT *ctx)
     uint64_t current_ticks = gdg_get_total_ticks();
     uint64_t phase = snap_audio_read_phase(ctx);
     if (phase > current_ticks) phase = current_ticks;
+    /* stav kanálu CTC0 podle načteného 8253 a PC0; reset logu podle něj ustálí vazbu */
+    ctc8253_ctc0_audio_restore();
     audio_reset_log(current_ticks - phase);
 
     fprintf(stderr, "Snapshot: audio log reset (ticks=%llu, psg phase=%llu)\n",

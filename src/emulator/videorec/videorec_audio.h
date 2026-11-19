@@ -2,7 +2,7 @@
  * @file   videorec_audio.h
  * @brief  Renderer audio událostí na stereo PCM v emulačním čase pro video záznam.
  *
- * Vstupem jsou změny hodnot zvukového logu (0 až 30, viz audio.h
+ * Vstupem jsou změny hodnot zvukového logu (0 až 31, viz audio.h
  * AUDIO_MAXVAL_PER_CHANNEL) jednotlivých zvukových kanálů s absolutním
  * časem v GDG taktech. Výstupem jsou stereo vzorky int16 (prokládané L, R).
  *
@@ -99,9 +99,10 @@ extern "C" {
 /**
  * @brief Počet úrovní na kanál (5bitová hodnota 0..31).
  *
- * Zvukový log používá hodnoty 0 až 30: 0 až 15 plná výchylka stupně
+ * Zvukový log používá hodnoty 0 až 31: 0 až 15 plná výchylka stupně
  * hlasitosti, 16 až 30 poloviční výchylka stupně `hodnota - 15` (tón PSG
- * s děličem 001h). Hodnota 31 se nepoužívá (v tabulce má mít úroveň 0).
+ * s děličem 001h), 31 výchylka 0,64 stupně 15 (jen kanál CTC0 v režimu 3
+ * s děličem 2, AUDIO_LEVEL_CTC0_DIV2 v audio.h).
  */
 #define VIDEOREC_AUDIO_LEVELS 32
 
@@ -394,8 +395,9 @@ float videorec_audio_output_gain_step(const st_VIDEOREC_AUDIO_COEF *c, float gai
  * @pre `a`, `level` nejsou NULL; `clk_hz` a `rate` nenulové.
  * @post Renderer je prázdný, `n == 0`, stavy filtrů nulové (jako SDL cesta po
  *       startu emulátoru) kromě střídavé vazby CTC0, která začíná ustálená na
- *       počáteční hodnotě kanálu 0 (`hp_mean` 1 při nenulové hodnotě, jinak 0;
- *       přesný stav nastaví videorec_audio_set_ctc0_mean()); všechny kanály se
+ *       počáteční hodnotě kanálu 0 (`hp_mean` = úroveň počáteční hodnoty dělená
+ *       úrovní hodnoty VIDEOREC_AUDIO_CTC0_ON_VALUE, tedy 1, 0,64 u hodnoty 31
+ *       nebo 0; přesný stav nastaví videorec_audio_set_ctc0_mean()); všechny kanály se
  *       mixují do obou stran (`stereo == false`, viz videorec_audio_set_stereo()),
  *       výstupní propust je vypnutá (videorec_audio_set_output_filter()),
  *       střídavá vazba výstupu je vypnutá a kanály PSG se parkují

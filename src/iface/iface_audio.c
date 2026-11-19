@@ -548,9 +548,11 @@ float *iface_audio_wait_for_data(size_t *output_samples_size)
 /**
  * @brief Výchylka kanálu PSG pro hodnotu zvukového logu.
  *
- * @param value  Hodnota zvukového logu 0 až 30 (viz AUDIO_MAXVAL_PER_CHANNEL):
+ * @param value  Hodnota zvukového logu 0 až 31 (viz AUDIO_MAXVAL_PER_CHANNEL):
  *               0 ticho, 1 až 15 plná výchylka stupně (krok 2 dB), 16 až 30
- *               výchylka stupně `value - 15` krát AUDIO_LEVEL_HALF_FACTOR.
+ *               výchylka stupně `value - 15` krát AUDIO_LEVEL_HALF_FACTOR,
+ *               31 (AUDIO_LEVEL_CTC0_DIV2) patří jen kanálu CTC0, kanály PSG
+ *               ji nepíšou a v tabulce má výchylku 0.
  * @param volume Hlasitost v procentech.
  * @return Výchylka v jednotkách AUDIO_OUTPUT_t.
  */
@@ -560,6 +562,11 @@ static AUDIO_OUTPUT_t iface_audio_SN76489_get_output_level(int value, int volume
     {
         return (AUDIO_OUTPUT_t)(AUDIO_LEVEL_HALF_FACTOR
                                 * iface_audio_SN76489_get_output_level((int)audio_level_step((unsigned)value), volume));
+    };
+    if (audio_level_is_ctc0_div2((unsigned)value))
+    {
+        /* hodnota kanálu CTC0; kanál PSG ji nenese */
+        return 0;
     };
     if (value == 0)
     {
@@ -597,9 +604,11 @@ void iface_audio_build_videorec_levels(float level[][VIDEOREC_AUDIO_LEVELS], uns
         for (unsigned v = 0; v < VIDEOREC_AUDIO_LEVELS; v++)
         {
             if (ch == 0)
-                /* CTC0: SDL cesta počítá podíl nenulových vzorků => 0 / zesílení bloku;
+                /* CTC0: SDL cesta počítá podíl nenulových vzorků => 0 / zesílení bloku
+                 * (hodnota 31, režim 3 s děličem 2, váhou AUDIO_CTC0_DIV2_FACTOR);
                  * poměr k PSG jako v mixu SDL cesty */
-                level[ch][v] = (v ? ctc0_gain : 0.0f) * g_iface_audio.gain[0] * ctc0_mix;
+                level[ch][v] = (v ? ctc0_gain : 0.0f) * (audio_level_is_ctc0_div2(v) ? AUDIO_CTC0_DIV2_FACTOR : 1.0f)
+                               * g_iface_audio.gain[0] * ctc0_mix;
             else if (v < AUDIO_LEVEL_VALUES_COUNT)
                 /* PSG: hlasitostní tabulka + gain, průměr přes 4 kanály jako iface_audio_mix_channels_with_gain() */
                 level[ch][v] = (float)g_iface_audio.SN76489_volume_value[ch][v] * g_iface_audio.gain[ch] / (float)PSG_CHANNELS_COUNT;

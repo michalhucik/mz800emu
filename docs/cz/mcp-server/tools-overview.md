@@ -2014,7 +2014,7 @@ i v GUI (Tools -> Audio Capture, `Alt + Q`) a v příkazové řádce
 
 | Soubor | Obsah |
 |---|---|
-| `events.csv` | `ticks,time_us,frame,channel,level` - každá změna výstupní úrovně zvukového kanálu (0-15; 16-30 = úroveň 0,49 stupně `level - 15` u tónu PSG s děličem 1) |
+| `events.csv` | `ticks,time_us,frame,channel,level` - každá změna výstupní úrovně zvukového kanálu (0-15; 16-30 = úroveň 0,49 stupně `level - 15` u tónu PSG s děličem 1; 31 = úroveň 0,64 stupně 15 u `ctc0` při CTC0 v režimu 3 s děličem 2, v emulátorech MZ-700 0,50) |
 | `psg_writes.csv` | `ticks,time_us,frame,psg,byte,channel,reg,value` - každý zápis do PSG s dekódováním |
 | `reference.wav` | zvuk vyrenderovaný přesně v emulovaném čase (renderer video záznamu) |
 | `sdl.wav` | zvuk ze zvukové výstupní cesty emulátoru - to, co slyší uživatel |
@@ -2023,7 +2023,8 @@ i v GUI (Tools -> Audio Capture, `Alt + Q`) a v příkazové řádce
 - `ticks` jsou takty GDG od začátku zachycení (`gdg_clk_hz` v
   capture.json), `time_us` totéž v mikrosekundách, `frame` zvukový snímek
   (= snímek obrazu, 20 ms PAL / 16,7 ms NTSC) od začátku.
-- Kanály: `ctc0` (reproduktor řízený CTC0 a PIO, úroveň 0 nebo 15),
+- Kanály: `ctc0` (reproduktor řízený CTC0 a PIO, úroveň 0 nebo 15; 31 při
+  CTC0 v režimu 3 s děličem 2 a PC0 = 1),
   `psg0_0`..`psg0_3` a na MZ-1500 nebo MZ-800 s druhým PSG
   `psg1_0`..`psg1_3`. Kanál 3 každého PSG je šumový. První řádky
   events.csv (ticks 0) jsou úrovně na začátku.
