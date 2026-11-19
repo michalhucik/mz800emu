@@ -34,9 +34,11 @@ right: the platform (for example MZ-800), the speed (a percentage or Max
 speed), **Muted** (only while the sound is muted) and **Paused** (only while
 the emulation is paused). The **Close** button is at the far right. In a
 narrower window the bar gradually drops the platform and speed labels, then
-the captions of the inactive tabs; the mute label shrinks to its icon, and
-finally the caption of the Close button and the whole mute label go. **The
-footer** shows the keys that apply at the moment.
+the captions of the inactive tabs; the mute label shrinks to its icon, then
+the caption of the Close button and the whole mute label go. When even that
+is not enough (a small window and a language with long words), the pause
+label shrinks to its icon and finally the caption of the active tab goes
+too. **The footer** shows the keys that apply at the moment.
 
 **Pause.** Opening the menu pauses a running emulation and closing it
 restores the state from before: an emulation that was running runs again, an

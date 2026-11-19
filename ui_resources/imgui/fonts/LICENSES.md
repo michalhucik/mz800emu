@@ -28,8 +28,9 @@ Staženo 2026-11-18.
   volume-2 e1ab, keyboard e284, camera e064, pause e12e, play e13c,
   rotate-cw e149, folder-open e247, download e0b2, upload e19e,
   cassette-tape e4ca.
-- Lucide nemá ikonu vysunutí média ani diskety: disketa je `ICON_LC_SAVE`,
-  vysunutí kreslí `ovl_draw_icon()` přes `ImDrawList` (`OVL_ICON_EJECT`).
+- Lucide nemá ikonu diskety: disketa je `ICON_LC_SAVE`. Ikonu vysunutí média
+  písmo má (U+E733), hlavička `IconsLucide.h` ji ale nezná (končí na U+E6FD);
+  vysunutí proto kreslí `ovl_draw_icon()` přes `ImDrawList` (`OVL_ICON_EJECT`).
 - Kódové body Lucide leží v soukromé oblasti Unicode a překrývají se s
   `ui_resources/imgui/symbols/mzglyphs.ttf` (U+E100 až U+E4FF). Lucide se proto
   slučuje jen do písem overlaye, nikdy do základního písma UI.

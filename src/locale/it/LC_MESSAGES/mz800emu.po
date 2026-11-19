@@ -83,7 +83,7 @@ msgstr "Velocità normale"
 
 #: src/emulator/emulator.c:480
 msgid "MUTED"
-msgstr ""
+msgstr "MUTO"
 
 #: src/emulator/hw-generic/cmt/cmthack.c:1046
 msgid "Select a MZF File"
@@ -94,14 +94,14 @@ msgstr "Seleziona file MZF"
 msgid ""
 "The disk in FDD %d was not saved: the drive now refers to a different image "
 "file than the one it was loaded from. Re-insert the image to continue."
-msgstr ""
+msgstr "Il disco in FDD %d non è stato salvato: l'unità ora punta a un file immagine diverso da quello da cui è stato caricato. Reinserisci l'immagine per continuare."
 
 #: src/emulator/hw-generic/fdc/fdc.c:1033
 #, c-format
 msgid ""
 "The disk in FDD %d was not saved: the image is also inserted in FDD %d, "
 "which may write to it."
-msgstr ""
+msgstr "Il disco in FDD %d non è stato salvato: l'immagine è inserita anche in FDD %d, che può scriverci."
 
 #: src/emulator/hw-generic/fdc/fdc.c:1545
 #, c-format
@@ -113,14 +113,14 @@ msgstr "Seleziona il file immagine DSK per FDC%u unità FD%d"
 msgid ""
 "The image is already inserted in FDD %d. It was inserted write-protected "
 "here to keep the image file safe."
-msgstr ""
+msgstr "L'immagine è già inserita in FDD %d. Qui è stata inserita protetta da scrittura per proteggere il file immagine."
 
 #: src/emulator/hw-generic/fdc/fdc_request.c:137
 #: src/ui-imgui/overlay/overlay_actions.cpp:176
 #: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:288
 #, c-format
 msgid "The image is also inserted in FDD %d, which may write to it."
-msgstr ""
+msgstr "L'immagine è inserita anche in FDD %d, che può scriverci."
 
 #: src/emulator/hw-generic/qdisk/qdisk.c:866
 msgid "Select existing .MZQ file or create new QD image"
@@ -134,7 +134,7 @@ msgstr "Seleziona directory da montare come Quick Disk virtuale"
 msgid ""
 "The Quick Disk was not saved: the drive now refers to a different image file "
 "than the one it was loaded from. Re-insert the image to continue."
-msgstr ""
+msgstr "Il Quick Disk non è stato salvato: l'unità ora punta a un file immagine diverso da quello da cui è stato caricato. Reinserisci l'immagine per continuare."
 
 #: src/emulator/hw-generic/unicard/unicard.c:2383
 msgid "Select SD root directory for Unicard"
@@ -202,17 +202,17 @@ msgstr "ROM definita dall'utente"
 #: src/emulator/snapshot/handlers/snap_fdc.c:100
 #: src/emulator/snapshot/handlers/snap_qdisk.c:152
 msgid "empty"
-msgstr ""
+msgstr "vuoto"
 
 #: src/emulator/snapshot/handlers/snap_fdc.c:102
 #, c-format
 msgid "FDD %d: %s (now: %s)"
-msgstr ""
+msgstr "FDD %d: %s (ora: %s)"
 
 #: src/emulator/snapshot/handlers/snap_qdisk.c:154
 #, c-format
 msgid "Quick Disk: %s (now: %s)"
-msgstr ""
+msgstr "Quick Disk: %s (ora: %s)"
 
 #: src/emulator/snapshot/snapshot_media.c:112
 #, c-format
@@ -220,7 +220,7 @@ msgid ""
 "The snapshot was saved with different disks:\n"
 "%s\n"
 "The inserted disks were kept."
-msgstr ""
+msgstr "L'istantanea è stata salvata con dischi diversi:\n%s\nI dischi inseriti sono stati mantenuti."
 
 #: src/ui/cmt/UiCmt.cpp:31
 msgid "Default"
@@ -447,36 +447,36 @@ msgstr "Mixer audio"
 #: src/ui-imgui/audio_window.cpp:139
 #: src/ui-imgui/overlay/overlay_tab_sound.cpp:185
 msgid "Output"
-msgstr ""
+msgstr "Uscita"
 
 #: src/ui-imgui/audio_window.cpp:141
 #: src/ui-imgui/overlay/overlay_actions.cpp:1293
 #: src/ui-imgui/overlay/overlay_tab_sound.cpp:206
 msgid "Mute"
-msgstr ""
+msgstr "Disattiva audio"
 
 #: src/ui-imgui/audio_window.cpp:147
 msgid ""
 "Silences the sound output; the volumes are kept. Not saved: the emulator "
 "always starts unmuted."
-msgstr ""
+msgstr "Silenzia l'uscita audio; i volumi restano invariati. Non viene salvato: l'emulatore parte sempre con l'audio attivo."
 
 #: src/ui-imgui/audio_window.cpp:151
 #: src/ui-imgui/overlay/overlay_actions.cpp:1292
 #: src/ui-imgui/overlay/overlay_tab_sound.cpp:192
 msgid "Master volume"
-msgstr ""
+msgstr "Volume generale"
 
 #: src/ui-imgui/audio_window.cpp:157
 msgid ""
 "Listening volume of the whole mix. The channel volumes and recordings are "
 "not affected."
-msgstr ""
+msgstr "Volume di ascolto dell'intero mix. I volumi dei canali e le registrazioni non cambiano."
 
 #: src/ui-imgui/audio_window.cpp:161
 #: src/ui-imgui/overlay/overlay_tab_sound.cpp:240
 msgid "Channels"
-msgstr ""
+msgstr "Canali"
 
 #: src/ui-imgui/audio_window.cpp:172
 #, c-format
@@ -490,11 +490,11 @@ msgstr "%.0f dB"
 
 #: src/ui-imgui/audio_window.cpp:232
 msgid "All channels: sets every channel to the same volume."
-msgstr ""
+msgstr "Tutti i canali: imposta ogni canale allo stesso volume."
 
 #: src/ui-imgui/audio_window.cpp:269
 msgid "Level of the mix before the master volume and mute."
-msgstr ""
+msgstr "Livello del mix prima del volume generale e del muto."
 
 #: src/ui-imgui/audio_window.cpp:278
 #: src/ui-imgui/overlay/overlay_actions.cpp:1294
@@ -14175,12 +14175,12 @@ msgstr ""
 
 #: src/ui-imgui/overlay/overlay.cpp:119
 msgid "Media"
-msgstr ""
+msgstr "Supporti"
 
 #: src/ui-imgui/overlay/overlay.cpp:120
 #: src/ui-imgui/overlay/overlay_tab_machine.cpp:171
 msgid "Machine"
-msgstr ""
+msgstr "Macchina"
 
 #: src/ui-imgui/overlay/overlay.cpp:121
 #: src/ui-imgui/topmenu/interface/menu_display.cpp:44
@@ -14189,15 +14189,15 @@ msgstr "Schermo"
 
 #: src/ui-imgui/overlay/overlay.cpp:122
 msgid "Sound"
-msgstr ""
+msgstr "Audio"
 
 #: src/ui-imgui/overlay/overlay.cpp:123
 msgid "Input"
-msgstr ""
+msgstr "Input"
 
 #: src/ui-imgui/overlay/overlay.cpp:124
 msgid "Capture"
-msgstr ""
+msgstr "Cattura"
 
 #: src/ui-imgui/overlay/overlay.cpp:910 src/ui-imgui/overlay/overlay.cpp:912
 #: src/ui-imgui/overlay/overlay.cpp:971 src/ui-imgui/overlay/overlay.cpp:1100
@@ -14207,125 +14207,125 @@ msgstr "Chiudi"
 
 #: src/ui-imgui/overlay/overlay.cpp:968
 msgid "Muted"
-msgstr ""
+msgstr "Muto"
 
 #: src/ui-imgui/overlay/overlay.cpp:1097
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:1346
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:1352
 msgctxt "overlay footer"
 msgid "to"
-msgstr ""
+msgstr "a"
 
 #: src/ui-imgui/overlay/overlay.cpp:1097
 msgid "Tabs"
-msgstr ""
+msgstr "Schede"
 
 #: src/ui-imgui/overlay/overlay.cpp:1098
 msgid "Arrows"
-msgstr ""
+msgstr "Frecce"
 
 #: src/ui-imgui/overlay/overlay.cpp:1098
 msgid "Move"
-msgstr ""
+msgstr "Sposta"
 
 #: src/ui-imgui/overlay/overlay.cpp:1099
 msgid "Select"
-msgstr ""
+msgstr "Seleziona"
 
 #: src/ui-imgui/overlay/overlay.cpp:1112
 msgid "Right-click: classic menu"
-msgstr ""
+msgstr "Clic destro: menu classico"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:131
 msgid "FD controller FDC0 is not connected."
-msgstr ""
+msgstr "Il controller FD FDC0 non è collegato."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:146
 #: src/ui-imgui/overlay/overlay_actions.cpp:246
 msgid "The drive is empty."
-msgstr ""
+msgstr "L'unità è vuota."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:154
 #: src/ui-imgui/overlay/overlay_actions.cpp:255
 msgid "There are no unsaved changes."
-msgstr ""
+msgstr "Nessuna modifica non salvata."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:173
 msgid "The file is write-protected on the disk."
-msgstr ""
+msgstr "Il file è protetto da scrittura sul disco."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:211
 msgid ""
 "Browse files opens the disk image dialog, but FD controller FDC0 is not "
 "connected."
-msgstr ""
+msgstr "Sfoglia file apre la finestra delle immagini disco, ma il controller FD FDC0 non è collegato."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:225
 msgid "Quick Disk is not connected."
-msgstr ""
+msgstr "Quick Disk non è collegato."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:227
 msgid "Quick Disk is controlled by Unicard."
-msgstr ""
+msgstr "Quick Disk è controllato da Unicard."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:237
 msgid "Eject the disk first."
-msgstr ""
+msgstr "Espelli prima il disco."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:301
 msgid "The tape is already playing."
-msgstr ""
+msgstr "Il nastro è già in riproduzione."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:313
 msgid "The tape is not playing."
-msgstr ""
+msgstr "Il nastro non è in riproduzione."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:380
 #: src/ui-imgui/overlay/overlay_actions.cpp:1036
 #: src/ui-imgui/overlay/overlay_view.cpp:245
 msgid "Not available while a replay is active."
-msgstr ""
+msgstr "Non disponibile mentre un replay è attivo."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:400
 msgid "Set a custom speed with the slider first."
-msgstr ""
+msgstr "Imposta prima una velocità personalizzata con il cursore."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:407
 msgid "Enable scanlines first."
-msgstr ""
+msgstr "Attiva prima le scanline."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:414
 msgid "Select Custom FPS first."
-msgstr ""
+msgstr "Seleziona prima FPS personalizzato."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:923
 msgid ""
 "The emulation was paused before the menu was opened. Resume it to listen."
-msgstr ""
+msgstr "L'emulazione era in pausa prima dell'apertura del menu. Riprendila per ascoltare."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:924
 msgid "The emulation is running."
-msgstr ""
+msgstr "L'emulazione è in esecuzione."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1076
 msgid "The joystick device could not be opened."
-msgstr ""
+msgstr "Impossibile aprire il dispositivo joystick."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1128
 msgid "No video recording is running."
-msgstr ""
+msgstr "Nessuna registrazione video in corso."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1167
 msgid "A replay is already active."
-msgstr ""
+msgstr "Un replay è già attivo."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1174
 msgid "No replay is active."
-msgstr ""
+msgstr "Nessun replay attivo."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1222
 msgid "Resume"
-msgstr ""
+msgstr "Riprendi"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1224
 #: src/ui-imgui/overlay/overlay_tab_machine.cpp:331
@@ -14361,7 +14361,7 @@ msgstr "Schermo intero"
 #: src/ui-imgui/overlay/overlay_actions.cpp:1260
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:568
 msgid "Insert disk"
-msgstr ""
+msgstr "Inserisci disco"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1239
 #: src/ui-imgui/overlay/overlay_actions.cpp:1240
@@ -14369,7 +14369,7 @@ msgstr ""
 #: src/ui-imgui/overlay/overlay_actions.cpp:1242
 #: src/ui-imgui/overlay/overlay_actions.cpp:1262
 msgid "Save changes"
-msgstr ""
+msgstr "Salva modifiche"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1243
 #: src/ui-imgui/overlay/overlay_actions.cpp:1244
@@ -14378,7 +14378,7 @@ msgstr ""
 #: src/ui-imgui/overlay/overlay_actions.cpp:1263
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:936
 msgid "Write protect"
-msgstr ""
+msgstr "Protezione da scrittura"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1248
 #: src/ui-imgui/topmenu/menu_replay.cpp:155
@@ -14390,21 +14390,21 @@ msgstr "Torna al checkpoint"
 #: src/ui-imgui/overlay/overlay_actions.cpp:1256
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:827
 msgid "Change tape"
-msgstr ""
+msgstr "Cambia nastro"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1258
 msgid "Open tape window"
-msgstr ""
+msgstr "Apri finestra nastro"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1265
 msgid "Browse files..."
-msgstr ""
+msgstr "Sfoglia file..."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1266
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:1039
 #: src/ui-imgui/topmenu/menu_recent.cpp:202
 msgid "Clear recent media"
-msgstr ""
+msgstr "Cancella supporti recenti"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1270
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:224
@@ -14417,17 +14417,17 @@ msgstr "Normale"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1271
 msgid "Custom"
-msgstr ""
+msgstr "Personalizzato"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1273
 #: src/ui-imgui/overlay/overlay_tab_machine.cpp:290
 msgid "Decrease by 10 %"
-msgstr ""
+msgstr "Riduci del 10 %"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1274
 #: src/ui-imgui/overlay/overlay_tab_machine.cpp:298
 msgid "Increase by 10 %"
-msgstr ""
+msgstr "Aumenta del 10 %"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1275
 #: src/ui-imgui/overlay/overlay_tab_machine.cpp:337
@@ -14450,37 +14450,37 @@ msgstr "Configurazione istantanea..."
 #: src/ui-imgui/overlay/overlay_actions.cpp:1278
 #: src/ui-imgui/overlay/overlay_tab_machine.cpp:375
 msgid "Open classic menu"
-msgstr ""
+msgstr "Apri menu classico"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1280
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:219
 msgid "Window size on startup"
-msgstr ""
+msgstr "Dimensione finestra all'avvio"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1281
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:234
 msgid "Lock window aspect ratio"
-msgstr ""
+msgstr "Blocca proporzioni della finestra"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1282
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:242
 msgid "By width"
-msgstr ""
+msgstr "Per larghezza"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1283
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:242
 msgid "By height"
-msgstr ""
+msgstr "Per altezza"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1284
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:263
 msgid "Color schema"
-msgstr ""
+msgstr "Schema colori"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1285
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:296
 msgid "Enable scanlines"
-msgstr ""
+msgstr "Attiva scanline"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1286
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:300
@@ -14491,7 +14491,7 @@ msgstr "Intensità"
 #: src/ui-imgui/overlay/overlay_actions.cpp:1287
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:332
 msgid "Frame rate control"
-msgstr ""
+msgstr "Controllo frequenza fotogrammi"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1288
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:337
@@ -14503,32 +14503,32 @@ msgstr "FPS personalizzato"
 #: src/ui-imgui/overlay/overlay_actions.cpp:1289
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:382
 msgid "Forced redraw every screen"
-msgstr ""
+msgstr "Ridisegno forzato di ogni schermata"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1291
 #: src/ui-imgui/overlay/overlay_tab_sound.cpp:146
 msgid "Listen"
-msgstr ""
+msgstr "Ascolta"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1295
 msgid "Channel volume"
-msgstr ""
+msgstr "Volume dei canali"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1296
 #: src/ui-imgui/overlay/overlay_tab_sound.cpp:262
 #: src/ui-imgui/overlay/overlay_tab_sound.cpp:266
 msgid "Reset channels"
-msgstr ""
+msgstr "Ripristina canali"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1298
 #: src/ui-imgui/overlay/overlay_tab_input.cpp:110
 msgid "Virtual keyboard"
-msgstr ""
+msgstr "Tastiera virtuale"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1299
 #: src/ui-imgui/overlay/overlay_tab_input.cpp:113
 msgid "Autotype buffer"
-msgstr ""
+msgstr "Buffer Autotype"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1301
 #: src/ui-imgui/overlay/overlay_tab_input.cpp:154
@@ -14604,12 +14604,12 @@ msgstr "Controllo replay..."
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:376
 #: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:313
 msgid "The Quick Disk is set to a mapped directory."
-msgstr ""
+msgstr "Quick Disk è impostato su una cartella mappata."
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:376
 #: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:313
 msgid "The Quick Disk is set to a disk image."
-msgstr ""
+msgstr "Quick Disk è impostato su un'immagine disco."
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:437
 #: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:302
@@ -14617,7 +14617,7 @@ msgstr ""
 msgid ""
 "Still checking whether the file exists. Try again in a moment:\n"
 "%s"
-msgstr ""
+msgstr "Verifica dell'esistenza del file ancora in corso. Riprova tra un momento:\n%s"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:443
 #: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:308
@@ -14625,7 +14625,7 @@ msgstr ""
 msgid ""
 "The file no longer exists and was removed from the recent media:\n"
 "%s"
-msgstr ""
+msgstr "Il file non esiste più ed è stato rimosso dai supporti recenti:\n%s"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:450
 #: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:243
@@ -14634,7 +14634,7 @@ msgstr ""
 msgid ""
 "The file path is too long:\n"
 "%s"
-msgstr ""
+msgstr "Il percorso del file è troppo lungo:\n%s"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:456
 #: src/ui-imgui/topmenu/devices/menu_cmt.cpp:436
@@ -14642,118 +14642,118 @@ msgstr ""
 msgid ""
 "Another tape dialog is still open. The tape was not changed:\n"
 "%s"
-msgstr ""
+msgstr "Un'altra finestra di dialogo del nastro è ancora aperta. Il nastro non è stato cambiato:\n%s"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:535
 msgid "just now"
-msgstr ""
+msgstr "proprio ora"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:536
 #, c-format
 msgid "%d min ago"
-msgstr ""
+msgstr "%d min fa"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:537
 #, c-format
 msgid "%d h ago"
-msgstr ""
+msgstr "%d h fa"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:538
 msgid "yesterday"
-msgstr ""
+msgstr "ieri"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:539
 #, c-format
 msgid "%d days ago"
-msgstr ""
+msgstr "%d giorni fa"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:540
 msgid "last week"
-msgstr ""
+msgstr "la settimana scorsa"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:541
 #, c-format
 msgid "%d weeks ago"
-msgstr ""
+msgstr "%d settimane fa"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:542
 #, c-format
 msgid "%d months ago"
-msgstr ""
+msgstr "%d mesi fa"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:543
 msgid "over a year ago"
-msgstr ""
+msgstr "più di un anno fa"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:822
 msgctxt "overlay media"
 msgid "empty"
-msgstr ""
+msgstr "vuoto"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:828
 msgid "Type to filter recent tapes"
-msgstr ""
+msgstr "Digita per filtrare i nastri recenti"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:829
 msgid "No recent tapes yet. Use Browse files..."
-msgstr ""
+msgstr "Nessun nastro recente. Usa Sfoglia file..."
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:835
 msgid "Insert into Quick Disk"
-msgstr ""
+msgstr "Inserisci in Quick Disk"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:836
 msgid "Type to filter recent directories"
-msgstr ""
+msgstr "Digita per filtrare le cartelle recenti"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:836
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:846
 msgid "Type to filter recent disks"
-msgstr ""
+msgstr "Digita per filtrare i dischi recenti"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:837
 msgid "No recent directories yet. Use Browse files..."
-msgstr ""
+msgstr "Nessuna cartella recente. Usa Sfoglia file..."
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:837
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:847
 msgid "No recent disks yet. Use Browse files..."
-msgstr ""
+msgstr "Nessun disco recente. Usa Sfoglia file..."
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:845
 #, c-format
 msgid "Insert into FDD %d"
-msgstr ""
+msgstr "Inserisci in FDD %d"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:849
 msgctxt "overlay drive"
 msgid "empty"
-msgstr ""
+msgstr "vuota"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:859
 #, c-format
 msgid "Now: %s"
-msgstr ""
+msgstr "Ora: %s"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:902
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:959
 msgid "File not found"
-msgstr ""
+msgstr "File non trovato"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:925
 msgid "No recent file matches the filter."
-msgstr ""
+msgstr "Nessun file recente corrisponde al filtro."
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:1042
 msgid "Insert into"
-msgstr ""
+msgstr "Inserisci in"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:1061
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:523
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:528
 #, c-format
 msgid "FDD %d"
-msgstr ""
+msgstr "FDD %d"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:1066
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:606
@@ -14764,20 +14764,20 @@ msgstr "Vuoto"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:1346
 msgid "Insert into drive"
-msgstr ""
+msgstr "Inserisci nell'unità"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:1347
 msgid "Insert into selected"
-msgstr ""
+msgstr "Inserisci nella selezionata"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:1352
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:1353
 msgid "Insert"
-msgstr ""
+msgstr "Inserisci"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:1355
 msgid "Insert selected"
-msgstr ""
+msgstr "Inserisci selezionato"
 
 #: src/ui-imgui/overlay/overlay_tab_capture.cpp:159
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:158
@@ -14824,7 +14824,7 @@ msgstr "Ultimo: %s"
 
 #: src/ui-imgui/overlay/overlay_tab_capture.cpp:235
 msgid "Status:"
-msgstr ""
+msgstr "Stato:"
 
 #: src/ui-imgui/overlay/overlay_tab_capture.cpp:260
 #: src/ui-imgui/topmenu/menu_replay.cpp:131
@@ -14833,7 +14833,7 @@ msgstr "Replay"
 
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:215
 msgid "Window"
-msgstr ""
+msgstr "Finestra"
 
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:222
 #: src/ui-imgui/topmenu/interface/menu_display.cpp:85
@@ -14857,11 +14857,11 @@ msgstr "Grande"
 
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:236
 msgid "Fix aspect ratio"
-msgstr ""
+msgstr "Correggi proporzioni"
 
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:262
 msgid "Colors"
-msgstr ""
+msgstr "Colori"
 
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:267
 #: src/ui-imgui/topmenu/interface/menu_display.cpp:62
@@ -14870,11 +14870,11 @@ msgstr "Scala di grigi"
 
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:295
 msgid "CRT scanlines"
-msgstr ""
+msgstr "Scanline CRT"
 
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:331
 msgid "Frame rate"
-msgstr ""
+msgstr "Frequenza fotogrammi"
 
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:335
 #: src/ui-imgui/topmenu/interface/menu_display.cpp:203
@@ -14899,95 +14899,95 @@ msgstr "Scambio immediato"
 
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:365
 msgid "Decrease by 1 Hz"
-msgstr ""
+msgstr "Riduci di 1 Hz"
 
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:377
 msgid "Increase by 1 Hz"
-msgstr ""
+msgstr "Aumenta di 1 Hz"
 
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:402
 msgid "Changes apply immediately."
-msgstr ""
+msgstr "Le modifiche si applicano subito."
 
 #: src/ui-imgui/overlay/overlay_tab_input.cpp:65
 msgid "While this menu is open, keys do not reach the emulated computer."
-msgstr ""
+msgstr "Mentre questo menu è aperto, i tasti non arrivano al computer emulato."
 
 #: src/ui-imgui/overlay/overlay_tab_input.cpp:107
 msgid "Keyboard"
-msgstr ""
+msgstr "Tastiera"
 
 #: src/ui-imgui/overlay/overlay_tab_input.cpp:134
 msgid "Numeric keypad"
-msgstr ""
+msgstr "Tastierino numerico"
 
 #: src/ui-imgui/overlay/overlay_tab_input.cpp:137
 msgid "No joystick found. Use Joystick Setup to rescan devices."
-msgstr ""
+msgstr "Nessun joystick trovato. Usa Configurazione joystick per cercare di nuovo i dispositivi."
 
 #: src/ui-imgui/overlay/overlay_tab_input.cpp:153
 msgid "Mapping and calibration"
-msgstr ""
+msgstr "Mappatura e calibrazione"
 
 #: src/ui-imgui/overlay/overlay_tab_machine.cpp:144
 msgid ""
 "ROM settings, memory disks, memory extensions, IDE and DIP switches are in "
 "the classic menu."
-msgstr ""
+msgstr "Impostazioni ROM, dischi di memoria, espansioni di memoria, IDE e interruttori DIP sono nel menu classico."
 
 #: src/ui-imgui/overlay/overlay_tab_machine.cpp:176
 msgctxt "overlay emulation"
 msgid "Running"
-msgstr ""
+msgstr "In esecuzione"
 
 #: src/ui-imgui/overlay/overlay_tab_machine.cpp:270
 msgid "CPU speed"
-msgstr ""
+msgstr "Velocità CPU"
 
 #: src/ui-imgui/overlay/overlay_tab_machine.cpp:273
 msgctxt "overlay speed"
 msgid "Normal"
-msgstr ""
+msgstr "Normale"
 
 #: src/ui-imgui/overlay/overlay_tab_machine.cpp:273
 msgctxt "overlay speed"
 msgid "Custom"
-msgstr ""
+msgstr "Person."
 
 #: src/ui-imgui/overlay/overlay_tab_machine.cpp:273
 msgctxt "overlay speed"
 msgid "Max"
-msgstr ""
+msgstr "Max"
 
 #: src/ui-imgui/overlay/overlay_tab_machine.cpp:322
 msgid "Snapshots"
-msgstr ""
+msgstr "Istantanee"
 
 #: src/ui-imgui/overlay/overlay_tab_machine.cpp:358
 msgid "More hardware"
-msgstr ""
+msgstr "Altro hardware"
 
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:568
 msgctxt "overlay media"
 msgid "Change"
-msgstr ""
+msgstr "Cambia"
 
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:598
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:703
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:874
 msgid "Unsaved changes"
-msgstr ""
+msgstr "Modifiche non salvate"
 
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:619
 #, c-format
 msgid "%u KB"
-msgstr ""
+msgstr "%u KB"
 
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:623
 #: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:212
 #, c-format
 msgid "Shared with FDD %d, write-protected"
-msgstr ""
+msgstr "Condiviso con FDD %d, protetto da scrittura"
 
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:624
 #: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:282
@@ -14996,25 +14996,25 @@ msgstr "Sola lettura"
 
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:638
 msgid "Floppy drives"
-msgstr ""
+msgstr "Unità floppy"
 
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:674
 msgid "Cassette"
-msgstr ""
+msgstr "Cassetta"
 
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:729
 msgid "Empty tape"
-msgstr ""
+msgstr "Nastro vuoto"
 
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:730
 #, c-format
 msgid "Recording block %d"
-msgstr ""
+msgstr "Registrazione blocco %d"
 
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:731
 #, c-format
 msgid "Block - / %d"
-msgstr ""
+msgstr "Blocco - / %d"
 
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:821
 #: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:334
@@ -15023,38 +15023,38 @@ msgstr "Quick Disk"
 
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:1002
 msgid "Recent media"
-msgstr ""
+msgstr "Supporti recenti"
 
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:1012
 msgid "No recent media yet. Use Browse files..."
-msgstr ""
+msgstr "Nessun supporto recente. Usa Sfoglia file..."
 
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:1017
 msgid "Clear history"
-msgstr ""
+msgstr "Cancella cronologia"
 
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:1107
 msgid "Speed Max"
-msgstr ""
+msgstr "Velocità max"
 
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:1108
 #, c-format
 msgid "Speed %u %%"
-msgstr ""
+msgstr "Velocità %u %%"
 
 #: src/ui-imgui/overlay/overlay_tab_sound.cpp:101
 msgid "The filter models the audio output stage of the real machine."
-msgstr ""
+msgstr "Il filtro modella lo stadio di uscita audio della macchina reale."
 
 #: src/ui-imgui/overlay/overlay_tab_sound.cpp:123
 msgid "The emulation is running so that you can hear the changes."
-msgstr ""
+msgstr "L'emulazione è in esecuzione per farti sentire le modifiche."
 
 #: src/ui-imgui/overlay/overlay_tab_sound.cpp:124
 msgid ""
 "Turn on Listen to hear the changes while the menu is open. The emulated "
 "computer keeps running without keyboard input."
-msgstr ""
+msgstr "Attiva Ascolta per sentire le modifiche mentre il menu è aperto. Il computer emulato continua a funzionare senza input da tastiera."
 
 #: src/ui-imgui/plotter/plotter_window.cpp:108
 msgid "Black"
@@ -17022,7 +17022,7 @@ msgstr "Disponibile durante la riproduzione di un replay."
 
 #: src/ui-imgui/topmenu/topmenu.cpp:50
 msgid "Overlay Menu..."
-msgstr ""
+msgstr "Menu overlay..."
 
 #: src/ui-imgui/topmenu/topmenu.cpp:101
 msgid "About..."

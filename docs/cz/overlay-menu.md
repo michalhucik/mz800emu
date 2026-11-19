@@ -32,7 +32,9 @@ například debugger) a není stisknutý `Shift`, `Ctrl`, `Alt` ani `Super`.
 zapnutém ztlumení zvuku) a **Paused** (jen když emulace stojí). Úplně vpravo
 je tlačítko **Close**. V užším okně lišta postupně vypouští štítek platformy
 a rychlosti, potom popisky neaktivních tabů; ze štítku ztlumení zůstane jen
-ikona a nakonec zmizí popisek tlačítka Close a štítek ztlumení celý.
+ikona a potom zmizí popisek tlačítka Close a štítek ztlumení celý. Když ani
+to nestačí (malé okno a jazyk s dlouhými slovy), zůstane ze štítku pauzy jen
+ikona a nakonec zmizí i popisek aktivního tabu.
 **Patička** ukazuje klávesy, které právě platí.
 
 **Pauza.** Při otevření se běžící emulace zastaví a při zavření se vrátí do

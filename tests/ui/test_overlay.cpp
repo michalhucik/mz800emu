@@ -55,8 +55,10 @@
  *   funkcí UI); zakázané karty při replay a bez řadiče nic nezařadí;
  *   zkratky akcí v okně overlaye; akce zavírající overlay a pauza po nich;
  *   výchozí fokus a pohyb šipkami; vysunutí diskety zvenčí mezi snímky.
- *   Druhá registrace ui-overlay-de (MZ_OVERLAY_TEST_LANG=de) spustí jen
- *   geometrii rámce, tabu Media a výsuvného listu v němčině;
+ *   Další registrace ui-overlay-de a ui-overlay-cs (MZ_OVERLAY_TEST_LANG)
+ *   spustí jen geometrii rámce, tabu Media a výsuvného listu v němčině
+ *   a v češtině (v češtině se v okně 640 x 480 uplatní poslední stupně
+ *   ústupu horní lišty: štítek pauzy jen ikonou);
  * - opravy z review vizuálního systému: ořez linky nadpisu karty při
  *   rolování, sdílená paměť souborů písem (jedno čtení z disku, stejné
  *   glyfy jako načtení ze souboru), japonské znaky v neproporcionálním

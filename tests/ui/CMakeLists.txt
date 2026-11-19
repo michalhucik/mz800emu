@@ -277,22 +277,27 @@ if(TARGET test_ui-overlay)
         MZTEST_FONT_DIR="${CMAKE_SOURCE_DIR}/ui_resources/imgui/fonts"
         MZTEST_LOCALE_DIR="${CMAKE_SOURCE_DIR}/src/locale"
     )
-    # Druhý běh téže binárky: jen geometrie rámce, tabů Media, Machine a
-    # Display, výsuvného listu a rozbalovacího výběru v němčině.
-    add_test(NAME ui-overlay-de
-        COMMAND test_ui-overlay
-        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/build-tests
-    )
-    if(WIN32)
-        get_filename_component(_ov_cc_dir "${CMAKE_C_COMPILER}" DIRECTORY)
-        set_tests_properties(ui-overlay-de PROPERTIES
-            ENVIRONMENT "MZ_OVERLAY_TEST_LANG=de;PATH=${_ov_cc_dir};$ENV{PATH}"
+    # Další běhy téže binárky: jen geometrie rámce, tabů Media, Machine a
+    # Display, výsuvného listu a rozbalovacího výběru v jiném jazyce.
+    # Němčina má dlouhé texty; čeština hlídá horní lištu v okně 640 x 480
+    # (popisek aktivního tabu a štítek pauzy se v ní překrývaly se šestým
+    # tabem, než lišta dostala další stupně ústupu).
+    foreach(_ov_lang de cs)
+        add_test(NAME ui-overlay-${_ov_lang}
+            COMMAND test_ui-overlay
+            WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/build-tests
         )
-    else()
-        set_tests_properties(ui-overlay-de PROPERTIES ENVIRONMENT "MZ_OVERLAY_TEST_LANG=de")
-    endif()
-    set_tests_properties(ui-overlay-de PROPERTIES LABELS "ui;overlay;i18n" SKIP_RETURN_CODE 77)
+        if(WIN32)
+            get_filename_component(_ov_cc_dir "${CMAKE_C_COMPILER}" DIRECTORY)
+            set_tests_properties(ui-overlay-${_ov_lang} PROPERTIES
+                ENVIRONMENT "MZ_OVERLAY_TEST_LANG=${_ov_lang};PATH=${_ov_cc_dir};$ENV{PATH}"
+            )
+        else()
+            set_tests_properties(ui-overlay-${_ov_lang} PROPERTIES ENVIRONMENT "MZ_OVERLAY_TEST_LANG=${_ov_lang}")
+        endif()
+        set_tests_properties(ui-overlay-${_ov_lang} PROPERTIES LABELS "ui;overlay;i18n" SKIP_RETURN_CODE 77)
+    endforeach()
     # MZ_OVERLAY_SHOT_DIR exportovaná ve shellu vývojáře by v CTest přepnula
     # test do režimu snímků (testy by neběžely): prázdná hodnota = vypnuto.
-    set_property(TEST ui-overlay ui-overlay-de APPEND PROPERTY ENVIRONMENT "MZ_OVERLAY_SHOT_DIR=")
+    set_property(TEST ui-overlay ui-overlay-de ui-overlay-cs APPEND PROPERTY ENVIRONMENT "MZ_OVERLAY_SHOT_DIR=")
 endif()

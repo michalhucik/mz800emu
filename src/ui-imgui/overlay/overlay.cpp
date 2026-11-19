@@ -934,9 +934,13 @@ static void overlay_draw_bar(float y0, float y1, float line_y, float x0, float x
  * Nevejde-li se vše vedle sebe, ustupuje postupně: štítek platformy, štítek
  * rychlosti, popisky neaktivních tabů (zůstane číslice a ikona), text štítku
  * ztlumení (zůstane samotná ikona s tooltipem; jen s ikonovým fontem),
- * popisek tlačítka Close, celý štítek ztlumení. Štítek ztlumení tak zmizí,
- * až když se nevejde ani jeho ikona vedle tabů a Close bez popisků
- * (posudek N04). Štítek pauzy a tlačítko Close zůstávají
+ * popisek tlačítka Close, celý štítek ztlumení, text štítku pauzy (zůstane
+ * samotná ikona s tooltipem; jen s ikonovým fontem) a nakonec popisek
+ * aktivního tabu. Štítek ztlumení tak zmizí, až když se nevejde ani jeho
+ * ikona vedle tabů a Close bez popisků (posudek N04). Poslední dva stupně
+ * jsou pro úzké okno s dlouhým překladem (640 x 480: popisek aktivního tabu
+ * a štítek pauzy se jinak v češtině a dalších jazycích překryly se šestým
+ * tabem). Štítek pauzy a tlačítko Close zůstávají
  * vždy. Štítek "Muted" je vidět jen při zapnutém ztlumení poslechu a
  * připomíná ho na všech tabech (mimo overlay ho ukazuje titulek hlavního
  * okna a okno Audio Mixer; ztlumení se neukládá). Štítek "Paused" se řídí
@@ -971,28 +975,32 @@ static void overlay_draw_topbar(const st_OVERLAY_VIEW *v, ImVec2 size, bool *clo
     const float close_full = floorf(close_kc + overlay_px(OVL_TAB_GAP) + overlay_text_width(overlay_font_ui(), OVL_FONT_BODY, _("Close")) + 0.5f);
 
     /* stupně ústupu: 0 = vše, 1 = bez platformy, 2 = bez rychlosti, 3 = neaktivní taby bez popisku, 4 = ztlumení jen ikonou,
-     * 5 = Close bez popisku, 6 = bez ztlumení */
+     * 5 = Close bez popisku, 6 = bez ztlumení, 7 = pauza jen ikonou, 8 = i aktivní tab bez popisku */
+    const ImVec2 chip_paused_icon = (paused && overlay_style_has_icons()) ? ovl_status_chip_size(ICON_LC_PAUSE, "") : ImVec2(0.0f, 0.0f);
     const ImVec2 chip_muted_icon = (muted && overlay_style_has_icons()) ? ovl_status_chip_size(ICON_LC_VOLUME_X, "") : ImVec2(0.0f, 0.0f);
     const float avail = size.x - 2.0f * edge;
     int level = 0;
     bool show_platform = false, show_speed = false, show_muted = false, muted_icon = false, compact = false, close_label = true;
+    bool paused_icon = false, compact_active = false;
     float tabs_w = 0.0f, right_w = 0.0f, close_w = 0.0f;
-    for (level = 0; level <= 6; level++) {
+    for (level = 0; level <= 8; level++) {
         show_platform = have_platform && level < 1;
         show_speed = level < 2;
         muted_icon = (level == 4 || level == 5) && chip_muted_icon.x > 0.0f;
         show_muted = muted && (level < 4 || muted_icon);
         compact = level >= 3;
         close_label = level < 5;
+        paused_icon = level >= 7 && chip_paused_icon.x > 0.0f;
+        compact_active = level >= 8;
         tabs_w = tab_gap * (float)((int)OVERLAY_TAB_COUNT - 1);
-        for (int i = 0; i < (int)OVERLAY_TAB_COUNT; i++) tabs_w += overlay_tab_width(i, compact && i != (int)s_tab);
+        for (int i = 0; i < (int)OVERLAY_TAB_COUNT; i++) tabs_w += overlay_tab_width(i, compact && (compact_active || i != (int)s_tab));
         close_w = close_label ? close_full : floorf(close_kc + 0.5f);
         float chips_w = 0.0f;
         int chips = 0;
         if (show_platform) { chips_w += chip_platform.x; chips++; }
         if (show_speed) { chips_w += chip_speed.x; chips++; }
         if (show_muted) { chips_w += muted_icon ? chip_muted_icon.x : chip_muted.x; chips++; }
-        if (paused) { chips_w += chip_paused.x; chips++; }
+        if (paused) { chips_w += paused_icon ? chip_paused_icon.x : chip_paused.x; chips++; }
         if (chips > 1) chips_w += chip_gap * (float)(chips - 1);
         right_w = close_w + (chips > 0 ? chips_w + group_gap : 0.0f);
         if (tabs_w + group_gap + right_w <= avail) break;
@@ -1003,8 +1011,9 @@ static void overlay_draw_topbar(const st_OVERLAY_VIEW *v, ImVec2 size, bool *clo
     const float item_h = bar_h - 2.0f * overlay_px(OVL_TAB_INSET_Y);
     float x = origin.x + edge;
     for (int i = 0; i < (int)OVERLAY_TAB_COUNT; i++) {
-        const float w = overlay_tab_width(i, compact && i != (int)s_tab);
-        if (overlay_tab_item(i, compact && i != (int)s_tab, ImVec2(x, item_y), ImVec2(w, item_h), origin.y + bar_h)) overlay_select_tab(s_tabs[i].tab);
+        const bool tab_compact = compact && (compact_active || i != (int)s_tab);
+        const float w = overlay_tab_width(i, tab_compact);
+        if (overlay_tab_item(i, tab_compact, ImVec2(x, item_y), ImVec2(w, item_h), origin.y + bar_h)) overlay_select_tab(s_tabs[i].tab);
         x += w + tab_gap;
     }
 
@@ -1037,8 +1046,9 @@ static void overlay_draw_topbar(const st_OVERLAY_VIEW *v, ImVec2 size, bool *clo
     }
     if (paused) {
         ImGui::SetCursorScreenPos(ImVec2(floorf(x), floorf(cy - chip_paused.y * 0.5f)));
-        ovl_status_chip_icon(ICON_LC_PAUSE, paused, OVL_STATUS_WARNING);
+        ovl_status_chip_icon(ICON_LC_PAUSE, paused_icon ? "" : paused, OVL_STATUS_WARNING);
         overlay_note_item(OVL_TEST_ITEM_CHIP_PAUSED);
+        if (paused_icon) ovl_tooltip(paused);
     }
     if (overlay_close_item(close_label, ImVec2(floorf(origin.x + size.x - edge - close_w), item_y), ImVec2(close_w, item_h))) *close = true;
 }

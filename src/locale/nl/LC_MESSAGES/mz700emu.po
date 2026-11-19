@@ -84,7 +84,7 @@ msgstr "Normale snelheid"
 
 #: src/emulator/emulator.c:480
 msgid "MUTED"
-msgstr ""
+msgstr "GEDEMPT"
 
 #: src/emulator/hw-generic/cmt/cmthack.c:1046
 msgid "Select a MZF File"
@@ -95,14 +95,14 @@ msgstr "Selecteer een MZF-bestand"
 msgid ""
 "The disk in FDD %d was not saved: the drive now refers to a different image "
 "file than the one it was loaded from. Re-insert the image to continue."
-msgstr ""
+msgstr "De schijf in FDD %d is niet opgeslagen: het station verwijst nu naar een ander imagebestand dan waaruit hij is geladen. Plaats de image opnieuw om door te gaan."
 
 #: src/emulator/hw-generic/fdc/fdc.c:1033
 #, c-format
 msgid ""
 "The disk in FDD %d was not saved: the image is also inserted in FDD %d, "
 "which may write to it."
-msgstr ""
+msgstr "De schijf in FDD %d is niet opgeslagen: de image zit ook in FDD %d, dat ernaar mag schrijven."
 
 #: src/emulator/hw-generic/fdc/fdc.c:1545
 #, c-format
@@ -114,14 +114,14 @@ msgstr "Selecteer DSK-imagebestand voor FDC%u station FD%d"
 msgid ""
 "The image is already inserted in FDD %d. It was inserted write-protected "
 "here to keep the image file safe."
-msgstr ""
+msgstr "De image zit al in FDD %d. Hier is hij schrijfbeveiligd geplaatst om het imagebestand te beschermen."
 
 #: src/emulator/hw-generic/fdc/fdc_request.c:137
 #: src/ui-imgui/overlay/overlay_actions.cpp:176
 #: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:288
 #, c-format
 msgid "The image is also inserted in FDD %d, which may write to it."
-msgstr ""
+msgstr "De image zit ook in FDD %d, dat ernaar mag schrijven."
 
 #: src/emulator/hw-generic/qdisk/qdisk.c:866
 msgid "Select existing .MZQ file or create new QD image"
@@ -135,7 +135,7 @@ msgstr "Selecteer map om als virtuele Quick Disk te koppelen"
 msgid ""
 "The Quick Disk was not saved: the drive now refers to a different image file "
 "than the one it was loaded from. Re-insert the image to continue."
-msgstr ""
+msgstr "De Quick Disk is niet opgeslagen: het station verwijst nu naar een ander imagebestand dan waaruit hij is geladen. Plaats de image opnieuw om door te gaan."
 
 #: src/emulator/hw-generic/unicard/unicard.c:2383
 msgid "Select SD root directory for Unicard"
@@ -162,17 +162,17 @@ msgstr "Door gebruiker gedefinieerde ROM"
 #: src/emulator/snapshot/handlers/snap_fdc.c:100
 #: src/emulator/snapshot/handlers/snap_qdisk.c:152
 msgid "empty"
-msgstr ""
+msgstr "leeg"
 
 #: src/emulator/snapshot/handlers/snap_fdc.c:102
 #, c-format
 msgid "FDD %d: %s (now: %s)"
-msgstr ""
+msgstr "FDD %d: %s (nu: %s)"
 
 #: src/emulator/snapshot/handlers/snap_qdisk.c:154
 #, c-format
 msgid "Quick Disk: %s (now: %s)"
-msgstr ""
+msgstr "Quick Disk: %s (nu: %s)"
 
 #: src/emulator/snapshot/snapshot_media.c:112
 #, c-format
@@ -180,7 +180,7 @@ msgid ""
 "The snapshot was saved with different disks:\n"
 "%s\n"
 "The inserted disks were kept."
-msgstr ""
+msgstr "De momentopname is met andere schijven opgeslagen:\n%s\nDe geplaatste schijven zijn behouden."
 
 #: src/ui/cmt/UiCmt.cpp:31
 msgid "Default"
@@ -409,36 +409,36 @@ msgstr "Audiomixer"
 #: src/ui-imgui/audio_window.cpp:139
 #: src/ui-imgui/overlay/overlay_tab_sound.cpp:185
 msgid "Output"
-msgstr ""
+msgstr "Uitvoer"
 
 #: src/ui-imgui/audio_window.cpp:141
 #: src/ui-imgui/overlay/overlay_actions.cpp:1293
 #: src/ui-imgui/overlay/overlay_tab_sound.cpp:206
 msgid "Mute"
-msgstr ""
+msgstr "Dempen"
 
 #: src/ui-imgui/audio_window.cpp:147
 msgid ""
 "Silences the sound output; the volumes are kept. Not saved: the emulator "
 "always starts unmuted."
-msgstr ""
+msgstr "Dempt de geluidsuitvoer; de volumes blijven behouden. Wordt niet opgeslagen: de emulator start altijd met geluid."
 
 #: src/ui-imgui/audio_window.cpp:151
 #: src/ui-imgui/overlay/overlay_actions.cpp:1292
 #: src/ui-imgui/overlay/overlay_tab_sound.cpp:192
 msgid "Master volume"
-msgstr ""
+msgstr "Hoofdvolume"
 
 #: src/ui-imgui/audio_window.cpp:157
 msgid ""
 "Listening volume of the whole mix. The channel volumes and recordings are "
 "not affected."
-msgstr ""
+msgstr "Luistervolume van de hele mix. Kanaalvolumes en opnames blijven ongewijzigd."
 
 #: src/ui-imgui/audio_window.cpp:161
 #: src/ui-imgui/overlay/overlay_tab_sound.cpp:240
 msgid "Channels"
-msgstr ""
+msgstr "Kanalen"
 
 #: src/ui-imgui/audio_window.cpp:172
 #, c-format
@@ -452,11 +452,11 @@ msgstr "%.0f dB"
 
 #: src/ui-imgui/audio_window.cpp:232
 msgid "All channels: sets every channel to the same volume."
-msgstr ""
+msgstr "Alle kanalen: zet elk kanaal op hetzelfde volume."
 
 #: src/ui-imgui/audio_window.cpp:269
 msgid "Level of the mix before the master volume and mute."
-msgstr ""
+msgstr "Niveau van de mix vóór het hoofdvolume en dempen."
 
 #: src/ui-imgui/audio_window.cpp:278
 #: src/ui-imgui/overlay/overlay_actions.cpp:1294
@@ -14060,12 +14060,12 @@ msgstr ""
 
 #: src/ui-imgui/overlay/overlay.cpp:119
 msgid "Media"
-msgstr ""
+msgstr "Media"
 
 #: src/ui-imgui/overlay/overlay.cpp:120
 #: src/ui-imgui/overlay/overlay_tab_machine.cpp:171
 msgid "Machine"
-msgstr ""
+msgstr "Machine"
 
 #: src/ui-imgui/overlay/overlay.cpp:121
 #: src/ui-imgui/topmenu/interface/menu_display.cpp:44
@@ -14074,15 +14074,15 @@ msgstr "Weergave"
 
 #: src/ui-imgui/overlay/overlay.cpp:122
 msgid "Sound"
-msgstr ""
+msgstr "Geluid"
 
 #: src/ui-imgui/overlay/overlay.cpp:123
 msgid "Input"
-msgstr ""
+msgstr "Invoer"
 
 #: src/ui-imgui/overlay/overlay.cpp:124
 msgid "Capture"
-msgstr ""
+msgstr "Opname"
 
 #: src/ui-imgui/overlay/overlay.cpp:910 src/ui-imgui/overlay/overlay.cpp:912
 #: src/ui-imgui/overlay/overlay.cpp:971 src/ui-imgui/overlay/overlay.cpp:1100
@@ -14092,125 +14092,125 @@ msgstr "Sluiten"
 
 #: src/ui-imgui/overlay/overlay.cpp:968
 msgid "Muted"
-msgstr ""
+msgstr "Gedempt"
 
 #: src/ui-imgui/overlay/overlay.cpp:1097
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:1346
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:1352
 msgctxt "overlay footer"
 msgid "to"
-msgstr ""
+msgstr "t/m"
 
 #: src/ui-imgui/overlay/overlay.cpp:1097
 msgid "Tabs"
-msgstr ""
+msgstr "Tabbladen"
 
 #: src/ui-imgui/overlay/overlay.cpp:1098
 msgid "Arrows"
-msgstr ""
+msgstr "Pijltoetsen"
 
 #: src/ui-imgui/overlay/overlay.cpp:1098
 msgid "Move"
-msgstr ""
+msgstr "Bewegen"
 
 #: src/ui-imgui/overlay/overlay.cpp:1099
 msgid "Select"
-msgstr ""
+msgstr "Selecteren"
 
 #: src/ui-imgui/overlay/overlay.cpp:1112
 msgid "Right-click: classic menu"
-msgstr ""
+msgstr "Rechtsklik: klassiek menu"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:131
 msgid "FD controller FDC0 is not connected."
-msgstr ""
+msgstr "FD-controller FDC0 is niet aangesloten."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:146
 #: src/ui-imgui/overlay/overlay_actions.cpp:246
 msgid "The drive is empty."
-msgstr ""
+msgstr "Het station is leeg."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:154
 #: src/ui-imgui/overlay/overlay_actions.cpp:255
 msgid "There are no unsaved changes."
-msgstr ""
+msgstr "Er zijn geen niet-opgeslagen wijzigingen."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:173
 msgid "The file is write-protected on the disk."
-msgstr ""
+msgstr "Het bestand is op de schijf schrijfbeveiligd."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:211
 msgid ""
 "Browse files opens the disk image dialog, but FD controller FDC0 is not "
 "connected."
-msgstr ""
+msgstr "Bestanden bladeren opent het dialoogvenster voor schijfimages, maar FD-controller FDC0 is niet aangesloten."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:225
 msgid "Quick Disk is not connected."
-msgstr ""
+msgstr "Quick Disk is niet aangesloten."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:227
 msgid "Quick Disk is controlled by Unicard."
-msgstr ""
+msgstr "Quick Disk wordt bestuurd door Unicard."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:237
 msgid "Eject the disk first."
-msgstr ""
+msgstr "Werp eerst de schijf uit."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:301
 msgid "The tape is already playing."
-msgstr ""
+msgstr "De band speelt al."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:313
 msgid "The tape is not playing."
-msgstr ""
+msgstr "De band speelt niet."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:380
 #: src/ui-imgui/overlay/overlay_actions.cpp:1036
 #: src/ui-imgui/overlay/overlay_view.cpp:245
 msgid "Not available while a replay is active."
-msgstr ""
+msgstr "Niet beschikbaar zolang een replay actief is."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:400
 msgid "Set a custom speed with the slider first."
-msgstr ""
+msgstr "Stel eerst met de schuifregelaar een aangepaste snelheid in."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:407
 msgid "Enable scanlines first."
-msgstr ""
+msgstr "Schakel eerst scanlines in."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:414
 msgid "Select Custom FPS first."
-msgstr ""
+msgstr "Kies eerst Aangepaste FPS."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:923
 msgid ""
 "The emulation was paused before the menu was opened. Resume it to listen."
-msgstr ""
+msgstr "De emulatie was al gepauzeerd voordat het menu werd geopend. Hervat haar om mee te luisteren."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:924
 msgid "The emulation is running."
-msgstr ""
+msgstr "De emulatie loopt."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1076
 msgid "The joystick device could not be opened."
-msgstr ""
+msgstr "Het joystickapparaat kon niet worden geopend."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1128
 msgid "No video recording is running."
-msgstr ""
+msgstr "Er loopt geen video-opname."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1167
 msgid "A replay is already active."
-msgstr ""
+msgstr "Er is al een replay actief."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1174
 msgid "No replay is active."
-msgstr ""
+msgstr "Er is geen replay actief."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1222
 msgid "Resume"
-msgstr ""
+msgstr "Hervatten"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1224
 #: src/ui-imgui/overlay/overlay_tab_machine.cpp:331
@@ -14246,7 +14246,7 @@ msgstr "Volledig scherm"
 #: src/ui-imgui/overlay/overlay_actions.cpp:1260
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:568
 msgid "Insert disk"
-msgstr ""
+msgstr "Schijf plaatsen"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1239
 #: src/ui-imgui/overlay/overlay_actions.cpp:1240
@@ -14254,7 +14254,7 @@ msgstr ""
 #: src/ui-imgui/overlay/overlay_actions.cpp:1242
 #: src/ui-imgui/overlay/overlay_actions.cpp:1262
 msgid "Save changes"
-msgstr ""
+msgstr "Wijzigingen opslaan"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1243
 #: src/ui-imgui/overlay/overlay_actions.cpp:1244
@@ -14263,7 +14263,7 @@ msgstr ""
 #: src/ui-imgui/overlay/overlay_actions.cpp:1263
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:936
 msgid "Write protect"
-msgstr ""
+msgstr "Schrijfbeveiliging"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1248
 #: src/ui-imgui/topmenu/menu_replay.cpp:155
@@ -14275,21 +14275,21 @@ msgstr "Terug naar checkpoint"
 #: src/ui-imgui/overlay/overlay_actions.cpp:1256
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:827
 msgid "Change tape"
-msgstr ""
+msgstr "Band wisselen"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1258
 msgid "Open tape window"
-msgstr ""
+msgstr "Bandvenster openen"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1265
 msgid "Browse files..."
-msgstr ""
+msgstr "Bestanden bladeren..."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1266
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:1039
 #: src/ui-imgui/topmenu/menu_recent.cpp:202
 msgid "Clear recent media"
-msgstr ""
+msgstr "Recente media wissen"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1270
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:224
@@ -14302,17 +14302,17 @@ msgstr "Normaal"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1271
 msgid "Custom"
-msgstr ""
+msgstr "Aangepast"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1273
 #: src/ui-imgui/overlay/overlay_tab_machine.cpp:290
 msgid "Decrease by 10 %"
-msgstr ""
+msgstr "Met 10 % verlagen"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1274
 #: src/ui-imgui/overlay/overlay_tab_machine.cpp:298
 msgid "Increase by 10 %"
-msgstr ""
+msgstr "Met 10 % verhogen"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1275
 #: src/ui-imgui/overlay/overlay_tab_machine.cpp:337
@@ -14335,37 +14335,37 @@ msgstr "Momentopname-instellingen..."
 #: src/ui-imgui/overlay/overlay_actions.cpp:1278
 #: src/ui-imgui/overlay/overlay_tab_machine.cpp:375
 msgid "Open classic menu"
-msgstr ""
+msgstr "Klassiek menu openen"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1280
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:219
 msgid "Window size on startup"
-msgstr ""
+msgstr "Venstergrootte bij opstarten"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1281
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:234
 msgid "Lock window aspect ratio"
-msgstr ""
+msgstr "Beeldverhouding van venster vergrendelen"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1282
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:242
 msgid "By width"
-msgstr ""
+msgstr "Op breedte"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1283
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:242
 msgid "By height"
-msgstr ""
+msgstr "Op hoogte"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1284
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:263
 msgid "Color schema"
-msgstr ""
+msgstr "Kleurenschema"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1285
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:296
 msgid "Enable scanlines"
-msgstr ""
+msgstr "Scanlines inschakelen"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1286
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:300
@@ -14376,7 +14376,7 @@ msgstr "Intensiteit"
 #: src/ui-imgui/overlay/overlay_actions.cpp:1287
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:332
 msgid "Frame rate control"
-msgstr ""
+msgstr "Regeling van de beeldsnelheid"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1288
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:337
@@ -14388,32 +14388,32 @@ msgstr "Aangepaste FPS"
 #: src/ui-imgui/overlay/overlay_actions.cpp:1289
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:382
 msgid "Forced redraw every screen"
-msgstr ""
+msgstr "Geforceerd hertekenen van elk scherm"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1291
 #: src/ui-imgui/overlay/overlay_tab_sound.cpp:146
 msgid "Listen"
-msgstr ""
+msgstr "Meeluisteren"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1295
 msgid "Channel volume"
-msgstr ""
+msgstr "Kanaalvolume"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1296
 #: src/ui-imgui/overlay/overlay_tab_sound.cpp:262
 #: src/ui-imgui/overlay/overlay_tab_sound.cpp:266
 msgid "Reset channels"
-msgstr ""
+msgstr "Kanalen herstellen"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1298
 #: src/ui-imgui/overlay/overlay_tab_input.cpp:110
 msgid "Virtual keyboard"
-msgstr ""
+msgstr "Virtueel toetsenbord"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1299
 #: src/ui-imgui/overlay/overlay_tab_input.cpp:113
 msgid "Autotype buffer"
-msgstr ""
+msgstr "Autotype-buffer"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1301
 #: src/ui-imgui/overlay/overlay_tab_input.cpp:154
@@ -14489,12 +14489,12 @@ msgstr "Replay-bediening..."
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:376
 #: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:313
 msgid "The Quick Disk is set to a mapped directory."
-msgstr ""
+msgstr "Quick Disk is ingesteld op een gekoppelde map."
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:376
 #: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:313
 msgid "The Quick Disk is set to a disk image."
-msgstr ""
+msgstr "Quick Disk is ingesteld op een schijfimage."
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:437
 #: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:302
@@ -14502,7 +14502,7 @@ msgstr ""
 msgid ""
 "Still checking whether the file exists. Try again in a moment:\n"
 "%s"
-msgstr ""
+msgstr "Er wordt nog gecontroleerd of het bestand bestaat. Probeer het zo opnieuw:\n%s"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:443
 #: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:308
@@ -14510,7 +14510,7 @@ msgstr ""
 msgid ""
 "The file no longer exists and was removed from the recent media:\n"
 "%s"
-msgstr ""
+msgstr "Het bestand bestaat niet meer en is uit de recente media verwijderd:\n%s"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:450
 #: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:243
@@ -14519,7 +14519,7 @@ msgstr ""
 msgid ""
 "The file path is too long:\n"
 "%s"
-msgstr ""
+msgstr "Het bestandspad is te lang:\n%s"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:456
 #: src/ui-imgui/topmenu/devices/menu_cmt.cpp:436
@@ -14527,118 +14527,118 @@ msgstr ""
 msgid ""
 "Another tape dialog is still open. The tape was not changed:\n"
 "%s"
-msgstr ""
+msgstr "Er staat nog een ander banddialoogvenster open. De band is niet gewisseld:\n%s"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:535
 msgid "just now"
-msgstr ""
+msgstr "zojuist"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:536
 #, c-format
 msgid "%d min ago"
-msgstr ""
+msgstr "%d min geleden"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:537
 #, c-format
 msgid "%d h ago"
-msgstr ""
+msgstr "%d u geleden"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:538
 msgid "yesterday"
-msgstr ""
+msgstr "gisteren"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:539
 #, c-format
 msgid "%d days ago"
-msgstr ""
+msgstr "%d dagen geleden"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:540
 msgid "last week"
-msgstr ""
+msgstr "vorige week"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:541
 #, c-format
 msgid "%d weeks ago"
-msgstr ""
+msgstr "%d weken geleden"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:542
 #, c-format
 msgid "%d months ago"
-msgstr ""
+msgstr "%d maanden geleden"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:543
 msgid "over a year ago"
-msgstr ""
+msgstr "meer dan een jaar geleden"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:822
 msgctxt "overlay media"
 msgid "empty"
-msgstr ""
+msgstr "leeg"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:828
 msgid "Type to filter recent tapes"
-msgstr ""
+msgstr "Typ om recente banden te filteren"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:829
 msgid "No recent tapes yet. Use Browse files..."
-msgstr ""
+msgstr "Nog geen recente banden. Gebruik Bestanden bladeren..."
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:835
 msgid "Insert into Quick Disk"
-msgstr ""
+msgstr "In Quick Disk plaatsen"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:836
 msgid "Type to filter recent directories"
-msgstr ""
+msgstr "Typ om recente mappen te filteren"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:836
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:846
 msgid "Type to filter recent disks"
-msgstr ""
+msgstr "Typ om recente schijven te filteren"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:837
 msgid "No recent directories yet. Use Browse files..."
-msgstr ""
+msgstr "Nog geen recente mappen. Gebruik Bestanden bladeren..."
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:837
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:847
 msgid "No recent disks yet. Use Browse files..."
-msgstr ""
+msgstr "Nog geen recente schijven. Gebruik Bestanden bladeren..."
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:845
 #, c-format
 msgid "Insert into FDD %d"
-msgstr ""
+msgstr "In FDD %d plaatsen"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:849
 msgctxt "overlay drive"
 msgid "empty"
-msgstr ""
+msgstr "leeg"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:859
 #, c-format
 msgid "Now: %s"
-msgstr ""
+msgstr "Nu: %s"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:902
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:959
 msgid "File not found"
-msgstr ""
+msgstr "Bestand niet gevonden"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:925
 msgid "No recent file matches the filter."
-msgstr ""
+msgstr "Geen recent bestand komt overeen met het filter."
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:1042
 msgid "Insert into"
-msgstr ""
+msgstr "Plaatsen in"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:1061
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:523
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:528
 #, c-format
 msgid "FDD %d"
-msgstr ""
+msgstr "FDD %d"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:1066
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:606
@@ -14649,20 +14649,20 @@ msgstr "Leeg"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:1346
 msgid "Insert into drive"
-msgstr ""
+msgstr "In station plaatsen"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:1347
 msgid "Insert into selected"
-msgstr ""
+msgstr "In geselecteerde plaatsen"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:1352
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:1353
 msgid "Insert"
-msgstr ""
+msgstr "Plaatsen"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:1355
 msgid "Insert selected"
-msgstr ""
+msgstr "Geselecteerde plaatsen"
 
 #: src/ui-imgui/overlay/overlay_tab_capture.cpp:159
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:158
@@ -14709,7 +14709,7 @@ msgstr "Laatste: %s"
 
 #: src/ui-imgui/overlay/overlay_tab_capture.cpp:235
 msgid "Status:"
-msgstr ""
+msgstr "Status:"
 
 #: src/ui-imgui/overlay/overlay_tab_capture.cpp:260
 #: src/ui-imgui/topmenu/menu_replay.cpp:131
@@ -14718,7 +14718,7 @@ msgstr "Replay"
 
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:215
 msgid "Window"
-msgstr ""
+msgstr "Venster"
 
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:222
 #: src/ui-imgui/topmenu/interface/menu_display.cpp:85
@@ -14742,11 +14742,11 @@ msgstr "Groot"
 
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:236
 msgid "Fix aspect ratio"
-msgstr ""
+msgstr "Beeldverhouding corrigeren"
 
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:262
 msgid "Colors"
-msgstr ""
+msgstr "Kleuren"
 
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:267
 #: src/ui-imgui/topmenu/interface/menu_display.cpp:62
@@ -14755,11 +14755,11 @@ msgstr "Grijstinten"
 
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:295
 msgid "CRT scanlines"
-msgstr ""
+msgstr "CRT-scanlines"
 
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:331
 msgid "Frame rate"
-msgstr ""
+msgstr "Beeldsnelheid"
 
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:335
 #: src/ui-imgui/topmenu/interface/menu_display.cpp:203
@@ -14784,95 +14784,95 @@ msgstr "Directe wisseling"
 
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:365
 msgid "Decrease by 1 Hz"
-msgstr ""
+msgstr "Met 1 Hz verlagen"
 
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:377
 msgid "Increase by 1 Hz"
-msgstr ""
+msgstr "Met 1 Hz verhogen"
 
 #: src/ui-imgui/overlay/overlay_tab_display.cpp:402
 msgid "Changes apply immediately."
-msgstr ""
+msgstr "Wijzigingen gelden direct."
 
 #: src/ui-imgui/overlay/overlay_tab_input.cpp:65
 msgid "While this menu is open, keys do not reach the emulated computer."
-msgstr ""
+msgstr "Zolang dit menu open is, bereiken toetsen de geëmuleerde computer niet."
 
 #: src/ui-imgui/overlay/overlay_tab_input.cpp:107
 msgid "Keyboard"
-msgstr ""
+msgstr "Toetsenbord"
 
 #: src/ui-imgui/overlay/overlay_tab_input.cpp:134
 msgid "Numeric keypad"
-msgstr ""
+msgstr "Numeriek toetsenblok"
 
 #: src/ui-imgui/overlay/overlay_tab_input.cpp:137
 msgid "No joystick found. Use Joystick Setup to rescan devices."
-msgstr ""
+msgstr "Geen joystick gevonden. Gebruik Joystick-instelling om opnieuw naar apparaten te zoeken."
 
 #: src/ui-imgui/overlay/overlay_tab_input.cpp:153
 msgid "Mapping and calibration"
-msgstr ""
+msgstr "Toewijzing en kalibratie"
 
 #: src/ui-imgui/overlay/overlay_tab_machine.cpp:144
 msgid ""
 "ROM settings, memory disks, memory extensions, IDE and DIP switches are in "
 "the classic menu."
-msgstr ""
+msgstr "ROM-instellingen, geheugenschijven, geheugenuitbreidingen, IDE en DIP-schakelaars staan in het klassieke menu."
 
 #: src/ui-imgui/overlay/overlay_tab_machine.cpp:176
 msgctxt "overlay emulation"
 msgid "Running"
-msgstr ""
+msgstr "Loopt"
 
 #: src/ui-imgui/overlay/overlay_tab_machine.cpp:270
 msgid "CPU speed"
-msgstr ""
+msgstr "CPU-snelheid"
 
 #: src/ui-imgui/overlay/overlay_tab_machine.cpp:273
 msgctxt "overlay speed"
 msgid "Normal"
-msgstr ""
+msgstr "Normaal"
 
 #: src/ui-imgui/overlay/overlay_tab_machine.cpp:273
 msgctxt "overlay speed"
 msgid "Custom"
-msgstr ""
+msgstr "Aangepast"
 
 #: src/ui-imgui/overlay/overlay_tab_machine.cpp:273
 msgctxt "overlay speed"
 msgid "Max"
-msgstr ""
+msgstr "Max"
 
 #: src/ui-imgui/overlay/overlay_tab_machine.cpp:322
 msgid "Snapshots"
-msgstr ""
+msgstr "Momentopnamen"
 
 #: src/ui-imgui/overlay/overlay_tab_machine.cpp:358
 msgid "More hardware"
-msgstr ""
+msgstr "Meer hardware"
 
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:568
 msgctxt "overlay media"
 msgid "Change"
-msgstr ""
+msgstr "Wisselen"
 
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:598
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:703
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:874
 msgid "Unsaved changes"
-msgstr ""
+msgstr "Niet-opgeslagen wijzigingen"
 
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:619
 #, c-format
 msgid "%u KB"
-msgstr ""
+msgstr "%u KB"
 
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:623
 #: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:212
 #, c-format
 msgid "Shared with FDD %d, write-protected"
-msgstr ""
+msgstr "Gedeeld met FDD %d, schrijfbeveiligd"
 
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:624
 #: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:282
@@ -14881,25 +14881,25 @@ msgstr "Alleen-lezen"
 
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:638
 msgid "Floppy drives"
-msgstr ""
+msgstr "Diskettestations"
 
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:674
 msgid "Cassette"
-msgstr ""
+msgstr "Cassette"
 
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:729
 msgid "Empty tape"
-msgstr ""
+msgstr "Lege band"
 
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:730
 #, c-format
 msgid "Recording block %d"
-msgstr ""
+msgstr "Blok %d wordt opgenomen"
 
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:731
 #, c-format
 msgid "Block - / %d"
-msgstr ""
+msgstr "Blok - / %d"
 
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:821
 #: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:334
@@ -14908,38 +14908,38 @@ msgstr "Quick Disk"
 
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:1002
 msgid "Recent media"
-msgstr ""
+msgstr "Recente media"
 
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:1012
 msgid "No recent media yet. Use Browse files..."
-msgstr ""
+msgstr "Nog geen recente media. Gebruik Bestanden bladeren..."
 
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:1017
 msgid "Clear history"
-msgstr ""
+msgstr "Geschiedenis wissen"
 
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:1107
 msgid "Speed Max"
-msgstr ""
+msgstr "Snelheid max"
 
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:1108
 #, c-format
 msgid "Speed %u %%"
-msgstr ""
+msgstr "Snelheid %u %%"
 
 #: src/ui-imgui/overlay/overlay_tab_sound.cpp:101
 msgid "The filter models the audio output stage of the real machine."
-msgstr ""
+msgstr "Het filter bootst de audio-uitgangstrap van de echte machine na."
 
 #: src/ui-imgui/overlay/overlay_tab_sound.cpp:123
 msgid "The emulation is running so that you can hear the changes."
-msgstr ""
+msgstr "De emulatie loopt, zodat je de wijzigingen kunt horen."
 
 #: src/ui-imgui/overlay/overlay_tab_sound.cpp:124
 msgid ""
 "Turn on Listen to hear the changes while the menu is open. The emulated "
 "computer keeps running without keyboard input."
-msgstr ""
+msgstr "Schakel Meeluisteren in om de wijzigingen te horen terwijl het menu open is. De geëmuleerde computer blijft draaien zonder toetsenbordinvoer."
 
 #: src/ui-imgui/overlay/overlay_view.cpp:824
 #: src/ui-imgui/overlay/overlay_view.cpp:925
@@ -16934,7 +16934,7 @@ msgstr "Beschikbaar tijdens het afspelen van een replay."
 
 #: src/ui-imgui/topmenu/topmenu.cpp:50
 msgid "Overlay Menu..."
-msgstr ""
+msgstr "Overlay-menu..."
 
 #: src/ui-imgui/topmenu/topmenu.cpp:101
 msgid "About..."

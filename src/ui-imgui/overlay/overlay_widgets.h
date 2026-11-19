@@ -59,7 +59,10 @@
 #include "libs/imgui/imgui.h"
 
 /**
- * @brief Ikona vysunutí média kreslená přes ImDrawList (písmo Lucide ji nemá).
+ * @brief Ikona vysunutí média kreslená přes ImDrawList.
+ *
+ * Hlavička IconsLucide.h ji nezná (končí na U+E6FD); písmo lucide.ttf
+ * ikonu vysunutí obsahuje na U+E733.
  *
  * Lze předat všude, kde widget bere parametr `icon`.
  */
