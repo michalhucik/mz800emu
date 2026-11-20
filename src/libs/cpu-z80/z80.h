@@ -22,7 +22,7 @@
  * - DAA lookup tabulka (2048 záznamů)
  * - Inline prefix handlery
  *
- * @version multi-v0.4
+ * @version multi-v0.5
  */
 
 #ifndef CPU_Z80_H
@@ -366,7 +366,6 @@ typedef struct z80_local_cache_s {
     uint8_t  *H, *L;       /**< HL pár */
     uint16_t *PC, *SP, *WZ;/**< PC, SP, WZ */
     uint8_t  *R, *Q;       /**< R refresh, Q interní */
-    uint8_t  *savedF;      /**< Snapshot F pro Q logiku - sync s F po setREG */
 } z80_local_cache_t;
 
 /**
@@ -406,7 +405,7 @@ typedef struct z80_s {
     bool ei_delay;     /**< EI delay: po EI se přerušení odloží o 1 instrukci */
     bool ld_a_ir;      /**< HW bug: INT po LD A,I/R resetuje PF na 0 */
     uint8_t   int_vector;   /**< Vektor přerušení (pro IM2) */
-    uint8_t   q;            /**< Interní Q registr: F z poslední ALU operace (pro SCF/CCF F3/F5) */
+    uint8_t   q;            /**< Interní registr Q: F po instrukci, která zapsala příznaky, jinak 0 (YF/XF u SCF/CCF) */
     /* Počítadlo cyklů */
     uint32_t cycles;        /**< Aktuální T-stavy ve frame */
     uint32_t total_cycles;  /**< Celkový počet T-stavů */
@@ -644,6 +643,8 @@ uint16_t z80_get_reg(z80_t *cpu, z80_reg_t reg);
  * @param reg Registr k nastavení.
  * @param value 16bitová hodnota.
  * @pre cpu != NULL.
+ * @post Zápis Z80_REG_AF vynuluje interní registr Q (jako POP AF), takže
+ *       následující SCF/CCF vezme YF/XF z A or F.
  */
 void z80_set_reg(z80_t *cpu, z80_reg_t reg, uint16_t value);
 
@@ -794,6 +795,6 @@ void z80_add_wait_states(z80_t *cpu, int wait);
 int z80_process_interrupt(z80_t *cpu);
 
 /** Řetězec verze knihovny. */
-#define CPU_Z80_VERSION "multi-v0.4"
+#define CPU_Z80_VERSION "multi-v0.5"
 
 #endif /* CPU_Z80_H */

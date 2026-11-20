@@ -24,6 +24,17 @@
  * jediný rozdíl mezi variantami; všech ~549 míst sahajících na registry
  * přes tyto aliasy zůstává textově identických -> žádná diverze handlerů.
  *
+ * Registr Q (YF/XF u SCF a CCF):
+ *   Po instrukci, která zapisuje příznaky, je Q = F (i když se hodnota F
+ *   nezměnila). Po instrukci, která je nezapisuje (včetně POP AF, EX AF,AF',
+ *   opakovaného fetche HALT a přijetí přerušení), je Q = 0. SCF a CCF berou
+ *   YF/XF z ((Q xor F) or A): po instrukci se zápisem příznaků jen z A, jinak
+ *   z A or F. Zdroj: redcode/Z80 (sources/Z80.c), MAME z80.lst; na MZ-800
+ *   změřeno programem syscheck (64 shod ze 64).
+ *   Instrukce značí zápis příznaků makrem F_WRITE; Q se z toho odvodí na konci
+ *   instrukce v Q_UPDATE (voláno z NEXT a NEXT_SLOW) a žije v cpu->q, takže
+ *   přežije hranici volání a per-step i batch jádro dávají stejný výsledek.
+ *
  * @param cpu Ukazatel na CPU instanci.
  * @param target_cycles Cílový počet T-stavů (ve step variantě fakticky 1).
  * @return Skutečný počet provedených T-stavů.
@@ -56,8 +67,7 @@ HOT int Z80_EXEC_FN(z80_t *cpu, int target_cycles) {
      * Per-step varianta: hlavní registry jsou aliasy přímo na pole cpu->.
      * Žádná lokální cache, žádný stack-spilling z vzetí adres. _active_cache
      * zůstává NULL po celou dobu (invariant z80.h posílen na "VŽDY NULL"
-     * ve step variantě). savedF je jediná lokální proměnná (interní Q-edge
-     * stav, není architektonický registr - viz DISPATCH níže).
+     * ve step variantě).
      */
 #define rA  (cpu->af.h)
 #define rF  (cpu->af.l)
@@ -72,7 +82,6 @@ HOT int Z80_EXEC_FN(z80_t *cpu, int target_cycles) {
 #define rWZ (cpu->wz.w)
 #define rR  (cpu->r)
 #define rQ  (cpu->q)
-    uint8_t savedF = rF;
     /* _lcache se NEVYTVÁŘÍ; _active_cache musí zůstat NULL po celou dobu. */
     cpu->_active_cache = NULL;
 #else
@@ -90,7 +99,6 @@ HOT int Z80_EXEC_FN(z80_t *cpu, int target_cycles) {
     uint16_t rWZ = cpu->wz.w;
     uint8_t  rR  = cpu->r;
     uint8_t  rQ  = cpu->q;
-    uint8_t  savedF = rF;
 
     /*
      * Registrace pointerů na lokální cache - umožňuje z80_set_reg() volané
@@ -105,7 +113,6 @@ HOT int Z80_EXEC_FN(z80_t *cpu, int target_cycles) {
         .H = &rH, .L = &rL,
         .PC = &rPC, .SP = &rSP, .WZ = &rWZ,
         .R = &rR, .Q = &rQ,
-        .savedF = &savedF,
     };
     cpu->_active_cache = &_lcache;
 #endif
@@ -113,12 +120,46 @@ HOT int Z80_EXEC_FN(z80_t *cpu, int target_cycles) {
     int cycles_executed = 0;
     int last_sync = 0;  /* Poslední bod synchronizace cpu->cycles */
 
+    /*
+     * Maska "probíhající instrukce zapsala příznaky": 0xFF po F_WRITE, jinak 0.
+     * Není architektonický registr; Q_UPDATE ji na konci každé instrukce
+     * spotřebuje a vynuluje, takže na hranici volání je vždy 0.
+     */
+    uint8_t f_written = 0;
+
+    /**
+     * @brief Zápis příznaků instrukcí: F_WRITE = výraz;
+     *
+     * Každá instrukce, která zapisuje příznaky, musí svůj první zápis do F
+     * provést přes F_WRITE; další úpravy F v téže instrukci smí jít přes rF.
+     * Instrukce, které F jen přepisují z paměti nebo stínového registru
+     * (POP AF, EX AF,AF'), F_WRITE nepoužívají.
+     *
+     * Omezení: rozvine se na čárkový výraz, proto jen jako samostatný
+     * přiřazovací příkaz, ne uvnitř jiného výrazu ani v deklaraci.
+     * @post f_written = 0xFF, F obsahuje přiřazenou hodnotu.
+     */
+#define F_WRITE f_written = 0xFF, rF
+
+    /**
+     * @brief Nastaví registr Q na konci instrukce a vynuluje f_written.
+     *
+     * Q = F, pokud instrukce zapsala příznaky (F_WRITE), jinak Q = 0.
+     * @pre Volá se právě jednou na konci každé instrukce (NEXT, NEXT_SLOW),
+     *      po posledním zápisu do F.
+     */
+#define Q_UPDATE() do { rQ = rF & f_written; f_written = 0; } while(0)
+
     /* Makra pro přístup k 16bit párům z lokálních proměnných */
 #define AF_VAL  ((uint16_t)((rA << 8) | rF))
 #define BC_VAL  ((uint16_t)((rB << 8) | rC))
 #define DE_VAL  ((uint16_t)((rD << 8) | rE))
 #define HL_VAL  ((uint16_t)((rH << 8) | rL))
 
+    /*
+     * SET_AF přepíše F bez označení zápisu příznaků: POP AF a EX AF,AF'
+     * nechávají Q = 0 (viz F_WRITE).
+     */
 #define SET_AF(v) do { rA = (uint8_t)((v) >> 8); rF = (uint8_t)(v); } while(0)
 #define SET_BC(v) do { rB = (uint8_t)((v) >> 8); rC = (uint8_t)(v); } while(0)
 #define SET_DE(v) do { rD = (uint8_t)((v) >> 8); rE = (uint8_t)(v); } while(0)
@@ -176,14 +217,11 @@ HOT int Z80_EXEC_FN(z80_t *cpu, int target_cycles) {
 #if Z80_DIRECT_REGS
     /*
      * Per-step varianta: registry ŽIJÍ přímo v cpu->, není co přenášet.
-     * WRITEBACK = úplný no-op. RELOAD dorovnává jen savedF na aktuální rF
-     * (= cpu->af.l) - když callback/interrupt změnil F zvenčí, savedF se
-     * musí posunout STEJNĚ jako v batch variantě (RELOAD tam dělá savedF=rF),
-     * jinak by se Q-edge logika DISPATCH chovala odlišně. Tím je Q-flag
-     * chování bit-identické s batch variantou.
+     * WRITEBACK i RELOAD jsou úplný no-op (Q žije v cpu->q stejně jako
+     * ostatní registry).
      */
 #define WRITEBACK() do { } while(0)
-#define RELOAD()    do { savedF = rF; } while(0)
+#define RELOAD()    do { } while(0)
 #else
     /* Writeback lokálních registrů do struktury */
 #define WRITEBACK() do { \
@@ -204,7 +242,7 @@ HOT int Z80_EXEC_FN(z80_t *cpu, int target_cycles) {
     rH = cpu->hl.h; rL = cpu->hl.l; \
     rPC = cpu->pc; rSP = cpu->sp; \
     rWZ = cpu->wz.w; rR = cpu->r; \
-    rQ = cpu->q; savedF = rF; \
+    rQ = cpu->q; \
 } while(0)
 #endif
 
@@ -277,7 +315,7 @@ HOT int Z80_EXEC_FN(z80_t *cpu, int target_cycles) {
 #define ADD8(a, b) ({ \
     uint16_t _r16 = (a) + (b); \
     uint8_t _r8 = (uint8_t)_r16; \
-    rF = sz53_table[_r8] \
+    F_WRITE = sz53_table[_r8] \
        | ((_r16 >> 8) & CF) \
        | (((a) ^ (b) ^ _r8) & HF) \
        | ((((a) ^ (b) ^ 0x80) & ((a) ^ _r8) & 0x80) >> 5); \
@@ -287,7 +325,7 @@ HOT int Z80_EXEC_FN(z80_t *cpu, int target_cycles) {
 #define ADC8(a, b) ({ \
     uint16_t _r16 = (a) + (b) + (rF & CF); \
     uint8_t _r8 = (uint8_t)_r16; \
-    rF = sz53_table[_r8] \
+    F_WRITE = sz53_table[_r8] \
        | ((_r16 >> 8) & CF) \
        | (((a) ^ (b) ^ _r8) & HF) \
        | ((((a) ^ (b) ^ 0x80) & ((a) ^ _r8) & 0x80) >> 5); \
@@ -297,7 +335,7 @@ HOT int Z80_EXEC_FN(z80_t *cpu, int target_cycles) {
 #define SUB8(a, b) ({ \
     uint16_t _r16 = (a) - (b); \
     uint8_t _r8 = (uint8_t)_r16; \
-    rF = sz53_table[_r8] \
+    F_WRITE = sz53_table[_r8] \
        | ((_r16 >> 8) & CF) \
        | NF \
        | (((a) ^ (b) ^ _r8) & HF) \
@@ -308,7 +346,7 @@ HOT int Z80_EXEC_FN(z80_t *cpu, int target_cycles) {
 #define SBC8(a, b) ({ \
     uint16_t _r16 = (a) - (b) - (rF & CF); \
     uint8_t _r8 = (uint8_t)_r16; \
-    rF = sz53_table[_r8] \
+    F_WRITE = sz53_table[_r8] \
        | ((_r16 >> 8) & CF) \
        | NF \
        | (((a) ^ (b) ^ _r8) & HF) \
@@ -316,20 +354,20 @@ HOT int Z80_EXEC_FN(z80_t *cpu, int target_cycles) {
     _r8; })
 
     /* AND */
-#define AND8(val) do { rA &= (val); rF = sz53p_table[rA] | HF; } while(0)
+#define AND8(val) do { rA &= (val); F_WRITE = sz53p_table[rA] | HF; } while(0)
 
     /* XOR */
-#define XOR8(val) do { rA ^= (val); rF = sz53p_table[rA]; } while(0)
+#define XOR8(val) do { rA ^= (val); F_WRITE = sz53p_table[rA]; } while(0)
 
     /* OR */
-#define OR8(val) do { rA |= (val); rF = sz53p_table[rA]; } while(0)
+#define OR8(val) do { rA |= (val); F_WRITE = sz53p_table[rA]; } while(0)
 
     /* CP - porovnání (jako SUB, ale výsledek se neukládá, F3/F5 z operandu) */
 #define CP8(val) do { \
     uint8_t _v = (val); \
     uint16_t _r16 = rA - _v; \
     uint8_t _r8 = (uint8_t)_r16; \
-    rF = (sz53_table[_r8] & ~(F3 | F5)) \
+    F_WRITE = (sz53_table[_r8] & ~(F3 | F5)) \
        | (_v & (F3 | F5)) \
        | ((_r16 >> 8) & CF) \
        | NF \
@@ -340,7 +378,7 @@ HOT int Z80_EXEC_FN(z80_t *cpu, int target_cycles) {
     /* INC 8bit */
 #define INC8(val) ({ \
     uint8_t _r = (val) + 1; \
-    rF = (rF & CF) \
+    F_WRITE = (rF & CF) \
        | sz53_table[_r] \
        | ((_r & 0x0F) == 0 ? HF : 0) \
        | ((val) == 0x7F ? PF : 0); \
@@ -349,7 +387,7 @@ HOT int Z80_EXEC_FN(z80_t *cpu, int target_cycles) {
     /* DEC 8bit */
 #define DEC8(val) ({ \
     uint8_t _r = (val) - 1; \
-    rF = (rF & CF) \
+    F_WRITE = (rF & CF) \
        | sz53_table[_r] \
        | NF \
        | ((_r & 0x0F) == 0x0F ? HF : 0) \
@@ -361,7 +399,7 @@ HOT int Z80_EXEC_FN(z80_t *cpu, int target_cycles) {
     uint16_t _dest = ((uint16_t)(dest_h) << 8) | (dest_l); \
     uint32_t _r32 = _dest + (val); \
     uint8_t _rh = (uint8_t)(_r32 >> 8); \
-    rF = (rF & (SF | ZF | PF)) \
+    F_WRITE = (rF & (SF | ZF | PF)) \
        | (_rh & (F3 | F5)) \
        | ((_r32 >> 16) & CF) \
        | (((_dest ^ (val) ^ _r32) >> 8) & HF); \
@@ -374,7 +412,7 @@ HOT int Z80_EXEC_FN(z80_t *cpu, int target_cycles) {
     uint16_t _hl = HL_VAL; \
     uint32_t _r32 = _hl + (val) + (rF & CF); \
     uint8_t _rh = (uint8_t)(_r32 >> 8); \
-    rF = ((_r32 >> 8) & SF) \
+    F_WRITE = ((_r32 >> 8) & SF) \
        | ((_r32 & 0xFFFF) == 0 ? ZF : 0) \
        | (_rh & (F3 | F5)) \
        | ((_r32 >> 16) & CF) \
@@ -388,7 +426,7 @@ HOT int Z80_EXEC_FN(z80_t *cpu, int target_cycles) {
     uint16_t _hl = HL_VAL; \
     uint32_t _r32 = _hl - (val) - (rF & CF); \
     uint8_t _rh = (uint8_t)(_r32 >> 8); \
-    rF = ((_r32 >> 8) & SF) \
+    F_WRITE = ((_r32 >> 8) & SF) \
        | ((_r32 & 0xFFFF) == 0 ? ZF : 0) \
        | (_rh & (F3 | F5)) \
        | ((_r32 >> 16) & CF) \
@@ -402,47 +440,47 @@ HOT int Z80_EXEC_FN(z80_t *cpu, int target_cycles) {
 #define RLC(val) ({ \
     uint8_t _c = ((val) >> 7) & 1; \
     uint8_t _r = ((val) << 1) | _c; \
-    rF = sz53p_table[_r] | _c; _r; })
+    F_WRITE = sz53p_table[_r] | _c; _r; })
 
 #define RRC(val) ({ \
     uint8_t _c = (val) & 1; \
     uint8_t _r = ((val) >> 1) | (_c << 7); \
-    rF = sz53p_table[_r] | _c; _r; })
+    F_WRITE = sz53p_table[_r] | _c; _r; })
 
 #define RL(val) ({ \
     uint8_t _c = ((val) >> 7) & 1; \
     uint8_t _r = ((val) << 1) | (rF & CF); \
-    rF = sz53p_table[_r] | _c; _r; })
+    F_WRITE = sz53p_table[_r] | _c; _r; })
 
 #define RR(val) ({ \
     uint8_t _c = (val) & 1; \
     uint8_t _r = ((val) >> 1) | ((rF & CF) << 7); \
-    rF = sz53p_table[_r] | _c; _r; })
+    F_WRITE = sz53p_table[_r] | _c; _r; })
 
 #define SLA(val) ({ \
     uint8_t _c = ((val) >> 7) & 1; \
     uint8_t _r = (val) << 1; \
-    rF = sz53p_table[_r] | _c; _r; })
+    F_WRITE = sz53p_table[_r] | _c; _r; })
 
 #define SRA(val) ({ \
     uint8_t _c = (val) & 1; \
     uint8_t _r = ((val) >> 1) | ((val) & 0x80); \
-    rF = sz53p_table[_r] | _c; _r; })
+    F_WRITE = sz53p_table[_r] | _c; _r; })
 
 #define SLL(val) ({ \
     uint8_t _c = ((val) >> 7) & 1; \
     uint8_t _r = ((val) << 1) | 1; \
-    rF = sz53p_table[_r] | _c; _r; })
+    F_WRITE = sz53p_table[_r] | _c; _r; })
 
 #define SRL(val) ({ \
     uint8_t _c = (val) & 1; \
     uint8_t _r = (val) >> 1; \
-    rF = sz53p_table[_r] | _c; _r; })
+    F_WRITE = sz53p_table[_r] | _c; _r; })
 
     /* BIT n, val */
 #define BIT_OP(n, val) do { \
     uint8_t _r = (val) & (1 << (n)); \
-    rF = (rF & CF) | HF | (_r & SF); \
+    F_WRITE = (rF & CF) | HF | (_r & SF); \
     if (_r == 0) rF |= ZF | PF; \
     rF |= ((val) & (F3 | F5)); \
 } while(0)
@@ -450,7 +488,7 @@ HOT int Z80_EXEC_FN(z80_t *cpu, int target_cycles) {
     /* BIT n, (HL)/(IX+d)/(IY+d) - F3/F5 z horního bajtu adresy */
 #define BIT_MEM(n, val, addr_hi) do { \
     uint8_t _r = (val) & (1 << (n)); \
-    rF = (rF & CF) | HF | (_r & SF); \
+    F_WRITE = (rF & CF) | HF | (_r & SF); \
     if (_r == 0) rF |= ZF | PF; \
     rF |= ((addr_hi) & (F3 | F5)); \
 } while(0)
@@ -507,8 +545,6 @@ HOT int Z80_EXEC_FN(z80_t *cpu, int target_cycles) {
 
     /* Dispatch makra pro computed goto */
 #define DISPATCH() do { \
-    rQ = (rF != savedF) ? rF : 0; \
-    savedF = rF; \
     cpu->op_tstate = 0; \
     uint8_t _op = M1_FETCH(); \
     INC_R(); \
@@ -520,6 +556,7 @@ HOT int Z80_EXEC_FN(z80_t *cpu, int target_cycles) {
      * Interrupt handling a post_step jsou ve slow path (check_interrupts label).
      */
 #define NEXT(c) do { \
+    Q_UPDATE(); \
     cycles_executed += (c) + cpu->wait_cycles; \
     cpu->wait_cycles = 0; \
     if (__builtin_expect(cycles_executed >= target_cycles, 0)) { \
@@ -533,6 +570,7 @@ HOT int Z80_EXEC_FN(z80_t *cpu, int target_cycles) {
 
     /* NEXT_SLOW: pro instrukce co mění interrupt stav (EI, DI, HALT, RETI, RETN) */
 #define NEXT_SLOW(c) do { \
+    Q_UPDATE(); \
     cycles_executed += (c) + cpu->wait_cycles; \
     cpu->wait_cycles = 0; \
     cpu->cycles += cycles_executed - last_sync; \
@@ -545,6 +583,7 @@ HOT int Z80_EXEC_FN(z80_t *cpu, int target_cycles) {
 
 #define DISPATCH() do { cpu->op_tstate = 0; goto dispatch_switch; } while(0)
 #define NEXT(c) do { \
+    Q_UPDATE(); \
     cycles_executed += (c) + cpu->wait_cycles; \
     cpu->wait_cycles = 0; \
     if (cycles_executed >= target_cycles) { \
@@ -587,6 +626,8 @@ HOT int Z80_EXEC_FN(z80_t *cpu, int target_cycles) {
          * 09-r-register.md; z80ex totéž). Bez toho loader Interkarate
          * po HALT dešifroval špatným klíčem (regrese v2.0.2). */
         INC_R();
+        /* Opakovaný fetch HALT je interní NOP: příznaky nezapisuje, Q = 0. */
+        rQ = 0;
         cycles = 4;
         cpu->cycles += cycles;
         cpu->total_cycles += cycles;
@@ -692,10 +733,10 @@ check_interrupts:
     op_06: rB = FETCH(); NEXT(7);
 
     /* RLCA */
-    op_07: { uint8_t c = rA >> 7; rA = (rA << 1) | c; rF = (rF & (SF|ZF|PF)) | (rA & (F3|F5)) | c; NEXT(4); }
+    op_07: { uint8_t c = rA >> 7; rA = (rA << 1) | c; F_WRITE = (rF & (SF|ZF|PF)) | (rA & (F3|F5)) | c; NEXT(4); }
 
     /* EX AF, AF' */
-    op_08: { uint16_t tmp = AF_VAL; uint16_t af2 = cpu->af2.w; SET_AF(af2); cpu->af2.w = tmp; savedF = rF; NEXT(4); }
+    op_08: { uint16_t tmp = AF_VAL; uint16_t af2 = cpu->af2.w; SET_AF(af2); cpu->af2.w = tmp; NEXT(4); }
 
     /* ADD HL, BC */
     op_09: rWZ = HL_VAL + 1; ADD16(rH, rL, BC_VAL); NEXT(11);
@@ -716,7 +757,7 @@ check_interrupts:
     op_0E: rC = FETCH(); NEXT(7);
 
     /* RRCA */
-    op_0F: { uint8_t c = rA & 1; rA = (rA >> 1) | (c << 7); rF = (rF & (SF|ZF|PF)) | (rA & (F3|F5)) | c; NEXT(4); }
+    op_0F: { uint8_t c = rA & 1; rA = (rA >> 1) | (c << 7); F_WRITE = (rF & (SF|ZF|PF)) | (rA & (F3|F5)) | c; NEXT(4); }
 
     /* DJNZ */
     op_10: { int8_t d = (int8_t)FETCH(); rB--; if (rB != 0) { rPC += d; rWZ = rPC; NEXT(13); } else { NEXT(8); } }
@@ -740,7 +781,7 @@ check_interrupts:
     op_16: rD = FETCH(); NEXT(7);
 
     /* RLA */
-    op_17: { uint8_t c = rA >> 7; rA = (rA << 1) | (rF & CF); rF = (rF & (SF|ZF|PF)) | (rA & (F3|F5)) | c; NEXT(4); }
+    op_17: { uint8_t c = rA >> 7; rA = (rA << 1) | (rF & CF); F_WRITE = (rF & (SF|ZF|PF)) | (rA & (F3|F5)) | c; NEXT(4); }
 
     /* JR d */
     op_18: { int8_t d = (int8_t)FETCH(); rPC += d; rWZ = rPC; NEXT(12); }
@@ -764,7 +805,7 @@ check_interrupts:
     op_1E: rE = FETCH(); NEXT(7);
 
     /* RRA */
-    op_1F: { uint8_t c = rA & 1; rA = (rA >> 1) | ((rF & CF) << 7); rF = (rF & (SF|ZF|PF)) | (rA & (F3|F5)) | c; NEXT(4); }
+    op_1F: { uint8_t c = rA & 1; rA = (rA >> 1) | ((rF & CF) << 7); F_WRITE = (rF & (SF|ZF|PF)) | (rA & (F3|F5)) | c; NEXT(4); }
 
     /* JR NZ, d */
     op_20: { int8_t d = (int8_t)FETCH(); if (!(rF & ZF)) { rPC += d; rWZ = rPC; NEXT(12); } else { NEXT(7); } }
@@ -792,7 +833,7 @@ check_interrupts:
         uint16_t daa_idx = rA | ((rF & CF) ? 0x100 : 0) | ((rF & HF) ? 0x200 : 0) | ((rF & NF) ? 0x400 : 0);
         uint16_t daa_val = daa_table[daa_idx];
         rA = (uint8_t)daa_val;
-        rF = (uint8_t)(daa_val >> 8);
+        F_WRITE = (uint8_t)(daa_val >> 8);
         NEXT(4);
     }
 
@@ -818,7 +859,7 @@ check_interrupts:
     op_2E: rL = FETCH(); NEXT(7);
 
     /* CPL */
-    op_2F: rA = ~rA; rF = (rF & (SF|ZF|PF|CF)) | (rA & (F3|F5)) | NF | HF; NEXT(4);
+    op_2F: rA = ~rA; F_WRITE = (rF & (SF|ZF|PF|CF)) | (rA & (F3|F5)) | NF | HF; NEXT(4);
 
     /* JR NC, d */
     op_30: { int8_t d = (int8_t)FETCH(); if (!(rF & CF)) { rPC += d; rWZ = rPC; NEXT(12); } else { NEXT(7); } }
@@ -842,7 +883,7 @@ check_interrupts:
     op_36: WR(HL_VAL, FETCH()); NEXT(10);
 
     /* SCF */
-    op_37: rF = (rF & (SF|ZF|PF)) | ((rA | rQ) & (F3|F5)) | CF; NEXT(4);
+    op_37: F_WRITE = (rF & (SF|ZF|PF)) | (((rQ ^ rF) | rA) & (F3|F5)) | CF; NEXT(4);
 
     /* JR C, d */
     op_38: { int8_t d = (int8_t)FETCH(); if (rF & CF) { rPC += d; rWZ = rPC; NEXT(12); } else { NEXT(7); } }
@@ -866,7 +907,7 @@ check_interrupts:
     op_3E: rA = FETCH(); NEXT(7);
 
     /* CCF */
-    op_3F: rF = (rF & (SF|ZF|PF)) | ((rA | rQ) & (F3|F5)) | ((rF & CF) ? HF : 0) | ((rF & CF) ^ CF); NEXT(4);
+    op_3F: F_WRITE = (rF & (SF|ZF|PF)) | (((rQ ^ rF) | rA) & (F3|F5)) | ((rF & CF) ? HF : 0) | ((rF & CF) ^ CF); NEXT(4);
 
     /* LD r, r' */
     op_40: NEXT(4);           /* LD B, B */
@@ -1055,7 +1096,7 @@ check_interrupts:
     op_C1: { uint16_t v = POP(); SET_BC(v); NEXT(10); }
     op_D1: { uint16_t v = POP(); SET_DE(v); NEXT(10); }
     op_E1: { uint16_t v = POP(); SET_HL(v); NEXT(10); }
-    op_F1: { uint16_t v = POP(); SET_AF(v); savedF = rF; NEXT(10); }
+    op_F1: { uint16_t v = POP(); SET_AF(v); NEXT(10); }
 
     /* PUSH rr */
     op_C5: PUSH(BC_VAL); NEXT(11);
@@ -1263,7 +1304,7 @@ check_interrupts:
      * @post Bity F3 a F5 v rF jsou kopií PC.11 a PC.13, ostatní beze změny.
      */
 #define BLOCK_REPEAT_FLAGS() do { \
-    rF = (uint8_t)((rF & ~(F3|F5)) | ((rPC >> 8) & (F3|F5))); \
+    F_WRITE = (uint8_t)((rF & ~(F3|F5)) | ((rPC >> 8) & (F3|F5))); \
 } while(0)
 
     /**
@@ -1305,7 +1346,7 @@ check_interrupts:
     } else { \
         _bp = parity_table[rB & 7]; \
     } \
-    rF = (uint8_t)(_bf ^ _bp ^ PF); \
+    F_WRITE = (uint8_t)(_bf ^ _bp ^ PF); \
 } while(0)
 
     op_ED: {
@@ -1314,14 +1355,14 @@ check_interrupts:
 
         switch (edop) {
             /* IN r, (C) */
-            case 0x40: rWZ = BC_VAL + 1; rB = IO_RD(BC_VAL); rF = (rF & CF) | sz53p_table[rB]; NEXT(12);
-            case 0x48: rWZ = BC_VAL + 1; rC = IO_RD(BC_VAL); rF = (rF & CF) | sz53p_table[rC]; NEXT(12);
-            case 0x50: rWZ = BC_VAL + 1; rD = IO_RD(BC_VAL); rF = (rF & CF) | sz53p_table[rD]; NEXT(12);
-            case 0x58: rWZ = BC_VAL + 1; rE = IO_RD(BC_VAL); rF = (rF & CF) | sz53p_table[rE]; NEXT(12);
-            case 0x60: rWZ = BC_VAL + 1; rH = IO_RD(BC_VAL); rF = (rF & CF) | sz53p_table[rH]; NEXT(12);
-            case 0x68: rWZ = BC_VAL + 1; rL = IO_RD(BC_VAL); rF = (rF & CF) | sz53p_table[rL]; NEXT(12);
-            case 0x70: { rWZ = BC_VAL + 1; uint8_t t = IO_RD(BC_VAL); rF = (rF & CF) | sz53p_table[t]; NEXT(12); }
-            case 0x78: rWZ = BC_VAL + 1; rA = IO_RD(BC_VAL); rF = (rF & CF) | sz53p_table[rA]; NEXT(12);
+            case 0x40: rWZ = BC_VAL + 1; rB = IO_RD(BC_VAL); F_WRITE = (rF & CF) | sz53p_table[rB]; NEXT(12);
+            case 0x48: rWZ = BC_VAL + 1; rC = IO_RD(BC_VAL); F_WRITE = (rF & CF) | sz53p_table[rC]; NEXT(12);
+            case 0x50: rWZ = BC_VAL + 1; rD = IO_RD(BC_VAL); F_WRITE = (rF & CF) | sz53p_table[rD]; NEXT(12);
+            case 0x58: rWZ = BC_VAL + 1; rE = IO_RD(BC_VAL); F_WRITE = (rF & CF) | sz53p_table[rE]; NEXT(12);
+            case 0x60: rWZ = BC_VAL + 1; rH = IO_RD(BC_VAL); F_WRITE = (rF & CF) | sz53p_table[rH]; NEXT(12);
+            case 0x68: rWZ = BC_VAL + 1; rL = IO_RD(BC_VAL); F_WRITE = (rF & CF) | sz53p_table[rL]; NEXT(12);
+            case 0x70: { rWZ = BC_VAL + 1; uint8_t t = IO_RD(BC_VAL); F_WRITE = (rF & CF) | sz53p_table[t]; NEXT(12); }
+            case 0x78: rWZ = BC_VAL + 1; rA = IO_RD(BC_VAL); F_WRITE = (rF & CF) | sz53p_table[rA]; NEXT(12);
 
             /* OUT (C), r */
             case 0x41: IO_WR(BC_VAL, rB); rWZ = BC_VAL + 1; NEXT(12);
@@ -1405,14 +1446,14 @@ check_interrupts:
             /* LD A, I */
             case 0x57:
                 rA = cpu->i;
-                rF = (rF & CF) | sz53_table[rA] | (cpu->iff2 ? PF : 0);
+                F_WRITE = (rF & CF) | sz53_table[rA] | (cpu->iff2 ? PF : 0);
                 cpu->ld_a_ir = true;
                 NEXT_SLOW(9);
 
             /* LD A, R */
             case 0x5F:
                 rA = rR;
-                rF = (rF & CF) | sz53_table[rA] | (cpu->iff2 ? PF : 0);
+                F_WRITE = (rF & CF) | sz53_table[rA] | (cpu->iff2 ? PF : 0);
                 cpu->ld_a_ir = true;
                 NEXT_SLOW(9);
 
@@ -1422,7 +1463,7 @@ check_interrupts:
                 uint8_t nv = (rA << 4) | (val >> 4);
                 rA = (rA & 0xF0) | (val & 0x0F);
                 WR(HL_VAL, nv);
-                rF = (rF & CF) | sz53p_table[rA];
+                F_WRITE = (rF & CF) | sz53p_table[rA];
                 rWZ = HL_VAL + 1;
                 NEXT(18);
             }
@@ -1433,7 +1474,7 @@ check_interrupts:
                 uint8_t nv = (val << 4) | (rA & 0x0F);
                 rA = (rA & 0xF0) | (val >> 4);
                 WR(HL_VAL, nv);
-                rF = (rF & CF) | sz53p_table[rA];
+                F_WRITE = (rF & CF) | sz53p_table[rA];
                 rWZ = HL_VAL + 1;
                 NEXT(18);
             }
@@ -1446,7 +1487,7 @@ check_interrupts:
                 uint16_t hl = HL_VAL + 1; SET_HL(hl);
                 uint16_t bc = BC_VAL - 1; SET_BC(bc);
                 uint8_t n = val + rA;
-                rF = (rF & (SF|ZF|CF)) | (bc != 0 ? PF : 0) | (n & F3) | ((n & 0x02) ? F5 : 0);
+                F_WRITE = (rF & (SF|ZF|CF)) | (bc != 0 ? PF : 0) | (n & F3) | ((n & 0x02) ? F5 : 0);
                 NEXT(16);
             }
 
@@ -1458,8 +1499,8 @@ check_interrupts:
                 uint16_t bc = BC_VAL - 1; SET_BC(bc);
                 uint8_t nhf = (rA ^ val ^ res) & HF;
                 uint8_t n = res - (nhf ? 1 : 0);
-                rF = (rF & CF) | NF | (bc != 0 ? PF : 0) | sz53_table[res & 0xFF] | nhf;
-                rF = (rF & ~(F3|F5)) | (n & F3) | ((n & 0x02) ? F5 : 0);
+                F_WRITE = (rF & CF) | NF | (bc != 0 ? PF : 0) | sz53_table[res & 0xFF] | nhf;
+                F_WRITE = (rF & ~(F3|F5)) | (n & F3) | ((n & 0x02) ? F5 : 0);
                 rWZ++;
                 NEXT(16);
             }
@@ -1472,7 +1513,7 @@ check_interrupts:
                 uint16_t hl = HL_VAL + 1; SET_HL(hl);
                 rB--;
                 uint16_t k = (uint16_t)val + (uint16_t)((rC + 1) & 0xFF);
-                rF = sz53_table[rB]
+                F_WRITE = sz53_table[rB]
                    | ((val & 0x80) ? NF : 0)
                    | (k > 255 ? (HF|CF) : 0)
                    | (parity_table[(uint8_t)((k & 7) ^ rB)] ? PF : 0);
@@ -1487,7 +1528,7 @@ check_interrupts:
                 uint16_t hl = HL_VAL + 1; SET_HL(hl);
                 rWZ = BC_VAL + 1;
                 uint16_t k = (uint16_t)val + (uint16_t)rL;
-                rF = sz53_table[rB]
+                F_WRITE = sz53_table[rB]
                    | ((val & 0x80) ? NF : 0)
                    | (k > 255 ? (HF|CF) : 0)
                    | (parity_table[(uint8_t)((k & 7) ^ rB)] ? PF : 0);
@@ -1502,7 +1543,7 @@ check_interrupts:
                 uint16_t hl = HL_VAL - 1; SET_HL(hl);
                 uint16_t bc = BC_VAL - 1; SET_BC(bc);
                 uint8_t n = val + rA;
-                rF = (rF & (SF|ZF|CF)) | (bc != 0 ? PF : 0) | (n & F3) | ((n & 0x02) ? F5 : 0);
+                F_WRITE = (rF & (SF|ZF|CF)) | (bc != 0 ? PF : 0) | (n & F3) | ((n & 0x02) ? F5 : 0);
                 NEXT(16);
             }
 
@@ -1514,8 +1555,8 @@ check_interrupts:
                 uint16_t bc = BC_VAL - 1; SET_BC(bc);
                 uint8_t nhf = (rA ^ val ^ res) & HF;
                 uint8_t n = res - (nhf ? 1 : 0);
-                rF = (rF & CF) | NF | (bc != 0 ? PF : 0) | sz53_table[res & 0xFF] | nhf;
-                rF = (rF & ~(F3|F5)) | (n & F3) | ((n & 0x02) ? F5 : 0);
+                F_WRITE = (rF & CF) | NF | (bc != 0 ? PF : 0) | sz53_table[res & 0xFF] | nhf;
+                F_WRITE = (rF & ~(F3|F5)) | (n & F3) | ((n & 0x02) ? F5 : 0);
                 rWZ--;
                 NEXT(16);
             }
@@ -1528,7 +1569,7 @@ check_interrupts:
                 uint16_t hl = HL_VAL - 1; SET_HL(hl);
                 rB--;
                 uint16_t k = (uint16_t)val + (uint16_t)((rC - 1) & 0xFF);
-                rF = sz53_table[rB]
+                F_WRITE = sz53_table[rB]
                    | ((val & 0x80) ? NF : 0)
                    | (k > 255 ? (HF|CF) : 0)
                    | (parity_table[(uint8_t)((k & 7) ^ rB)] ? PF : 0);
@@ -1543,7 +1584,7 @@ check_interrupts:
                 uint16_t hl = HL_VAL - 1; SET_HL(hl);
                 rWZ = BC_VAL - 1;
                 uint16_t k = (uint16_t)val + (uint16_t)rL;
-                rF = sz53_table[rB]
+                F_WRITE = sz53_table[rB]
                    | ((val & 0x80) ? NF : 0)
                    | (k > 255 ? (HF|CF) : 0)
                    | (parity_table[(uint8_t)((k & 7) ^ rB)] ? PF : 0);
@@ -1558,7 +1599,7 @@ check_interrupts:
                 uint16_t hl = HL_VAL + 1; SET_HL(hl);
                 uint16_t bc = BC_VAL - 1; SET_BC(bc);
                 uint8_t n = val + rA;
-                rF = (rF & (SF|ZF|CF)) | (bc != 0 ? PF : 0) | (n & F3) | ((n & 0x02) ? F5 : 0);
+                F_WRITE = (rF & (SF|ZF|CF)) | (bc != 0 ? PF : 0) | (n & F3) | ((n & 0x02) ? F5 : 0);
                 if (bc != 0) { rPC -= 2; rWZ = rPC + 1; BLOCK_REPEAT_FLAGS(); NEXT(21); }
                 NEXT(16);
             }
@@ -1571,8 +1612,8 @@ check_interrupts:
                 uint16_t bc = BC_VAL - 1; SET_BC(bc);
                 uint8_t nhf = (rA ^ val ^ res) & HF;
                 uint8_t n = res - (nhf ? 1 : 0);
-                rF = (rF & CF) | NF | (bc != 0 ? PF : 0) | sz53_table[res & 0xFF] | nhf;
-                rF = (rF & ~(F3|F5)) | (n & F3) | ((n & 0x02) ? F5 : 0);
+                F_WRITE = (rF & CF) | NF | (bc != 0 ? PF : 0) | sz53_table[res & 0xFF] | nhf;
+                F_WRITE = (rF & ~(F3|F5)) | (n & F3) | ((n & 0x02) ? F5 : 0);
                 if (bc != 0 && !(rF & ZF)) { rPC -= 2; rWZ = rPC + 1; BLOCK_REPEAT_FLAGS(); NEXT(21); }
                 rWZ++;
                 NEXT(16);
@@ -1586,7 +1627,7 @@ check_interrupts:
                 uint16_t hl = HL_VAL + 1; SET_HL(hl);
                 rB--;
                 uint16_t k = (uint16_t)val + (uint16_t)((rC + 1) & 0xFF);
-                rF = sz53_table[rB]
+                F_WRITE = sz53_table[rB]
                    | ((val & 0x80) ? NF : 0)
                    | (k > 255 ? (HF|CF) : 0)
                    | (parity_table[(uint8_t)((k & 7) ^ rB)] ? PF : 0);
@@ -1602,7 +1643,7 @@ check_interrupts:
                 uint16_t hl = HL_VAL + 1; SET_HL(hl);
                 rWZ = BC_VAL + 1;
                 uint16_t k = (uint16_t)val + (uint16_t)rL;
-                rF = sz53_table[rB]
+                F_WRITE = sz53_table[rB]
                    | ((val & 0x80) ? NF : 0)
                    | (k > 255 ? (HF|CF) : 0)
                    | (parity_table[(uint8_t)((k & 7) ^ rB)] ? PF : 0);
@@ -1618,7 +1659,7 @@ check_interrupts:
                 uint16_t hl = HL_VAL - 1; SET_HL(hl);
                 uint16_t bc = BC_VAL - 1; SET_BC(bc);
                 uint8_t n = val + rA;
-                rF = (rF & (SF|ZF|CF)) | (bc != 0 ? PF : 0) | (n & F3) | ((n & 0x02) ? F5 : 0);
+                F_WRITE = (rF & (SF|ZF|CF)) | (bc != 0 ? PF : 0) | (n & F3) | ((n & 0x02) ? F5 : 0);
                 if (bc != 0) { rPC -= 2; rWZ = rPC + 1; BLOCK_REPEAT_FLAGS(); NEXT(21); }
                 NEXT(16);
             }
@@ -1631,8 +1672,8 @@ check_interrupts:
                 uint16_t bc = BC_VAL - 1; SET_BC(bc);
                 uint8_t nhf = (rA ^ val ^ res) & HF;
                 uint8_t n = res - (nhf ? 1 : 0);
-                rF = (rF & CF) | NF | (bc != 0 ? PF : 0) | sz53_table[res & 0xFF] | nhf;
-                rF = (rF & ~(F3|F5)) | (n & F3) | ((n & 0x02) ? F5 : 0);
+                F_WRITE = (rF & CF) | NF | (bc != 0 ? PF : 0) | sz53_table[res & 0xFF] | nhf;
+                F_WRITE = (rF & ~(F3|F5)) | (n & F3) | ((n & 0x02) ? F5 : 0);
                 if (bc != 0 && !(rF & ZF)) { rPC -= 2; rWZ = rPC + 1; BLOCK_REPEAT_FLAGS(); NEXT(21); }
                 rWZ--;
                 NEXT(16);
@@ -1646,7 +1687,7 @@ check_interrupts:
                 uint16_t hl = HL_VAL - 1; SET_HL(hl);
                 rB--;
                 uint16_t k = (uint16_t)val + (uint16_t)((rC - 1) & 0xFF);
-                rF = sz53_table[rB]
+                F_WRITE = sz53_table[rB]
                    | ((val & 0x80) ? NF : 0)
                    | (k > 255 ? (HF|CF) : 0)
                    | (parity_table[(uint8_t)((k & 7) ^ rB)] ? PF : 0);
@@ -1662,7 +1703,7 @@ check_interrupts:
                 uint16_t hl = HL_VAL - 1; SET_HL(hl);
                 rWZ = BC_VAL - 1;
                 uint16_t k = (uint16_t)val + (uint16_t)rL;
-                rF = sz53_table[rB]
+                F_WRITE = sz53_table[rB]
                    | ((val & 0x80) ? NF : 0)
                    | (k > 255 ? (HF|CF) : 0)
                    | (parity_table[(uint8_t)((k & 7) ^ rB)] ? PF : 0);
@@ -1686,25 +1727,25 @@ check_interrupts:
         case 0x09: rWZ = (IDX_W) + 1; { \
             uint32_t _r32 = (IDX_W) + BC_VAL; \
             uint8_t _rh = (uint8_t)(_r32 >> 8); \
-            rF = (rF & (SF|ZF|PF)) | (_rh & (F3|F5)) | ((_r32 >> 16) & CF) \
+            F_WRITE = (rF & (SF|ZF|PF)) | (_rh & (F3|F5)) | ((_r32 >> 16) & CF) \
                | ((((IDX_W) ^ BC_VAL ^ _r32) >> 8) & HF); \
             (IDX_W) = (uint16_t)_r32; } NEXT(15); \
         case 0x19: rWZ = (IDX_W) + 1; { \
             uint32_t _r32 = (IDX_W) + DE_VAL; \
             uint8_t _rh = (uint8_t)(_r32 >> 8); \
-            rF = (rF & (SF|ZF|PF)) | (_rh & (F3|F5)) | ((_r32 >> 16) & CF) \
+            F_WRITE = (rF & (SF|ZF|PF)) | (_rh & (F3|F5)) | ((_r32 >> 16) & CF) \
                | ((((IDX_W) ^ DE_VAL ^ _r32) >> 8) & HF); \
             (IDX_W) = (uint16_t)_r32; } NEXT(15); \
         case 0x29: rWZ = (IDX_W) + 1; { \
             uint32_t _r32 = (IDX_W) + (IDX_W); \
             uint8_t _rh = (uint8_t)(_r32 >> 8); \
-            rF = (rF & (SF|ZF|PF)) | (_rh & (F3|F5)) | ((_r32 >> 16) & CF) \
+            F_WRITE = (rF & (SF|ZF|PF)) | (_rh & (F3|F5)) | ((_r32 >> 16) & CF) \
                | ((((IDX_W) ^ (IDX_W) ^ _r32) >> 8) & HF); \
             (IDX_W) = (uint16_t)_r32; } NEXT(15); \
         case 0x39: rWZ = (IDX_W) + 1; { \
             uint32_t _r32 = (IDX_W) + rSP; \
             uint8_t _rh = (uint8_t)(_r32 >> 8); \
-            rF = (rF & (SF|ZF|PF)) | (_rh & (F3|F5)) | ((_r32 >> 16) & CF) \
+            F_WRITE = (rF & (SF|ZF|PF)) | (_rh & (F3|F5)) | ((_r32 >> 16) & CF) \
                | ((((IDX_W) ^ rSP ^ _r32) >> 8) & HF); \
             (IDX_W) = (uint16_t)_r32; } NEXT(15); \
         /* LD IX/IY, nn */ \
@@ -1883,8 +1924,10 @@ check_interrupts:
      * vrátí (rPC--), R za něj se odečte (DISPATCH ho přičte znovu) a krok
      * skončí za prefixem; ten jeden bajt se tedy načte dvakrát.
      *
-     * Q registr se spočítá stejně jako v DISPATCH (prefix F nemění, výsledek
-     * je 0), aby se chování SCF/CCF za prefixem nezměnilo.
+     * Registr Q se za prefixem nuluje (prefix příznaky nezapisuje), takže
+     * SCF/CCF za osamoceným prefixem vidí Q = 0 bez ohledu na instrukci před
+     * prefixem. Chování je převzaté z dřívější implementace; na reálném
+     * procesoru neověřeno [neověřeno].
      *
      * @param op Bajt načtený za prefixem.
      * @pre Volá se jen z větve default makra DDFD_PREFIX; ddfd_chain počítá
@@ -1902,14 +1945,12 @@ check_interrupts:
             NEXT(4); \
         } \
         cycles_executed += 4; \
-        rQ = (rF != savedF) ? rF : 0; \
-        savedF = rF; \
+        rQ = 0; \
         if ((op) == 0xDD) goto op_DD_chain; \
         goto op_FD_chain; \
     } \
     cycles_executed += 4; \
-    rQ = (rF != savedF) ? rF : 0; \
-    savedF = rF; \
+    rQ = 0; \
     goto *base_dispatch[(op)]; \
 } while(0)
 #else
@@ -2006,6 +2047,8 @@ done:
 #undef BIT_OP
 #undef BIT_MEM
 #undef DISPATCH
+#undef F_WRITE
+#undef Q_UPDATE
 #undef NEXT
 #undef NEXT_SLOW
 #undef DDFD_PREFIX

@@ -88,3 +88,14 @@ mz_add_test(cpu_z80_block_repeat
     LIBS     mzlib_cpu_z80
     LABELS   "standalone;libs"
 )
+
+# Interní registr Q: YF/XF po SCF a CCF = ((Q xor F) or A) and 28h, Q = F po
+# instrukci se zápisem příznaků, jinak 0. Krokování, dávka i hranice volání
+# musí dát stejný výsledek (program syscheck na MZ-800: 64 shod ze 64).
+# Viz emu-experiments/q-register/README.md.
+mz_add_test(cpu_z80_q_register
+    TYPE     STANDALONE
+    SOURCES  test_q_register.c
+    LIBS     mzlib_cpu_z80
+    LABELS   "standalone;libs"
+)

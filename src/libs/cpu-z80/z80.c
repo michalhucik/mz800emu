@@ -20,7 +20,7 @@
  * - DAA lookup tabulka (2048 záznamů)
  * - Inline prefix handlery (CB/ED/DD/FD/DDCB/FDCB)
  *
- * @version multi-v0.4
+ * @version multi-v0.5
  */
 
 #include "z80.h"
@@ -448,7 +448,8 @@ static inline void inc_r_on_int_ack(z80_t *cpu) {
  *
  * Zpracovává NMI a maskované přerušení (IM0/1/2).
  * Volán z execute smyčky - pracuje přímo se strukturou (ne s locals).
- * Při přijetí NMI i INT zvýší R o 1 (inc_r_on_int_ack).
+ * Při přijetí NMI i INT zvýší R o 1 (inc_r_on_int_ack) a vynuluje
+ * registr Q (cpu->q).
  *
  * @param cpu Ukazatel na CPU instanci.
  * @return Počet T-stavů spotřebovaných obsluhou, nebo 0.
@@ -579,6 +580,9 @@ static int handle_interrupts_internal(z80_t *cpu) {
                 break;
         }
     }
+
+    /* Přijetí přerušení příznaky nezapisuje: instrukce za ním vidí Q = 0. */
+    if (int_cycles > 0) cpu->q = 0;
 
     return int_cycles;
 }
@@ -976,10 +980,14 @@ void z80_set_reg(z80_t *cpu, z80_reg_t reg, uint16_t value) {
     switch (reg) {
         case Z80_REG_AF:
             cpu->af.w = value;
+            /* Zápis AF zvenčí se pro registr Q chová jako POP AF: Q = 0.
+             * Při volání z callbacku uprostřed instrukce Q stejně přepíše
+             * konec té instrukce (Q_UPDATE). */
+            cpu->q = 0;
             if (lc) {
                 *lc->A = (uint8_t)(value >> 8);
                 *lc->F = (uint8_t)value;
-                *lc->savedF = *lc->F;
+                *lc->Q = 0;
             }
             break;
         case Z80_REG_BC:
