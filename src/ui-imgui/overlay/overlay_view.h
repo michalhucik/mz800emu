@@ -77,6 +77,9 @@
 
 /** @brief Největší počet zvukových kanálů v kopii (CTC0 a dva čipy PSG po čtyřech kanálech). */
 #define OVERLAY_VIEW_AUDIO_CHANNELS_MAX 9
+
+/** @brief Největší hlavní hlasitost poslechu v kopii (AUDIO_MASTER_GAIN_MAX v audio.h; 2,0 = 200 %). */
+#define OVERLAY_VIEW_MASTER_GAIN_MAX 2.0f
 /** @brief Velikost pole st_OVERLAY_VIEW_CAPTURE::replay_text včetně ukončovací nuly; delší text se zkrátí na hranici znaku. */
 #define OVERLAY_VIEW_REPLAY_TEXT_SIZE 256
 
@@ -299,7 +302,7 @@ typedef enum en_OVERLAY_LISTEN {
 /**
  * @brief Stav pro tab Sound v kopii (zvukové rozhraní g_iface_audio a přepínač Listen).
  *
- * Invarianty: 0 <= master_gain <= 1; channel_count je 1 (jen CTC0), 5
+ * Invarianty: 0 <= master_gain <= OVERLAY_VIEW_MASTER_GAIN_MAX; channel_count je 1 (jen CTC0), 5
  * (CTC0 a jeden čip PSG) nebo 9 (dva čipy PSG) a nikdy víc než
  * OVERLAY_VIEW_AUDIO_CHANNELS_MAX; channel_gain[i] pro i < channel_count
  * je hlasitost kanálu 0 až 1 (pořadí kanálů jako v okně Audio Mixer);
@@ -308,7 +311,7 @@ typedef enum en_OVERLAY_LISTEN {
  */
 typedef struct st_OVERLAY_VIEW_SOUND {
     int listen;                                          /**< stav přepínače Listen (en_OVERLAY_LISTEN); plní rámec overlaye, ne overlay_view_fill() */
-    float master_gain;                                   /**< hlavní hlasitost poslechu 0 až 1 (iface_audio_get_master_gain()) */
+    float master_gain;                                   /**< hlavní hlasitost poslechu 0 až OVERLAY_VIEW_MASTER_GAIN_MAX, 1 = 100 % (iface_audio_get_master_gain()) */
     bool mute;                                           /**< poslech je ztlumený (iface_audio_get_mute()) */
     bool has_output_filter;                              /**< stroj má věrnou výstupní propust (AUDIO_HAVE_OUTPUT_FILTER); false = řádek se nekreslí */
     bool output_filter;                                  /**< věrná výstupní propust je zapnutá (iface_audio_output_filter_enabled()) */

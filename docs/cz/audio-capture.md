@@ -82,6 +82,17 @@ První řádky (`ticks` 0) jsou úrovně na začátku.
 | `volume` | útlum 0-15 (15 = vypnuto) |
 | `noise` | `(typ << 2) \| rychlost` |
 
+**Úrovně v reference.wav a sdl.wav** - oba soubory obsahují výstup za
+dorovnáním hlasitosti a měkkým omezovačem: součet zdrojů se násobí 2,51
+(+8 dB) se zapnutou výstupní propustí a 1,58 (+4 dB) s vypnutou
+a v emulátorech MZ-700. Do výchylky 0,7 plného rozsahu (22 937 z 32 767) je
+výstup přesně lineární, takže poměry mezi zdroji platí beze změny; větší
+špičky jsou plynule stlačené k plnému rozsahu a neoříznou se. Jeden kanál
+PSG s útlumem 0 má po ustálení rozkmit 0,25 krát násobitel, reproduktor
+(CTC0) 1,49krát tolik. Proti verzi 2.0.7 jsou úrovně o 8 dB (propust
+zapnutá) nebo o 4 dB (vypnutá) vyšší. Hlavní hlasitost a ztlumení v souborech
+nejsou.
+
 **reference.wav** a **sdl.wav** - 44100 Hz, 16 bit, stereo, stejný formát,
 lze je přímo porovnat. reference.wav je spočítaný přesně v emulovaném čase,
 sdl.wav je to, co vyrobil zvukový výstup emulátoru. Jejich rozdíl ukazuje

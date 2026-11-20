@@ -305,9 +305,27 @@ speaker (CTC0) and of the PSG channels. The option **Hardware output filter**
 filter a real MZ-800 has between the sound chip and the amplifier (first
 order, 346 Hz corner with the volume at maximum): the sound is duller, like
 from the computer's own speaker. With the option off you get the previous,
-brighter sound of the emulator. The level of low tones does not change with
-the option, it can be switched at any time while running and it also applies
-to the audio capture and the video recording. The speaker (CTC0, beeps, music
+brighter sound of the emulator. It can be switched at any time while running
+and it also applies to the audio capture and the video recording.
+
+The emulator makes up for the loss of volume behind the filter, as the
+amplifier does on the real computer: by 8 dB with the filter on, by 4 dB with
+it off (and in the MZ-700 emulators). A 440 Hz tone is therefore equally loud
+in both states; low tones are 4 dB stronger with the filter on, high tones
+weaker. The make-up gain does not change the ratios between the sources (the
+speaker against the PSG). Peaks above 0.7 of full scale are softly
+compressed, so even all sources at full level do not clip the output hard;
+below that the output is exactly linear. The make-up gain is a choice of the
+emulator, not a measured value: the loudness of the real computer is set by
+its volume knob.
+
+The indicators in the Audio Mixer window show the peak: a channel playing at
+full level with its volume at 0 dB lights its whole indicator, a constant
+level (which is not audible) lights nothing. The vertical indicator on the
+right shows the peak of the whole output before the master volume and mute;
+lit top LEDs mean that the peaks are being compressed.
+
+The speaker (CTC0, beeps, music
 through the 8253 and the tape signal) is AC coupled as on the real computer:
 a constant level fades out within about a second. A constant level of the
 whole output fades out the same way (MZ-800 and MZ-1500): there is a capacitor
@@ -318,12 +336,17 @@ seconds.
 
 The master listening volume (**Master volume**) and **Mute** are in the
 overlay menu on the Sound tab (`F10`, see [`overlay-menu.md`](overlay-menu.md))
-and in the Audio Mixer window. The emulation is paused while the overlay menu
-is open; to hear the changes at once, turn on the **Listen** switch on the
+and in the Audio Mixer window. The master volume has a range of 0 to 200 %
+(100 % by default, marked on the slider; a double-click sets it back): up to
+100 % it attenuates, above 100 % it boosts by up to 6 dB and the sound then
+goes through a soft limiter, so the peaks are not cut off. The emulation is
+paused while the overlay menu is open; to hear the changes at once, turn on the **Listen** switch on the
 Sound tab. They are applied only at the sound output of
 the emulator, so they do not change the channel volumes and do not get into
 the sound of a video or into the audio capture. The master volume is saved
-(`[AUDIO] volume_master` in the INI file); mute is not saved, the emulator
+(`[AUDIO] volume_master` in the INI file for 0 to 100 % and
+`volume_master_boost` for the per cent above 100 %, written in hexadecimal
+in the file, `0x00` to `0x64`); mute is not saved, the emulator
 always starts unmuted. While muted, the title of the main window carries the
 mark **MUTED**, both while running and while paused.
 

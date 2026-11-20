@@ -33,8 +33,8 @@
  *   iface_audio_lowpass_filter()) -> anti-glitch (0,2, iface_audio_anti_glitch_filter());
  * - kanály 1.. (PSG): parkování -> IIR `y += (x - y) / 6`;
  * - mix: součet kanálů každé strany (úrovně už obsahují gain a průměr přes
- *   4 kanály PSG, viz iface_audio_build_videorec_levels()), ořez shora na 1,0
- *   jako iface_audio_mix_channels_with_gain() / iface_audio_mix_channels_stereo();
+ *   4 kanály PSG, viz iface_audio_build_videorec_levels()) jako
+ *   iface_audio_mix_channels_with_gain() / iface_audio_mix_channels_stereo();
  * - výstupní propust (volba, videorec_audio_set_output_filter()): místo
  *   low-passu, anti-glitch a IIR jednotlivých kanálů projde součet kanálů
  *   (CTC0 po střídavé vazbě, PSG po parkování) dolní propustí 1. řádu
@@ -43,7 +43,12 @@
  * - střídavá vazba výstupu (videorec_audio_set_output_coupling(), MZ-800
  *   a MZ-1500): horní propust 1. řádu VIDEOREC_AUDIO_OUT_AC_TAU_MS na součtu
  *   kanálů každé strany (kondenzátor v sérii s výstupem čipu PSG); kanály PSG
- *   se pak neparkují.
+ *   se pak neparkují;
+ * - dorovnání hlasitosti a měkký omezovač (videorec_audio_output_stage()):
+ *   výsledek se násobí VIDEOREC_AUDIO_OUT_MAKEUP_ON_DB nebo _OFF_DB podle
+ *   stavu výstupní propusti a projde omezovačem videorec_audio_soft_limit()
+ *   (pod kolenem VIDEOREC_AUDIO_OUT_KNEE přesně lineární, nad ním stlačení
+ *   k 1,0 bez tvrdého ořezu).
  *
  * Střídavá vazba CTC0: na skutečném MZ-800 je CTC0 do výstupu vázaný
  * střídavě (změřeno osciloskopem 2026-11-18: obdélník souměrný kolem klidu,
@@ -73,7 +78,8 @@
  * Součet box průměrů kanálů bez filtrů (testy časování a box filtru).
  *
  * @par Výstup
- * Výsledek se ořízne na [-1, 1] a převede na int16 (x 32767).
+ * Výsledek se převede na int16 (x 32767); v režimu `sdl_chain` je díky
+ * omezovači vždy v [-1, 1], v surovém režimu se na tento rozsah ořízne.
  *
  * @par Vlákna
  * Jedna instance smí být používána jen z jednoho vlákna, nebo musí volající
@@ -85,6 +91,7 @@
 #ifndef VIDEOREC_AUDIO_H
 #define VIDEOREC_AUDIO_H
 
+#include <math.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -134,6 +141,24 @@ extern "C" {
 /** @brief Délka plynulého přechodu při přepnutí výstupní propusti [ms]. */
 #define VIDEOREC_AUDIO_OUT_XFADE_MS 10u
 
+/**
+ * @brief Dorovnání hlasitosti výstupu se zapnutou výstupní propustí [dB] (AUDIO_OUT_MAKEUP_FILTER_ON_DB v audio.h).
+ *
+ * Volba emulátoru, ne změřená hodnota; zdůvodnění viz audio.h.
+ */
+#define VIDEOREC_AUDIO_OUT_MAKEUP_ON_DB 8.0
+
+/** @brief Dorovnání hlasitosti výstupu s vypnutou výstupní propustí a na strojích bez ní [dB] (AUDIO_OUT_MAKEUP_FILTER_OFF_DB v audio.h). */
+#define VIDEOREC_AUDIO_OUT_MAKEUP_OFF_DB 4.0
+
+/**
+ * @brief Koleno měkkého omezovače výstupu (AUDIO_OUT_LIMIT_KNEE v audio.h).
+ *
+ * Výchylka (v rozsahu 0 až 1), do které je výstup přesně lineární.
+ * Invariant: 0 < koleno < 1.
+ */
+#define VIDEOREC_AUDIO_OUT_KNEE 0.7f
+
 /** @brief Hodnota kanálu CTC0 ve stavu "jednička" (AUDIO_MAXVAL_PER_CHANNEL); její úroveň je jednotka střídavé vazby. */
 #define VIDEOREC_AUDIO_CTC0_ON_VALUE 15u
 
@@ -166,7 +191,10 @@ typedef struct st_VIDEOREC_AUDIO_QUEUE {
  *
  * Invariant: při `rate == VIDEOREC_AUDIO_SDL_RATE` jsou hodnoty přesně ty
  * z SDL cesty (0,4f, 0,2f, 6,0f, 1980, 880; `ctc_ac_k`, `out_lp_k`
- * a `out_xfade_step` stejným výrazem jako v iface_audio).
+ * a `out_xfade_step` stejným výrazem jako v iface_audio). Dorovnání
+ * hlasitosti (`out_makeup_off`, `out_makeup_on`) a koleno omezovače
+ * (`out_knee`) na frekvenci nezávisí; po videorec_audio_coef_init() mají
+ * hodnoty emulátoru, jiné nastaví jen videorec_audio_coef_set_output_level().
  */
 typedef struct st_VIDEOREC_AUDIO_COEF {
     unsigned park_samples; /**< Počet vzorků konstantní nenulové hodnoty před parkováním (`(rate/1000) * 45`). */
@@ -179,6 +207,9 @@ typedef struct st_VIDEOREC_AUDIO_COEF {
     float out_xfade_step;  /**< Krok váhy výstupní propusti na vzorek (`1000 / (xfade_ms * rate)`). */
     double out_ac_k;       /**< Střídavá vazba výstupu: `mean += (x - mean) * k`; 0 = vazba vypnutá (výchozí). */
     bool psg_park;         /**< Parkovat stálou úroveň kanálů PSG (výchozí true; false s vazbou výstupu). */
+    float out_makeup_off;  /**< Násobitel výstupu při váze propusti 0 (`10^(VIDEOREC_AUDIO_OUT_MAKEUP_OFF_DB / 20)`). */
+    float out_makeup_on;   /**< Násobitel výstupu při váze propusti 1 (`10^(VIDEOREC_AUDIO_OUT_MAKEUP_ON_DB / 20)`). */
+    float out_knee;        /**< Koleno měkkého omezovače výstupu (VIDEOREC_AUDIO_OUT_KNEE); 0 < koleno <= 1, 1 = tvrdý ořez na [-1, 1]. */
 } st_VIDEOREC_AUDIO_COEF;
 
 /**
@@ -332,17 +363,63 @@ float videorec_audio_chain_ctc0(st_VIDEOREC_AUDIO_CHSTATE *s, const st_VIDEOREC_
 float videorec_audio_chain_psg(st_VIDEOREC_AUDIO_CHSTATE *s, const st_VIDEOREC_AUDIO_COEF *c, float x, uint8_t end_value, float *raw);
 
 /**
- * @brief Jeden vzorek výstupního stupně jedné strany: střídavá vazba, ořez, výstupní propust, plynulý přechod.
+ * @brief Měkký omezovač špiček: pod kolenem přesně lineární, nad ním plynulé stlačení k 1,0.
+ *
+ * Pro `|x| <= knee` vrací přesně `x` (stejný bitový obraz). Pro větší
+ * výchylku `sign(x) * (knee + (1 - knee) * tanh((|x| - knee) / (1 - knee)))`:
+ * v koleni navazuje hodnotou i směrnicí (1), je rostoucí a pro libovolně
+ * velký vstup zůstává v [-1, 1] (k 1,0 se blíží, tvrdě neořezává). Nemá
+ * stav, takže nepumpuje a nezávisí na předchozích vzorcích; cenou je
+ * zkreslení špiček nad kolenem (liché harmonické jako u přebuzeného
+ * zesilovače).
+ *
+ * @param x    Vstupní vzorek (libovolná hodnota včetně nekonečna).
+ * @param knee Koleno, 0 < knee <= 1; při 1 je funkce tvrdý ořez na [-1, 1].
+ * @return Vzorek v [-1, 1]; NaN se vrací beze změny.
+ * @note Čistá funkce; lze volat z libovolného vlákna.
+ */
+static inline float videorec_audio_soft_limit_knee(float x, float knee)
+{
+    float a = fabsf(x);
+    if (!(a > knee)) return x;
+    float span = 1.0f - knee;
+    return copysignf(knee + span * tanhf((a - knee) / span), x);
+}
+
+/**
+ * @brief Měkký omezovač výstupu s kolenem VIDEOREC_AUDIO_OUT_KNEE (viz videorec_audio_soft_limit_knee()).
+ *
+ * Používá ho výstupní stupeň (videorec_audio_output_stage()) a hlavní
+ * hlasitost poslechu nad 100 % (iface_audio_apply_master()).
+ *
+ * @param x Vstupní vzorek.
+ * @return Vzorek v [-1, 1], pro `|x| <= VIDEOREC_AUDIO_OUT_KNEE` přesně `x`.
+ */
+static inline float videorec_audio_soft_limit(float x)
+{
+    return videorec_audio_soft_limit_knee(x, VIDEOREC_AUDIO_OUT_KNEE);
+}
+
+/**
+ * @brief Jeden vzorek výstupního stupně jedné strany: střídavá vazba, výstupní propust, plynulý přechod, dorovnání hlasitosti a měkký omezovač.
  *
  * Střídavá vazba výstupu (horní propust 1. řádu, VIDEOREC_AUDIO_OUT_AC_TAU_MS):
  * `*ac += (raw - *ac) * out_ac_k` a střední hodnota `*ac` se odečte od obou
  * součtů (jejich stejnosměrná složka je stejná, filtry kanálů mají
  * stejnosměrné zesílení 1). Při `out_ac_k == 0` a `*ac == 0` se nic nemění.
- * `legacy` (součet kanálů po jejich filtrech) se pak ořízne shora na 1,0 jako
- * dřív. `raw` (součet kanálů před jejich filtry) projde dolní propustí
- * `*lp += (raw - *lp) * out_lp_k`, která běží vždy. Výsledek je
- * `legacy + gain * (lp - legacy)`, oříznutý na [-1, 1]; při `gain == 0` je
- * přesně `legacy`. Stejnou funkci volá mix SDL cesty (iface_audio.c).
+ * `raw` (součet kanálů před jejich filtry) projde dolní propustí
+ * `*lp += (raw - *lp) * out_lp_k`, která běží vždy. Smíchaný vzorek je
+ * `m = legacy + gain * (lp - legacy)` (`legacy` = součet kanálů po jejich
+ * filtrech; při `gain == 0` přesně `legacy`).
+ *
+ * Dorovnání hlasitosti: `m` se násobí
+ * `out_makeup_off + gain * (out_makeup_on - out_makeup_off)`, tedy při
+ * přepnutí propusti přechází násobitel plynule spolu s vahou propusti.
+ * Výsledek projde měkkým omezovačem videorec_audio_soft_limit_knee() s kolenem
+ * `out_knee`: pod kolenem (VIDEOREC_AUDIO_OUT_KNEE) je výstup přesně lineární (poměry mezi zdroji se
+ * nemění), nad ním se špičky stlačí k 1,0. Dřívější tvrdý ořez součtu
+ * `legacy` shora na 1,0 omezovač nahrazuje. Stejnou funkci volá mix SDL
+ * cesty (iface_audio.c).
  *
  * @param c      Koeficienty.
  * @param ac     Stav střídavé vazby strany (mění se).
@@ -353,6 +430,21 @@ float videorec_audio_chain_psg(st_VIDEOREC_AUDIO_CHSTATE *s, const st_VIDEOREC_A
  * @return Vzorek strany v rozsahu [-1, 1].
  */
 float videorec_audio_output_stage(const st_VIDEOREC_AUDIO_COEF *c, double *ac, double *lp, float legacy, float raw, float gain);
+
+/**
+ * @brief Přepíše dorovnání hlasitosti a koleno omezovače výstupního stupně.
+ *
+ * Emulátor ji nevolá: videorec_audio_coef_init() nastaví hodnoty
+ * VIDEOREC_AUDIO_OUT_MAKEUP_OFF_DB, _ON_DB a VIDEOREC_AUDIO_OUT_KNEE. Slouží
+ * testům tvaru filtrů a nástrojům, které chtějí výstup bez dorovnání:
+ * `(1, 1, 1)` dává výstupní stupeň bez zesílení s tvrdým ořezem na [-1, 1].
+ *
+ * @param c          Koeficienty po videorec_audio_coef_init().
+ * @param makeup_off Násobitel výstupu při váze propusti 0 (větší než 0).
+ * @param makeup_on  Násobitel výstupu při váze propusti 1 (větší než 0).
+ * @param knee       Koleno omezovače, 0 < knee <= 1.
+ */
+void videorec_audio_coef_set_output_level(st_VIDEOREC_AUDIO_COEF *c, float makeup_off, float makeup_on, float knee);
 
 /**
  * @brief Zapne nebo vypne v koeficientech střídavou vazbu výstupu.

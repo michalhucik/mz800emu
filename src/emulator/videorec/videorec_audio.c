@@ -12,9 +12,10 @@
  *   `sample += (x - sample) / 6`;
  * - výstupní stupeň: videorec_audio_output_stage() (sdílený s mixem SDL cesty);
  * - mix: iface_audio_mix_channels_with_gain() (iface_audio.c, mono):
- *   CTC0 * gain * iface_audio_ctc0_mix_level() + průměr PSG0 kanálů * gain,
- *   ořez `<= 1`; iface_audio_mix_channels_stereo() (iface_audio.c, stereo):
- *   L = CTC0 + průměr PSG0, R = CTC0 + průměr PSG1, ořez každé strany `<= 1`
+ *   CTC0 * gain * iface_audio_ctc0_mix_level() + průměr PSG0 kanálů * gain;
+ *   iface_audio_mix_channels_stereo() (iface_audio.c, stereo):
+ *   L = CTC0 + průměr PSG0, R = CTC0 + průměr PSG1; každá strana má vlastní
+ *   výstupní stupeň s dorovnáním hlasitosti a měkkým omezovačem
  *   (rozložení kanálů viz videorec_audio_set_stereo()). Poměr CTC0 k PSG je
  *   v rendereru zapečený do `level` (iface_audio_build_videorec_levels()).
  * SDL cesta drží stavy filtrů ve `static` proměnných; zde jsou v instanci
@@ -48,6 +49,9 @@ void videorec_audio_coef_init(st_VIDEOREC_AUDIO_COEF *c, unsigned rate)
     c->out_xfade_step = 1000.0f / ((float)VIDEOREC_AUDIO_OUT_XFADE_MS * (float)rate);
     c->out_ac_k = 0.0;
     c->psg_park = true;
+    c->out_makeup_off = (float)pow(10.0, VIDEOREC_AUDIO_OUT_MAKEUP_OFF_DB / 20.0);
+    c->out_makeup_on = (float)pow(10.0, VIDEOREC_AUDIO_OUT_MAKEUP_ON_DB / 20.0);
+    c->out_knee = VIDEOREC_AUDIO_OUT_KNEE;
     if (rate == VIDEOREC_AUDIO_SDL_RATE) {
         /* Přesně konstanty SDL cesty (bez přepočtu, aby nevznikla odchylka v posledním bitu). */
         c->ctc_lp_alpha = 0.4f;
@@ -146,12 +150,18 @@ float videorec_audio_output_stage(const st_VIDEOREC_AUDIO_COEF *c, double *ac, d
     *ac += ((double)raw - *ac) * c->out_ac_k;
     legacy -= (float)*ac;
     raw -= (float)*ac;
-    float l = (legacy <= 1) ? legacy : 1.0f; /* dřívější ořez mixu SDL cesty */
     *lp += ((double)raw - *lp) * c->out_lp_k;
-    float y = l + gain * ((float)*lp - l);
-    if (y > 1.0f) y = 1.0f;
-    if (y < -1.0f) y = -1.0f;
-    return y;
+    float y = legacy + gain * ((float)*lp - legacy);
+    /* dorovnání hlasitosti (přechází s vahou propusti) a měkký omezovač špiček */
+    y *= c->out_makeup_off + gain * (c->out_makeup_on - c->out_makeup_off);
+    return videorec_audio_soft_limit_knee(y, c->out_knee);
+}
+
+void videorec_audio_coef_set_output_level(st_VIDEOREC_AUDIO_COEF *c, float makeup_off, float makeup_on, float knee)
+{
+    c->out_makeup_off = makeup_off;
+    c->out_makeup_on = makeup_on;
+    c->out_knee = knee;
 }
 
 float videorec_audio_output_gain_step(const st_VIDEOREC_AUDIO_COEF *c, float gain, bool on)
@@ -316,7 +326,7 @@ static inline uint64_t sample_start(const st_VIDEOREC_AUDIO *a, uint64_t n)
 }
 
 /**
- * @brief Převede vzorek jedné strany na int16 (ořez na [-1, 1]).
+ * @brief Převede vzorek jedné strany na int16 (ořez na [-1, 1]; po výstupním stupni se už neuplatní).
  * @param y Vzorek strany.
  * @return Vzorek int16.
  */
@@ -365,7 +375,7 @@ size_t videorec_audio_render(st_VIDEOREC_AUDIO *a, uint64_t horizon_ticks, int16
         }
 
         if (a->sdl_chain) {
-            /* výstupní stupeň jako mix SDL cesty: střídavá vazba, ořez, výstupní propust, plynulý přechod */
+            /* výstupní stupeň jako mix SDL cesty: střídavá vazba, výstupní propust, plynulý přechod, dorovnání, omezovač */
             a->out_gain = videorec_audio_output_gain_step(&a->coef, a->out_gain, a->out_filter);
             yl = videorec_audio_output_stage(&a->coef, &a->out_ac[0], &a->out_lp[0], (float)yl, (float)rl, a->out_gain);
             yr = videorec_audio_output_stage(&a->coef, &a->out_ac[1], &a->out_lp[1], (float)yr, (float)rr, a->out_gain);

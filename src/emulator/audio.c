@@ -129,26 +129,105 @@ void audio_savecfg_volume(void *e, void *data)
     cfgelement_set_unsigned_value((CFGELM *)e, volume);
 }
 
+/** @brief Největší hodnota INI klíče [AUDIO] volume_master_boost: procenta hlavní hlasitosti nad 100 %. */
+#define AUDIO_MASTER_BOOST_MAX_PERCENT 100u
+
+G_STATIC_ASSERT(AUDIO_MASTER_GAIN_MAX == 1.0f + (float)AUDIO_MASTER_BOOST_MAX_PERCENT / 100.0f);
+
 /**
- * @brief INI -> hlavní hlasitost poslechu ([AUDIO] volume_master).
+ * @brief Část hlavní hlasitosti z INI klíče volume_master (0 až 1) naposledy přečtená z konfigurace.
+ *
+ * Hlavní hlasitost je v INI rozdělená do dvou klíčů (viz
+ * audio_master_gain_to_cfg()); každý má vlastní propagaci a jejich pořadí
+ * není zaručené, proto si obě části drží poslední hodnotu a hlasitost se
+ * nastaví z jejich součtu. Jen vlákno, které konfiguraci propaguje.
+ */
+static float s_cfg_master_base = 1.0f;
+/** @brief Část hlavní hlasitosti z INI klíče volume_master_boost (0 až 1) naposledy přečtená z konfigurace. */
+static float s_cfg_master_boost = 0.0f;
+
+/* Doxygen viz audio.h. */
+float audio_master_gain_from_cfg(uint32_t volume_master, uint32_t boost_percent)
+{
+    if (boost_percent > AUDIO_MASTER_BOOST_MAX_PERCENT)
+        boost_percent = AUDIO_MASTER_BOOST_MAX_PERCENT;
+    float gain = audio_uint32_to_float01(volume_master) + (float)boost_percent / 100.0f;
+    return (gain > AUDIO_MASTER_GAIN_MAX) ? AUDIO_MASTER_GAIN_MAX : gain;
+}
+
+/* Doxygen viz audio.h. */
+void audio_master_gain_to_cfg(float gain, uint32_t *volume_master, uint32_t *boost_percent)
+{
+    if (!(gain >= 0.0f))
+        gain = 0.0f; /* i NaN */
+    if (gain > AUDIO_MASTER_GAIN_MAX)
+        gain = AUDIO_MASTER_GAIN_MAX;
+    uint32_t boost = 0;
+    if (gain > 1.0f)
+    {
+        boost = (uint32_t)lroundf((gain - 1.0f) * 100.0f);
+        if (boost > AUDIO_MASTER_BOOST_MAX_PERCENT)
+            boost = AUDIO_MASTER_BOOST_MAX_PERCENT;
+    };
+    if (volume_master)
+        *volume_master = audio_float01_to_uint32(gain);
+    if (boost_percent)
+        *boost_percent = boost;
+}
+
+/**
+ * @brief INI -> hlavní hlasitost poslechu, část do 100 % ([AUDIO] volume_master).
  * @param e    Prvek konfigurace (unsigned, stejné měřítko jako hlasitosti kanálů).
  * @param data Nepoužito.
+ * @post Hlavní hlasitost je součet obou částí (audio_master_gain_from_cfg()).
  */
 static void audio_propagatecfg_master_volume(void *e, void *data)
 {
     (void)data;
-    iface_audio_set_master_gain(audio_uint32_to_float01(cfgelement_get_unsigned_value((CFGELM *)e)));
+    s_cfg_master_base = audio_uint32_to_float01(cfgelement_get_unsigned_value((CFGELM *)e));
+    iface_audio_set_master_gain(s_cfg_master_base + s_cfg_master_boost);
 }
 
 /**
- * @brief Hlavní hlasitost poslechu -> INI.
+ * @brief Hlavní hlasitost poslechu -> INI, část do 100 %.
  * @param e    Prvek konfigurace (unsigned).
  * @param data Nepoužito.
  */
 static void audio_savecfg_master_volume(void *e, void *data)
 {
     (void)data;
-    cfgelement_set_unsigned_value((CFGELM *)e, audio_float01_to_uint32(iface_audio_get_master_gain()));
+    uint32_t volume = 0;
+    audio_master_gain_to_cfg(iface_audio_get_master_gain(), &volume, NULL);
+    cfgelement_set_unsigned_value((CFGELM *)e, volume);
+}
+
+/**
+ * @brief INI -> hlavní hlasitost poslechu, část nad 100 % ([AUDIO] volume_master_boost).
+ * @param e    Prvek konfigurace (unsigned, procenta 0 až AUDIO_MASTER_BOOST_MAX_PERCENT).
+ * @param data Nepoužito.
+ * @post Hlavní hlasitost je součet obou částí (audio_master_gain_from_cfg()).
+ */
+static void audio_propagatecfg_master_boost(void *e, void *data)
+{
+    (void)data;
+    uint32_t boost = (uint32_t)cfgelement_get_unsigned_value((CFGELM *)e);
+    if (boost > AUDIO_MASTER_BOOST_MAX_PERCENT)
+        boost = AUDIO_MASTER_BOOST_MAX_PERCENT;
+    s_cfg_master_boost = (float)boost / 100.0f;
+    iface_audio_set_master_gain(s_cfg_master_base + s_cfg_master_boost);
+}
+
+/**
+ * @brief Hlavní hlasitost poslechu -> INI, část nad 100 %.
+ * @param e    Prvek konfigurace (unsigned).
+ * @param data Nepoužito.
+ */
+static void audio_savecfg_master_boost(void *e, void *data)
+{
+    (void)data;
+    uint32_t boost = 0;
+    audio_master_gain_to_cfg(iface_audio_get_master_gain(), NULL, &boost);
+    cfgelement_set_unsigned_value((CFGELM *)e, boost);
 }
 
 #if AUDIO_HAVE_OUTPUT_FILTER
@@ -467,13 +546,19 @@ void audio_init(void)
     cfgelement_set_save_cb(elm, audio_savecfg_output_filter, NULL);
 #endif /* AUDIO_HAVE_OUTPUT_FILTER */
 
-    /* Hlavní hlasitost poslechu (násobitel hotového mixu, mimo záznam); výchozí 100 %.
+    /* Hlavní hlasitost poslechu (násobitel hotového mixu, mimo záznam); výchozí 100 %, rozsah 0 až 200 %.
+     * Dva klíče kvůli zpětné kompatibilitě: volume_master (0 až 4294967295 = 0 až 100 %, význam se nemění)
+     * a volume_master_boost (procenta nad 100 %, 0 až 100); hlasitost je jejich součet.
      * Ztlumení (iface_audio_set_mute()) se do INI neukládá: emulátor startuje vždy neztlumený. Klíč "mute"
      * ze staršího INI se při čtení tiše přeskočí (cfgmodule_parse() neznámé klíče ignoruje) a při příštím
      * uložení ze souboru zmizí (cfgroot_save() zapisuje jen registrované prvky). */
     elm = cfgmodule_register_new_element(cmod, "volume_master", CFGENTYPE_UNSIGNED, DEFAULT_VOLUME, 0, MAX_UINT32);
     cfgelement_set_propagate_cb(elm, audio_propagatecfg_master_volume, NULL);
     cfgelement_set_save_cb(elm, audio_savecfg_master_volume, NULL);
+
+    elm = cfgmodule_register_new_element(cmod, "volume_master_boost", CFGENTYPE_UNSIGNED, 0, 0, AUDIO_MASTER_BOOST_MAX_PERCENT);
+    cfgelement_set_propagate_cb(elm, audio_propagatecfg_master_boost, NULL);
+    cfgelement_set_save_cb(elm, audio_savecfg_master_boost, NULL);
 
     cfgmodule_parse(cmod);
     cfgmodule_propagate(cmod);

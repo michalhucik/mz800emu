@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mz800emu 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-19 13:40+0100\n"
+"POT-Creation-Date: 2026-11-19 22:10+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -38,7 +38,7 @@ msgstr ""
 msgid "Untitled File Chooser"
 msgstr ""
 
-#: src/emulator/audio.c:181
+#: src/emulator/audio.c:260
 msgid "Audio volume settings:"
 msgstr ""
 
@@ -138,13 +138,13 @@ msgid "Select SD root directory for Unicard"
 msgstr ""
 
 #: src/emulator/mzarch/mz800/memory/mz800_rom.c:42
-#: src/ui-imgui/overlay/overlay_view.cpp:824
-#: src/ui-imgui/overlay/overlay_view.cpp:925
+#: src/ui-imgui/overlay/overlay_view.cpp:825
+#: src/ui-imgui/overlay/overlay_view.cpp:926
 msgid "Standard Sharp MZ-800 ROM"
 msgstr ""
 
 #: src/emulator/mzarch/mz800/memory/mz800_rom.c:43
-#: src/ui-imgui/overlay/overlay_view.cpp:825
+#: src/ui-imgui/overlay/overlay_view.cpp:826
 msgid "JSS ROMs"
 msgstr ""
 
@@ -157,42 +157,42 @@ msgid "JSS v1.03 - for Pezik (devel)"
 msgstr ""
 
 #: src/emulator/mzarch/mz800/memory/mz800_rom.c:47
-#: src/ui-imgui/overlay/overlay_view.cpp:826
+#: src/ui-imgui/overlay/overlay_view.cpp:827
 msgid "JSS v1.08C - for MZ-1R18"
 msgstr ""
 
 #: src/emulator/mzarch/mz800/memory/mz800_rom.c:48
-#: src/ui-imgui/overlay/overlay_view.cpp:827
+#: src/ui-imgui/overlay/overlay_view.cpp:828
 msgid "JSS v1.06A - for Pezik"
 msgstr ""
 
 #: src/emulator/mzarch/mz800/memory/mz800_rom.c:49
-#: src/ui-imgui/overlay/overlay_view.cpp:828
+#: src/ui-imgui/overlay/overlay_view.cpp:829
 msgid "Willy ROMs"
 msgstr ""
 
 #: src/emulator/mzarch/mz800/memory/mz800_rom.c:50
-#: src/ui-imgui/overlay/overlay_view.cpp:829
+#: src/ui-imgui/overlay/overlay_view.cpp:830
 msgid "Willy - English"
 msgstr ""
 
 #: src/emulator/mzarch/mz800/memory/mz800_rom.c:51
-#: src/ui-imgui/overlay/overlay_view.cpp:830
+#: src/ui-imgui/overlay/overlay_view.cpp:831
 msgid "Willy - German"
 msgstr ""
 
 #: src/emulator/mzarch/mz800/memory/mz800_rom.c:52
-#: src/ui-imgui/overlay/overlay_view.cpp:831
+#: src/ui-imgui/overlay/overlay_view.cpp:832
 msgid "Willy - Japanese"
 msgstr ""
 
 #: src/emulator/mzarch/mz800/memory/mz800_rom.c:53
-#: src/ui-imgui/overlay/overlay_view.cpp:832
+#: src/ui-imgui/overlay/overlay_view.cpp:833
 msgid "User"
 msgstr ""
 
 #: src/emulator/mzarch/mz800/memory/mz800_rom.c:54
-#: src/ui-imgui/overlay/overlay_view.cpp:833
+#: src/ui-imgui/overlay/overlay_view.cpp:834
 msgid "User Defined ROM"
 msgstr ""
 
@@ -369,136 +369,142 @@ msgstr ""
 msgid "Close this window"
 msgstr ""
 
-#: src/ui-imgui/audio_window.cpp:41 src/ui-imgui/audio_window.cpp:47
-#: src/ui-imgui/audio_window.cpp:53 src/ui-imgui/debugger/ctc_window.cpp:381
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:71
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:73
+#: src/ui-imgui/audio_window.cpp:45 src/ui-imgui/audio_window.cpp:51
+#: src/ui-imgui/audio_window.cpp:57 src/ui-imgui/debugger/ctc_window.cpp:381
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:78
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:80
 msgid "CTC0"
 msgstr ""
 
-#: src/ui-imgui/audio_window.cpp:47
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:71
+#: src/ui-imgui/audio_window.cpp:51
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:78
 msgid "PSG tone1"
 msgstr ""
 
-#: src/ui-imgui/audio_window.cpp:47
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:71
+#: src/ui-imgui/audio_window.cpp:51
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:78
 msgid "PSG tone2"
 msgstr ""
 
-#: src/ui-imgui/audio_window.cpp:47
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:71
+#: src/ui-imgui/audio_window.cpp:51
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:78
 msgid "PSG tone3"
 msgstr ""
 
-#: src/ui-imgui/audio_window.cpp:47
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:71
+#: src/ui-imgui/audio_window.cpp:51
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:78
 msgid "PSG noise"
 msgstr ""
 
-#: src/ui-imgui/audio_window.cpp:54
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:73
+#: src/ui-imgui/audio_window.cpp:58
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:80
 msgid "PSG0 tone1"
 msgstr ""
 
-#: src/ui-imgui/audio_window.cpp:54
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:73
+#: src/ui-imgui/audio_window.cpp:58
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:80
 msgid "PSG0 tone2"
 msgstr ""
 
-#: src/ui-imgui/audio_window.cpp:54
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:73
+#: src/ui-imgui/audio_window.cpp:58
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:80
 msgid "PSG0 tone3"
 msgstr ""
 
-#: src/ui-imgui/audio_window.cpp:54
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:73
+#: src/ui-imgui/audio_window.cpp:58
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:80
 msgid "PSG0 noise"
 msgstr ""
 
-#: src/ui-imgui/audio_window.cpp:55
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:74
+#: src/ui-imgui/audio_window.cpp:59
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:81
 msgid "PSG1 tone1"
 msgstr ""
 
-#: src/ui-imgui/audio_window.cpp:55
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:74
+#: src/ui-imgui/audio_window.cpp:59
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:81
 msgid "PSG1 tone2"
 msgstr ""
 
-#: src/ui-imgui/audio_window.cpp:55
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:74
+#: src/ui-imgui/audio_window.cpp:59
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:81
 msgid "PSG1 tone3"
 msgstr ""
 
-#: src/ui-imgui/audio_window.cpp:55
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:74
+#: src/ui-imgui/audio_window.cpp:59
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:81
 msgid "PSG1 noise"
 msgstr ""
 
-#: src/ui-imgui/audio_window.cpp:118
+#: src/ui-imgui/audio_window.cpp:141
 msgid "Audio Mixer"
 msgstr ""
 
-#: src/ui-imgui/audio_window.cpp:139
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:185
+#: src/ui-imgui/audio_window.cpp:162
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:192
 msgid "Output"
 msgstr ""
 
-#: src/ui-imgui/audio_window.cpp:141
+#: src/ui-imgui/audio_window.cpp:164
 #: src/ui-imgui/overlay/overlay_actions.cpp:1293
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:206
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:214
 msgid "Mute"
 msgstr ""
 
-#: src/ui-imgui/audio_window.cpp:147
+#: src/ui-imgui/audio_window.cpp:170
 msgid ""
 "Silences the sound output; the volumes are kept. Not saved: the emulator "
 "always starts unmuted."
 msgstr ""
 
-#: src/ui-imgui/audio_window.cpp:151
+#: src/ui-imgui/audio_window.cpp:176
 #: src/ui-imgui/overlay/overlay_actions.cpp:1292
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:192
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:199
 msgid "Master volume"
 msgstr ""
 
-#: src/ui-imgui/audio_window.cpp:157
+#: src/ui-imgui/audio_window.cpp:200
 msgid ""
 "Listening volume of the whole mix. The channel volumes and recordings are "
 "not affected."
 msgstr ""
 
-#: src/ui-imgui/audio_window.cpp:161
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:240
+#: src/ui-imgui/audio_window.cpp:201
+msgid ""
+"The range is 0 to 200 %; values above 100 amplify the sound. Double-click to "
+"reset to 100."
+msgstr ""
+
+#: src/ui-imgui/audio_window.cpp:213
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:248
 msgid "Channels"
 msgstr ""
 
-#: src/ui-imgui/audio_window.cpp:172
+#: src/ui-imgui/audio_window.cpp:224
 #, c-format
 msgid "%.1f dB"
 msgstr ""
 
-#: src/ui-imgui/audio_window.cpp:222
+#: src/ui-imgui/audio_window.cpp:274
 #, c-format
 msgid "%.0f dB"
 msgstr ""
 
-#: src/ui-imgui/audio_window.cpp:232
+#: src/ui-imgui/audio_window.cpp:284
 msgid "All channels: sets every channel to the same volume."
 msgstr ""
 
-#: src/ui-imgui/audio_window.cpp:269
+#: src/ui-imgui/audio_window.cpp:321
 msgid "Level of the mix before the master volume and mute."
 msgstr ""
 
-#: src/ui-imgui/audio_window.cpp:278
+#: src/ui-imgui/audio_window.cpp:330
 #: src/ui-imgui/overlay/overlay_actions.cpp:1294
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:208
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:216
 msgid "Hardware output filter"
 msgstr ""
 
-#: src/ui-imgui/audio_window.cpp:284
+#: src/ui-imgui/audio_window.cpp:336
 msgid ""
 "Low-pass filter of the real MZ-800 audio output (346 Hz). Off = the "
 "previous, brighter sound."
@@ -1051,7 +1057,7 @@ msgstr ""
 #: src/ui-imgui/overlay/overlay_tab_machine.cpp:194
 #: src/ui-imgui/overlay/overlay_tab_machine.cpp:199
 #: src/ui-imgui/plotter/plotter_window.cpp:432
-#: src/ui-imgui/topmenu/topmenu.cpp:85
+#: src/ui-imgui/topmenu/topmenu.cpp:89
 msgid "Reset"
 msgstr ""
 
@@ -1837,7 +1843,7 @@ msgstr ""
 msgid "Waiting for motor"
 msgstr ""
 
-#: src/ui-imgui/cmt/cmt_window.cpp:704 src/ui-imgui/overlay/overlay.cpp:963
+#: src/ui-imgui/cmt/cmt_window.cpp:704 src/ui-imgui/overlay/overlay.cpp:967
 #: src/ui-imgui/overlay/overlay_tab_machine.cpp:176
 msgid "Paused"
 msgstr ""
@@ -8697,7 +8703,7 @@ msgid "Max Speed"
 msgstr ""
 
 #: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:160
-#: src/ui-imgui/topmenu/topmenu.cpp:80
+#: src/ui-imgui/topmenu/topmenu.cpp:84
 msgid "Pause Emulation"
 msgstr ""
 
@@ -12459,7 +12465,7 @@ msgid "Cancel##watch_load_cancel"
 msgstr ""
 
 #: src/ui-imgui/devices/device_request_ui.cpp:49
-#: src/ui-imgui/topmenu/topmenu.cpp:70
+#: src/ui-imgui/topmenu/topmenu.cpp:74
 msgid ""
 "Machine settings cannot be changed while a replay is recorded or played. "
 "Stop it in the Replay menu first."
@@ -13489,39 +13495,39 @@ msgid "Capture"
 msgstr ""
 
 #: src/ui-imgui/overlay/overlay.cpp:910 src/ui-imgui/overlay/overlay.cpp:912
-#: src/ui-imgui/overlay/overlay.cpp:971 src/ui-imgui/overlay/overlay.cpp:1100
+#: src/ui-imgui/overlay/overlay.cpp:975 src/ui-imgui/overlay/overlay.cpp:1110
 #: src/ui-imgui/version_check/imgui_version_check.cpp:390
 msgid "Close"
 msgstr ""
 
-#: src/ui-imgui/overlay/overlay.cpp:968
+#: src/ui-imgui/overlay/overlay.cpp:972
 msgid "Muted"
 msgstr ""
 
-#: src/ui-imgui/overlay/overlay.cpp:1097
+#: src/ui-imgui/overlay/overlay.cpp:1107
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:1346
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:1352
 msgctxt "overlay footer"
 msgid "to"
 msgstr ""
 
-#: src/ui-imgui/overlay/overlay.cpp:1097
+#: src/ui-imgui/overlay/overlay.cpp:1107
 msgid "Tabs"
 msgstr ""
 
-#: src/ui-imgui/overlay/overlay.cpp:1098
+#: src/ui-imgui/overlay/overlay.cpp:1108
 msgid "Arrows"
 msgstr ""
 
-#: src/ui-imgui/overlay/overlay.cpp:1098
+#: src/ui-imgui/overlay/overlay.cpp:1108
 msgid "Move"
 msgstr ""
 
-#: src/ui-imgui/overlay/overlay.cpp:1099
+#: src/ui-imgui/overlay/overlay.cpp:1109
 msgid "Select"
 msgstr ""
 
-#: src/ui-imgui/overlay/overlay.cpp:1112
+#: src/ui-imgui/overlay/overlay.cpp:1122
 msgid "Right-click: classic menu"
 msgstr ""
 
@@ -13571,7 +13577,7 @@ msgstr ""
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:380
 #: src/ui-imgui/overlay/overlay_actions.cpp:1036
-#: src/ui-imgui/overlay/overlay_view.cpp:245
+#: src/ui-imgui/overlay/overlay_view.cpp:246
 msgid "Not available while a replay is active."
 msgstr ""
 
@@ -13795,7 +13801,7 @@ msgid "Forced redraw every screen"
 msgstr ""
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1291
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:146
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:153
 msgid "Listen"
 msgstr ""
 
@@ -13804,8 +13810,8 @@ msgid "Channel volume"
 msgstr ""
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1296
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:262
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:266
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:270
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:274
 msgid "Reset channels"
 msgstr ""
 
@@ -14331,15 +14337,15 @@ msgstr ""
 msgid "Speed %u %%"
 msgstr ""
 
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:101
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:108
 msgid "The filter models the audio output stage of the real machine."
 msgstr ""
 
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:123
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:130
 msgid "The emulation is running so that you can hear the changes."
 msgstr ""
 
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:124
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:131
 msgid ""
 "Turn on Listen to hear the changes while the menu is open. The emulated "
 "computer keeps running without keyboard input."
@@ -16224,11 +16230,11 @@ msgstr ""
 msgid "Available while playing a replay."
 msgstr ""
 
-#: src/ui-imgui/topmenu/topmenu.cpp:50
+#: src/ui-imgui/topmenu/topmenu.cpp:54
 msgid "Overlay Menu..."
 msgstr ""
 
-#: src/ui-imgui/topmenu/topmenu.cpp:101
+#: src/ui-imgui/topmenu/topmenu.cpp:105
 msgid "About..."
 msgstr ""
 

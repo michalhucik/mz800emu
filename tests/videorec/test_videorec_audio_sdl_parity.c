@@ -84,6 +84,9 @@ static const plat_t *P = &PLAT_MZ800;
 #define T_CTC0_AC_TAU_S 0.85           /* AUDIO_CTC0_AC_TAU_MS (audio.h): střídavá vazba CTC0 */
 #define T_OUT_LP_TAU_S 460e-6          /* AUDIO_OUT_LP_TAU_US (audio.h): výstupní dolní propust */
 #define T_OUT_AC_TAU_S 0.57            /* AUDIO_OUT_AC_TAU_MS (audio.h): střídavá vazba celého výstupu */
+#define T_MAKEUP_ON_DB 8.0f            /* AUDIO_OUT_MAKEUP_FILTER_ON_DB (audio.h): dorovnání hlasitosti se zapnutou propustí */
+#define T_MAKEUP_OFF_DB 4.0f           /* AUDIO_OUT_MAKEUP_FILTER_OFF_DB (audio.h): dorovnání s vypnutou propustí a bez ní */
+#define T_KNEE 0.7f                    /* AUDIO_OUT_LIMIT_KNEE (audio.h): koleno měkkého omezovače */
 /* AUDIO_HAVE_OUTPUT_COUPLING: vazbu výstupu mají počítače s PSG (MZ-800, MZ-1500), samostatný MZ-700 ne */
 #define T_COUPLING (P->ch > 1)
 
@@ -255,9 +258,12 @@ static float ref_ctc0_mix_level(void)
 
 /**
  * Výstupní stupeň mixu (nezávislý zápis videorec_audio_output_stage() pro váhu
- * 0 nebo 1): vypnutá propust = součet po filtrech kanálů oříznutý shora na 1,0;
- * zapnutá = součet před filtry kanálů po dolní propusti 1. řádu T_OUT_LP_TAU_S
- * (propust běží vždy). Výsledek v rozsahu [-1, 1]. Před tím střídavá vazba
+ * 0 nebo 1): vypnutá propust = součet po filtrech kanálů krát dorovnání
+ * T_MAKEUP_OFF_DB; zapnutá = součet před filtry kanálů po dolní propusti
+ * 1. řádu T_OUT_LP_TAU_S (propust běží vždy) krát dorovnání T_MAKEUP_ON_DB.
+ * Za tím měkký omezovač s kolenem T_KNEE (pod kolenem beze změny, nad ním
+ * `knee + (1 - knee) * tanh((|y| - knee) / (1 - knee))`); výsledek je
+ * v rozsahu [-1, 1]. Před tím střídavá vazba
  * výstupu (jen T_COUPLING): střední hodnota součtu před filtry se blíží
  * k součtu s časovou konstantou T_OUT_AC_TAU_S a odečte se od obou součtů.
  */
@@ -271,10 +277,24 @@ static float ref_output_stage(double *ac, double *lp, float legacy, float raw)
     }
     double k = 1.0 - exp(-1.0 / (T_OUT_LP_TAU_S * (double)T_RATE));
     *lp += ((double)raw - *lp) * k;
-    float y = s_filter_on ? (float)*lp : ((legacy <= 1) ? legacy : 1.0f);
-    if (y > 1.0f) y = 1.0f;
-    if (y < -1.0f) y = -1.0f;
+    float y = s_filter_on ? (float)*lp : legacy;
+    y *= s_filter_on ? powf(10.0f, T_MAKEUP_ON_DB / 20.0f) : powf(10.0f, T_MAKEUP_OFF_DB / 20.0f);
+    float a = fabsf(y);
+    if (a > T_KNEE) {
+        a = T_KNEE + (1.0f - T_KNEE) * tanhf((a - T_KNEE) / (1.0f - T_KNEE));
+        y = (y < 0.0f) ? -a : a;
+    }
     return y;
+}
+
+/**
+ * Dorovnání hlasitosti výstupního stupně v aktuálním stavu propusti (násobitel).
+ * Absolutní meze a očekávané úrovně testů jsou zapsané pro výstup bez dorovnání
+ * a tímto násobitelem se přepočítávají.
+ */
+static double ref_makeup(void)
+{
+    return pow(10.0, (double)(s_filter_on ? T_MAKEUP_ON_DB : T_MAKEUP_OFF_DB) / 20.0);
 }
 
 /** Kopie iface_audio_mix_channels_with_gain() (iface_audio.c), bez měření úrovní; PSG jen při HAVE_PSG >= 1. */
@@ -577,7 +597,7 @@ static void test_full_path_parity(void)
     double rms_d = sqrt(se / (F * T_SPF)), rms_r = sqrt(sr / (F * T_SPF));
     printf("full path: RMS ref %.1f, RMS diff %.1f (%.1f %%), max |diff| %.0f\n", rms_r, rms_d, 100.0 * rms_d / rms_r, mx);
     TEST_ASSERT_TRUE_MESSAGE(rms_d <= 0.10 * rms_r, "RMS difference above 10 % of the signal");
-    TEST_ASSERT_TRUE_MESSAGE(mx <= 4000.0, "max difference above 4000");
+    TEST_ASSERT_TRUE_MESSAGE(mx <= 4000.0 * ref_makeup(), "max difference above 4000 times the makeup gain");
 
     /* Plató CTC0 (snímek 31: trvale 1, ostatní kanály tiché nebo už zaparkované) */
     double m_ref = 0, m_ren = 0;
@@ -625,7 +645,7 @@ static void test_psg_constant_level_decays(void)
     add_ev(80, 2, 10);
     run_sdl(10, gain, ref, NULL);
     run_renderer(10, gain, ren, NULL);
-    double lvl = 32767.0 * pow(10, -0.5) / 4.0; /* hlasitost 10 = 10^-0,5, průměr 4 kanálů */
+    double lvl = 32767.0 * pow(10, -0.5) / 4.0 * ref_makeup(); /* hlasitost 10 = 10^-0,5, průměr 4 kanálů, dorovnání hlasitosti */
     double want = lvl * exp(-0.11 / T_OUT_AC_TAU_S); /* střed snímku 5 = 0,11 s po skoku */
     printf("PSG constant level: SDL frame 5 mean %.1f, renderer %.1f (level %.1f, expected %.1f)\n",
            mean16(ref, 5 * T_SPF, 6 * T_SPF), mean16(ren, 5 * T_SPF, 6 * T_SPF), lvl, want);
@@ -702,7 +722,7 @@ static void compare(const char *tag, const int16_t *ref, const int16_t *ren, siz
            100.0 * rms_d / rms_r, mx);
     TEST_ASSERT_TRUE_MESSAGE(rms_r > 100.0, "reference is (almost) silent");
     TEST_ASSERT_TRUE_MESSAGE(rms_d <= 0.10 * rms_r, "RMS difference above 10 % of the signal");
-    TEST_ASSERT_TRUE_MESSAGE(mx <= 4000.0, "max difference above 4000");
+    TEST_ASSERT_TRUE_MESSAGE(mx <= 4000.0 * ref_makeup(), "max difference above 4000 times the makeup gain");
 }
 
 /** RMS rozdílu stran L - R (míra "opravdového" sterea). @param l L. @param r R. @param n Vzorků. @return RMS. */
@@ -790,7 +810,7 @@ static void test_mono_parity_mz700_ntsc(void)
     /* Úroveň CTC0 bez PSG je stejná jako na MZ-800: rozkmit obdélníku je
      * hlasitost 0,8 krát 1,49 / 4 (obdélník 0,8 kHz ve snímcích 45 až 55; rychlejší
      * obdélník filtry kanálu nenechají doběhnout). Na skutečném MZ-700 neměřeno. */
-    double swing = 0.8 * T_CTC0_TO_PSG / T_PSG_CH * 32767.0;
+    double swing = 0.8 * T_CTC0_TO_PSG / T_PSG_CH * 32767.0 * ref_makeup(); /* krát dorovnání hlasitosti; pod kolenem omezovače */
     int mn_ref = 32767, mx_ref = -32768, mn_ren = 32767, mx_ren = -32768;
     for (size_t i = 45 * T_SPF; i < 55 * T_SPF; i++) {
         if (refl[i] < mn_ref) mn_ref = refl[i];
@@ -852,11 +872,16 @@ static void test_full_path_parity_output_filter(void)
     run_renderer(F, gain, ren, NULL);
     compare("output filter", ref, ren, (size_t)F * T_SPF);
 
-    /* propust opravdu působí: výstup se od vypnuté volby liší a je hladší */
+    /* propust opravdu působí: výstup se od vypnuté volby liší a je hladší (kroky bez dorovnání
+     * hlasitosti, které je se zapnutou propustí o 4 dB větší) */
+    const double mk_on = ref_makeup();
+    s_filter_on = false;
+    const double mk_off = ref_makeup();
+    s_filter_on = true;
     double step_on = 0, step_off = 0;
     for (size_t i = 1; i < (size_t)F * T_SPF; i++) {
-        step_on += fabs((double)ref[i] - ref[i - 1]);
-        step_off += fabs((double)ref_off[i] - ref_off[i - 1]);
+        step_on += fabs((double)ref[i] - ref[i - 1]) / mk_on;
+        step_off += fabs((double)ref_off[i] - ref_off[i - 1]) / mk_off;
     }
     printf("output filter: mean |step| on %.1f, off %.1f\n", step_on / (F * T_SPF), step_off / (F * T_SPF));
     TEST_ASSERT_TRUE(step_on < 0.5 * step_off);

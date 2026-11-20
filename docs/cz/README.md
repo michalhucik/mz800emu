@@ -316,8 +316,25 @@ a kanálů PSG. Volba **Hardware output filter** (výchozí zapnuto, v INI
 `[AUDIO] output_filter`) zapíná dolní propust, kterou má skutečný MZ-800 mezi
 zvukovým čipem a zesilovačem (první řád, zlom 346 Hz při hlasitosti na
 maximum): zvuk je tlumenější, jako z reproduktoru počítače. Vypnutá volba
-dává dřívější, jasnější zvuk emulátoru. Hlasitost hlubokých tónů se přepnutím
-nemění, přepnout jde kdykoli za běhu a platí i pro záznam zvuku a videa.
+dává dřívější, jasnější zvuk emulátoru. Přepnout jde kdykoli za běhu a platí
+i pro záznam zvuku a videa.
+
+Úbytek hlasitosti za propustí emulátor dorovnává, jako to na skutečném
+počítači dělá zesilovač: se zapnutou propustí o 8 dB, s vypnutou
+(a v emulátorech MZ-700) o 4 dB. Tón 440 Hz je tak v obou stavech stejně
+hlasitý; hluboké tóny jsou se zapnutou propustí o 4 dB silnější, vysoké
+slabší. Poměry mezi zdroji (reproduktor proti PSG) dorovnání nemění. Špičky
+nad 0,7 plného rozsahu se měkce stlačují, takže ani všechny zdroje naplno
+výstup tvrdě neoříznou; pod touto mezí je výstup přesně lineární. Dorovnání
+je volba emulátoru, ne změřená hodnota: hlasitost skutečného počítače určuje
+knoflík hlasitosti.
+
+Indikátory v okně Audio Mixer ukazují špičku: kanál hrající naplno
+s hlasitostí 0 dB rozsvítí celý svůj indikátor, stálá úroveň (není slyšet)
+nic. Svislý indikátor vpravo ukazuje špičku celého výstupu před hlavní
+hlasitostí a ztlumením; rozsvícené horní diody znamenají, že se špičky
+stlačují.
+
 Reproduktor (CTC0, pípání, hudba přes 8253 a signál kazety) je jako na
 skutečném počítači vázaný střídavě: stálá úroveň do necelé sekundy dozní.
 Stejně doznívá stálá úroveň celého výstupu (MZ-800 a MZ-1500): za zvukovým
@@ -327,10 +344,15 @@ mlčí, je výstup do několika sekund na nule.
 
 Hlavní hlasitost poslechu (**Master volume**) a ztlumení (**Mute**) jsou
 v overlay menu na tabu Sound (`F10`, viz [`overlay-menu.md`](overlay-menu.md))
-a v okně Audio Mixer. Emulace při otevřeném overlay menu stojí; aby byly
+a v okně Audio Mixer. Hlavní hlasitost má rozsah 0 až 200 % (výchozí 100 %,
+na posuvníku vyznačených; dvojklik je vrátí): do 100 % ubírá, nad 100 %
+přidává až 6 dB a zvuk přitom prochází měkkým omezovačem, takže se špičky
+nezaříznou. Emulace při otevřeném overlay menu stojí; aby byly
 změny slyšet hned, zapněte na tabu Sound přepínač **Listen**. Uplatní se až na zvukovém výstupu emulátoru, takže
 hlasitosti kanálů nemění a do zvuku videa ani do zachycení zvuku se
-nepromítají. Hlavní hlasitost se ukládá (INI `[AUDIO] volume_master`);
+nepromítají. Hlavní hlasitost se ukládá (INI `[AUDIO] volume_master`
+pro 0 až 100 % a `volume_master_boost` pro procenta nad 100 %, v souboru
+šestnáctkově `0x00` až `0x64`);
 ztlumení se neukládá, emulátor se vždy spustí neztlumený. Zapnuté ztlumení
 ukazuje značka **MUTED** v titulku hlavního okna, za běhu i při pauze.
 

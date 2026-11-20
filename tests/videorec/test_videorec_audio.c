@@ -282,12 +282,61 @@ static void test_sdl_ctc0_gain(void)
  * Řetězec SDL cesty v rendereru
  * ================================================================ */
 
-/** Nový renderer při 44 100 Hz s řetězcem SDL cesty. */
+/**
+ * Nový renderer při 44 100 Hz s řetězcem SDL cesty.
+ *
+ * Testy tvaru filtrů (střídavé vazby, propust, IIR) pracují s úrovněmi až do
+ * plného rozsahu, proto má výstupní stupeň vypnuté dorovnání hlasitosti
+ * a omezovač (násobitele 1, koleno 1 = prostý ořez na [-1, 1]). Dorovnání
+ * a omezovač ověřují test_soft_limit_properties(), test_output_stage_makeup_gain()
+ * a test_render_makeup_and_limiter() s výchozím nastavením.
+ */
 static void init44(uint8_t v0, uint8_t v1)
 {
     videorec_audio_free(&A);
     uint8_t vals[2] = { v0, v1 };
     videorec_audio_init(&A, CLK44, RATE44, 2, (const float (*)[VIDEOREC_AUDIO_LEVELS])LV, vals, 0, true);
+    videorec_audio_coef_set_output_level(&A.coef, 1.0f, 1.0f, 1.0f);
+}
+
+/*
+ * Renderer s výchozím nastavením (jak ho používá emulátor): stálá úroveň kanálu PSG 0,2 dá po ustálení
+ * IIR 0,2 krát +4 dB, se zapnutou propustí 0,2 krát +8 dB; úroveň 1,0 (nad rozsahem po dorovnání) se
+ * měkce stlačí pod plný rozsah a neořízne; koeficient s kolenem 1 dává dřívější tvrdý ořez.
+ * Čte se vzorek 1500 (34 ms): IIR i propust jsou ustálené a parkování stálé úrovně (po 45 ms) ještě nezačalo.
+ */
+static void test_render_makeup_and_limiter(void)
+{
+    static float lv[2][VIDEOREC_AUDIO_LEVELS];
+    memset(lv, 0, sizeof(lv));
+    lv[1][15] = 0.2f;
+    lv[1][14] = 1.0f;
+    static int16_t out[2000 * 2];
+    uint8_t vals[2] = { 0, 15 };
+    for (int pass = 0; pass < 2; pass++) {
+        videorec_audio_free(&A);
+        videorec_audio_init(&A, CLK44, RATE44, 2, (const float (*)[VIDEOREC_AUDIO_LEVELS])lv, vals, 0, true);
+        videorec_audio_set_output_filter(&A, pass == 1, true);
+        TEST_ASSERT_EQUAL_size_t(2000, videorec_audio_render(&A, 2000ull * 400, out, 2000));
+        const double want = 0.2 * pow(10.0, (pass ? VIDEOREC_AUDIO_OUT_MAKEUP_ON_DB : VIDEOREC_AUDIO_OUT_MAKEUP_OFF_DB) / 20.0) * 32767.0;
+        TEST_ASSERT_INT16_WITHIN(3, (int16_t)lrint(want), out[1500 * 2]);
+        TEST_ASSERT_EQUAL_INT16(out[1500 * 2], out[1500 * 2 + 1]);
+    }
+
+    vals[1] = 14;
+    videorec_audio_free(&A);
+    videorec_audio_init(&A, CLK44, RATE44, 2, (const float (*)[VIDEOREC_AUDIO_LEVELS])lv, vals, 0, true);
+    TEST_ASSERT_EQUAL_size_t(2000, videorec_audio_render(&A, 2000ull * 400, out, 2000));
+    const double lim = 0.7 + 0.3 * tanh((pow(10.0, 4.0 / 20.0) - 0.7) / 0.3);
+    TEST_ASSERT_INT16_WITHIN(3, (int16_t)lrint(lim * 32767.0), out[1500 * 2]);
+    TEST_ASSERT_TRUE(out[1500 * 2] < 32767);
+    for (int i = 1; i <= 1500; i++) TEST_ASSERT_TRUE(out[i * 2] >= out[(i - 1) * 2]); /* náběh IIR zůstává monotónní */
+
+    videorec_audio_free(&A);
+    videorec_audio_init(&A, CLK44, RATE44, 2, (const float (*)[VIDEOREC_AUDIO_LEVELS])lv, vals, 0, true);
+    videorec_audio_coef_set_output_level(&A.coef, 2.0f, 2.0f, 1.0f);
+    TEST_ASSERT_EQUAL_size_t(2000, videorec_audio_render(&A, 2000ull * 400, out, 2000));
+    TEST_ASSERT_EQUAL_INT16(32767, out[1500 * 2]);
 }
 
 /*
@@ -360,28 +409,36 @@ static void test_ctc0_ac_square_symmetric(void)
  * Výstupní propust (volba [AUDIO] output_filter)
  * ================================================================ */
 
-/* Výstupní stupeň: váha 0 = součet po filtrech kanálů oříznutý shora (dřívější výstup), propust přitom běží. */
+/*
+ * Výstupní stupeň: váha 0 = součet po filtrech kanálů (dřívější filtry) krát dorovnání pro vypnutou propust,
+ * pod kolenem omezovače přesně lineární; součet nad rozsahem se měkce stlačí pod 1,0 (dřív tvrdý ořez na 1,0).
+ * Propust přitom běží.
+ */
 static void test_output_stage_gain_zero_is_legacy(void)
 {
     st_VIDEOREC_AUDIO_COEF c;
     videorec_audio_coef_init(&c, 44100);
     double lp = 0.0, ac = 0.0;
-    TEST_ASSERT_TRUE(videorec_audio_output_stage(&c, &ac, &lp, 0.3f, 0.9f, 0.0f) == 0.3f);
-    TEST_ASSERT_TRUE(videorec_audio_output_stage(&c, &ac, &lp, 1.7f, 0.9f, 0.0f) == 1.0f);
-    TEST_ASSERT_TRUE(videorec_audio_output_stage(&c, &ac, &lp, -0.4f, 0.9f, 0.0f) == -0.4f);
+    TEST_ASSERT_TRUE(videorec_audio_output_stage(&c, &ac, &lp, 0.3f, 0.9f, 0.0f) == 0.3f * c.out_makeup_off);
+    float top = videorec_audio_output_stage(&c, &ac, &lp, 1.7f, 0.9f, 0.0f);
+    TEST_ASSERT_TRUE(top > VIDEOREC_AUDIO_OUT_KNEE && top <= 1.0f);
+    TEST_ASSERT_TRUE(videorec_audio_output_stage(&c, &ac, &lp, -0.4f, 0.9f, 0.0f) == -0.4f * c.out_makeup_off);
     TEST_ASSERT_TRUE(lp > 0.0 && lp < 0.9); /* propust běží i při váze 0 */
     TEST_ASSERT_TRUE(ac == 0.0);            /* bez střídavé vazby výstupu se její stav nemění */
 }
 
-/* Výstupní propust: stejnosměrné zesílení 1 (úroveň nízkých kmitočtů se nemění), -3 dB na 346 Hz, -20,3 dB na 3,46 kHz. */
+/*
+ * Výstupní propust: stejnosměrné zesílení propusti 1 (výstup = vstup krát dorovnání pro zapnutou propust),
+ * -3 dB na 346 Hz, -20,3 dB na 3,46 kHz. Amplitudy jsou volené pod kolenem omezovače.
+ */
 static void test_output_stage_lowpass_response(void)
 {
     st_VIDEOREC_AUDIO_COEF c;
     videorec_audio_coef_init(&c, 44100);
     double lp = 0.0, ac = 0.0;
     float y = 0;
-    for (int i = 0; i < 44100; i++) y = videorec_audio_output_stage(&c, &ac, &lp, 0.0f, 0.3f, 1.0f);
-    TEST_ASSERT_FLOAT_WITHIN(1e-5f, 0.3f, y);
+    for (int i = 0; i < 44100; i++) y = videorec_audio_output_stage(&c, &ac, &lp, 0.0f, 0.2f, 1.0f);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5f, 0.2f * c.out_makeup_on, y);
 
     const double freq[3] = { 34.6, 346.0, 3460.0 };
     const double want_db[3] = { -0.04, -3.01, -20.04 };
@@ -389,12 +446,123 @@ static void test_output_stage_lowpass_response(void)
         lp = 0.0;
         double peak = 0;
         for (int i = 0; i < 44100; i++) {
-            float x = (float)(0.5 * sin(2.0 * M_PI * freq[f] * i / 44100.0));
+            float x = (float)(0.2 * sin(2.0 * M_PI * freq[f] * i / 44100.0));
             y = videorec_audio_output_stage(&c, &ac, &lp, 0.0f, x, 1.0f);
             if (i > 22050 && fabs(y) > peak) peak = fabs(y);
         }
-        TEST_ASSERT_DOUBLE_WITHIN(0.5, want_db[f], 20.0 * log10(peak / 0.5));
+        TEST_ASSERT_DOUBLE_WITHIN(0.5, want_db[f], 20.0 * log10(peak / (0.2 * (double)c.out_makeup_on)));
     }
+}
+
+/*
+ * Měkký omezovač: do kolena přesně lineární (bitově), lichý, neklesající, nikdy nad 1,0 ani pro
+ * libovolně velký vstup, nad kolenem stlačuje a v koleni navazuje směrnicí 1 (bez zlomu).
+ */
+static void test_soft_limit_properties(void)
+{
+    const float knee = VIDEOREC_AUDIO_OUT_KNEE;
+    TEST_ASSERT_TRUE(knee > 0.0f && knee < 1.0f);
+
+    /* lineární část: přesně vstup */
+    for (int i = -1000; i <= 1000; i++) {
+        float x = knee * (float)i / 1000.0f;
+        TEST_ASSERT_TRUE(videorec_audio_soft_limit(x) == x);
+    }
+    TEST_ASSERT_TRUE(videorec_audio_soft_limit(knee) == knee);
+    TEST_ASSERT_TRUE(videorec_audio_soft_limit(-knee) == -knee);
+    TEST_ASSERT_TRUE(videorec_audio_soft_limit(0.0f) == 0.0f);
+
+    /* neklesající, lichý, v [-1, 1], nad kolenem pod vstupem */
+    float prev = 0.0f;
+    for (int i = 1; i <= 40000; i++) {
+        float x = (float)i / 10000.0f;
+        float y = videorec_audio_soft_limit(x);
+        TEST_ASSERT_TRUE(y >= prev);
+        TEST_ASSERT_TRUE(y <= 1.0f);
+        TEST_ASSERT_TRUE(y <= x);
+        TEST_ASSERT_TRUE(videorec_audio_soft_limit(-x) == -y);
+        if (x > knee + 0.01f) TEST_ASSERT_TRUE(y < x);
+        prev = y;
+    }
+    /* do dvojnásobku plného rozsahu ostře roste (žádná rovná střecha jako u tvrdého ořezu) */
+    prev = videorec_audio_soft_limit(knee);
+    for (int i = 1; i <= 130; i++) {
+        float y = videorec_audio_soft_limit(knee + (float)i / 100.0f);
+        TEST_ASSERT_TRUE(y > prev);
+        prev = y;
+    }
+    /* libovolně velký vstup zůstává v rozsahu */
+    TEST_ASSERT_TRUE(videorec_audio_soft_limit(100.0f) <= 1.0f && videorec_audio_soft_limit(100.0f) > 0.999f);
+    TEST_ASSERT_TRUE(videorec_audio_soft_limit(-1.0e30f) >= -1.0f && videorec_audio_soft_limit(-1.0e30f) < -0.999f);
+    TEST_ASSERT_TRUE(videorec_audio_soft_limit(INFINITY) == 1.0f);
+
+    /* známé hodnoty: knee + (1 - knee) * tanh((x - knee) / (1 - knee)) */
+    TEST_ASSERT_FLOAT_WITHIN(1e-5f, (float)(0.7 + 0.3 * tanh(1.0)), videorec_audio_soft_limit(1.0f));
+    TEST_ASSERT_FLOAT_WITHIN(1e-5f, (float)(0.7 + 0.3 * tanh(0.5 / 0.3)), videorec_audio_soft_limit(1.2f));
+
+    /* spojitá derivace v koleni: směrnice těsně pod i nad kolenem je 1 a nad kolenem plynule klesá */
+    const float h = 1.0e-3f;
+    float below = (videorec_audio_soft_limit(knee) - videorec_audio_soft_limit(knee - h)) / h;
+    float above = (videorec_audio_soft_limit(knee + h) - videorec_audio_soft_limit(knee)) / h;
+    TEST_ASSERT_FLOAT_WITHIN(1e-3f, 1.0f, below);
+    TEST_ASSERT_FLOAT_WITHIN(1e-3f, 1.0f, above);
+    float slope_prev = above;
+    for (int i = 1; i <= 20; i++) {
+        float x = knee + 0.05f * (float)i;
+        float slope = (videorec_audio_soft_limit(x + h) - videorec_audio_soft_limit(x)) / h;
+        TEST_ASSERT_TRUE(slope < slope_prev + 2e-3f);
+        TEST_ASSERT_TRUE(slope >= 0.0f);
+        slope_prev = slope;
+    }
+
+    /* obecné koleno */
+    TEST_ASSERT_TRUE(videorec_audio_soft_limit_knee(0.5f, 0.5f) == 0.5f);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5f, (float)(0.5 + 0.5 * tanh(1.0)), videorec_audio_soft_limit_knee(1.0f, 0.5f));
+}
+
+/*
+ * Dorovnání hlasitosti: +4 dB s vypnutou propustí (a na strojích bez ní), +8 dB se zapnutou; při
+ * přechodu se násobitel mění lineárně s vahou propusti; pod kolenem je výstup přesně úměrný vstupu
+ * (poměry mezi zdroji se nemění).
+ */
+static void test_output_stage_makeup_gain(void)
+{
+    st_VIDEOREC_AUDIO_COEF c;
+    videorec_audio_coef_init(&c, 44100);
+    TEST_ASSERT_FLOAT_WITHIN(1e-4f, 1.5849f, c.out_makeup_off);
+    TEST_ASSERT_FLOAT_WITHIN(1e-4f, 2.5119f, c.out_makeup_on);
+    TEST_ASSERT_DOUBLE_WITHIN(1e-4, VIDEOREC_AUDIO_OUT_MAKEUP_OFF_DB, 20.0 * log10((double)c.out_makeup_off));
+    TEST_ASSERT_DOUBLE_WITHIN(1e-4, VIDEOREC_AUDIO_OUT_MAKEUP_ON_DB, 20.0 * log10((double)c.out_makeup_on));
+    /* dorovnání nezávisí na vzorkovací frekvenci */
+    st_VIDEOREC_AUDIO_COEF c48;
+    videorec_audio_coef_init(&c48, 48000);
+    TEST_ASSERT_TRUE(c48.out_makeup_off == c.out_makeup_off && c48.out_makeup_on == c.out_makeup_on);
+
+    /* vypnutá propust: linearita pod kolenem, poměr dvou úrovní přesně zachovaný */
+    double lp = 0.0, ac = 0.0;
+    float a1 = videorec_audio_output_stage(&c, &ac, &lp, 0.25f, 0.0f, 0.0f);
+    float a2 = videorec_audio_output_stage(&c, &ac, &lp, 0.25f * 1.49f, 0.0f, 0.0f);
+    TEST_ASSERT_TRUE(a1 == 0.25f * c.out_makeup_off);
+    TEST_ASSERT_TRUE(a2 < VIDEOREC_AUDIO_OUT_KNEE);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5f, 1.49f, a2 / a1);
+
+    /* zapnutá propust, ustálená stálá úroveň */
+    lp = 0.1;
+    float y = videorec_audio_output_stage(&c, &ac, &lp, 0.0f, 0.1f, 1.0f);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6f, 0.1f * c.out_makeup_on, y);
+
+    /* uprostřed přechodu: průměr obou cest krát průměr obou násobitelů */
+    lp = 0.1;
+    y = videorec_audio_output_stage(&c, &ac, &lp, 0.2f, 0.1f, 0.5f);
+    TEST_ASSERT_FLOAT_WITHIN(1e-6f, 0.15f * 0.5f * (c.out_makeup_off + c.out_makeup_on), y);
+
+    /* nejhorší případ (CTC0 a všechny kanály PSG naplno, součet 1,37): stlačí se, neořízne */
+    lp = 0.0;
+    float worst = videorec_audio_output_stage(&c, &ac, &lp, 1.37f, 0.0f, 0.0f);
+    float more = videorec_audio_output_stage(&c, &ac, &lp, 1.5f, 0.0f, 0.0f);
+    TEST_ASSERT_TRUE(worst > VIDEOREC_AUDIO_OUT_KNEE && worst <= 1.0f);
+    TEST_ASSERT_TRUE(more >= worst && more <= 1.0f);
+    TEST_ASSERT_TRUE(videorec_audio_output_stage(&c, &ac, &lp, -1.37f, 0.0f, 0.0f) == -worst);
 }
 
 /** Tón 440 Hz na kanálu PSG (úroveň 0,5) v intervalu [from, to). */
@@ -691,6 +859,9 @@ int main(void)
     RUN_TEST(test_ctc0_ac_square_symmetric);
     RUN_TEST(test_output_stage_gain_zero_is_legacy);
     RUN_TEST(test_output_stage_lowpass_response);
+    RUN_TEST(test_soft_limit_properties);
+    RUN_TEST(test_output_stage_makeup_gain);
+    RUN_TEST(test_render_makeup_and_limiter);
     RUN_TEST(test_output_filter_switch_without_click);
     RUN_TEST(test_output_filter_keeps_low_frequency_level);
     RUN_TEST(test_output_coupling_constant_level_decays);

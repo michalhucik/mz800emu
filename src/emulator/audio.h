@@ -188,6 +188,58 @@ extern "C"
 #define AUDIO_HAVE_OUTPUT_FILTER 1
 #endif
 
+/**
+ * @brief Dorovnání hlasitosti výstupu se zapnutou výstupní propustí [dB].
+ *
+ * Volba emulátoru, NE změřená vlastnost stroje: absolutní hlasitost
+ * skutečného počítače určuje knoflík hlasitosti a zesilovač LM386 (zesílení
+ * asi 21), který úbytek za propustí dohání; v emulátoru za propustí žádný
+ * zesilovač není. Poměry mezi zdroji (CTC0 proti PSG, dělič 001h, CTC0
+ * s děličem 2) se dorovnáním nemění, násobí se až hotový součet.
+ *
+ * Hodnota 8 dB (2,51x) je zvolená podle měřicího programu audio_meas
+ * (záznam reference.wav): tón CTC0 440 Hz má pak efektivní hodnotu
+ * -11,6 dBFS a kanál PSG 433 Hz naplno -15,0 dBFS; kanál PSG, který začne
+ * hrát naplno z ticha (jednostranná výchylka 0,25, než se střídavá vazba
+ * výstupu ustálí), dá 0,63 a zůstane pod kolenem AUDIO_OUT_LIMIT_KNEE.
+ * S 9 dB by už koleno překročil.
+ */
+#define AUDIO_OUT_MAKEUP_FILTER_ON_DB 8.0
+
+/**
+ * @brief Dorovnání hlasitosti výstupu s vypnutou výstupní propustí [dB].
+ *
+ * Platí i pro samostatný MZ-700 (MZARCH 700), který propust nemá. Volba
+ * emulátoru jako AUDIO_OUT_MAKEUP_FILTER_ON_DB. Hodnota 4 dB (1,58x) je
+ * zvolená tak, aby tón 440 Hz měl se zapnutou i vypnutou propustí stejnou
+ * efektivní hodnotu (propust na 440 Hz ubírá 3,9 až 4,0 dB, změřeno
+ * v emulátoru programem audio_meas): přepnutí propusti mění barvu zvuku,
+ * ne hlasitost.
+ */
+#define AUDIO_OUT_MAKEUP_FILTER_OFF_DB 4.0
+
+/**
+ * @brief Koleno měkkého omezovače výstupu (výchylka v rozsahu 0 až 1).
+ *
+ * Do této výchylky je výstup přesně lineární, nad ní se špičky plynule
+ * stlačují k 1,0 (videorec_audio_soft_limit()); tvrdý ořez nenastane ani při
+ * všech zdrojích naplno. Volba emulátoru: skutečný MZ-800 plný signál také
+ * stlačuje (zesilovač, asi 0,8 dB u jednoho kanálu PSG naplno), ale jeho
+ * křivka změřená není a omezovač ji nenapodobuje. Tóny CTC0 a jeden až dva
+ * kanály PSG naplno zůstávají pod kolenem; tři kanály PSG naplno, CTC0
+ * s PSG a začátek tónu CTC0 (než se jeho střídavá vazba ustálí) koleno
+ * překračují a stlačí se.
+ */
+#define AUDIO_OUT_LIMIT_KNEE 0.7f
+
+/**
+ * @brief Největší hlavní hlasitost poslechu (násobitel; 2,0 = 200 %, +6 dB).
+ *
+ * Hodnoty nad 1,0 přidávají: blok pro zvukové zařízení pak projde druhým
+ * měkkým omezovačem (iface_audio_apply_master()), takže se neořízne.
+ */
+#define AUDIO_MASTER_GAIN_MAX 2.0f
+
     // extern AUDIO_BUF_t g_attenuator_volume_value [ PSG_OUT_OFF + 1 ];
     extern AUDIO_BUF_t g_attenuator_volume_value[4][16];
 
@@ -370,6 +422,37 @@ extern "C"
     extern st_AUDIO g_audio;
 
     extern void audio_init(void);
+
+    /**
+     * @brief Hlavní hlasitost poslechu z hodnot INI klíčů [AUDIO] volume_master a volume_master_boost.
+     *
+     * Hlasitost je `volume_master / 4294967295 + boost_percent / 100`,
+     * nejvýš AUDIO_MASTER_GAIN_MAX. Klíč volume_master má stejný význam jako
+     * před rozšířením rozsahu (0 až 4294967295 = 0 až 100 %), takže starší
+     * INI bez klíče volume_master_boost (výchozí 0) dává stejnou hlasitost
+     * jako dřív.
+     *
+     * @param volume_master Hodnota klíče volume_master.
+     * @param boost_percent Hodnota klíče volume_master_boost (procenta nad 100 %); nad 100 se ořízne.
+     * @return Hlasitost 0 až AUDIO_MASTER_GAIN_MAX.
+     * @note Čistá funkce.
+     */
+    extern float audio_master_gain_from_cfg(uint32_t volume_master, uint32_t boost_percent);
+
+    /**
+     * @brief Rozloží hlavní hlasitost poslechu do INI klíčů volume_master a volume_master_boost.
+     *
+     * Do 100 % včetně: `volume_master = hlasitost * 4294967295`, boost 0.
+     * Nad 100 %: volume_master je nejvyšší hodnota a boost jsou celá
+     * procenta nad 100 % (zaokrouhleno). Starší verze emulátoru, která klíč
+     * volume_master_boost nezná, z takového INI přečte 100 %.
+     *
+     * @param gain          Hlasitost; ořízne se na 0 až AUDIO_MASTER_GAIN_MAX, NaN se bere jako 0.
+     * @param volume_master Výstup: hodnota klíče volume_master; NULL = nezapisovat.
+     * @param boost_percent Výstup: hodnota klíče volume_master_boost (0 až 100); NULL = nezapisovat.
+     * @note Čistá funkce.
+     */
+    extern void audio_master_gain_to_cfg(float gain, uint32_t *volume_master, uint32_t *boost_percent);
 
     /**
      * @brief Změna výstupu CTC0 po hradlování bitem PC0.

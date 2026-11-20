@@ -29,6 +29,10 @@ G_STATIC_ASSERT(IFACE_AUDIO_SAMPLE_RATE == VIDEOREC_RT_SDL_RATE);
 G_STATIC_ASSERT(IFACE_AUDIO_SAMPLE_RATE % VIDEO_SCREENS_PER_SEC == 0);
 /* Tabulka úrovní video záznamu musí pojmout všechny hodnoty zvukového logu. */
 G_STATIC_ASSERT(AUDIO_LEVEL_VALUES_COUNT <= VIDEOREC_AUDIO_LEVELS);
+/* Dorovnání hlasitosti a koleno omezovače: konstanty výstupního stupně (videorec_audio.h) musí souhlasit s audio.h. */
+G_STATIC_ASSERT(VIDEOREC_AUDIO_OUT_MAKEUP_ON_DB == AUDIO_OUT_MAKEUP_FILTER_ON_DB);
+G_STATIC_ASSERT(VIDEOREC_AUDIO_OUT_MAKEUP_OFF_DB == AUDIO_OUT_MAKEUP_FILTER_OFF_DB);
+G_STATIC_ASSERT(VIDEOREC_AUDIO_OUT_KNEE == AUDIO_OUT_LIMIT_KNEE);
 
 #if (LINUX && defined(USE_SDL2) && defined(USE_SDL_AUDIO)) || defined(MZ800EMU_CFG_AUDIO_DISABLED)
 #define AUDIO_SYNC_BY_NSTIMER
@@ -133,8 +137,8 @@ void iface_audio_set_master_gain(float gain)
         gain = 1.0f;
     if (gain < 0.0f)
         gain = 0.0f;
-    if (gain > 1.0f)
-        gain = 1.0f;
+    if (gain > AUDIO_MASTER_GAIN_MAX)
+        gain = AUDIO_MASTER_GAIN_MAX;
     g_iface_audio.master_gain = gain;
 }
 
@@ -172,25 +176,37 @@ void iface_audio_apply_master(float *samples, size_t frames, unsigned channels)
     /* výchozí stav: blok zůstává bitově shodný s mixem */
     if (target == 1.0f && from == 1.0f)
         return;
+    /* přidání nad 100 %: za násobením měkký omezovač, aby se špičky neořízly
+     * (do 100 % se nevolá, blok je jen vynásobený jako dřív) */
+    const bool boost = (target > 1.0f) || (from > 1.0f);
     if (target == from)
     {
         for (size_t i = 0; i < frames * channels; i++)
         {
             samples[i] *= target;
         };
-        return;
-    };
-    /* změna hlasitosti: lineární přechod přes blok, poslední snímek už má cílový násobitel */
-    const float step = (target - from) / (float)frames;
-    for (size_t i = 0; i < frames; i++)
+    }
+    else
     {
-        const float g = (i + 1 == frames) ? target : (from + step * (float)(i + 1));
-        for (unsigned c = 0; c < channels; c++)
+        /* změna hlasitosti: lineární přechod přes blok, poslední snímek už má cílový násobitel */
+        const float step = (target - from) / (float)frames;
+        for (size_t i = 0; i < frames; i++)
         {
-            samples[i * channels + c] *= g;
+            const float g = (i + 1 == frames) ? target : (from + step * (float)(i + 1));
+            for (unsigned c = 0; c < channels; c++)
+            {
+                samples[i * channels + c] *= g;
+            };
+        };
+        s_master_applied = target;
+    };
+    if (boost)
+    {
+        for (size_t i = 0; i < frames * channels; i++)
+        {
+            samples[i] = videorec_audio_soft_limit(samples[i]);
         };
     };
-    s_master_applied = target;
 }
 
 /**
@@ -250,6 +266,88 @@ static inline void iface_audio_output_stage_prepare(void)
     };
 }
 
+/* Doxygen viz iface_audio.h. */
+float iface_audio_level_follow(float prev, float peak, size_t frames)
+{
+    if (!(peak >= 0.0f))
+        peak = 0.0f; /* i NaN */
+    if (peak > 1.0f)
+        peak = 1.0f;
+    /* náběh okamžitý, doběh exponenciální s časovou konstantou IFACE_AUDIO_LEVEL_RELEASE_MS */
+    const float decay = expf(-(float)frames * 1000.0f / ((float)IFACE_AUDIO_SAMPLE_RATE * (float)IFACE_AUDIO_LEVEL_RELEASE_MS));
+    float held = prev * decay;
+    if (!(held >= IFACE_AUDIO_LEVEL_FLOOR))
+        held = 0.0f;
+    return (peak > held) ? peak : held;
+}
+
+/**
+ * @brief Rozkmit kanálů v bloku pro indikaci úrovní (nejmenší a největší vzorek každého kanálu).
+ *
+ * Invariant: po iface_audio_meter_begin() je `mn[ch] > mx[ch]` (kanál bez
+ * vzorku), po prvním vzorku `mn[ch] <= mx[ch]`.
+ */
+typedef struct st_IFACE_AUDIO_METER
+{
+    float mn[AUDIO_SRC_CHANNELS_COUNT]; /**< Nejmenší vzorek kanálu v bloku. */
+    float mx[AUDIO_SRC_CHANNELS_COUNT]; /**< Největší vzorek kanálu v bloku. */
+    float out_peak;                     /**< Největší absolutní hodnota výstupu (za omezovačem) v bloku. */
+} st_IFACE_AUDIO_METER;
+
+/**
+ * @brief Vynuluje měření rozkmitu před blokem.
+ * @param m Měření.
+ */
+static inline void iface_audio_meter_begin(st_IFACE_AUDIO_METER *m)
+{
+    for (size_t ch = 0; ch < AUDIO_SRC_CHANNELS_COUNT; ch++)
+    {
+        m->mn[ch] = 1.0e30f;
+        m->mx[ch] = -1.0e30f;
+    };
+    m->out_peak = 0.0f;
+}
+
+/**
+ * @brief Započte vzorek kanálu do měření rozkmitu.
+ * @param m  Měření.
+ * @param ch Index kanálu.
+ * @param x  Vzorek kanálu před jeho filtry.
+ */
+static inline void iface_audio_meter_sample(st_IFACE_AUDIO_METER *m, size_t ch, float x)
+{
+    m->mn[ch] = (x < m->mn[ch]) ? x : m->mn[ch];
+    m->mx[ch] = (x > m->mx[ch]) ? x : m->mx[ch];
+}
+
+/**
+ * @brief Z měření bloku aktualizuje indikaci úrovní g_iface_audio.level[] a total_level.
+ *
+ * Úroveň kanálu je rozkmit (největší minus nejmenší vzorek) kanálu před
+ * jeho filtry, násobený hlasitostí kanálu; u CTC0 dělený středním zesílením
+ * převzorkování (asi 0,926), aby obdélník CTC0 naplno dal 1,0 stejně jako
+ * kanál PSG s útlumem 0. Stálá úroveň (neslyšitelná) dává 0. Celková úroveň
+ * je největší absolutní hodnota výstupu za omezovačem. Obojí se drží
+ * iface_audio_level_follow() (rychlý náběh, pomalejší doběh).
+ *
+ * @param m      Měření bloku.
+ * @param frames Počet snímků bloku (délka doběhu).
+ */
+static inline void iface_audio_meter_end(const st_IFACE_AUDIO_METER *m, size_t frames)
+{
+    const float *gain = g_iface_audio.gain;
+    /* střední zesílení převzorkování CTC0 (iface_audio_ctc0_mix_level() je jím dělený) */
+    const float ctc0_unit = AUDIO_CTC0_TO_PSG_CHANNEL_RATIO / (float)PSG_CHANNELS_COUNT / iface_audio_ctc0_mix_level();
+    for (size_t ch = 0; ch < AUDIO_SRC_CHANNELS_COUNT; ch++)
+    {
+        float swing = (m->mx[ch] > m->mn[ch]) ? (m->mx[ch] - m->mn[ch]) * gain[ch] : 0.0f;
+        if (ch == 0)
+            swing /= ctc0_unit;
+        g_iface_audio.level[ch] = iface_audio_level_follow(g_iface_audio.level[ch], swing, frames);
+    };
+    g_iface_audio.total_level = iface_audio_level_follow(g_iface_audio.total_level, m->out_peak, frames);
+}
+
 /**
  * @brief Mono mix: CTC0 + průměr kanálů PSG0, výstupní stupeň.
  *
@@ -257,35 +355,35 @@ static inline void iface_audio_output_stage_prepare(void)
  *        + součet(PSG0 kanál * gain[kanál]) / PSG_CHANNELS_COUNT,
  * počítaný dvakrát: z kanálů po jejich filtrech (`channels`) a před nimi
  * (`raw`). Výstupní stupeň videorec_audio_output_stage() z nich udělá vzorek:
- * s vypnutou volbou [AUDIO] output_filter součet po filtrech oříznutý shora
- * na 1,0 (dřívější chování), se zapnutou součet před filtry po dolní propusti
- * 460 us; přepnutí za běhu je plynulý přechod 10 ms. CTC0 má 1,49 násobek
- * výchylky jednoho kanálu PSG s útlumem 0 (AUDIO_CTC0_TO_PSG_CHANNEL_RATIO).
- * Indikace úrovní (g_iface_audio.level[]) se počítá z kanálů po filtrech,
- * před poměrem CTC0 a před dělením počtem kanálů.
+ * s vypnutou volbou [AUDIO] output_filter součet po filtrech (dřívější zvuk),
+ * se zapnutou součet před filtry po dolní propusti 460 us; přepnutí za běhu
+ * je plynulý přechod 10 ms. Za tím je dorovnání hlasitosti
+ * (AUDIO_OUT_MAKEUP_FILTER_ON_DB / _OFF_DB) a měkký omezovač s kolenem
+ * AUDIO_OUT_LIMIT_KNEE. CTC0 má 1,49 násobek výchylky jednoho kanálu PSG
+ * s útlumem 0 (AUDIO_CTC0_TO_PSG_CHANNEL_RATIO). Indikace úrovní viz
+ * iface_audio_meter_end().
  *
  * @param channels    Kanály po filtrech (AUDIO_SRC_CHANNELS_COUNT polí po output_size vzorcích).
  * @param raw         Kanály před filtry (stejný tvar).
- * @param output      Výstup, output_size vzorků v rozsahu [-1, 1].
- * @param output_size Počet vzorků.
- * @post g_iface_audio.level[] a total_level obsahují střední úrovně bloku;
+ * @param output      Prokládaný výstup L, R (obě strany stejné); 2 * output_size vzorků v rozsahu [-1, 1].
+ * @param output_size Počet stereo vzorků.
+ * @post g_iface_audio.level[] a total_level jsou aktualizované podle bloku;
  *       stav výstupní propusti a váha přechodu jsou posunuté o output_size vzorků.
  */
 static inline void iface_audio_mix_channels_with_gain(float **channels, float **raw, float *output, size_t output_size)
 {
     float *gain = g_iface_audio.gain;
-    float level[AUDIO_SRC_CHANNELS_COUNT] = {0};
-    float total_level = 0.0f;
+    st_IFACE_AUDIO_METER meter;
     const float ctc0_mix = iface_audio_ctc0_mix_level();
     const bool filter_on = g_iface_audio.output_filter;
 
     iface_audio_output_stage_prepare();
+    iface_audio_meter_begin(&meter);
 
     for (size_t i = 0; i < output_size; i++)
     {
-        float sample_ctc0 = channels[0][i] * gain[0];
-        level[0] += fabs(sample_ctc0);
-        sample_ctc0 *= ctc0_mix;
+        float sample_ctc0 = channels[0][i] * gain[0] * ctc0_mix;
+        iface_audio_meter_sample(&meter, 0, raw[0][i]);
         float raw_ctc0 = raw[0][i] * gain[0] * ctc0_mix;
 
         float sample_psg0 = 0.0f;
@@ -294,9 +392,8 @@ static inline void iface_audio_mix_channels_with_gain(float **channels, float **
 #if HAVE_PSG >= 1
         for (size_t ch = 1; ch < (1 + PSG_CHANNELS_COUNT); ch++)
         {
-            float sample = channels[ch][i] * gain[ch];
-            level[ch] += fabs(sample);
-            sample_psg0 += sample;
+            iface_audio_meter_sample(&meter, ch, raw[ch][i]);
+            sample_psg0 += channels[ch][i] * gain[ch];
             raw_psg0 += raw[ch][i] * gain[ch];
         };
         sample_psg0 /= (float)PSG_CHANNELS_COUNT;
@@ -306,19 +403,17 @@ static inline void iface_audio_mix_channels_with_gain(float **channels, float **
         float sample_max = sample_ctc0 + sample_psg0;
 
         s_out_gain = videorec_audio_output_gain_step(&s_out_coef, s_out_gain, filter_on);
-        output[i] = videorec_audio_output_stage(&s_out_coef, &s_out_ac[0], &s_out_lp[0], sample_max, raw_ctc0 + raw_psg0, s_out_gain);
-        total_level += fabs(output[i]);
+        float y = videorec_audio_output_stage(&s_out_coef, &s_out_ac[0], &s_out_lp[0], sample_max, raw_ctc0 + raw_psg0, s_out_gain);
+        output[i * 2] = y;
+        output[i * 2 + 1] = y;
+        y = fabsf(y);
+        meter.out_peak = (y > meter.out_peak) ? y : meter.out_peak;
     }
     /* mono: pravá strana má stejný stav jako levá (pro případné přepnutí na stereo) */
     s_out_lp[1] = s_out_lp[0];
     s_out_ac[1] = s_out_ac[0];
 
-    for (size_t ch = 0; ch < AUDIO_SRC_CHANNELS_COUNT; ch++)
-    {
-        g_iface_audio.level[ch] = level[ch] / output_size;
-    };
-
-    g_iface_audio.total_level = total_level / output_size;
+    iface_audio_meter_end(&meter, output_size);
 }
 
 /**
@@ -326,30 +421,31 @@ static inline void iface_audio_mix_channels_with_gain(float **channels, float **
  *
  * L = CTC0 + průměr PSG0 (kanály 1-4), R = CTC0 + průměr PSG1 (kanály 5-8).
  * CTC0 se násobí gain[0] a iface_audio_ctc0_mix_level(), každá strana má
- * vlastní výstupní stupeň (viz iface_audio_mix_channels_with_gain()).
+ * vlastní výstupní stupeň včetně dorovnání hlasitosti a omezovače (viz
+ * iface_audio_mix_channels_with_gain()). Celková úroveň indikace je větší
+ * ze špiček obou stran.
  *
  * @param channels    Kanály po filtrech (AUDIO_SRC_CHANNELS_COUNT polí po output_size vzorcích).
  * @param raw         Kanály před filtry (stejný tvar).
  * @param output      Prokládaný výstup L, R; 2 * output_size vzorků v rozsahu [-1, 1].
  * @param output_size Počet stereo vzorků.
- * @post g_iface_audio.level[] a total_level obsahují střední úrovně bloku;
+ * @post g_iface_audio.level[] a total_level jsou aktualizované podle bloku;
  *       stav výstupní propusti a váha přechodu jsou posunuté o output_size vzorků.
  */
 static inline void iface_audio_mix_channels_stereo(float **channels, float **raw, float *output, size_t output_size)
 {
     float *gain = g_iface_audio.gain;
-    float level[AUDIO_SRC_CHANNELS_COUNT] = {0};
-    float total_level = 0.0f;
+    st_IFACE_AUDIO_METER meter;
     const float ctc0_mix = iface_audio_ctc0_mix_level();
     const bool filter_on = g_iface_audio.output_filter;
 
     iface_audio_output_stage_prepare();
+    iface_audio_meter_begin(&meter);
 
     for (size_t i = 0; i < output_size; i++)
     {
-        float sample_ctc0 = channels[0][i] * gain[0];
-        level[0] += fabs(sample_ctc0);
-        sample_ctc0 *= ctc0_mix;
+        float sample_ctc0 = channels[0][i] * gain[0] * ctc0_mix;
+        iface_audio_meter_sample(&meter, 0, raw[0][i]);
         float raw_ctc0 = raw[0][i] * gain[0] * ctc0_mix;
 
         /* PSG0 → levý kanál */
@@ -357,9 +453,8 @@ static inline void iface_audio_mix_channels_stereo(float **channels, float **raw
         float raw_psg0 = 0.0f;
         for (size_t ch = 1; ch < (1 + PSG_CHANNELS_COUNT); ch++)
         {
-            float sample = channels[ch][i] * gain[ch];
-            level[ch] += fabs(sample);
-            sample_psg0 += sample;
+            iface_audio_meter_sample(&meter, ch, raw[ch][i]);
+            sample_psg0 += channels[ch][i] * gain[ch];
             raw_psg0 += raw[ch][i] * gain[ch];
         };
         sample_psg0 /= (float)PSG_CHANNELS_COUNT;
@@ -370,9 +465,8 @@ static inline void iface_audio_mix_channels_stereo(float **channels, float **raw
         float raw_psg1 = 0.0f;
         for (size_t ch = (1 + PSG_CHANNELS_COUNT); ch < AUDIO_SRC_CHANNELS_COUNT; ch++)
         {
-            float sample = channels[ch][i] * gain[ch];
-            level[ch] += fabs(sample);
-            sample_psg1 += sample;
+            iface_audio_meter_sample(&meter, ch, raw[ch][i]);
+            sample_psg1 += channels[ch][i] * gain[ch];
             raw_psg1 += raw[ch][i] * gain[ch];
         };
         sample_psg1 /= (float)PSG_CHANNELS_COUNT;
@@ -385,15 +479,40 @@ static inline void iface_audio_mix_channels_stereo(float **channels, float **raw
         output[i * 2]     = videorec_audio_output_stage(&s_out_coef, &s_out_ac[0], &s_out_lp[0], left, raw_ctc0 + raw_psg0, s_out_gain);
         output[i * 2 + 1] = videorec_audio_output_stage(&s_out_coef, &s_out_ac[1], &s_out_lp[1], right, raw_ctc0 + raw_psg1, s_out_gain);
 
-        total_level += (fabs(output[i * 2]) + fabs(output[i * 2 + 1])) * 0.5f;
+        float y = fabsf(output[i * 2]);
+        meter.out_peak = (y > meter.out_peak) ? y : meter.out_peak;
+        y = fabsf(output[i * 2 + 1]);
+        meter.out_peak = (y > meter.out_peak) ? y : meter.out_peak;
     }
 
+    iface_audio_meter_end(&meter, output_size);
+}
+
+/* Doxygen viz iface_audio.h. */
+void iface_audio_mix_block(float **channels, float **raw, float *output, size_t frames, bool stereo)
+{
+    g_iface_audio.output_channels = stereo ? 2 : 1;
+    if (stereo)
+    {
+        iface_audio_mix_channels_stereo(channels, raw, output, frames);
+    }
+    else
+    {
+        iface_audio_mix_channels_with_gain(channels, raw, output, frames);
+    };
+}
+
+/* Doxygen viz iface_audio.h. */
+void iface_audio_mix_restart(void)
+{
+    s_out_lp[0] = s_out_lp[1] = 0.0;
+    s_out_ac[0] = s_out_ac[1] = 0.0;
+    s_out_gain = -1.0f;
     for (size_t ch = 0; ch < AUDIO_SRC_CHANNELS_COUNT; ch++)
     {
-        g_iface_audio.level[ch] = level[ch] / output_size;
+        g_iface_audio.level[ch] = 0.0f;
     };
-
-    g_iface_audio.total_level = total_level / output_size;
+    g_iface_audio.total_level = 0.0f;
 }
 
 float *iface_audio_wait_for_data(size_t *output_samples_size)
@@ -507,23 +626,8 @@ float *iface_audio_wait_for_data(size_t *output_samples_size)
     audio_log_destroy(audiolog);
 
     float *output_samples = g_malloc0(*output_samples_size);
-    g_iface_audio.output_channels = stereo ? 2 : 1;
-    if (stereo)
-    {
-        iface_audio_mix_channels_stereo(all_samples, raw_samples, output_samples, output_samples_count);
-    }
-    else
-    {
-        /* mono mix do dočasného bufferu, pak duplikace do stereo L=R */
-        float *mono_buf = g_malloc(output_samples_count * sizeof(float));
-        iface_audio_mix_channels_with_gain(all_samples, raw_samples, mono_buf, output_samples_count);
-        for (size_t i = 0; i < output_samples_count; i++)
-        {
-            output_samples[i * 2]     = mono_buf[i];
-            output_samples[i * 2 + 1] = mono_buf[i];
-        }
-        g_free(mono_buf);
-    }
+    /* mix do prokládaného stereo bloku (mono rozložení dává L = R) */
+    iface_audio_mix_block(all_samples, raw_samples, output_samples, output_samples_count, stereo);
 
     for (int i = 0; i < AUDIO_SRC_CHANNELS_COUNT; i++)
     {
@@ -540,7 +644,7 @@ float *iface_audio_wait_for_data(size_t *output_samples_size)
     /* Zachycení zvuku: stejný blok do sdl.wav (mimo zachycení 1 čtení příznaku). */
     audio_capture_sdl_output(output_samples, output_samples_count);
     /* Hlavní hlasitost a ztlumení poslechu: až za odběrem pro záznam, který je na poslechu nezávislý
-     * (ve výchozím stavu jedno porovnání na blok, blok se nemění). */
+     * (ve výchozím stavu jedno porovnání na blok, blok se nemění; nad 100 % ještě měkký omezovač). */
     iface_audio_apply_master(output_samples, output_samples_count, 2);
     return output_samples;
 }

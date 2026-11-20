@@ -2383,8 +2383,9 @@ Whitelist:
 - `AUDIO/volume_8253` (unsigned)
 - `AUDIO/volume_psg0` .. `AUDIO/volume_psg3` (unsigned)
 - `AUDIO/volume_psg1_0` .. `AUDIO/volume_psg1_3` (MZ-1500, unsigned)
-- hlavní hlasitost poslechu (`AUDIO/volume_master`) ve whitelistu není;
-  `emu_settings_get` ji přečte. Ztlumení poslechu klíč nemá (neukládá se,
+- hlavní hlasitost poslechu (`AUDIO/volume_master`, 0 až 4294967295 =
+  0 až 100 %, a `AUDIO/volume_master_boost`, procenta nad 100 %, 0 až 100)
+  ve whitelistu není; `emu_settings_get` oba klíče přečte. Ztlumení poslechu klíč nemá (neukládá se,
   emulátor se vždy spustí neztlumený)
 - `AUDIO/output_filter` (bool; výstupní dolní propust skutečného MZ-800, 346 Hz, výchozí zapnuto; přepnutí platí hned a bez lupnutí, i v běžícím záznamu zvuku a videa; v emulátorech MZ-700 klíč není, ten počítač propust nemá)
 - `DISPLAY/forced_full_screen_redrawing` (bool)

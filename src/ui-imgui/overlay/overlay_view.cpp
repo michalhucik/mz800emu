@@ -88,6 +88,7 @@
 static_assert((int)JOY_TYPE_NONE == (int)OVERLAY_JOY_NONE && (int)JOY_TYPE_NUM_KEYPAD == (int)OVERLAY_JOY_NUM_KEYPAD && (int)JOY_TYPE_JOYSTICK == (int)OVERLAY_JOY_JOYSTICK,
               "overlay joystick types must match en_JOY_TYPE");
 static_assert(AUDIO_SRC_CHANNELS_COUNT <= OVERLAY_VIEW_AUDIO_CHANNELS_MAX, "overlay view must hold every audio channel");
+static_assert(OVERLAY_VIEW_MASTER_GAIN_MAX == AUDIO_MASTER_GAIN_MAX, "overlay view master volume range must match the audio interface");
 
 /* pořadí druhů historie jádra a kopie je stejné (plnění druh přetypovává) */
 static_assert((int)RECENT_MEDIA_DSK == (int)OVERLAY_MEDIA_DSK && (int)RECENT_MEDIA_CMT == (int)OVERLAY_MEDIA_CMT && (int)RECENT_MEDIA_QD == (int)OVERLAY_MEDIA_QD

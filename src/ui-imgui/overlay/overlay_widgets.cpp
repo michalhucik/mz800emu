@@ -948,7 +948,37 @@ bool ovl_slider_percent_ex(const char *id_str, float *value, float min, float ma
     return ovl_slider_unit_ex(id_str, value, min, max, step, width, "%");
 }
 
+/**
+ * @brief Společné tělo posuvníků: hodnota s jednotkou, volitelně značka význačné hodnoty s přichycením.
+ *
+ * Parametry jako ovl_slider_unit_ex() a ovl_slider_percent_mark().
+ *
+ * @param id_str   Řetězec pro ID prvku.
+ * @param value    Hodnota.
+ * @param min      Nejmenší hodnota.
+ * @param max      Největší hodnota (větší než min).
+ * @param step     Krok klávesnice a zaokrouhlení; <= 0 = 1.
+ * @param width    Šířka celého prvku; <= 0 = zbývající šířka.
+ * @param unit     Text jednotky; NULL nebo prázdný = jen číslo.
+ * @param has_mark true = kreslit značku hodnoty `mark` a přichytávat k ní.
+ * @param mark     Hodnota se značkou (min < mark < max).
+ * @param detent   Polovina šířky pásma přichycení myši; <= 0 = bez přichycení.
+ * @return true = hodnota se změnila.
+ */
+static bool ovl_slider_impl(const char *id_str, float *value, float min, float max, float step, float width, const char *unit, bool has_mark, float mark, float detent);
+
 bool ovl_slider_unit_ex(const char *id_str, float *value, float min, float max, float step, float width, const char *unit)
+{
+    return ovl_slider_impl(id_str, value, min, max, step, width, unit, false, 0.0f, 0.0f);
+}
+
+bool ovl_slider_percent_mark(const char *id_str, float *value, float min, float max, float step, float width, float mark, float detent)
+{
+    const bool has_mark = (mark > min) && (mark < max);
+    return ovl_slider_impl(id_str, value, min, max, step, width, "%", has_mark, mark, detent);
+}
+
+static bool ovl_slider_impl(const char *id_str, float *value, float min, float max, float step, float width, const char *unit, bool has_mark, float mark, float detent)
 {
     ImGuiWindow *window = ImGui::GetCurrentWindow();
     if (!unit) unit = "";
@@ -1003,6 +1033,8 @@ bool ovl_slider_unit_ex(const char *id_str, float *value, float min, float max, 
             if (t < 0.0f) t = 0.0f;
             if (t > 1.0f) t = 1.0f;
             v = ovl_slider_snap(min + t * (max - min), min, max, step);
+            /* značka: tažení se u ní přichytí, dvojklik na ni hodnotu vrátí */
+            if (has_mark && ((detent > 0.0f && fabsf(v - mark) <= detent) || ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))) v = mark;
         }
         if (g.NavId == id && g.NavWindow && g.NavWindow->RootWindow == window->RootWindow) {
             /* vodorovné šipky a Home / End patří při fokusu posuvníku (navigace je příští snímek nedostane) */
@@ -1030,6 +1062,12 @@ bool ovl_slider_unit_ex(const char *id_str, float *value, float min, float max, 
     const float kx = x0 + (x1 - x0) * ((v - min) / (max - min));
     dl->AddRectFilled(ImVec2(x0, cy - th), ImVec2(x1, cy + th), disabled ? OVL_COL_BORDER_STRONG : OVL_COL_MUTED, th);
     dl->AddRectFilled(ImVec2(x0, cy - th), ImVec2(kx, cy + th), disabled ? OVL_COL_MUTED_DIM : OVL_COL_ACCENT, th);
+    if (has_mark) {
+        /* značka význačné hodnoty: svislá čárka přes drážku */
+        const float mx = floorf(x0 + (x1 - x0) * ((mark - min) / (max - min)));
+        const float mh = floorf(th + overlay_px(3.0f));
+        dl->AddRectFilled(ImVec2(mx, cy - mh), ImVec2(mx + overlay_px(1.0f), cy + mh), disabled ? OVL_COL_TEXT_DISABLED : OVL_COL_TEXT_SECONDARY);
+    }
     dl->AddCircleFilled(ImVec2(kx, cy), knob_r, disabled ? OVL_COL_TEXT_DISABLED : OVL_COL_KNOB);
     if (!disabled && (hovered || held)) dl->AddCircle(ImVec2(kx, cy), knob_r + overlay_px(1.0f), OVL_COL_ACCENT, 0, overlay_px(OVL_FOCUS_W));
 

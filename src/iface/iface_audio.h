@@ -79,7 +79,26 @@ typedef struct st_IFACE_AUDIO
     AUDIO_OUTPUT_t SN76489_volume_value[AUDIO_SRC_CHANNELS_COUNT][AUDIO_LEVEL_VALUES_COUNT];
 
     float gain[AUDIO_SRC_CHANNELS_COUNT]; // nastaveni hlasitosti pro jednotlive zdroje
-    float level[AUDIO_SRC_CHANNELS_COUNT]; // prumerna uroven zvuku na kanale pro indikaci
+    /**
+     * @brief Indikace úrovně kanálů 0 až 1 (okno Audio Mixer).
+     *
+     * Rozkmit kanálu v posledním bloku (největší minus nejmenší vzorek před
+     * filtry kanálu) krát hlasitost kanálu gain[]: kanál PSG s útlumem 0
+     * i obdélník CTC0 dávají při hlasitosti 100 % hodnotu 1,0, stálá
+     * (neslyšitelná) úroveň 0. Náběh je okamžitý, doběh exponenciální
+     * (iface_audio_level_follow()). Zapisuje vlákno mixu, čte UI vlákno
+     * (jednotlivé hodnoty float, bez zámku).
+     */
+    float level[AUDIO_SRC_CHANNELS_COUNT];
+    /**
+     * @brief Indikace celkové úrovně výstupu 0 až 1.
+     *
+     * Největší absolutní hodnota smíchaného výstupu v posledním bloku za
+     * dorovnáním hlasitosti a měkkým omezovačem, před hlavní hlasitostí
+     * a ztlumením (ve stereo rozložení větší z obou stran); hodnoty nad
+     * AUDIO_OUT_LIMIT_KNEE znamenají, že omezovač špičky stlačuje. Doběh
+     * a vlákna jako level[].
+     */
     float total_level;
     int output_channels;  /* aktuální počet output kanálů (1=mono, 2=stereo) */
 
@@ -100,12 +119,14 @@ typedef struct st_IFACE_AUDIO
     bool output_filter;
 
     /**
-     * @brief Hlavní hlasitost poslechu 0 až 1 (INI [AUDIO] volume_master, výchozí 1).
+     * @brief Hlavní hlasitost poslechu 0 až AUDIO_MASTER_GAIN_MAX (INI [AUDIO] volume_master a volume_master_boost, výchozí 1).
      *
      * Násobí hotový smíchaný blok těsně před předáním zvukovému zařízení
      * (iface_audio_apply_master()), až za odběrem pro video záznam a pro
      * zachycení zvuku; hlasitosti kanálů (gain[]) ani indikace úrovní
-     * (level[], total_level) se jí nemění. Invariant: 0 <= master_gain <= 1.
+     * (level[], total_level) se jí nemění. Hodnoty nad 1 přidávají (až
+     * +6 dB), blok pak projde měkkým omezovačem.
+     * Invariant: 0 <= master_gain <= AUDIO_MASTER_GAIN_MAX.
      * Zapisuje UI vlákno nebo vlákno emulátoru (iface_audio_set_master_gain()),
      * čte vlákno zvukového výstupu (jedna hodnota float, bez zámku).
      */
@@ -269,14 +290,15 @@ extern "C"
      * zvukového bloku plynulým přechodem přes jeden blok. Do INI se zapíše
      * při ukládání konfigurace. Video záznam ani zachycení zvuku neovlivní.
      *
-     * @param gain Hlasitost 0 až 1; hodnota mimo rozsah se ořízne, NaN se bere jako 1.
+     * @param gain Hlasitost 0 až AUDIO_MASTER_GAIN_MAX (1 = 100 %, výchozí; 2 = 200 %);
+     *             hodnota mimo rozsah se ořízne, NaN se bere jako 1.
      * @note Lze volat z libovolného vlákna.
      */
     extern void iface_audio_set_master_gain(float gain);
 
     /**
      * @brief Hlavní hlasitost poslechu.
-     * @return Hodnota 0 až 1 (výchozí 1); ztlumení ji nemění.
+     * @return Hodnota 0 až AUDIO_MASTER_GAIN_MAX (výchozí 1); ztlumení ji nemění.
      * @note Lze volat z libovolného vlákna.
      */
     extern float iface_audio_get_master_gain(void);
@@ -313,6 +335,13 @@ extern "C"
      * iface_audio_master_restart()) začíná rovnou na cílovém násobiteli:
      * s nižší hlasitostí z INI se nepřechází z plné hlasitosti.
      *
+     * Je-li cílový nebo naposledy uplatněný násobitel větší než 1 (hlavní
+     * hlasitost nad 100 %), projde vynásobený blok měkkým omezovačem
+     * videorec_audio_soft_limit(): vzorky do kolena AUDIO_OUT_LIMIT_KNEE
+     * zůstanou jen vynásobené, větší se stlačí k 1,0 a tvrdý ořez
+     * nenastane. Do 100 % včetně se omezovač nevolá a chování je stejné
+     * jako před rozšířením rozsahu.
+     *
      * Volá iface_audio_wait_for_data() na bloku pro zvukové zařízení až po
      * předání téhož bloku video záznamu (videorec_rt_audio_output()) a
      * zachycení zvuku (audio_capture_sdl_output()): záznam je na poslechu
@@ -324,7 +353,8 @@ extern "C"
      * @pre Jen vlákno, které volá iface_audio_wait_for_data() (drží stav
      *      naposledy uplatněného násobitele): vlákno zvukového výstupu, v
      *      režimu bez zvukového zařízení vlákno emulátoru; testy z jednoho vlákna.
-     * @post Naposledy uplatněný násobitel je cílový násobitel.
+     * @post Naposledy uplatněný násobitel je cílový násobitel; všechny
+     *       vzorky bloku, který byl na vstupu v [-1, 1], jsou v [-1, 1].
      */
     extern void iface_audio_apply_master(float *samples, size_t frames, unsigned channels);
 
@@ -372,6 +402,63 @@ extern "C"
     extern void iface_audio_build_videorec_levels(float level[][VIDEOREC_AUDIO_LEVELS], unsigned channels);
 
     extern float *iface_audio_wait_for_data(size_t *samples_size);
+
+/** @brief Časová konstanta doběhu indikace úrovní [ms] (iface_audio_level_follow()). */
+#define IFACE_AUDIO_LEVEL_RELEASE_MS 300
+
+/** @brief Úroveň indikace, pod kterou doběh skončí nulou. */
+#define IFACE_AUDIO_LEVEL_FLOOR 0.001f
+
+    /**
+     * @brief Jeden krok indikace úrovně: okamžitý náběh, exponenciální doběh.
+     *
+     * Vrací větší z hodnot `peak` a `prev * exp(-t / IFACE_AUDIO_LEVEL_RELEASE_MS)`,
+     * kde `t` je délka bloku (`frames` vzorků při IFACE_AUDIO_SAMPLE_RATE).
+     * Indikátor tak neproblikává mezi bloky a po utichnutí dojde do půl
+     * sekundy pod desetinu; držená hodnota pod IFACE_AUDIO_LEVEL_FLOOR se
+     * bere jako 0.
+     *
+     * @param prev   Dosavadní hodnota indikace (0 až 1).
+     * @param peak   Špička nového bloku; ořízne se na 0 až 1, NaN se bere jako 0.
+     * @param frames Počet vzorků bloku na kanál.
+     * @return Nová hodnota indikace 0 až 1.
+     * @note Čistá funkce; lze volat z libovolného vlákna.
+     */
+    extern float iface_audio_level_follow(float prev, float peak, size_t frames);
+
+    /**
+     * @brief Smíchá blok kanálů do prokládaného stereo výstupu a aktualizuje indikaci úrovní.
+     *
+     * Společný mix SDL cesty: součet CTC0 a kanálů PSG s hlasitostmi gain[]
+     * a poměrem iface_audio_ctc0_mix_level(), výstupní stupeň
+     * videorec_audio_output_stage() (střídavá vazba, výstupní propust podle
+     * volby, dorovnání hlasitosti, měkký omezovač). Mono rozložení
+     * (`stereo == false`): CTC0 + PSG0 do obou stran, kanály PSG1 se
+     * nemixují. Stereo: L = CTC0 + PSG0, R = CTC0 + PSG1. Hlavní hlasitost
+     * a ztlumení se zde neuplatňují (iface_audio_apply_master()).
+     *
+     * @param channels Kanály po jejich filtrech: AUDIO_SRC_CHANNELS_COUNT polí po `frames` vzorcích.
+     * @param raw      Kanály před jejich filtry (stejný tvar).
+     * @param output   Výstup, 2 * `frames` vzorků v rozsahu [-1, 1] (L, R).
+     * @param frames   Počet vzorků na kanál.
+     * @param stereo   Stereo rozložení (dva čipy PSG).
+     * @pre Jen vlákno mixu (volá iface_audio_wait_for_data(); testy z jednoho vlákna);
+     *      ukazatele nejsou NULL.
+     * @post g_iface_audio.level[], total_level a output_channels jsou aktualizované;
+     *       stav výstupního stupně je posunutý o `frames` vzorků.
+     */
+    extern void iface_audio_mix_block(float **channels, float **raw, float *output, size_t frames, bool stereo);
+
+    /**
+     * @brief Vrátí výstupní stupeň mixu a indikaci úrovní do stavu po startu.
+     *
+     * Vynuluje stav výstupní propusti a střídavé vazby výstupu, váhu
+     * propusti nechá při dalším bloku nastavit podle volby bez přechodu
+     * a vynuluje level[] a total_level. Určeno pro testy.
+     *
+     * @pre Vlákno mixu právě bloky nezpracovává (stav se nechrání zámkem).
+     */
+    extern void iface_audio_mix_restart(void);
 
     /***************************************************
      *

@@ -146,7 +146,7 @@ typedef enum en_OVL_ACTION {
     OVL_ACTION_FORCED_REDRAW,  /**< přepnout vynucené překreslení každého snímku (display_set_forced_redrawing()) */
     /* tab Sound */
     OVL_ACTION_LISTEN,         /**< přepnout poslech při otevřeném overlayi (imgui_overlay_set_listen(), přepínač Listen); nedostupné, když pauza není overlaye nebo emulace běží z jiného důvodu */
-    OVL_ACTION_MASTER_VOLUME,  /**< hlavní hlasitost poslechu (iface_audio_set_master_gain()); hodnota = procenta 0 až 100 */
+    OVL_ACTION_MASTER_VOLUME,  /**< hlavní hlasitost poslechu (iface_audio_set_master_gain()); hodnota = procenta 0 až 200 */
     OVL_ACTION_MUTE,           /**< přepnout ztlumení poslechu (iface_audio_set_mute()) */
     OVL_ACTION_OUTPUT_FILTER,  /**< přepnout věrnou výstupní propust (iface_audio_set_output_filter(), volba "Hardware output filter" okna Audio Mixer) */
     OVL_ACTION_CHANNEL_VOLUME, /**< hlasitost kanálu (zápis g_iface_audio.gain[] jako posuvník okna Audio Mixer); hodnota = OVL_CHANNEL_VOLUME_VALUE(kanál, procenta) */

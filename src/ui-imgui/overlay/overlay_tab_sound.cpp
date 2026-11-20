@@ -9,7 +9,9 @@
  *
  * Hlavní hlasitost a ztlumení jsou veličiny zvukového rozhraní
  * (iface_audio_set_master_gain(), iface_audio_set_mute()): násobí hotový
- * mix pro poslech a hlasitosti kanálů nemění. Kanály mají počet a jména
+ * mix pro poslech a hlasitosti kanálů nemění. Hlavní hlasitost má rozsah
+ * 0 až 200 % (OVERLAY_VIEW_MASTER_GAIN_MAX) se značkou a přichycením na 100 %;
+ * nad 100 % zvuk zesiluje. Kanály mají počet a jména
  * jako okno Audio Mixer (audio_window.cpp; jména jsou jeho msgid) a
  * posuvník zapisuje stejnou hodnotu g_iface_audio.gain[], jen v procentech
  * místo decibelů. Emulace na tabu stojí jako na ostatních tabech; aby byla
@@ -63,6 +65,11 @@
 #undef _
 #define _(STRING) overlay_test_tr(STRING)
 #endif
+
+/** @brief Největší hodnota posuvníku Master volume v procentech. */
+#define SOUND_MASTER_PERCENT_MAX (OVERLAY_VIEW_MASTER_GAIN_MAX * 100.0f)
+/** @brief Polovina šířky pásma, ve kterém se posuvník Master volume při tažení myší přichytí na 100 % [procenta]. */
+#define SOUND_MASTER_DETENT_PERCENT 4.0f
 
 /** @brief Počet kanálů jednoho čipu PSG a kanálu CTC0 dohromady (jména bez čísla čipu). */
 #define SOUND_MONO_CHANNELS 5
@@ -197,7 +204,8 @@ static void sound_card_output(const st_OVERLAY_VIEW *v, ImVec2 size)
             overlay_test_note_item("snd_master_icon");
             ImGui::SameLine(0.0f, gap);
             float value = floorf(v->sound.master_gain * 100.0f + 0.5f);
-            if (ovl_slider_percent_ex("snd_master", &value, 0.0f, 100.0f, 1.0f, 0.0f)) overlay_action_request_value(OVL_ACTION_MASTER_VOLUME, (int)(value + 0.5f));
+            if (ovl_slider_percent_mark("snd_master", &value, 0.0f, SOUND_MASTER_PERCENT_MAX, 1.0f, 0.0f, 100.0f, SOUND_MASTER_DETENT_PERCENT))
+                overlay_action_request_value(OVL_ACTION_MASTER_VOLUME, (int)(value + 0.5f));
             overlay_test_note_item("snd_master");
             if (overlay_default_focus_wanted()) overlay_focus_last_item();
         }

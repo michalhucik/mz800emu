@@ -255,7 +255,11 @@ Changes apply immediately.
   emulation is paused as on the other tabs; the switch runs it, so changes of
   the volume, mute, the filter and the channels are audible at once. Details
   below.
-- **Master volume** - the master listening volume, 0 to 100 %.
+- **Master volume** - the master listening volume, 0 to 200 %, 100 % by
+  default. Up to 100 % it attenuates, above 100 % it boosts (by up to 6 dB;
+  the peaks are then softly compressed, not cut off). The slider has a mark
+  at 100 %: dragging with the mouse snaps to it and a double-click sets the
+  value back to 100 %.
 - **Mute** - mutes the sound; the master volume and the channel volumes do
   not change, so after unmuting the emulator plays as loud as before. While
   the sound is muted, the **Muted** label in the top bar of the menu shows it
@@ -270,7 +274,10 @@ emulator: they do not get into recordings (the sound of a video, the audio
 capture), and a recording has the full volume even while listening is muted.
 The master volume is saved in the INI file, section `[AUDIO]`, key
 `volume_master` (an integer 0 to 4294967295, the same scale as the other
-`volume_*` keys, the default is the highest value = 100 %). The same
+`volume_*` keys, the default is the highest value = 100 %) and key
+`volume_master_boost` (per cent above 100 %, 0 to 100, default 0); the
+volume is their sum. Both values are written in hexadecimal in the file
+(`0xffffffff`, `0x00` to `0x64`). The same
 **Mute** and **Master volume** are also in the window Interface -> Audio...
 (Audio Mixer).
 

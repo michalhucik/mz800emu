@@ -86,6 +86,17 @@ levels at the start.
 | `volume` | attenuation 0-15 (15 = off) |
 | `noise` | `(type << 2) \| rate` |
 
+**Levels in reference.wav and sdl.wav** - both files hold the output behind
+the make-up gain and the soft limiter: the sum of the sources is multiplied
+by 2.51 (+8 dB) with the output filter on and by 1.58 (+4 dB) with it off and
+in the MZ-700 emulators. Up to a swing of 0.7 of full scale (22 937 of
+32 767) the output is exactly linear, so the ratios between the sources hold
+unchanged; larger peaks are smoothly compressed towards full scale and are
+not clipped. One PSG channel at attenuation 0 has a settled peak-to-peak
+swing of 0.25 times the multiplier, the speaker (CTC0) 1.49 times as much.
+Compared with version 2.0.7 the levels are 8 dB (filter on) or 4 dB (filter
+off) higher. The master volume and mute are not in the files.
+
 **reference.wav** and **sdl.wav** - 44100 Hz, 16 bit, stereo, the same
 format, so they can be compared directly. reference.wav is computed exactly
 in emulated time; sdl.wav is what the emulator's audio output produced. Their

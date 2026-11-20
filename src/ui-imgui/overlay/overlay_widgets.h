@@ -351,6 +351,27 @@ bool ovl_slider_percent_ex(const char *id, float *value, float min, float max, f
 bool ovl_slider_unit_ex(const char *id, float *value, float min, float max, float step, float width, const char *unit);
 
 /**
+ * @brief Posuvník hodnoty v procentech se značkou význačné hodnoty na drážce.
+ *
+ * Chování, ovládání a parametry jako ovl_slider_percent_ex(). Navíc kreslí
+ * na drážce svislou značku v místě hodnoty `mark`, tažení a klik myší se
+ * v pásmu `detent` kolem značky přichytí přesně na ni a dvojklik do drážky
+ * hodnotu na značku vrátí. Klávesnice krokuje volně (značku lze přejít po
+ * krocích).
+ *
+ * @param id     Řetězec pro ID prvku.
+ * @param value  Hodnota.
+ * @param min    Nejmenší hodnota.
+ * @param max    Největší hodnota (větší než min).
+ * @param step   Krok klávesnice a zaokrouhlení; <= 0 = 1.
+ * @param width  Šířka celého prvku včetně číselného údaje v pixelech; <= 0 = zbývající šířka.
+ * @param mark   Hodnota se značkou; mimo otevřený interval (min, max) se značka nekreslí a prvek se chová jako ovl_slider_percent_ex().
+ * @param detent Polovina šířky pásma přichycení v jednotkách hodnoty; <= 0 = bez přichycení.
+ * @return true = hodnota se změnila.
+ */
+bool ovl_slider_percent_mark(const char *id, float *value, float min, float max, float step, float width, float mark, float detent);
+
+/**
  * @brief Rozbalovací výběr jedné z N položek.
  *
  * Zavřený prvek ukazuje text zvolené položky a šipku dolů. Zvolením (klik,

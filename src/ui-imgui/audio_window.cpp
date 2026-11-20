@@ -6,11 +6,15 @@
  * zvukového rozhraní jako tab Sound overlay menu (iface_audio_set_mute(),
  * iface_audio_set_master_gain()). Násobí hotový mix těsně před zvukovým
  * zařízením, hlasitosti kanálů ani záznam nemění; ztlumení se neukládá.
+ * Master volume má rozsah 0 až 200 % se značkou na 100 %: tažení myší se
+ * u 100 % přichytí a dvojklik vrátí 100 %.
  * Oddíl Channels má vodorovný posuvník a indikátor úrovně pro každý kanál
  * (g_iface_audio.gain[], level[]) a vpravo svislý posuvník, který všem
  * kanálům zapíše stejnou hlasitost, s indikátorem celkové úrovně
- * (total_level, úroveň před hlavní hlasitostí a ztlumením). Pod nimi je
- * volba věrné výstupní propusti (jen na stroji, který ji má).
+ * (total_level, špička výstupu před hlavní hlasitostí a ztlumením).
+ * Indikátory ukazují špičku: kanál hrající naplno s hlasitostí 0 dB
+ * rozsvítí všechny diody. Pod nimi je volba věrné výstupní propusti (jen na
+ * stroji, který ji má).
  */
 
 #include "main.h"
@@ -78,6 +82,24 @@ static inline int get_num_channels(void) {
 
 const int NUM_LEDS = 16; // Počet LED indikátorů
 
+/** @brief Největší hodnota posuvníku Master volume v procentech (AUDIO_MASTER_GAIN_MAX). */
+static const float MASTER_PERCENT_MAX = AUDIO_MASTER_GAIN_MAX * 100.0f;
+/** @brief Šířka pásma kolem 100 %, ve kterém se tažení posuvníku Master volume myší přichytí na 100 % [procenta]. */
+static const float MASTER_DETENT_PERCENT = 4.0f;
+
+/**
+ * @brief Počet rozsvícených diod indikátoru pro úroveň.
+ * @param level Úroveň 0 až 1 (g_iface_audio.level[], total_level).
+ * @return Počet diod 0 až NUM_LEDS, zaokrouhleno na nejbližší (úroveň od 0,97 rozsvítí všechny).
+ */
+static int level_to_leds(float level)
+{
+    int n = (int)(level * NUM_LEDS + 0.5f);
+    if (n < 0)
+        n = 0;
+    return (n > NUM_LEDS) ? NUM_LEDS : n;
+}
+
 // Získání nejvyšší aktuální hlasitosti všech kanálů
 float get_max_channel_db()
 {
@@ -103,7 +125,8 @@ float get_max_channel_db()
  * zápisem g_iface_audio.gain[], propust přes iface_audio_set_output_filter().
  * Svislý posuvník přepíše hlasitosti všech kanálů jednou hodnotou; jeho
  * poloha se po otevření okna sama neobnovuje podle kanálů (výchozí hodnotu
- * bere jen při prvním vykreslení v běhu programu). Esc při fokusu okno zavře.
+ * bere jen při prvním vykreslení v běhu programu). Dvojklik na Master volume
+ * nastaví 100 % a drží je do puštění tlačítka myši. Esc při fokusu okno zavře.
  *
  * @param p_open Příznak zobrazení okna; false = nic se nekreslí. Zavření okna ho shodí.
  * @pre UI vlákno, mezi ImGui::NewFrame() a ImGui::Render(); p_open není NULL.
@@ -146,15 +169,44 @@ void imgui_audio(bool *p_open)
     {
         ImGui::SetTooltip("%s", _("Silences the sound output; the volumes are kept. Not saved: the emulator always starts unmuted."));
     }
+    /* dvojklik na Master volume proběhl a tlačítko myši je ještě stisknuté */
+    static bool masterResetHold = false;
     float masterPercent = floorf(iface_audio_get_master_gain() * 100.0f + 0.5f);
     ImGui::SetNextItemWidth(sliderWidth);
-    if (ImGui::SliderFloat(_L("Master volume"), &masterPercent, 0.0f, 100.0f, "%.0f %%", ImGuiSliderFlags_AlwaysClamp))
+    if (ImGui::SliderFloat(_L("Master volume"), &masterPercent, 0.0f, MASTER_PERCENT_MAX, "%.0f %%", ImGuiSliderFlags_AlwaysClamp))
     {
+        /* tažení myší se u 100 % přichytí (klávesnice a zadání čísla krokují volně) */
+        if (ImGui::IsMouseDown(ImGuiMouseButton_Left) && fabsf(masterPercent - 100.0f) <= MASTER_DETENT_PERCENT)
+            masterPercent = 100.0f;
         iface_audio_set_master_gain(masterPercent / 100.0f);
+    }
+    {
+        /* značka 100 % na drážce posuvníku (vnitřní okraj drážky jako ImGui::SliderBehavior()) */
+        const ImVec2 rmin = ImGui::GetItemRectMin();
+        const ImVec2 rmax = ImGui::GetItemRectMax();
+        const float grab = ImGui::GetStyle().GrabMinSize;
+        const float x0 = rmin.x + 2.0f + grab * 0.5f;
+        const float x1 = rmin.x + sliderWidth - 2.0f - grab * 0.5f;
+        const float mx = floorf(x0 + (x1 - x0) * (100.0f / MASTER_PERCENT_MAX)) + 0.5f;
+        ImGui::GetWindowDrawList()->AddLine(ImVec2(mx, rmax.y - 5.0f), ImVec2(mx, rmax.y), ImGui::GetColorU32(ImGuiCol_Text), 1.0f);
     }
     if (ImGui::IsItemHovered())
     {
-        ImGui::SetTooltip("%s", _("Listening volume of the whole mix. The channel volumes and recordings are not affected."));
+        if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+        {
+            /* dvojklik: zpět na 100 % */
+            masterResetHold = true;
+        }
+        ImGui::SetTooltip("%s\n%s", _("Listening volume of the whole mix. The channel volumes and recordings are not affected."),
+                          _("The range is 0 to 200 %; values above 100 amplify the sound. Double-click to reset to 100."));
+    }
+
+    if (masterResetHold)
+    {
+        /* po dvojkliku drží 100 %, dokud uživatel tlačítko nepustí (posuvník je druhým stiskem ještě aktivní) */
+        iface_audio_set_master_gain(1.0f);
+        if (!ImGui::IsMouseDown(ImGuiMouseButton_Left))
+            masterResetHold = false;
     }
 
     /* Kanály: vodorovné posuvníky a úrovně, vpravo svislý posuvník pro všechny kanály najednou */
@@ -177,8 +229,8 @@ void imgui_audio(bool *p_open)
         ImGui::Dummy(ImVec2(0, 5));
 
         // Horizontalni LED indikátory pro každý kanál
-        float level = g_iface_audio.level[i];
-        int numActiveLeds = (int)(level * NUM_LEDS);
+        /* špička kanálu: kanál naplno s hlasitostí 0 dB rozsvítí všechny diody */
+        int numActiveLeds = level_to_leds(g_iface_audio.level[i]);
 
         ImGui::BeginGroup();
         for (int j = 0; j < NUM_LEDS; j++)
@@ -235,8 +287,8 @@ void imgui_audio(bool *p_open)
     ImGui::SameLine();
 
     // LED indikátor pro globální úroveň
-    float avgLevel = g_iface_audio.total_level;
-    int numActiveLeds = (int)(avgLevel * NUM_LEDS);
+    /* špička výstupu za omezovačem, před hlavní hlasitostí a ztlumením */
+    int numActiveLeds = level_to_leds(g_iface_audio.total_level);
 
     ImGui::BeginGroup();
     for (int j = NUM_LEDS - 1; j >= 0; j--) // LED indikátor vertikálně

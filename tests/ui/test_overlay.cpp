@@ -7655,7 +7655,7 @@ void test_o6_view_fill(void)
     /* testovací stavy: invarianty kopie */
     for (int f = 0; f < (int)OVERLAY_FIXTURE_COUNT; f++) {
         overlay_view_make_fixture(&v, (en_OVERLAY_FIXTURE)f);
-        TEST_ASSERT_TRUE(v.sound.master_gain >= 0.0f && v.sound.master_gain <= 1.0f);
+        TEST_ASSERT_TRUE(v.sound.master_gain >= 0.0f && v.sound.master_gain <= OVERLAY_VIEW_MASTER_GAIN_MAX);
         TEST_ASSERT_TRUE(v.sound.channel_count >= 1 && v.sound.channel_count <= OVERLAY_VIEW_AUDIO_CHANNELS_MAX);
         TEST_ASSERT_TRUE(v.input.joy_type >= 0 && v.input.joy_type < (int)OVERLAY_JOY_TYPE_COUNT);
         TEST_ASSERT_TRUE(!v.capture.video_paused || v.capture.video_pause_enabled);

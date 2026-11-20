@@ -2452,8 +2452,9 @@ Whitelist:
 - `AUDIO/volume_8253` (unsigned)
 - `AUDIO/volume_psg0` .. `AUDIO/volume_psg3` (unsigned)
 - `AUDIO/volume_psg1_0` .. `AUDIO/volume_psg1_3` (MZ-1500, unsigned)
-- the master listening volume (`AUDIO/volume_master`) is not in the
-  whitelist; `emu_settings_get` reads it. Mute has no key (it is not saved,
+- the master listening volume (`AUDIO/volume_master`, 0 to 4294967295 =
+  0 to 100 %, and `AUDIO/volume_master_boost`, per cent above 100 %, 0 to
+  100) is not in the whitelist; `emu_settings_get` reads both keys. Mute has no key (it is not saved,
   the emulator always starts unmuted)
 - `AUDIO/output_filter` (bool; the output low-pass filter of the real MZ-800, 346 Hz, default on; a change applies at once and without a click, also in a running audio capture and video recording; the key does not exist in the MZ-700 emulators, that computer has no such filter)
 - `DISPLAY/forced_full_screen_redrawing` (bool)

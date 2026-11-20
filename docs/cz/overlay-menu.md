@@ -240,7 +240,10 @@ Změny se projeví hned ("Changes apply immediately.").
 - **Listen** - poslech při otevřeném menu. Emulace na tabu Sound stojí jako
   na ostatních tabech; zapnutý přepínač ji rozběhne, takže změny hlasitosti,
   ztlumení, propusti i kanálů jsou slyšet hned. Podrobnosti níže.
-- **Master volume** - hlavní hlasitost poslechu 0 až 100 %.
+- **Master volume** - hlavní hlasitost poslechu 0 až 200 %, výchozí 100 %.
+  Do 100 % ubírá, nad 100 % přidává (až 6 dB; špičky se přitom měkce
+  stlačují, neoříznou se). Na 100 % je na posuvníku značka: tažení myší se
+  u ní přichytí a dvojklik hodnotu na 100 % vrátí.
 - **Mute** - ztlumení; hlavní hlasitost ani hlasitosti kanálů se nemění,
   po zrušení ztlumení hraje emulátor stejně hlasitě jako předtím. Zapnuté
   ztlumení připomíná štítek **Muted** v horní liště menu na všech tabech
@@ -254,7 +257,9 @@ do nahrávek (zvuk videa, zachycení zvuku) se nepromítají a nahrávka má
 plnou hlasitost i při ztlumeném poslechu. Hlavní hlasitost se ukládá do INI
 souboru, sekce `[AUDIO]`, klíč `volume_master` (celé číslo 0 až 4294967295,
 stejné měřítko jako ostatní klíče `volume_*`, výchozí je nejvyšší hodnota
-= 100 %). Stejné **Mute** a **Master volume** jsou i v okně Interface ->
+= 100 %) a klíč `volume_master_boost` (procenta nad 100 %, 0 až 100,
+výchozí 0); hlasitost je jejich součet. V souboru jsou obě hodnoty
+šestnáctkově (`0xffffffff`, `0x00` až `0x64`). Stejné **Mute** a **Master volume** jsou i v okně Interface ->
 Audio... (Audio Mixer).
 
 **Channels** - hlasitost reproduktoru (CTC0) a jednotlivých kanálů PSG,

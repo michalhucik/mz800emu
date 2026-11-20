@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mz800emu 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-19 13:40+0100\n"
+"POT-Creation-Date: 2026-11-19 22:10+0100\n"
 "PO-Revision-Date: 2026-03-11 21:00+0100\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -38,7 +38,7 @@ msgstr "Verzeichnis öffnen"
 msgid "Untitled File Chooser"
 msgstr "Dateiauswahl"
 
-#: src/emulator/audio.c:181
+#: src/emulator/audio.c:260
 msgid "Audio volume settings:"
 msgstr "Lautstärkeeinstellungen:"
 
@@ -95,14 +95,19 @@ msgstr "MZF-Datei auswählen"
 msgid ""
 "The disk in FDD %d was not saved: the drive now refers to a different image "
 "file than the one it was loaded from. Re-insert the image to continue."
-msgstr "Die Diskette in FDD %d wurde nicht gespeichert: das Laufwerk verweist jetzt auf eine andere Image-Datei als die, aus der sie geladen wurde. Image neu einlegen, um fortzufahren."
+msgstr ""
+"Die Diskette in FDD %d wurde nicht gespeichert: das Laufwerk verweist jetzt "
+"auf eine andere Image-Datei als die, aus der sie geladen wurde. Image neu "
+"einlegen, um fortzufahren."
 
 #: src/emulator/hw-generic/fdc/fdc.c:1033
 #, c-format
 msgid ""
 "The disk in FDD %d was not saved: the image is also inserted in FDD %d, "
 "which may write to it."
-msgstr "Die Diskette in FDD %d wurde nicht gespeichert: das Image ist auch in FDD %d eingelegt, das darauf schreiben darf."
+msgstr ""
+"Die Diskette in FDD %d wurde nicht gespeichert: das Image ist auch in FDD %d "
+"eingelegt, das darauf schreiben darf."
 
 #: src/emulator/hw-generic/fdc/fdc.c:1545
 #, c-format
@@ -114,7 +119,9 @@ msgstr "DSK-Abbilddatei für FDC%u Laufwerk FD%d auswählen"
 msgid ""
 "The image is already inserted in FDD %d. It was inserted write-protected "
 "here to keep the image file safe."
-msgstr "Das Image ist bereits in FDD %d eingelegt. Hier wurde es schreibgeschützt eingelegt, um die Image-Datei zu schützen."
+msgstr ""
+"Das Image ist bereits in FDD %d eingelegt. Hier wurde es schreibgeschützt "
+"eingelegt, um die Image-Datei zu schützen."
 
 #: src/emulator/hw-generic/fdc/fdc_request.c:137
 #: src/ui-imgui/overlay/overlay_actions.cpp:176
@@ -135,7 +142,10 @@ msgstr "Verzeichnis als virtuelles Quick Disk einbinden"
 msgid ""
 "The Quick Disk was not saved: the drive now refers to a different image file "
 "than the one it was loaded from. Re-insert the image to continue."
-msgstr "Die Quick Disk wurde nicht gespeichert: das Laufwerk verweist jetzt auf eine andere Image-Datei als die, aus der sie geladen wurde. Image neu einlegen, um fortzufahren."
+msgstr ""
+"Die Quick Disk wurde nicht gespeichert: das Laufwerk verweist jetzt auf eine "
+"andere Image-Datei als die, aus der sie geladen wurde. Image neu einlegen, "
+"um fortzufahren."
 
 #: src/emulator/hw-generic/unicard/unicard.c:2383
 msgid "Select SD root directory for Unicard"
@@ -150,12 +160,12 @@ msgid "Alternative monitor: MZ-NEWMON"
 msgstr "Alternativer Monitor: MZ-NEWMON"
 
 #: src/emulator/mzarch/mz1500/memory/mz1500_rom.c:20
-#: src/ui-imgui/overlay/overlay_view.cpp:832
+#: src/ui-imgui/overlay/overlay_view.cpp:833
 msgid "User"
 msgstr "Benutzer"
 
 #: src/emulator/mzarch/mz1500/memory/mz1500_rom.c:21
-#: src/ui-imgui/overlay/overlay_view.cpp:833
+#: src/ui-imgui/overlay/overlay_view.cpp:834
 msgid "User Defined ROM"
 msgstr "Benutzerdefiniertes ROM"
 
@@ -180,7 +190,10 @@ msgid ""
 "The snapshot was saved with different disks:\n"
 "%s\n"
 "The inserted disks were kept."
-msgstr "Der Schnappschuss wurde mit anderen Disketten gespeichert:\n%s\nDie eingelegten Disketten wurden beibehalten."
+msgstr ""
+"Der Schnappschuss wurde mit anderen Disketten gespeichert:\n"
+"%s\n"
+"Die eingelegten Disketten wurden beibehalten."
 
 #: src/ui/cmt/UiCmt.cpp:31
 msgid "Default"
@@ -334,136 +347,148 @@ msgstr "Siehe GNU General Public License, Version 3 oder höher für Details."
 msgid "Close this window"
 msgstr "Dieses Fenster schließen"
 
-#: src/ui-imgui/audio_window.cpp:41 src/ui-imgui/audio_window.cpp:47
-#: src/ui-imgui/audio_window.cpp:53 src/ui-imgui/debugger/ctc_window.cpp:381
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:71
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:73
+#: src/ui-imgui/audio_window.cpp:45 src/ui-imgui/audio_window.cpp:51
+#: src/ui-imgui/audio_window.cpp:57 src/ui-imgui/debugger/ctc_window.cpp:381
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:78
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:80
 msgid "CTC0"
 msgstr "CTC0"
 
-#: src/ui-imgui/audio_window.cpp:47
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:71
+#: src/ui-imgui/audio_window.cpp:51
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:78
 msgid "PSG tone1"
 msgstr "PSG tone1"
 
-#: src/ui-imgui/audio_window.cpp:47
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:71
+#: src/ui-imgui/audio_window.cpp:51
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:78
 msgid "PSG tone2"
 msgstr "PSG tone2"
 
-#: src/ui-imgui/audio_window.cpp:47
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:71
+#: src/ui-imgui/audio_window.cpp:51
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:78
 msgid "PSG tone3"
 msgstr "PSG tone3"
 
-#: src/ui-imgui/audio_window.cpp:47
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:71
+#: src/ui-imgui/audio_window.cpp:51
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:78
 msgid "PSG noise"
 msgstr "PSG noise"
 
-#: src/ui-imgui/audio_window.cpp:54
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:73
+#: src/ui-imgui/audio_window.cpp:58
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:80
 msgid "PSG0 tone1"
 msgstr "PSG0 tone1"
 
-#: src/ui-imgui/audio_window.cpp:54
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:73
+#: src/ui-imgui/audio_window.cpp:58
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:80
 msgid "PSG0 tone2"
 msgstr "PSG0 tone2"
 
-#: src/ui-imgui/audio_window.cpp:54
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:73
+#: src/ui-imgui/audio_window.cpp:58
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:80
 msgid "PSG0 tone3"
 msgstr "PSG0 tone3"
 
-#: src/ui-imgui/audio_window.cpp:54
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:73
+#: src/ui-imgui/audio_window.cpp:58
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:80
 msgid "PSG0 noise"
 msgstr "PSG0 noise"
 
-#: src/ui-imgui/audio_window.cpp:55
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:74
+#: src/ui-imgui/audio_window.cpp:59
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:81
 msgid "PSG1 tone1"
 msgstr "PSG1 tone1"
 
-#: src/ui-imgui/audio_window.cpp:55
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:74
+#: src/ui-imgui/audio_window.cpp:59
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:81
 msgid "PSG1 tone2"
 msgstr "PSG1 tone2"
 
-#: src/ui-imgui/audio_window.cpp:55
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:74
+#: src/ui-imgui/audio_window.cpp:59
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:81
 msgid "PSG1 tone3"
 msgstr "PSG1 tone3"
 
-#: src/ui-imgui/audio_window.cpp:55
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:74
+#: src/ui-imgui/audio_window.cpp:59
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:81
 msgid "PSG1 noise"
 msgstr "PSG1 noise"
 
-#: src/ui-imgui/audio_window.cpp:118
+#: src/ui-imgui/audio_window.cpp:141
 msgid "Audio Mixer"
 msgstr "Audio-Mixer"
 
-#: src/ui-imgui/audio_window.cpp:139
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:185
+#: src/ui-imgui/audio_window.cpp:162
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:192
 msgid "Output"
 msgstr "Ausgabe"
 
-#: src/ui-imgui/audio_window.cpp:141
+#: src/ui-imgui/audio_window.cpp:164
 #: src/ui-imgui/overlay/overlay_actions.cpp:1293
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:206
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:214
 msgid "Mute"
 msgstr "Stumm schalten"
 
-#: src/ui-imgui/audio_window.cpp:147
+#: src/ui-imgui/audio_window.cpp:170
 msgid ""
 "Silences the sound output; the volumes are kept. Not saved: the emulator "
 "always starts unmuted."
-msgstr "Schaltet die Tonausgabe stumm; die Lautstärken bleiben erhalten. Wird nicht gespeichert: der Emulator startet immer mit Ton."
+msgstr ""
+"Schaltet die Tonausgabe stumm; die Lautstärken bleiben erhalten. Wird nicht "
+"gespeichert: der Emulator startet immer mit Ton."
 
-#: src/ui-imgui/audio_window.cpp:151
+#: src/ui-imgui/audio_window.cpp:176
 #: src/ui-imgui/overlay/overlay_actions.cpp:1292
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:192
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:199
 msgid "Master volume"
 msgstr "Gesamtlautstärke"
 
-#: src/ui-imgui/audio_window.cpp:157
+#: src/ui-imgui/audio_window.cpp:200
 msgid ""
 "Listening volume of the whole mix. The channel volumes and recordings are "
 "not affected."
-msgstr "Hörlautstärke der gesamten Mischung. Kanallautstärken und Aufnahmen bleiben unberührt."
+msgstr ""
+"Hörlautstärke der gesamten Mischung. Kanallautstärken und Aufnahmen bleiben "
+"unberührt."
 
-#: src/ui-imgui/audio_window.cpp:161
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:240
+#: src/ui-imgui/audio_window.cpp:201
+msgid ""
+"The range is 0 to 200 %; values above 100 amplify the sound. Double-click to "
+"reset to 100."
+msgstr ""
+"Der Bereich ist 0 bis 200 %; Werte über 100 verstärken den Ton. Doppelklick "
+"setzt auf 100 zurück."
+
+#: src/ui-imgui/audio_window.cpp:213
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:248
 msgid "Channels"
 msgstr "Kanäle"
 
-#: src/ui-imgui/audio_window.cpp:172
+#: src/ui-imgui/audio_window.cpp:224
 #, c-format
 msgid "%.1f dB"
 msgstr "%.1f dB"
 
-#: src/ui-imgui/audio_window.cpp:222
+#: src/ui-imgui/audio_window.cpp:274
 #, c-format
 msgid "%.0f dB"
 msgstr "%.0f dB"
 
-#: src/ui-imgui/audio_window.cpp:232
+#: src/ui-imgui/audio_window.cpp:284
 msgid "All channels: sets every channel to the same volume."
 msgstr "Alle Kanäle: setzt jeden Kanal auf dieselbe Lautstärke."
 
-#: src/ui-imgui/audio_window.cpp:269
+#: src/ui-imgui/audio_window.cpp:321
 msgid "Level of the mix before the master volume and mute."
 msgstr "Pegel der Mischung vor Gesamtlautstärke und Stummschaltung."
 
-#: src/ui-imgui/audio_window.cpp:278
+#: src/ui-imgui/audio_window.cpp:330
 #: src/ui-imgui/overlay/overlay_actions.cpp:1294
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:208
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:216
 msgid "Hardware output filter"
 msgstr "Ausgangsfilter der echten Hardware"
 
-#: src/ui-imgui/audio_window.cpp:284
+#: src/ui-imgui/audio_window.cpp:336
 msgid ""
 "Low-pass filter of the real MZ-800 audio output (346 Hz). Off = the "
 "previous, brighter sound."
@@ -1038,7 +1063,7 @@ msgstr ""
 #: src/ui-imgui/overlay/overlay_tab_machine.cpp:194
 #: src/ui-imgui/overlay/overlay_tab_machine.cpp:199
 #: src/ui-imgui/plotter/plotter_window.cpp:432
-#: src/ui-imgui/topmenu/topmenu.cpp:85
+#: src/ui-imgui/topmenu/topmenu.cpp:89
 msgid "Reset"
 msgstr "Zurücksetzen"
 
@@ -1872,7 +1897,7 @@ msgstr "Wiedergabe"
 msgid "Waiting for motor"
 msgstr "Wartet auf Motor"
 
-#: src/ui-imgui/cmt/cmt_window.cpp:704 src/ui-imgui/overlay/overlay.cpp:963
+#: src/ui-imgui/cmt/cmt_window.cpp:704 src/ui-imgui/overlay/overlay.cpp:967
 #: src/ui-imgui/overlay/overlay_tab_machine.cpp:176
 msgid "Paused"
 msgstr "Pausiert"
@@ -9050,7 +9075,7 @@ msgid "Max Speed"
 msgstr "Maximale Geschwindigkeit"
 
 #: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:160
-#: src/ui-imgui/topmenu/topmenu.cpp:80
+#: src/ui-imgui/topmenu/topmenu.cpp:84
 msgid "Pause Emulation"
 msgstr "Emulation pausieren"
 
@@ -13050,7 +13075,7 @@ msgid "Cancel##watch_load_cancel"
 msgstr "Abbrechen##watch_load_cancel"
 
 #: src/ui-imgui/devices/device_request_ui.cpp:49
-#: src/ui-imgui/topmenu/topmenu.cpp:70
+#: src/ui-imgui/topmenu/topmenu.cpp:74
 msgid ""
 "Machine settings cannot be changed while a replay is recorded or played. "
 "Stop it in the Replay menu first."
@@ -14098,39 +14123,39 @@ msgid "Capture"
 msgstr "Aufnahme"
 
 #: src/ui-imgui/overlay/overlay.cpp:910 src/ui-imgui/overlay/overlay.cpp:912
-#: src/ui-imgui/overlay/overlay.cpp:971 src/ui-imgui/overlay/overlay.cpp:1100
+#: src/ui-imgui/overlay/overlay.cpp:975 src/ui-imgui/overlay/overlay.cpp:1110
 #: src/ui-imgui/version_check/imgui_version_check.cpp:390
 msgid "Close"
 msgstr "Schließen"
 
-#: src/ui-imgui/overlay/overlay.cpp:968
+#: src/ui-imgui/overlay/overlay.cpp:972
 msgid "Muted"
 msgstr "Stumm"
 
-#: src/ui-imgui/overlay/overlay.cpp:1097
+#: src/ui-imgui/overlay/overlay.cpp:1107
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:1346
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:1352
 msgctxt "overlay footer"
 msgid "to"
 msgstr "bis"
 
-#: src/ui-imgui/overlay/overlay.cpp:1097
+#: src/ui-imgui/overlay/overlay.cpp:1107
 msgid "Tabs"
 msgstr "Tabs"
 
-#: src/ui-imgui/overlay/overlay.cpp:1098
+#: src/ui-imgui/overlay/overlay.cpp:1108
 msgid "Arrows"
 msgstr "Pfeiltasten"
 
-#: src/ui-imgui/overlay/overlay.cpp:1098
+#: src/ui-imgui/overlay/overlay.cpp:1108
 msgid "Move"
 msgstr "Bewegen"
 
-#: src/ui-imgui/overlay/overlay.cpp:1099
+#: src/ui-imgui/overlay/overlay.cpp:1109
 msgid "Select"
 msgstr "Auswählen"
 
-#: src/ui-imgui/overlay/overlay.cpp:1112
+#: src/ui-imgui/overlay/overlay.cpp:1122
 msgid "Right-click: classic menu"
 msgstr "Rechtsklick: klassisches Menü"
 
@@ -14156,7 +14181,9 @@ msgstr "Die Datei ist auf dem Datenträger schreibgeschützt."
 msgid ""
 "Browse files opens the disk image dialog, but FD controller FDC0 is not "
 "connected."
-msgstr "Dateien durchsuchen öffnet den Dialog für Disk-Images, aber der FD-Controller FDC0 ist nicht angeschlossen."
+msgstr ""
+"Dateien durchsuchen öffnet den Dialog für Disk-Images, aber der FD-"
+"Controller FDC0 ist nicht angeschlossen."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:225
 msgid "Quick Disk is not connected."
@@ -14180,7 +14207,7 @@ msgstr "Das Band läuft nicht."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:380
 #: src/ui-imgui/overlay/overlay_actions.cpp:1036
-#: src/ui-imgui/overlay/overlay_view.cpp:245
+#: src/ui-imgui/overlay/overlay_view.cpp:246
 msgid "Not available while a replay is active."
 msgstr "Nicht verfügbar, solange ein Replay aktiv ist."
 
@@ -14199,7 +14226,8 @@ msgstr "Zuerst Benutzerdefinierte FPS wählen."
 #: src/ui-imgui/overlay/overlay_actions.cpp:923
 msgid ""
 "The emulation was paused before the menu was opened. Resume it to listen."
-msgstr "Die Emulation war vor dem Öffnen des Menüs pausiert. Zum Mithören fortsetzen."
+msgstr ""
+"Die Emulation war vor dem Öffnen des Menüs pausiert. Zum Mithören fortsetzen."
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:924
 msgid "The emulation is running."
@@ -14404,7 +14432,7 @@ msgid "Forced redraw every screen"
 msgstr "Erzwungenes Neuzeichnen jedes Bildes"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1291
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:146
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:153
 msgid "Listen"
 msgstr "Mithören"
 
@@ -14413,8 +14441,8 @@ msgid "Channel volume"
 msgstr "Kanallautstärke"
 
 #: src/ui-imgui/overlay/overlay_actions.cpp:1296
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:262
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:266
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:270
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:274
 msgid "Reset channels"
 msgstr "Kanäle zurücksetzen"
 
@@ -14515,7 +14543,9 @@ msgstr "Quick Disk ist auf ein Disk-Image eingestellt."
 msgid ""
 "Still checking whether the file exists. Try again in a moment:\n"
 "%s"
-msgstr "Es wird noch geprüft, ob die Datei existiert. Gleich noch einmal versuchen:\n%s"
+msgstr ""
+"Es wird noch geprüft, ob die Datei existiert. Gleich noch einmal versuchen:\n"
+"%s"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:443
 #: src/ui-imgui/topmenu/devices/menu_qdisk.cpp:308
@@ -14523,7 +14553,10 @@ msgstr "Es wird noch geprüft, ob die Datei existiert. Gleich noch einmal versuc
 msgid ""
 "The file no longer exists and was removed from the recent media:\n"
 "%s"
-msgstr "Die Datei existiert nicht mehr und wurde aus den zuletzt verwendeten Medien entfernt:\n%s"
+msgstr ""
+"Die Datei existiert nicht mehr und wurde aus den zuletzt verwendeten Medien "
+"entfernt:\n"
+"%s"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:450
 #: src/ui-imgui/topmenu/devices/menu_fdcontroller.cpp:243
@@ -14532,7 +14565,9 @@ msgstr "Die Datei existiert nicht mehr und wurde aus den zuletzt verwendeten Med
 msgid ""
 "The file path is too long:\n"
 "%s"
-msgstr "Der Dateipfad ist zu lang:\n%s"
+msgstr ""
+"Der Dateipfad ist zu lang:\n"
+"%s"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:456
 #: src/ui-imgui/topmenu/devices/menu_cmt.cpp:436
@@ -14540,7 +14575,9 @@ msgstr "Der Dateipfad ist zu lang:\n%s"
 msgid ""
 "Another tape dialog is still open. The tape was not changed:\n"
 "%s"
-msgstr "Ein anderer Banddialog ist noch geöffnet. Das Band wurde nicht gewechselt:\n%s"
+msgstr ""
+"Ein anderer Banddialog ist noch geöffnet. Das Band wurde nicht gewechselt:\n"
+"%s"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:535
 msgid "just now"
@@ -14594,7 +14631,8 @@ msgstr "Tippen, um zuletzt verwendete Bänder zu filtern"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:829
 msgid "No recent tapes yet. Use Browse files..."
-msgstr "Noch keine zuletzt verwendeten Bänder. Dateien durchsuchen... verwenden."
+msgstr ""
+"Noch keine zuletzt verwendeten Bänder. Dateien durchsuchen... verwenden."
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:835
 msgid "Insert into Quick Disk"
@@ -14611,12 +14649,15 @@ msgstr "Tippen, um zuletzt verwendete Disketten zu filtern"
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:837
 msgid "No recent directories yet. Use Browse files..."
-msgstr "Noch keine zuletzt verwendeten Verzeichnisse. Dateien durchsuchen... verwenden."
+msgstr ""
+"Noch keine zuletzt verwendeten Verzeichnisse. Dateien durchsuchen... "
+"verwenden."
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:837
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:847
 msgid "No recent disks yet. Use Browse files..."
-msgstr "Noch keine zuletzt verwendeten Disketten. Dateien durchsuchen... verwenden."
+msgstr ""
+"Noch keine zuletzt verwendeten Disketten. Dateien durchsuchen... verwenden."
 
 #: src/ui-imgui/overlay/overlay_insert_sheet.cpp:845
 #, c-format
@@ -14809,7 +14850,9 @@ msgstr "Änderungen wirken sofort."
 
 #: src/ui-imgui/overlay/overlay_tab_input.cpp:65
 msgid "While this menu is open, keys do not reach the emulated computer."
-msgstr "Solange dieses Menü geöffnet ist, erreichen Tasten den emulierten Rechner nicht."
+msgstr ""
+"Solange dieses Menü geöffnet ist, erreichen Tasten den emulierten Rechner "
+"nicht."
 
 #: src/ui-imgui/overlay/overlay_tab_input.cpp:107
 msgid "Keyboard"
@@ -14821,7 +14864,8 @@ msgstr "Ziffernblock"
 
 #: src/ui-imgui/overlay/overlay_tab_input.cpp:137
 msgid "No joystick found. Use Joystick Setup to rescan devices."
-msgstr "Kein Joystick gefunden. Mit Joystick-Einrichtung die Geräte neu suchen."
+msgstr ""
+"Kein Joystick gefunden. Mit Joystick-Einrichtung die Geräte neu suchen."
 
 #: src/ui-imgui/overlay/overlay_tab_input.cpp:153
 msgid "Mapping and calibration"
@@ -14831,7 +14875,9 @@ msgstr "Zuordnung und Kalibrierung"
 msgid ""
 "ROM settings, memory disks, memory extensions, IDE and DIP switches are in "
 "the classic menu."
-msgstr "ROM-Einstellungen, Speicherdisks, Speichererweiterungen, IDE und DIP-Schalter sind im klassischen Menü."
+msgstr ""
+"ROM-Einstellungen, Speicherdisks, Speichererweiterungen, IDE und DIP-"
+"Schalter sind im klassischen Menü."
 
 #: src/ui-imgui/overlay/overlay_tab_machine.cpp:176
 msgctxt "overlay emulation"
@@ -14925,7 +14971,8 @@ msgstr "Zuletzt verwendete Medien"
 
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:1012
 msgid "No recent media yet. Use Browse files..."
-msgstr "Noch keine zuletzt verwendeten Medien. Dateien durchsuchen... verwenden."
+msgstr ""
+"Noch keine zuletzt verwendeten Medien. Dateien durchsuchen... verwenden."
 
 #: src/ui-imgui/overlay/overlay_tab_media.cpp:1017
 msgid "Clear history"
@@ -14940,50 +14987,52 @@ msgstr "Geschwindigkeit Max"
 msgid "Speed %u %%"
 msgstr "Geschwindigkeit %u %%"
 
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:101
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:108
 msgid "The filter models the audio output stage of the real machine."
 msgstr "Der Filter bildet die Audio-Ausgangsstufe des echten Rechners nach."
 
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:123
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:130
 msgid "The emulation is running so that you can hear the changes."
 msgstr "Die Emulation läuft, damit die Änderungen zu hören sind."
 
-#: src/ui-imgui/overlay/overlay_tab_sound.cpp:124
+#: src/ui-imgui/overlay/overlay_tab_sound.cpp:131
 msgid ""
 "Turn on Listen to hear the changes while the menu is open. The emulated "
 "computer keeps running without keyboard input."
-msgstr "Mithören einschalten, um die Änderungen bei geöffnetem Menü zu hören. Der emulierte Rechner läuft ohne Tastatureingaben weiter."
+msgstr ""
+"Mithören einschalten, um die Änderungen bei geöffnetem Menü zu hören. Der "
+"emulierte Rechner läuft ohne Tastatureingaben weiter."
 
-#: src/ui-imgui/overlay/overlay_view.cpp:824
-#: src/ui-imgui/overlay/overlay_view.cpp:925
+#: src/ui-imgui/overlay/overlay_view.cpp:825
+#: src/ui-imgui/overlay/overlay_view.cpp:926
 msgid "Standard Sharp MZ-800 ROM"
 msgstr "Standard Sharp MZ-800 ROM"
 
-#: src/ui-imgui/overlay/overlay_view.cpp:825
+#: src/ui-imgui/overlay/overlay_view.cpp:826
 msgid "JSS ROMs"
 msgstr "JSS ROMs"
 
-#: src/ui-imgui/overlay/overlay_view.cpp:826
+#: src/ui-imgui/overlay/overlay_view.cpp:827
 msgid "JSS v1.08C - for MZ-1R18"
 msgstr "JSS v1.08C - for MZ-1R18"
 
-#: src/ui-imgui/overlay/overlay_view.cpp:827
+#: src/ui-imgui/overlay/overlay_view.cpp:828
 msgid "JSS v1.06A - for Pezik"
 msgstr "JSS v1.06A - for Pezik"
 
-#: src/ui-imgui/overlay/overlay_view.cpp:828
+#: src/ui-imgui/overlay/overlay_view.cpp:829
 msgid "Willy ROMs"
 msgstr "Willy ROMs"
 
-#: src/ui-imgui/overlay/overlay_view.cpp:829
+#: src/ui-imgui/overlay/overlay_view.cpp:830
 msgid "Willy - English"
 msgstr "Willy - Englisch"
 
-#: src/ui-imgui/overlay/overlay_view.cpp:830
+#: src/ui-imgui/overlay/overlay_view.cpp:831
 msgid "Willy - German"
 msgstr "Willy - Deutsch"
 
-#: src/ui-imgui/overlay/overlay_view.cpp:831
+#: src/ui-imgui/overlay/overlay_view.cpp:832
 msgid "Willy - Japanese"
 msgstr "Willy - Japanisch"
 
@@ -16951,11 +17000,11 @@ msgstr ""
 msgid "Available while playing a replay."
 msgstr "Während der Wiedergabe eines Replays verfügbar."
 
-#: src/ui-imgui/topmenu/topmenu.cpp:50
+#: src/ui-imgui/topmenu/topmenu.cpp:54
 msgid "Overlay Menu..."
 msgstr "Overlay-Menü..."
 
-#: src/ui-imgui/topmenu/topmenu.cpp:101
+#: src/ui-imgui/topmenu/topmenu.cpp:105
 msgid "About..."
 msgstr "Über..."
 

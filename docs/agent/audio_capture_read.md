@@ -61,6 +61,21 @@ The memory stays readable after the capture ends, until the next
 - Levels between sources: the speaker (`ctc0`, level 15) is 1.49 times
   the swing of one PSG channel at attenuation 0 (+3.5 dB, measured on a
   real MZ-800); the user volumes in the INI multiply this.
+- Absolute PCM levels (`reference.wav`, `sdl.wav`, `rms`/`peak` of the
+  `audio_frames` rows): the sum of the sources is multiplied by a make-up
+  gain, 2.51 (+8 dB) with `AUDIO/output_filter` on and 1.58 (+4 dB) with
+  it off and in the MZ-700 emulators, and then goes through a soft
+  limiter. Up to 0.7 of full scale (int16 22937) the output is exactly
+  linear, so level ratios can be read directly; above that the peaks are
+  smoothly compressed towards full scale (never clipped), so do not derive
+  ratios from samples above 22937. One PSG channel at attenuation 0 has a
+  settled peak-to-peak swing of 0.25 times the gain, the speaker 1.49
+  times as much; one or two full PSG channels or the speaker alone stay
+  linear once settled, three full PSG channels or the speaker together
+  with full PSG channels reach the limiter.
+  Captures made with version 2.0.7 are 8 dB (filter on) or 4 dB (filter
+  off) lower. The make-up gain is a choice of the emulator, not a measured
+  property of the machine.
 - The speaker (`ctc0`, also the tape echo) is AC coupled with a time
   constant of 0.85 s: a square wave is symmetric around zero in the PCM
   and a level held constant decays to silence (it is not cut off after
@@ -86,8 +101,10 @@ The memory stays readable after the capture ends, until the next
   The capture files (`reference.wav`, `sdl.wav`), the level events and
   the sound of a video recording do not contain them: a capture has the
   full level even while the user has muted the emulator. The master
-  volume is the INI key `[AUDIO] volume_master`; it is not in the
-  `emu_settings_set` whitelist, `emu_settings_get` reads it. Mute is not
+  volume (0 to 200 %) is stored in the INI keys `[AUDIO] volume_master`
+  (0 to 4294967295 = 0 to 100 %) and `volume_master_boost` (per cent
+  above 100 %, 0 to 100); they are not in the `emu_settings_set`
+  whitelist, `emu_settings_get` reads them. Mute is not
   a setting: it is not saved, has no key, and the emulator always starts
   unmuted.
 - How well founded the sound path is: MZ-800 measured on a real machine,

@@ -38,7 +38,9 @@ mz_add_test(audio_ctc0_div2
 
 # Hlavní hlasitost a ztlumení poslechu (iface_audio_apply_master()): výchozí
 # stav nechá blok bitově shodný, ztlumení dá ticho, zisk 0,5 poloviční
-# amplitudu, změna je plynulý přechod přes jeden blok; meze nastavení.
+# amplitudu, změna je plynulý přechod přes jeden blok; meze nastavení,
+# hlasitost nad 100 % s měkkým omezovačem, rozklad do INI klíčů. Indikace
+# úrovní podle špičky a dorovnání hlasitosti v mixu (iface_audio_mix_block()).
 mz_add_test(audio_master
     TYPE     EMU
     SOURCES  test_audio_master.c
