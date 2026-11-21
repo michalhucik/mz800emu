@@ -1865,6 +1865,7 @@ static JsonObject *_stop_record_to_json(const st_RUN_LOG_RECORD *rec) {
         json_object_set_int_member(o, "bytes", (gint64)rec->bytes);
         json_object_set_string_member(o, "detail", rec->detail);
     }
+    if (rec->goto_out_of_range) json_object_set_boolean_member(o, "out_of_range", TRUE);
     return o;
 }
 
@@ -15794,6 +15795,7 @@ static en_MCP_DISPATCH_RESULT _handle_get_periph_gdg(
     json_object_set_boolean_member(resp, "has_border_reg", param.has_border_reg ? TRUE : FALSE);
     json_object_set_boolean_member(resp, "has_pal_group",  param.has_pal_group ? TRUE : FALSE);
     json_object_set_boolean_member(resp, "has_cksw",       param.has_cksw ? TRUE : FALSE);
+    json_object_set_int_member(resp,    "line_ticks",   (gint64)param.line_ticks);
     json_object_set_int_member(resp,    "regDMD",       (gint64)param.regDMD);
     json_object_set_int_member(resp,    "regBOR",       (gint64)param.regBOR);
     json_object_set_int_member(resp,    "regPALGRP",    (gint64)param.regPALGRP);
@@ -20940,6 +20942,7 @@ static JsonObject *_replay_status_to_json(const st_REPLAY_STATUS *st) {
     json_object_set_boolean_member(o, "seeking", st->seeking ? TRUE : FALSE);
     json_object_set_int_member(o, "seek_target", (gint64)st->seek_target);
     json_object_set_boolean_member(o, "goto_active", st->goto_active ? TRUE : FALSE);
+    json_object_set_boolean_member(o, "goto_out_of_range", st->goto_out_of_range ? TRUE : FALSE);
     json_object_set_int_member(o, "goto_target_t", (gint64)st->goto_target);
     JsonObject *ck = json_object_new();
     json_object_set_int_member(ck, "interval", (gint64)st->checkpoint_interval);
@@ -21560,6 +21563,9 @@ static en_MCP_DISPATCH_RESULT _handle_replay_goto(const st_JSONL_MESSAGE *req,
     JsonObject *expect = NULL;
     int64_t expect_pc = -1;
     en_MCP_DISPATCH_RESULT rc = MCP_DISPATCH_OK;
+    bool by_frame = false;          /* cíl zadaný jako frame + frame_ticks */
+    uint32_t goto_frame = 0;
+    uint32_t goto_frame_ticks = 0;
     if (json_object_has_member(obj, "t")) {
         gint64 t = _obj_int_or(obj, "t", -1);
         if (t < 0) {
@@ -21572,12 +21578,17 @@ static en_MCP_DISPATCH_RESULT _handle_replay_goto(const st_JSONL_MESSAGE *req,
         gint64 f = _obj_int_or(obj, "frame", -1);
         gint64 ft = _obj_int_or(obj, "frame_ticks", -1);
         uint32_t per = (uint32_t)VIDEO_SCREEN_TICKS;
-        if (f < 0 || ft < 0 || (uint64_t)ft >= per) {
-            rc = _err_response(req_id, "Invalid parameters: frame >= 0 and frame_ticks in range 0..ticks per frame - 1",
+        if (f < 0 || f > (gint64)G_MAXUINT32 || ft < 0 || (uint64_t)ft >= per) {
+            rc = _err_response(req_id, "Invalid parameters: frame in range 0..4294967295 and frame_ticks in range 0..ticks per frame - 1",
                                MCP_DISPATCH_INVALID_PARAMS, out_response);
             goto out;
         }
-        target = (uint64_t)f * per + (uint64_t)ft;
+        /* Dvojice se nese až do replaye: začátek snímku se bere ze
+         * skutečného běhu, ne ze jmenovité délky snímku (snímky zkrácené
+         * bitem CKSW na MZ-800). Cílový čas doplní stav po vyřízení. */
+        by_frame = true;
+        goto_frame = (uint32_t)f;
+        goto_frame_ticks = (uint32_t)ft;
     } else {
         JsonNode *n = json_object_get_member(obj, "trace");
         if (!n || !JSON_NODE_HOLDS_OBJECT(n)) {
@@ -21593,7 +21604,8 @@ static en_MCP_DISPATCH_RESULT _handle_replay_goto(const st_JSONL_MESSAGE *req,
 
     {
         uint64_t seq0 = run_log_current(NULL);
-        uint32_t rseq = replay_request_goto(target, keep, ckpt);
+        uint32_t rseq = by_frame ? replay_request_goto_frame(goto_frame, goto_frame_ticks, keep, ckpt)
+                                 : replay_request_goto(target, keep, ckpt);
         if (!replay_wait_request(rseq, MCP_REPLAY_REQUEST_TIMEOUT_MS)) {
             rc = _err_response(req_id, "replay request was not processed in time",
                                MCP_DISPATCH_EMU_ERROR, out_response);
@@ -21627,6 +21639,9 @@ static en_MCP_DISPATCH_RESULT _handle_replay_goto(const st_JSONL_MESSAGE *req,
             cur = goto_run;
         }
         replay_get_status(&st);
+        /* Cíl zadaný snímkem: čas určil replay na hranici snímku. Dokud
+         * dojetí běží a hranice ještě nenastala, je 0. */
+        if (by_frame) target = st.goto_target;
 
         JsonObject *resp = json_object_new();
         json_object_set_boolean_member(resp, "done", done ? TRUE : FALSE);
@@ -21648,7 +21663,13 @@ static en_MCP_DISPATCH_RESULT _handle_replay_goto(const st_JSONL_MESSAGE *req,
         }
         const char *stopped_by = have_rec ? rec.reason : "replay_goto";
         json_object_set_string_member(resp, "stopped_by", stopped_by);
+        /* Cíl zadaný snímkem, jehož takt ležel za koncem (kratšího) snímku:
+         * cíl neexistuje. Výsledek nese záznam běhu (příznak nezávislý na
+         * důvodu zastavení; na cíli goto je navíc důvod
+         * "replay_goto_out_of_range", na konci záznamu zůstává "replay_end"). */
+        bool out_of_range = have_rec && rec.goto_out_of_range;
         json_object_set_boolean_member(resp, "reached", strcmp(stopped_by, "replay_goto") == 0 ? TRUE : FALSE);
+        if (out_of_range) json_object_set_boolean_member(resp, "out_of_range", TRUE);
 
         JsonObject *observe = NULL;
         char *oerr = NULL;

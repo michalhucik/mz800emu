@@ -19,7 +19,16 @@ typedef struct st_CUSTOMSPEED
 
 extern st_CUSTOMSPEED g_customspeed;
 
-#define customspeed_on_screen_done() (g_customspeed.speed_sync_event.ticks -= VIDEO_SCREEN_TICKS)
+/**
+ * @brief Konec snímku: posune 20ms událost o délku skončeného snímku.
+ *
+ * Perioda události je pevná (VIDEO_SCREEN_TICKS pxCLK = 20 ms při 100 %),
+ * délka obrazového snímku ne: na MZ-800 ji zkracuje bit CKSW
+ * (gdg_get_ending_frame_ticks()). Tempo emulace a zvuk se řídí touto
+ * událostí, ne obrazovým snímkem. Makro se rozvíjí v mzarch.c, kde je
+ * hlavička GDG vložená.
+ */
+#define customspeed_on_screen_done() (g_customspeed.speed_sync_event.ticks -= gdg_get_ending_frame_ticks())
 
 #define customspeed_get_current_speed() (g_customspeed.speed_in_percentage)
 #define customspeed_get_current_speed_ticks() (g_customspeed.speed_frame_width)

@@ -3366,6 +3366,16 @@ uint32_t replay_request_goto(uint64_t ticks, bool keep_breakpoints, bool checkpo
     return stub_replay_request(6, NULL, 0, false);
 }
 
+uint32_t replay_request_goto_frame(uint32_t frame, uint32_t frame_ticks, bool keep_breakpoints,
+                                   bool checkpoint_at_target)
+{
+    g_stub_replay.last_goto_frame = frame;
+    g_stub_replay.last_goto_frame_ticks = frame_ticks;
+    g_stub_replay.last_goto_keep = keep_breakpoints;
+    g_stub_replay.last_goto_ckpt = checkpoint_at_target;
+    return stub_replay_request(7, NULL, 0, false);
+}
+
 uint32_t replay_request_record(const char *path, uint32_t hash_interval, const char *description)
 {
     (void)description;

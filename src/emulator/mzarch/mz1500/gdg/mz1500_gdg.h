@@ -155,6 +155,43 @@ extern "C"
 
 #define gdg_compute_total_ticks(now_ticks) (now_ticks + ((uint64_t)g_gdg.total_elapsed.screens * VIDEO_SCREEN_TICKS))
 #define gdg_get_total_ticks() gdg_compute_total_ticks(g_gdg.total_elapsed.ticks)
+
+/**
+ * @brief Délka právě končícího snímku v pxCLK.
+ *
+ * Na této platformě konstanta; na MZ-800 ji zkracuje bit CKSW
+ * (mz800_gdg.h). O tuto hodnotu posouvá konec snímku události časované od
+ * začátku snímku (CTC0, PIO-Z80, 20ms časovač).
+ */
+#define gdg_get_ending_frame_ticks() ( VIDEO_SCREEN_TICKS )
+
+/**
+ * @brief Tiky od poslední sestupné hrany skutečného HSYNC (CLK1 čítače 8253).
+ *
+ * @param ticks Tiky od začátku snímku.
+ * @return Počet tiků od hrany, 0 až VIDEO_SCREEN_WIDTH - 1.
+ */
+#define gdg_get_ticks_since_hsync_fall(ticks) \
+    ( ( VIDEO_GET_SCREEN_COL(ticks) + VIDEO_SCREEN_WIDTH - VIDEO_REAL_HSYNC_START_COLUMN ) % VIDEO_SCREEN_WIDTH )
+
+/**
+ * @brief Čas události aktuálního řádku v tikách od začátku snímku.
+ *
+ * @param column Sloupec události z tabulky g_gdgevent.
+ * @return Tiky od začátku snímku (řádek má pevnou délku).
+ */
+#define gdg_get_event_ticks(column) ( g_gdg.beam_row * VIDEO_SCREEN_WIDTH + (column) )
+
+/** @brief Sloupec paprsku v aktuálním čase GDG (řádek má pevnou délku). */
+#define gdg_get_beam_col() ( VIDEO_GET_SCREEN_COL(g_gdg.total_elapsed.ticks) )
+
+/**
+ * @brief Virtuální pozice paprsku (řádek * VIDEO_SCREEN_WIDTH + sloupec).
+ *
+ * Na této platformě má řádek pevnou délku, pozice je rovna tikům od začátku
+ * snímku. Na MZ-800 ji mění bit CKSW (mz800_gdg.h).
+ */
+#define gdg_get_beam_vpos(ticks) ( ticks )
 /**
  * @brief Okamžik právě probíhajícího přístupu na sběrnici (IORQ, MMIO) v tikách GDG.
  *

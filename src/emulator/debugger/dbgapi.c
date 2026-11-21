@@ -1727,7 +1727,7 @@ static void dbgapi_frame_hash_fill ( st_DBGAPI_FRAME_HASH_PARAM *out, const uint
     out->height = (uint32_t) VIDEO_DISPLAY_HEIGHT;
     out->frame = (uint32_t) g_gdg.total_elapsed.screens;
     out->scanline = (uint16_t) g_gdg.beam_row;
-    out->column = (uint16_t) VIDEO_GET_SCREEN_COL ( g_gdg.total_elapsed.ticks );
+    out->column = (uint16_t) gdg_get_beam_col ( );
     out->paused = EMULATOR_TEST_PAUSED ? true : false;
     (void) state_hash_part ( STATE_HASH_VRAM, out->vram_sha256 );
 
@@ -2002,7 +2002,7 @@ static void dbgapi_cpu_panel_fill ( st_DBGAPI_CPU_PANEL_BATCH *out, uint32_t whi
         st_DBGAPI_RASTER_POS *r = &out->raster;
         r->frame_number = (uint32_t) g_gdg.total_elapsed.screens;
         r->scanline     = (uint16_t) g_gdg.beam_row;
-        r->column_pixel = (uint16_t) VIDEO_GET_SCREEN_COL ( g_gdg.total_elapsed.ticks );
+        r->column_pixel = (uint16_t) gdg_get_beam_col ( );
         r->total_cycles = cpu->total_cycles;
         r->frame_cycles = cpu->cycles;
         out->raster_valid = 1;
@@ -4084,9 +4084,10 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
              *
              * scanline = g_gdg.beam_row (= aktuální raster row, sjednoceno
              * s io_history záznamem).
-             * column_pixel = VIDEO_GET_SCREEN_COL(g_gdg.total_elapsed.ticks)
+             * column_pixel = gdg_get_beam_col()
              * - poznámka: ticks je počet GDG ticks od začátku snímku,
-             * VIDEO_GET_SCREEN_COL = ticks % VIDEO_SCREEN_WIDTH.
+             * = sloupec od začátku řádku; na MZ-800 má řádek při CKSW = 1
+             * jen 1120 sloupců.
              */
             if (rq->result_ptr)
             {
@@ -4095,7 +4096,7 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
                 z80_t *cpu = g_mzarch_main.cpu;
                 out->frame_number = (uint32_t)g_gdg.total_elapsed.screens;
                 out->scanline     = (uint16_t)g_gdg.beam_row;
-                out->column_pixel = (uint16_t)VIDEO_GET_SCREEN_COL(g_gdg.total_elapsed.ticks);
+                out->column_pixel = (uint16_t)gdg_get_beam_col ( );
                 out->total_cycles = cpu->total_cycles;
                 out->frame_cycles = cpu->cycles;
                 rq->success = true;
@@ -8743,6 +8744,7 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
             p->vbln          = (uint8_t)( g_gdg.vbln & 0x01u );
             p->tempo         = (uint32_t)g_gdg.tempo;
             p->tempo_divider = (uint32_t)g_gdg.tempo_divider;
+            p->line_ticks    = (uint16_t)VIDEO_SCREEN_WIDTH;
 
 #if MZARCH == 800
             /* MZ-800: 16-color palette přes regPALGRP + regPAL0..3,
@@ -8754,6 +8756,7 @@ void dbgapi_emu_dispatch(st_DBGAPI_CMDRQ *rq)
             p->regBOR    = (uint8_t)( g_gdg.regBOR & 0xFFu );
             p->regPALGRP = (uint8_t)( g_gdg.regPALGRP & 0xFFu );
             p->cksw      = (uint8_t)( g_gdg.cksw & 0x01u );
+            p->line_ticks = (uint16_t)( VIDEO_SCREEN_WIDTH - g_gdg.row_shrink );
             /* Paleta: regPAL0..3 obsahuje 4 nibble-pair (per registr 2x4
              * bity = 4 entries po 4-bit). Pro klienta vyplníme 16 položek
              * podle pořadí ve kterém GDG resolvuje plane bits. Bezpečné je

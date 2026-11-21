@@ -123,9 +123,13 @@ static inline int cputrack_time_full ( void )
  */
 static void cputrack_rechunk_at ( uint64_t px )
 {
-    uint32_t per_screen = tlog_common_get_pxclk_per_screen ( );
+    /* Číslo snímku z čítače snímků, ne z času: snímek zkrácený bitem CKSW
+     * (MZ-800) trvá méně než pxclk_per_screen. Kotva leží nejvýš jednu
+     * instrukci za aktuálním časem; padne-li přes konec snímku, který
+     * ještě není zpracovaný, je číslo o 1 nižší než u pozdějších záznamů
+     * chunku (stejně jako u dělení časem na hranici). */
     tlog_writer_rechunk ( &s_writer, px, px / s_cpu_divider,
-                          (uint32_t) ( per_screen ? px / per_screen : 0 ) );
+                          tlog_common_get_screens_total ( ) );
 }
 
 

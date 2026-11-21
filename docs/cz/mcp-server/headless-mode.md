@@ -59,7 +59,7 @@ mz800emu --headless --speed max --run-mzf test.mzf \
 |-------|------------|---------------|
 | `--exit-after-frames N` | po N emulovaných snímcích | 0 |
 | `--timeout-frames N` | po N emulovaných snímcích, pokud dřív nenastala jiná podmínka | 2 |
-| `--timeout-seconds S` | totéž v emulovaných sekundách (zaokrouhleno nahoru na celé snímky) | 2 |
+| `--timeout-seconds S` | totéž v emulovaných sekundách (zaokrouhleno nahoru na celé snímky po 20 ms; program, který na MZ-800 nastaví bit CKSW, má snímky o 1,4 % kratší a limit mu vyprší o tolik dřív) | 2 |
 | `--exit-on-pc ADDR[,skip=N][,code=C]` | když CPU vykoná ADDR (po přeskočení prvních N průchodů) | C, výchozí 0 |
 | `--fail-on-pc ADDR[,skip=N]` | když CPU vykoná ADDR | 1 |
 | `--exit-on-write ADDR[=VAL][,skip=N][,code=C]` | když program zapíše na adresu paměti ADDR (jen hodnotu VAL, je-li zadaná) | zapsaná hodnota, nebo C |

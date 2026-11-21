@@ -82,6 +82,14 @@ typedef struct st_GDG_RASTER_SNAPSHOT
     uint32_t ctc0_divider;    /**< Compile-time GDGCLK_CTC0_DIVIDER pro
                                *   aktuální arch (MZ-800=16, MZ-1500=16,
                                *   MZ-700 NTSC=13, MZ-700 PAL=16). */
+
+    /* ---- Délka řádku --------------------------------------------------- */
+    uint16_t line_ticks;      /**< Délka aktuálního řádku v pxCLK:
+                               *   VIDEO_SCREEN_WIDTH, na MZ-800 o 16 méně,
+                               *   když řádek zkrátil bit CKSW (platí od
+                               *   načtení bitu ve sloupci 790 do konce
+                               *   řádku). Stejný význam jako pole
+                               *   line_ticks příkazu get_periph_gdg. */
 } st_GDG_RASTER_SNAPSHOT;
 
 /**

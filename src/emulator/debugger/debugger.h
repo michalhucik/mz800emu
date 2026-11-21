@@ -103,6 +103,7 @@ extern "C"
          * (run_frames_active | run_deadline_active). Platí do nejbližší pauzy. */
         unsigned run_deadline_active;             /**< 1 = běh má deadline; emu se pausne, jakmile run_control_mono_ticks() dosáhne run_deadline_ticks. 0 = neaktivní. */
         uint64_t run_deadline_ticks;              /**< Deadline v monotónních taktech GDG (run_control_mono_ticks()). Platné jen pokud run_deadline_active != 0. */
+        uint32_t run_deadline_screens;            /**< Deadline zadaný ve snímcích: cílová hodnota g_gdg.total_elapsed.screens, 0 = deadline jen podle run_deadline_ticks. Snímek zkrácený bitem CKSW (MZ-800) skončí dřív, než udává run_deadline_ticks spočtený ze jmenovité délky; pak rozhodne tento čítač. Platné jen pokud run_deadline_active != 0. */
         /* Zastavení na čase (run_control_stop_at_arm()): kontrola před
          * instrukcí v breakpoints_enforce_global() přes bránu GLOBAL
          * breakpointů (bptmap_set_global_hook()). Platí do nejbližší pauzy. */

@@ -358,18 +358,20 @@ const char *eventlog_filter_cat_to_name ( uint8_t cat );
 
 
 /**
- * @brief Nastaví šíři logického screenu pro dekódování sline/px.
+ * @brief Nastaví délku řádku, kterou filtr dekóduje sline/px.
  *
- * Filter používá @c pxclk_in_screen z eventu a dělí ho šíří screenu
- * pro získání scanline (@c pxclk_in_screen / @c width) a pixel column
- * (@c pxclk_in_screen % @c width). Hodnota je per-arch (MZ-800 H40 =
- * 320, H80 = 640, MZ-700 = 320).
+ * Filtr dělí @c pxclk_in_screen události délkou řádku: scanline je
+ * @c pxclk_in_screen / @c width, sloupec @c pxclk_in_screen % @c width.
+ * Pole @c pxclk_in_screen je číslo řádku krát VIDEO_SCREEN_WIDTH plus
+ * sloupec (celý řádek včetně zatemnění; platí i v řádcích zkrácených
+ * bitem CKSW), správná hodnota je tedy VIDEO_SCREEN_WIDTH dané platformy
+ * (MZ-800 PAL 1136) a nezávisí na obrazovém režimu.
  *
- * Default po startu = @c 320 (= MZ-800 H40 nebo MZ-700 textový). UI
- * nastavuje při změně video módu nebo arch přepnutí. Hodnota
- * @c 0 je ignorována (= ponechá předchozí).
+ * Výchozí hodnota po startu je VIDEO_SCREEN_WIDTH; okno Event Viewer
+ * nastavuje tutéž hodnotu. Jiná šířka má smysl jen v testech. Hodnota
+ * @c 0 se ignoruje (zůstane předchozí).
  *
- * @param width  Šíře screenu v pixel clocks (typicky 320 nebo 640).
+ * @param width  Délka řádku v taktech pixelových hodin.
  */
 void eventlog_filter_set_screen_width ( uint32_t width );
 

@@ -114,6 +114,7 @@ void gdg_mirror_raster_snapshot(st_GDG_RASTER_SNAPSHOT *out)
     out->tempo         = (uint8_t)(g_gdg.tempo & 0x01u);
     out->tempo_divider = (uint32_t)g_gdg.tempo_divider;
     out->ctc0_divider  = (uint32_t)GDGCLK_CTC0_DIVIDER;
+    out->line_ticks    = (uint16_t)(VIDEO_SCREEN_WIDTH - g_gdg.row_shrink);
 }
 
 #endif /* MZARCH == 800 */

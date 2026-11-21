@@ -775,8 +775,7 @@ uint8_t memory_read_with_logging_cb ( z80_t *cpu, uint16_t addr, int m1_state, v
                                  g_mzarch_main.instruction_addr,
                                  frame_n,
                                  (uint16_t) g_gdg.beam_row,
-                                 (uint16_t) VIDEO_GET_SCREEN_COL (
-                                     g_gdg.total_elapsed.ticks ),
+                                 (uint16_t) gdg_get_beam_col ( ),
                                  g_mzarch_main.cpu->total_cycles );
     }
 
@@ -1055,8 +1054,7 @@ void memory_write_with_logging_cb ( z80_t *cpu, uint16_t addr, uint8_t value, vo
                                  g_mzarch_main.instruction_addr,
                                  frame_n,
                                  (uint16_t) g_gdg.beam_row,
-                                 (uint16_t) VIDEO_GET_SCREEN_COL (
-                                     g_gdg.total_elapsed.ticks ),
+                                 (uint16_t) gdg_get_beam_col ( ),
                                  g_mzarch_main.cpu->total_cycles );
     }
 

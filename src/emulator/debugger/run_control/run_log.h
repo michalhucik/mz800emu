@@ -56,7 +56,9 @@ extern "C" {
         uint64_t run_seq;          /**< Číslo běhu, který skončil. */
         const char *reason;        /**< Důvod: "step", "run_to", "breakpoint", "frames",
                                         "deadline", "manual", "exit", "bp_action_saturation",
-                                        "event_trigger". */
+                                        "event_trigger", "replay_goto" (zastavení na cíli goto),
+                                        "replay_goto_out_of_range" (goto zadané snímkem a takty,
+                                        takt ležel za koncem snímku; zastavení v dalším snímku). */
         const char *started_by;    /**< Původ příkazu, který běh spustil: "user", "mcp",
                                         "test", "internal"; "user" i u rozběhu mimo frontu
                                         dbgapi (klávesa Pause v GUI). */
@@ -77,6 +79,7 @@ extern "C" {
                                         "exit_action", ...), jinak "". */
         uint64_t bytes;            /**< Objem zápisů akcí u "bp_action_saturation", jinak 0. */
         char detail[RUN_LOG_DETAIL_SIZE]; /**< Doplňující text (zpráva akce exit, detail saturace), jinak "". */
+        bool goto_out_of_range;    /**< Běh prováděl replay goto zadané snímkem a takty a cílový takt ležel na konci snímku nebo za ním (cíl neexistuje). Nezávisí na důvodu zastavení. */
     } st_RUN_LOG_RECORD;
 
     /** @brief Výsledek run_log_wait(). */

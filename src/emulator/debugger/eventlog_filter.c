@@ -20,6 +20,7 @@
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
 
 #include "eventlog_filter.h"
+#include "hw-generic/gdg/video.h"
 
 #include <ctype.h>
 #include <string.h>
@@ -65,10 +66,13 @@
 /**
  * @brief Globální šíře screenu pro sline/px dekódování.
  *
- * Defaults na 320 (= MZ-800 H40 / MZ-700). UI volá
- * @ref eventlog_filter_set_screen_width() při změně módu.
+ * Pole pxclk_in_screen záznamu je číslo řádku krát VIDEO_SCREEN_WIDTH plus
+ * sloupec (i v řádcích zkrácených bitem CKSW), výchozí šíře je proto
+ * VIDEO_SCREEN_WIDTH. Dřívější výchozí hodnota 320 dekódovala řádek
+ * i sloupec špatně, dokud okno Event Viewer šíři nenastavilo.
+ * @ref eventlog_filter_set_screen_width() ji umí změnit.
  */
-static uint32_t g_evfilt_screen_width = 320u;
+static uint32_t g_evfilt_screen_width = (uint32_t) VIDEO_SCREEN_WIDTH;
 
 
 void eventlog_filter_set_screen_width ( uint32_t width )
@@ -1994,13 +1998,13 @@ static bool eval_leaf ( const st_EVFILT_LEAF *leaf,
                     && e->pxclk_total <= leaf->rmax );
             break;
         case EVFILT_LEAF_SLINE_RANGE: {
-            uint32_t w = g_evfilt_screen_width ? g_evfilt_screen_width : 320u;
+            uint32_t w = g_evfilt_screen_width ? g_evfilt_screen_width : (uint32_t) VIDEO_SCREEN_WIDTH;
             uint64_t sline = e->pxclk_in_screen / w;
             raw = ( sline >= leaf->rmin && sline <= leaf->rmax );
             break;
         }
         case EVFILT_LEAF_PX_RANGE: {
-            uint32_t w = g_evfilt_screen_width ? g_evfilt_screen_width : 320u;
+            uint32_t w = g_evfilt_screen_width ? g_evfilt_screen_width : (uint32_t) VIDEO_SCREEN_WIDTH;
             uint64_t px = e->pxclk_in_screen % w;
             raw = ( px >= leaf->rmin && px <= leaf->rmax );
             break;

@@ -59,7 +59,9 @@ Records still in the RAM buffer are readable too, so even a short run
   the change, i.e. the end of the instruction in progress (in HALT the
   end of the current 4 T-state step), not the moment of the edge itself.
   The OUT2 edge of the 8253 happens on the HSYNC falling edge (MZ-800:
-  `pos` modulo 1136 = 950) up to one instruction earlier. For interrupt
+  `pos` modulo 1136 = 950; `pos` is the line number times 1136 plus
+  the column, so this also holds in lines shortened by the CKSW bit,
+  where columns 912 to 927 do not occur) up to one instruction earlier. For interrupt
   latency measure from that edge, not from `t`.
 - An interrupt request is accepted at the end of an instruction only if
   it arrived at least 8 ticks (1.6 T-states) before it (CTC2: 13 ticks

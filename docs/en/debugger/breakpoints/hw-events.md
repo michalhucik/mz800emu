@@ -65,9 +65,10 @@ is available in the condition expression as `Value`.
 | `palette_change`  | palette   | GDG palette index (port 0xF0, bit 6 = 0) |
 | `palgrp_change`   | palgrp    | GDG palette group (port 0xF0, bit 6 = 1) |
 | `border_change`   | border    | GDG border color (port 0xCF, msb = 6) |
+| `cksw_change`     | cksw      | GDG CKSW bit (port 0xCF, msb = 7); `Value` = 0 or 1, fires on every write |
 | `cmt:state_change`| cmt state | CMT lifecycle (play / stop / pause / eject) |
 
-Note: MZ-1500 has neither `palgrp_change` nor `border_change` (= a
+Note: `cksw_change` exists on the MZ-800 only. MZ-1500 has neither `palgrp_change` nor `border_change` (= a
 simpler palette model, fixed border). BPs with these events on
 MZ-1500 never fire.
 

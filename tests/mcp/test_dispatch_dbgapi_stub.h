@@ -881,12 +881,14 @@ extern st_DISPATCH_STUB_STATE g_stub_state;
  */
 typedef struct st_DISPATCH_STUB_REPLAY {
     int calls;                  /**< Počet požadavků od resetu. */
-    int last_kind;              /**< 1 = record, 2 = play, 3 = stop, 4 = rewind, 5 = seek. */
+    int last_kind;              /**< 1 = record, 2 = play, 3 = stop, 4 = rewind, 5 = seek, 6 = goto na čas, 7 = goto na snímek. */
     char last_path[512];        /**< Cesta posledního požadavku ("" = žádná). */
     uint32_t last_interval;     /**< hash_interval posledního záznamu (0 = výchozí). */
     bool last_pause_after_load; /**< pause_after_load posledního přehrání. */
     uint32_t last_frames;       /**< frames rewindu / frame seeku. */
     uint64_t last_goto_ticks;   /**< Cílový čas posledního goto. */
+    uint32_t last_goto_frame;       /**< Cílový snímek posledního goto zadaného snímkem (last_kind 7). */
+    uint32_t last_goto_frame_ticks; /**< Takty od začátku snímku posledního goto zadaného snímkem. */
     bool last_goto_keep;        /**< Goto: breakpoints keep. */
     bool last_goto_ckpt;        /**< Goto: checkpoint v cíli. */
     st_REPLAY_CKPT_CFG last_ckpt; /**< Nastavení checkpointů posledního záznamu / přehrání (-1 = z INI). */

@@ -137,7 +137,7 @@ viz [hw-events.md](hw-events.md#cpu-events).
 | Identifikátor | Význam |
 |---------------|--------|
 | `Cycle` | Takty GDG (pixel ticks) od startu emulátoru na začátku aktuální instrukce (reset stroje čítač nenuluje, nahrání snapshotu ho nastaví na uloženou hodnotu). **Pozor:** není to čítač T-stavů Z80: jeden T-stav je 5 taktů GDG u PAL (MZ-800, MZ-700 PAL) a 4 u NTSC (MZ-700 NTSC, MZ-1500). Jako každá hodnota se ořízne na 32 bitů a po 2^31 taktech přeteče do záporných čísel, u PAL asi po 121 s emulovaného času (17 721 600 taktů za sekundu), u NTSC asi po 150 s. |
-| `FrameCycle` | Takty GDG od začátku aktuálního snímku na začátku aktuální instrukce: 0 .. takty snímku - 1 (354 432 na snímek u PAL, 238 944 u NTSC). Nepřetéká, pro časování v rámci snímku. `Cycle = Frame * takty snímku + FrameCycle`, dokud `Cycle` nepřeteče. |
+| `FrameCycle` | Takty GDG od začátku aktuálního snímku na začátku aktuální instrukce: 0 .. takty snímku - 1 (354 432 na snímek u PAL, 238 944 u NTSC). Nepřetéká, pro časování v rámci snímku. `Cycle = Frame * takty snímku + FrameCycle`, dokud `Cycle` nepřeteče. Na MZ-800 je snímek kratší, dokud je nastavený bit CKSW (port 0x07CF, v MZ notaci 0xCF07, bit 7): každý řádek trvá 1120 taktů místo 1136, celý snímek 349 440; po takovém řádku už vztah výše neplatí a `FrameCycle` snímku končí dřív. |
 | `Frame` | Počet kompletních snímků od startu emulátoru (reset stroje ho nenuluje). Inkrementuje se na konci snímku. |
 | `Scanline` | Aktuální GDG raster row (0..výška snímku-1). |
 

@@ -71,7 +71,10 @@ of `deadline_frames`, `deadline_ms`, `deadline_ticks`:
 
 - The deadline counts emulated time, not wall clock: the same program
   from the same state stops at the same point (measured: three runs of
-  `deadline_frames=5` took exactly 5 x 354432 GDG ticks each).
+  `deadline_frames=5` took exactly 5 x 354432 GDG ticks each; on the
+  MZ-800 frames are shorter, down to 349440 ticks, while the program
+  keeps the CKSW bit (bit 7 of port 0x07CF) set - the run still stops at the
+  frame boundary).
 - `deadline_frames` stops exactly at the N-th frame boundary.
   `deadline_ms` / `deadline_ticks` stop at the first emulation event
   point at or after the deadline, less than one frame late.

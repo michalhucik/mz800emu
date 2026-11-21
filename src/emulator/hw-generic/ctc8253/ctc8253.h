@@ -259,12 +259,19 @@ extern "C"
 
 #ifdef MZ800EMU_CFG_CLK1M1_FAST
 #include "gdg/video.h"
+/**
+ * @brief Konec snímku: posune čekající událost CTC0 o délku skončeného snímku.
+ *
+ * Délka je gdg_get_ending_frame_ticks() (na MZ-800 ji zkracuje bit CKSW),
+ * tedy stejná hodnota, o kterou konec snímku posouvá čas GDG. Makro se
+ * rozvíjí v mzarch.c, kde je hlavička GDG vložená.
+ */
 #define ctc8253_on_screen_done_event()                      \
     {                                                       \
         st_CTC8253 *ctc0 = &g_ctc8253[CTC_CS0];             \
         if ((int)ctc0->clk1m1_event.ticks != -1)            \
         {                                                   \
-            ctc0->clk1m1_event.ticks -= VIDEO_SCREEN_TICKS; \
+            ctc0->clk1m1_event.ticks -= gdg_get_ending_frame_ticks(); \
         };                                                  \
     }
 #endif

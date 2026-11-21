@@ -191,6 +191,21 @@ extern "C"
     extern void mzarch_main_report_screen_done_underflow(unsigned ticks);
 
     /**
+     * @brief Znovu vybere nejbližší čekající událost do g_mzarch_main.event.
+     *
+     * Pro zařízení, které uvnitř instrukce změnilo čas své už naplánované
+     * události na pozdější (dřívější čas lze převzít přímo). Vybírá z týchž
+     * zdrojů jako plánovač po zpracování události (GDG, CTC0, PIO-Z80,
+     * 20ms časovač).
+     *
+     * @pre Emu vlákno uvnitř instrukce, nebo pauza. Čekající události všech
+     *      zdrojů mají platný čas.
+     * @post g_mzarch_main.event je nejbližší z čekajících událostí; vynucená
+     *       událost (jméno >= MZEVENT_BREAK) zůstává beze změny.
+     */
+    extern void mzarch_main_requeue_event(void);
+
+    /**
      * @brief Nastaví polohu zadního přepínače SW1 (MZ-700 / MZ-800 mód).
      *
      * Mění jen stav přepínače, ne aktuální mód GDG - ten přepíná ROM

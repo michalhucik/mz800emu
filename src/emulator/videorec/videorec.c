@@ -2788,8 +2788,10 @@ void videorec_on_screen_done(void)
     g_mutex_lock(&g_vr.mutex);
     vr_flag_clear(VIDEOREC_FLAG_REQ);
 
-    /* Konec snímku zaokrouhlený na násobek VIDEO_SCREEN_TICKS (hook běží na konci posledního řádku). */
-    uint64_t frame_end = ((gdg_get_total_ticks() + VIDEO_SCREEN_TICKS / 2) / VIDEO_SCREEN_TICKS) * VIDEO_SCREEN_TICKS;
+    /* Přesný čas konce snímku. Hook běží při zpracování konce posledního řádku, před uzavřením snímku
+     * v GDG, kdy čas GDG může konec snímku o část instrukce přesahovat; délka snímku je
+     * gdg_get_ending_frame_ticks() (na MZ-800 ji zkracuje bit CKSW, jinak VIDEO_SCREEN_TICKS). */
+    uint64_t frame_end = gdg_compute_total_ticks(gdg_get_ending_frame_ticks());
 
     if (g_vr.state == VIDEOREC_STATE_IDLE) {
         if (g_vr.req_start && g_vr.initialized) vr_do_start(frame_end);
@@ -2818,6 +2820,21 @@ void videorec_on_screen_done(void)
             return;
         }
         vr_rt_leave(frame_end); /* tento snímek už patří emulačnímu času */
+    }
+
+    /* Nahrávka má pevný rastr snímků po ticks_per_frame (20 ms). Snímek zkrácený bitem CKSW (MZ-800)
+     * končí mimo rastr: skončí-li dřív než další bod rastru, do nahrávky nejde (asi každý 70. snímek
+     * při trvalém CKSW); skončí-li až za ním, zapíše se s časem bodu rastru. Zvuk se renderuje po
+     * bodech rastru a zůstává souvislý. Odchylka o celý snímek a víc je skutečná nespojitost (šev)
+     * a řeší se dál jako dřív. Bez CKSW konec snímku na rastru leží vždy. */
+    if (frame_end != g_vr.pipe.next_frame_end) {
+        uint64_t next = g_vr.pipe.next_frame_end;
+        uint64_t tpf = g_vr_platform.ticks_per_frame;
+        if ((frame_end < next) && ((next - frame_end) < tpf)) {
+            g_mutex_unlock(&g_vr.mutex);
+            return;
+        }
+        if ((frame_end > next) && ((frame_end - next) < tpf)) frame_end = next;
     }
 
     /* Chyba zápisu ve writeru -> ukončit nahrávání s chybou. */

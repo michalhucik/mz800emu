@@ -359,11 +359,18 @@ static void decode_gdg_colors ( uint8_t subtype, uint32_t payload,
 
 
 /**
- * @brief Dekóduje GDG_VIDEO event (subtype už říká vše).
+ * @brief Dekóduje GDG_VIDEO event.
+ *
+ * U hran synchronizace říká vše subtype. Zápis bitu CKSW nese v payloadu
+ * [2] zapsaný bajt (bit 7 = CKSW); vypíše se hodnota bitu.
  */
-static void decode_gdg_video ( uint8_t subtype, char *buf, size_t buf_len )
+static void decode_gdg_video ( uint8_t subtype, uint32_t payload, char *buf, size_t buf_len )
 {
     const char *label;
+    if ( subtype == HWLOG_GDG_VIDEO_CKSW ) {
+        snprintf ( buf, buf_len, "CKSW=%u", (unsigned) ( ( payload >> 23 ) & 1u ) );
+        return;
+    }
     switch ( subtype ) {
         case HWLOG_GDG_VIDEO_VBLN_START: label = "VBLN start"; break;
         case HWLOG_GDG_VIDEO_VBLN_END:   label = "VBLN end";   break;
@@ -951,7 +958,7 @@ void eventlog_decode_detail ( const st_EVENTLOG_EVENT *e,
             decode_gdg_colors ( e->subtype, e->payload, buf, buf_len );
             return;
         case EVENTLOG_CAT_GDG_VIDEO:
-            decode_gdg_video ( e->subtype, buf, buf_len );
+            decode_gdg_video ( e->subtype, e->payload, buf, buf_len );
             return;
         case EVENTLOG_CAT_GDG_WFRF:
             decode_gdg_wfrf ( e->subtype, e->payload, buf, buf_len );
@@ -1172,6 +1179,7 @@ void eventlog_decode_subtype_short ( uint8_t category, uint8_t subtype,
                 case HWLOG_GDG_VIDEO_HBLN_END:   sub_copy ( buf, buf_len, "HBLN_E" ); return;
                 case HWLOG_GDG_VIDEO_HS_START:   sub_copy ( buf, buf_len, "HS_S"   ); return;
                 case HWLOG_GDG_VIDEO_HS_END:     sub_copy ( buf, buf_len, "HS_E"   ); return;
+                case HWLOG_GDG_VIDEO_CKSW:       sub_copy ( buf, buf_len, "CKSW"   ); return;
             }
             break;
 
@@ -1456,6 +1464,8 @@ void eventlog_decode_subtype_full ( uint8_t category, uint8_t subtype,
                     sub_copy ( buf, buf_len, "HSYNC start" ); return;
                 case HWLOG_GDG_VIDEO_HS_END:
                     sub_copy ( buf, buf_len, "HSYNC end" ); return;
+                case HWLOG_GDG_VIDEO_CKSW:
+                    sub_copy ( buf, buf_len, "CKSW (Superimpose) bit write" ); return;
             }
             break;
 

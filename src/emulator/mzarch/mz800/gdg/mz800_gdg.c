@@ -143,6 +143,9 @@ void gdg_init(void)
 
     g_gdg.regct53g7 = 0;
     g_gdg.cksw = 0;
+    g_gdg.row_shrink = 0;
+    g_gdg.frame_short_ticks = 0;
+    g_gdg.short_ticks_total = 0;
 
     hwscroll_init();
     framebuffer_init();
@@ -249,6 +252,12 @@ void gdg_reset(void)
     g_gdg.regPAL2 = 0;
     g_gdg.regPAL3 = 0;
 
+    /* Klopný obvod CKSW má asynchronní reset. Délka rozběhnutého řádku
+     * (row_shrink) je po načtení bitu už daná a reset ji nemění. */
+    if (g_gdg.cksw)
+    {
+        g_framebuffer.border_changes = SCRSTS_THIS_IS_CHANGED;
+    };
     g_gdg.cksw = 0;
 
     vramctrl_reset();
@@ -295,6 +304,46 @@ uint8_t gdg_peek_dmd_status_memop(void)
     return gdg_read_dmd_status_memop();
 }
 
+/**
+ * @brief Doplní účinek zápisu bitu CKSW, který skončil těsně po jeho načtení.
+ *
+ * Čip načítá bit jednou za řádek (MZEVENT_GDG_HBLN_START nastaví
+ * g_gdg.row_shrink). Klopný obvod bitu se ale překlápí
+ * GDG_CKSW_WR_EDGE_TICKS před koncem M-cyklu zápisu, kdežto emulátor zápis
+ * provádí s časem konce M-cyklu a s už zpracovanými událostmi do té chvíle.
+ * Skončil-li M-cyklus méně než GDG_CKSW_WR_EDGE_TICKS po načtení bitu, čip
+ * už načetl novou hodnotu: funkce přepíše zkrácení tohoto řádku a čas čekající
+ * události GDG, pokud leží za sloupcem GDG_CKSW_SHRINK_FIRST_COLUMN.
+ *
+ * @pre g_gdg.cksw už má novou hodnotu; g_gdg.total_elapsed.ticks je čas
+ *      konce M-cyklu zápisu a události GDG do něj jsou zpracované. Emu
+ *      vlákno, nebo pauza.
+ * @post g_gdg.row_shrink odpovídá bitu, pokud zápis spadl do okna; čekající
+ *       událost GDG i g_mzarch_main.event mají čas podle nového zkrácení.
+ *       Mimo okno beze změny.
+ */
+static void gdg_cksw_written(void)
+{
+    unsigned row;
+    unsigned col = gdg_get_beam_pos(g_gdg.total_elapsed.ticks, &row);
+    unsigned shrink = g_gdg.cksw * GDG_CKSW_ROW_SHRINK;
+
+    if ((row != g_gdg.beam_row) || (col < VIDEO_BEAM_HBLN_FIRST_COLUMN) ||
+        (col >= VIDEO_BEAM_HBLN_FIRST_COLUMN + GDG_CKSW_WR_EDGE_TICKS) || (shrink == g_gdg.row_shrink))
+    {
+        return;
+    };
+
+    g_gdg.row_shrink = shrink;
+
+    unsigned column = g_gdgevent[g_gdg.event.event_name].event_column;
+    if (column > GDG_CKSW_SHRINK_FIRST_COLUMN)
+    {
+        g_gdg.event.ticks = gdg_get_event_ticks(column);
+        mzarch_main_requeue_event();
+    };
+}
+
 void gdg_write_byte(unsigned addr, uint8_t value)
 {
     // printf("%s():%d - addr = 0x%04x, value = 0x%02x, PC = 0x%04x\n", __func__, __LINE__, addr, value, g_mz800_main.instruction_addr);
@@ -315,6 +364,8 @@ void gdg_write_byte(unsigned addr, uint8_t value)
                 hwlog_record ( HWLOG_CHIP_GDG_HWSCROLL, (uint8_t) msb, payload );
             } else if ( msb == 6 ) {
                 hwlog_record ( HWLOG_CHIP_GDG_COLORS, HWLOG_GDG_COLORS_BORDER, payload );
+            } else if ( msb == 7 ) {
+                hwlog_record ( HWLOG_CHIP_GDG_VIDEO, HWLOG_GDG_VIDEO_CKSW, payload );
             }
         } else if ( low == 0xf0 ) {
             uint8_t sub = ( value & 0x40 ) ? HWLOG_GDG_COLORS_PALGRP : HWLOG_GDG_COLORS_PAL;
@@ -327,6 +378,7 @@ void gdg_write_byte(unsigned addr, uint8_t value)
      * palgrp_change / border_change). Rozdeleno dle write target portu:
      *   0xCE              -> mode_change (DMD)
      *   0xCF, msb=6       -> border_change (border barva)
+     *   0xCF, msb=7       -> cksw_change (bit CKSW)
      *   0xCF, msb<6       -> HW scroll (= zadny BP event)
      *   0xF0 & 0x40       -> palgrp_change (palette group selector)
      *   0xF0 & ~0x40      -> palette_change (konkretni paleta) */
@@ -341,6 +393,12 @@ void gdg_write_byte(unsigned addr, uint8_t value)
             if ( msb == 6 ) {
                 if ( g_bp_event_active[ BP_EVENT_GDG_BORDER_CHANGE ] ) {
                     bp_event_fire ( BP_EVENT_GDG_BORDER_CHANGE, (int32_t) value );
+                }
+            } else if ( msb == 7 ) {
+                /* cksw_change: Value = zapsaný bit CKSW (0 nebo 1), při
+                 * každém zápisu na port, i když se hodnota nemění. */
+                if ( g_bp_event_active[ BP_EVENT_GDG_CKSW_CHANGE ] ) {
+                    bp_event_fire ( BP_EVENT_GDG_CKSW_CHANGE, (int32_t) ( ( value >> 7 ) & 1 ) );
                 }
             }
         } else if ( low == 0xf0 ) {
@@ -409,13 +467,21 @@ void gdg_write_byte(unsigned addr, uint8_t value)
         }
         else if (addr_msb == 7)
         {
-            /* Bit 7 hodnoty = nastaveny stav CKSW signalu (1 = ON).
-             * Emulator hodnotu udrzuje pro Status read (0xCE / 0xE008 bit 2),
-             * ale efekt na horizontalni timing (CKSW=1 zkracuje radek o 16 pxCLK)
-             * NEemulujeme - dynamicka zmena sirky radku za behu by rozhodila
-             * dalsi vztahy v emulaci. Viz mz800-knowledge public/reference/agent/hw/08a-video-timing.md
-             * (rozdil ~1.5 % frame rate). */
-            g_gdg.cksw = (value >> 7) & 1;
+            /* Bit 7 hodnoty = stav signálu CKSW (1 = řádek kratší
+             * o GDG_CKSW_ROW_SHRINK pxCLK). Status registr (0CEh / 0E008h
+             * bit 2) vidí novou hodnotu hned. Délku řádku čip mění jen při
+             * načtení bitu v HBLN_START (mz800_gdg_event.c): zápis před ním
+             * platí už pro tento řádek, pozdější až pro další. Zdroj:
+             * mz800-knowledge hw/11-palette-attributes.md, "Jak rychle se
+             * změna CKSW projeví" (simulace netlistu). */
+            unsigned cksw = (value >> 7) & 1;
+            if (cksw != g_gdg.cksw)
+            {
+                g_gdg.cksw = cksw;
+                gdg_cksw_written();
+                /* Krátký řádek má jinou viditelnou šířku - border překreslit. */
+                g_framebuffer.border_changes = SCRSTS_THIS_IS_CHANGED;
+            };
         };
         break;
 

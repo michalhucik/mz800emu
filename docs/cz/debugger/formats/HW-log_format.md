@@ -141,9 +141,11 @@ sub_event_type:
 - `0x06` HBLN_END   - horizontal blanking end (decimace)
 - `0x07` HS_START   - STS_HSYNC start (decimace)
 - `0x08` HS_END     - STS_HSYNC end (decimace)
+- `0x09` CKSW       - zápis bitu CKSW (Superimpose), port 0x07CF (MZ-800); emituje se vždy
 
-Payload: 6 nul (timestamp v hlavičce eventu je dostatečný, žádné
-další info).
+Payload: 6 nul u hran synchronizace (timestamp v hlavičce eventu je
+dostatečný). U CKSW: `[0]` addr_low, `[1]` addr_high, `[2]` zapsaný
+bajt (bit 7 = CKSW).
 
 #### Decimace HS / HBLN
 

@@ -15,9 +15,80 @@
 #include "snapshot/snapshot_xml.h"
 #include "hw-generic/gdg/gdg.h"
 #include "hw-generic/gdg/video.h"
+#include "customspeed.h"
 #if MZARCH == 800
 #include "mzarch/mz800/gdg/mz800_hwscroll.h"
 #endif
+
+/**
+ * @brief Obnoví termín další 20ms události po načtení snapshotu.
+ *
+ * 20ms událost (customspeed) uzavírá zvukový log a dokrokovává PSG, na její
+ * fázi tedy závisí stav PSG po dalším běhu. Snapshot ji nese v klíči
+ * speed_sync_ticks (tiky od začátku snímku); klíč není součástí otisku
+ * stavu, aby otisky zůstaly porovnatelné se záznamy starších verzí.
+ *
+ * Snapshot bez klíče pochází ze starší verze, která termín neukládala ani
+ * při načtení neměnila; fáze se tehdy řídila jen dosavadním během procesu
+ * (například po návratu ze 150 % na 100 % zůstává termín uprostřed snímku).
+ * Stejně se zachová i zde: termín se nemění, takže starší záznam se přehraje
+ * ze stejně připraveného procesu jako na původní verzi. Výjimka je proces,
+ * ve kterém termín před načtením posunuly snímky zkrácené bitem CKSW: takový
+ * posun starší verze neznala. Každý zkrácený snímek odečte od termínu méně
+ * než VIDEO_SCREEN_TICKS, termín je tedy větší právě o součet zkrácení
+ * dokončených snímků (@p cksw_drift_ticks; zkrácení běžícího snímku se
+ * projeví až na jeho konci). Tento součet se od termínu odečte a výsledek
+ * se o celé periody srovná do okna jedné periody za časem snímku před
+ * načtením; vyjde termín, jaký by měl stejně připravený proces bez
+ * zkrácených snímků, včetně fáze posunuté dřívější změnou rychlosti.
+ * Výpočet byl ověřen pro periodu ustálenou před prvním zkrácením a dále
+ * neměnnou. Po změně periody mezi krátkými snímky nebo po nich součet
+ * zkrácení sám neurčuje fázi, kterou by měl proces bez CKSW.
+ * Je-li po této korekci termín v obnoveném rastru již splatný, přesune se
+ * o celé periody za obnovenou pozici, aby jej čtečka mohla znovu obnovit
+ * z nově uloženého snapshotu.
+ * Z uložených dat samotných fázi starší verze určit nelze.
+ *
+ * @param has_saved true = z XML se podařilo přečíst uložený termín.
+ * @param saved Uložený termín (platí při @p has_saved).
+ * @param cksw_drift_ticks Součet zkrácení dokončených snímků bitem CKSW ve
+ *        stavu PŘED načtením (g_gdg.short_ticks_total), 0 = žádné.
+ * @param prev_ticks Čas snímku (g_gdg.total_elapsed.ticks) PŘED načtením.
+ * @pre g_gdg.total_elapsed.ticks je už obnovený.
+ * @post Přečtený termín se obnoví přesně, i když již nastal. Takový stav může
+ *       vzniknout přeuložením starého snapshotu před dalším krokem emulace.
+ *       Výpočet podle historie přehrávače se použije jen při chybějícím termínu.
+ */
+static void snap_gdg_restore_speed_sync(bool has_saved, unsigned saved, uint64_t cksw_drift_ticks, unsigned prev_ticks)
+{
+    if (has_saved)
+    {
+        g_customspeed.speed_sync_event.ticks = saved;
+    }
+    else if (cksw_drift_ticks)
+    {
+        int64_t width = (int64_t)g_customspeed.speed_frame_width_requested;
+        if (width <= 0)
+        {
+            g_customspeed.speed_sync_event.ticks = VIDEO_SCREEN_TICKS;
+            return;
+        }
+        int64_t term = (int64_t)g_customspeed.speed_sync_event.ticks - (int64_t)(cksw_drift_ticks % (uint64_t)width);
+        while (term <= (int64_t)prev_ticks)
+        {
+            term += width;
+        }
+        while (term > (int64_t)prev_ticks + width)
+        {
+            term -= width;
+        }
+        while (term <= (int64_t)g_gdg.total_elapsed.ticks)
+        {
+            term += width;
+        }
+        g_customspeed.speed_sync_event.ticks = (unsigned)term;
+    }
+}
 
 static en_SNAPSHOT_RESULT snap_gdg_save(st_SNAPSHOT_CONTEXT *ctx)
 {
@@ -34,6 +105,30 @@ static en_SNAPSHOT_RESULT snap_gdg_save(st_SNAPSHOT_CONTEXT *ctx)
 
     /* Pozice paprsku */
     snapshot_xml_write_uint(w, "beam_row", g_gdg.beam_row);
+
+    /* Termín další 20ms události (tiky od začátku snímku), viz
+     * snap_gdg_restore_speed_sync(). Otisk stavu ho vynechává: starší verze
+     * klíč neměly a jejich záznamy vstupů by se jinak při kontrole otisků
+     * rozešly; odlišná fáze se v otisku projeví stavem PSG po další události. */
+    if (!ctx->for_hash)
+    {
+        snapshot_xml_write_uint(w, "speed_sync_ticks", g_customspeed.speed_sync_event.ticks);
+    }
+
+#if MZARCH == 800
+    /* Zkrácení řádků bitem CKSW: délka aktuálního řádku, součet za snímek
+     * a za celý běh (souvislý absolutní čas). Bez CKSW je vše nulové
+     * a element se nezapisuje, takže snapshot i jeho otisk jsou stejné
+     * jako před zavedením těchto polí. */
+    if (g_gdg.row_shrink || g_gdg.frame_short_ticks || g_gdg.short_ticks_total)
+    {
+        snapshot_xml_open_element(w, "cksw_timing");
+        snapshot_xml_write_uint(w, "row_shrink", g_gdg.row_shrink);
+        snapshot_xml_write_uint(w, "frame_short_ticks", g_gdg.frame_short_ticks);
+        snapshot_xml_write_uint64(w, "short_ticks_total", g_gdg.short_ticks_total);
+        snapshot_xml_close_element(w);
+    }
+#endif
 
     /* Registry */
     snapshot_xml_open_element(w, "registers");
@@ -140,14 +235,16 @@ static en_SNAPSHOT_RESULT snap_gdg_save(st_SNAPSHOT_CONTEXT *ctx)
  * událost je první aktivní událost aktuálního řádku (v pořadí g_gdgevent[],
  * seřazeném vzestupně podle event_column) s ticks > total_elapsed.ticks -
  * tedy totéž, co by vybral gdg_event_set_next. V konzistentním stavu takovou
- * událost najdeme vždy: poslední událost řádku SCREEN_ROW_END leží na
- * (beam_row + 1) * VIDEO_SCREEN_WIDTH.
+ * událost najdeme vždy: poslední událost řádku SCREEN_ROW_END leží na konci
+ * řádku. Čas události dává gdg_get_event_ticks(), stejná funkce jako
+ * v gdg_event_set_next (na MZ-800 počítá se zkrácením řádků bitem CKSW).
  *
  * Index do g_gdgevent[] je hodnota en_MZEVENT (MZEVENT_GDG_HBLN_END = 0 ..
  * MZEVENT_GDG_SCREEN_ROW_END), stejně jako v gdg_event_set_next.
  *
  * @pre g_gdg.beam_row a g_gdg.total_elapsed.ticks jsou už obnovené ze snapshotu
- *      a g_gdg.beam_row < VIDEO_SCREEN_HEIGHT.
+ *      a g_gdg.beam_row < VIDEO_SCREEN_HEIGHT; na MZ-800 jsou obnovené
+ *      i g_gdg.row_shrink a g_gdg.frame_short_ticks.
  * @post g_gdg.event odpovídá obnovenému rastru. Pokud je total_elapsed.ticks
  *       za koncem řádku (nekonzistentní snapshot), nastaví se SCREEN_ROW_END
  *       aktuálního řádku - zpracuje se hned při dalším mzarch_main_process_events
@@ -159,12 +256,11 @@ static en_SNAPSHOT_RESULT snap_gdg_save(st_SNAPSHOT_CONTEXT *ctx)
 static void snap_gdg_event_resync(void)
 {
     unsigned row = g_gdg.beam_row;
-    unsigned row_ticks = row * VIDEO_SCREEN_WIDTH;
 
     for (int name = MZEVENT_GDG_HBLN_END; name <= MZEVENT_GDG_SCREEN_ROW_END; name++)
     {
         const st_GDGEVENT *ev = &g_gdgevent[name];
-        unsigned ticks = row_ticks + ev->event_column;
+        unsigned ticks = gdg_get_event_ticks(ev->event_column);
         if (row >= ev->start_row && row < ev->start_row + ev->num_rows &&
             ticks > g_gdg.total_elapsed.ticks)
         {
@@ -176,11 +272,20 @@ static void snap_gdg_event_resync(void)
 
     /* total_elapsed za koncem řádku - nekonzistentní stav, viz @post */
     g_gdg.event.event_name = MZEVENT_GDG_SCREEN_ROW_END;
-    g_gdg.event.ticks = row_ticks + g_gdgevent[MZEVENT_GDG_SCREEN_ROW_END].event_column;
+    g_gdg.event.ticks = gdg_get_event_ticks(g_gdgevent[MZEVENT_GDG_SCREEN_ROW_END].event_column);
 }
 
 static en_SNAPSHOT_RESULT snap_gdg_load(st_SNAPSHOT_CONTEXT *ctx)
 {
+    /* Zkrácení řádků bitem CKSW ve stavu před načtením: rozhoduje o termínu
+     * 20ms události u snapshotu bez klíče (snap_gdg_restore_speed_sync()). */
+#if MZARCH == 800
+    uint64_t cksw_drift_ticks = g_gdg.short_ticks_total;
+#else
+    uint64_t cksw_drift_ticks = 0;
+#endif
+    unsigned prev_ticks = g_gdg.total_elapsed.ticks;
+
     char *xml = NULL;
     en_SNAPSHOT_RESULT res = snapshot_io_read_xml(ctx->io, "hw/gdg.xml", &xml);
     if (res != SNAPSHOT_OK) {
@@ -217,6 +322,43 @@ static en_SNAPSHOT_RESULT snap_gdg_load(st_SNAPSHOT_CONTEXT *ctx)
         return SNAPSHOT_ERR_CORRUPTED;
     }
 
+    /* Termín další 20ms události (snap_gdg_restore_speed_sync()). */
+    unsigned speed_sync = 0;
+    bool has_speed_sync = snapshot_xml_read_uint(r, "speed_sync_ticks", &speed_sync);
+
+#if MZARCH == 800
+    /* Zkrácení řádků bitem CKSW. Element chybí ve snapshotech bez CKSW
+     * i ve starších verzích (ty řádky nezkracovaly): vše nulové. Čtečka XML
+     * při chybějícím klíči hodnotu nemění, proto se výchozí hodnoty nastavují
+     * předem - jinak by snapshot zdědil stav stroje, přes který se načítá
+     * (platí i pro bit cksw v registrech níže). */
+    g_gdg.cksw = 0;
+    g_gdg.row_shrink = 0;
+    g_gdg.frame_short_ticks = 0;
+    g_gdg.short_ticks_total = 0;
+    if (snapshot_xml_enter_element(r, "cksw_timing")) {
+        snapshot_xml_read_uint(r, "row_shrink", &g_gdg.row_shrink);
+        snapshot_xml_read_uint(r, "frame_short_ticks", &g_gdg.frame_short_ticks);
+        snapshot_xml_read_uint64(r, "short_ticks_total", &g_gdg.short_ticks_total);
+        /* Pracovní verze mutanta superimpose (206f2fd2) ukládala termín
+         * 20ms události sem. */
+        if (!has_speed_sync) {
+            has_speed_sync = snapshot_xml_read_uint(r, "speed_sync_ticks", &speed_sync);
+        }
+        snapshot_xml_leave_element(r);
+    }
+    if (((g_gdg.row_shrink != 0) && (g_gdg.row_shrink != GDG_CKSW_ROW_SHRINK)) ||
+        (g_gdg.frame_short_ticks > g_gdg.beam_row * GDG_CKSW_ROW_SHRINK) ||
+        (g_gdg.frame_short_ticks % GDG_CKSW_ROW_SHRINK)) {
+        SNAP_ERR("gdg", "cksw_timing out of range (row_shrink %u, frame_short_ticks %u)",
+                 g_gdg.row_shrink, g_gdg.frame_short_ticks);
+        snapshot_xml_reader_free(r);
+        return SNAPSHOT_ERR_CORRUPTED;
+    }
+#endif
+
+    snap_gdg_restore_speed_sync(has_speed_sync, speed_sync, cksw_drift_ticks, prev_ticks);
+
     /* Čekající GDG událost patří k obnovenému rastru, ne k předchozímu stroji. */
     snap_gdg_event_resync();
 
@@ -233,6 +375,7 @@ static en_SNAPSHOT_RESULT snap_gdg_load(st_SNAPSHOT_CONTEXT *ctx)
         /* cksw - novy klic, starsi snapshoty ho nemaji -> default 0
          * (snapshot_xml_read_uint nesnaha pri chybejicim klici). */
         snapshot_xml_read_uint(r, "cksw", &g_gdg.cksw);
+        g_gdg.cksw &= 1;
 #endif
         snapshot_xml_read_uint(r, "regct53g7", &g_gdg.regct53g7);
 #if MZARCH == 800

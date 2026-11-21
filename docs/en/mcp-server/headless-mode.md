@@ -63,7 +63,7 @@ mz800emu --headless --speed max --run-mzf test.mzf \
 |--------|--------------|-----------|
 | `--exit-after-frames N` | after N emulated frames | 0 |
 | `--timeout-frames N` | after N emulated frames, unless another condition came first | 2 |
-| `--timeout-seconds S` | same, in emulated seconds (rounded up to whole frames) | 2 |
+| `--timeout-seconds S` | same, in emulated seconds (rounded up to whole 20 ms frames; a program that sets the CKSW bit on the MZ-800 has frames 1.4 % shorter and reaches the limit that much sooner) | 2 |
 | `--exit-on-pc ADDR[,skip=N][,code=C]` | when the CPU executes ADDR (after skipping the first N passes) | C, default 0 |
 | `--fail-on-pc ADDR[,skip=N]` | when the CPU executes ADDR | 1 |
 | `--exit-on-write ADDR[=VAL][,skip=N][,code=C]` | when the program writes to memory address ADDR (only the value VAL, if given) | the written value, or C |

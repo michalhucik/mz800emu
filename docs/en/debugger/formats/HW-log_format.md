@@ -144,9 +144,11 @@ sub_event_type:
 - `0x06` HBLN_END   - horizontal blanking end (decimation)
 - `0x07` HS_START   - STS_HSYNC start (decimation)
 - `0x08` HS_END     - STS_HSYNC end (decimation)
+- `0x09` CKSW       - write of the CKSW (Superimpose) bit, port 0x07CF (MZ-800); always emitted
 
-Payload: 6 zeros (the timestamp in the event header is sufficient, no
-further info).
+Payload: 6 zeros for the sync edges (the timestamp in the event header
+is sufficient). For CKSW: `[0]` addr_low, `[1]` addr_high, `[2]` the
+byte written (bit 7 = CKSW).
 
 #### HS / HBLN decimation
 

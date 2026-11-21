@@ -99,6 +99,7 @@ typedef enum en_HWLOG_GDG_VIDEO_SUB
     HWLOG_GDG_VIDEO_HBLN_END   = 0x06,    /**< horizontal blanking end (decim) */
     HWLOG_GDG_VIDEO_HS_START   = 0x07,    /**< STS_HSYNC start (decim) */
     HWLOG_GDG_VIDEO_HS_END     = 0x08,    /**< STS_HSYNC end (decim) */
+    HWLOG_GDG_VIDEO_CKSW       = 0x09,    /**< zápis bitu CKSW (port 0x07CF); payload[0..1] = adresa, payload[2] = zapsaný bajt (bit 7 = CKSW) */
 } en_HWLOG_GDG_VIDEO_SUB;
 
 /**

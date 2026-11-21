@@ -716,15 +716,28 @@ static inline void mzarch_main_insideop(const en_INSIDEOP insideop)
         en_VRAMWAIT_GRID grid = GDG_MZ800_DMD_TEST_MZ700 ? VRAMWAIT_GRID_MZ700 : VRAMWAIT_GRID_MZ800;
         unsigned wait_tw;
 
+        /* Řádek modelu začíná sestupnou hranou nHSYN předchozího řádku
+         * emulátoru. Ta leží GDG_VRAMWAIT_TICKS_TO_LINE_OFFSET tiků před
+         * začátkem aktuálního řádku, takže na ose modelu (čas GDG plus týž
+         * posun) má začátek řádku modelu hodnotu absolutního času začátku
+         * aktuálního řádku emulátoru. Délka je délka aktuálního řádku
+         * (kratší při CKSW = 1; do načtení bitu v HBLN_START nezkrácená,
+         * což stačí, protože na délce závisí jen sloty za tímto bodem).
+         * Přístup za hranou nHSYN aktuálního řádku model sám přiřadí
+         * dalšímu řádku. */
+        st_VRAMWAIT_LINE ln;
+        ln.start = gdg_compute_total_ticks( gdg_get_row_start_ticks( ) );
+        ln.len = VIDEO_SCREEN_WIDTH - g_gdg.row_shrink;
+
         if ( g_gdg.vram_wrff_release > t1r + VRAMWAIT_WRFF_MAX_AHEAD ) {
             g_gdg.vram_wrff_release = 0;
         }
 
         if ( insideop == INSIDEOP_MREQ_MZ800_VRAMCTRL_WRITE ) {
             int two_slots = ( grid == VRAMWAIT_GRID_MZ800 ) && !GDG_MZ800_DMD_TEST_SCRW640;
-            wait_tw = vramwait_write( &g_gdg.vram_wrff_release, t1r, grid, two_slots );
+            wait_tw = vramwait_write_ln( &g_gdg.vram_wrff_release, t1r, grid, two_slots, &ln );
         } else {
-            wait_tw = vramwait_read( g_gdg.vram_wrff_release, t1r, grid );
+            wait_tw = vramwait_read_ln( g_gdg.vram_wrff_release, t1r, grid, &ln );
         }
 
         if ( wait_tw ) {
@@ -836,6 +849,16 @@ void mzarch_main_insideop_mreq_mz800_vramctrl_write(void)
 void mzarch_main_insideop_iorq_psg_write(void)
 {
     mzarch_main_insideop(INSIDEOP_IORQ_PSG_WRITE);
+}
+
+void mzarch_main_requeue_event(void)
+{
+    /* Vynucenou událost (pauza, krok, přerušení) nesmí přeplánování zrušit;
+     * hlavní smyčka ji po vyřízení sama nahradí nejbližší čekající. */
+    if (g_mzarch_main.event.event_name < MZEVENT_BREAK)
+    {
+        mzarch_main_queue_next_event();
+    };
 }
 
 void mzarch_main_report_screen_done_underflow(unsigned ticks)

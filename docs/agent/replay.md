@@ -15,8 +15,34 @@ every input change at a frame boundary + SHA-256 hashes of the state
 every N frames. Playback loads the snapshot, applies the same inputs at
 the same places and compares the hashes; it stops at the first frame
 whose state differs. The emulator core is deterministic from the same
-state with the same inputs (also in a new process and at any speed), so
+state with the same inputs (also in a new process and in MAX SPEED), so
 a replay repeats the run instruction for instruction.
+
+Two limits come from the 20 ms sound timer, which steps the PSG and
+whose period in emulated time follows the custom speed setting:
+
+- Play a recording at the custom speed it was recorded at (MAX SPEED is
+  fine, it does not change the period). At another speed the PSG state
+  differs sooner or later and the playback stops with `state differs at
+  frame N (periph)`; which frame depends on the hash interval.
+- A recording whose start snapshot has no `speed_sync_ticks` key in
+  `hw/gdg.xml` (older versions; the version number in the file does not
+  tell them apart) does not hold the phase of that timer. The phase
+  then stays as the playing process has it, so the process must be
+  prepared the same way as the recording one: the same speed changes
+  for the same number of frames before `emu_replay_play`. This also
+  holds for a recording made at a steady 100 %: a player that ran at
+  another speed earlier has a different phase. Otherwise the playback
+  stops with `state differs at frame N (periph)` at the first hashed
+  frame. The safe way is a fresh process, the same speed preparation
+  without any frame shortened by the CKSW bit (MZ-800), then
+  `emu_replay_play`. If the player did run short frames before, their
+  effect on the phase is taken out when such a file is loaded, but only
+  when the custom speed was set before the first short frame and not
+  changed afterwards; a speed change between or after the short frames
+  leaves a phase that cannot be reconstructed, and the playback may stop
+  at the first hashed frame. Recordings with the key restore the phase
+  from the file.
 
 Recorded: keyboard matrix (GUI keyboard, virtual keyboard, `emu_input_*`
 and `emu_input_send_keys*` together), joysticks (host joystick read once
@@ -177,7 +203,17 @@ emu_replay_goto(trace={"seq": 123456, "at": "before"},
 - Targets: `t` (GDG ticks: the `t` column of `emu_trace_read`,
   `time.ticks` of `emu_state_observe`, `stop_ticks`, `Cycle` of
   breakpoint conditions), `frame` + `frame_ticks` (absolute, as in
-  `emu_state_observe`), or `trace` `{seq, at}` (`before` = state before
+  `emu_state_observe`; the tick is counted from the real start of that
+  frame, so both forms land on the same point even after frames
+  shortened by the CKSW bit of the MZ-800; a tick at or beyond the end
+  of the frame returns `reached: false` with `out_of_range: true`; the
+  stop record of that run carries `out_of_range: true` as well, so the
+  result is also available after a deferred `emu_wait_stop(run_seq)`,
+  and its reason is `replay_goto_out_of_range` instead of `replay_goto`
+  (or stays `replay_end` when the run ended at the end of the
+  recording); a target before the start point of the recording is
+  refused), or `trace`
+  `{seq, at}` (`before` = state before
   the record, `after` = after it) on the current cputrack segment without
   a PC filter. The playback produces the same trace as the original run,
   so a trace recorded during playback is a valid map of the replay.

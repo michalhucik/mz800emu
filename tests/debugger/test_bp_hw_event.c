@@ -445,6 +445,7 @@ void test_event_kind_change_subset ( void ) {
     en_BP_EVENT changes[] = {
         BP_EVENT_GDG_MODE_CHANGE, BP_EVENT_GDG_PALETTE_CHANGE,
         BP_EVENT_GDG_PALGRP_CHANGE, BP_EVENT_GDG_BORDER_CHANGE,
+        BP_EVENT_GDG_CKSW_CHANGE,
         /* V1.6+ TODO 4.6: CMT_STATE_CHANGE pridan jako CHANGE kind. */
         BP_EVENT_CMT_STATE_CHANGE,
     };

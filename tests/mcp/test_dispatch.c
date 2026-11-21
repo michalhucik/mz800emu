@@ -9093,11 +9093,14 @@ void test_replay_goto_params(void) {
     g_object_unref(parser);
     free(resp);
 
-    /* frame + frame_ticks = frame * takty snímku + frame_ticks. */
+    /* frame + frame_ticks se předá jako dvojice (čas určí až replay ze
+     * skutečného začátku snímku; snímky může zkrátit bit CKSW). */
     (void)_rc_call("{\"type\":\"request\",\"req_id\":9141,\"cmd\":\"replay_goto\","
                    "\"data\":{\"frame\":3,\"frame_ticks\":100}}", &rc, &parser, &resp);
     TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, rc);
-    TEST_ASSERT_EQUAL_UINT64(3ull * VIDEO_SCREEN_TICKS + 100u, g_stub_replay.last_goto_ticks);
+    TEST_ASSERT_EQUAL_INT(7, g_stub_replay.last_kind);
+    TEST_ASSERT_EQUAL_UINT32(3u, g_stub_replay.last_goto_frame);
+    TEST_ASSERT_EQUAL_UINT32(100u, g_stub_replay.last_goto_frame_ticks);
     TEST_ASSERT_FALSE(g_stub_replay.last_goto_keep);
     TEST_ASSERT_FALSE(g_stub_replay.last_goto_ckpt);
     g_object_unref(parser);

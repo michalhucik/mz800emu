@@ -267,8 +267,9 @@ static unsigned ctc8253_load_skips_edge(unsigned cs, unsigned ticks)
 
     case CTC_CS1:
     {
-        unsigned col = VIDEO_GET_SCREEN_COL(ticks);
-        unsigned p = (col + VIDEO_SCREEN_WIDTH - VIDEO_REAL_HSYNC_START_COLUMN) % VIDEO_SCREEN_WIDTH;
+        /* tiky od poslední sestupné hrany HSYNC (na MZ-800 závisí poloha
+         * hrany v řádku na bitu CKSW) */
+        unsigned p = gdg_get_ticks_since_hsync_fall(ticks);
         return ctc8253_misses_rising_edge(p, 2 * VIDEO_H_SYNC_TICKS);
     }
 

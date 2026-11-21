@@ -8952,7 +8952,12 @@ async def resource_periph_gdg() -> str:
     "regBOR": int, "regPALGRP": int, "regct53g7": int, "beam_row": int,
     "total_screens": int, "total_ticks": int, "sts_vsync": int,
     "sts_hsync": int, "hbln": int, "vbln": int, "cksw": int,
-    "tempo": int, "tempo_divider": int}``.
+    "line_ticks": int, "tempo": int, "tempo_divider": int}``.
+
+    ``line_ticks`` is the length of the current scanline in pixel clock
+    ticks. On the MZ-800 a line is 1136 ticks, or 1120 when the CKSW bit
+    (port 0x07CF, bit 7) shortened it; the chip samples the bit once per
+    line at column 790, so the value is final from there to the line end.
 
     For MZ-800 the four ``palette[0..3]`` entries are the raw
     ``regPAL0..3`` bytes; entries 4..15 are zero placeholders and the
@@ -9688,7 +9693,15 @@ async def emu_replay_goto(t: int | None = None,
       ``time.ticks`` of ``emu_state_observe``, ``stop_ticks`` of stop
       records, ``Cycle`` in breakpoint conditions);
     - ``frame`` + ``frame_ticks``: absolute frame and tick in the frame as
-      ``time.frame`` / ``time.frame_ticks`` of ``emu_state_observe``;
+      ``time.frame`` / ``time.frame_ticks`` of ``emu_state_observe``. The
+      tick is counted from the real start of that frame (frames can be
+      shorter than nominal on the MZ-800 while the CKSW bit is set). A
+      tick at or beyond the end of the frame gives ``reached: false`` and
+      ``out_of_range: true``; the stop record of that run carries
+      ``out_of_range: true`` too (also with ``timeout_ms=0`` and a later
+      ``emu_wait_stop``) and its reason is ``replay_goto_out_of_range``,
+      or ``replay_end`` when the run reached the end of the recording; a
+      target before the start point of the recording is refused;
     - ``trace``: ``{"seq": N, "at": "before" | "after", "channel":
       "cputrack"}`` - a record of the current cputrack segment (without a
       PC filter, which removes the time): the state before (default) or

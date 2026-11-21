@@ -284,9 +284,15 @@ extern "C" {
     #define pioz80_get_icena_event_pointer() ( &g_pioz80.icena_event )
 
 #include "gdg/video.h"
+/**
+ * @brief Konec snímku: posune čekající událost ICENA o délku skončeného snímku.
+ *
+ * Délka je gdg_get_ending_frame_ticks() (na MZ-800 ji zkracuje bit CKSW).
+ * Makro se rozvíjí v mzarch.c, kde je hlavička GDG vložená.
+ */
 #define pioz80_on_screen_done_event() {\
     if ( (int)g_pioz80.icena_event.ticks != -1 ) {\
-        g_pioz80.icena_event.ticks -= VIDEO_SCREEN_TICKS;\
+        g_pioz80.icena_event.ticks -= gdg_get_ending_frame_ticks();\
     };\
 }
 

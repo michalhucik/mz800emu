@@ -695,8 +695,7 @@ uint8_t port_read_with_logging_cb(z80_t *cpu, uint16_t addr, void *user_data)
                             g_mzarch_main.instruction_addr,
                             frame_n,
                             (uint16_t) g_gdg.beam_row,
-                            (uint16_t) VIDEO_GET_SCREEN_COL (
-                                g_gdg.total_elapsed.ticks ),
+                            (uint16_t) gdg_get_beam_col ( ),
                             g_mzarch_main.cpu->total_cycles );
     }
 
@@ -767,8 +766,7 @@ void port_write_with_logging_cb(z80_t *cpu, uint16_t addr, uint8_t value, void *
                             g_mzarch_main.instruction_addr,
                             frame_n,
                             (uint16_t) g_gdg.beam_row,
-                            (uint16_t) VIDEO_GET_SCREEN_COL (
-                                g_gdg.total_elapsed.ticks ),
+                            (uint16_t) gdg_get_beam_col ( ),
                             g_mzarch_main.cpu->total_cycles );
     }
 

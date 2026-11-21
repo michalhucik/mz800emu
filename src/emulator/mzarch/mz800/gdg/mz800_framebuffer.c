@@ -171,6 +171,12 @@ void framebuffer_border_current_row_fill ( void ) {
         unsigned pos_x = ( g_gdg.last_updated_border_pixel >= VIDEO_BORDER_LEFT_WIDTH + VIDEO_CANVAS_WIDTH ) ? g_gdg.last_updated_border_pixel : VIDEO_BORDER_LEFT_WIDTH + VIDEO_CANVAS_WIDTH;
         memset ( &p [ pos_x ], g_gdg.regBOR, VIDEO_DISPLAY_WIDTH - pos_x );
     };
+
+    /* Krátký řádek (CKSW = 1): viditelná část končí o row_shrink bodů dřív,
+     * zbytek řádku ve framebufferu je zatemnění (černá, IGRB 0). */
+    if ( g_gdg.row_shrink ) {
+        memset ( &p [ VIDEO_DISPLAY_WIDTH - g_gdg.row_shrink ], 0x00, g_gdg.row_shrink );
+    };
 }
 
 
@@ -183,14 +189,11 @@ void framebuffer_border_changed ( void ) {
 
     g_framebuffer.border_changes = SCRSTS_THIS_IS_CHANGED;
 
-    unsigned beam_col = VIDEO_GET_SCREEN_COL ( g_gdg.total_elapsed.ticks );
-    unsigned beam_row = VIDEO_GET_SCREEN_ROW ( g_gdg.total_elapsed.ticks );
-
-
-    /* Osetreni situace, kdy OUT provedl zmenu na hranici mezi dvema snimky. */
-    if ( beam_row == VIDEO_SCREEN_HEIGHT ) {
-        beam_row = 0;
-    };
+    /* Pozice od začátku aktuálního řádku (délka řádku závisí na CKSW).
+     * Změnu na hranici dvou řádků nebo snímků, jejíž konec řádku ještě není
+     * zpracovaný, gdg_get_beam_pos() přiřadí následujícímu řádku. */
+    unsigned beam_row;
+    unsigned beam_col = gdg_get_beam_pos ( g_gdg.total_elapsed.ticks, &beam_row );
 
     /* Pokud jsme na radku, ktery je mimo viditelnou oblast, tak neni potreba aktualizovat framebuffer. */
     if ( beam_row > VIDEO_BEAM_DISPLAY_LAST_ROW ) return;
@@ -203,6 +206,12 @@ void framebuffer_border_changed ( void ) {
 
     /* Osetreni maximalni horni hranice paprsku na radku. */
     beam_col = ( beam_col > VIDEO_BEAM_DISPLAY_LAST_COLUMN ) ? ( VIDEO_BEAM_DISPLAY_LAST_COLUMN + 1 ) : beam_col;
+
+    /* V krátkém řádku (CKSW = 1) končí viditelná část o row_shrink bodů dřív;
+     * dál už se border nekreslí (zatemnění doplní konec viditelné části). */
+    if ( ( beam_row == g_gdg.beam_row ) && ( beam_col > VIDEO_DISPLAY_WIDTH - g_gdg.row_shrink ) ) {
+        beam_col = VIDEO_DISPLAY_WIDTH - g_gdg.row_shrink;
+    };
 
     /* */
     if ( beam_row != g_gdg.beam_row ) {
@@ -247,7 +256,7 @@ void framebuffer_border_changed ( void ) {
 
 void framebuffer_MZ800_screen_changed ( void ) {
     g_framebuffer.screen_changes = SCRSTS_THIS_IS_CHANGED;
-    unsigned column = VIDEO_GET_SCREEN_COL ( g_gdg.total_elapsed.ticks );
+    unsigned column = gdg_get_beam_col ( );
     if ( ( column < VIDEO_BEAM_CANVAS_FIRST_COLUMN + 3 ) || ( column > VIDEO_BEAM_CANVAS_LAST_COLUMN ) || ( g_gdg.beam_row < VIDEO_BEAM_CANVAS_FIRST_ROW ) || ( g_gdg.beam_row > VIDEO_BEAM_CANVAS_LAST_ROW ) ) return;
     framebuffer_MZ800_current_screen_row_fill ( column - VIDEO_BEAM_CANVAS_FIRST_COLUMN );
 }

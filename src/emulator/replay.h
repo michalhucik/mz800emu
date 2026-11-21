@@ -120,6 +120,7 @@ extern "C"
         int32_t goto_seek_from;      /**< Odkud poslední goto vyšlo: snímek checkpointu (>= 0),
                                           REPLAY_GOTO_FROM_RESTART, REPLAY_GOTO_FROM_NONE. */
         bool goto_checkpoint;        /**< Poslední goto uložilo checkpoint v cílovém snímku. */
+        bool goto_out_of_range;      /**< Poslední goto zadané snímkem a takty: cílový takt ležel na konci snímku nebo za ním (snímek byl kratší), goto skončilo v dalším snímku a cíle nedosáhlo. Platí po skončení goto. */
     } st_REPLAY_STATUS;
 
     /** @brief st_REPLAY_STATUS::goto_seek_from: goto dojelo bez seeku (cíl dopředu ve stejném snímku). */
@@ -300,6 +301,65 @@ extern "C"
      *         nebo za koncem záznamu) je ve stavu (`request_ok` = false).
      */
     uint32_t replay_request_goto(uint64_t ticks, bool keep_breakpoints, bool checkpoint_at_target);
+
+    /**
+     * @brief Požádá o skok přehrávání na snímek a takty od jeho začátku.
+     *
+     * Jako replay_request_goto(), ale cíl je dvojice, jak ji vrací
+     * state_observe (`time.frame`, `time.frame_ticks`). Přehrávání se přesune
+     * na hranici snímku @p frame a cílový čas se určí až tam, ze skutečného
+     * začátku snímku. Délka předchozích snímků se nepředpokládá: na MZ-800
+     * ji zkracuje bit CKSW, takže převod dvojice na čas jmenovitou délkou
+     * snímku by mířil jinam.
+     *
+     * Bod na hranici snímku leží nejvýš jednu instrukci za jeho začátkem;
+     * cíl s menším počtem taktů skončí v tomto bodě. Takt musí ležet uvnitř
+     * snímku: je-li @p frame_ticks roven délce snímku nebo větší (délku
+     * zná replay až po doběhnutí snímku), goto skončí v dalším snímku
+     * a stav ho označí `goto_out_of_range`. Cíl v prvním snímku záznamu
+     * před jeho startovním bodem se odmítne jako čas před startem.
+     *
+     * @param frame                Snímek od startu emulátoru
+     *                             (g_gdg.total_elapsed.screens).
+     * @param frame_ticks          Takty GDG od začátku snímku.
+     * @param keep_breakpoints     true = uživatelské breakpointy platí dál.
+     * @param checkpoint_at_target true = na hranici snímku seeku uložit checkpoint.
+     * @return Číslo požadavku. Odmítnutí (mimo přehrávání, snímek před startem
+     *         nebo za koncem záznamu) je ve stavu (`request_ok` = false).
+     */
+    uint32_t replay_request_goto_frame(uint32_t frame, uint32_t frame_ticks, bool keep_breakpoints,
+                                       bool checkpoint_at_target);
+
+    /**
+     * @brief Zjistí, zda goto zadané snímkem a takty skončilo mimo rozsah snímku.
+     *
+     * Volá se při zastavení na cíli goto (záznam běhu v run_control) a při
+     * ukončení goto. První volání po zastavení porovná požadovaný takt se
+     * skutečnou délkou cílového snímku (známou, až když snímek skončil)
+     * a výsledek si zapamatuje do dalšího goto; další volání ho jen vrací.
+     *
+     * @return true = cílový takt ležel na konci cílového snímku nebo za ním,
+     *         zastavení je v dalším snímku a cíle nedosáhlo. false i pro goto
+     *         zadané časem a před prvním goto.
+     * @pre Emu vlákno, emulace zastavená na hranici instrukce.
+     */
+    bool replay_goto_stop_out_of_range(void);
+
+    /**
+     * @brief Výsledek kontroly rozsahu goto pro záznam daného běhu.
+     *
+     * Goto se vyřizuje v pauze a jeho dojetí je následující běh; jeho číslo
+     * si replay při přijetí goto zapamatuje. Volá run_control při zastavení
+     * běhu, aby výsledek uložil do záznamu právě toho běhu, ať skončil
+     * jakkoli (cíl, konec přehrávání, breakpoint).
+     *
+     * @param run_seq Číslo běhu, který se právě zastavil.
+     * @param[out] out_of_range Výsledek replay_goto_stop_out_of_range();
+     *             plní se jen při návratu true. Smí být NULL.
+     * @return true = tento běh prováděl goto.
+     * @pre Emu vlákno, emulace zastavená na hranici instrukce.
+     */
+    bool replay_goto_result_for_run(uint64_t run_seq, bool *out_of_range);
 
     /**
      * @brief Požádá o konec: záznam uloží, přehrávání ukončí (výsledek `stopped`).

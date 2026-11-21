@@ -187,6 +187,11 @@ Sub-registry (všechny W-only):
 - Read mirror je k dispozici pro SOF0/SOF1, SW, SSA, SEA a BCOL. Pro
   CKSW mirror neexistuje; aktuální stav signálu CKSW lze číst v 0xCE
   Status registru, bit 2.
+- CKSW = 1 zkracuje každý obrazový řádek z 1136 na 1120 taktů pixelových
+  hodin (pravý border přijde o 16 bodů). Čip si bit načítá jednou za
+  řádek na sestupné hraně HBLN, takže zápis před ní zkrátí už tento řádek
+  a pozdější zápis až následující. Chování podle simulace netlistu GDG,
+  na skutečném MZ-800 neměřeno.
 
 **IORQ_W BP integrace:** Při akci "Add IORQ W BP" z 0xCF<RR> entry UI
 automaticky nastaví `port_mode = BP_PORT_16BIT`. Default 8-bit mód by

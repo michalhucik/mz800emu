@@ -23,6 +23,7 @@
 #include "mzarch/mzarch.h"
 #include "hw-generic/gdg/gdg.h"
 #include "hw-generic/gdg/gdgclk.h"
+#include "replay.h"
 
 #ifdef MZ800EMU_CFG_MCP_SERVER_ENABLED
 #include <json-glib/json-glib.h>
@@ -171,6 +172,7 @@ static void run_control_emit_paused(const st_RUN_LOG_RECORD *rec)
         json_object_set_int_member(p, "bytes", (gint64)rec->bytes);
         json_object_set_string_member(p, "detail", rec->detail);
     };
+    if (rec->goto_out_of_range) json_object_set_boolean_member(p, "out_of_range", TRUE);
     event_bus_emit("paused", p);
 }
 
@@ -219,6 +221,23 @@ void run_control_on_stop(void)
     st_RUN_LOG_RECORD rec;
     run_log_record_clear(&rec);
     rec.reason = run_control_reason_name(why);
+    /* Goto zadané snímkem a takty, jehož takt ležel za koncem (kratšího)
+     * snímku: běh skončil v dalším snímku a cíle nedosáhl. Výsledek patří
+     * k tomuto běhu, proto je v jeho záznamu (dohledatelný podle run_seq
+     * i při odloženém čekání a po dalším goto) jako příznak nezávislý na
+     * důvodu zastavení - běh může skončit i koncem přehrávání. Zastavení
+     * na cíli goto má navíc vlastní důvod. */
+    {
+        bool out_of_range = false;
+        if (replay_goto_result_for_run(run_log_current(NULL), &out_of_range) && out_of_range)
+        {
+            rec.goto_out_of_range = true;
+            if (why == EMU_PAUSE_REASON_REPLAY_GOTO)
+            {
+                rec.reason = "replay_goto_out_of_range";
+            };
+        };
+    }
     rec.started_by = s_rc.started_by;
     rec.start_cmd = s_rc.start_cmd;
     rec.stopped_by = (why == EMU_PAUSE_REASON_MANUAL)
@@ -327,9 +346,15 @@ bool run_control_deadline_arm(en_RUN_DEADLINE_KIND kind, uint64_t value, uint64_
     {
         case RUN_DEADLINE_FRAMES:
             if (value < 1 || value > RUN_DEADLINE_MAX_FRAMES) return false;
-            /* Hranice snímku: čas screens * VIDEO_SCREEN_TICKS. */
-            target = ((uint64_t)g_gdg.total_elapsed.screens + value) * (uint64_t)VIDEO_SCREEN_TICKS;
-            break;
+            /* Hranice snímku: začátek aktuálního snímku plus jmenovitá délka
+             * zbývajících snímků. Snímky zkrácené bitem CKSW (MZ-800) skončí
+             * dřív; běh pak zastaví čítač snímků run_deadline_screens. */
+            target = gdg_compute_total_ticks(0u) + value * (uint64_t)VIDEO_SCREEN_TICKS;
+            g_debugger.run_deadline_screens = g_gdg.total_elapsed.screens + (uint32_t)value;
+            g_debugger.run_deadline_ticks = target;
+            g_debugger.run_deadline_active = 1;
+            if (out_ticks) *out_ticks = (target > now) ? (target - now) : 0;
+            return true;
         case RUN_DEADLINE_EMULATED_MS:
             if (value < 1 || value > RUN_DEADLINE_MAX_MS) return false;
             target = now + value * (uint64_t)GDGCLK_BASE / 1000u;
@@ -342,6 +367,7 @@ bool run_control_deadline_arm(en_RUN_DEADLINE_KIND kind, uint64_t value, uint64_
             return false;
     };
     g_debugger.run_deadline_ticks = target;
+    g_debugger.run_deadline_screens = 0;
     g_debugger.run_deadline_active = 1;
     if (out_ticks) *out_ticks = (target > now) ? (target - now) : 0;
     return true;
@@ -392,7 +418,9 @@ void run_control_check_run_bounds(void)
         emulator_pause(true);
     }
     else if (g_debugger.run_deadline_active
-             && run_control_mono_ticks() >= g_debugger.run_deadline_ticks)
+             && ((run_control_mono_ticks() >= g_debugger.run_deadline_ticks)
+                 || (g_debugger.run_deadline_screens
+                     && (g_gdg.total_elapsed.screens >= g_debugger.run_deadline_screens))))
     {
         g_debugger.run_deadline_active = 0;
         g_emulator.pause_reason = EMU_PAUSE_REASON_DEADLINE;

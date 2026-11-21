@@ -190,6 +190,11 @@ Sub-registers (all W-only):
 - A read mirror is available for SOF0/SOF1, SW, SSA, SEA and BCOL. There
   is no mirror for CKSW; the current state of the CKSW signal can be
   read in the 0xCE Status register, bit 2.
+- CKSW = 1 shortens every scanline from 1136 to 1120 pixel clock ticks
+  (the right border loses 16 points). The chip samples the bit once per
+  line at the falling edge of HBLN, so a write before it shortens that
+  very line and a later write the next one. Behavior according to a
+  simulation of the GDG netlist, not measured on a real MZ-800.
 
 **IORQ_W BP integration:** When triggering "Add IORQ W BP" from a
 0xCF<RR> entry, the UI automatically sets `port_mode = BP_PORT_16BIT`.

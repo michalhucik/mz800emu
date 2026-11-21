@@ -4773,7 +4773,7 @@ typedef struct st_DBGAPI_PERIPH_GDG_PARAM
     uint8_t  vbln;               /**< OUT: VBLN: 0 = paprsek mimo screen vertikálně. */
     uint8_t  cksw;               /**< OUT: CKSW (Superimpose) bit; vždy 0 u MZ-700/MZ-1500. */
     uint8_t  has_cksw;           /**< OUT: 1 = MZ-800 (cksw field existuje), 0 = jinde. */
-    uint8_t  _pad[2];            /**< Zarovnání. */
+    uint16_t line_ticks;         /**< OUT: délka aktuálního řádku v pxCLK (VIDEO_SCREEN_WIDTH; na MZ-800 o 16 méně, když řádek zkrátil bit CKSW - platí od načtení bitu ve sloupci 790 do konce řádku). */
     uint32_t tempo;              /**< OUT: tempo počítadlo (společné). */
     uint32_t tempo_divider;      /**< OUT: tempo_divider (společné). */
     /* --- MZ-800: řadič VRAM (WF/RF, porty CCh/CDh) - platné při has_vramctrl --- */

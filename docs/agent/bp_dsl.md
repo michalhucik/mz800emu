@@ -68,7 +68,7 @@ Filled by the BP enforcement layer at hit time. Zero outside a hit
 | Identifier | Meaning |
 |------------|---------|
 | `Cycle` | GDG pixel ticks since the emulator started (not restarted by a machine reset; a snapshot load sets the saved value), at instruction start (5 per Z80 T-state on PAL, 4 on NTSC). Truncated to int32: wraps negative after about 121 s of emulated time (PAL). |
-| `FrameCycle` | GDG pixel ticks since the start of the current frame (0..354431 on PAL, 0..238943 on NTSC). Never wraps; prefer it for in-frame timing. |
+| `FrameCycle` | GDG pixel ticks since the start of the current frame (0..354431 on PAL, 0..238943 on NTSC). Never wraps; prefer it for in-frame timing. On the MZ-800 a frame is shorter (down to 349440 ticks) while the CKSW bit (port 0x07CF, MZ notation 0xCF07, bit 7) is set: each line then takes 1120 ticks instead of 1136, and `Cycle` no longer equals `Frame * 354432 + FrameCycle`. |
 | `Frame` | Completed frames since the emulator started (not restarted by a machine reset). |
 | `Scanline` | Current GDG raster row (0..frame_height-1). |
 

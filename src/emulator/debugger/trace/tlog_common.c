@@ -121,7 +121,11 @@ uint32_t tlog_common_get_screens_total ( void )
 
 uint32_t tlog_common_get_pxclk_in_screen ( void )
 {
-    return g_gdg.total_elapsed.ticks;
+    /* Virtuální pozice (řádek * VIDEO_SCREEN_WIDTH + sloupec): dekódování
+     * dělením VIDEO_SCREEN_WIDTH platí i v řádcích zkrácených bitem CKSW
+     * (MZ-800). Bez CKSW a na ostatních platformách jsou to tiky od začátku
+     * snímku. */
+    return gdg_get_beam_vpos ( g_gdg.total_elapsed.ticks );
 }
 
 uint64_t tlog_common_get_cpuclk_total ( void )

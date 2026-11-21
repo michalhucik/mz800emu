@@ -70,7 +70,8 @@ extern "C" {
  *   SIGNAL       - signál se selectorem trigger condition (vsync, ctc:zc0,
  *                  irq:fdc, cmt:in, ...). Předává se 0/1 jako value.
  *   CHANGE       - implicit "happened" pri kazdem fire (mode_change,
- *                  palette_change, palgrp_change, border_change). Value
+ *                  palette_change, palgrp_change, border_change,
+ *                  cksw_change). Value
  *                  nese novou hodnotu (= dostupna v condition jako Value).
  *   POINT_PARAM  - point event s parametrem (raster:N). Value nese row.
  *   POINT_NOPARAM- point event bez parametru (cpu:nmi, cpu:halt, ...).
@@ -105,6 +106,7 @@ typedef enum en_BP_EVENT {
     BP_EVENT_GDG_PALETTE_CHANGE,    /**< zmena konkretni barvy v palete */
     BP_EVENT_GDG_PALGRP_CHANGE,     /**< zmena palette group selectoru */
     BP_EVENT_GDG_BORDER_CHANGE,     /**< zmena border barvy */
+    BP_EVENT_GDG_CKSW_CHANGE,       /**< zápis bitu CKSW (port 0x07CF), value = bit 0/1; jen MZ-800 */
     BP_EVENT_CMT_STATE_CHANGE,      /**< CMT lifecycle change (V1.6+ TODO 4.6) - value = en_BP_CMT_STATE */
 
     /* === Point events (1) - parametr filter === */

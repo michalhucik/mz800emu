@@ -351,9 +351,10 @@ Soubory bez tohoto klíče se načtou s defaultem `cpu_view`.
 `irq:ctc2`, `irq:pioz80_a`, `irq:pioz80_b`, `irq:fdc`, `tempo`,
 `cursor`, `cmt:in`, `cmt:out`, `cmt:mstate`, `cmt:motor`
 
-**Change events (4)** - implicit "happened":
+**Change events (5)** - implicit "happened":
 
-`mode_change`, `palette_change`, `palgrp_change`, `border_change`
+`mode_change`, `palette_change`, `palgrp_change`, `border_change`,
+`cksw_change`
 
 **Point event s parametrem (1)**:
 

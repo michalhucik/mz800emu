@@ -83,6 +83,7 @@ static const char *s_event_names [ BP_EVENT_COUNT ] = {
     [ BP_EVENT_GDG_PALETTE_CHANGE ]  = "palette_change",
     [ BP_EVENT_GDG_PALGRP_CHANGE ]   = "palgrp_change",
     [ BP_EVENT_GDG_BORDER_CHANGE ]   = "border_change",
+    [ BP_EVENT_GDG_CKSW_CHANGE ]     = "cksw_change",
     [ BP_EVENT_CMT_STATE_CHANGE ]    = "cmt:state_change",
 
     /* Point event s parametrem */
@@ -145,6 +146,7 @@ bool bp_event_is_supported_on_current_arch ( en_BP_EVENT event ) {
         case BP_EVENT_GDG_PALETTE_CHANGE:
         case BP_EVENT_GDG_PALGRP_CHANGE:
         case BP_EVENT_GDG_BORDER_CHANGE:
+        case BP_EVENT_GDG_CKSW_CHANGE:
             return false;
 #endif
         default:
@@ -180,6 +182,7 @@ en_BP_EVENT_KIND bp_event_get_kind ( en_BP_EVENT event ) {
         case BP_EVENT_GDG_PALETTE_CHANGE:
         case BP_EVENT_GDG_PALGRP_CHANGE:
         case BP_EVENT_GDG_BORDER_CHANGE:
+        case BP_EVENT_GDG_CKSW_CHANGE:
         case BP_EVENT_CMT_STATE_CHANGE:
             return BP_EVT_KIND_CHANGE;
 

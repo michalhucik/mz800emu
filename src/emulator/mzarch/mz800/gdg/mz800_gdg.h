@@ -118,12 +118,30 @@ extern "C"
 
         unsigned regct53g7; /* rizeni GATE pro CTC0 v ctc8253 v rezimu MZ700 */
 
-        unsigned cksw;      /* CKSW (Superimpose) bit, set zapisem na 0xCF07 bit 7.
-                             * Citelny v Status registru bit 2 (0xCE i 0xE008).
-                             * Emulator hodnotu udrzuje, ale zmenu HSYN timingu
-                             * (CKSW=1 zkracuje horizontalni periodu o 16 pxCLK)
-                             * NEemulujeme - viz mz800-knowledge public/reference/agent/hw/08a-video-timing.md.
-                             */
+        /** CKSW (Superimpose) bit: zápis na 0CF07h bit 7, čitelný v bitu 2
+         *  Status registru (0CEh i 0E008h). Hodnota 1 zkracuje řádek
+         *  o GDG_CKSW_ROW_SHRINK pxCLK; čip si bit načítá jednou za řádek
+         *  (viz row_shrink). Vždy 0 nebo 1. */
+        unsigned cksw;
+
+        /** Zkrácení aktuálního řádku v pxCLK: 0, nebo GDG_CKSW_ROW_SHRINK.
+         *  Nastavuje událost MZEVENT_GDG_HBLN_START z cksw, nuluje konec
+         *  řádku. O tuto hodnotu jsou dřív události řádku za sloupcem
+         *  GDG_CKSW_SHRINK_FIRST_COLUMN (konec viditelné části, hrana HSYNC,
+         *  konec řádku). */
+        unsigned row_shrink;
+
+        /** Součet zkrácení dokončených řádků aktuálního snímku (pxCLK).
+         *  Začátek aktuálního řádku je
+         *  beam_row * VIDEO_SCREEN_WIDTH - frame_short_ticks tiků od začátku
+         *  snímku. Na konci snímku se přičte do short_ticks_total a vynuluje.
+         *  Bez CKSW trvale 0. */
+        unsigned frame_short_ticks;
+
+        /** Součet zkrácení všech dokončených snímků (pxCLK). Absolutní čas je
+         *  ticks + screens * VIDEO_SCREEN_TICKS - short_ticks_total
+         *  (gdg_compute_total_ticks()). Bez CKSW trvale 0. */
+        uint64_t short_ticks_total;
 
         unsigned tempo;
         unsigned tempo_divider;
@@ -198,8 +216,62 @@ extern "C"
      */
     extern void gdg_debug_set_regDMD(uint8_t value);
 
-#define gdg_compute_total_ticks(now_ticks) (now_ticks + ((uint64_t)g_gdg.total_elapsed.screens * VIDEO_SCREEN_TICKS))
+/** @brief Zkrácení řádku při CKSW = 1 v pxCLK (netlist GDG: 1136 -> 1120). */
+#define GDG_CKSW_ROW_SHRINK 16u
+
+/**
+ * @brief O kolik pxCLK před koncem M-cyklu zápisu se překlopí klopný obvod CKSW.
+ *
+ * Emulátor zná u zápisu na port čas konce M-cyklu. Klopný obvod bitu se
+ * podle netlistu překlápí 0,5 CLK0 po náběžné hraně /WR (sestupná hrana T3),
+ * tedy 2 CLK0 před koncem M-cyklu; fáze CPU vůči CLK0 je pevná, hodnota nemá
+ * rozptyl. Zápis, jehož M-cyklus končí méně než tolik tiků po načtení bitu
+ * (MZEVENT_GDG_HBLN_START), proto ještě platí pro tento řádek. Zdroj:
+ * simulace netlistu GDG (emu-experiments superimpose/gdgsim,
+ * probe_cksw_wr.c, 2160 zápisů). Měření na MZ-800 analyzátorem 2026-11-21
+ * (hodiny = pixel clock, 14 227 zápisů): náběžná hrana /IORQ 975 px po
+ * sestupné hraně /HSYNC ještě změní tentýž řádek, 976 px už ne, v obou
+ * směrech; netlist dává 974,5 a 975,5, shoda je na půl pixelu, tedy na
+ * rozlišení měření.
+ */
+#define GDG_CKSW_WR_EDGE_TICKS 2u
+
+/**
+ * @brief První sloupec, který krátkému řádku chybí.
+ *
+ * Zkrácení jde celé z pravého borderu: viditelná část krátkého řádku končí
+ * tímto sloupcem (912 místo 928) a všechny události řádku za ním nastanou
+ * o GDG_CKSW_ROW_SHRINK pxCLK dřív. Zdroj: simulace netlistu GDG
+ * (emu-experiments superimpose/gdgsim, probe_cksw_edges.c). Měření na MZ-800
+ * analyzátorem 2026-11-21: řádek 1120 px, 312 řádků, border na výstupu RGBI
+ * od 186 px po sestupné hraně /HSYNC do 1114 px (CKSW = 0) nebo 1098 px
+ * (CKSW = 1), tedy sloupce 0 až 928 a 0 až 912 emulátoru.
+ */
+#define GDG_CKSW_SHRINK_FIRST_COLUMN ( VIDEO_BEAM_DISPLAY_LAST_COLUMN + 1u - GDG_CKSW_ROW_SHRINK )
+
+/**
+ * @brief Absolutní čas (pxCLK od startu emulace) pro tiky aktuálního snímku.
+ *
+ * Snímek s krátkými řádky (CKSW = 1) trvá méně než VIDEO_SCREEN_TICKS;
+ * rozdíl za dokončené snímky drží g_gdg.short_ticks_total. Čas je souvislý
+ * i přes konec snímku. Bez CKSW je výsledek stejný jako dřív
+ * (screens * VIDEO_SCREEN_TICKS + now_ticks).
+ */
+#define gdg_compute_total_ticks(now_ticks) (now_ticks + ((uint64_t)g_gdg.total_elapsed.screens * VIDEO_SCREEN_TICKS) - g_gdg.short_ticks_total)
 #define gdg_get_total_ticks() gdg_compute_total_ticks(g_gdg.total_elapsed.ticks)
+
+/** @brief Tiky od začátku snímku, ve kterých začíná aktuální řádek (sloupec 0). */
+#define gdg_get_row_start_ticks() ( g_gdg.beam_row * VIDEO_SCREEN_WIDTH - g_gdg.frame_short_ticks )
+
+/**
+ * @brief Délka právě končícího snímku v pxCLK.
+ *
+ * Platí při zpracování konce posledního řádku (po přičtení jeho zkrácení do
+ * frame_short_ticks, před gdg_on_screen_done_event()). O tuto hodnotu posouvá
+ * konec snímku čas GDG i události časované od začátku snímku (CTC0, PIO-Z80,
+ * 20ms časovač).
+ */
+#define gdg_get_ending_frame_ticks() ( VIDEO_SCREEN_TICKS - g_gdg.frame_short_ticks )
 
 /**
  * @brief Posun tiků GDG na časovou osu modelu WAIT u VRAM (mz800_vramwait.h).
@@ -254,9 +326,11 @@ extern "C"
  * @brief Uzavře snímek: zvýší čítač snímků a odečte délku snímku od tiků.
  *
  * Volá se jen z gdg_process_events() při zpracování události konce
- * posledního řádku. V tu chvíli platí
- * g_gdg.total_elapsed.ticks >= VIDEO_SCREEN_TICKS (událost má ticks ==
- * VIDEO_SCREEN_TICKS). Pokud by to neplatilo (konec snímku zpracovaný
+ * posledního řádku. Délka snímku je gdg_get_ending_frame_ticks()
+ * (VIDEO_SCREEN_TICKS minus zkrácení řádků při CKSW = 1); zkrácení se
+ * přičte do short_ticks_total, aby absolutní čas zůstal souvislý. V tu
+ * chvíli platí g_gdg.total_elapsed.ticks >= délka snímku (událost má ticks
+ * rovné délce snímku). Pokud by to neplatilo (konec snímku zpracovaný
  * dvakrát), unsigned odečet by přetekl na ~2^32 a emulace by minuty
  * zpracovávala události bez instrukcí. Pojistka to nahlásí přes
  * mzarch_main_report_screen_done_underflow() a tiky srovná na 0.
@@ -266,17 +340,131 @@ extern "C"
     {                                                    \
         g_gdg.total_elapsed.screens++;                   \
         g_mzarch_main.cursor_timer++;                          \
-        if (g_gdg.total_elapsed.ticks >= VIDEO_SCREEN_TICKS) \
+        if (g_gdg.total_elapsed.ticks >= gdg_get_ending_frame_ticks()) \
         {                                                \
-            g_gdg.total_elapsed.ticks -= VIDEO_SCREEN_TICKS; \
+            g_gdg.total_elapsed.ticks -= gdg_get_ending_frame_ticks(); \
         }                                                \
         else                                             \
         {                                                \
             mzarch_main_report_screen_done_underflow(g_gdg.total_elapsed.ticks); \
             g_gdg.total_elapsed.ticks = 0;               \
         }                                                \
+        g_gdg.short_ticks_total += g_gdg.frame_short_ticks; \
+        g_gdg.frame_short_ticks = 0;                     \
         g_gdg.beam_row = 0;                              \
         gdg_1m1_on_screen_done_event();                  \
+    }
+
+    /**
+     * @brief Pozice paprsku pro čas @p ticks v aktuálním snímku.
+     *
+     * Vychází z g_gdg.beam_row (řádek, jehož události jsou zpracované)
+     * a počítá sloupec od začátku tohoto řádku. Pokud je @p ticks až za
+     * koncem řádku (konec řádku ještě není zpracovaný), vrátí pozici
+     * v následujícím řádku; za posledním řádkem snímku řádek 0.
+     *
+     * @param ticks Tiky od začátku snímku (>= začátek aktuálního řádku).
+     * @param row [out] Řádek 0..VIDEO_SCREEN_HEIGHT-1; smí být NULL.
+     * @return Sloupec od začátku řádku (0 = první viditelný bod).
+     * @pre Emu vlákno, nebo pauza.
+     */
+    static inline unsigned gdg_get_beam_pos(unsigned ticks, unsigned *row);
+
+    /**
+     * @brief Čas události aktuálního řádku v tikách od začátku snímku.
+     *
+     * Jediné místo, které převádí sloupec z tabulky g_gdgevent na čas:
+     * používá ho plánovač událostí (gdg_event_set_next()) i obnova čekající
+     * události po načtení snapshotu. V krátkém řádku (g_gdg.row_shrink != 0,
+     * bit CKSW) nastanou události za sloupcem GDG_CKSW_SHRINK_FIRST_COLUMN
+     * o row_shrink dřív: konec viditelné části, hrana HSYNC a konec řádku.
+     *
+     * @param column Jmenovitý sloupec události (0..VIDEO_SCREEN_WIDTH).
+     * @return Tiky od začátku snímku.
+     * @pre g_gdg.beam_row, frame_short_ticks a row_shrink odpovídají řádku,
+     *      pro který se čas počítá.
+     */
+    static inline unsigned gdg_get_event_ticks(unsigned column)
+    {
+        if (column > GDG_CKSW_SHRINK_FIRST_COLUMN)
+        {
+            column -= g_gdg.row_shrink;
+        };
+        return gdg_get_row_start_ticks() + column;
+    }
+
+    static inline unsigned gdg_get_beam_pos(unsigned ticks, unsigned *row)
+    {
+        unsigned r = g_gdg.beam_row;
+        unsigned col = ticks - gdg_get_row_start_ticks();
+        unsigned width = VIDEO_SCREEN_WIDTH - g_gdg.row_shrink;
+        if (col >= width)
+        {
+            col -= width;
+            r = (r + 1 < VIDEO_SCREEN_HEIGHT) ? r + 1 : 0;
+        };
+        if (row)
+        {
+            *row = r;
+        };
+        return col;
+    }
+
+/** @brief Sloupec paprsku v aktuálním čase GDG (viz gdg_get_beam_pos()). */
+#define gdg_get_beam_col() gdg_get_beam_pos(g_gdg.total_elapsed.ticks, NULL)
+
+    /**
+     * @brief Virtuální pozice paprsku: řádek * VIDEO_SCREEN_WIDTH + sloupec
+     *        v mřížce nezkráceného řádku.
+     *
+     * Pro ladicí nástroje a záznamy trace, které pozici dekódují dělením
+     * VIDEO_SCREEN_WIDTH. V krátkém řádku (CKSW = 1) se sloupce od
+     * GDG_CKSW_SHRINK_FIRST_COLUMN posunou o GDG_CKSW_ROW_SHRINK, takže
+     * hrana HSYNC a konec řádku mají stejný sloupec jako v dlouhém řádku
+     * a sloupce 912 až 927 se nevyskytnou. Bez CKSW je výsledek roven
+     * tikům od začátku snímku.
+     *
+     * @param ticks Tiky od začátku snímku (>= začátek aktuálního řádku).
+     * @return Virtuální pozice 0..VIDEO_SCREEN_TICKS-1.
+     * @pre Emu vlákno, nebo pauza.
+     */
+    static inline unsigned gdg_get_beam_vpos(unsigned ticks)
+    {
+        unsigned r = g_gdg.beam_row;
+        unsigned col = ticks - gdg_get_row_start_ticks();
+        if (g_gdg.row_shrink && (col >= GDG_CKSW_SHRINK_FIRST_COLUMN))
+        {
+            col += g_gdg.row_shrink;
+        };
+        if (col >= VIDEO_SCREEN_WIDTH)
+        {
+            col -= VIDEO_SCREEN_WIDTH;
+            r = (r + 1 < VIDEO_SCREEN_HEIGHT) ? r + 1 : 0;
+        };
+        return r * VIDEO_SCREEN_WIDTH + col;
+    }
+
+    /**
+     * @brief Tiky od poslední sestupné hrany skutečného HSYNC (CLK1 čítače 8253).
+     *
+     * Hrana je ve sloupci VIDEO_REAL_HSYNC_START_COLUMN, v krátkém řádku
+     * (CKSW = 1) o row_shrink dřív. Od hrany do konce řádku je vždy stejně
+     * daleko (zkrácení leží před hranou), takže před hranou aktuálního
+     * řádku je výsledek sloupec plus tato pevná vzdálenost.
+     *
+     * @param ticks Tiky od začátku snímku (>= začátek aktuálního řádku).
+     * @return Počet tiků od hrany, 0 až délka řádku - 1.
+     * @pre Emu vlákno, nebo pauza.
+     */
+    static inline unsigned gdg_get_ticks_since_hsync_fall(unsigned ticks)
+    {
+        unsigned col = gdg_get_beam_pos(ticks, NULL);
+        unsigned hsync_col = VIDEO_REAL_HSYNC_START_COLUMN - g_gdg.row_shrink;
+        if (col >= hsync_col)
+        {
+            return col - hsync_col;
+        };
+        return col + (VIDEO_SCREEN_WIDTH - VIDEO_REAL_HSYNC_START_COLUMN);
     }
 
     static inline void gdg_get_timestamp(st_GDG_TIMESTAMP *tm)

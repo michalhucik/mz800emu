@@ -561,6 +561,42 @@ if(Python3_FOUND)
     message(STATUS "  tests/mcp: registered mcp_snapshot_gdg_event "
                    "(Python ${Python3_VERSION})")
 
+    # Bit CKSW (Superimpose, 0CF07h bit 7) na MZ-800: řádek 1120 místo 1136
+    # pxCLK, načtení bitu na sestupné hraně HBLN (zápis před ní zkrátí už
+    # tento řádek, za ní až další), snímek 349440 pxCLK, souvislý absolutní
+    # čas, snapshot uprostřed krátkého řádku. Pipe, bez TCP. Bez binárky 77.
+    add_test(
+        NAME    mcp_gdg_cksw
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_gdg_cksw.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_gdg_cksw PROPERTIES
+        LABELS  "e2e;mcp;pipe;gdg"
+        TIMEOUT 180
+        SKIP_RETURN_CODE 77
+    )
+    message(STATUS "  tests/mcp: registered mcp_gdg_cksw "
+                   "(Python ${Python3_VERSION})")
+
+    # Záznamy vstupů pořízené verzí 1564848f (tests/data/replay) při 100 %
+    # a 150 %: přehrání musí doběhnout do konce. Hlídá, že termín 20ms
+    # události u starého snapshotu zůstává podle původní verze a že klíč
+    # s termínem není v otisku stavu. MZ-800, pipe. Bez binárky 77.
+    add_test(
+        NAME    mcp_replay_legacy_speed
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_replay_legacy_speed.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_replay_legacy_speed PROPERTIES
+        LABELS  "e2e;mcp;pipe;replay"
+        TIMEOUT 180
+        SKIP_RETURN_CODE 77
+    )
+    message(STATUS "  tests/mcp: registered mcp_replay_legacy_speed "
+                   "(Python ${Python3_VERSION})")
+
     # Stránkované čtení Trace Suite (trace_status / trace_read): krátký běh
     # jen v RAM čitelný za běhu i po stopu, raw_b64 = chunk soubory, čas
     # cputrack = kotvy chunků i s přijetím přerušení, segment_replaced po

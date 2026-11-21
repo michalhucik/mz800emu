@@ -57,6 +57,7 @@
 /** @brief Dopředná deklarace (definice u přehrání). */
 static void replay_devbus_idle_text(char *buf, size_t size);
 #include "automation.h"
+#include "debugger/run_control/run_log.h"
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
 #include "debugger/dbgapi_cmdrq.h"
@@ -105,6 +106,8 @@ typedef struct st_REPLAY_REQ
     uint64_t ticks;           /**< Goto: cílový čas v taktech GDG. */
     bool keep_bps;            /**< Goto: uživatelské breakpointy platí dál. */
     bool ckpt_at_target;      /**< Goto: checkpoint na hranici snímku seeku. */
+    bool by_frame;            /**< Goto: cíl je snímek (frames) a takty od jeho začátku (frame_ticks), ne ticks. */
+    uint32_t frame_ticks;     /**< Goto se snímkem: takty GDG od začátku snímku. */
 } st_REPLAY_REQ;
 
 
@@ -178,6 +181,14 @@ static bool s_goto_ckpt = false;         /**< Goto: checkpoint na hranici snímk
 static bool s_goto_saved_max = false;    /**< MAX SPEED před goto (po goto vrátit). */
 static int32_t s_goto_seek_from = REPLAY_GOTO_FROM_NONE; /**< Odkud goto vyšlo (st_REPLAY_STATUS). */
 static bool s_goto_ckpt_taken = false;   /**< Goto uložilo checkpoint v cílovém snímku. */
+static bool s_goto_by_frame = false;     /**< Goto: cílový čas se teprve určí na hranici snímku s_goto_frame (pak false). */
+static uint64_t s_goto_frame = 0;        /**< Goto se snímkem: cílový snímek (g_gdg.total_elapsed.screens). */
+static uint32_t s_goto_frame_ticks = 0;  /**< Goto se snímkem: takty od začátku cílového snímku. */
+static bool s_goto_frame_check = false;  /**< Goto se snímkem: po zastavení ověřit, že cílový takt ležel uvnitř snímku. */
+static uint64_t s_goto_frame_start = 0;  /**< Goto se snímkem: absolutní čas začátku cílového snímku (platí při s_goto_frame_check). */
+static bool s_goto_out_of_range = false; /**< Poslední goto se snímkem: cílový takt byl za koncem snímku (st_REPLAY_STATUS). */
+static uint32_t s_start_frame_ticks = 0; /**< g_gdg.total_elapsed.ticks při startu záznamu / přehrávání. */
+static uint64_t s_goto_run_seq = 0;      /**< Číslo běhu (run_log), který provádí poslední goto; 0 = žádné goto. */
 
 static void replay_goto_finish(void);
 
@@ -395,6 +406,7 @@ static void replay_publish(void)
     s_status.goto_target = s_goto_ticks;
     s_status.goto_seek_from = s_goto_seek_from;
     s_status.goto_checkpoint = s_goto_ckpt_taken;
+    s_status.goto_out_of_range = s_goto_out_of_range;
     g_mutex_unlock(&s_lock);
 }
 
@@ -518,6 +530,20 @@ uint32_t replay_request_goto(uint64_t ticks, bool keep_breakpoints, bool checkpo
     st_REPLAY_REQ *r = g_new0(st_REPLAY_REQ, 1);
     r->kind = REPLAY_REQ_GOTO;
     r->ticks = ticks;
+    r->keep_bps = keep_breakpoints;
+    r->ckpt_at_target = checkpoint_at_target;
+    return replay_enqueue(r);
+}
+
+
+uint32_t replay_request_goto_frame(uint32_t frame, uint32_t frame_ticks, bool keep_breakpoints,
+                                   bool checkpoint_at_target)
+{
+    st_REPLAY_REQ *r = g_new0(st_REPLAY_REQ, 1);
+    r->kind = REPLAY_REQ_GOTO;
+    r->by_frame = true;
+    r->frames = frame;
+    r->frame_ticks = frame_ticks;
     r->keep_bps = keep_breakpoints;
     r->ckpt_at_target = checkpoint_at_target;
     return replay_enqueue(r);
@@ -1500,6 +1526,7 @@ static const char *replay_rec_start(const st_REPLAY_REQ *r, char *errbuf, size_t
     s_frame = 0;
     s_boundary_ticks = gdg_get_total_ticks();
     s_start_ticks = s_boundary_ticks;
+    s_start_frame_ticks = g_gdg.total_elapsed.ticks;
 
     g_mutex_lock(&s_lock);
     memcpy(s_host_kbd, g_pio8255.keyboard_matrix, sizeof(s_host_kbd));
@@ -1973,6 +2000,7 @@ static const char *replay_play_load_start(const st_REPLAY_DATA *d, char *errbuf,
     s_frame = 0;
     s_boundary_ticks = gdg_get_total_ticks();
     s_start_ticks = s_boundary_ticks;
+    s_start_frame_ticks = g_gdg.total_elapsed.ticks;
     return NULL;
 }
 
@@ -2256,6 +2284,39 @@ static const char *replay_play_rewind(uint32_t frames, bool *out_run, char *errb
  * Goto přehrávání (čas v taktech GDG)
  * ================================================================ */
 
+bool replay_goto_stop_out_of_range(void)
+{
+    if (s_goto_frame_check)
+    {
+        /* Cíl zadaný snímkem: délka cílového snímku je známá, až když
+         * skončí. Zastavení v následujícím snímku je v pořádku jen jako
+         * doběh k hranici instrukce z taktu, který ve snímku ještě ležel;
+         * takt na konci snímku nebo za ním je mimo rozsah. Ve vzdálenějším
+         * snímku skončí jen cíl za koncem snímku. */
+        s_goto_frame_check = false;
+        uint64_t screens = (uint64_t)g_gdg.total_elapsed.screens;
+        if (screens == s_goto_frame + 1u)
+        {
+            uint64_t len = (uint64_t)gdg_compute_total_ticks(0u) - s_goto_frame_start;
+            s_goto_out_of_range = ((uint64_t)s_goto_frame_ticks >= len);
+        }
+        else if (screens > s_goto_frame + 1u)
+        {
+            s_goto_out_of_range = true;
+        };
+    };
+    return s_goto_out_of_range;
+}
+
+
+bool replay_goto_result_for_run(uint64_t run_seq, bool *out_of_range)
+{
+    if (!s_goto_run_seq || (s_goto_run_seq != run_seq)) return false;
+    if (out_of_range) *out_of_range = replay_goto_stop_out_of_range();
+    return true;
+}
+
+
 /**
  * @brief Konec goto: potlačení breakpointů pryč, rychlost jako před goto.
  *
@@ -2267,6 +2328,7 @@ static void replay_goto_finish(void)
 {
     if (!s_goto_active) return;
     s_goto_active = false;
+    (void)replay_goto_stop_out_of_range();
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
     run_control_stop_at_clear();
     g_debugger.bp_suppress = 0;
@@ -2298,6 +2360,24 @@ static bool replay_goto_arm(bool paused)
         replay_ckpt_take_ex(true);
         s_goto_ckpt_taken = had || s_ckpt.count != before
                             || replay_ckpt_ring_has_frame(&s_ckpt, replay_current_frame());
+    };
+    if (s_goto_by_frame)
+    {
+        /* Cíl zadaný snímkem: čas se určí až teď, ze skutečného začátku
+         * snímku (délku předchozích snímků může zkrátit bit CKSW). Sem se
+         * dojde na hranici cílového snímku; kdyby byl snímek už jiný
+         * (nemá nastat), goto skončí v aktuálním bodě. */
+        s_goto_by_frame = false;
+        if ((uint64_t)g_gdg.total_elapsed.screens == s_goto_frame)
+        {
+            s_goto_frame_start = (uint64_t)gdg_compute_total_ticks(0u);
+            s_goto_ticks = s_goto_frame_start + s_goto_frame_ticks;
+            s_goto_frame_check = true;
+        }
+        else
+        {
+            s_goto_ticks = gdg_get_total_ticks();
+        };
     };
     if (gdg_get_total_ticks() >= s_goto_ticks)
     {
@@ -2336,17 +2416,82 @@ static const char *replay_play_goto(const st_REPLAY_REQ *r, bool *out_run, char 
     (void)errsize;
     return "goto needs a build with the debugger";
 #else
+    /* Snímek cíle: odhad z absolutního času a jmenovité délky snímku.
+     * Snímky zkrácené bitem CKSW (MZ-800) trvají méně, čas tedy odpovídá
+     * vyššímu číslu snímku, než dá dělení: odhad je dolní mez (nejníž
+     * snímek 0), seek skončí dřív a zbytek doběhne dojetí na čas. Odhad
+     * zpřesní zaznamenané časy snímků z hashes.csv (řádek s časem <= cíl
+     * dává dolní mez snímku). Bez CKSW je odhad přesný. */
+    if (r->by_frame)
+    {
+        /* Cíl zadaný snímkem a takty od jeho začátku: seek na hranici
+         * snímku, čas určí replay_goto_arm() ze skutečného začátku snímku. */
+        if ((uint64_t)r->frames < s_start_screens) return "target frame is before the start of the replay";
+        if (((uint64_t)r->frames == s_start_screens) && (r->frame_ticks < s_start_frame_ticks))
+        {
+            return "target time is before the start of the replay";
+        };
+        uint64_t rel = (uint64_t)r->frames - s_start_screens;
+        if (rel >= s_play->frames) return "target frame is after the end of the replay";
+
+        s_goto_saved_max = g_emulator.max_speed;
+        s_goto_active = true;
+        s_goto_by_frame = true;
+        s_goto_frame_check = false;
+        s_goto_out_of_range = false;
+        s_goto_run_seq = run_log_current(NULL) + 1u;
+        s_goto_frame = (uint64_t)r->frames;
+        s_goto_frame_ticks = r->frame_ticks;
+        s_goto_ticks = 0;
+        s_goto_ckpt = r->ckpt_at_target;
+        s_goto_ckpt_taken = false;
+        s_goto_seek_from = REPLAY_GOTO_FROM_NONE;
+        g_debugger.bp_suppress = r->keep_bps ? 0 : 1;
+
+        if (((uint64_t)g_gdg.total_elapsed.screens == s_goto_frame)
+            && (g_gdg.total_elapsed.ticks <= r->frame_ticks))
+        {
+            /* Cíl dopředu v běžícím snímku: stačí dojet. */
+            *out_run = replay_goto_arm(true);
+            replay_publish();
+            return NULL;
+        };
+        bool frun = false;
+        const char *fe = replay_play_seek_from((uint32_t)rel, &frun, &s_goto_seek_from, errbuf, errsize);
+        if (fe || !s_play)
+        {
+            replay_goto_finish();
+            return fe;
+        };
+        *out_run = frun ? true : replay_goto_arm(true);
+        replay_publish();
+        return NULL;
+    };
     const uint64_t vst = (uint64_t)VIDEO_SCREEN_TICKS;
     if (r->ticks < s_start_ticks) return "target time is before the start of the replay";
     uint64_t f_abs = r->ticks / vst;
-    if (f_abs < s_start_screens) return "target time is before the start of the replay";
-    uint64_t f = f_abs - s_start_screens;
+    uint64_t f = (f_abs > s_start_screens) ? (f_abs - s_start_screens) : 0;
+    bool f_from_row = false;
+    for (guint i = 0; i < s_play->hashes->len; i++)
+    {
+        const st_REPLAY_HASH_ROW *row = &g_array_index(s_play->hashes, st_REPLAY_HASH_ROW, i);
+        if (row->ticks > r->ticks) break;
+        if (row->frame > f)
+        {
+            f = row->frame;
+            f_from_row = true;
+        };
+    };
     if (f >= s_play->frames) return "target time is after the end of the replay";
     uint32_t seek_f = (uint32_t)f;
-    if ((r->ticks % vst) < REPLAY_GOTO_BOUNDARY_MARGIN && seek_f > 0) seek_f--;
+    if (!f_from_row && ((r->ticks % vst) < REPLAY_GOTO_BOUNDARY_MARGIN) && seek_f > 0) seek_f--;
 
     s_goto_saved_max = g_emulator.max_speed;
     s_goto_active = true;
+    s_goto_by_frame = false;
+    s_goto_frame_check = false;
+    s_goto_out_of_range = false;
+    s_goto_run_seq = run_log_current(NULL) + 1u;
     s_goto_ticks = r->ticks;
     s_goto_ckpt = r->ckpt_at_target;
     s_goto_ckpt_taken = false;

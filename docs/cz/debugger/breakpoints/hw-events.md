@@ -66,9 +66,10 @@ dostupná v condition expression jako `Value`.
 | `palette_change`  | palette   | GDG palette index (port 0xF0, bit 6 = 0) |
 | `palgrp_change`   | palgrp    | GDG palette group (port 0xF0, bit 6 = 1) |
 | `border_change`   | border    | GDG border barva (port 0xCF, msb = 6) |
+| `cksw_change`     | cksw      | GDG bit CKSW (port 0xCF, msb = 7); `Value` = 0 nebo 1, fire při každém zápisu |
 | `cmt:state_change`| cmt state | CMT lifecycle (play / stop / pause / eject) |
 
-Pozn: MZ-1500 nemá `palgrp_change` ani `border_change` (= jednodušší
+Pozn: `cksw_change` existuje jen na MZ-800. MZ-1500 nemá `palgrp_change` ani `border_change` (= jednodušší
 paletový model, border je pevný). BP s těmito eventy v MZ-1500 nikdy
 nezafire.
 
