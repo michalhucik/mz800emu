@@ -17,8 +17,10 @@
 ## Emulace
 
 - Přeměřit na reálném HW: `VIDEO_H_BACK_PORCH_TICKS`, `VIDEO_H_FRONT_PORCH_TICKS` (aktuálně 104+39=143, ale přesný split není ověřený)
-- Zvážit emulaci částečně obsazené VRAM u MZ-800
+- MZ-800: možnost odpojit přídavnou VRAM (počítač bez rozšíření MZ-1R25, jen základních 16 kB, roviny I a II). Na takovém počítači čtení z rovin III a IV vrací 0xFF a zápis do nich nemá účinek.
+- MZ-800, režimy 640x200: na skutečném počítači začíná canvas o 2 body a border o 1 bod dřív než v režimech 320x200. Emulátor kreslí všechny režimy na stejném místě; v plánu je posunout canvas i border.
 - MZ-1500 gdg: ověřit nepřítomnost VRAM latch
+- Přesný takt: emulátor odvozuje takt od celých snímků za sekundu, ne od krystalu. PAL běží na 17 721 600 Hz místo 17 734 475 Hz (o 0,07 % pomaleji), NTSC na 14 336 640 Hz místo 14 318 180 Hz (o 0,13 % rychleji); stejně se posouvá všechno odvozené, včetně tónů CTC0. V plánu je přesnější emulace: počet taktů na snímek zůstane stejný, ale převod na skutečný čas (zvuk, nahrávání AVI, zápis a čtení WAV kazety, synchronizace bez zvuku) bude vycházet z frekvence krystalu, případně jako volitelné nastavení.
 
 ### Čítač 8253: známé rozdíly proti skutečnému počítači
 
@@ -31,3 +33,4 @@
 # Chyby čekající na bugfix
 
 - **topmenu**: Když uživatel použije k navigaci kurzory, jsou načítány jako vstup z klávesnice do emulace (zvážit, zda toto chování půjde potlačit)
+- **MZ-700 NTSC, CTC0**: dělič 13 dává vstup CTC0 asi 1,1 MHz, ale japonská ROM 1Z-009B má tabulku not spočítanou pro asi 895 kHz (krystal / 16). S japonskou ROM proto hrají tóny asi o 23 % výš (pípnutí asi 1085 Hz místo 880 Hz). Ověřit měřením na MZ-1500, který má stejný krystal, a opravit.
