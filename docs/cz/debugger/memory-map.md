@@ -148,10 +148,14 @@ trace logu a nespustí breakpoint na změnu módu. "MZ-700" zapisuje 0x08
 
 ### Prohibited mode (MZ-800 + MZ-700)
 
-- Aktivuje se OUT 0E5h, čte se 0x1A shadow z $E009-$FFFF, $E000-$E008
-  zůstávají MMIO funkční
-- Persistuje přes E0/E1/E2/E3/E4 + DMD bit 3 switch
-- Reset: OUT 0E6h, GDG reset
+- Aktivuje se OUT 0E5h
+- MZ-800: při čtení $E000-$FFFF nic nebudí datovou sběrnici a CPU přečte
+  poslední bajt, který na ní byl (u datového čtení poslední bajt instrukce:
+  `LD A,(DE)` přečte 1Ah, `LD A,(HL)` 7Eh); zápis se neprovede. Změřeno na
+  skutečném MZ-800.
+- MZ-700: čte se 0x1A z $E009-$FFFF, $E000-$E008 zůstávají MMIO funkční
+- Persistuje přes E0/E1/E2/E3 + DMD bit 3 switch
+- Reset: OUT 0E6h, OUT 0E4h, GDG reset
 - UI značí červenou barvou
 
 ## Interakce

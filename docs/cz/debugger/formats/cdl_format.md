@@ -210,16 +210,12 @@ na aktuální grafický režim. Bank-mask přichází z hardware:
 | E000h-FFFFh | ROM_E000 mapped, ostatní (NE Prohibited) | bus + rom-upper[bus_addr-E000h] |
 | E000h-FFFFh | ROM_E000 unmapped | bus + ram[bus_addr] |
 
-Pozn.: "Prohibited" = stav po OUT 0xE5. Na **MZ-800** persistuje přes OUT
-E0/E1/E2/E3/E4 i přes DMD bit 3 switch (700 ↔ 800 native); ruší ho jen
-OUT 0xE6 nebo reset. V Prohibited stavu CPU čte konstantní 0x1A shadow byte
-v celém $E000-$FFFF - žádný fyzický region (skip resolveru).
-
-Pozor na rozdíl mezi architekturami: na **samostatném MZ-700** naopak
-`OUT 0xE4` Prohibited **zruší**, protože tam `memory_mmap_all_on()` přepisuje
-celé slovo mapy (prosté přiřazení v `mz700_memory.c`), kdežto na MZ-800 jen
-nastavuje bity (`|=` v `mz800_memory.c`) a příznak Prohibited nechává být.
-Formulace "ruší jen 0xE6 nebo 0xE4" bez uvedení architektury je tedy neúplná.
+Pozn.: "Prohibited" = stav po OUT 0xE5. Persistuje přes OUT E0/E1/E2/E3
+i přes DMD bit 3 switch (700 ↔ 800 native); ruší ho OUT 0xE6, OUT 0xE4 nebo
+reset (na MZ-800 změřeno na skutečném stroji). V Prohibited stavu CPU čte
+v celém $E000-$FFFF poslední bajt, který byl na datové sběrnici (u datového
+čtení poslední bajt instrukce), a zápis se neprovede - žádný fyzický region
+(skip resolveru).
 
 ### Mapování CPU sběrnice na regiony (MZ-700 mód)
 

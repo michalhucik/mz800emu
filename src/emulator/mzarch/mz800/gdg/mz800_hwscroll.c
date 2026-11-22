@@ -104,7 +104,8 @@ static inline void hwscroll_flush_elapsed_pixels(void)
 {
     if (!GDG_MZ800_DMD_TEST_MZ700)
     {
-        framebuffer_MZ800_screen_changed();
+        /* Místo, odkud platí nový registr, viz GDG_SCROLL_WR_LEAD_TICKS. */
+        framebuffer_MZ800_reg_write_begin(GDG_SCROLL_WR_LEAD_TICKS, 0);
     };
 }
 
@@ -225,6 +226,12 @@ void hwscroll_set_reg(unsigned addr, uint8_t value)
     };
 
     hwscroll_regs_changed();
+
+    if (!GDG_MZ800_DMD_TEST_MZ700)
+    {
+        /* Překreslit už nakreslenou část řádku za místem změny. */
+        framebuffer_MZ800_reg_write_end();
+    };
 }
 
 /*

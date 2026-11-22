@@ -151,10 +151,14 @@ preserved).
 
 ### Prohibited mode (MZ-800 + MZ-700)
 
-- Activated by OUT 0E5h; the 0x1A shadow is read from $E009-$FFFF,
-  $E000-$E008 remain functional MMIO
-- Persists across E0/E1/E2/E3/E4 + DMD bit 3 switch
-- Reset: OUT 0E6h, GDG reset
+- Activated by OUT 0E5h
+- MZ-800: nothing drives the data bus for reads of $E000-$FFFF and the CPU
+  reads the last byte that was on it (for a data read the last byte of the
+  instruction: `LD A,(DE)` reads 1Ah, `LD A,(HL)` 7Eh); writes are dropped.
+  Measured on a real MZ-800.
+- MZ-700: 0x1A is read from $E009-$FFFF, $E000-$E008 remain functional MMIO
+- Persists across E0/E1/E2/E3 + DMD bit 3 switch
+- Reset: OUT 0E6h, OUT 0E4h, GDG reset
 - UI marks it in red
 
 ## Interaction

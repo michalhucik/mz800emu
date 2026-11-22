@@ -154,6 +154,12 @@ static en_SNAPSHOT_RESULT snap_gdg_save(st_SNAPSHOT_CONTEXT *ctx)
     /* Tempo */
     snapshot_xml_write_uint(w, "tempo", g_gdg.tempo);
     snapshot_xml_write_uint(w, "tempo_divider", g_gdg.tempo_divider);
+#if MZARCH == 800
+    /* Perioda TEMPO v řádcích (g_gdg.tempo_rows). Klíč není součástí otisku
+     * stavu: otisky v záznamech vstupů starších verzí ho neznají. */
+    if (!ctx->for_hash)
+        snapshot_xml_write_uint(w, "tempo_rows", g_gdg.tempo_rows);
+#endif
 
     /* Synchronizační signály */
     snapshot_xml_open_element(w, "sync_signals");
@@ -391,6 +397,14 @@ static en_SNAPSHOT_RESULT snap_gdg_load(st_SNAPSHOT_CONTEXT *ctx)
     /* Tempo */
     snapshot_xml_read_uint(r, "tempo", &g_gdg.tempo);
     snapshot_xml_read_uint(r, "tempo_divider", &g_gdg.tempo_divider);
+#if MZARCH == 800
+    /* Perioda TEMPO: snapshot starší verze klíč nemá a běží dál s tehdejší
+     * periodou 229 řádků, aby jeho záznam vstupů dával stejné otisky. */
+    g_gdg.tempo_rows = GDG_TEMPO_DIVIDER_ROWS_LEGACY;
+    snapshot_xml_read_uint(r, "tempo_rows", &g_gdg.tempo_rows);
+    if (g_gdg.tempo_rows != GDG_TEMPO_DIVIDER_ROWS_LEGACY)
+        g_gdg.tempo_rows = GDG_TEMPO_DIVIDER_ROWS;
+#endif
 
     /* Synchronizační signály */
     if (snapshot_xml_enter_element(r, "sync_signals")) {

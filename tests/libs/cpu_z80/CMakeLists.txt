@@ -79,6 +79,16 @@ mz_add_test(cpu_z80_push_order
     LABELS   "standalone;libs"
 )
 
+# Pořadí čtení 16bitové hodnoty z paměti: LD rr,(nn), POP, RET, RETI
+# a EX (SP),HL čtou nižší bajt dřív (Zilog UM0080). Na pořadí záleží
+# u čekacích taktů VRAM a u mapovaných portů se stavem.
+mz_add_test(cpu_z80_read16_order
+    TYPE     STANDALONE
+    SOURCES  test_read16_order.c
+    LIBS     mzlib_cpu_z80
+    LABELS   "standalone;libs"
+)
+
 # Příznaky v opakující iteraci LDIR/LDDR/CPIR/CPDR/INIR/INDR/OTIR/OTDR
 # (YF/XF z adresy instrukce, u INxR/OTxR i PF/HF) podle měření BLKFLAGS
 # na MZ-800 a na reálných čipech Z80. Viz emu-experiments/z80-block-flags/.

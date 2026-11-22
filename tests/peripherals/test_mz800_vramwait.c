@@ -127,7 +127,8 @@ void test_write_write ( void )
 {
     TEST_ASSERT_EQUAL_UINT ( 2u, pair ( 'W', 3, 'W', 18, M320 ) );
     TEST_ASSERT_EQUAL_UINT ( 4u, pair ( 'W', 401, 'W', 416, M320 ) );
-    TEST_ASSERT_EQUAL_UINT ( 0u, pair ( 'W', 400, 'W', 435, M320 ) );
+    /* uvolnění WRITE FF 9 CLK0 po slotu (měřeno na MZ-800); s 8 CLK0 by bylo 0 */
+    TEST_ASSERT_EQUAL_UINT ( 1u, pair ( 'W', 400, 'W', 435, M320 ) );
     TEST_ASSERT_EQUAL_UINT ( 1u, pair ( 'W', 3, 'W', 18, M640 ) );
     TEST_ASSERT_EQUAL_UINT ( 1u, pair ( 'W', 401, 'W', 416, M640 ) );
     TEST_ASSERT_EQUAL_UINT ( 1u, pair ( 'W', 3, 'W', 18, M700 ) );
@@ -182,14 +183,14 @@ void test_next_cpu_slot_boundaries ( void )
 
 
 /**
- * @brief Kotva časové osy: začátek viditelné části HBLN v emulátoru
- *        (událost MZEVENT_GDG_HBLN_END) leží na CLK0 335 od nHSYN jako
- *        v netlistu.
+ * @brief Kotva časové osy: sestupná hrana nHSYN (sloupec
+ *        VIDEO_REAL_HSYNC_START_COLUMN) je pozice 0 modelu; posun 186 CLK0
+ *        je určen měřením na MZ-800. Délka řádku shodná.
  */
-void test_time_axis_anchor_hbln ( void )
+void test_time_axis_anchor_measured ( void )
 {
-    unsigned col = VIDEO_BEAM_CANVAS_FIRST_COLUMN - 4u;
-    TEST_ASSERT_EQUAL_UINT ( 335u, ( col + GDG_VRAMWAIT_TICKS_TO_LINE_OFFSET ) % VRAMWAIT_LINE_CLK0 );
+    TEST_ASSERT_EQUAL_UINT ( 186u, GDG_VRAMWAIT_TICKS_TO_LINE_OFFSET );
+    TEST_ASSERT_EQUAL_UINT ( 0u, ( VIDEO_REAL_HSYNC_START_COLUMN + GDG_VRAMWAIT_TICKS_TO_LINE_OFFSET ) % VRAMWAIT_LINE_CLK0 );
     TEST_ASSERT_EQUAL_UINT ( VRAMWAIT_LINE_CLK0, VIDEO_SCREEN_WIDTH );
 }
 
@@ -208,7 +209,7 @@ int main ( int argc, char *argv[] )
     RUN_TEST ( test_write_read );
     RUN_TEST ( test_read_then_access );
     RUN_TEST ( test_next_cpu_slot_boundaries );
-    RUN_TEST ( test_time_axis_anchor_hbln );
+    RUN_TEST ( test_time_axis_anchor_measured );
     int result = UNITY_END ( );
 
     mztest_teardown ( );

@@ -635,6 +635,19 @@ static inline void mzarch_sync_ctc0_and_cmt(unsigned instruction_ticks)
  */
 #define VRAMWAIT_WRFF_MAX_AHEAD ( 2u * VRAMWAIT_LINE_CLK0 )
 
+/**
+ * @brief Nejmenší odstup konce M-cyklu zápisu na port GDG od uvolnění WRITE FF (CLK0).
+ *
+ * Zápis na porty 0CCh až 0CFh čeká, dokud jeho M-cyklus neskončí aspoň
+ * tolik CLK0 po uvolnění WRITE FF předchozího zápisu do VRAM. Hodnota je
+ * určena měřením na MZ-800 (emu-experiments gdg-meas, čtvrté měření): po
+ * zápisu ve viditelné části režimu MZ-700 (uvolnění 969 CLK0 od hrany /HSYN)
+ * končí /IORQ čekajícího OUT 976 až 980 px, M-cyklus tedy 979 až 983 CLK0
+ * v mřížce emulátoru. Odpovídá vzorkování /WAIT procesorem 1,5 T před
+ * koncem M-cyklu.
+ */
+#define GDG_PORT_WAIT_RELEASE_CLK0 10u
+
 #if VIDEO_SCREEN_WIDTH != 1136
 #error "Model WAIT (mz800_vramwait.h) předpokládá řádek PAL 1136 CLK0"
 #endif
@@ -753,6 +766,33 @@ static inline void mzarch_main_insideop(const en_INSIDEOP insideop)
     }
 #endif /* MZARCH == 800 */
 
+#if MZARCH == 800
+    case INSIDEOP_IORQ_GDG_WRITE: {
+        /* Čas GDG je konec M-cyklu zápisu bez čekání (předtím proběhlo
+         * mzarch_main_insideop_iorq()). */
+        uint64_t end = gdg_get_vramwait_ticks( );
+        unsigned wait_tw = 0;
+
+        if ( g_gdg.vram_wrff_release > end + VRAMWAIT_WRFF_MAX_AHEAD ) {
+            g_gdg.vram_wrff_release = 0;
+        }
+        if ( g_gdg.vram_wrff_release + GDG_PORT_WAIT_RELEASE_CLK0 > end ) {
+            wait_tw = (unsigned) ( ( g_gdg.vram_wrff_release + GDG_PORT_WAIT_RELEASE_CLK0 - end
+                                     + GDGCLK2CPU_DIVIDER - 1u ) / GDGCLK2CPU_DIVIDER );
+        }
+        if ( wait_tw ) {
+            z80_add_wait_states( g_mzarch_main.cpu, (int) wait_tw );
+            /* trace-suite: saturujici akumulace WAIT T-states pro cputrack. */
+            uint64_t wsum = (uint64_t) g_mzarch_main.instruction_wait_tstates + wait_tw;
+            g_mzarch_main.instruction_wait_tstates = ( wsum > 0xFFFFFFFFu ) ? 0xFFFFFFFFu : (uint32_t) wsum;
+        }
+        ticks_to_sync = wait_tw * GDGCLK2CPU_DIVIDER;
+
+        instruction_ticks = g_mzarch_main.instruction_insideop_sync_ticks + ticks_to_sync;
+        break;
+    }
+#endif /* MZARCH == 800 */
+
 #if MZARCH != 700
     case INSIDEOP_IORQ_PSG_WRITE:
         tstates_to_psg_sync = 16 - (gdg_get_total_ticks() / GDGCLK2CPU_DIVIDER) % 16;
@@ -849,6 +889,17 @@ void mzarch_main_insideop_mreq_mz800_vramctrl_write(void)
 void mzarch_main_insideop_iorq_psg_write(void)
 {
     mzarch_main_insideop(INSIDEOP_IORQ_PSG_WRITE);
+}
+
+void mzarch_main_insideop_iorq_gdg_write(void)
+{
+#if MZARCH == 800
+    /* Zápis debuggeru mezi instrukcemi (op_tstate vynulovaný v
+     * mzarch_main_dbgapi_dispatch_one()) čekací takty nedostane. Bez
+     * rozpracovaného zápisu do VRAM není co počítat. */
+    if ( ( g_gdg.vram_wrff_release == 0 ) || ( g_mzarch_main.cpu->op_tstate == 0 ) ) return;
+    mzarch_main_insideop(INSIDEOP_IORQ_GDG_WRITE);
+#endif
 }
 
 void mzarch_main_requeue_event(void)

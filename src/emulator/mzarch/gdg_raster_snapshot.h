@@ -34,7 +34,9 @@
  *  - `sts_vsync`    - VSYNC bit viditelný v GDG Status registru.
  *  - `tempo`        - tempo signál (1 Hz bit). Live výstup low-bit pro Status.
  *  - `tempo_divider`- živý čítač pro generování tempo signálu
- *                    (`g_gdg.tempo_divider`, rozsah 0..228; po 229 reset na 0).
+ *                    (`g_gdg.tempo_divider`; MZ-800 0..227, po 228 reset na 0
+ *                    (po načtení snapshotu starší verze 229),
+ *                    MZ-700 a MZ-1500 0..228, po 229 reset na 0).
  *                    POZN: jiný pojem než `ctc0_divider` níže.
  *  - `ctc0_divider` - compile-time konstanta `GDGCLK_CTC0_DIVIDER` (MZ-800=16,
  *                    MZ-1500=16, MZ-700 NTSC=13, MZ-700 PAL=16). Udává kolik
@@ -78,7 +80,7 @@ typedef struct st_GDG_RASTER_SNAPSHOT
 
     /* ---- Tempo + divider --------------------------------------------- */
     uint8_t  tempo;           /**< Tempo signál (1 Hz bit, 0/1). */
-    uint32_t tempo_divider;   /**< Živý čítač pro tempo (0..228). */
+    uint32_t tempo_divider;   /**< Živý čítač pro tempo (MZ-800 0..227, jinak 0..228). */
     uint32_t ctc0_divider;    /**< Compile-time GDGCLK_CTC0_DIVIDER pro
                                *   aktuální arch (MZ-800=16, MZ-1500=16,
                                *   MZ-700 NTSC=13, MZ-700 PAL=16). */

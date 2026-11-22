@@ -180,12 +180,46 @@ void framebuffer_border_current_row_fill ( void ) {
 }
 
 
-/*
- * 
- *  Prave doslo ke zmene borderu. Nez provedeme zmenu, tak zaktualizujeme aktualni radek az po misto, kde nastala zmena.
+/**
+ * @brief Přebarví už nakreslený border řádku ve sloupcích @p col až @p end - 1.
  *
+ * Body canvasu nechává být. Konec ořízne na viditelnou šířku řádku
+ * (zatemnění krátkého řádku při CKSW = 1 zůstává černé).
+ *
+ * @param beam_row Řádek framebufferu (viditelný).
+ * @param col      První sloupec s novou barvou.
+ * @param end      První sloupec, který se už nemění.
+ * @param value    Nová barva borderu.
+ * @pre Sloupce col až end - 1 jsou ve framebufferu nakreslené.
  */
-void framebuffer_border_changed ( void ) {
+static void framebuffer_border_repaint ( unsigned beam_row, unsigned col, unsigned end, unsigned value ) {
+    if ( end > VIDEO_DISPLAY_WIDTH - g_gdg.row_shrink ) end = VIDEO_DISPLAY_WIDTH - g_gdg.row_shrink;
+    if ( col >= end ) return;
+    uint8_t *p = g_framebuffer.pixels + beam_row * VIDEO_DISPLAY_WIDTH;
+
+    if ( ( beam_row <= VIDEO_BEAM_BORDER_TOP_LAST_ROW ) || ( beam_row >= VIDEO_BEAM_BORDER_BOTOM_FIRST_ROW ) ) {
+        memset ( &p [ col ], value, end - col );
+        return;
+    };
+    if ( col <= VIDEO_BEAM_BORDER_LEFT_LAST_COLUMN ) {
+        unsigned left_end = ( end < VIDEO_BEAM_BORDER_LEFT_LAST_COLUMN + 1 ) ? end : VIDEO_BEAM_BORDER_LEFT_LAST_COLUMN + 1;
+        memset ( &p [ col ], value, left_end - col );
+    };
+    unsigned start = ( col > VIDEO_BEAM_BORDER_RIGHT_FIRST_COLUMN ) ? col : VIDEO_BEAM_BORDER_RIGHT_FIRST_COLUMN;
+    if ( start < end ) {
+        memset ( &p [ start ], value, end - start );
+    };
+}
+
+
+/**
+ * @brief Společné tělo framebuffer_border_changed() a framebuffer_border_write().
+ *
+ * @param write     0 = jen dokreslit starou barvou po paprsek;
+ *                  1 = zápis nové barvy (místo změny je před koncem M-cyklu).
+ * @param new_value Nová barva borderu (jen při write = 1).
+ */
+static inline void framebuffer_border_paint ( int write, unsigned new_value ) {
 
     g_framebuffer.border_changes = SCRSTS_THIS_IS_CHANGED;
 
@@ -198,8 +232,24 @@ void framebuffer_border_changed ( void ) {
     /* Pokud jsme na radku, ktery je mimo viditelnou oblast, tak neni potreba aktualizovat framebuffer. */
     if ( beam_row > VIDEO_BEAM_DISPLAY_LAST_ROW ) return;
 
-    /* Pokud je tento radek ve framebufferu uz hotov, tak muzeme jit pryc. */
-    if ( ( beam_row == g_gdg.beam_row ) && ( g_gdg.last_updated_border_pixel == VIDEO_BEAM_DISPLAY_LAST_COLUMN + 1 ) ) return;
+    /* Barva se mění už během zápisového pulzu, na sudém sloupci. Změna před
+     * sloupcem 0 padla do zatemnění na konci předchozího řádku: celý tento
+     * řádek má novou barvu a není co dokreslovat. */
+    if ( write ) {
+        unsigned lead = GDG_BORDER_WR_LEAD_TICKS + ( ( beam_col + GDG_BORDER_WR_LEAD_TICKS ) & 1u );
+        if ( beam_col <= lead ) return;
+        beam_col -= lead;
+    };
+
+    /* Řádek je ve framebufferu už nakreslený za místo změny (uzavřený řádek,
+     * nebo dokreslení po paprsek při pauze): při zápisu tu část přebarvit
+     * novou barvou, jinak není co dělat. */
+    if ( ( beam_row == g_gdg.beam_row )
+         && ( ( beam_col <= g_gdg.last_updated_border_pixel )
+              || ( g_gdg.last_updated_border_pixel == VIDEO_BEAM_DISPLAY_LAST_COLUMN + 1 ) ) ) {
+        if ( write ) framebuffer_border_repaint ( beam_row, beam_col, g_gdg.last_updated_border_pixel, new_value );
+        return;
+    };
 
     /* Pokud doslo ke zmene na zacatku framebufferu, tak neni co updatovat. */
     if ( beam_col == 0 ) return;
@@ -251,6 +301,18 @@ void framebuffer_border_changed ( void ) {
             g_gdg.last_updated_border_pixel = beam_col;
         };
     };
+}
+
+
+/* Dokreslení borderu po paprsek, viz mz800_framebuffer.h. */
+void framebuffer_border_changed ( void ) {
+    framebuffer_border_paint ( 0, 0 );
+}
+
+
+/* Zápis nové barvy borderu, viz mz800_framebuffer.h. */
+void framebuffer_border_write ( unsigned new_value ) {
+    framebuffer_border_paint ( 1, new_value );
 }
 
 
@@ -623,6 +685,52 @@ void framebuffer_MZ800_current_screen_row_fill ( unsigned last_pixel ) {
     if ( g_gdg.screen_need_update_from >= last_pixel ) return;
     unsigned beam_row = g_gdg.beam_row;
     g_gdg.screen_need_update_from = framebuffer_MZ800_screen_row_fill ( beam_row, last_pixel );
+}
+
+
+/** Kam byl řádek nakreslený před vrácením kreslení ve framebuffer_MZ800_reg_write_begin(); 0 = nic. */
+static unsigned s_reg_write_refill_to;
+
+
+/* Začátek zápisu do registru měnícího canvas, viz mz800_framebuffer.h. */
+void framebuffer_MZ800_reg_write_begin ( unsigned lead, int align16 ) {
+    g_framebuffer.screen_changes = SCRSTS_THIS_IS_CHANGED;
+    s_reg_write_refill_to = 0;
+
+    unsigned row;
+    unsigned col = gdg_get_beam_pos ( g_gdg.total_elapsed.ticks, &row );
+
+    /* Konec M-cyklu až v dalším řádku, jehož začátek ještě není zpracovaný:
+     * místo změny leží v zatemnění nebo v levém borderu, canvas se nemění. */
+    if ( row != g_gdg.beam_row ) return;
+    if ( ( row < VIDEO_BEAM_CANVAS_FIRST_ROW ) || ( row > VIDEO_BEAM_CANVAS_LAST_ROW ) ) return;
+    if ( col <= lead + VIDEO_BEAM_CANVAS_FIRST_COLUMN ) return;
+
+    unsigned x = col - lead - VIDEO_BEAM_CANVAS_FIRST_COLUMN;
+    if ( align16 ) x = ( x + 15u ) & ~15u;
+    /* Změna na konci canvasu nebo za ním: celý řádek patří staré hodnotě. */
+    if ( x > VIDEO_CANVAS_WIDTH ) x = VIDEO_CANVAS_WIDTH;
+
+    if ( x >= g_gdg.screen_need_update_from ) {
+        framebuffer_MZ800_current_screen_row_fill ( x );
+        return;
+    };
+
+    /* Řádek je nakreslený za místo změny. Kreslení se vrátí na začátek bajtu
+     * (tam se znovu načtou data z VRAM), po místo změny se nakreslí starou
+     * hodnotou a zbytek doplní framebuffer_MZ800_reg_write_end() novou. */
+    s_reg_write_refill_to = g_gdg.screen_need_update_from;
+    g_gdg.screen_need_update_from = x & ~15u;
+    framebuffer_MZ800_current_screen_row_fill ( x );
+}
+
+
+/* Konec zápisu do registru měnícího canvas, viz mz800_framebuffer.h. */
+void framebuffer_MZ800_reg_write_end ( void ) {
+    if ( s_reg_write_refill_to ) {
+        framebuffer_MZ800_current_screen_row_fill ( s_reg_write_refill_to );
+        s_reg_write_refill_to = 0;
+    };
 }
 
 

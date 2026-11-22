@@ -60,6 +60,7 @@
 #include "hw-generic/gdg/video.h"
 #include "hw-generic/ctc8253/ctc8253.h"
 #include "mzarch/mzarch.h"
+#include "mzarch/mz800/memory/mz800_memory.h"
 
 #ifdef MZ800EMU_CFG_RAM_FASTPATH
 /* E1: DMD switch (700/800 mode, SCRW640) meni VRAM mapping -> nutny rebuild
@@ -119,6 +120,7 @@ const struct st_GDGEVENT g_gdgevent[] = {
 
 void gdg_init(void)
 {
+    g_gdg.tempo_rows = GDG_TEMPO_DIVIDER_ROWS;
 
     g_gdg.total_elapsed.ticks = 0;
     g_gdg.total_elapsed.screens = 0;
@@ -171,13 +173,73 @@ static inline void gdg_set_regDMD(uint8_t value, unsigned event_ticks)
 }
 
 /**
+ * @brief Nastaví paletové registry tak, jak je zanechá režim MZ-700 při návratu do režimu MZ-800.
+ *
+ * V režimu MZ-700 jdou barvy přes paletové registry: liché položky (1, 3)
+ * nesou barvu popředí a sudé (0, 2) barvu pozadí právě zobrazované buňky,
+ * obojí jako barva režimu MZ-700 (nenulová s intenzitou). Mimo viditelnou
+ * část řádku je v lichých 0 a v sudých 0Fh. Při zápisu DMD bez bitu 3
+ * v registrech zůstane, co v nich právě bylo.
+ *
+ * Změřeno na MZ-800 (emu-experiments gdg-meas, třetí až páté měření, 60
+ * návratů): rozhoduje jen vodorovná poloha zápisu DMD; sestupná hrana /IORQ
+ * 333,5 až 938,5 px od hrany /HSYN dává barvy atributu (atributy 17h, 25h,
+ * 77h), 997,5 až 321,5 px dává 0, 0, F, F, a to i na řádcích mimo canvas.
+ * Hranice mezi těmito polohami změřené nejsou; bere se viditelná část řádku
+ * podle HBLN a místo GDG_PALETTE_WR_LEAD_TICKS před koncem M-cyklu jako
+ * u zápisu palety [neověřeno]. Na řádcích mimo canvas se bere buňka prvního
+ * nebo posledního řádku textu [neověřeno] (v měření měly všechny buňky
+ * stejný atribut).
+ *
+ * @pre Emu vlákno; g_gdg.regDMD má ještě bit MZ-700; čas GDG je konec
+ *      M-cyklu zápisu DMD.
+ * @post g_gdg.regPAL0 až regPAL3 nastavené; PALGRP se nemění.
+ */
+static void gdg_palette_after_mz700(void)
+{
+    unsigned row;
+    unsigned col = gdg_get_beam_pos(g_gdg.total_elapsed.ticks, &row);
+    unsigned fg = 0x00;
+    unsigned bg = 0x0f;
+
+    if ((row == g_gdg.beam_row) && (col >= GDG_PALETTE_WR_LEAD_TICKS))
+    {
+        unsigned c = col - GDG_PALETTE_WR_LEAD_TICKS;
+        if ((c >= VIDEO_BEAM_CANVAS_FIRST_COLUMN - 4u) && (c < VIDEO_BEAM_HBLN_FIRST_COLUMN))
+        {
+            unsigned x = (c < VIDEO_BEAM_CANVAS_FIRST_COLUMN) ? 0 : (c - VIDEO_BEAM_CANVAS_FIRST_COLUMN) / 16;
+            unsigned y = (row < VIDEO_BEAM_CANVAS_FIRST_ROW) ? 0
+                         : (row > VIDEO_BEAM_CANVAS_LAST_ROW) ? 24
+                         : (row - VIDEO_BEAM_CANVAS_FIRST_ROW) / 8;
+            if (x > 39)
+                x = 39;
+            uint8_t attr = g_memoryVRAM[0x1800 + y * 40 + x];
+            unsigned f = (attr >> 4) & 0x07;
+            unsigned b = attr & 0x07;
+            /* barva režimu MZ-700: nenulová s intenzitou */
+            fg = f ? (f | 0x08) : 0;
+            bg = b ? (b | 0x08) : 0;
+        };
+    };
+    g_gdg.regPAL1 = fg;
+    g_gdg.regPAL3 = fg;
+    g_gdg.regPAL0 = bg;
+    g_gdg.regPAL2 = bg;
+}
+
+/**
  * @brief Zápis DMD s vedlejšími efekty GDG (společné jádro OUT CEh
  *        a gdg_debug_set_regDMD()).
  *
  * Maskuje na bity 0-3; beze změny hodnoty nic nedělá. Jinak podle
  * PŮVODNÍHO režimu aktualizuje framebuffer (z 800 módu dokreslí řádek
- * do aktuální pozice paprsku, ze 700 módu jen označí změnu obrazu)
+ * do místa změny, ze 700 módu jen označí změnu obrazu)
  * a zavolá gdg_set_regDMD() s časem gdg_get_insigeop_ticks().
+ *
+ * Mezi režimy MZ-800 se obraz přepíná až na hranici 16 sloupců canvasu
+ * (GDG_DMD_WR_LEAD_TICKS, měřeno na MZ-800 pro 320 <-> 640). Při přepnutí
+ * do režimu MZ-700 se řádek dokreslí po paprsek jako dřív. Při návratu
+ * z režimu MZ-700 se přepíšou paletové registry (gdg_palette_after_mz700()).
  *
  * Bez záznamu hwlog a bez HW event breakpointu - ty řeší volající
  * gdg_write_byte().
@@ -201,11 +263,26 @@ static void gdg_write_regDMD(uint8_t value)
          * MZ800 -> MZ700 - udelat update jen do zmeny rezimu, zbytek vygenerovat v 700
          *
          */
-        framebuffer_MZ800_screen_changed();
+        if (value & REGISTER_DMD_FLAG_MZ700)
+        {
+            framebuffer_MZ800_screen_changed();
+        }
+        else
+        {
+            framebuffer_MZ800_reg_write_begin(GDG_DMD_WR_LEAD_TICKS, 1);
+            gdg_set_regDMD(value, gdg_get_insigeop_ticks());
+            framebuffer_MZ800_reg_write_end();
+            return;
+        };
     }
     else
     {
         g_framebuffer.screen_changes = SCRSTS_THIS_IS_CHANGED;
+        if (!(value & REGISTER_DMD_FLAG_MZ700))
+        {
+            /* Návrat z režimu MZ-700: v paletě zůstanou barvy z tohoto režimu. */
+            gdg_palette_after_mz700();
+        };
     };
     gdg_set_regDMD(value, gdg_get_insigeop_ticks());
 
@@ -269,15 +346,98 @@ void gdg_reset(void)
     g_framebuffer.screen_changes = SCRSTS_THIS_IS_CHANGED;
 }
 
+/**
+ * @brief O kolik tiků před koncem M-cyklu čtení vzorkuje procesor Status registr.
+ *
+ * Změřeno na MZ-800 instrukcí IN A,(0CEh) (emu-experiments gdg-meas, první
+ * měření, 2920 čtení): bit HBLN je 1 pro náběžnou hranu /IORQ 337 až 976 px,
+ * přičemž hrany signálu leží v 336 a 976 px. Procesor tedy bere data asi
+ * 1 px před náběžnou hranou /IORQ, 3,5 px před koncem M-cyklu; v mřížce
+ * emulátoru 4 sloupce.
+ */
+#define GDG_STATUS_SAMPLE_LEAD_TICKS 4
+
+/**
+ * @brief O kolik sloupců dřív než události emulátoru leží hrany stavového HSYNC.
+ *
+ * Stavový HSYNC (bit 5) má na MZ-800 hrany 184 a 1112 px od sestupné hrany
+ * /HSYN (měření i netlist), tedy sloupce -2 a 926. Události emulátoru, které
+ * mění g_gdg.sts_hsync, jsou ve sloupcích 0 (konec řádku) a 928 (konec
+ * viditelné části), aby se ušetřily dvě události na řádek. Rozdíl se
+ * dorovnává jen při čtení Status registru.
+ */
+#define GDG_STATUS_HSYNC_LEAD_TICKS 2
+
+/**
+ * @brief Stavové bity Status registru tak, jak je vidí procesor při čtení.
+ *
+ * Čas GDG je konec M-cyklu čtení; stav se bere GDG_STATUS_SAMPLE_LEAD_TICKS
+ * dřív. Protože události, které mezitím proběhly, už g_gdg.hbln, vbln,
+ * sts_hsync a sts_vsync změnily, počítá se HBLN a HSYNC z polohy paprsku
+ * a VBLN a VSYNC se v řádku své hrany vrací na hodnotu před hranou.
+ *
+ * @param hbln [out] Bit 7 (1 = viditelná část řádku).
+ * @param vbln [out] Bit 6.
+ * @param hs   [out] Bit 5 (stavový HSYNC).
+ * @param vs   [out] Bit 4.
+ * @pre Emu vlákno; g_gdg.total_elapsed.ticks je konec M-cyklu čtení a události
+ *      do této chvíle jsou zpracované (mzarch_main_insideop_*()).
+ */
+static void gdg_status_sample(unsigned *hbln, unsigned *vbln, unsigned *hs, unsigned *vs)
+{
+    unsigned row;
+    int col = (int) gdg_get_beam_pos(g_gdg.total_elapsed.ticks, &row);
+    int same_row = (row == g_gdg.beam_row);
+    int sampled = col - GDG_STATUS_SAMPLE_LEAD_TICKS;
+
+    *vbln = SIGNAL_GDG_VBLNK ? 1 : 0;
+    *vs = SIGNAL_GDG_STS_VS ? 1 : 0;
+
+    /* Konec stavového HSYNC v tomto řádku (zkrácený řádek ho má dřív; délka
+     * je známá od načtení bitu CKSW ve sloupci VIDEO_BEAM_HBLN_FIRST_COLUMN). */
+    int hs_end = (int) (VIDEO_BEAM_DISPLAY_LAST_COLUMN + 1u) - GDG_STATUS_HSYNC_LEAD_TICKS
+                 - (same_row ? (int) g_gdg.row_shrink : 0);
+
+    if (sampled < 0)
+    {
+        /* Vzorek padl na konec předchozího řádku: zatemnění. */
+        *hbln = 0;
+        *hs = (sampled >= -GDG_STATUS_HSYNC_LEAD_TICKS) ? 1 : 0;
+        return;
+    };
+
+    *hbln = ((sampled >= (int) (VIDEO_BEAM_CANVAS_FIRST_COLUMN - 4u)) && (sampled < (int) VIDEO_BEAM_HBLN_FIRST_COLUMN)) ? 1 : 0;
+    *hs = (sampled < hs_end) ? 1 : 0;
+
+    if (!same_row)
+        return;
+
+    /* VBLN se mění s HBLN_START na posledním řádku canvasu a na řádku před
+     * prvním; VSYNC ve sloupci konce canvasu - 2 na řádku 0 a na posledním
+     * viditelném řádku. Vzorek před hranou vidí hodnotu před ní. */
+    if (((row == VIDEO_BEAM_CANVAS_LAST_ROW) || (row == VIDEO_BEAM_CANVAS_FIRST_ROW - 1))
+        && (col >= (int) VIDEO_BEAM_HBLN_FIRST_COLUMN) && (sampled < (int) VIDEO_BEAM_HBLN_FIRST_COLUMN))
+    {
+        *vbln = !*vbln;
+    };
+    if (((row == 0) || (row == VIDEO_DISPLAY_HEIGHT - 1))
+        && (col >= (int) (VIDEO_BORDER_LEFT_WIDTH + VIDEO_CANVAS_WIDTH - 2)) && (sampled < (int) (VIDEO_BORDER_LEFT_WIDTH + VIDEO_CANVAS_WIDTH - 2)))
+    {
+        *vs = !*vs;
+    };
+}
+
 uint8_t gdg_read_dmd_status_ioop(void)
 {
 
     uint8_t retval;
+    unsigned hbln, vbln, hs, vs;
 
-    retval = SIGNAL_GDG_HBLNK ? 1 << 7 : 0x00;
-    retval |= SIGNAL_GDG_VBLNK ? 1 << 6 : 0x00;
-    retval |= SIGNAL_GDG_STS_HS ? 1 << 5 : 0x00;
-    retval |= SIGNAL_GDG_STS_VS ? 1 << 4 : 0x00;
+    gdg_status_sample(&hbln, &vbln, &hs, &vs);
+    retval = hbln ? 1 << 7 : 0x00;
+    retval |= vbln ? 1 << 6 : 0x00;
+    retval |= hs ? 1 << 5 : 0x00;
+    retval |= vs ? 1 << 4 : 0x00;
     retval |= g_gdg.cksw ? 1 << 2 : 0x00;
     /* Bit 1 = poloha SW1: 0 = MZ-700 mód, 1 = MZ-800 mód (viz en_MZ800_MODE_SW). */
     retval |= (g_mzarch_main.mode_sw == MZ800_MODE_SW_MZ800) ? 1 << 1 : 0x00;
@@ -290,9 +450,16 @@ uint8_t gdg_read_dmd_status_memop(void)
 {
     uint8_t retval = 0x00;
 
-    retval |= SIGNAL_GDG_HBLNK ? 1 << 7 : 0x00;
+    /* Čtení 0E008h v režimu MZ-700 nese jen HBLN (bit 7) a TEMPO (bit 0).
+     * Bit CKSW tu na rozdíl od portu 0CEh není ani s nastaveným bitem:
+     * změřeno na MZ-800 (emu-experiments gdg-meas, třetí měření: 81h a 80h).
+     * Okamžik vzorkování je stejný jako u portu 0CEh (gdg_status_sample());
+     * u čtení paměti změřený není, plyne z časování sběrnice Z80: data se
+     * berou na téže hraně T3 jako u čtení portu [neověřeno]. */
+    unsigned hbln, vbln, hs, vs;
+    gdg_status_sample(&hbln, &vbln, &hs, &vs);
+    retval |= hbln ? 1 << 7 : 0x00;
     retval |= SIGNAL_GDG_TEMPO;
-    retval |= g_gdg.cksw ? 1 << 2 : 0x00;
 
     //    printf ( "read DMD sts = 0x%02x - HB: %d, VB: %d, HS: %d, VS: %d, row: %d, col: %d, PC: 0x%04x\n", retval, SIGNAL_GDG_HBLNK, SIGNAL_GDG_VBLNK, SIGNAL_GDG_STS_HS, SIGNAL_GDG_STS_VS, BEAM_ROW ( g_gdg.screen_ticks_elapsed ), BEAM_COL ( g_gdg.screen_ticks_elapsed ), z80ex_get_reg ( g_mz800_main.cpu, regPC )  );
     return retval;
@@ -300,8 +467,11 @@ uint8_t gdg_read_dmd_status_memop(void)
 
 uint8_t gdg_peek_dmd_status_memop(void)
 {
-    /* Čtení statusu na MZ-800 nemá vedlejší efekt. */
-    return gdg_read_dmd_status_memop();
+    /* Okamžitý stav signálů (bez předstihu vzorkování procesorem). */
+    uint8_t retval = 0x00;
+    retval |= SIGNAL_GDG_HBLNK ? 1 << 7 : 0x00;
+    retval |= SIGNAL_GDG_TEMPO;
+    return retval;
 }
 
 /**
@@ -459,7 +629,7 @@ void gdg_write_byte(unsigned addr, uint8_t value)
             if (g_gdg.regBOR != value)
             {
                 // printf ( "BORDER: 0x%02x, screen: %d, ticks: %d\n", value, g_gdg.total_elapsed.screens, mz800_main_get_instruction_start_ticks ( ) );
-                framebuffer_border_changed();
+                framebuffer_border_write ( value );
                 g_gdg.regBOR = value;
             };
 
@@ -486,6 +656,19 @@ void gdg_write_byte(unsigned addr, uint8_t value)
         break;
 
     case 0xf0:
+    {
+        /* Zápis palety nebo skupiny palet. Na obraze se projeví
+         * GDG_PALETTE_WR_LEAD_TICKS před koncem M-cyklu (měřeno na MZ-800);
+         * řádek se proto před první změnou registru dokreslí po toto místo
+         * a po změnách se případně překreslí jeho už nakreslený zbytek. */
+        int pal_touched = 0;
+#define GDG_PALETTE_WRITE_BEGIN() \
+    do { \
+        if ( !pal_touched && !GDG_MZ800_DMD_TEST_MZ700 ) { \
+            framebuffer_MZ800_reg_write_begin ( GDG_PALETTE_WR_LEAD_TICKS, 0 ); \
+            pal_touched = 1; \
+        } \
+    } while ( 0 )
 
         /* nastaveni PALGRP */
         if (value & 0x40)
@@ -493,10 +676,7 @@ void gdg_write_byte(unsigned addr, uint8_t value)
 
             if (g_gdg.regPALGRP != (value & 0x03))
             {
-                if (!GDG_MZ800_DMD_TEST_MZ700)
-                {
-                    framebuffer_MZ800_screen_changed();
-                };
+                GDG_PALETTE_WRITE_BEGIN();
                 g_gdg.regPALGRP = value & 0x03;
             };
 
@@ -504,8 +684,6 @@ void gdg_write_byte(unsigned addr, uint8_t value)
         }
         else
         {
-
-            unsigned framebuffer_updated = 0;
 
             unsigned pal_value = value & 0x0f;
 
@@ -518,23 +696,13 @@ void gdg_write_byte(unsigned addr, uint8_t value)
                     /* undoc mode! */
                     if (g_gdg.regPAL1 != pal_value)
                     {
-                        if (!GDG_MZ800_DMD_TEST_MZ700)
-                        {
-                            framebuffer_MZ800_screen_changed();
-                        };
+                        GDG_PALETTE_WRITE_BEGIN();
                         g_gdg.regPAL1 = pal_value;
-                        framebuffer_updated = 1;
                     };
                 };
                 if (g_gdg.regPAL0 != pal_value)
                 {
-                    if (framebuffer_updated == 0)
-                    {
-                        if (!GDG_MZ800_DMD_TEST_MZ700)
-                        {
-                            framebuffer_MZ800_screen_changed();
-                        };
-                    };
+                    GDG_PALETTE_WRITE_BEGIN();
                     g_gdg.regPAL0 = pal_value;
                 };
                 break;
@@ -542,10 +710,7 @@ void gdg_write_byte(unsigned addr, uint8_t value)
             case 1:
                 if (g_gdg.regPAL1 != pal_value)
                 {
-                    if (!GDG_MZ800_DMD_TEST_MZ700)
-                    {
-                        framebuffer_MZ800_screen_changed();
-                    };
+                    GDG_PALETTE_WRITE_BEGIN();
                     g_gdg.regPAL1 = pal_value;
                 };
                 break;
@@ -553,10 +718,7 @@ void gdg_write_byte(unsigned addr, uint8_t value)
             case 2:
                 if (g_gdg.regPAL2 != pal_value)
                 {
-                    if (!GDG_MZ800_DMD_TEST_MZ700)
-                    {
-                        framebuffer_MZ800_screen_changed();
-                    };
+                    GDG_PALETTE_WRITE_BEGIN();
                     g_gdg.regPAL2 = pal_value;
                 };
                 break;
@@ -566,28 +728,21 @@ void gdg_write_byte(unsigned addr, uint8_t value)
                 {
                     if (g_gdg.regPAL2 != pal_value)
                     {
-                        if (!GDG_MZ800_DMD_TEST_MZ700)
-                        {
-                            framebuffer_MZ800_screen_changed();
-                        };
+                        GDG_PALETTE_WRITE_BEGIN();
                         g_gdg.regPAL2 = pal_value;
-                        framebuffer_updated = 1;
                     };
                 };
                 if (g_gdg.regPAL3 != pal_value)
                 {
-                    if (framebuffer_updated == 0)
-                    {
-                        if (!GDG_MZ800_DMD_TEST_MZ700)
-                        {
-                            framebuffer_MZ800_screen_changed();
-                        };
-                    };
+                    GDG_PALETTE_WRITE_BEGIN();
                     g_gdg.regPAL3 = pal_value;
                 };
                 break;
             };
         };
+        if ( pal_touched ) framebuffer_MZ800_reg_write_end ( );
+#undef GDG_PALETTE_WRITE_BEGIN
+    }
         break;
     };
 }

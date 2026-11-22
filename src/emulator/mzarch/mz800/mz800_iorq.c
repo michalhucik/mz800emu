@@ -440,6 +440,13 @@ void port_write_cb(z80_t *cpu, uint16_t addr, uint8_t value, void *user_data)
     case 0xcd:
     case 0xce:
     case 0xcf:
+        /* Zápis na 0CCh až 0CFh čeká na vyřízení předchozího zápisu do
+         * VRAM; port 0F0h nečeká (měřeno na MZ-800). */
+        mzarch_main_insideop_iorq_gdg_write();
+        gdg_write_byte(addr, value);
+        TRACELOG_IORQ_MARK_HANDLED();
+        break;
+
     case 0xf0:
         /* zapisujeme do GDG: 0xcc - 0xcf, 0xf0 */
         gdg_write_byte(addr, value);

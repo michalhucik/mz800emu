@@ -215,10 +215,11 @@ of the current graphics mode. The bank-mask comes from hardware:
 | E000h-FFFFh | ROM_E000 unmapped | bus + ram[bus_addr] |
 
 Note: "Prohibited" = state after OUT 0xE5, persists across OUT E0/E1/E2/E3
-and across DMD bit 3 switch (700 <-> 800 native). Cleared only by OUT
-0xE6 or OUT 0xE4 (= reset map). In the Prohibited state, the CPU reads
-a constant 0x1A shadow byte over the entire $E000-$FFFF - no physical
-region (skip resolver).
+and across DMD bit 3 switch (700 <-> 800 native). Cleared by OUT 0xE6,
+OUT 0xE4 or reset (on the MZ-800 measured on a real machine). In the
+Prohibited state the CPU reads, over the entire $E000-$FFFF, the last byte
+that was on the data bus (for a data read the last byte of the instruction)
+and writes are dropped - no physical region (skip resolver).
 
 ### Mapping of CPU bus to regions (MZ-700 mode)
 

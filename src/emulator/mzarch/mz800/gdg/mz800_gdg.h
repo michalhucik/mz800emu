@@ -146,6 +146,14 @@ extern "C"
         unsigned tempo;
         unsigned tempo_divider;
 
+        /** Počet řádků, po kterém se překlopí TEMPO. Běžně
+         *  GDG_TEMPO_DIVIDER_ROWS; po načtení snapshotu starší verze (bez
+         *  klíče tempo_rows) GDG_TEMPO_DIVIDER_ROWS_LEGACY, aby se záznamy
+         *  vstupů pořízené starší verzí přehrály se stejnými otisky stavu.
+         *  Nastavuje gdg_init() a načtení snapshotu; reset hodnotu nemění.
+         *  Invariant: jedna z obou konstant. */
+        unsigned tempo_rows;
+
 #ifdef MZ800EMU_CFG_CLK1M1_SLOW
         unsigned ctc0clk;
 #endif
@@ -274,19 +282,37 @@ extern "C"
 #define gdg_get_ending_frame_ticks() ( VIDEO_SCREEN_TICKS - g_gdg.frame_short_ticks )
 
 /**
+ * @brief Počet řádků, po kterém se překlopí signál TEMPO (bit 0 Status registru).
+ *
+ * Změřeno na MZ-800 analyzátorem: 227,960 řádku, 34,24 Hz (emu-experiments
+ * gdg-meas, druhé měření). Dělič běží po řádcích bez ohledu na délku řádku.
+ * Platná hodnota za běhu je g_gdg.tempo_rows.
+ */
+#define GDG_TEMPO_DIVIDER_ROWS 228u
+
+/**
+ * @brief Perioda TEMPO ve verzích do mz800new 8e1e2b09 včetně (odhad, ne měření).
+ *
+ * Používá se jen po načtení snapshotu bez klíče tempo_rows, viz g_gdg.tempo_rows.
+ */
+#define GDG_TEMPO_DIVIDER_ROWS_LEGACY 229u
+
+/**
  * @brief Posun tiků GDG na časovou osu modelu WAIT u VRAM (mz800_vramwait.h).
  *
  * Tik GDG = 1 CLK0, sloupec 0 emulátoru je začátek levého borderu. Model
- * počítá pozici v řádku od sestupné hrany nHSYN. Kotvou je začátek viditelné
- * části HBLN: v emulátoru sloupec VIDEO_BEAM_CANVAS_FIRST_COLUMN - 4 (událost
- * MZEVENT_GDG_HBLN_END), v netlistu GDG CLK0 335 od nHSYN (gdg-mz800,
- * kap. 05). Vztah WAIT k bitu HBLN Status registru je tak stejný jako
- * v netlistu. Kotva podle VIDEO_REAL_HSYNC_START_COLUMN by dala posun o 1 CLK0
- * větší; který z obou signálů má emulátor vůči HW přesněji, ověřené není
- * [neověřeno].
+ * počítá pozici v řádku od sestupné hrany nHSYN.
+ *
+ * Kotvou je sestupná hrana nHSYN na sloupci VIDEO_REAL_HSYNC_START_COLUMN
+ * (posun 186 CLK0). Určeno měřením na MZ-800 (emu-experiments gdg-meas, třetí
+ * měření): 18 000 přístupů do VRAM ve všech fázích řádku. Model sedí se
+ * strojem jen pro jedno zarovnání osy (posun o 1 CLK0 na kteroukoli stranu
+ * dá o pětinu až třetinu shod méně) a emulátor s touto kotvou dává v téže
+ * poloze stejné čekací takty jako stroj. Dřívější kotva podle začátku
+ * viditelné části HBLN (CLK0 335 netlistu na sloupci
+ * VIDEO_BEAM_CANVAS_FIRST_COLUMN - 4) dávala posun o 1 CLK0 menší.
  */
-#define GDG_VRAMWAIT_TICKS_TO_LINE_OFFSET \
-    ( ( 335u + VIDEO_SCREEN_WIDTH - ( VIDEO_BEAM_CANVAS_FIRST_COLUMN - 4u ) ) % VIDEO_SCREEN_WIDTH )
+#define GDG_VRAMWAIT_TICKS_TO_LINE_OFFSET ( VIDEO_SCREEN_WIDTH - VIDEO_REAL_HSYNC_START_COLUMN )
 
 /** @brief Aktuální čas GDG na časové ose modelu WAIT u VRAM (CLK0). */
 #define gdg_get_vramwait_ticks() ( gdg_get_total_ticks() + GDG_VRAMWAIT_TICKS_TO_LINE_OFFSET )

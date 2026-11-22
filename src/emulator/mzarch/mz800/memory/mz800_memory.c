@@ -204,14 +204,19 @@ void memory_map_pwrite ( uint8_t mmap_port, uint8_t value ) {
 
         case MMAP_MZ800_PWRITE_E4:
             memory_mmap_all_on ( );
+            /* OUT 0E4h zákaz z OUT 0E5h ruší. Změřeno na MZ-800 v režimu
+             * 320x200 (emu-experiments gdg-meas, druhé měření: po E5h, E4h
+             * se z 0E010h čte bajt ROM) a shodně vyšlo už v testu
+             * banking-e800 v0.2 (krok K16M). V režimu MZ-700 [neověřeno]. */
+            g_memory.map &= ~MEMORY_MZ800_MAP_FLAG_PROHIBITED;
             break;
 
         case MMAP_MZ800_PWRITE_E5:
-            /* Aktivace "Prohibited" banking mode. Read $E009-$FFFF nyni vraci
-             * 0x1A shadow byte (= empiricky overeno na realnem HW). Persistuje
-             * pres OUT E0/E1/E2/E3/E4 a pres DMD bit 3 switch (= per-architektura
-             * memory state, drzen v g_memory.map flag bit 4).
-             * Reset: jen OUT E6, memory_reset / gdg_reset. */
+            /* Zákaz oblasti 0E000h-0FFFFh ("Prohibited"). Čtení vrací
+             * poslední bajt na datové sběrnici (memory_prohibited_read_sync()),
+             * zápis se neprovede. Drží přes OUT E0h až E3h a přes přepnutí
+             * DMD bit 3 (test banking-e800 v0.3 a v0.4). Ruší ho OUT 0E6h,
+             * OUT 0E4h a reset. */
             g_memory.map |= MEMORY_MZ800_MAP_FLAG_PROHIBITED;
             break;
 
@@ -504,26 +509,37 @@ void memory_reset ( void ) {
 #define memory_internal_read_c000_cfff(a) { if ( 0x0c == a ) { if ( MEMORY_MZ800_MAP_TEST_CGRAM ) return MEMORY_VRAM_MZ700_READ_BYTE; return MEMORY_RAM_READ_BYTE; } }
 #define memory_internal_read_d000_dfff_sync(a) { if ( 0x0d == a ) { if ( MEMORY_MZ800_MAP_TEST_VRAM_D000 ) return MEMORY_VRAM_MZ700_READ_BYTE_SYNC; return MEMORY_RAM_READ_BYTE; } }
 #define memory_internal_read_d000_dfff(a) { if ( 0x0d == a ) { if ( MEMORY_MZ800_MAP_TEST_VRAM_D000 ) return MEMORY_VRAM_MZ700_READ_BYTE; return MEMORY_RAM_READ_BYTE; } }
-/* Pozn. k bankingu $E000-$FFFF na MZ-800 (per VYHODNOCENI.md, banking-e800,
- * verze v0.5 testu):
- *   - Clear stav (! ROM_E000, NE Prohibited): cele $E000-$FFFF = DRAM
- *     (zadny mapped ports overlay v clear stavu).
- *   - Prohibited stav (po OUT E5, persistuje pres OUT E0-E4 a DMD switch):
- *     cele $E000-$FFFF = 0x1A shadow byte (vcetne $E000-$E008 mapped ports area).
- *     Empiricky overeno v0.5 T4. Rusi jen OUT E6 nebo gdg_reset.
- *   - K3 (ROM_E000 set, NE Prohibited):
- *     - 700 mode (DMD bit 3 = 1):
- *         $E000-$E008 = mapped ports (PIO/CTC/GDG)
- *         $E009-$E00F = 0x1A shadow byte (HW vraci natvrdo 0x1A nezavisle na
- *                       ROM image obsahu - hardcoded pro shodu s realnym HW;
- *                       empiricky overeno v0.5 T0/T1/T2)
- *         $E010-$FFFF = ROM
- *     - 800 native (DMD bit 3 = 0): mapped ports area cela "off"
- *         $E000-$E00F = 0xFF (empiricky overeno v0.5 T3 + v0.4 T6)
- *         $E010-$FFFF = ROM */
-#define memory_internal_read_e000_efff_sync(a) { if ( 0x0e == a ) { if ( MEMORY_MZ800_MAP_TEST_PROHIBITED ) return 0x1A; if ( MEMORY_MZ800_MAP_TEST_ROM_E000 ) return memory_internal_read_rom_e000_efff_sync ( addr ); return MEMORY_RAM_READ_BYTE; } }
-#define memory_internal_read_e000_efff(a) { if ( 0x0e == a ) { if ( MEMORY_MZ800_MAP_TEST_PROHIBITED ) return 0x1A; if ( MEMORY_MZ800_MAP_TEST_ROM_E000 ) return memory_internal_read_rom_e000_efff ( addr ); return MEMORY_RAM_READ_BYTE; } }
-#define memory_internal_read_f000_ffff(a) { if ( 0x0f == a ) { if ( MEMORY_MZ800_MAP_TEST_PROHIBITED ) return 0x1A; if ( MEMORY_MZ800_MAP_TEST_ROM_E000 ) return MEMORY_ROM_READ_BYTE; return MEMORY_RAM_READ_BYTE; } }
+/* Bankování 0E000h-0FFFFh na MZ-800 (test banking-e800 v0.1 až v0.5
+ * a měření analyzátorem, emu-experiments gdg-meas, druhé a třetí měření):
+ *   - Bez ROM_E000 a bez zákazu: celá oblast je DRAM.
+ *   - Zákaz (po OUT 0E5h; drží přes OUT E0h až E3h a přes přepnutí DMD,
+ *     ruší OUT 0E6h, OUT 0E4h a reset): čtení celé oblasti včetně
+ *     mapovaných portů vrací poslední bajt na datové sběrnici, zápis se
+ *     neprovede. Dřívější "konstantní bajt 1Ah" byl kód instrukce
+ *     LD A,(DE), kterou starší test četl.
+ *   - ROM_E000 bez zákazu:
+ *     - režim MZ-700 (DMD bit 3 = 1):
+ *         0E000h-0E008h = mapované porty (8255, 8253, GDG)
+ *         0E009h-0E00Fh = 1Ah (test v0.5 T0 až T2, čteno jen instrukcí
+ *                         LD A,(DE); nejspíš také zbytek na sběrnici
+ *                         (hypotéza), jinou instrukcí neměřeno)
+ *         0E010h-0FFFFh = ROM
+ *     - režim MZ-800 (DMD bit 3 = 0):
+ *         0E000h-0E00Fh = FFh (test v0.5 T3, v0.4 T6)
+ *         0E010h-0FFFFh = ROM */
+
+/** Adresa instrukce, která naposledy četla zakázanou oblast (memory_prohibited_read_sync()). */
+static uint16_t s_prohibited_instr_addr;
+
+/** Hodnota cpu->op_tstate při posledním čtení zakázané oblasti, -1 = žádné. */
+static int s_prohibited_op_tstate = -1;
+
+static uint8_t memory_prohibited_read_sync ( uint16_t addr );
+
+#define memory_internal_read_e000_efff_sync(a) { if ( 0x0e == a ) { if ( MEMORY_MZ800_MAP_TEST_PROHIBITED ) return memory_prohibited_read_sync ( addr ); if ( MEMORY_MZ800_MAP_TEST_ROM_E000 ) return memory_internal_read_rom_e000_efff_sync ( addr ); return MEMORY_RAM_READ_BYTE; } }
+#define memory_internal_read_e000_efff(a) { if ( 0x0e == a ) { if ( MEMORY_MZ800_MAP_TEST_PROHIBITED ) return g_mzarch_main.regDBUS_latch; if ( MEMORY_MZ800_MAP_TEST_ROM_E000 ) return memory_internal_read_rom_e000_efff ( addr ); return MEMORY_RAM_READ_BYTE; } }
+#define memory_internal_read_f000_ffff_sync(a) { if ( 0x0f == a ) { if ( MEMORY_MZ800_MAP_TEST_PROHIBITED ) return memory_prohibited_read_sync ( addr ); if ( MEMORY_MZ800_MAP_TEST_ROM_E000 ) return MEMORY_ROM_READ_BYTE; return MEMORY_RAM_READ_BYTE; } }
+#define memory_internal_read_f000_ffff(a) { if ( 0x0f == a ) { if ( MEMORY_MZ800_MAP_TEST_PROHIBITED ) return g_mzarch_main.regDBUS_latch; if ( MEMORY_MZ800_MAP_TEST_ROM_E000 ) return MEMORY_ROM_READ_BYTE; return MEMORY_RAM_READ_BYTE; } }
 
 
 /**
@@ -650,8 +666,52 @@ uint8_t memory_internal_read_sync ( uint16_t addr ) {
     memory_internal_read_c000_cfff_sync ( addr_high );
     memory_internal_read_d000_dfff_sync ( addr_high );
     memory_internal_read_e000_efff_sync ( addr_high );
-    memory_internal_read_f000_ffff ( addr_high );
+    memory_internal_read_f000_ffff_sync ( addr_high );
     return MEMORY_RAM_READ_BYTE;
+}
+
+
+/**
+ * @brief Čtení zakázané oblasti 0E000h-0FFFFh procesorem (po OUT 0E5h).
+ *
+ * Oblast při zákazu nikdo nebudí, čte se poslední bajt, který byl na datové
+ * sběrnici. Změřeno na MZ-800 (emu-experiments gdg-meas, druhé a třetí
+ * měření): LD A,(0E010h) přečte E0h (vyšší bajt adresy), LD A,(HL) 7Eh,
+ * LD A,(DE) 1Ah (kódy instrukcí), LD A,(IX+0) 00h (posunutí).
+ *
+ * Pravidlo:
+ *  - datové čtení: bajt na adrese PC - 1, tedy poslední načtený bajt
+ *    instrukce (čte se bez vedlejšího efektu);
+ *  - druhé čtení téže instrukce hned za prvním (vyšší bajt u LD rr,(nn),
+ *    POP, RET): hodnota předchozího čtení [neověřeno];
+ *  - výběr instrukce nebo operandu ze zakázané oblasti a datové čtení, kdy
+ *    PC - 1 leží v zakázané oblasti: poslední bajt přečtený přes callback
+ *    (g_mzarch_main.regDBUS_latch) [neověřeno].
+ *
+ * @param addr Čtená adresa v 0E000h-0FFFFh.
+ * @return Bajt, který by byl na sběrnici.
+ * @pre Emu vlákno, uvnitř z80_step(); g_mzarch_main.mreq_m1 je nastaven pro
+ *      toto čtení (memory_read_cb) a cpu->pc i cpu->op_tstate jsou platné
+ *      (jádro s registry přímo v cpu).
+ * @post Zapamatovaná instrukce a op_tstate pro rozpoznání druhého čtení.
+ *       Stav není ve snapshotu: snapshot vzniká na hranici instrukce, kde
+ *       na něm nezáleží.
+ */
+static uint8_t memory_prohibited_read_sync ( uint16_t addr ) {
+    const z80_t *cpu = g_mzarch_main.cpu;
+    uint16_t pc = (uint16_t) cpu->pc;
+    uint16_t prev = (uint16_t) ( pc - 1 );
+    int second = ( s_prohibited_op_tstate >= 0 )
+                 && ( s_prohibited_instr_addr == (uint16_t) g_mzarch_main.instruction_addr )
+                 && ( cpu->op_tstate == s_prohibited_op_tstate + 3 );
+
+    s_prohibited_instr_addr = (uint16_t) g_mzarch_main.instruction_addr;
+    s_prohibited_op_tstate = cpu->op_tstate;
+
+    if ( g_mzarch_main.mreq_m1 || ( pc == (uint16_t) ( addr + 1 ) ) || second || ( prev >= 0xe000 ) ) {
+        return g_mzarch_main.regDBUS_latch;
+    };
+    return memory_read_byte_no_se ( prev );
 }
 
 
@@ -940,9 +1000,11 @@ uint8_t memory_read_byte_no_se ( uint16_t addr ) {
 #define memory_internal_write_c000_cfff(a) { if ( 0x0c == a ) { if ( MEMORY_MZ800_MAP_TEST_CGRAM ) { MEMORY_VRAM_MZ700_WRITE_BYTE; } else { MEMORY_RAM_WRITE_BYTE; } return; } }
 #define memory_internal_write_d000_dfff_sync(a) { if ( 0x0d == a ) { if ( MEMORY_MZ800_MAP_TEST_VRAM_D000 ) { MEMORY_VRAM_MZ700_WRITE_BYTE_SYNC; } else { MEMORY_RAM_WRITE_BYTE; } return; } }
 #define memory_internal_write_d000_dfff(a) { if ( 0x0d == a ) { if ( MEMORY_MZ800_MAP_TEST_VRAM_D000 ) { MEMORY_VRAM_MZ700_WRITE_BYTE; } else { MEMORY_RAM_WRITE_BYTE; } return; } }
-#define memory_internal_write_e000_efff_sync(a) { if ( 0x0e == a ) { if ( MEMORY_MZ800_MAP_TEST_ROM_E000 ) { memory_internal_write_rom_e000_sync ( addr, value ); } else { MEMORY_RAM_WRITE_BYTE; } return; } }
-#define memory_internal_write_e000_efff(a) { if ( 0x0e == a ) { if ( MEMORY_MZ800_MAP_TEST_ROM_E000 ) { memory_internal_write_rom_e000 ( addr, value ); } else { MEMORY_RAM_WRITE_BYTE; } return; } }
-#define memory_internal_write_f000_ffff(a) { if ( 0x0f == a ) { if ( ! MEMORY_MZ800_MAP_TEST_ROM_E000 ) MEMORY_RAM_WRITE_BYTE; return; } }
+/* Zápis do zakázané oblasti (po OUT 0E5h) se neprovede: změřeno na MZ-800 s DRAM na 0E000h
+ * (emu-experiments gdg-meas, druhé měření); u mapovaných portů [neověřeno]. */
+#define memory_internal_write_e000_efff_sync(a) { if ( 0x0e == a ) { if ( MEMORY_MZ800_MAP_TEST_PROHIBITED ) return; if ( MEMORY_MZ800_MAP_TEST_ROM_E000 ) { memory_internal_write_rom_e000_sync ( addr, value ); } else { MEMORY_RAM_WRITE_BYTE; } return; } }
+#define memory_internal_write_e000_efff(a) { if ( 0x0e == a ) { if ( MEMORY_MZ800_MAP_TEST_PROHIBITED ) return; if ( MEMORY_MZ800_MAP_TEST_ROM_E000 ) { memory_internal_write_rom_e000 ( addr, value ); } else { MEMORY_RAM_WRITE_BYTE; } return; } }
+#define memory_internal_write_f000_ffff(a) { if ( 0x0f == a ) { if ( ( ! MEMORY_MZ800_MAP_TEST_PROHIBITED ) && ( ! MEMORY_MZ800_MAP_TEST_ROM_E000 ) ) MEMORY_RAM_WRITE_BYTE; return; } }
 
 
 static inline void memory_internal_write_rom_e000_sync ( uint16_t addr, uint8_t value ) {

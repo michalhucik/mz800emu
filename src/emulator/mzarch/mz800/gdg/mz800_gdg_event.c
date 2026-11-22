@@ -275,8 +275,9 @@ static inline void gdg_process_events(void)
         }
 #endif
         g_gdg.tempo_divider++;
-        /* Na mem MZ800 ma TEMPO pravdepodobne cca 34 Hz - tedy od oka :) */
-        if (g_gdg.tempo_divider == 229)
+        /* TEMPO se na MZ-800 překlápí po 228 řádcích (34,24 Hz): změřeno
+         * analyzátorem, 227,960 řádku (emu-experiments gdg-meas, druhé měření). */
+        if (g_gdg.tempo_divider >= g_gdg.tempo_rows)
         {
             g_gdg.tempo_divider = 0;
             g_gdg.tempo++;

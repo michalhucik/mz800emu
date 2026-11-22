@@ -729,7 +729,12 @@ static char *build_subsys_header_json ( void )
     json_builder_set_member_name ( b, "psgclk_divider_cpuclk" );
     json_builder_add_int_value ( b, (gint64) ( PSG_DIVIDER / GDGCLK2CPU_DIVIDER ) );
     json_builder_set_member_name ( b, "tempo_divider_screen_rows" );
+#if MZARCH == 800
+    /* MZ-800: 228 řádků (měřeno), po načtení snapshotu starší verze 229. */
+    json_builder_add_int_value ( b, (gint64) g_gdg.tempo_rows );
+#else
     json_builder_add_int_value ( b, 229 );
+#endif
     json_builder_set_member_name ( b, "cpu_divider_pxclk" );
     json_builder_add_int_value ( b, (gint64) GDGCLK2CPU_DIVIDER );
     json_builder_set_member_name ( b, "ctc0_clk1m1_divider_pxclk" );

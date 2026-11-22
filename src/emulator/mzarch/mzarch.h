@@ -118,6 +118,7 @@ typedef enum en_INSIDEOP
     INSIDEOP_MREQ_MZ800_VRAMCTRL_READ,   /* MZ-800 build: cteni VRAM pres GDG (model WAIT mz800_vramwait.h, rezim MZ-800 i MZ-700) */
     INSIDEOP_MREQ_MZ800_VRAMCTRL_WRITE,  /* MZ-800 build: zapis do VRAM pres GDG (model WAIT mz800_vramwait.h, rezim MZ-800 i MZ-700) */
     INSIDEOP_IORQ_PSG_WRITE,             /* IORQ wite byte do PSG */
+    INSIDEOP_IORQ_GDG_WRITE,             /* MZ-800 build: IORQ zapis na porty GDG 0CCh az 0CFh (WAIT, dokud je nevyrizeny zapis do VRAM) */
 } en_INSIDEOP;
 
 #ifdef __cplusplus
@@ -172,6 +173,28 @@ extern "C"
     extern void mzarch_main_insideop_mreq_mz800_vramctrl_read(void);
     extern void mzarch_main_insideop_mreq_mz800_vramctrl_write(void);
     extern void mzarch_main_insideop_iorq_psg_write(void);
+
+    /**
+     * @brief Čekací takty zápisu na porty GDG 0CCh až 0CFh (jen build MZ-800).
+     *
+     * GDG drží /WAIT i u zápisu na své porty WF, RF, DMD a 0CFh, dokud není
+     * vyřízený předchozí zápis CPU do VRAM (WRITE FF modelu mz800_vramwait.h).
+     * V režimu MZ-700 se zápis ve viditelné části řádku vyřídí až v zatemnění,
+     * takže OUT krátce po zápisu na obrazovku čeká do konce viditelné části.
+     * Změřeno na MZ-800 (emu-experiments gdg-meas, čtvrté měření): porty 0CCh,
+     * 0CDh, 0CEh a 06CFh čekají, /IORQ končí 976 až 980 px po hraně /HSYN;
+     * port 0F0h nečeká.
+     *
+     * Volá se z obsluhy zápisu na port po mzarch_main_insideop_iorq() a před
+     * provedením zápisu. Přidá čekací takty a posune čas GDG na nový konec
+     * M-cyklu. Při zápisu debuggeru mezi instrukcemi (cpu->op_tstate == 0)
+     * nedělá nic, aby ladicí příkaz neposouval čas emulace.
+     *
+     * @pre Emu vlákno; čas GDG je konec M-cyklu zápisu bez čekacích taktů.
+     * @post Čas GDG je konec M-cyklu včetně čekacích taktů; události do té
+     *       chvíle jsou zpracované.
+     */
+    extern void mzarch_main_insideop_iorq_gdg_write(void);
 
     /**
      * @brief Nahlásí podtečení tiků při uzavření snímku (pojistka).

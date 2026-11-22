@@ -35,7 +35,7 @@
  * - **Zápis** jde přes jednobajtový buffer: sám čeká jen na uvolnění WRITE FF
  *   předchozího zápisu. Do DRAM se zapíše v prvním CPU slotu, který začne
  *   nejdřív 13 CLK0 po T1r (po případném WAIT), v 320x200 ještě v dalším CPU
- *   slotu (sloupec s+40h). WRITE FF se uvolní 8 CLK0 po začátku posledního
+ *   slotu (sloupec s+40h). WRITE FF se uvolní 9 CLK0 po začátku posledního
  *   zápisového slotu.
  * - **WAIT FF** vzorkuje na náběžných hranách T2r, TW1r, ...; Z80 je vidí
  *   na následující sestupné hraně. Počet TW = počet náběžných hran od T2r
@@ -55,7 +55,14 @@
  * na každé pozici řádku; samostatné čtení a zápis, dvojice W+R, W+W, R+R,
  * R+W s mezerou 0-8 T). Simulace má krok 1/2 CLK0 a sloty ve viditelné části
  * začínají na půl CLK0; model je zaokrouhluje na celé CLK0 tak, že výsledné
- * počty TW sedí. Na reálném HW počty TW změřené nejsou [neověřeno].
+ * počty TW sedí.
+ *
+ * Měření na MZ-800 (analyzátor, 18 000 přístupů: čtení, zápis, W+R, W+W, R+R
+ * ve třech režimech a všech fázích řádku; emu-experiments gdg-meas, třetí
+ * měření) model potvrdilo. Jediná odchylka od simulace: uvolnění WRITE FF
+ * je na stroji o 1 CLK0 později (VRAMWAIT_WRITE_RELEASE_CLK0 = 9), což se
+ * projeví u dvou zápisů těsně za sebou. S touto hodnotou sedí 18 000
+ * z 18 003 změřených přístupů.
  *
  * Časová osa: všechny časy jsou absolutní (CLK0). Pozice v řádku se počítá
  * od začátku řádku modelu (sestupná hrana nHSYN), který předává volající
@@ -96,8 +103,14 @@ extern "C"
 /** @brief Nejmenší odstup začátku prvního zápisového CPU slotu od T1r zápisu. */
 #define VRAMWAIT_WRITE_LEAD_CLK0 13u
 
-/** @brief Uvolnění WRITE FF za začátkem posledního zápisového CPU slotu. */
-#define VRAMWAIT_WRITE_RELEASE_CLK0 8u
+/**
+ * @brief Uvolnění WRITE FF za začátkem posledního zápisového CPU slotu.
+ *
+ * Simulace netlistu dávala 8 CLK0. Měření na MZ-800 (emu-experiments gdg-meas,
+ * třetí měření, 3600 dvojic zápisů `LD (nn),HL` ve třech režimech) sedí
+ * s hodnotou 9 ve všech případech, s hodnotou 8 ve 2911 a s hodnotou 10 ve 2962.
+ */
+#define VRAMWAIT_WRITE_RELEASE_CLK0 9u
 
     /**
      * @brief Rozvrh CPU slotů v řádku.
