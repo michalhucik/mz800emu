@@ -206,6 +206,10 @@ def _step_row_counter_700_to_320(emu):
         emu.call("run", {"frames": 2})
         row = _CANVAS_ROW + s
         e = _out_at(emu, 0xCE, 0x00, row, 80, 100)
+        # zbytková paleta po návratu mimo okno závisí na CG-RAM znaku 0 (tady pravítko, tedy černá);
+        # pravítko potřebuje položku 0 bílou a položku 1 černou ještě před canvasem řádku S
+        emu.call("io_write", {"port": 0xF0, "value": 0x0F})
+        emu.call("io_write", {"port": 0xF0, "value": 0x10})
         emu.call("run", {"frames": 1})
         _w, px = _frame(emu)
         got = [_ruler_value(px, row + k) for k in (0, 1, 2, 8)]
@@ -275,10 +279,20 @@ def _return_palette(emu, line, e_min, e_max):
     return e, pal
 
 
+def _cg0_fill(emu, value):
+    """Vzor znaku 0 v CG-RAM (rovina I, offset 0 až 7) = ``value``; zapisuje v DMD 00h, končí v DMD 08h."""
+    emu.call("io_write", {"port": 0xCE, "value": 0x00})
+    _run_code(emu, "dbe0" "3e01d3cc" "210080" "0608" "36%02x" "23" "10fb" "dbe1" % value, 2)
+    emu.call("io_write", {"port": 0xCE, "value": 0x08})
+
+
 def _step_palette_window(emu):
     """Krok 3 (A9)."""
     emu.call("io_write", {"port": 0xCE, "value": 0x08})
     _text_attrs(emu, _attr_cell)
+    # mimo okno zůstanou v paletě barvy bajtu vzoru znaku 0 z CG-RAM (0C000h + řádek vzoru):
+    # výplň 0Fh dá 0, 0, F, F jako v měřeních 5 až 9; po kroku se vrátí nuly z _fill_ruler()
+    _cg0_fill(emu, 0x0F)
     emu.call("run", {"frames": 2})
     seen = set()
     for lo, hi in ((156, 170), (174, 186), (795, 810)):
@@ -296,6 +310,7 @@ def _step_palette_window(emu):
                                  f"expected {want} ({'cell %d' % cell if cell is not None else 'outside the window'})")
     for need in ((161, 162), (179, 180), (801, 802), (803, 804)):
         h.check(any(e in seen for e in need), f"window sweep covered column {need[0]} or {need[1]}")
+    _cg0_fill(emu, 0x00)
 
 
 def _attr_row25(p):
@@ -768,6 +783,8 @@ def _step_snapshot_row_counter(emu, tmp=None):
     tmp = Path(tmp or tempfile.mkdtemp(prefix="gdg_rowctr_"))
     _fill_ruler(emu)
     emu.call("io_write", {"port": 0xCE, "value": 0x00})
+    for value in (0x0F, 0x10, 0x20, 0x30):          # položka 0 = barva F, ostatní 0 (černá)
+        emu.call("io_write", {"port": 0xF0, "value": value})
     emu.call("run", {"frames": 1})
     s = 50
     h._goto(emu, _CANVAS_ROW + s, 300)

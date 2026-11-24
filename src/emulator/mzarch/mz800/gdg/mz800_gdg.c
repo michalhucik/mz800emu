@@ -307,18 +307,31 @@ static inline void gdg_set_regDMD(uint8_t value, unsigned event_ticks)
  * @brief Nastaví paletové registry tak, jak je zanechá režim MZ-700 při návratu do režimu MZ-800.
  *
  * V režimu MZ-700 jdou barvy přes paletové registry: liché položky (1, 3)
- * nesou barvu popředí a sudé (0, 2) barvu pozadí právě zobrazované buňky,
- * obojí jako barva režimu MZ-700 (nenulová s intenzitou; bity 3 a 7 atributu
- * barvy neovlivňují). Mimo vodorovné okno zůstane v lichých 0 a v sudých
- * 0Fh. Při zápisu DMD bez bitu 3 v registrech zůstane, co v nich právě bylo.
+ * nesou barvu popředí a sudé (0, 2) barvu pozadí, obojí jako barva režimu
+ * MZ-700 (nenulová s intenzitou; bity 3 a 7 bajtu barvy neovlivňují).
+ * Při zápisu DMD bez bitu 3 v registrech zůstane, co v nich právě bylo.
  *
+ * Ve vodorovném okně canvasu je zdrojem atribut právě zobrazované buňky.
  * Změřeno na MZ-800 (mz800-knowledge hw-measurement/vysledky.md, oddíly 17
  * a 19): okno a buňka viz GDG_PALRET_LEAD_TICKS. Atribut se bere podle
  * čítače adresy řádku (st_GDG.row_addr) i na řádcích mimo canvas, kde čítač
  * běží dál: pod canvasem textový řádek 25 (buňky 24 až 39 přetékají na
  * offset 0 až 15), pak další přes konec snímku až po začátek canvasu.
- * Mimo okno dává stroj 0, 0, F, F (položky 3, 1, 2, 0), C model netlistu
- * 0, 0, 0, 0; emulátor drží stroj (příčina rozdílu neznámá).
+ *
+ * Mimo okno je zdrojem bajt CG-RAM znaku 0 (rovina I, offset r, adresa
+ * 0C000h + r v režimu MZ-700), kde r je řádek vzoru posledního řádku
+ * rastru, jehož okno už proběhlo: před oknem řádek vzoru předchozího řádku
+ * rastru, za oknem řádek vzoru tohoto řádku. Bajt se dekóduje jako atribut
+ * (bity 6 až 4 popředí, 2 až 0 pozadí). Pravidlo je z C modelu netlistu GDG
+ * (gdg-mz800 c-whid-0; emu-experiments sapo-regress/model) a sedí se všemi
+ * měřeními: v měřeních 5 až 9 (oddíly 16 a 17) ležela v CG-RAM výplň 0Fh
+ * a stroj dal 0, 0, F, F (položky 3, 1, 2, 0); v měření 14 (oddíl 19) nuly
+ * a stroj dal černou, jen po řádku rastru se vzorem 01h na 0C000h barvu 9
+ * v sudých položkách. Model čte buňku DRAM se sloupcovým bitem 7 = 1, kterou
+ * CPU nezapíše; na stroji je to táž buňka jako 0C000h + r (paměť sloupcové
+ * bity 0 a 7 nerozlišuje, viz čtvrté čtení v DMD 0Ch). Kód znaku 0 mimo okno
+ * je doložený modelem; měření ho nevyvrací, ale samo ho neurčí
+ * (v měření 14 byly kódy všech znaků 00h) [neověřeno na stroji s jinými kódy].
  *
  * @pre Emu vlákno; g_gdg.regDMD má ještě bit MZ-700; čas GDG je konec
  *      M-cyklu zápisu DMD.
@@ -328,24 +341,31 @@ static void gdg_palette_after_mz700(void)
 {
     unsigned row;
     unsigned col = gdg_get_beam_pos(g_gdg.total_elapsed.ticks, &row);
-    unsigned fg = 0x00;
-    unsigned bg = 0x0f;
+    uint8_t src;
 
-    if ((row == g_gdg.beam_row) && (col >= GDG_PALRET_LEAD_TICKS + VIDEO_BEAM_CANVAS_FIRST_COLUMN))
+    if ((row == g_gdg.beam_row) && (col >= GDG_PALRET_LEAD_TICKS + VIDEO_BEAM_CANVAS_FIRST_COLUMN)
+        && (col - GDG_PALRET_LEAD_TICKS <= VIDEO_BEAM_CANVAS_LAST_COLUMN))
     {
-        unsigned c = col - GDG_PALRET_LEAD_TICKS;
-        if (c <= VIDEO_BEAM_CANVAS_LAST_COLUMN)
-        {
-            unsigned x = (c - VIDEO_BEAM_CANVAS_FIRST_COLUMN) / 16;
-            unsigned offset = (g_gdg.row_addr * 40u + x) & 0x03ff;
-            uint8_t attr = g_memoryVRAM[0x1800 + offset];
-            unsigned f = (attr >> 4) & 0x07;
-            unsigned b = attr & 0x07;
-            /* barva režimu MZ-700: nenulová s intenzitou */
-            fg = f ? (f | 0x08) : 0;
-            bg = b ? (b | 0x08) : 0;
-        };
+        /* v okně: atribut právě zobrazované buňky */
+        unsigned x = (col - GDG_PALRET_LEAD_TICKS - VIDEO_BEAM_CANVAS_FIRST_COLUMN) / 16;
+        unsigned offset = (g_gdg.row_addr * 40u + x) & 0x03ff;
+        src = g_memoryVRAM[0x1800 + offset];
+    }
+    else
+    {
+        /* mimo okno: vzor znaku 0 z CG-RAM, řádek vzoru posledního řádku
+         * rastru, jehož okno už proběhlo. Když M-cyklus končí až v dalším,
+         * ještě nezpracovaném řádku, je tím řádkem beam_row. */
+        unsigned r = g_gdg.char_row;
+        if ((row == g_gdg.beam_row) && (col < GDG_PALRET_LEAD_TICKS + VIDEO_BEAM_CANVAS_FIRST_COLUMN))
+            r = (r + 7) & 0x07;
+        src = g_memoryVRAM[r];
     };
+    unsigned f = (src >> 4) & 0x07;
+    unsigned b = src & 0x07;
+    /* barva režimu MZ-700: nenulová s intenzitou */
+    unsigned fg = f ? (f | 0x08) : 0;
+    unsigned bg = b ? (b | 0x08) : 0;
     g_gdg.regPAL1 = fg;
     g_gdg.regPAL3 = fg;
     g_gdg.regPAL0 = bg;

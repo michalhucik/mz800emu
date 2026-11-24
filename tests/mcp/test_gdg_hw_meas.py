@@ -37,7 +37,7 @@ Kroky:
      zápisu v zatemnění nečeká žádný;
  11  paleta po návratu z režimu MZ-700 (zápis DMD 00h): ve viditelné části
      řádku zůstane v lichých položkách barva popředí a v sudých barva pozadí
-     atributu (25h -> A, A, D, D pro položky 3, 1, 2, 0), mimo ni 0, 0, F, F,
+     atributu (25h -> A, A, D, D pro položky 3, 1, 2, 0), mimo ni barvy bajtu CG-RAM znaku 0 (výplň 0Fh -> 0, 0, F, F),
      a to i na řádku mimo canvas.
 
 Jen MZ-800. Binárka se hledá v kořeni repa nebo v adresáři z proměnné
@@ -217,9 +217,10 @@ def _out_after_vram_write(emu, port, line, col):
     return pos["col"] + 95, end["line"], end["col"]
 
 
-def _palette_after_mode700(emu, attr, line, col):
+def _palette_after_mode700(emu, attr, line, col, cg0=None):
     """Paleta 0, 1, 2, 4, režim MZ-700 s atributem ``attr`` všude, návrat OUT (C),A na DMD 00h.
 
+    ``cg0`` (8 bajtů hex) je vzor znaku 0 v CG-RAM (0C000h až 0C007h); bez něj zůstane, co tam je.
     Vrací (sloupec konce M-cyklu zápisu DMD, [položka 3, 1, 2, 0]).
     """
     emu.call("io_write", {"port": 0x00CE, "value": 0x00})
@@ -227,6 +228,8 @@ def _palette_after_mode700(emu, attr, line, col):
         emu.call("io_write", {"port": 0x00F0, "value": value})
     emu.call("io_write", {"port": 0x00CE, "value": 0x08})
     emu.call("mem_write", {"addr": 0xD800, "data_hex": ("%02x" % attr) * 1000})
+    if cg0 is not None:
+        emu.call("mem_write", {"addr": 0xC000, "data_hex": cg0})
     pos = h._goto(emu, line, col)
     code = 0x3100
     jp = "c3%02x%02x" % (h._LOOP & 0xFF, h._LOOP >> 8)
@@ -445,10 +448,23 @@ def run(exe):
             end, pal = _palette_after_mode700(emu, attr, 100, 400)
             h.check(pal == want, f"palette after mode 700, attribute {attr:02X}h, return in the visible part "
                                  f"(M-cycle end {end}): entries 3, 1, 2, 0 = {pal}, expected {want}")
+        # mimo okno: bajt CG-RAM znaku 0, řádek vzoru posledního řádku rastru, jehož okno proběhlo
+        # (canvas začíná řádkem 46; řádek 102 = řádek vzoru 0, před oknem tedy vzor 7 řádku 101)
         for line, col, where in ((100, 40, "left border"), (100, 880, "line blanking"), (100, 1000, "line blanking")):
-            end, pal = _palette_after_mode700(emu, 0x25, line, col)
-            h.check(pal == [0x0, 0x0, 0xF, 0xF], f"palette after mode 700, return in the {where} "
+            end, pal = _palette_after_mode700(emu, 0x25, line, col, "0f" * 8)
+            h.check(pal == [0x0, 0x0, 0xF, 0xF], f"palette after mode 700, CG-RAM of character 0 = 0Fh, return in the {where} "
                                                 f"(M-cycle end {end}): entries 3, 1, 2, 0 = {pal}, expected 0, 0, F, F")
+        cg0 = "0112233445566770"
+        for line, col, where, want in ((102, 40, "left border (pattern row 7 of the previous line)", [0xF, 0xF, 0x0, 0x0]),
+                                       (103, 40, "left border (pattern row 0 of the previous line)", [0x0, 0x0, 0x9, 0x9]),
+                                       (102, 880, "line blanking (pattern row 0 of this line)", [0x0, 0x0, 0x9, 0x9]),
+                                       (105, 1000, "line blanking (pattern row 3 of this line)", [0xB, 0xB, 0xC, 0xC])):
+            end, pal = _palette_after_mode700(emu, 0x25, line, col, cg0)
+            h.check(pal == want, f"palette after mode 700, return in the {where} "
+                                 f"(M-cycle end {end}): entries 3, 1, 2, 0 = {pal}, expected {want}")
+        end, pal = _palette_after_mode700(emu, 0x25, 100, 40, "00" * 8)
+        h.check(pal == [0x0, 0x0, 0x0, 0x0], f"palette after mode 700, CG-RAM of character 0 = 00h, return in the left border "
+                                            f"(M-cycle end {end}): entries 3, 1, 2, 0 = {pal}, expected 0, 0, 0, 0")
         end, pal = _palette_after_mode700(emu, 0x25, 270, 400)
         h.check(pal == [0xA, 0xA, 0xD, 0xD], f"palette after mode 700, return below the canvas in the visible "
                                             f"width (M-cycle end {end}): entries 3, 1, 2, 0 = {pal}")
