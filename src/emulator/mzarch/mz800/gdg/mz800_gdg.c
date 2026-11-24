@@ -338,12 +338,16 @@ static inline void gdg_set_regDMD(uint8_t value, unsigned event_ticks)
  * V okně je to buňka pod paprskem (stejné okno a dělení na buňky jako
  * u DMD 08h), před oknem buňka 39 předchozího řádku rastru, za oknem buňka
  * 39 tohoto řádku. Zdroj: C model netlistu (gdg-mz800 c-whid-0 2b97ab6;
- * emu-experiments emucheck-fixes/model): pozadí (sudé položky) sleduje bajt
- * F přesně, hranice buněk má model v 334,5 + 16k CLK0, tedy o 1,5 px později
- * než okno DMD 08h změřené na stroji (stejný posun modelu jako u DMD 08h).
- * Popředí (liché položky) dává model z bajtu F jen v části buňky, jinde
- * hodnotu závislou na fázi zápisu po půlbodech; emulátor bere bajt F vždy
- * [popředí a celý přechod z 0Ch neověřeny na stroji].
+ * emu-experiments archive/emucheck-fixes/model; mz800-knowledge
+ * hw-measurement/vysledky.md, oddíl 22): sudé položky jsou barvy bitů 2 až 0
+ * bajtu F, liché bitů 6 až 4. Latche palety se v těchto režimech otevírají
+ * každých 8 CLK0 a střídavě berou atribut a bajt F; registrovaný bit 3 DMD
+ * se překlopí vždy po otevření s bajtem F, proto v registrech zůstane F.
+ * Hranice buněk má model v 334,5 + 16k CLK0, tedy o 1,5 px později než okno
+ * DMD 08h změřené na stroji (stejný posun modelu jako u DMD 08h); emulátor
+ * používá okno a dělení buněk DMD 08h. Buňka 39 mimo okno je z pozadí
+ * v sondě emu-experiments, v modelu dál nerozebráno [neověřeno].
+ * [Celý přechod z 0Ch až 0Fh na stroji neměřen.]
  *
  * @pre Emu vlákno; g_gdg.regDMD má ještě bit MZ-700; čas GDG je konec
  *      M-cyklu zápisu DMD.
