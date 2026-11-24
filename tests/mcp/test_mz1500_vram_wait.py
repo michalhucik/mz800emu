@@ -23,8 +23,8 @@ a 1604 (rovina PCG); značka čekajícího průchodu je 133 taktů po sestupné 
   8  mz700emu-pal, změřeno na skutečném MZ-700 PAL (2026-11-24, emu-experiments
      mz700-meas, VYSLEDKY2.md a VYSLEDKY3.md): řádek 81 + 225 + 704 + 126 (HS 81 taktů,
      obraz 338 taktů za hranou HS). Smyčky dlouhé 229, 228 a 227 T (značka se posouvá
-     o 9, 4 a -1 takt, takže projde obě meze okna): čeká průchod se značkou 203 až 928
-     taktů po hraně HS a má o 5 * ceil((929 - značka) / 5) taktů víc, jinak nečeká;
+     o 9, 4 a -1 takt, takže projde obě meze okna): čeká průchod se značkou 203 až 933
+     taktů po hraně HS a má o 5 * ceil((934 - značka) / 5) taktů víc, jinak nečeká;
      čeká se i v řádcích mimo canvas, zápis atributů stejně jako čtení znaků, čtení RAM
      je bez čekání
 
@@ -72,8 +72,8 @@ _LINE_PAL = 1136
 #: MZ-700 PAL podle měření: první a poslední sloupec značky, při kterém průchod čeká,
 #: a sloupec, od kterého se počítá počet čekacích taktů.
 _PAL_MARK_FIRST = 203
-_PAL_MARK_LAST = 928
-_PAL_MARK_END = 929
+_PAL_MARK_LAST = 933
+_PAL_MARK_END = 934
 #: Smyčky pro MZ-700 PAL: délka průchodu v T a výplň mezi přístupem a čítačem (30, 29, 28 T).
 _PAL_LOOPS = (
     (229, [0x00] * 4 + [0x3E, 0x00] * 2),
@@ -245,7 +245,7 @@ def run_mz700_pal(exe):
         check(sl["h_sync_ticks"] + sl["h_back_porch_ticks"] + sl["border_left_width"] == 338,
               "picture starts 338 ticks after the HS falling edge")
         hs_col = sl["display_width"] + sl["h_front_porch_ticks"]
-        seen_first = seen_last = False
+        seen = set()    # sloupce značky navštívené ve všech smyčkách dohromady
         outside = 0
         for tstates, pad in _PAL_LOOPS:
             base = 5 * tstates
@@ -260,12 +260,12 @@ def run_mz700_pal(exe):
                                        if _PAL_MARK_FIRST <= p[0] <= _PAL_MARK_LAST else 0)))
                 check(not bad, f"{tstates} T, {what}: wait is 5 * ceil(({_PAL_MARK_END} - marker) / 5) for markers "
                                f"{_PAL_MARK_FIRST} to {_PAL_MARK_LAST}, none elsewhere ({bad[:6]})")
-                cols = set(p[0] for p in passes)
-                seen_first |= _PAL_MARK_FIRST in cols and _PAL_MARK_FIRST - 1 in cols
-                seen_last |= _PAL_MARK_LAST in cols and _PAL_MARK_LAST + 1 in cols
+                seen |= set(p[0] for p in passes)
                 outside += sum(1 for p in waits if not _CANVAS_ROWS[0] <= p[3] % 312 <= _CANVAS_ROWS[1])
-        check(seen_first, f"markers {_PAL_MARK_FIRST - 1} and {_PAL_MARK_FIRST} (window start) were both visited")
-        check(seen_last, f"markers {_PAL_MARK_LAST} and {_PAL_MARK_LAST + 1} (window end) were both visited")
+        check(_PAL_MARK_FIRST - 1 in seen and _PAL_MARK_FIRST in seen,
+              f"markers {_PAL_MARK_FIRST - 1} and {_PAL_MARK_FIRST} (window start) were both visited")
+        check(_PAL_MARK_LAST in seen and _PAL_MARK_LAST + 1 in seen,
+              f"markers {_PAL_MARK_LAST} and {_PAL_MARK_LAST + 1} (window end) were both visited")
         check(outside >= 2, f"{outside} waits in rows outside the canvas")
         lens = Counter(p[1] for p in _measure(emu, 0x7E, 0x3000, line=_LINE_PAL, hs_col=hs_col, before_end=15))
         check(set(lens) == {5 * 229}, f"read 3000h: no wait ({dict(lens)})")

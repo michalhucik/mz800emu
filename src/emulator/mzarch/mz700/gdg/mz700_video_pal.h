@@ -232,10 +232,13 @@ extern "C" {
  * Hodnoty níže jsou v čase, ke kterému emulátor přístup počítá, a jsou seřízené tak,
  * aby smyčka s jedním přístupem na průchod dávala stejné délky průchodů jako stroj
  * (emu-experiments mz700-fixes, tools/calib.py): čeká průchod, jehož značka (začátek
- * /IORQ instrukce IN těsně před přístupem) je 203 až 928 taktů po hraně HS, a počet
- * čekacích taktů procesoru je ceil((929 - značka) / 5). Počet čekacích taktů je
- * odvozený z konce /WAIT a z okamžiku vzorkování /WAIT podle časování Z80 (hodiny
- * procesoru při měření připojené nebyly) [odvozeno].
+ * /IORQ instrukce IN těsně před přístupem) je 203 až 933 taktů po hraně HS, a počet
+ * čekacích taktů procesoru je ceil((934 - značka) / 5). Počet čekacích taktů je
+ * změřený: z toho, o kolik později přijde na /WAIT krátký pulz dalšího zápisu
+ * programu do paměti než v kontrolním úseku bez čekání (mz700-meas,
+ * vram_wait_tstates.py; 4 624 z 4 627 průchodů, zbylé tři jsou zápisy znaku se
+ * značkou 933, které čekaly 2 T místo 1 T). Do mz800new 4571f537 byl počet jen
+ * odvozený z konce /WAIT a vycházel o 1 T menší (ceil((929 - značka) / 5)).
  * VIDEO_VRAMWAIT_FIRST_FROM_HSYNC je první takt okna od sestupné hrany HS,
  * VIDEO_VRAMWAIT_VRAM_TICKS délka okna. VIDEO_VRAMWAIT_TAIL_TICKS je počet taktů,
  * o které čekání končí před koncem okna: přístup v posledním taktu okna tak dostane
@@ -243,7 +246,7 @@ extern "C" {
  * nečeká o T déle (jádro přičítá k čekání vždy začatý takt procesoru).
  */
 #define VIDEO_VRAMWAIT_FIRST_FROM_HSYNC         253
-#define VIDEO_VRAMWAIT_VRAM_TICKS               726
+#define VIDEO_VRAMWAIT_VRAM_TICKS               731
 #define VIDEO_VRAMWAIT_TAIL_TICKS               1
 /** První sloupec okna čekání v řádku emulátoru. */
 #define VIDEO_BEAM_VRAMWAIT_FIRST_COLUMN        ( ( VIDEO_REAL_HSYNC_START_COLUMN + VIDEO_VRAMWAIT_FIRST_FROM_HSYNC ) % VIDEO_SCREEN_WIDTH )
