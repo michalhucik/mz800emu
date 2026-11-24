@@ -31,4 +31,3 @@
 # Chyby čekající na bugfix
 
 - **topmenu**: Když uživatel použije k navigaci kurzory, jsou načítány jako vstup z klávesnice do emulace (zvážit, zda toto chování půjde potlačit)
-- **MZ-700 NTSC, CTC0**: dělič 13 dává vstup CTC0 asi 1,1 MHz, ale japonská ROM 1Z-009B má tabulku not spočítanou pro asi 895 kHz (krystal / 16). S japonskou ROM proto hrají tóny asi o 23 % výš (pípnutí asi 1085 Hz místo 880 Hz). Ověřit měřením na MZ-1500, který má stejný krystal, a opravit.

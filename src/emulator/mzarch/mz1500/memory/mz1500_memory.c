@@ -81,15 +81,16 @@ uint8_t *g_memoryPCG3 = &g_memory.PCG[MEMORY_SIZE_PCG_BANK * 2];
 #define MEMORY_RAM_READ_BYTE                (g_memory.memram_read[(addr >> 12)])[(addr & 0x0fff)]
 #define MEMORY_RAM_WRITE_BYTE               (g_memory.memram_write[(addr >> 12)])[(addr & 0x0fff)] = value;
 
-#define MEMORY_VRAM_READ_BYTE_SYNC          vramctrl_mz700_memop_read_byte_sync(addr & 0x0fff)
-#define MEMORY_VRAM_WRITE_BYTE_SYNC         vramctrl_mz700_memop_write_byte_sync(addr & 0x0fff, value)
+#define MEMORY_VRAM_READ_BYTE_SYNC          vramctrl_mz1500_memop_read_byte_sync(addr & 0x0fff, VIDEO_VRAMWAIT_VRAM_TICKS)
+#define MEMORY_VRAM_WRITE_BYTE_SYNC         vramctrl_mz1500_memop_write_byte_sync(addr & 0x0fff, value, VIDEO_VRAMWAIT_VRAM_TICKS)
 
 #define MEMORY_VRAM_READ_BYTE               vramctrl_mz700_memop_read_byte(addr & 0x0fff)
 #define MEMORY_VRAM_WRITE_BYTE              vramctrl_mz700_memop_write_byte(addr & 0x0fff, value)
 
-/* PCG pristup — pcg_id = spec_id - 2 (0, 1, 2) */
-#define MEMORY_PCG_READ_BYTE_SYNC           vramctrl_mz700_memop_read_byte_sync((pcg_id * MEMORY_SIZE_PCG_BANK) + (addr & 0x3fff))
-#define MEMORY_PCG_WRITE_BYTE_SYNC          vramctrl_mz700_memop_write_byte_sync(((pcg_id * MEMORY_SIZE_PCG_BANK) + (addr & 0x3fff)), value)
+/* PCG pristup - pcg_id = spec_id - 2 (0, 1, 2). Rovina PCG čeká déle než VRAM
+ * (změřeno jen u roviny 1 při zápisu; pro ostatní roviny a čtení převzato). */
+#define MEMORY_PCG_READ_BYTE_SYNC           vramctrl_mz1500_memop_read_byte_sync((pcg_id * MEMORY_SIZE_PCG_BANK) + (addr & 0x3fff), VIDEO_VRAMWAIT_PCG_TICKS)
+#define MEMORY_PCG_WRITE_BYTE_SYNC          vramctrl_mz1500_memop_write_byte_sync(((pcg_id * MEMORY_SIZE_PCG_BANK) + (addr & 0x3fff)), value, VIDEO_VRAMWAIT_PCG_TICKS)
 
 #define MEMORY_PCG_READ_BYTE                vramctrl_mz700_memop_read_byte((pcg_id * MEMORY_SIZE_PCG_BANK) + (addr & 0x3fff))
 #define MEMORY_PCG_WRITE_BYTE               vramctrl_mz700_memop_write_byte(((pcg_id * MEMORY_SIZE_PCG_BANK) + (addr & 0x3fff)), value)

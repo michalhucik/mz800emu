@@ -163,18 +163,18 @@ current runtime attached state. For runtime state see
 | `gdg_real_base_hz` | Real crystal frequency | 14,318,180 / 17,734,475 |
 | `cpu_hz` | Z80 effective clock | 3,584,160 (NTSC) / 3,552,000 (PAL) |
 | `cpu_divider` | GDGCLK2CPU_DIVIDER | 4 (NTSC) / 5 (PAL) |
-| `ctc0_input_hz` | 8253 counter 0 input | 1,102,818 (700-NTSC, div=13) / 1,110,000 (PAL+MZ-800+MZ-1500, div=16) |
-| `ctc0_divider` | GDGCLK_CTC0_DIVIDER | 13 (700-NTSC) / 16 (rest) |
+| `ctc0_input_hz` | 8253 counter 0 input | 896,040 (NTSC) / 1,110,000 (PAL) |
+| `ctc0_divider` | GDGCLK_CTC0_DIVIDER | 16 |
 | `psg_input_hz` | SN76489 PSG input | cpu_hz / 16 |
 | `psg_divider` | PSG_DIVIDER = 16 * cpu_divider | 64 (NTSC) / 80 (PAL) |
 | `ctc1_input_hz` | **null** | 8253 counter 1 is cascade-driven |
 | `ctc2_input_hz` | **null** | 8253 counter 2 is cascade-driven |
 | `ctc12_note` | "read emulator://periph/i8253 for runtime state" | Per-platform routing |
 
-**Note on MZ-1500 vs MZ-700 NTSC**: both use the 14.318 MHz crystal
-but have different CTC0 dividers (16 vs 13), which produces different
-BASIC tempo and sound tones. The `ctc0_divider` field makes this
-explicit.
+**Note on MZ-1500 and MZ-700 NTSC**: both use the 14.318 MHz crystal
+and the same CTC0 divider 16 (the CTC0 input is a quarter of the CPU
+clock). On the MZ-1500 this is measured; for the MZ-700 NTSC it follows
+from the note table of the Japanese ROM.
 
 ### `scanline` sub-object - raster geometry
 

@@ -133,10 +133,12 @@ extern "C" {
 
     /* Definice obrazoveho radku */
 #define VIDEO_H_SYNC_TICKS          65 /* skutecny Hsync na video vystupu (soucast VIDEO_SCREEN_WIDTH; delka LOW urovne CLK1 pro ctc8253) */
-#define VIDEO_H_BACK_PORCH_TICKS    104
+/* Poloha obrazu v řádku převzatá z měření na skutečném MZ-1500 (2026-11-24,
+ * emu-experiments mz1500-meas): obraz 640 taktů začíná 195 taktů po sestupné hraně HS,
+ * tedy 65 + 98 + 32. Na japonském MZ-700 změřeno není [interpolace, neověřeno]. */
+#define VIDEO_H_BACK_PORCH_TICKS    98
 #define VIDEO_H_ENABLED_TICKS       VIDEO_DISPLAY_WIDTH
-//#define VIDEO_H_FRONT_PORCH_TICKS   104
-#define VIDEO_H_FRONT_PORCH_TICKS   39
+#define VIDEO_H_FRONT_PORCH_TICKS   45
 
 
     /* Celkove rozmery screen */
@@ -197,6 +199,23 @@ extern "C" {
 
 
 #define VIDEO_BEAM_HBLN_FIRST_COLUMN            ( VIDEO_BEAM_CANVAS_LAST_COLUMN - 3 )
+
+/**
+ * @brief Okno čekání procesoru při přístupu do VRAM (v taktech GDGCLK).
+ *
+ * Na samostatném MZ-700 změřeno není. Převzato z měření na skutečném MZ-1500
+ * (2026-11-24, emu-experiments mz1500-meas, VYSLEDKY3.md) [interpolace, neověřeno na
+ * MZ-700]: každý přístup do VRAM, který padne do okna, čeká do jeho konce - i první
+ * v řádku a i v řádcích mimo obraz. Okno začíná 6,5 T před levým okrajem obrazu
+ * (v čase, ke kterému emulátor přístup počítá) a končí na jeho pravém okraji.
+ * Hodnoty jsou shodné s MZ-1500 (stejný řádek 912 taktů a 4 takty na T).
+ * VIDEO_VRAMWAIT_FIRST_FROM_HSYNC je první takt okna od sestupné hrany HS,
+ * VIDEO_VRAMWAIT_VRAM_TICKS délka okna.
+ */
+#define VIDEO_VRAMWAIT_FIRST_FROM_HSYNC         169
+#define VIDEO_VRAMWAIT_VRAM_TICKS               666
+/** První sloupec okna čekání v řádku emulátoru. */
+#define VIDEO_BEAM_VRAMWAIT_FIRST_COLUMN        ( ( VIDEO_REAL_HSYNC_START_COLUMN + VIDEO_VRAMWAIT_FIRST_FROM_HSYNC ) % VIDEO_SCREEN_WIDTH )
 
 #define VIDEO_BEAM_VSYNC_FIRST_ROW              15
 #define VIDEO_BEAM_VSYNC_LAST_ROW               247

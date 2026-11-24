@@ -699,7 +699,13 @@ static inline void mzarch_main_insideop(const en_INSIDEOP insideop)
     {
     case INSIDEOP_MREQ_MZ700_VRAMCTRL:
         /* V tuto chvili pocitame s tim, ze uz mame synchronizovano po g_gdg.total_elapsed.ticks */
+#if MZARCH == 1500 || MZARCH == 700
+        /* MZ-1500 a MZ-700: konec okna čekání spočítal vramctrl_mz1500_memop_wait()
+         * (VRAM a rovina PCG mají okno různě dlouhé) nebo vramctrl_mz700_memop_wait(). */
+        ticks_to_sync = g_vramctrl.wait_ticks;
+#else
         ticks_to_sync = VIDEO_BEAM_HBLN_FIRST_COLUMN - VIDEO_GET_SCREEN_COL(g_gdg.total_elapsed.ticks);
+#endif
         ticks_to_sync += GDGCLK2CPU_DIVIDER - (ticks_to_sync % GDGCLK2CPU_DIVIDER);
         {
             unsigned wait_added = (ticks_to_sync / GDGCLK2CPU_DIVIDER);

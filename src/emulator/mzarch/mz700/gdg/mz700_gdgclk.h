@@ -33,7 +33,11 @@
 #define GDGCLK_REAL_BASE 14318180
 #define GDGCLK_BASE (VIDEO_SCREEN_TICKS * VIDEO_SCREENS_PER_SEC) /* 262 * 912 * 60 = 14 336 640 */
 #define GDGCLK2CPU_DIVIDER 4                                     /* 3,579545 MHz */
-#define GDGCLK_CTC0_DIVIDER 13                                   /* 1,101398 MHz */
+/* Vstup CTC0 = krystal / 16 = 894,886 kHz. Na MZ-1500 změřeno (894 945 Hz, čtvrtina
+ * hodin CPU; báze mz800-knowledge, hw-measurement/vysledky.md, oddíl 24). Pro japonský
+ * MZ-700 to plyne nepřímo: ROM 1Z-009B má tabulku not shodnou s ROM MZ-1500; na stroji
+ * samotném změřeno není. Dřívější dělič 13 (1,101398 MHz) neměl zdroj. */
+#define GDGCLK_CTC0_DIVIDER 16                                   /* 894,886 kHz */
 
 #elif MZTVSYS == MZTVSYS_PAL
 

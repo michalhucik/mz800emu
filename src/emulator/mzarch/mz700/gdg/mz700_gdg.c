@@ -93,7 +93,7 @@ const struct st_GDGEVENT g_gdgevent[] = {
     /* row: ALL, col: 926 - podle mych mereni zacina zde */
     //{ MZEVENT_GDG_STS_HSYNC_START, 0, BEAM_TOTAL_ROWS, 926 },
 
-    /* row: ALL, col: VIDEO_DISPLAY_WIDTH + VIDEO_H_FRONT_PORCH_TICKS = 704 + 39 = 743 */
+    /* row: ALL, col: VIDEO_DISPLAY_WIDTH + VIDEO_H_FRONT_PORCH_TICKS (NTSC 749, PAL 828) */
     {MZEVENT_GDG_REAL_HSYNC_START, 0, VIDEO_SCREEN_HEIGHT, VIDEO_REAL_HSYNC_START_COLUMN},
 
     /* row: ALL, col: 1133 - podle mych mereni konci zde */

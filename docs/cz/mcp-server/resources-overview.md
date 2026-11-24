@@ -159,17 +159,17 @@ aktuálně runtime attached. Pro runtime stav viz `emulator://media/state`,
 | `gdg_real_base_hz` | Reálná krystalová frekvence | 14,318,180 / 17,734,475 |
 | `cpu_hz` | Z80 efektivní clock | 3,584,160 (NTSC) / 3,552,000 (PAL) |
 | `cpu_divider` | GDGCLK2CPU_DIVIDER | 4 (NTSC) / 5 (PAL) |
-| `ctc0_input_hz` | 8253 counter 0 input | 1,102,818 (700-NTSC, div=13) / 1,110,000 (PAL+MZ-800+MZ-1500, div=16) |
-| `ctc0_divider` | GDGCLK_CTC0_DIVIDER | 13 (700-NTSC) / 16 (jinde) |
+| `ctc0_input_hz` | 8253 counter 0 input | 896,040 (NTSC) / 1,110,000 (PAL) |
+| `ctc0_divider` | GDGCLK_CTC0_DIVIDER | 16 |
 | `psg_input_hz` | SN76489 PSG input | cpu_hz / 16 |
 | `psg_divider` | PSG_DIVIDER = 16 * cpu_divider | 64 (NTSC) / 80 (PAL) |
 | `ctc1_input_hz` | **null** | 8253 counter 1 je cascade-driven |
 | `ctc2_input_hz` | **null** | 8253 counter 2 je cascade-driven |
 | `ctc12_note` | "read emulator://periph/i8253 for runtime state" | Per-platform routing |
 
-**Pozn k MZ-1500 vs MZ-700 NTSC**: oba mají krystal 14.318 MHz, ale
-různé CTC0 deličky (16 vs 13) → různé BASIC tempo + zvuk tóny.
-`ctc0_divider` field tohle explicit rozliší.
+**Pozn k MZ-1500 a MZ-700 NTSC**: oba mají krystal 14.318 MHz a stejnou
+CTC0 děličku 16 (vstup CTC0 je čtvrtina hodin CPU). Na MZ-1500 je to
+změřené, pro MZ-700 NTSC to plyne z tabulky not japonské ROM.
 
 ### `scanline` sub-object - raster geometrie
 

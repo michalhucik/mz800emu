@@ -31,4 +31,3 @@ The counter is fixed according to measurements with a logic analyzer on an MZ-80
 # Bugs awaiting a fix
 
 - **topmenu**: When the user uses arrow keys for navigation, they are picked up as keyboard input to the emulation (consider whether this behavior can be suppressed)
-- **MZ-700 NTSC, CTC0**: the divider 13 gives a CTC0 input of about 1.1 MHz, but the Japanese ROM 1Z-009B has a note table computed for about 895 kHz (crystal / 16). With the Japanese ROM, tones therefore play about 23 % higher (the beep is about 1085 Hz instead of 880 Hz). Verify by measuring on an MZ-1500, which has the same crystal, and fix.

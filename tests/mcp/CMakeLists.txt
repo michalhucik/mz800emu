@@ -1028,6 +1028,27 @@ if(Python3_FOUND)
                    "(Python ${Python3_VERSION})")
 
     # -----------------------------------------------------------
+    # MZ-1500 a MZ-700: čekání procesoru u VRAM a rovin PCG, poloha obrazu (pipe)
+    # -----------------------------------------------------------
+    # Podle měření na skutečném MZ-1500 (2026-11-24): řádek 65 + 98 + 704 +
+    # 45, čeká každý přístup do VRAM v okně řádku (i první a i mimo canvas),
+    # rovina PCG o 5 T déle, RAM bez čekání. MZ-700 NTSC stejná čísla a dělič
+    # CTC0 16, MZ-700 PAL řádek 80 + 228 + 704 + 124 (převzato, neměřeno).
+    add_test(
+        NAME    mcp_mz1500_vram_wait
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_mz1500_vram_wait.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_mz1500_vram_wait PROPERTIES
+        LABELS  "e2e;mcp;pipe"
+        TIMEOUT 180
+        SKIP_RETURN_CODE 77
+    )
+    message(STATUS "  tests/mcp: registered mcp_mz1500_vram_wait "
+                   "(Python ${Python3_VERSION})")
+
+    # -----------------------------------------------------------
     # Pásky TMZ ve Virtual CMT a načtení MZF ROM na všech platformách (pipe)
     # -----------------------------------------------------------
     # Data v tests/data/cmt/ (kontroluje je unit test cmt_testdata):

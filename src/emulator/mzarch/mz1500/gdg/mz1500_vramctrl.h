@@ -34,9 +34,20 @@ extern "C"
 #include <stdint.h>
 #include "debugger/debugger.h"
 
+    /**
+     * @brief Stav řadiče VRAM MZ-1500.
+     *
+     * mz700_wr_latch_is_used: pozůstatek jednorázové závory z modelu MZ-800; na MZ-1500
+     *   se k čekání nepoužívá (stroj čeká u každého přístupu v okně), zůstává kvůli
+     *   společnému snapshotu a je vždy 0.
+     * wait_ticks: počet taktů GDGCLK do konce okna čekání pro právě zpracovávaný přístup;
+     *   platí jen mezi vramctrl_mz1500_memop_wait() a zpracováním
+     *   INSIDEOP_MREQ_MZ700_VRAMCTRL, jinak bez významu (do snapshotu nepatří).
+     */
     typedef struct st_VRAMCTRL
     {
         unsigned mz700_wr_latch_is_used;
+        unsigned wait_ticks;
     } st_VRAMCTRL;
 
     extern st_VRAMCTRL g_vramctrl;
@@ -87,63 +98,60 @@ extern "C"
 #define vramctrl_mz700_memop_write_byte(addr, value) vramctrl_mz700_memop_write_byte_internal(addr, value)
 
     /**
-     * One-shot WAIT logika pro MZ-700 mode VRAM/CG-RAM pristup.
+     * @brief Čekání procesoru při přístupu do VRAM nebo do roviny PCG na MZ-1500.
      *
-     * Pravidla z gate-level HDL simulace GDG (viz mz800-knowledge
-     * public/reference/agent/hw/08-video-mz700-mode.md):
+     * Podle měření na skutečném MZ-1500 (emu-experiments mz1500-meas, VYSLEDKY3.md,
+     * 2026-11-24): každý přístup, který padne do okna řádku, čeká do konce okna.
+     * Čeká i první přístup v řádku (jednorázová závora z modelu GDG MZ-800 v režimu
+     * MZ-700 tu neplatí) a čeká se i v řádcích mimo obraz - okno je dané jen polohou
+     * v řádku. Čtení a zápis, znaky a atributy se neliší.
      *
-     *   1. SIGNAL_GDG_HBLNK = 1 (visible canvas, vcetne 5 px pre-canvas zone):
-     *      - Prvni R/W pristup na scanline projde bez WAIT (= "first free").
-     *      - Kazdy dalsi R/W pristup na stejnem scanline dostane WAIT az do
-     *        konce visible (~3 px pred koncem canvas, kdy fyrne HBLN_START
-     *        event a deaktivuje SIGNAL_GDG_HBLNK).
-     *      - Latch je sdileny pro READ i WRITE.
-     *   2. SIGNAL_GDG_HBLNK = 0 (border / blanking): zadny WAIT bez ohledu
-     *      na latch (= raster-chasing free okno).
-     *   3. Latch reset na visible -> blank prechodu (= MZEVENT_GDG_HBLN_START
-     *      event handler resetuje g_vramctrl.mz700_wr_latch_is_used na 0).
-     *
-     * Predpoklad: pred volanim doslo k mzarch_main_insideop_mreq() (sync
-     * total_elapsed.ticks tak, ze SIGNAL_GDG_HBLNK odpovida current beam pos).
+     * @param window_ticks Délka okna v taktech GDGCLK od VIDEO_BEAM_VRAMWAIT_FIRST_COLUMN
+     *                     (VIDEO_VRAMWAIT_VRAM_TICKS nebo VIDEO_VRAMWAIT_PCG_TICKS).
+     * @pre Před voláním proběhlo mzarch_main_insideop_mreq(), takže
+     *      g_gdg.total_elapsed.ticks odpovídá okamžiku přístupu.
+     * @post Mimo okno beze změny. V okně je do instrukce vloženo čekání do konce okna
+     *       zaokrouhlené nahoru na celé T (mzarch_main_insideop,
+     *       INSIDEOP_MREQ_MZ700_VRAMCTRL) a čas GDG je posunutý za ně.
+     * @note Vedlejší efekt: zapisuje g_vramctrl.wait_ticks.
      */
-    static inline void vramctrl_mz700_memop_oneshot_wait(void)
+    static inline void vramctrl_mz1500_memop_wait(unsigned window_ticks)
     {
-        if (!SIGNAL_GDG_HBLNK) {
-            return;     /* mimo visible - WAIT nikdy */
+        unsigned col = VIDEO_GET_SCREEN_COL(g_gdg.total_elapsed.ticks);
+        unsigned from_first = (col + VIDEO_SCREEN_WIDTH - VIDEO_BEAM_VRAMWAIT_FIRST_COLUMN) % VIDEO_SCREEN_WIDTH;
+        if (from_first >= window_ticks) {
+            return;     /* mimo okno - bez čekání */
         }
-        if (g_vramctrl.mz700_wr_latch_is_used) {
-            /* dalsi pristup ve stejne visible periode - WAIT do konce visible */
-            mzarch_main_insideop_mreq_mz700_vramctrl();
-            return;
-        }
-        /* prvni pristup v aktualni visible periode - oznac latch, NO WAIT */
-        g_vramctrl.mz700_wr_latch_is_used = 1;
+        g_vramctrl.wait_ticks = window_ticks - from_first;
+        mzarch_main_insideop_mreq_mz700_vramctrl();
     }
 
     /**
-     * Cteni z MZ-700 VRAM se synchronizaci a HDL-spravnym WAIT.
+     * @brief Čtení z VRAM nebo z roviny PCG se synchronizací a čekáním.
      *
-     * @param addr
-     * @return
+     * @param addr Offset v g_memory.VRAM (roviny PCG leží za VRAM).
+     * @param window_ticks Délka okna čekání, viz vramctrl_mz1500_memop_wait().
+     * @return Přečtený bajt.
      */
-    static inline uint8_t vramctrl_mz700_memop_read_byte_sync(uint16_t addr)
+    static inline uint8_t vramctrl_mz1500_memop_read_byte_sync(unsigned addr, unsigned window_ticks)
     {
         mzarch_main_insideop_mreq();
-        vramctrl_mz700_memop_oneshot_wait();
+        vramctrl_mz1500_memop_wait(window_ticks);
         return vramctrl_mz700_memop_read_byte(addr);
     }
 
     /**
-     * Zapis do MZ-700 VRAM se synchronizaci a HDL-spravnym WAIT.
+     * @brief Zápis do VRAM nebo do roviny PCG se synchronizací a čekáním.
      *
-     * @param addr
-     * @param value
+     * @param addr Offset v g_memory.VRAM (roviny PCG leží za VRAM).
+     * @param value Zapisovaný bajt.
+     * @param window_ticks Délka okna čekání, viz vramctrl_mz1500_memop_wait().
      */
-#define vramctrl_mz700_memop_write_byte_sync(addr, value)           \
-    {                                                               \
-        mzarch_main_insideop_mreq();                                \
-        vramctrl_mz700_memop_oneshot_wait();                        \
-        vramctrl_mz700_memop_write_byte_internal(addr, value);      \
+#define vramctrl_mz1500_memop_write_byte_sync(addr, value, window_ticks) \
+    {                                                                   \
+        mzarch_main_insideop_mreq();                                    \
+        vramctrl_mz1500_memop_wait(window_ticks);                       \
+        vramctrl_mz700_memop_write_byte_internal(addr, value);          \
     }
 
 #ifdef __cplusplus

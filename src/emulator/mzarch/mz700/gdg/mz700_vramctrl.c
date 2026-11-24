@@ -43,4 +43,5 @@ st_VRAMCTRL g_vramctrl;
 void vramctrl_reset(void)
 {
     g_vramctrl.mz700_wr_latch_is_used = 0;
+    g_vramctrl.wait_ticks = 0;
 }

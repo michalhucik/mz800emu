@@ -133,10 +133,14 @@ extern "C" {
 
     /* Definice obrazoveho radku */
 #define VIDEO_H_SYNC_TICKS          65 /* skutecny Hsync na video vystupu (soucast VIDEO_SCREEN_WIDTH; delka LOW urovne CLK1 pro ctc8253) */
-#define VIDEO_H_BACK_PORCH_TICKS    104
+/* Poloha obrazu v řádku je změřená na skutečném MZ-1500 (2026-11-24, emu-experiments
+ * mz1500-meas, VYSLEDKY1.md a VYSLEDKY2.md): obraz 640 clk začíná 194,8 clk a končí
+ * 834,7 clk po sestupné hraně HS; po odečtení rozdílu zpoždění HS a barev za hranou
+ * hodin (asi 17 ns) je to 195 a 835 taktů. S levým okrajem 32 tedy 65 + 98 + 32 = 195.
+ * Stroj samostatnou barevnou plochu okraje nemá; okraj 32 + 32 je jen rámec emulátoru. */
+#define VIDEO_H_BACK_PORCH_TICKS    98
 #define VIDEO_H_ENABLED_TICKS       VIDEO_DISPLAY_WIDTH
-//#define VIDEO_H_FRONT_PORCH_TICKS   104
-#define VIDEO_H_FRONT_PORCH_TICKS   39
+#define VIDEO_H_FRONT_PORCH_TICKS   45
 
 
     /* Celkove rozmery screen */
@@ -197,6 +201,30 @@ extern "C" {
 
 
 #define VIDEO_BEAM_HBLN_FIRST_COLUMN            ( VIDEO_BEAM_CANVAS_LAST_COLUMN - 3 )
+
+/**
+ * @brief Okno čekání procesoru při přístupu do VRAM a do rovin PCG (v taktech GDGCLK).
+ *
+ * Změřeno na skutečném MZ-1500 (2026-11-24, emu-experiments mz1500-meas, VYSLEDKY3.md):
+ * každý přístup do VRAM, který padne do okna, čeká do jeho konce - i první v řádku
+ * a i v řádcích mimo obraz. /WAIT padá nejdřív mezi 161. a 165. taktem po sestupné
+ * hraně HS (asi 30 taktů před levým okrajem obrazu) a končí na 833,5 až 834,5 (konec
+ * obrazu 834,7). U roviny PCG namapované na 0D000h končí na 852,5 a procesor pokračuje
+ * o 5 T později.
+ *
+ * Hodnoty jsou v souřadnicích emulátoru, tedy vůči okamžiku, ke kterému emulátor
+ * přístup počítá (mzarch_main_insideop_mreq), a jsou seřízené tak, aby program
+ * mz1500_meas1.mzf dal v emulátoru stejné délky průchodů jako na stroji:
+ * VIDEO_VRAMWAIT_FIRST_FROM_HSYNC je první takt okna od sestupné hrany HS,
+ * VIDEO_VRAMWAIT_VRAM_TICKS a VIDEO_VRAMWAIT_PCG_TICKS délka okna. Na stroji je mřížka
+ * T-stavů vůči řádku stálá (řádek = 228 T), začátek okna je proto změřený jen
+ * s rozlišením 1 T.
+ */
+#define VIDEO_VRAMWAIT_FIRST_FROM_HSYNC         169
+#define VIDEO_VRAMWAIT_VRAM_TICKS               666
+#define VIDEO_VRAMWAIT_PCG_TICKS                ( VIDEO_VRAMWAIT_VRAM_TICKS + 20 )
+/** První sloupec okna čekání v řádku emulátoru. */
+#define VIDEO_BEAM_VRAMWAIT_FIRST_COLUMN        ( ( VIDEO_REAL_HSYNC_START_COLUMN + VIDEO_VRAMWAIT_FIRST_FROM_HSYNC ) % VIDEO_SCREEN_WIDTH )
 
 #define VIDEO_BEAM_VSYNC_FIRST_ROW              15
 #define VIDEO_BEAM_VSYNC_LAST_ROW               247
