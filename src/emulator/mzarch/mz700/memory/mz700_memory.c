@@ -288,6 +288,9 @@ void memory_reset(void) {
  * @return
  */
 #define memory_internal_read_0000_0fff(a) { if ( 0x00 == a ) { if ( MEMORY_MZ700_MAP_TEST_ROM_0000 ) return MEMORY_ROM_READ_BYTE; return MEMORY_RAM_READ_BYTE; } }
+/* Totéž pro čtecí cyklus procesoru: čtení z připojené monitorové ROM vloží čekací takt
+ * (memory_rom_0000_read_wait). */
+#define memory_internal_read_0000_0fff_sync(a) { if ( 0x00 == a ) { if ( MEMORY_MZ700_MAP_TEST_ROM_0000 ) { memory_rom_0000_read_wait ( ); return MEMORY_ROM_READ_BYTE; } return MEMORY_RAM_READ_BYTE; } }
 #define memory_internal_read_d000_dfff_sync(a) { if ( 0x0d == a ) { if ( MEMORY_MZ700_MAP_TEST_VRAM_D000 ) return MEMORY_VRAM_MZ700_READ_BYTE_SYNC; return MEMORY_RAM_READ_BYTE; } }
 #define memory_internal_read_d000_dfff(a) { if ( 0x0d == a ) { if ( MEMORY_MZ700_MAP_TEST_VRAM_D000 ) return MEMORY_VRAM_MZ700_READ_BYTE; return MEMORY_RAM_READ_BYTE; } }
 #define memory_internal_read_e000_efff_sync(a) { if ( 0x0e == a ) { if ( MEMORY_MZ700_MAP_TEST_ROM_E000 ) return memory_internal_read_rom_e000_efff_sync ( addr ); return MEMORY_RAM_READ_BYTE; } }
@@ -298,6 +301,36 @@ void memory_reset(void) {
  *   - K3 (ROM_E000) + ! Prohibited: ROM bajt
  */
 #define memory_internal_read_f000_ffff(a) { if ( 0x0f == a ) { if ( ! MEMORY_MZ700_MAP_TEST_ROM_E000 ) return MEMORY_RAM_READ_BYTE; if ( MEMORY_MZ700_MAP_TEST_PROHIBITED ) return 0xff; return MEMORY_ROM_READ_BYTE; } }
+
+
+/**
+ * @brief Počet čekacích taktů procesoru při čtecím cyklu z monitorové ROM 0000h až 0FFFh.
+ *
+ * Změřeno na skutečném MZ-700 PAL (2026-11-24, emu-experiments mz700-meas,
+ * VYSLEDKY4.md až VYSLEDKY6.md): když je spodní ROM připojená, trvá každý čtecí cyklus
+ * z adres 0000h až 0FFFh o 1 T déle - čtení instrukce (M1), operandu i dat. Stroj při
+ * něm dává na /WAIT pulz dlouhý 1 T; je to vlastnost stroje, bez karty Unicard stejná.
+ * Zápis na tyto adresy, RAM připojená na jejich místo (OUT 0E0h), adresy od 1000h
+ * a oblast 0E800h až 0FFFFh nečekají. Platí i pro sestavení NTSC: změřený je jen stroj
+ * PAL, japonský má podle Michala Hučíka stejný hardware [na NTSC neměřeno].
+ */
+#define MEMORY_MZ700_ROM_0000_READ_WAIT_TSTATES 1
+
+/**
+ * @brief Vloží do právě běžícího čtecího cyklu procesoru čekací takt monitorové ROM.
+ *
+ * @pre Volá se jen z čtecí cesty procesoru (memory_internal_read_sync) a jen když je
+ *      spodní ROM připojená a adresa je 0000h až 0FFFh.
+ * @post Cyklus je delší o MEMORY_MZ700_ROM_0000_READ_WAIT_TSTATES a tyto takty jsou
+ *       přičtené do g_mzarch_main.instruction_wait_tstates (sytí se na 0FFFFFFFFh).
+ * @note Čas GDG se tu nedorovnává; dorovná ho nejbližší synchronizace uvnitř instrukce
+ *       nebo konec instrukce, stejně jako u čekání zařízení na sběrnici (mz700_devbus.c).
+ */
+static inline void memory_rom_0000_read_wait ( void ) {
+    z80_add_wait_states ( g_mzarch_main.cpu, MEMORY_MZ700_ROM_0000_READ_WAIT_TSTATES );
+    uint64_t sum = (uint64_t) g_mzarch_main.instruction_wait_tstates + MEMORY_MZ700_ROM_0000_READ_WAIT_TSTATES;
+    g_mzarch_main.instruction_wait_tstates = ( sum > 0xFFFFFFFFu ) ? 0xFFFFFFFFu : (uint32_t) sum;
+}
 
 
 /**
@@ -407,7 +440,7 @@ static inline uint8_t memory_internal_read_rom_e000_efff ( uint16_t addr ) {
 
 uint8_t memory_internal_read_sync ( uint16_t addr ) {
     unsigned addr_high = addr >> 12;
-    memory_internal_read_0000_0fff ( addr_high );
+    memory_internal_read_0000_0fff_sync ( addr_high );
     memory_internal_read_d000_dfff_sync ( addr_high );
     memory_internal_read_e000_efff_sync ( addr_high );
     memory_internal_read_f000_ffff ( addr_high );

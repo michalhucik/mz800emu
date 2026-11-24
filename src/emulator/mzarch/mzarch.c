@@ -1905,7 +1905,8 @@ void mzarch_main(void)
          *
          * wait_extra_tstates = g_mzarch_main.instruction_wait_tstates,
          * akumulovany v INSIDEOP_MREQ_MZ700_VRAMCTRL a INSIDEOP_IORQ_PSG_WRITE
-         * paths (jediná místa volající z80_add_wait_states v hot loop).
+         * paths, v čekání zařízení na sběrnici MZ-700 (mz700_devbus.c) a v čekacím
+         * taktu monitorové ROM MZ-700 (memory_rom_0000_read_wait).
          * V T-states units (z80 ISA), saturated na 0xFFFFFFFF. */
         uint32_t post_insn_hooks = g_mzarch_post_insn_hooks;
         if ( post_insn_hooks ) {
