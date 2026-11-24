@@ -1033,7 +1033,7 @@ if(Python3_FOUND)
     # Podle měření na skutečném MZ-1500 (2026-11-24): řádek 65 + 98 + 704 +
     # 45, čeká každý přístup do VRAM v okně řádku (i první a i mimo canvas),
     # rovina PCG o 5 T déle, RAM bez čekání. MZ-700 NTSC stejná čísla a dělič
-    # CTC0 16, MZ-700 PAL řádek 80 + 228 + 704 + 124 (převzato, neměřeno).
+    # CTC0 16, MZ-700 PAL řádek 81 + 225 + 704 + 126 a okno čekání podle měření na MZ-700 PAL.
     add_test(
         NAME    mcp_mz1500_vram_wait
         COMMAND ${Python3_EXECUTABLE}

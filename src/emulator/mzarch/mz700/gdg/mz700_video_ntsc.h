@@ -210,10 +210,13 @@ extern "C" {
  * (v čase, ke kterému emulátor přístup počítá) a končí na jeho pravém okraji.
  * Hodnoty jsou shodné s MZ-1500 (stejný řádek 912 taktů a 4 takty na T).
  * VIDEO_VRAMWAIT_FIRST_FROM_HSYNC je první takt okna od sestupné hrany HS,
- * VIDEO_VRAMWAIT_VRAM_TICKS délka okna.
+ * VIDEO_VRAMWAIT_VRAM_TICKS délka okna. VIDEO_VRAMWAIT_TAIL_TICKS je počet taktů,
+ * o které čekání končí před koncem okna (0 jako na MZ-1500; v sestavení PAL 1 podle
+ * měření na MZ-700 PAL).
  */
 #define VIDEO_VRAMWAIT_FIRST_FROM_HSYNC         169
 #define VIDEO_VRAMWAIT_VRAM_TICKS               666
+#define VIDEO_VRAMWAIT_TAIL_TICKS               0
 /** První sloupec okna čekání v řádku emulátoru. */
 #define VIDEO_BEAM_VRAMWAIT_FIRST_COLUMN        ( ( VIDEO_REAL_HSYNC_START_COLUMN + VIDEO_VRAMWAIT_FIRST_FROM_HSYNC ) % VIDEO_SCREEN_WIDTH )
 

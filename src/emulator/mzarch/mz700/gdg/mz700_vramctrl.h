@@ -100,17 +100,20 @@ extern "C"
     /**
      * @brief Čekání procesoru při přístupu do VRAM na MZ-700.
      *
-     * Na samostatném MZ-700 změřeno není; pravidlo je převzaté z měření na skutečném
-     * MZ-1500 (emu-experiments mz1500-meas, VYSLEDKY3.md, 2026-11-24) [interpolace]:
-     * každý přístup, který padne do okna řádku, čeká do konce okna. Čeká i první přístup
+     * Každý přístup, který padne do okna řádku, čeká do konce okna. Čeká i první přístup
      * v řádku (jednorázová závora z modelu GDG MZ-800 v režimu MZ-700 se nepoužívá)
-     * a čeká se i v řádcích mimo obraz. Čtení a zápis se neliší.
+     * a čeká se i v řádcích mimo obraz. Čtení a zápis se neliší. V sestavení PAL je
+     * pravidlo i okno změřené na skutečném MZ-700 PAL (emu-experiments mz700-meas,
+     * VYSLEDKY3.md, 2026-11-24); v sestavení NTSC je převzaté z měření na skutečném
+     * MZ-1500 (mz1500-meas, VYSLEDKY3.md) [interpolace, na MZ-700 NTSC neměřeno].
+     * Okno a jeho konec určují VIDEO_VRAMWAIT_* v mz700_video_pal.h a mz700_video_ntsc.h.
      *
      * @pre Před voláním proběhlo mzarch_main_insideop_mreq(), takže
      *      g_gdg.total_elapsed.ticks odpovídá okamžiku přístupu.
      * @post Mimo okno beze změny. V okně je do instrukce vloženo čekání do konce okna
-     *       zaokrouhlené nahoru na celé T (mzarch_main_insideop,
-     *       INSIDEOP_MREQ_MZ700_VRAMCTRL) a čas GDG je posunutý za ně.
+     *       zkráceného o VIDEO_VRAMWAIT_TAIL_TICKS, prodloužené na nejbližší vyšší
+     *       celý počet T, tedy vždy aspoň 1 T (mzarch_main_insideop,
+     *       INSIDEOP_MREQ_MZ700_VRAMCTRL), a čas GDG je posunutý za ně.
      * @note Vedlejší efekt: zapisuje g_vramctrl.wait_ticks.
      */
     static inline void vramctrl_mz700_memop_wait(void)
@@ -120,7 +123,7 @@ extern "C"
         if (from_first >= VIDEO_VRAMWAIT_VRAM_TICKS) {
             return;     /* mimo okno - bez čekání */
         }
-        g_vramctrl.wait_ticks = VIDEO_VRAMWAIT_VRAM_TICKS - from_first;
+        g_vramctrl.wait_ticks = VIDEO_VRAMWAIT_VRAM_TICKS - VIDEO_VRAMWAIT_TAIL_TICKS - from_first;
         mzarch_main_insideop_mreq_mz700_vramctrl();
     }
 

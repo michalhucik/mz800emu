@@ -38,34 +38,36 @@ extern "C" {
      *
      *  Master CLK = 17 734 475 Hz, T = 1 / master = 56,39 ns.
      *
-     *  Mereni STF (logicky analyzator SIGMA/OMEGA, 2026-05-08):
-     *  - HSYNC perioda 1136 T = 64,07 us = PAL line rate 15625 Hz [overeno]
-     *  - HACTIVE (canvas enable) HIGH = 639 T ≈ 640 T = canvas width [overeno]
-     *  - VSYNC nebyl pripojen na zadny ze 7 vstupu - nelze overit
+     *  Měření na skutečném MZ-700 PAL logickým analyzátorem OMEGA (2026-11-24,
+     *  emu-experiments mz700-meas, VYSLEDKY2.md a VYSLEDKY3.md; HS, VS a barvy
+     *  na obrazovém konektoru, hodiny na vývodu obvodu videa):
+     *  - řádek 1136 T, HS v nule 81 T [změřeno]
+     *  - obraz 338 až 977 T po sestupné hraně HS (639 T) [změřeno]
+     *  - snímek 312 řádků, VS v nule 3 řádky, obraz na řádcích 68 až 267
+     *    počítáno od řádku, ve kterém VS začíná [změřeno]
+     *  Starší měření z 2026-05-08 (řádek 1136 T, HACTIVE 639 T) s tím souhlasí;
+     *  při něm vyhořel zdroj počítače a hodnoty byly do 2026-11-24 interpolované
+     *  z měření MZ-1500 a MZ-800.
      *
-     *  Borderove rozmery prevzate z MZ-1500 (32/32/16/16) [neovereno];
-     *  Visible display (704 x 232) je symetricky umisten v 1136 T radku.
+     *  Borderové rozměry převzaté z MZ-1500 (32/32/16/16) [neověřeno];
+     *  stroj sám žádný border nemá.
      *
-     *  Vertikalni timing odvozen z MZ-800 PAL (VSYNC pozice rows 270-311)
-     *  [neovereno - bez VSYNC mereni].
-     * 
-     * V průběhu měření vyhořel zdroj počítače, takže jsem musel hodnoty interpolovat z měření MZ-1500 a MZ-800.
+     *  Vertikální timing odvozen z MZ-800 PAL (VSYNC pozice rows 270-311)
+     *  [s měřením VS z 2026-11-24 nesrovnáno].
      *
      *
      * 	Radkove casovani:
      *	=================
      *
-     * 	Hsync:		   80 T
-     * 	Back Porch:	  228 T
+     * 	Hsync:		   81 T
+     * 	Back Porch:	  225 T
      * 	Video Enable:	  704 T  (display = 32 + 640 + 32)
-     * 	Front Porch:	  124 T
+     * 	Front Porch:	  126 T
      *  	-----------------------
      * 	Cely radek:	1 136 T  [overeno mereni]
      *
-     *  Sum check: 80 + 228 + 704 + 124 = 1136
-     *  Poloha obrazu prevzata z MZ-800 (canvas 340 T po sestupne hrane HS:
-     *  80 + 106 + 154 v mz800_video.h, zmereno na MZ-800) [interpolace, na MZ-700
-     *  neovereno]: 80 + 228 + 32 = 340.
+     *  Sum check: 81 + 225 + 704 + 126 = 1136
+     *  Canvas začíná 338 T po sestupné hraně HS [změřeno]: 81 + 225 + 32 = 338.
      *
      *
      * 	Snimkove casovani:
@@ -148,15 +150,14 @@ extern "C" {
 
     /*
      * Definice obrazoveho radku
-     * Canvas zacina 340 T po sestupne hrane HS jako na MZ-800 (80 + 106 + 154,
-     * zmereno na MZ-800) [interpolace, na MZ-700 neovereno]; s levym okrajem 32 T
-     * vychazi back porch 228 T a front porch 124 T.
-     * HSync 80 T (z MZ-800 PAL [neovereno]).
+     * Změřeno na skutečném MZ-700 PAL (2026-11-24, emu-experiments mz700-meas,
+     * VYSLEDKY3.md): HS v nule 81 T, canvas začíná 338 T po sestupné hraně HS.
+     * S levým okrajem 32 T vychází back porch 225 T a front porch 126 T.
      */
-#define VIDEO_H_SYNC_TICKS          80  /* skutecny Hsync na video vystupu (soucast VIDEO_SCREEN_WIDTH; delka LOW urovne CLK1 pro ctc8253) */
-#define VIDEO_H_BACK_PORCH_TICKS    228 /* canvas 340 T po hrane HS jako MZ-800 */
+#define VIDEO_H_SYNC_TICKS          81  /* skutecny Hsync na video vystupu (soucast VIDEO_SCREEN_WIDTH; delka LOW urovne CLK1 pro ctc8253) [zmereno] */
+#define VIDEO_H_BACK_PORCH_TICKS    225 /* canvas 338 T po hrane HS [zmereno] */
 #define VIDEO_H_ENABLED_TICKS       VIDEO_DISPLAY_WIDTH  /* 704 T */
-#define VIDEO_H_FRONT_PORCH_TICKS   124 /* zbytek radku */
+#define VIDEO_H_FRONT_PORCH_TICKS   126 /* zbytek radku */
 
 
     /* Celkove rozmery screen */
@@ -164,7 +165,7 @@ extern "C" {
 /** Sloupec sestupné hrany skutečného HSYNC (= CLK1 čítače 8253, událost
  *  MZEVENT_GDG_REAL_HSYNC_START); HSYNC je pak LOW po VIDEO_H_SYNC_TICKS. */
 #define VIDEO_REAL_HSYNC_START_COLUMN ( VIDEO_DISPLAY_WIDTH + VIDEO_H_FRONT_PORCH_TICKS )
-#define VIDEO_SCREEN_HEIGHT         312  /* PAL standard [neovereno - bez VSYNC mereni] */
+#define VIDEO_SCREEN_HEIGHT         312  /* [zmereno 2026-11-24] */
 #define VIDEO_SCREEN_TICKS          ( VIDEO_SCREEN_HEIGHT * VIDEO_SCREEN_WIDTH )
 
 
@@ -221,18 +222,29 @@ extern "C" {
 /**
  * @brief Okno čekání procesoru při přístupu do VRAM (v taktech GDGCLK).
  *
- * Na samostatném MZ-700 změřeno není. Převzato z měření na skutečném MZ-1500
- * (2026-11-24, emu-experiments mz1500-meas, VYSLEDKY3.md) [interpolace, neověřeno na
- * MZ-700]: každý přístup do VRAM, který padne do okna, čeká do jeho konce - i první
- * v řádku a i v řádcích mimo obraz. Okno začíná 6,5 T před levým okrajem obrazu
- * (v čase, ke kterému emulátor přístup počítá) a končí na jeho pravém okraji.
- * Na řádku PAL (5 taktů na T) je 6,5 T asi 32 takty: okno od 308 do 980 taktů
- * po sestupné hraně HS (canvas 340 až 980).
+ * Změřeno na skutečném MZ-700 PAL (2026-11-24, emu-experiments mz700-meas,
+ * VYSLEDKY3.md): každý přístup do VRAM (čtení i zápis, znaky i atributy), který padne
+ * do okna, čeká do jeho konce - i první v řádku a i v řádcích mimo obraz. Mimo okno
+ * se nečeká. Na stroji začíná /WAIT 1 takt po sestupné hraně /MREQ; čeká se, když
+ * tento začátek padne do 241 až 976 taktů po sestupné hraně HS, a /WAIT končí
+ * v 976,5 taktu (obraz 338 až 977).
+ *
+ * Hodnoty níže jsou v čase, ke kterému emulátor přístup počítá, a jsou seřízené tak,
+ * aby smyčka s jedním přístupem na průchod dávala stejné délky průchodů jako stroj
+ * (emu-experiments mz700-fixes, tools/calib.py): čeká průchod, jehož značka (začátek
+ * /IORQ instrukce IN těsně před přístupem) je 203 až 928 taktů po hraně HS, a počet
+ * čekacích taktů procesoru je ceil((929 - značka) / 5). Počet čekacích taktů je
+ * odvozený z konce /WAIT a z okamžiku vzorkování /WAIT podle časování Z80 (hodiny
+ * procesoru při měření připojené nebyly) [odvozeno].
  * VIDEO_VRAMWAIT_FIRST_FROM_HSYNC je první takt okna od sestupné hrany HS,
- * VIDEO_VRAMWAIT_VRAM_TICKS délka okna.
+ * VIDEO_VRAMWAIT_VRAM_TICKS délka okna. VIDEO_VRAMWAIT_TAIL_TICKS je počet taktů,
+ * o které čekání končí před koncem okna: přístup v posledním taktu okna tak dostane
+ * jeden čekací takt procesoru a přístup, kterému do konce zbývá celý násobek T,
+ * nečeká o T déle (jádro přičítá k čekání vždy začatý takt procesoru).
  */
-#define VIDEO_VRAMWAIT_FIRST_FROM_HSYNC         308
-#define VIDEO_VRAMWAIT_VRAM_TICKS               672
+#define VIDEO_VRAMWAIT_FIRST_FROM_HSYNC         253
+#define VIDEO_VRAMWAIT_VRAM_TICKS               726
+#define VIDEO_VRAMWAIT_TAIL_TICKS               1
 /** První sloupec okna čekání v řádku emulátoru. */
 #define VIDEO_BEAM_VRAMWAIT_FIRST_COLUMN        ( ( VIDEO_REAL_HSYNC_START_COLUMN + VIDEO_VRAMWAIT_FIRST_FROM_HSYNC ) % VIDEO_SCREEN_WIDTH )
 

@@ -190,9 +190,9 @@ from the note table of the Japanese ROM.
 | `canvas_height` | Drawing area without border | 200 |
 | `border_left_width` / `border_right_width` | Side borders | 32 |
 | `border_top_height` / `border_bottom_height` | Top/bottom borders | 16 |
-| `h_sync_ticks` | HSync interval | 80 (PAL) / 65 (NTSC) |
-| `h_back_porch_ticks` | Back porch after HSync | 136 (PAL) / 104 (NTSC) |
-| `h_front_porch_ticks` | Front porch before HSync | 216 (PAL) / 39 (NTSC) |
+| `h_sync_ticks` | HSync interval | 81 (MZ-700 PAL) / 80 (MZ-800) / 65 (NTSC) |
+| `h_back_porch_ticks` | Back porch after HSync | 225 (MZ-700 PAL) / 106 (MZ-800) / 98 (NTSC) |
+| `h_front_porch_ticks` | Front porch before HSync | 126 (MZ-700 PAL) / 22 (MZ-800) / 45 (NTSC) |
 
 ### Subset in hello capabilities
 

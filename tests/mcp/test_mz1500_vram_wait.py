@@ -20,9 +20,13 @@ a 1604 (rovina PCG); značka čekajícího průchodu je 133 taktů po sestupné 
   6  čtení 3000h (RAM): žádné čekání
   7  mz700emu-ntsc (hodnoty převzaté z MZ-1500, na MZ-700 neměřeno): kroky 1, 2, 3 a 6
      se stejnými čísly; get_platform_info hlásí dělič CTC0 16
-  8  mz700emu-pal (poloha obrazu podle MZ-800, okno podle MZ-1500, neměřeno): řádek
-     80 + 228 + 704 + 124, čtení 0D000h má průchody s čekáním i v řádcích mimo canvas,
-     čtení RAM je bez čekání
+  8  mz700emu-pal, změřeno na skutečném MZ-700 PAL (2026-11-24, emu-experiments
+     mz700-meas, VYSLEDKY2.md a VYSLEDKY3.md): řádek 81 + 225 + 704 + 126 (HS 81 taktů,
+     obraz 338 taktů za hranou HS). Smyčky dlouhé 229, 228 a 227 T (značka se posouvá
+     o 9, 4 a -1 takt, takže projde obě meze okna): čeká průchod se značkou 203 až 928
+     taktů po hraně HS a má o 5 * ceil((929 - značka) / 5) taktů víc, jinak nečeká;
+     čeká se i v řádcích mimo canvas, zápis atributů stejně jako čtení znaků, čtení RAM
+     je bez čekání
 
 Proces běží izolovaně (dočasný --cfg-dir a --work-dir, --no-save-ini); zabíjí se jen
 vlastní PID. Výstup anglicky.
@@ -63,18 +67,34 @@ _CANVAS_ROWS = (16, 215)
 _FRAMES = 6
 
 
-#: Řádek a průchod 229 T v sestavení PAL (5 taktů na T).
+#: Řádek v sestavení PAL (5 taktů na T).
 _LINE_PAL = 1136
-_PASS_PAL = 1145
+#: MZ-700 PAL podle měření: první a poslední sloupec značky, při kterém průchod čeká,
+#: a sloupec, od kterého se počítá počet čekacích taktů.
+_PAL_MARK_FIRST = 203
+_PAL_MARK_LAST = 928
+_PAL_MARK_END = 929
+#: Smyčky pro MZ-700 PAL: délka průchodu v T a výplň mezi přístupem a čítačem (30, 29, 28 T).
+_PAL_LOOPS = (
+    (229, [0x00] * 4 + [0x3E, 0x00] * 2),
+    (228, [0x00] * 2 + [0x3E, 0x00] * 3),
+    (227, [0x00] * 7),
+)
 
 
-def _program(opcode):
-    """Smyčka 229 T: značka, přístup instrukcí s kódem opcode (7Eh čtení, 71h zápis C)."""
+def _program(opcode, pad=None):
+    """Smyčka 229 T: značka, přístup instrukcí s kódem opcode (7Eh čtení, 71h zápis C).
+
+    pad nahrazuje výplň 30 T mezi přístupem a čítačem (výchozí 4 x NOP a 2 x LD A,0);
+    kratší výplň dá kratší průchod.
+    """
+    if pad is None:
+        pad = [0x00, 0x00, 0x00, 0x00,  # 4 x nop       16 T
+               0x3E, 0x00, 0x3E, 0x00]  # 2 x ld a,0    14 T
     code = bytes([
         0xDB, 0xA0,             # in a,(0A0h)   11 T
         opcode,                 # ld a,(hl) / ld (hl),c   7 T
-        0x00, 0x00, 0x00, 0x00, # 4 x nop       16 T
-        0x3E, 0x00, 0x3E, 0x00, # 2 x ld a,0    14 T
+        *pad,
         0x06, 0x0D,             # ld b,13        7 T
         0x10, 0xFE,             # djnz           164 T
         0xC3, _PROG & 0xFF, _PROG >> 8,  # jp   10 T
@@ -82,13 +102,15 @@ def _program(opcode):
     return code.hex()
 
 
-def _measure(emu, opcode, addr, value=0, line=_LINE, hs_col=_HS_COL, before_end=_IORQ_BEFORE_END):
+def _measure(emu, opcode, addr, value=0, line=_LINE, hs_col=_HS_COL, before_end=_IORQ_BEFORE_END,
+             pad=None):
     """Pustí smyčku a vrátí seznam (sloupec značky, délka průchodu, sloupec další značky, řádek).
 
     line je délka řádku, hs_col sloupec sestupné hrany HS v řádku emulátoru a before_end
-    odstup začátku pulzu /IORQ od konce V/V cyklu (3 T) v taktech GDGCLK.
+    odstup začátku pulzu /IORQ od konce V/V cyklu (3 T) v taktech GDGCLK; pad je výplň
+    smyčky podle _program().
     """
-    emu.call("mem_write", {"addr": _PROG, "data_hex": _program(opcode)})
+    emu.call("mem_write", {"addr": _PROG, "data_hex": _program(opcode, pad)})
     emu.call("set_register", {"reg": "HL", "value": addr})
     emu.call("set_register", {"reg": "BC", "value": value})
     emu.call("set_register", {"reg": "PC", "value": _PROG})
@@ -212,27 +234,41 @@ def run_mz700_ntsc(exe):
 
 
 def run_mz700_pal(exe):
-    """Krok 8: MZ-700 PAL - rozložení řádku a čekání u jediného přístupu v řádku. Vrací True = PASS."""
+    """Krok 8: MZ-700 PAL - rozložení řádku a okno čekání podle měření na stroji. Vrací True = PASS."""
     print(f"\n=== {exe.name} ===")
     emu = None
     try:
         emu = _start(exe, Path(tempfile.mkdtemp(prefix="mz700p_vram_wait_")))
         sl = emu.call("get_platform_info")["scanline"]
         got = (sl["h_sync_ticks"], sl["h_back_porch_ticks"], sl["display_width"], sl["h_front_porch_ticks"])
-        check(got == (80, 228, 704, 124), f"line layout is 80 + 228 + 704 + 124 ({got})")
+        check(got == (81, 225, 704, 126), f"line layout is 81 + 225 + 704 + 126 ({got})")
+        check(sl["h_sync_ticks"] + sl["h_back_porch_ticks"] + sl["border_left_width"] == 338,
+              "picture starts 338 ticks after the HS falling edge")
         hs_col = sl["display_width"] + sl["h_front_porch_ticks"]
-        passes = _measure(emu, 0x7E, 0xD000, line=_LINE_PAL, hs_col=hs_col, before_end=15)
-        waits = [p for p in passes if p[1] != _PASS_PAL]
-        check(len(passes) > 1000 and len(waits) >= 10,
-              f"read 0D000h: {len(waits)} waiting passes of {len(passes)}")
-        check(all(p[1] > _PASS_PAL for p in waits), "read 0D000h: waiting passes are longer than 229 T")
-        ends = sorted(set(p[2] for p in waits))
-        # řádek 1136 není násobek průchodu ani T (5 taktů), fáze T-stavů vůči řádku se mění
-        check(ends[-1] - ends[0] < 5, f"read 0D000h: all waits end within one T-state ({ends})")
-        outside = [p for p in waits if not _CANVAS_ROWS[0] <= p[3] % 312 <= _CANVAS_ROWS[1]]
-        check(len(outside) >= 2, f"read 0D000h: {len(outside)} waits in rows outside the canvas")
+        seen_first = seen_last = False
+        outside = 0
+        for tstates, pad in _PAL_LOOPS:
+            base = 5 * tstates
+            for what, op, addr, val in (("read 0D000h", 0x7E, 0xD000, 0), ("write 0D800h", 0x71, 0xD800, 0x70)):
+                passes = _measure(emu, op, addr, val, line=_LINE_PAL, hs_col=hs_col, before_end=15, pad=pad)
+                waits = [p for p in passes if p[1] != base]
+                check(len(passes) > 1000 and len(waits) >= 10,
+                      f"{tstates} T, {what}: {len(waits)} waiting passes of {len(passes)}")
+                bad = sorted(set(
+                    (p[0], p[1] - base) for p in passes
+                    if p[1] - base != (5 * -((p[0] - _PAL_MARK_END) // 5)
+                                       if _PAL_MARK_FIRST <= p[0] <= _PAL_MARK_LAST else 0)))
+                check(not bad, f"{tstates} T, {what}: wait is 5 * ceil(({_PAL_MARK_END} - marker) / 5) for markers "
+                               f"{_PAL_MARK_FIRST} to {_PAL_MARK_LAST}, none elsewhere ({bad[:6]})")
+                cols = set(p[0] for p in passes)
+                seen_first |= _PAL_MARK_FIRST in cols and _PAL_MARK_FIRST - 1 in cols
+                seen_last |= _PAL_MARK_LAST in cols and _PAL_MARK_LAST + 1 in cols
+                outside += sum(1 for p in waits if not _CANVAS_ROWS[0] <= p[3] % 312 <= _CANVAS_ROWS[1])
+        check(seen_first, f"markers {_PAL_MARK_FIRST - 1} and {_PAL_MARK_FIRST} (window start) were both visited")
+        check(seen_last, f"markers {_PAL_MARK_LAST} and {_PAL_MARK_LAST + 1} (window end) were both visited")
+        check(outside >= 2, f"{outside} waits in rows outside the canvas")
         lens = Counter(p[1] for p in _measure(emu, 0x7E, 0x3000, line=_LINE_PAL, hs_col=hs_col, before_end=15))
-        check(set(lens) == {_PASS_PAL}, f"read 3000h: no wait ({dict(lens)})")
+        check(set(lens) == {5 * 229}, f"read 3000h: no wait ({dict(lens)})")
         return True
     except TestFailure:
         return False

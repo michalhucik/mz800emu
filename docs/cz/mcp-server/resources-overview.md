@@ -185,9 +185,9 @@ změřené, pro MZ-700 NTSC to plyne z tabulky not japonské ROM.
 | `canvas_height` | Kreslicí plocha bez border | 200 |
 | `border_left_width` / `border_right_width` | Border po stranách | 32 |
 | `border_top_height` / `border_bottom_height` | Border nahoře/dole | 16 |
-| `h_sync_ticks` | HSync interval | 80 (PAL) / 65 (NTSC) |
-| `h_back_porch_ticks` | Back porch po HSync | 136 (PAL) / 104 (NTSC) |
-| `h_front_porch_ticks` | Front porch před HSync | 216 (PAL) / 39 (NTSC) |
+| `h_sync_ticks` | HSync interval | 81 (MZ-700 PAL) / 80 (MZ-800) / 65 (NTSC) |
+| `h_back_porch_ticks` | Back porch po HSync | 225 (MZ-700 PAL) / 106 (MZ-800) / 98 (NTSC) |
+| `h_front_porch_ticks` | Front porch před HSync | 126 (MZ-700 PAL) / 22 (MZ-800) / 45 (NTSC) |
 
 ### Subset v hello capabilities
 
