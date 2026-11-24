@@ -44,14 +44,15 @@ extern "C"
                                                     MZ800: 0x8000 - 0x9fff | 0xbfff (VRAM) */
 #define MEMORY_MZ800_MAP_FLAG_ROM_E000 (1 << 3)   /* + MZ700: 0xd000 - 0xdfff (atributova VRAM) */
 #define MEMORY_MZ800_MAP_FLAG_PROHIBITED (1 << 4) /* OUT 0xE5/E6 - "Prohibited" banking mode \
-                                                     na MZ-800. Aktivni = ctene CELE \
-                                                     $E000-$FFFF vraci 0x1A shadow byte, \
+                                                     na MZ-800. Aktivni = cteni CELE \
+                                                     $E000-$FFFF vraci posledni bajt na \
+                                                     datove sbernici (mereni na MZ-800; \
+                                                     drivejsi 0x1A byl kod LD A,(DE)), \
                                                      vcetne mapped ports $E000-$E008 - \
                                                      ctecí makra testuji tento priznak jako \
                                                      PRVNI podminku, takze se k portum \
-                                                     nedojde. Empiricky overeno v0.5 T4: \
-                                                     $E001 (PIO port B) vraci 0x1A, ne \
-                                                     klavesnicovy scan. \
+                                                     nedojde (v0.5 T4: $E001 nevraci \
+                                                     klavesnicovy scan); zapis se neprovede. \
                                                      Persistuje pres OUT E0/E1/E2/E3/E4 i \
                                                      pres DMD bit 3 switch (700 <-> 800). \
                                                      Reset: OUT E6, gdg_init/reset. \
@@ -83,8 +84,38 @@ extern "C"
     extern uint8_t *g_memoryVRAM;
     extern uint8_t *g_memoryVRAM_I;
     extern uint8_t *g_memoryVRAM_II;
+    /** Roviny III a IV pro čtení (video fetch, čtení CPU): g_memory.EXVRAM, nebo
+     *  při neosazeném rozšíření VRAM buffer se samými 0FFh. */
     extern uint8_t *g_memoryVRAM_III;
     extern uint8_t *g_memoryVRAM_IV;
+
+    /** Roviny III a IV pro zápis CPU: g_memory.EXVRAM, nebo při neosazeném
+     *  rozšíření VRAM odpadní buffer (zápis se ztratí). */
+    extern uint8_t *g_memoryVRAM_III_WR;
+    extern uint8_t *g_memoryVRAM_IV_WR;
+
+    /** 1 = osazené rozšíření VRAM MZ-1R25 (roviny III a IV, 32 KB VRAM),
+     *  0 = jen základních 16 KB. Konfigurace [MZ800] exvram v INI, výchozí 1.
+     *  Mění ho jen mz800_memory_set_exvram(). */
+    extern unsigned g_mz800_exvram_installed;
+
+    /**
+     * @brief Osadí nebo odpojí rozšíření VRAM MZ-1R25 (roviny III a IV).
+     *
+     * Bez rozšíření čte video fetch i CPU z rovin III a IV 0FFh a zápisy do
+     * nich se ztratí (mz800-knowledge hw/10-vram-organization.md; C model
+     * netlistu gdg-mz800 gdg-documented/20-extended-vram-missing.md, model
+     * VRAM s vc_installed = 0). Co čte GDG z neosazených patic na skutečném
+     * MZ-800, je na HW neověřené [neověřeno]. Obsah g_memory.EXVRAM zůstává
+     * (snapshot, debugger) a po novém osazení je zase vidět.
+     *
+     * Bez kontroly v rychlé cestě: přepíná jen ukazatele rovin.
+     *
+     * @param installed Nenulové = osazeno.
+     * @pre Emu vlákno, nebo neběžící emulace.
+     * @post g_mz800_exvram_installed, g_memoryVRAM_III/IV a *_WR odpovídají.
+     */
+    extern void mz800_memory_set_exvram(unsigned installed);
 
     /*
      *
@@ -101,6 +132,21 @@ extern "C"
 
 #define MEMORY_MZ800_MAP_TEST_VRAM_8000 ((!GDG_MZ800_DMD_TEST_MZ700) && MEMORY_MZ800_MAP_TEST_VRAM)
 #define MEMORY_MZ800_MAP_TEST_VRAM_A000 (MEMORY_MZ800_MAP_TEST_VRAM_8000 && GDG_MZ800_DMD_TEST_SCRW640)
+
+/**
+ * @brief Nedokumentované režimy DMD 0Ch až 0Fh (režim MZ-700 s bitem 640).
+ *
+ * Podle C modelu netlistu GDG (emu-experiments hw-fixes/research/dmd0c/SPEC.md,
+ * pravidlo 3) má buňka VRAM v těchto režimech adresu jako v 640x200: CPU
+ * adresa a jde na offset roviny I (a >> 1) & 1FFFh (A0 se neuplatní) a okno
+ * VRAM je 0A000h až 0DFFFh, když je připojená CG-RAM (jinak jen 0D000h až
+ * 0DFFFh). Na stroji změřeno jen to, že bajt zapsaný v 0Ch se přečte v 0Fh
+ * a ne v 08h (mz800-knowledge hw-measurement/vysledky.md oddíl 17, U5);
+ * okno 0A000h až 0BFFFh je jen z modelu [neověřeno na HW].
+ */
+#define MEMORY_MZ800_MAP_TEST_DMD0C ((g_gdg.regDMD & 0x0c) == 0x0c)
+/** @brief Okno 0A000h až 0BFFFh v DMD 0Ch až 0Fh (text a atributy, viz MEMORY_MZ800_MAP_TEST_DMD0C). */
+#define MEMORY_MZ800_MAP_TEST_VRAM700_A000 (MEMORY_MZ800_MAP_TEST_CGRAM && MEMORY_MZ800_MAP_TEST_DMD0C)
 
     // static inline int memory_test_addr_is_vram(uint16_t addr)
     // {

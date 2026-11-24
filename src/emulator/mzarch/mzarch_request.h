@@ -40,6 +40,14 @@ uint32_t mzarch_request_mode_sw_set(int mode);
  * @return Pořadové číslo zásahu (od 1).
  */
 uint32_t mzarch_request_allow_psg1(bool allow);
+
+/**
+ * @brief Zařadí osazení nebo odpojení rozšíření VRAM MZ-1R25
+ *        (mz800_memory_set_exvram()) a překreslení obrazu.
+ * @param installed true = osazeno (32 KB VRAM), false = jen 16 KB.
+ * @return Pořadové číslo zásahu (od 1).
+ */
+uint32_t mzarch_request_exvram(bool installed);
 #endif
 
 /**

@@ -63,8 +63,18 @@ extern "C"
 #define TEST_HWSCRL_ENABLED (g_hwscroll.enabled)
 #define TEST_HWSCRL_ADDR_IN_SCRL_AREA(addr) ((addr >= g_hwscroll.regSSA) && (addr < g_hwscroll.regSEA))
 #define TEST_HWSCRL_ADDR_IN_SCRL_AREA_UPDOWN(addr) (addr >= (g_hwscroll.regSEA - g_hwscroll.regSOF))
-#define HWSCRL_SHIFT_UP(addr) (addr + g_hwscroll.regSOF)
-#define HWSCRL_SHIFT_DOWN(addr) (addr + g_hwscroll.regSOF - g_hwscroll.regSW)
+/**
+ * @brief Maska posunuté adresy roviny VRAM (13 bitů, 8 KB).
+ *
+ * Při SW = SEA - SSA zůstane posunutá adresa v oblasti SSA až SEA - 1. Stroj
+ * ale scroll zapne i při porušení této rovnosti (mz800-knowledge
+ * hw/10c-hw-scroll.md, OPRAVA 2026-11-22) a adresa pak může vyjít mimo
+ * rozsah; sčítačka adresy v GDG přeteče v 13 bitech (hypotéza, podle šířky
+ * adresy roviny), emulátor tak nikdy nečte mimo rovinu.
+ */
+#define HWSCRL_ADDR_MASK 0x1fffu
+#define HWSCRL_SHIFT_UP(addr) ((addr + g_hwscroll.regSOF) & HWSCRL_ADDR_MASK)
+#define HWSCRL_SHIFT_DOWN(addr) ((addr + g_hwscroll.regSOF - g_hwscroll.regSW) & HWSCRL_ADDR_MASK)
 #define HWSCRL_SHIFT_UPDOWN(addr) ((TEST_HWSCRL_ADDR_IN_SCRL_AREA_UPDOWN(addr)) ? HWSCRL_SHIFT_DOWN(addr) : HWSCRL_SHIFT_UP(addr))
 
     static inline unsigned hwscroll_shift_addr(unsigned addr)

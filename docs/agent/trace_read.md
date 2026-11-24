@@ -55,6 +55,13 @@ Records still in the RAM buffer are readable too, so even a short run
 - `t` = GDG ticks since emulation start (the same clock in all channels,
   so cputrack rows can be matched with iorqlog rows by time). `frame` =
   emulated frame, `pos` = ticks since the start of the frame.
+- iorqlog `t` is the end of the I/O cycle including wait states; `pulse`
+  is the /IORQ pulse length in pixel clock ticks including wait states
+  (2.5 CPU T-states without waits: 12 on the MZ-800 and the PAL MZ-700,
+  10 on the NTSC MZ-700 and the MZ-1500; capped at 255), so the falling edge of /IORQ lies about `pulse` + 3
+  ticks before `t`. Rows of type `mreq_mapped` (MMIO in MZ-700 mode, no
+  /IORQ) carry 0, as do recordings made by versions before this field
+  was filled.
 - intlog `t` of a `pin_edge` row is the moment the emulator processed
   the change, i.e. the end of the instruction in progress (in HALT the
   end of the current 4 T-state step), not the moment of the edge itself.

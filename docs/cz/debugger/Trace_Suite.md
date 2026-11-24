@@ -421,7 +421,7 @@ compiler ABI - layout viz `docs/cz/debugger/formats/HW-log_INITIAL_STATE_format.
 
 Header obsahuje per-chip děličky:
 `psgclk_divider_cpuclk`, `tempo_divider_screen_rows`,
-`ctc0_clk1m1_divider_pxclk`, `pio8255_cursor_divider_screens`.
+`ctc0_clk1m1_divider_pxclk`, `ctc0_clk1m1_phase_pxclk`, `pio8255_cursor_divider_screens`.
 
 ### marklog (24 B)
 

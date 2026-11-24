@@ -739,6 +739,10 @@ static char *build_subsys_header_json ( void )
     json_builder_add_int_value ( b, (gint64) GDGCLK2CPU_DIVIDER );
     json_builder_set_member_name ( b, "ctc0_clk1m1_divider_pxclk" );
     json_builder_add_int_value ( b, (gint64) GDGCLK_CTC0_DIVIDER );
+    /* Fáze CLK0: sestupná hrana při pxclk_total % dělič == fáze (MZ-800 6,
+     * změřeno; MZ-700 a MZ-1500 0). */
+    json_builder_set_member_name ( b, "ctc0_clk1m1_phase_pxclk" );
+    json_builder_add_int_value ( b, (gint64) GDG_CTC0_CLK_PHASE_TICKS );
     json_builder_set_member_name ( b, "pio8255_cursor_divider_screens" );
     json_builder_add_int_value ( b, 25 );
     json_builder_end_object ( b );

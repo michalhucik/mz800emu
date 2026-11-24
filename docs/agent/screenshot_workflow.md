@@ -101,6 +101,17 @@ How it works:
   `frame,file,gdg_screen` (`gdg_screen` = absolute GDG frame counter).
 - Only one series at a time; a second start is an error.
 
+**Pausing in the middle of a frame** (a breakpoint, `emu_pause`, stepping
+to a beam position) completes the picture with the machine state at the
+pause: the rows the beam has already passed are drawn again with the
+palette, mode and VRAM of that moment. When the run continues, the frame
+that then ends keeps those rows as of the pause, so a program that changes
+the palette or VRAM during the frame can show a picture that a continuous
+run does not. For the picture
+exactly as the machine draws it, take a frame series, or compare frames
+reached by `emu_run(frames=N)` from a frame boundary without pausing in
+between.
+
 **Recipe - capture 3 seconds of an animation exactly:**
 
 ```python

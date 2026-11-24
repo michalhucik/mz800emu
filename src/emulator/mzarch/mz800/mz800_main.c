@@ -15,6 +15,7 @@
 #include "mzarch/interrupt.h"
 #include "mzarch/mz800/gdg/mz800_gdg.h"
 #include "hw-generic/memory/memory.h"
+#include "mzarch/mz800/memory/mz800_memory.h"
 #include "hw-generic/ctc8253/ctc8253.h"
 #include "hw-generic/pio8255/pio8255.h"
 #include "hw-generic/cmt/cmt.h"
@@ -200,8 +201,14 @@ void mzarch_platform_fn_init(void)
                                                      MZ800_MODE_SW_MZ800, "MZ800",
                                                      -1);
         cfgelement_set_handlers(elm, (void *)&g_mzarch_main.mode_sw, (void *)&g_mzarch_main.mode_sw);
+
+        /* [MZ800] exvram - osazené rozšíření VRAM MZ-1R25 (roviny III a IV). */
+        CFGELM *elm_exvram = cfgmodule_register_new_element(cmod, "exvram", CFGENTYPE_BOOL, true);
+        cfgelement_set_handlers(elm_exvram, (void *)&g_mz800_exvram_installed, (void *)&g_mz800_exvram_installed);
+
         cfgmodule_parse(cmod);
         cfgmodule_propagate(cmod);
+        mz800_memory_set_exvram(g_mz800_exvram_installed);
 
         en_MZ800_MODE_SW cli_mode;
         if (sdlapp_option_present("--mode-switch")

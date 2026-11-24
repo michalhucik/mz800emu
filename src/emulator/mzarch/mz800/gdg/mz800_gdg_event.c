@@ -120,6 +120,8 @@ static inline void gdg_process_events(void)
          * /HSYNC (sloupec 0) a hranice zápisu vychází na stejném místě
          * s přesností půl pixelu. */
         g_gdg.row_shrink = g_gdg.cksw * GDG_CKSW_ROW_SHRINK;
+        /* Čítač adresy řádku pro další řádek podle DMD v tomto okamžiku. */
+        gdg_row_counter_advance();
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
         /* trace-suite hwlog: HBLN start edge (decimovaný). */
         if ( TEST_TRACE_HWLOG_DISPATCH ) {
@@ -298,6 +300,10 @@ static inline void gdg_process_events(void)
         };
 
         g_gdg.screen_need_update_from = 0;
+        g_gdg.canvas_split_x = 0;
+        g_gdg.mz700_skip_row = 0;
+        framebuffer_row_state_reset();
+        gdg_geometry_row_start();
 
         /* Řádek končí: jeho zkrácení (CKSW) přejde do součtu snímku, další
          * řádek je do načtení bitu v HBLN_START veden jako nezkrácený. */
@@ -307,6 +313,7 @@ static inline void gdg_process_events(void)
         if (g_gdg.beam_row < VIDEO_SCREEN_HEIGHT - 1)
         {
             g_gdg.beam_row++;
+            gdg_row_counter_enter_row();
         }
         else
         {
@@ -324,6 +331,7 @@ static inline void gdg_process_events(void)
             mz800_main_event_callback_screen_done();
 
             gdg_on_screen_done_event();
+            gdg_row_counter_enter_row();
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
             /* V1.5 fáze 2.2: HWE BP_EVENT_CURSOR edge-based fire.

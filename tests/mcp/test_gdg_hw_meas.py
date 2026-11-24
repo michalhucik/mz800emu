@@ -21,10 +21,12 @@ Kroky:
      M-cyklu zápisu, na hranici bodu režimu 320x200 (na stroji 3,5 nebo
      4,5 px po sestupné hraně /IORQ), i když zápis končí těsně za canvasem;
   7  přepnutí 320x200 -> 640x200 (0CEh) se projeví až na hranici 16 sloupců
-     canvasu, nejvýš 10 sloupců před koncem M-cyklu (na stroji první hranice
-     16 px aspoň 5,5 px po sestupné hraně /IORQ);
+     canvasu, nejvýš 8 sloupců před koncem M-cyklu (na stroji převezme registr
+     DMD v 334 + 16k px zápis se sestupnou hranou /IORQ nejpozději 1,5 px před
+     hranou; první měření -2,5 až 12,5 px, měření 8 U19); přechod na rozhraní smí
+     začít až 6 sloupců před hranicí (U19, viz test_gdg_hw_fixes krok 12);
   8  nový offset scrollu (01CFh) platí od hranice 16 sloupců canvasu, nejvýš
-     3 sloupce před koncem M-cyklu (na stroji hranice 11,5 až 26,5 px po
+     4 sloupce před koncem M-cyklu (na stroji hranice 11,5 až 26,5 px po
      sestupné hraně /IORQ);
   9  čtení Status registru (IN A,(0CEh)): bit HBLN je 1, když M-cyklus
      čtení končí ve sloupcích 154 až 793, bit HSYNC ve sloupcích 2 až 929
@@ -132,13 +134,15 @@ def _fill_vram(emu, body_hex):
     emu.call("set_register", {"reg": "PC", "value": h._LOOP})
 
 
-def _boundary_leads(emu, port, before, after, canvas, what, max_lead, restore=None):
+def _boundary_leads(emu, port, before, after, canvas, what, max_lead, restore=None, pre=0):
     """Zápisy na port v různých polohách; vrátí množinu (konec M-cyklu - hranice změny).
 
     Změna obrazu musí ležet vždy ve stejné vzdálenosti ``k`` za hranicí
     16 sloupců canvasu (podle obsahu VRAM se první odlišný bod nemusí krýt
     s hranicí) a hranice musí být první hranice 16 sloupců, která leží
-    nejvýš ``max_lead`` sloupců před koncem M-cyklu.
+    nejvýš ``max_lead`` sloupců před koncem M-cyklu. ``pre`` sloupců přechodu
+    smí ležet ještě před hranicí (přepnutí 320 -> 640: podle měření U19
+    a C modelu netlistu začíná přechod 3 sloupce před hranicí bajtu 320).
     """
     cases = []
     for pad_hex, pad_ticks in (("", 0), ("3e%02x" % after, 35)):
@@ -153,7 +157,7 @@ def _boundary_leads(emu, port, before, after, canvas, what, max_lead, restore=No
     k = ks.pop()
     leads = set()
     for end, change in cases:
-        bound = change - k
+        bound = change - k if k < 16 - pre else change - k + 16
         want = canvas + -(-(end - max_lead - canvas) // 16) * 16
         h.check(bound == want, f"{what}: takes effect at the first 16-column boundary at most {max_lead} columns "
                                f"before the M-cycle end (end {end}, boundary {bound}, expected {want})")
@@ -392,18 +396,18 @@ def run(exe):
         _fill_vram(emu, "210080" "11018001" "3f1f" "360f" "edb0")
         emu.call("io_write", {"port": 0x00F0, "value": 0x00})
         emu.call("io_write", {"port": 0x00F0, "value": 0x1F})
-        leads = _boundary_leads(emu, 0x00CE, 0x00, 0x04, canvas, "resolution switch", 10)
-        h.check(len(leads) >= 6 and min(leads) >= -5 and max(leads) <= 10,
-                f"resolution switch: boundary lies 10 columns before to 5 after the M-cycle end (leads {sorted(leads)})")
+        leads = _boundary_leads(emu, 0x00CE, 0x00, 0x04, canvas, "resolution switch", 8, pre=6)
+        h.check(len(leads) >= 6 and min(leads) >= -7 and max(leads) <= 8,
+                f"resolution switch: boundary lies 8 columns before to 7 after the M-cycle end (leads {sorted(leads)})")
         emu.call("io_write", {"port": 0x00CE, "value": 0x00})
 
         # 8 - offset scrollu od hranice 16 sloupců (VRAM: liché řádky FFh, sudé 00h; posun o řádek)
         _fill_vram(emu, "210080" "0ec8" "af" "0628" "772310fc" "2f" "0d" "20f6")
         for port, value in ((0x03CF, 0x7D), (0x04CF, 0x00), (0x05CF, 0x7D), (0x02CF, 0x00)):
             emu.call("io_write", {"port": port, "value": value})
-        leads = _boundary_leads(emu, 0x01CF, 0x00, 0x05, canvas, "scroll offset", 3)
-        h.check(len(leads) >= 6 and min(leads) >= -12 and max(leads) <= 3,
-                f"scroll offset: boundary lies 3 columns before to 12 after the M-cycle end (leads {sorted(leads)})")
+        leads = _boundary_leads(emu, 0x01CF, 0x00, 0x05, canvas, "scroll offset", 4)
+        h.check(len(leads) >= 6 and min(leads) >= -11 and max(leads) <= 4,
+                f"scroll offset: boundary lies 4 columns before to 11 after the M-cycle end (leads {sorted(leads)})")
         emu.call("io_write", {"port": 0x01CF, "value": 0x00})
 
         # 9 - okamžik vzorkování Status registru

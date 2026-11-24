@@ -48,6 +48,9 @@ void imgui_menu_devices(void)
         imgui_menu_ide8();
         imgui_menu_memext();
         imgui_menu_rom();
+#if MZARCH == 800
+        imgui_menu_mz800_exvram();
+#endif
 
 #if (MZARCH == 800) || (MZARCH == 1500)
         // Tiskárna (capture + plotter) existuje jen na architekturách se Z80 PIO

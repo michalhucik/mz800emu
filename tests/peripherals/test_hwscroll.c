@@ -147,9 +147,11 @@ void test_scroll_disable_keeps_elapsed_pixels ( void )
 void test_band_registers_keep_elapsed_pixels ( void )
 {
     check_port_write ( 0x02, 1, "SOF_HI 0 -> 1" );
-    check_port_write ( 0x03, 100, "SW 125 -> 100 (scroll off)" );
-    check_port_write ( 0x04, 1, "SSA 0 -> 1 (scroll off)" );
-    check_port_write ( 0x05, 100, "SEA 125 -> 100 (scroll off)" );
+    /* SW, SSA a SEA porušující SW = SEA - SSA scroll na MZ-800 nevypnou
+     * (měření U4, mz800-knowledge hw/10c-hw-scroll.md OPRAVA 2026-11-22). */
+    check_port_write ( 0x03, 100, "SW 125 -> 100 (scroll stays on)" );
+    check_port_write ( 0x04, 1, "SSA 0 -> 1 (scroll stays on)" );
+    check_port_write ( 0x05, 100, "SEA 125 -> 100 (scroll stays on)" );
 }
 
 

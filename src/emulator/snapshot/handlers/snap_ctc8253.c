@@ -143,7 +143,12 @@ static en_SNAPSHOT_RESULT snap_ctc8253_load(st_SNAPSHOT_CONTEXT *ctx)
 
 #ifdef MZ800EMU_CFG_CLK1M1_FAST
         /* CTC0 rychlá cesta; snapshot bez události (starší verze) ji
-         * naplánuje na nejbližší hranu CLK0 (GDG je už obnovený). */
+         * naplánuje na nejbližší hranu CLK0 (GDG je už obnovený).
+         * Snapshot MZ-800 uložený před změnou fáze CLK0 (do 883abab8, hrana
+         * při total_ticks % 16 == 0) pokračuje ve staré fázi, dokud se
+         * událost nepřeplánuje (nahrání děliče, hrana GATE0); násilné
+         * přeplánování by mohlo ztratit hrany od poslední zpracované do
+         * okamžiku uložení. Rozdíl nejvýš 10 tiků, jen u takových snapshotů. */
         if (i == CTC_CS0) {
             unsigned ev_ticks, base;
             if (snapshot_xml_read_uint(r, "clk1m1_event_ticks", &ev_ticks)

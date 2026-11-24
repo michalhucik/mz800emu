@@ -110,6 +110,22 @@ are accessible and `emulator://video/text_dump` returns data. The
 mode flip is detectable via `emulator://platform/info` (`mode` field
 = `native` / `compat700`).
 
+- Reads of `0xE009..0xE00F` in 700-compat mode: nothing drives the bus,
+  the CPU reads the last byte that was on it (as in the Prohibited state
+  above: `LD A,(0xE009)` reads `0xE0`, `LD A,(HL)` reads `0x7E`).
+  Measured on a real MZ-800.
+- DMD `0x0C..0x0F` (undocumented, the 700-compat bit together with the
+  640 bit): the picture is not the MZ-700 text screen, and `0xD000..0xDFFF`
+  does not reach the text and attribute bytes at their usual places: the
+  CPU address is shifted right by one bit (`0xD000` and `0xD001` hit the
+  same byte, offset = (address >> 1) & `0x1FFF`), and with the CG-RAM
+  mapped the VRAM window is `0xA000..0xDFFF` (not only `0xC000..0xDFFF`). Follows the simulation of the GDG
+  netlist; the picture was checked point by point against recordings
+  of a real MZ-800, where the writes go is not measured.
+- INI `[MZ800] exvram = 0` (menu HW & Devices > VRAM Extension MZ-1R25)
+  removes the VRAM extension: reads of planes III and IV return `0xFF`
+  and writes to them are dropped. Default 1 (installed).
+
 ## Memory expansion (Memext) replaces the RAM
 
 When a memory expansion is connected (INI `[MEMEXT] connected = 1`,

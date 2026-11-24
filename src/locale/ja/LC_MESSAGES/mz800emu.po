@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mz800emu 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-19 22:10+0100\n"
+"POT-Creation-Date: 2026-11-23 22:23+0100\n"
 "PO-Revision-Date: 2026-03-11 22:00+0100\n"
 "Last-Translator: Claude Code\n"
 "Language-Team: 日本語\n"
@@ -490,8 +490,8 @@ msgid ""
 "The range is 0 to 200 %; values above 100 amplify the sound. Double-click to "
 "reset to 100."
 msgstr ""
-"範囲は 0 から 200 % です。100 を超える値は音を増幅します。ダブルクリックで 100 に"
-"戻ります。"
+"範囲は 0 から 200 % です。100 を超える値は音を増幅します。ダブルクリックで "
+"100 に戻ります。"
 
 #: src/ui-imgui/audio_window.cpp:213
 #: src/ui-imgui/overlay/overlay_tab_sound.cpp:248
@@ -13978,15 +13978,27 @@ msgstr "文字ごと"
 msgid "Per pair of characters"
 msgstr "2文字ごと"
 
-#: src/ui-imgui/mz800/topmenu/devices/menu_mz800_hw_compat.cpp:23
+#: src/ui-imgui/mz800/topmenu/devices/menu_mz800_hw_compat.cpp:33
+msgid "VRAM Extension MZ-1R25"
+msgstr "VRAM増設 MZ-1R25"
+
+#: src/ui-imgui/mz800/topmenu/devices/menu_mz800_hw_compat.cpp:37
+msgid ""
+"Optional extension of the video RAM from 16 KB to 32 KB (planes III and IV). "
+"Without it, frame B, the 16-color mode and the 4-color 640x200 mode show "
+"only some of the colors: planes III and IV read as 0xFF and writes to them "
+"are lost."
+msgstr "ビデオRAMを16 KBから32 KBに増設するオプションです(プレーンIIIとIV)。増設なしでは、フレームB、16色モード、640x200の4色モードで一部の色しか表示されません。プレーンIIIとIVは0xFFとして読み出され、書き込みは失われます。"
+
+#: src/ui-imgui/mz800/topmenu/devices/menu_mz800_hw_compat.cpp:42
 msgid "HW Compatibility Experiments"
 msgstr "HW互換性実験"
 
-#: src/ui-imgui/mz800/topmenu/devices/menu_mz800_hw_compat.cpp:25
+#: src/ui-imgui/mz800/topmenu/devices/menu_mz800_hw_compat.cpp:44
 msgid "Allow PSG1 (stereo)"
 msgstr "PSG1を有効化（ステレオ）"
 
-#: src/ui-imgui/mz800/topmenu/devices/menu_mz800_hw_compat.cpp:29
+#: src/ui-imgui/mz800/topmenu/devices/menu_mz800_hw_compat.cpp:48
 msgid ""
 "Enables a second PSG (SN76489), providing stereo sound similar to the "
 "MZ-1500. Port 0xF2 is still used as a mono audio PSG (left + right "

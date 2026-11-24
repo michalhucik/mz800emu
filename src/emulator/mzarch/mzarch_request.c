@@ -15,6 +15,8 @@
 
 #if MZARCH == 800
 #include "mz800/mz800_main.h"
+#include "mz800/memory/mz800_memory.h"
+#include "mz800/gdg/mz800_framebuffer.h"
 #endif
 
 
@@ -51,6 +53,25 @@ uint32_t mzarch_request_allow_psg1(bool allow)
     device_request_args_set_str(&a, NULL);
     a.i[0] = allow ? 1 : 0;
     return device_request_submit("allow_psg1", mzarch_request_exec_allow_psg1, &a);
+}
+
+
+/** @brief Zásah: rozšíření VRAM MZ-1R25 (i[0] 0/1). */
+static int mzarch_request_exec_exvram(const st_DEVICE_REQ_ARGS *a)
+{
+    mz800_memory_set_exvram(a->i[0] ? 1u : 0u);
+    /* obsah rovin III a IV se mění najednou: obraz celý znovu */
+    g_framebuffer.screen_changes = SCRSTS_THIS_IS_CHANGED;
+    return 0;
+}
+
+
+uint32_t mzarch_request_exvram(bool installed)
+{
+    st_DEVICE_REQ_ARGS a;
+    device_request_args_set_str(&a, NULL);
+    a.i[0] = installed ? 1 : 0;
+    return device_request_submit("exvram", mzarch_request_exec_exvram, &a);
 }
 #endif /* MZARCH == 800 */
 

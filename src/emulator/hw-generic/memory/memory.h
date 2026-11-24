@@ -146,7 +146,7 @@ extern "C"
         MEMMAP_KIND_PCG_2,           /**< MZ-1500: PCG bank 2 (SPEC=3). */
         MEMMAP_KIND_PCG_3,           /**< MZ-1500: PCG bank 3 (SPEC=4). */
         MEMMAP_KIND_MAPPED_PORTS,    /**< MZ-700 / MZ-800 v MZ-700 modu / MZ-1500: 0xE000-0xE00F mapped PIO/CTC/GDG ports. */
-        MEMMAP_KIND_PROHIBITED,      /**< MZ-700/800: Prohibited mode (OUT E5) - čtení vrací 0x1A / 0xFF shadow. */
+        MEMMAP_KIND_PROHIBITED,      /**< MZ-700/800: Prohibited mode (OUT E5) - čtení vrací na MZ-800 poslední bajt na datové sběrnici, na MZ-700 0xFF. */
         MEMMAP_KIND_UNMAPPED         /**< Nedefinovaný / 0xFF (např. MZ-1500 F000-FFFF + SPEC active). */
     } en_MEMMAP_REGION_KIND;
 

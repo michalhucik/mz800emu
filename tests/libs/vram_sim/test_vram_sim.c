@@ -114,6 +114,11 @@ static void test_hwscroll_recompute_enable_conditions(void)
     state.hwscroll_sw = state.hwscroll_sof;
     vram_sim_recompute_hwscroll_enabled(&state);
     TEST_ASSERT_EQUAL_UINT8(0, state.hwscroll_enabled);
+
+    /* SW != SEA - SSA scroll nevypne (OPRAVA báze 2026-11-22, jako emulátor). */
+    state.hwscroll_sw = (uint16_t)(state.hwscroll_sea - state.hwscroll_ssa - 0x0040);
+    vram_sim_recompute_hwscroll_enabled(&state);
+    TEST_ASSERT_EQUAL_UINT8(1, state.hwscroll_enabled);
 }
 
 static void test_hwscroll_shift_up_and_down(void)

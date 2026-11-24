@@ -16,9 +16,7 @@
 
 ## Emulace
 
-- Přeměřit na reálném HW: `VIDEO_H_BACK_PORCH_TICKS`, `VIDEO_H_FRONT_PORCH_TICKS` (aktuálně 104+39=143, ale přesný split není ověřený)
-- MZ-800: možnost odpojit přídavnou VRAM (počítač bez rozšíření MZ-1R25, jen základních 16 kB, roviny I a II). Na takovém počítači čtení z rovin III a IV vrací 0xFF a zápis do nich nemá účinek.
-- MZ-800, režimy 640x200: na skutečném počítači začíná canvas o 2 body a border o 1 bod dřív než v režimech 320x200. Emulátor kreslí všechny režimy na stejném místě; v plánu je posunout canvas i border.
+- MZ-700 a MZ-1500: přeměřit na reálném HW `VIDEO_H_BACK_PORCH_TICKS` a `VIDEO_H_FRONT_PORCH_TICKS` (MZ-700 NTSC a MZ-1500 aktuálně 104 + 39, MZ-700 PAL 136 + 216; přesné rozdělení není ověřené). MZ-800 je na skutečném počítači ověřený: HSYNC 80, back porch 106, zobrazení 928, front porch 22 bodů, řádek 1136 bodů.
 - MZ-1500 gdg: ověřit nepřítomnost VRAM latch
 - Přesný takt: emulátor odvozuje takt od celých snímků za sekundu, ne od krystalu. PAL běží na 17 721 600 Hz místo 17 734 475 Hz (o 0,07 % pomaleji), NTSC na 14 336 640 Hz místo 14 318 180 Hz (o 0,13 % rychleji); stejně se posouvá všechno odvozené, včetně tónů CTC0. V plánu je přesnější emulace: počet taktů na snímek zůstane stejný, ale převod na skutečný čas (zvuk, nahrávání AVI, zápis a čtení WAV kazety, synchronizace bez zvuku) bude vycházet z frekvence krystalu, případně jako volitelné nastavení.
 

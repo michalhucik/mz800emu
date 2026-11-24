@@ -20,6 +20,9 @@
 #include "snapshot/snapshot.h"
 #include "hw-generic/memory/memory.h"
 #include "hw-generic/memory/memext.h"
+#if MZARCH == 800
+#include "mzarch/mz800/memory/mz800_memory.h"
+#endif
 #include "hw-generic/pio8255/pio8255.h"
 #include "hw-generic/fdc/fdc.h"
 #include "hw-generic/qdisk/qdisk.h"
@@ -101,6 +104,9 @@ static void mh_memmap(GChecksum *cs)
 #endif
 #if MZARCH == 800
     mh_u32(cs, (uint32_t)g_mzarch_main.mz800_hwcompat_allow_psg1);
+    /* Rozšíření VRAM jen bez něj, aby otisk stroje s rozšířením zůstal jako
+     * před zavedením volby. */
+    if (!g_mz800_exvram_installed) mh_u32(cs, 0x4558u);
 #endif
     mh_u32(cs, (uint32_t)g_memext.connection);
     mh_u32(cs, (uint32_t)g_memext.type);

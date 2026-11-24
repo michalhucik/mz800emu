@@ -197,7 +197,9 @@ extern void vram_sim_attach_emu_planes(st_VRAM_SIM_STATE *state);
  *  - SEA >= 0x0140
  *  - SW > SOF
  *  - SEA > SSA
- *  - SW == (SEA - SSA)
+ *
+ * Rovnost SW == SEA - SSA podmínkou není: na MZ-800 její porušení scroll
+ * nevypne (mz800-knowledge hw/10c-hw-scroll.md, OPRAVA 2026-11-22).
  *
  * Volat po manuální změně SOF/SW/SSA/SEA v state.
  *
@@ -359,10 +361,9 @@ extern uint8_t vram_sim_cpu_planes(const st_VRAM_SIM_STATE *state);
  *  - addr >= SEA - SOF: posun dolů (addr + SOF - SW)
  *  - jinak: posun nahoru (addr + SOF)
  *
- * Edge case: shift výsledek může přesáhnout 0x1FFF (např. SOF velký +
- * addr blízko SEA). Konzument by měl maskovat `& 0x1FFF` před indexem
- * do `plane_data[]`. Sim sám bounds check nedělá - kopíruje 1:1 chování
- * emu kódu kde `hwscroll_shift_addr()` má stejnou edge case.
+ * Posunutá adresa přeteče v 13 bitech (výsledek `& 0x1FFF`) stejně jako
+ * v `hwscroll_shift_addr()` emulátoru (HWSCRL_ADDR_MASK), takže je vždy
+ * platný index do `plane_data[]`.
  *
  * @param[in] state
  * @param[in] phy_offset  Fyzický offset uvnitř plane (typicky 0..0x1FFF)

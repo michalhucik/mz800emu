@@ -21,7 +21,7 @@
  * | 18     | 2 B      | source_addr (regBC pro IORQ, regPC pro MREQ)   |
  * | 20     | 2 B      | port_or_addr                                   |
  * | 22     | 1 B      | value                                          |
- * | 23     | 1 B      | pulse_duration_pxclk (s WAIT delší)            |
+ * | 23     | 1 B      | pulse_duration_pxclk (2,5 T bez WAIT, s WAIT delší; MREQ 0) |
  *
  * @author Michal Hucik <hucik@ordoz.com>
  */
@@ -160,6 +160,21 @@ int iorqlog_save_segment ( const char *path );
  *         nebo neaktivní subsystém.
  */
 int iorqlog_is_truncated ( void );
+
+/**
+ * @brief Délka pulzu /IORQ (pxCLK) pro záznam: 2,5 T bez čekání plus čekací takty.
+ *
+ * Na MZ-800 změřeno 12,5 px u OUT bez čekání (emu-experiments gdg-meas,
+ * VYSLEDKY15.md); bere se 5 * GDGCLK2CPU_DIVIDER / 2 (MZ-800 a MZ-700 PAL 12,
+ * MZ-700 NTSC a MZ-1500 10) a GDGCLK2CPU_DIVIDER za každý TW, nasyceno na 255.
+ *
+ * Makro: GDGCLK2CPU_DIVIDER se bere v místě použití (obsluhy I/O platforem),
+ * tato hlavička architekturu nezná.
+ *
+ * @param wait_tstates Čekací takty přidané během tohoto I/O cyklu (uint32_t).
+ * @return Délka pulzu v pxCLK (uint8_t, 0 až 255).
+ */
+#define iorqlog_pulse_pxclk( wait_tstates )     ( (uint8_t) ( ( ( 5u * GDGCLK2CPU_DIVIDER ) / 2u + (uint32_t) ( wait_tstates ) * GDGCLK2CPU_DIVIDER > 255u )                   ? 255u : ( ( 5u * GDGCLK2CPU_DIVIDER ) / 2u + (uint32_t) ( wait_tstates ) * GDGCLK2CPU_DIVIDER ) ) )
 
 /**
  * @brief Hot-path hook - emit eventu po I/O operaci.

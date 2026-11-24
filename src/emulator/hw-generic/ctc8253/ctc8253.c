@@ -242,8 +242,9 @@ static inline unsigned ctc8253_misses_rising_edge(unsigned p, unsigned rise2)
  * náběžnou hranou se proto nahraje až druhou sestupnou hranou.
  *
  * - CLK0 = 1M1 (pxCLK / GDGCLK_CTC0_DIVIDER): sestupná hrana tam, kde je
- *   total_ticks % GDGCLK_CTC0_DIVIDER == 0, náběžná v polovině periody
- *   (změřeno 8,1/16; u děliče 13 v MZ-700 NTSC neměřeno [neověřeno]).
+ *   total_ticks % GDGCLK_CTC0_DIVIDER == GDG_CTC0_CLK_PHASE_TICKS (na MZ-800
+ *   0,0 až 0,2 px po sestupné hraně HSYNC, změřeno), náběžná v polovině
+ *   periody (změřeno 8,1/16; u děliče 13 v MZ-700 NTSC neměřeno [neověřeno]).
  *   Změřeno: první hranu stihnou 4 fáze ze 16.
  * - CLK1 = HSYNC: LOW od sestupné hrany (sloupec VIDEO_REAL_HSYNC_START_COLUMN,
  *   kde se volá ctc8253_clkfall(CTC_CS1)) po dobu VIDEO_H_SYNC_TICKS
@@ -275,7 +276,7 @@ static unsigned ctc8253_load_skips_edge(unsigned cs, unsigned ticks)
 
     default:
     {
-        unsigned p = (unsigned)(gdg_compute_total_ticks(ticks) % GDGCLK_CTC0_DIVIDER);
+        unsigned p = (unsigned)((gdg_compute_total_ticks(ticks) + GDGCLK_CTC0_DIVIDER - GDG_CTC0_CLK_PHASE_TICKS) % GDGCLK_CTC0_DIVIDER);
         return ctc8253_misses_rising_edge(p, GDGCLK_CTC0_DIVIDER);
     }
     };

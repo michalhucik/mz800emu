@@ -131,9 +131,9 @@ int mz800_regions_collect(st_REGION_DESC *out, int max_count)
      * Plane IV: g_memory.EXVRAM[0x2000..0x3FFF]
      * Pointery: g_memoryVRAM_I/II/III/IV.
      *
-     * Plane III/IV jsou "connected" jen pokud je připojené EXVRAM rozšíření.
-     * Emu detection není (TODO viz framebuffer.c:274, vramctrl.c:70).
-     * Pro V-1b enumerujeme jako connected=1 a noted v doc.
+     * Plane III/IV jsou "connected" jen pokud je osazené rozšíření VRAM
+     * MZ-1R25 (g_mz800_exvram_installed, volba [MZ800] exvram). Debugger
+     * čte a zapisuje g_memory.EXVRAM přímo i bez osazení.
      *
      * mapped_now: 1 pokud DMD je v MZ-800 native modu a VRAM flag set. */
     int mz800_vram_mapped =
@@ -155,12 +155,12 @@ int mz800_regions_collect(st_REGION_DESC *out, int max_count)
      * přímo - je viditelný jen pro GDG. Logical_base = 0xFFFFFFFF. */
     dbgapi_regions_add(out, &count, max_count,
         REGION_KIND_VRAM_PHYS_PLANE, 2, "VRAM plane III (8 KB, exVRAM)",
-        0xFFFFFFFFu, MEMORY_SIZE_VRAM_BANK, 1, 1, 0);
+        0xFFFFFFFFu, MEMORY_SIZE_VRAM_BANK, 1, g_mz800_exvram_installed ? 1 : 0, 0);
 
     /* Plane IV (EXVRAM druhá půlka, 8 KB). Dtto. */
     dbgapi_regions_add(out, &count, max_count,
         REGION_KIND_VRAM_PHYS_PLANE, 3, "VRAM plane IV (8 KB, exVRAM)",
-        0xFFFFFFFFu, MEMORY_SIZE_VRAM_BANK, 1, 1, 0);
+        0xFFFFFFFFu, MEMORY_SIZE_VRAM_BANK, 1, g_mz800_exvram_installed ? 1 : 0, 0);
 
     /* ---- Memext: RAM + FLASH banky. ---- *
      * Luftner: 128 RAM banks (4 KB) + 128 FLASH banks (rawbank 0x80..0xFF).
@@ -240,12 +240,13 @@ int mz800_regions_collect(st_REGION_DESC *out, int max_count)
         }
     }
 
-    /* ---- PROHIBITED shadow: virtuální region $E009-$FFFF vracející 0x1A. ---- *
+    /* ---- PROHIBITED shadow: virtuální region $E009-$FFFF vracející poslední
+     * bajt na datové sběrnici (měření na MZ-800; zákaz platí od $E000). ---- *
      * Enumerujeme jen pokud aktuálně aktivní (OUT 0xE5). Velikost = 0x10000
      * - 0xE009 = 0x1FF7 bajtů (= 8183). Logical base 0xE009. */
     if (MEMORY_MZ800_MAP_TEST_PROHIBITED) {
         dbgapi_regions_add(out, &count, max_count,
-            REGION_KIND_PROHIBITED_SHADOW, 0, "Prohibited shadow (0x1A)",
+            REGION_KIND_PROHIBITED_SHADOW, 0, "Prohibited shadow (last bus byte)",
             0xE009, 0x10000 - 0xE009, 0, 1, 1);
     }
 

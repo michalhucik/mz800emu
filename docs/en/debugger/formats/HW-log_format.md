@@ -207,7 +207,9 @@ Payload:
 
 The header contains the **CTC0 1M1 divider** in
 `subsys_header.chip_dividers.ctc0_clk1m1_divider_pxclk` (= 16 on
-mz800/mz1500 = pxCLK/16 ~ 1.108 MHz on mz800).
+mz800/mz1500 = pxCLK/16 ~ 1.108 MHz on mz800) and its phase in
+`ctc0_clk1m1_phase_pxclk`: the CLK0 falling edge is at
+`pxclk_total % divider == phase` (6 on mz800, 0 on mz700 and mz1500).
 
 ### QD (0x30)
 

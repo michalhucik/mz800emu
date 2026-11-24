@@ -201,7 +201,8 @@ Payload:
 ```
 
 Header obsahuje **CTC0 1M1 dělička** v `subsys_header.chip_dividers.ctc0_clk1m1_divider_pxclk`
-(= 16 na mz800/mz1500 = pxCLK/16 ≈ 1.108 MHz na mz800).
+(= 16 na mz800/mz1500 = pxCLK/16 ≈ 1.108 MHz na mz800) a jeho fázi v `ctc0_clk1m1_phase_pxclk`:
+sestupná hrana CLK0 leží v `pxclk_total % dělička == fáze` (6 na mz800, 0 na mz700 a mz1500).
 
 ### QD (0x30)
 

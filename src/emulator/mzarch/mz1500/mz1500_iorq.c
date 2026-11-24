@@ -488,6 +488,7 @@ uint8_t port_read_with_logging_cb(z80_t *cpu, uint16_t addr, void *user_data)
     };
     g_tracelog_iorq_unconnected = 0;
     g_dbg_in_cpu_path = 1;
+    uint32_t wait_before = g_mzarch_main.instruction_wait_tstates;
     uint8_t value = port_read_cb(cpu, addr, user_data);
     g_dbg_in_cpu_path = 0;
     if (TEST_TRACE_IORQLOG_ACTIVE) {
@@ -495,7 +496,8 @@ uint8_t port_read_with_logging_cb(z80_t *cpu, uint16_t addr, void *user_data)
         en_IORQLOG_EVENT_TYPE etype = g_tracelog_iorq_unconnected
             ? IORQLOG_EVENT_IORQ_UNCONNECTED
             : IORQLOG_EVENT_IORQ;
-        iorqlog_record(etype, IORQLOG_DIR_IN, bc, addr, value, 0u);
+        iorqlog_record(etype, IORQLOG_DIR_IN, bc, addr, value,
+                       iorqlog_pulse_pxclk(g_mzarch_main.instruction_wait_tstates - wait_before));
     }
     /* I/O Ports panel activity tracking + history - gated default OFF. */
     if ( g_io_window_tracking_active ) {
@@ -543,6 +545,7 @@ void port_write_with_logging_cb(z80_t *cpu, uint16_t addr, uint8_t value, void *
     };
     g_tracelog_iorq_unconnected = 0;
     g_dbg_in_cpu_path = 1;
+    uint32_t wait_before = g_mzarch_main.instruction_wait_tstates;
     port_write_cb(cpu, addr, value, user_data);
     g_dbg_in_cpu_path = 0;
     if (TEST_TRACE_IORQLOG_ACTIVE) {
@@ -550,7 +553,8 @@ void port_write_with_logging_cb(z80_t *cpu, uint16_t addr, uint8_t value, void *
         en_IORQLOG_EVENT_TYPE etype = g_tracelog_iorq_unconnected
             ? IORQLOG_EVENT_IORQ_UNCONNECTED
             : IORQLOG_EVENT_IORQ;
-        iorqlog_record(etype, IORQLOG_DIR_OUT, bc, addr, value, 0u);
+        iorqlog_record(etype, IORQLOG_DIR_OUT, bc, addr, value,
+                       iorqlog_pulse_pxclk(g_mzarch_main.instruction_wait_tstates - wait_before));
     }
     /* I/O Ports panel activity tracking + history - gated default OFF. */
     if ( g_io_window_tracking_active ) {

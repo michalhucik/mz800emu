@@ -70,7 +70,8 @@
  *	Pokud neni nastaven search, tak cteme tu rovinu, ktera je vybrana ( bit ma nastaveno 1).
  *      	Cteni z vice rovin neni podporovano a vraci 0x00.
  *		Pokud neni vybrana zadna rovina, tak cteme 0xff.
- *		Pokud neni pripojena EXVRAM, tak z ni cteme 0xff.
+ *		Pokud neni pripojena EXVRAM, tak z ni cteme 0xff (g_memoryVRAM_III/IV,
+ *		mz800_memory_set_exvram()), zapis do ni se ztrati (g_memoryVRAM_III_WR/IV_WR).
  *
  *	V rezimu SEARCH cteme automaticky ze vsech dostupnych rovin soucasne a vracime 1 tam, kde vysledna hodnota barevne
  *	kombinace pixelu odpovida hledane kombinaci, ktera je urcena nastavenim bitu 0. - 3. RF registru.
@@ -1160,7 +1161,7 @@ inline void vramctrl_mz800_memop_write_byte(uint16_t addr, uint8_t value)
             };
             break;
         };
-        g_memoryVRAM_III[phy_vram_addr] = wrvalue;
+        g_memoryVRAM_III_WR[phy_vram_addr] = wrvalue;
     };
 
     if (WE & DEF_PLANE4)
@@ -1235,7 +1236,7 @@ inline void vramctrl_mz800_memop_write_byte(uint16_t addr, uint8_t value)
             };
             break;
         };
-        g_memoryVRAM_IV[phy_vram_addr] = wrvalue;
+        g_memoryVRAM_IV_WR[phy_vram_addr] = wrvalue;
     };
 
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED

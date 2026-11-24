@@ -37,12 +37,9 @@ void vram_sim_capture_from_emu(st_VRAM_SIM_STATE *state)
     state->hwscroll_sea     = (uint16_t)(g_hwscroll.regSEA);
     state->hwscroll_enabled = (uint8_t)(g_hwscroll.enabled);
 
-    /*
-     * exVRAM je v emu compile-time konstantou (DEF_USE_EXTVRAM = 1) -
-     * vždy přítomná. Pro budoucí runtime variantu (např. emulace
-     * konfigurace bez exVRAM) by se zde četl runtime flag.
-     */
-    state->has_exvram = 1;
+    /* Rozšíření VRAM MZ-1R25 jde odpojit volbou [MZ800] exvram
+     * (mz800_memory_set_exvram()). */
+    state->has_exvram = (uint8_t) ( g_mz800_exvram_installed ? 1 : 0 );
 
     vram_sim_attach_emu_planes(state);
 }
@@ -55,6 +52,8 @@ void vram_sim_attach_emu_planes(st_VRAM_SIM_STATE *state)
     state->plane_data[3] = g_memoryVRAM_IV;
     state->plane_data_writable[0] = g_memoryVRAM_I;
     state->plane_data_writable[1] = g_memoryVRAM_II;
-    state->plane_data_writable[2] = g_memoryVRAM_III;
-    state->plane_data_writable[3] = g_memoryVRAM_IV;
+    /* Bez rozšíření ukazují čtecí ukazatele III a IV na buffer samých 0FFh;
+     * zápis jde přes *_WR (odkládací buffer), takže čtení nepřepíše. */
+    state->plane_data_writable[2] = g_memoryVRAM_III_WR;
+    state->plane_data_writable[3] = g_memoryVRAM_IV_WR;
 }

@@ -169,6 +169,66 @@ extern "C"
          *  čte. */
         uint64_t vram_wrff_release;
 
+        /** Čítač adresy řádku video fetche: hodnota pro aktuální řádek
+         *  beam_row v jednotkách 40 bajtů. GDG má jediný čítač pro grafiku
+         *  i režim MZ-700: v grafice se zvětší každým řádkem rastru,
+         *  v režimu MZ-700 jen při přetečení řádku znaku (char_row 7 -> 0).
+         *  Nuluje se jen na prvním řádku canvasu; mimo canvas běží dál.
+         *  Grafika čte řádek VRAM row_addr (adresa 40 * row_addr + bajt),
+         *  režim MZ-700 offset textu a atributu (40 * row_addr + buňka)
+         *  mod 1024.
+         *
+         *  Změřeno na MZ-800 (mz800-knowledge hw-measurement/vysledky.md,
+         *  oddíly 17 až 19 a 21): po přepnutí z režimu MZ-700 do grafiky
+         *  na řádku canvasu S ukáže řádek S řádek VRAM S div 8, další +1;
+         *  po přepnutí z grafiky do režimu MZ-700 začne text od offsetu
+         *  (40 * S) mod 1024 a přetéká na 1024; textový řádek 25 pod
+         *  canvasem bere buňky 24 až 39 z offsetu 0 až 15. Běh mimo canvas
+         *  (přetečení na 1024 místo nulování za řádkem 25) podle C modelu
+         *  netlistu gdg-mz800; měření (buňka 16) obě varianty nerozliší.
+         *  Invariant: row_addr == row_addr_of_row[beam_row]. */
+        unsigned row_addr;
+
+        /** Řádek znaku 0 až 7 pro aktuální řádek beam_row: řádky rastru
+         *  od prvního řádku canvasu mod 8 (přepnutí DMD ho neovlivní). */
+        unsigned char_row;
+
+        /** row_addr a char_row pro řádek beam_row + 1. Spočítá je
+         *  gdg_row_counter_advance() v události MZEVENT_GDG_HBLN_START
+         *  podle DMD v tom okamžiku, převezme gdg_row_counter_enter_row()
+         *  na začátku dalšího řádku. */
+        unsigned row_addr_next;
+        unsigned char_row_next;
+
+        /** Hodnota čítače adresy řádku, se kterou se kreslí každý řádek
+         *  rastru (poslední průchod paprsku). Pro kreslení po řádcích
+         *  i pro vynucené překreslení celého obrazu; do snapshotu se
+         *  neukládá, po načtení ho obnoví gdg_row_counter_rebuild(). */
+        uint16_t row_addr_of_row[VIDEO_SCREEN_HEIGHT];
+
+        /** Bod canvasu, od kterého aktuální řádek kreslí grafiku po
+         *  přepnutí z režimu MZ-700 uprostřed řádku (body před ním zůstanou
+         *  v režimu MZ-700); 0 = bez přepnutí. Nastavuje
+         *  framebuffer_mode700_switch(), nuluje konec řádku. */
+        unsigned canvas_split_x;
+
+        /** beam_row + 1 řádku, který už nakreslilo přepnutí do režimu
+         *  MZ-700 uprostřed řádku: kreslení na konci HBLN ho přeskočí;
+         *  0 = žádný. Nuluje konec řádku. */
+        unsigned mz700_skip_row;
+
+        /** Geometrie aktuálního řádku podle režimu 640 (1) nebo 320 a MZ-700
+         *  (0) v okamžiku jednotlivých hran (měřeno na MZ-800, mz800-knowledge
+         *  hw-measurement/vysledky.md oddíly 12, 17 a 18): geom640_cs začátek
+         *  canvasu (338 / 340 px, sloupec 152 / 154), geom640_ce konec canvasu
+         *  (978 / 980 px, sloupec 792 / 794), geom640_be konec borderu
+         *  (1113 / 1114 px, poslední sloupec framebufferu 927 je v režimu 640
+         *  zatemnění). Na začátku řádku podle DMD, zápis DMD je mění podle
+         *  okamžiku zápisu (gdg_geometry_dmd_written()). */
+        unsigned geom640_cs;
+        unsigned geom640_ce;
+        unsigned geom640_be;
+
     } st_GDG;
 
     extern st_GDG g_gdg;
@@ -179,6 +239,63 @@ extern "C"
 
     extern void gdg_init(void);
     extern void gdg_reset(void);
+
+    /**
+     * @brief Spočítá čítač adresy řádku pro následující řádek rastru.
+     *
+     * Volá se v události MZEVENT_GDG_HBLN_START (sloupec 790 = 976 px po
+     * sestupné hraně HSYNC). Na stroji se čítač posouvá někde mezi 467,5 px
+     * řádku a 34 px dalšího řádku (přepnutí DMD v tomto rozmezí změřené
+     * není); přesný okamžik je [neověřeno]. Před prvním řádkem canvasu
+     * čítač i řádek znaku vynuluje, jinak se řádek znaku zvětší o 1 mod 8
+     * a čítač o 1 v grafice, v režimu MZ-700 jen při přetečení řádku znaku.
+     *
+     * @pre Emu vlákno; g_gdg.beam_row je řádek, jehož HBLN začíná.
+     * @post g_gdg.row_addr_next a g_gdg.char_row_next platí pro řádek
+     *       beam_row + 1 (za posledním řádkem snímku pro řádek 0).
+     */
+    extern void gdg_row_counter_advance(void);
+
+    /**
+     * @brief Převezme čítač adresy řádku pro nový řádek rastru.
+     *
+     * Volá se hned po posunu g_gdg.beam_row na konci řádku (i po přechodu
+     * na řádek 0 dalšího snímku).
+     *
+     * @pre Pro předchozí řádek proběhl gdg_row_counter_advance().
+     * @post g_gdg.row_addr == g_gdg.row_addr_of_row[g_gdg.beam_row].
+     */
+    extern void gdg_row_counter_enter_row(void);
+
+    /**
+     * @brief Nastaví čítač adresy řádku a historii po řádcích tak, jako by
+     *        celý snímek běžel v současném režimu DMD.
+     *
+     * Pro zapnutí a načtení snapshotu bez stavu čítače. V režimu MZ-700 je
+     * pro řádek s c řádky od začátku canvasu (mod počet řádků snímku)
+     * hodnota c div 8, v grafice c.
+     *
+     * @pre Emu vlákno, nebo neběžící emulace; g_gdg.beam_row a regDMD platí.
+     * @post row_addr, char_row a row_addr_of_row[] konzistentní; next
+     *       hodnoty odpovídají řádku beam_row + 1.
+     */
+    extern void gdg_row_counter_rebuild(void);
+
+    /**
+     * @brief Zda DMD dává geometrii obrazu režimu 640 (canvas o 2 px dřív).
+     *
+     * Režimy 04h až 07h a 0Ch až 0Fh (canvas 338 až 977 px, border 185 až
+     * 1113 px; DMD 0Ch až 0Fh podle C modelu netlistu i měření U5 na stroji).
+     */
+#define GDG_DMD_IS_GEOM640(dmd) (((dmd) & 0x04) ? 1u : 0u)
+
+    /**
+     * @brief Nastaví geometrii aktuálního řádku (st_GDG.geom640_*) podle DMD.
+     *
+     * Volá se na začátku řádku a po načtení snapshotu.
+     * @pre Emu vlákno.
+     */
+    extern void gdg_geometry_row_start(void);
     extern uint8_t gdg_read_dmd_status_memop(void);
 
     /**
@@ -338,7 +455,25 @@ extern "C"
  */
 #define gdg_get_insigeop_ticks() (g_gdg.total_elapsed.ticks)
 
-#define gdg_proximate_clk1m1_event(now_ticks) (now_ticks + (GDGCLK_CTC0_DIVIDER - (gdg_compute_total_ticks(now_ticks) % GDGCLK_CTC0_DIVIDER)))
+/**
+ * @brief Fáze sestupné hrany CLK0 obvodu 8253 (signál 1M1 = CKMS): hrana leží
+ *        tam, kde gdg_compute_total_ticks() % GDGCLK_CTC0_DIVIDER == tato hodnota.
+ *
+ * Změřeno na MZ-800 přímo na vývodech 8253 i na CKMS u GDG (mz800-knowledge
+ * hw/00-clock-domain.md, "Fáze CLK0 vůči řádku"; hw-measurement/vysledky.md,
+ * oddíly 8 a 23): sestupná hrana CLK0 leží 0,0 až 0,2 px po sestupné hraně
+ * HSYNC (mod 16 px), náběžná v 8,1 až 8,2 px; CKMS jde na CLK0 bez inverze.
+ * Sloupec 0 emulátoru je 186 px po hraně HSYNC, hrana tedy padá ve sloupcích
+ * 16k + 6 (186 + 6 = 192 = 12 * 16). Do opravy byla v emulátoru ve sloupcích
+ * 16k, tedy 10 px po hraně HSYNC.
+ */
+#define GDG_CTC0_CLK_PHASE_TICKS 6u
+
+/**
+ * @brief Čas první sestupné hrany CLK0 ostře po @p now_ticks (tiky snímku).
+ * @param now_ticks Tiky od začátku snímku.
+ */
+#define gdg_proximate_clk1m1_event(now_ticks) (now_ticks + (GDGCLK_CTC0_DIVIDER - ((gdg_compute_total_ticks(now_ticks) + GDGCLK_CTC0_DIVIDER - GDG_CTC0_CLK_PHASE_TICKS) % GDGCLK_CTC0_DIVIDER)))
 #define gdg_get_event_pointer() (&g_gdg.event)
 #define gdg_get_regct53g7() (g_gdg.regct53g7)
 

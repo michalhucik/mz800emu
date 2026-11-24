@@ -14,7 +14,7 @@
  * @c mz800_memory.c. Čtecí makra @c memory_internal_read_e000_efff a
  * @c memory_internal_read_f000_ffff testují @c PROHIBITED jako PRVNÍ
  * podmínku - resolver proto musí dělat totéž. Jinak vzniká rozpor ve stavu
- * "Prohibited aktivní, ROM_E000 neaktivní": CPU vrátí shadow bajt 0x1A a z
+ * "Prohibited aktivní, ROM_E000 neaktivní": CPU vrátí poslední bajt na sběrnici a z
  * paměti RAM nečte nic, ale resolver by přístup zaznamenal do regionu RAM.
  *
  * Pokrytí:
@@ -54,7 +54,7 @@ void tearDown(void)
 /*
  * Regresní test.
  *
- * Ve stavu "Prohibited aktivní, ROM_E000 neaktivní" čte CPU shadow bajt 0x1A
+ * Ve stavu "Prohibited aktivní, ROM_E000 neaktivní" čte CPU poslední bajt na sběrnici
  * (viz memory_internal_read_e000_efff - PROHIBITED je první podmínka) a k
  * paměti RAM se vůbec nedostane. Resolver proto nesmí hlásit fyzický cíl.
  *
@@ -103,7 +103,7 @@ void test_mhmap_prohibited_with_rom_e000(void)
 /*
  * Prohibited zastiňuje CELÉ $E000-$FFFF včetně oblasti mapovaných portů
  * $E000-$E008. Empiricky ověřeno na reálném stroji (banking-e800 v0.5,
- * test T4: $E001 vrací 0x1A, ne klávesnicový scan).
+ * test T4: $E001 nevrací klávesnicový scan, ale poslední bajt na sběrnici).
  */
 void test_mhmap_prohibited_covers_mapped_ports(void)
 {

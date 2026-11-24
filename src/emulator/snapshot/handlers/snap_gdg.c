@@ -18,6 +18,7 @@
 #include "customspeed.h"
 #if MZARCH == 800
 #include "mzarch/mz800/gdg/mz800_hwscroll.h"
+#include "mzarch/mz800/gdg/mz800_framebuffer.h"
 #endif
 
 /**
@@ -159,6 +160,19 @@ static en_SNAPSHOT_RESULT snap_gdg_save(st_SNAPSHOT_CONTEXT *ctx)
      * stavu: otisky v záznamech vstupů starších verzí ho neznají. */
     if (!ctx->for_hash)
         snapshot_xml_write_uint(w, "tempo_rows", g_gdg.tempo_rows);
+
+    /* Čítač adresy řádku video fetche (st_GDG.row_addr). Není součástí
+     * otisku stavu: otisky v záznamech vstupů starších verzí ho neznají
+     * a bez přepnutí DMD uprostřed snímku plyne z DMD a polohy paprsku. */
+    if (!ctx->for_hash)
+    {
+        snapshot_xml_open_element(w, "row_counter");
+        snapshot_xml_write_uint(w, "row_addr", g_gdg.row_addr);
+        snapshot_xml_write_uint(w, "char_row", g_gdg.char_row);
+        snapshot_xml_write_uint(w, "row_addr_next", g_gdg.row_addr_next);
+        snapshot_xml_write_uint(w, "char_row_next", g_gdg.char_row_next);
+        snapshot_xml_close_element(w);
+    }
 #endif
 
     /* Synchronizační signály */
@@ -461,6 +475,40 @@ static en_SNAPSHOT_RESULT snap_gdg_load(st_SNAPSHOT_CONTEXT *ctx)
         snapshot_xml_read_uint(r, "regSOF", &g_hwscroll.regSOF);
         snapshot_xml_read_uint(r, "enabled", &g_hwscroll.enabled);
         snapshot_xml_leave_element(r);
+    }
+#endif
+
+#if MZARCH == 800
+    /* Čítač adresy řádku: historii po řádcích odvodí z DMD, stav aktuálního
+     * řádku vezme ze snapshotu; starší snapshot bez elementu = ustálený
+     * stav podle DMD (gdg_row_counter_rebuild()). */
+    gdg_row_counter_rebuild();
+    /* Geometrie řádku (režim 640 v okamžiku hran) se neukládá: podle DMD.
+     * Stav kreslení vázaný na řádek (část řádku v režimu MZ-700, přepnutí
+     * 320 -> 640) patří předchozímu stroji: zapomenout. */
+    gdg_geometry_row_start();
+    g_gdg.canvas_split_x = 0;
+    g_gdg.mz700_skip_row = 0;
+    framebuffer_row_state_reset();
+    if (snapshot_xml_enter_element(r, "row_counter")) {
+        snapshot_xml_read_uint(r, "row_addr", &g_gdg.row_addr);
+        snapshot_xml_read_uint(r, "char_row", &g_gdg.char_row);
+        snapshot_xml_read_uint(r, "row_addr_next", &g_gdg.row_addr_next);
+        snapshot_xml_read_uint(r, "char_row_next", &g_gdg.char_row_next);
+        snapshot_xml_leave_element(r);
+        g_gdg.char_row &= 0x07;
+        g_gdg.char_row_next &= 0x07;
+        if ((g_gdg.row_addr >= VIDEO_SCREEN_HEIGHT) || (g_gdg.row_addr_next >= VIDEO_SCREEN_HEIGHT))
+        {
+            /* Čítač za běhu nepřesáhne počet řádků snímku (nuluje se na
+             * prvním řádku canvasu); jiná hodnota je poškozený snapshot
+             * a grafika by četla mimo rovinu VRAM: stav podle DMD. */
+            gdg_row_counter_rebuild();
+        }
+        else
+        {
+            g_gdg.row_addr_of_row[g_gdg.beam_row] = (uint16_t)g_gdg.row_addr;
+        };
     }
 #endif
 

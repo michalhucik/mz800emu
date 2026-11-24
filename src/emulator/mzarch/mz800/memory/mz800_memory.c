@@ -66,6 +66,34 @@ uint8_t *g_memoryVRAM_I = g_memory.VRAM;
 uint8_t *g_memoryVRAM_II = &g_memory.VRAM [ MEMORY_SIZE_VRAM_BANK ];
 uint8_t *g_memoryVRAM_III = g_memory.EXVRAM;
 uint8_t *g_memoryVRAM_IV = &g_memory.EXVRAM [ MEMORY_SIZE_VRAM_BANK ];
+uint8_t *g_memoryVRAM_III_WR = g_memory.EXVRAM;
+uint8_t *g_memoryVRAM_IV_WR = &g_memory.EXVRAM [ MEMORY_SIZE_VRAM_BANK ];
+
+unsigned g_mz800_exvram_installed = 1;
+
+/** Obsah neosazených rovin III a IV při čtení: samé 0FFh (viz mz800_memory_set_exvram()). */
+static uint8_t s_exvram_missing_read [ MEMORY_SIZE_VRAM ];
+
+/** Kam jdou zápisy do neosazených rovin III a IV (obsah se nikdy nečte). */
+static uint8_t s_exvram_missing_sink [ MEMORY_SIZE_VRAM ];
+
+
+/* Osazení rozšíření VRAM, viz mz800_memory.h. */
+void mz800_memory_set_exvram ( unsigned installed ) {
+    g_mz800_exvram_installed = installed ? 1 : 0;
+    if ( g_mz800_exvram_installed ) {
+        g_memoryVRAM_III = g_memory.EXVRAM;
+        g_memoryVRAM_IV = &g_memory.EXVRAM [ MEMORY_SIZE_VRAM_BANK ];
+        g_memoryVRAM_III_WR = g_memoryVRAM_III;
+        g_memoryVRAM_IV_WR = g_memoryVRAM_IV;
+    } else {
+        memset ( s_exvram_missing_read, 0xff, sizeof ( s_exvram_missing_read ) );
+        g_memoryVRAM_III = s_exvram_missing_read;
+        g_memoryVRAM_IV = &s_exvram_missing_read [ MEMORY_SIZE_VRAM_BANK ];
+        g_memoryVRAM_III_WR = s_exvram_missing_sink;
+        g_memoryVRAM_IV_WR = &s_exvram_missing_sink [ MEMORY_SIZE_VRAM_BANK ];
+    };
+}
 
 
 #define MEMORY_ROM_READ_BYTE                g_memory.ROM [ addr & 0x3fff ]
@@ -75,11 +103,20 @@ uint8_t *g_memoryVRAM_IV = &g_memory.EXVRAM [ MEMORY_SIZE_VRAM_BANK ];
 #define MEMORY_RAM_READ_BYTE                ( g_memory.memram_read[( addr >> 12 )] ) [ (addr & 0x0fff) ]
 #define MEMORY_RAM_WRITE_BYTE               ( g_memory.memram_write[( addr >> 12 )] ) [ (addr & 0x0fff) ] = value;
 
-#define MEMORY_VRAM_MZ700_READ_BYTE_SYNC    vramctrl_mz700_memop_read_byte_sync ( addr & ~0xe000 )
-#define MEMORY_VRAM_MZ700_WRITE_BYTE_SYNC   vramctrl_mz700_memop_write_byte_sync ( addr & ~0xe000, value )
+/**
+ * @brief Offset VRAM režimu MZ-700 (roviny I) pro adresu CPU.
+ *
+ * DMD 08h až 0Bh: adresa bez bitů 0E000h (0C000h = CG-RAM 0000h, 0D000h =
+ * text 1000h). DMD 0Ch až 0Fh: (a >> 1) & 1FFFh podle C modelu netlistu
+ * (MEMORY_MZ800_MAP_TEST_DMD0C), sudá a lichá adresa na týž bajt.
+ */
+#define MEMORY_MZ700_VRAM_OFS(a) ( MEMORY_MZ800_MAP_TEST_DMD0C ? ( ( ( a ) >> 1 ) & 0x1fff ) : ( ( a ) & ~0xe000 ) )
 
-#define MEMORY_VRAM_MZ700_READ_BYTE         vramctrl_mz700_memop_read_byte ( addr & ~0xe000 )
-#define MEMORY_VRAM_MZ700_WRITE_BYTE        vramctrl_mz700_memop_write_byte ( addr & ~0xe000, value )
+#define MEMORY_VRAM_MZ700_READ_BYTE_SYNC    vramctrl_mz700_memop_read_byte_sync ( MEMORY_MZ700_VRAM_OFS ( addr ) )
+#define MEMORY_VRAM_MZ700_WRITE_BYTE_SYNC   vramctrl_mz700_memop_write_byte_sync ( MEMORY_MZ700_VRAM_OFS ( addr ), value )
+
+#define MEMORY_VRAM_MZ700_READ_BYTE         vramctrl_mz700_memop_read_byte ( MEMORY_MZ700_VRAM_OFS ( addr ) )
+#define MEMORY_VRAM_MZ700_WRITE_BYTE        vramctrl_mz700_memop_write_byte ( MEMORY_MZ700_VRAM_OFS ( addr ), value )
 
 #define MEMORY_VRAM_MZ800_READ_BYTE_SYNC    vramctrl_mz800_memop_read_byte_sync ( addr & 0x3fff )
 #define MEMORY_VRAM_MZ800_WRITE_BYTE_SYNC   vramctrl_mz800_memop_write_byte_sync ( addr & 0x3fff, value )
@@ -503,8 +540,8 @@ void memory_reset ( void ) {
 #define memory_internal_read_1000_1fff(a) { if ( 0x01 == a ) { if ( MEMORY_MZ800_MAP_TEST_ROM_1000 ) return MEMORY_ROM_READ_BYTE; return MEMORY_RAM_READ_BYTE; } }
 #define memory_internal_read_8000_9fff_sync(a) { if ( ( 0x08 == a) || ( 0x09 == a) ) { if ( MEMORY_MZ800_MAP_TEST_VRAM_8000 ) return MEMORY_VRAM_MZ800_READ_BYTE_SYNC; return MEMORY_RAM_READ_BYTE; } }
 #define memory_internal_read_8000_9fff(a) { if ( ( 0x08 == a) || ( 0x09 == a) ) { if ( MEMORY_MZ800_MAP_TEST_VRAM_8000 ) return MEMORY_VRAM_MZ800_READ_BYTE; return MEMORY_RAM_READ_BYTE; } }
-#define memory_internal_read_a000_bfff_sync(a) { if ( ( 0x0a == a) || ( 0x0b == a) ) { if ( MEMORY_MZ800_MAP_TEST_VRAM_A000 ) return MEMORY_VRAM_MZ800_READ_BYTE_SYNC; return MEMORY_RAM_READ_BYTE; } }
-#define memory_internal_read_a000_bfff(a) { if ( ( 0x0a == a) || ( 0x0b == a) ) { if ( MEMORY_MZ800_MAP_TEST_VRAM_A000 ) return MEMORY_VRAM_MZ800_READ_BYTE; return MEMORY_RAM_READ_BYTE; } }
+#define memory_internal_read_a000_bfff_sync(a) { if ( ( 0x0a == a) || ( 0x0b == a) ) { if ( MEMORY_MZ800_MAP_TEST_VRAM_A000 ) return MEMORY_VRAM_MZ800_READ_BYTE_SYNC; if ( MEMORY_MZ800_MAP_TEST_VRAM700_A000 ) return MEMORY_VRAM_MZ700_READ_BYTE_SYNC; return MEMORY_RAM_READ_BYTE; } }
+#define memory_internal_read_a000_bfff(a) { if ( ( 0x0a == a) || ( 0x0b == a) ) { if ( MEMORY_MZ800_MAP_TEST_VRAM_A000 ) return MEMORY_VRAM_MZ800_READ_BYTE; if ( MEMORY_MZ800_MAP_TEST_VRAM700_A000 ) return MEMORY_VRAM_MZ700_READ_BYTE; return MEMORY_RAM_READ_BYTE; } }
 #define memory_internal_read_c000_cfff_sync(a) { if ( 0x0c == a ) { if ( MEMORY_MZ800_MAP_TEST_CGRAM ) return MEMORY_VRAM_MZ700_READ_BYTE_SYNC; return MEMORY_RAM_READ_BYTE; } }
 #define memory_internal_read_c000_cfff(a) { if ( 0x0c == a ) { if ( MEMORY_MZ800_MAP_TEST_CGRAM ) return MEMORY_VRAM_MZ700_READ_BYTE; return MEMORY_RAM_READ_BYTE; } }
 #define memory_internal_read_d000_dfff_sync(a) { if ( 0x0d == a ) { if ( MEMORY_MZ800_MAP_TEST_VRAM_D000 ) return MEMORY_VRAM_MZ700_READ_BYTE_SYNC; return MEMORY_RAM_READ_BYTE; } }
@@ -520,9 +557,11 @@ void memory_reset ( void ) {
  *   - ROM_E000 bez zákazu:
  *     - režim MZ-700 (DMD bit 3 = 1):
  *         0E000h-0E008h = mapované porty (8255, 8253, GDG)
- *         0E009h-0E00Fh = 1Ah (test v0.5 T0 až T2, čteno jen instrukcí
- *                         LD A,(DE); nejspíš také zbytek na sběrnici
- *                         (hypotéza), jinou instrukcí neměřeno)
+ *         0E009h-0E00Fh = nikdo nebudí, poslední bajt na datové sběrnici
+ *                         jako u zákazu (měření na MZ-800, mz800-knowledge
+ *                         hw-measurement/vysledky.md oddíl 17, U1:
+ *                         LD A,(0E009h) E0h, LD A,(HL) 7Eh, LD A,(DE) 1Ah,
+ *                         LD A,(IX+d) d, LD HL,(0E009h) L = H = E0h)
  *         0E010h-0FFFFh = ROM
  *     - režim MZ-800 (DMD bit 3 = 0):
  *         0E000h-0E00Fh = FFh (test v0.5 T3, v0.4 T6)
@@ -555,20 +594,17 @@ static inline uint8_t memory_internal_read_rom_e000_efff_sync ( uint16_t addr ) 
     /* cteni z horni rom */
     if ( addr_low > 0x0f ) return MEMORY_ROM_READ_BYTE;
 
-    /* $E000-$E00F oblast (NE Prohibited - tu uz vyresilo nadrazene makro):
-     *   - 800 native (DMD bit 3 = 0): cela mapped ports area "off", vraci 0xFF
-     *     (empiricky overeno v0.5 T3 i v0.4 T6).
-     *   - 700 mode (DMD bit 3 = 1):
-     *       $E000-$E008 = mapped ports (PIO/CTC/GDG)
-     *       $E009-$E00F = 0x1A shadow byte (empiricky overeno HW v0.5 T0/T1/T2;
-     *                     ROM image v emu ma na techto offsetech ruzne padding
-     *                     bajty (FF/00/...) ale HW vraci konstantni 0x1A
-     *                     bez ohledu na PIO state - takze tady vracime natvrdo
-     *                     0x1A pro shodu s HW). */
+    /* Oblast 0E000h-0E00Fh (zákaz už vyřešilo nadřazené makro):
+     *   - režim MZ-800 (DMD bit 3 = 0): celá oblast vrací 0FFh (test v0.5 T3,
+     *     v0.4 T6; měření U1).
+     *   - režim MZ-700 (DMD bit 3 = 1): 0E000h-0E008h mapované porty (8255,
+     *     8253, GDG), 0E009h-0E00Fh nikdo nebudí a čte se poslední bajt na
+     *     datové sběrnici (viz komentář k bankování výše). Dřívější "stálý
+     *     bajt 1Ah" byl kód instrukce LD A,(DE), kterou starší test četl. */
     if ( ! GDG_MZ800_DMD_TEST_MZ700 ) return 0xFF;
 
-    /* 700 mode: $E009-$E00F shadow byte. */
-    if ( addr_low > 0x08 ) return 0x1A;
+    /* Režim MZ-700, 0E009h-0E00Fh: poslední bajt na sběrnici. */
+    if ( addr_low > 0x08 ) return memory_prohibited_read_sync ( addr );
 
     /* 700 mode: $E000-$E008 mapped ports. */
     uint8_t retval;
@@ -626,13 +662,14 @@ static inline uint8_t memory_internal_read_rom_e000_efff ( uint16_t addr ) {
     /* cteni z horni rom */
     if ( addr_low > 0x0f ) return MEMORY_ROM_READ_BYTE;
 
-    /* $E000-$E00F (NE Prohibited - tu uz vyresilo nadrazene makro).
-     * 800 native: cela oblast "off" (0xFF). 700 mode: $E000-$E008 mapped ports,
-     * $E009-$E00F = 0x1A shadow byte. Detail v sync verzi. */
+    /* Oblast 0E000h-0E00Fh (zákaz už vyřešilo nadřazené makro).
+     * Režim MZ-800: 0FFh. Režim MZ-700: 0E000h-0E008h mapované porty,
+     * 0E009h-0E00Fh poslední bajt, který procesor přečetl ze sběrnice
+     * (debugger ho čte bez vedlejšího efektu). Detail v sync verzi. */
     if ( ! GDG_MZ800_DMD_TEST_MZ700 ) return 0xFF;
 
-    /* 700 mode: $E009-$E00F shadow byte. */
-    if ( addr_low > 0x08 ) return 0x1A;
+    /* Režim MZ-700, 0E009h-0E00Fh: poslední bajt na sběrnici. */
+    if ( addr_low > 0x08 ) return g_mzarch_main.regDBUS_latch;
 
     /* 700 mode: $E000-$E008 mapped ports. */
 
@@ -672,12 +709,15 @@ uint8_t memory_internal_read_sync ( uint16_t addr ) {
 
 
 /**
- * @brief Čtení zakázané oblasti 0E000h-0FFFFh procesorem (po OUT 0E5h).
+ * @brief Čtení adresy, kterou nikdo nebudí, procesorem: zakázaná oblast
+ *        0E000h-0FFFFh (po OUT 0E5h) a 0E009h-0E00Fh v režimu MZ-700.
  *
- * Oblast při zákazu nikdo nebudí, čte se poslední bajt, který byl na datové
- * sběrnici. Změřeno na MZ-800 (emu-experiments gdg-meas, druhé a třetí
- * měření): LD A,(0E010h) přečte E0h (vyšší bajt adresy), LD A,(HL) 7Eh,
- * LD A,(DE) 1Ah (kódy instrukcí), LD A,(IX+0) 00h (posunutí).
+ * Čte se poslední bajt, který byl na datové sběrnici. Změřeno na MZ-800
+ * (emu-experiments gdg-meas, druhé, třetí a šesté měření; mz800-knowledge
+ * hw-measurement/vysledky.md oddíl 17, U1 a U2): LD A,(0E010h) přečte E0h
+ * (vyšší bajt adresy), LD A,(HL) 7Eh, LD A,(DE) 1Ah (kódy instrukcí),
+ * LD A,(IX+d) d (posunutí); LD HL,(nn) dá L = H. Totéž platí pro 0E009h
+ * v režimu MZ-700 bez zákazu.
  *
  * Pravidlo:
  *  - datové čtení: bajt na adrese PC - 1, tedy poslední načtený bajt
@@ -993,9 +1033,9 @@ uint8_t memory_read_byte_no_se ( uint16_t addr ) {
 #define memory_internal_write_1000_1fff(a) { if ( 0x01 == a ) { if ( ! MEMORY_MZ800_MAP_TEST_ROM_1000 ) MEMORY_RAM_WRITE_BYTE; return; } }
 #define memory_internal_write_2000_7fff(a) { if ( ( 0x02 <= a ) && ( 0x07 >= a ) ) { MEMORY_RAM_WRITE_BYTE; return; } }
 #define memory_internal_write_8000_9fff_sync(a) { if ( ( 0x08 == a ) || ( 0x09 == a ) ) { if ( MEMORY_MZ800_MAP_TEST_VRAM_8000 ) { MEMORY_VRAM_MZ800_WRITE_BYTE_SYNC; } else { MEMORY_RAM_WRITE_BYTE; }; return; } }
-#define memory_internal_write_a000_bfff_sync(a) { if ( ( 0x0a == a ) || ( 0x0b == a ) ) { if ( MEMORY_MZ800_MAP_TEST_VRAM_A000 ) { MEMORY_VRAM_MZ800_WRITE_BYTE_SYNC; } else { MEMORY_RAM_WRITE_BYTE; }; return; } }
+#define memory_internal_write_a000_bfff_sync(a) { if ( ( 0x0a == a ) || ( 0x0b == a ) ) { if ( MEMORY_MZ800_MAP_TEST_VRAM_A000 ) { MEMORY_VRAM_MZ800_WRITE_BYTE_SYNC; } else if ( MEMORY_MZ800_MAP_TEST_VRAM700_A000 ) { MEMORY_VRAM_MZ700_WRITE_BYTE_SYNC; } else { MEMORY_RAM_WRITE_BYTE; }; return; } }
 #define memory_internal_write_8000_9fff(a) { if ( ( 0x08 == a ) || ( 0x09 == a ) ) { if ( MEMORY_MZ800_MAP_TEST_VRAM_8000 ) { MEMORY_VRAM_MZ800_WRITE_BYTE; } else { MEMORY_RAM_WRITE_BYTE; }; return; } }
-#define memory_internal_write_a000_bfff(a) { if ( ( 0x0a == a ) || ( 0x0b == a ) ) { if ( MEMORY_MZ800_MAP_TEST_VRAM_A000 ) { MEMORY_VRAM_MZ800_WRITE_BYTE; } else { MEMORY_RAM_WRITE_BYTE; }; return; } }
+#define memory_internal_write_a000_bfff(a) { if ( ( 0x0a == a ) || ( 0x0b == a ) ) { if ( MEMORY_MZ800_MAP_TEST_VRAM_A000 ) { MEMORY_VRAM_MZ800_WRITE_BYTE; } else if ( MEMORY_MZ800_MAP_TEST_VRAM700_A000 ) { MEMORY_VRAM_MZ700_WRITE_BYTE; } else { MEMORY_RAM_WRITE_BYTE; }; return; } }
 #define memory_internal_write_c000_cfff_sync(a) { if ( 0x0c == a ) { if ( MEMORY_MZ800_MAP_TEST_CGRAM ) { MEMORY_VRAM_MZ700_WRITE_BYTE_SYNC; } else { MEMORY_RAM_WRITE_BYTE; } return; } }
 #define memory_internal_write_c000_cfff(a) { if ( 0x0c == a ) { if ( MEMORY_MZ800_MAP_TEST_CGRAM ) { MEMORY_VRAM_MZ700_WRITE_BYTE; } else { MEMORY_RAM_WRITE_BYTE; } return; } }
 #define memory_internal_write_d000_dfff_sync(a) { if ( 0x0d == a ) { if ( MEMORY_MZ800_MAP_TEST_VRAM_D000 ) { MEMORY_VRAM_MZ700_WRITE_BYTE_SYNC; } else { MEMORY_RAM_WRITE_BYTE; } return; } }
@@ -1395,6 +1435,8 @@ en_MEMMAP_REGION_KIND memmap_query ( uint8_t addr_point )
             /* $A000-$BFFF: VRAM II (= rozšířená 8 KB) v 800 native modu
              * pokud SCRW640 + CGRAM_VRAM. Jinak RAM. */
             if ( MEMORY_MZ800_MAP_TEST_VRAM_A000 ) return MEMMAP_KIND_VRAM_II;
+            /* DMD 0Ch až 0Fh s připojenou CG-RAM: text a atributy (C model). */
+            if ( MEMORY_MZ800_MAP_TEST_VRAM700_A000 ) return MEMMAP_KIND_VRAM_TEXT;
             return MEMMAP_KIND_RAM;
 
         case 0x0c:
@@ -1411,7 +1453,8 @@ en_MEMMAP_REGION_KIND memmap_query ( uint8_t addr_point )
 
         case 0x0e:
             /* $E000-$EFFF: per banking-e800 v0.5 model.
-             * - Prohibited (OUT E5 active): celé E000-EFFF vrací 0x1A shadow.
+             * - Prohibited (OUT E5 active): celé E000-EFFF vrací poslední
+             *   bajt na datové sběrnici, zápis se neprovede.
              * - K3 (ROM_E000 set, NE Prohibited):
              *     - 700 mode: $E000-$E008 = mapped ports. UI ale ukazuje
              *       celý 4 kB blok jako jednu kategorii - pojmem ho jako
@@ -1426,7 +1469,7 @@ en_MEMMAP_REGION_KIND memmap_query ( uint8_t addr_point )
             return MEMMAP_KIND_ROM_HIGH;
 
         case 0x0f:
-            /* $F000-$FFFF: K3 -> ROM (Prohibited -> 0x1A); Clear -> RAM. */
+            /* $F000-$FFFF: K3 -> ROM (Prohibited -> poslední bajt na sběrnici); Clear -> RAM. */
             if ( prohibited ) return MEMMAP_KIND_PROHIBITED;
             if ( MEMORY_MZ800_MAP_TEST_ROM_E000 ) return MEMMAP_KIND_ROM_HIGH;
             return MEMMAP_KIND_RAM;

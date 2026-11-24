@@ -16,9 +16,7 @@
 
 ## Emulation
 
-- Re-measure on real HW: `VIDEO_H_BACK_PORCH_TICKS`, `VIDEO_H_FRONT_PORCH_TICKS` (currently 104+39=143, but the exact split is not verified)
-- MZ-800: an option to disconnect the extension VRAM (a computer without the MZ-1R25 extension, only the basic 16 KB, planes I and II). On such a computer a read from planes III and IV returns 0xFF and a write to them has no effect.
-- MZ-800, 640x200 modes: on a real computer the canvas starts 2 pixels and the border 1 pixel earlier than in the 320x200 modes. The emulator draws all modes at the same place; shifting both the canvas and the border is planned.
+- MZ-700 and MZ-1500: re-measure `VIDEO_H_BACK_PORCH_TICKS` and `VIDEO_H_FRONT_PORCH_TICKS` on real HW (MZ-700 NTSC and MZ-1500 currently 104 + 39, MZ-700 PAL 136 + 216; the exact split is not verified). MZ-800 is verified on a real computer: HSYNC 80, back porch 106, display 928, front porch 22 pixels, line 1136 pixels.
 - MZ-1500 gdg: verify absence of VRAM latch
 - Exact clock: the emulator derives its clock from a whole number of frames per second, not from the crystal. PAL runs at 17,721,600 Hz instead of 17,734,475 Hz (0.07 % slow), NTSC at 14,336,640 Hz instead of 14,318,180 Hz (0.13 % fast); everything derived from it shifts the same way, including CTC0 tones. More exact emulation is planned: the number of ticks per frame stays the same, but the conversion to real time (audio, AVI recording, tape WAV writing and reading, sync without audio) will be based on the crystal frequency, possibly as an optional setting.
 

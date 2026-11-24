@@ -596,6 +596,23 @@ if(Python3_FOUND)
     message(STATUS "  tests/mcp: registered mcp_gdg_hw_meas "
                    "(Python ${Python3_VERSION})")
 
+    # Opravy GDG podle měření na MZ-800, druhá série (emu-experiments
+    # hw-fixes): čítač adresy řádku při přepnutí režimu MZ-700 / grafika,
+    # paleta po návratu z režimu MZ-700. Pipe, bez TCP. Bez binárky 77.
+    add_test(
+        NAME    mcp_gdg_hw_fixes
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_gdg_hw_fixes.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_gdg_hw_fixes PROPERTIES
+        LABELS  "e2e;mcp;pipe;gdg"
+        TIMEOUT 300
+        SKIP_RETURN_CODE 77
+    )
+    message(STATUS "  tests/mcp: registered mcp_gdg_hw_fixes "
+                   "(Python ${Python3_VERSION})")
+
     # Záznamy vstupů pořízené verzí 1564848f (tests/data/replay) při 100 %
     # a 150 %: přehrání musí doběhnout do konce. Hlídá, že termín 20ms
     # události u starého snapshotu zůstává podle původní verze a že klíč

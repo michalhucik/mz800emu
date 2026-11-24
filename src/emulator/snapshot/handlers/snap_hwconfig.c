@@ -6,7 +6,7 @@
  * pro běh, INI ([HWCOMPAT] allow_psg1) si drží volbu uživatele
  * (snapshot_config_pin_ini_value). Druhý PSG se zakládá jen při startu
  * emulátoru (mz800_main.c), obnovená volba ho tedy nezaloží [neověřeno,
- * zda to vadí].
+ * zda to vadí]. Stejně se chová volba [MZ800] exvram (rozšíření VRAM MZ-1R25).
  */
 
 #include <stdio.h>
@@ -18,6 +18,9 @@
 #include "snapshot/snapshot_config.h"
 #include "mzarch/mzarch.h"
 #include "hw-generic/psg/psg.h"
+#if MZARCH == 800
+#include "mzarch/mz800/memory/mz800_memory.h"
+#endif
 
 
 static en_SNAPSHOT_RESULT snap_hwconfig_save(st_SNAPSHOT_CONTEXT *ctx)
@@ -43,6 +46,10 @@ static en_SNAPSHOT_RESULT snap_hwconfig_save(st_SNAPSHOT_CONTEXT *ctx)
 #if MZARCH == 800
     snapshot_xml_write_int(w, "hwcompat_allow_psg1",
                            (int)g_mzarch_main.mz800_hwcompat_allow_psg1);
+    /* Rozšíření VRAM MZ-1R25. Do otisku stavu jen bez rozšíření, aby otisky
+     * dřívějších záznamů vstupů (vždy s rozšířením) zůstaly stejné. */
+    if (!ctx->for_hash || !g_mz800_exvram_installed)
+        snapshot_xml_write_int(w, "exvram", (int)g_mz800_exvram_installed);
 #endif /* MZARCH == 800 */
 
     snapshot_xml_close_element(w); /* hwconfig */
@@ -113,6 +120,14 @@ static en_SNAPSHOT_RESULT snap_hwconfig_load(st_SNAPSHOT_CONTEXT *ctx)
         if (snapshot_xml_read_int(r, "hwcompat_allow_psg1", &ival))
             g_mzarch_main.mz800_hwcompat_allow_psg1 = (en_MZ800_HWCOMPAT_ALLOW_PSG1)ival;
         snapshot_config_pin_ini_value("HWCOMPAT", "allow_psg1", ini_allow_psg1);
+
+        /* Rozšíření VRAM jen pro běh, INI hodnota se připne; starší snapshot
+         * bez klíče = osazeno. */
+        unsigned ini_exvram = g_mz800_exvram_installed;
+        int exvram = 1;
+        snapshot_xml_read_int(r, "exvram", &exvram);
+        mz800_memory_set_exvram(exvram ? 1u : 0u);
+        snapshot_config_pin_ini_value("MZ800", "exvram", ini_exvram);
     }
 #endif /* MZARCH == 800 */
 

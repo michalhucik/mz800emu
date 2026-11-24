@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mz800emu 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-19 22:10+0100\n"
+"POT-Creation-Date: 2026-11-23 22:23+0100\n"
 "PO-Revision-Date: 2026-03-11 22:00+0100\n"
 "Last-Translator: Claude Code\n"
 "Language-Team: Deutsch\n"
@@ -14116,15 +14116,27 @@ msgstr "Pro Zeichen"
 msgid "Per pair of characters"
 msgstr "Pro Zeichenpaar"
 
-#: src/ui-imgui/mz800/topmenu/devices/menu_mz800_hw_compat.cpp:23
+#: src/ui-imgui/mz800/topmenu/devices/menu_mz800_hw_compat.cpp:33
+msgid "VRAM Extension MZ-1R25"
+msgstr "VRAM-Erweiterung MZ-1R25"
+
+#: src/ui-imgui/mz800/topmenu/devices/menu_mz800_hw_compat.cpp:37
+msgid ""
+"Optional extension of the video RAM from 16 KB to 32 KB (planes III and IV). "
+"Without it, frame B, the 16-color mode and the 4-color 640x200 mode show "
+"only some of the colors: planes III and IV read as 0xFF and writes to them "
+"are lost."
+msgstr "Optionale Erweiterung des Videospeichers von 16 KB auf 32 KB (Ebenen III und IV). Ohne sie zeigen Frame B, der 16-Farben-Modus und der 4-Farben-Modus 640x200 nur einen Teil der Farben: Die Ebenen III und IV werden als 0xFF gelesen und Schreibzugriffe auf sie gehen verloren."
+
+#: src/ui-imgui/mz800/topmenu/devices/menu_mz800_hw_compat.cpp:42
 msgid "HW Compatibility Experiments"
 msgstr "HW-Kompatibilitätsexperimente"
 
-#: src/ui-imgui/mz800/topmenu/devices/menu_mz800_hw_compat.cpp:25
+#: src/ui-imgui/mz800/topmenu/devices/menu_mz800_hw_compat.cpp:44
 msgid "Allow PSG1 (stereo)"
 msgstr "PSG1 aktivieren (Stereo)"
 
-#: src/ui-imgui/mz800/topmenu/devices/menu_mz800_hw_compat.cpp:29
+#: src/ui-imgui/mz800/topmenu/devices/menu_mz800_hw_compat.cpp:48
 msgid ""
 "Enables a second PSG (SN76489), providing stereo sound similar to the "
 "MZ-1500. Port 0xF2 is still used as a mono audio PSG (left + right "

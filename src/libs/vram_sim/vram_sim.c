@@ -142,13 +142,13 @@ uint8_t vram_sim_cpu_planes(const st_VRAM_SIM_STATE *state)
 
 void vram_sim_recompute_hwscroll_enabled(st_VRAM_SIM_STATE *state)
 {
-    /* Port z mz800_hwscroll.c:88-152 (hwscroll_regs_changed). */
+    /* Port z mz800_hwscroll.c (hwscroll_regs_changed); rovnost SW == SEA - SSA
+     * podmínkou není (OPRAVA báze 2026-11-22, viz vram_sim.h). */
     if ((state->hwscroll_sof > 0) &&
         (state->hwscroll_ssa <= 0x1E00) &&
         (state->hwscroll_sea >= 0x0140) &&
         (state->hwscroll_sw > state->hwscroll_sof) &&
-        (state->hwscroll_sea > state->hwscroll_ssa) &&
-        (state->hwscroll_sw == (state->hwscroll_sea - state->hwscroll_ssa)))
+        (state->hwscroll_sea > state->hwscroll_ssa))
     {
         state->hwscroll_enabled = 1;
     } else {
@@ -168,16 +168,11 @@ uint16_t vram_sim_hwscroll_shift(const st_VRAM_SIM_STATE *state, uint16_t phy_of
     }
     /* Uvnitř scroll area - rozhodnout up/down podle pozice. */
     if (phy_offset >= (uint16_t)(state->hwscroll_sea - state->hwscroll_sof)) {
-        /*
-         * Shift down. Pozn: může dát výsledek > 0x1FFF (např. SOF veliký).
-         * Emu kód také nedělá bounds check - viz README knowledge harvest
-         * gotcha. Konzument plane[result & 0x1FFF] musí maskovat sám pokud
-         * chce safe access.
-         */
-        return (uint16_t)(phy_offset + state->hwscroll_sof - state->hwscroll_sw);
+        /* Shift down; přetečení v 13 bitech jako HWSCRL_ADDR_MASK emulátoru. */
+        return (uint16_t)((phy_offset + state->hwscroll_sof - state->hwscroll_sw) & 0x1FFFu);
     }
     /* Shift up. */
-    return (uint16_t)(phy_offset + state->hwscroll_sof);
+    return (uint16_t)((phy_offset + state->hwscroll_sof) & 0x1FFFu);
 }
 
 int vram_sim_cpu_hwscroll_applies(const st_VRAM_SIM_STATE *state)

@@ -213,7 +213,20 @@ extern "C"
  */
 #define gdg_get_insigeop_ticks() (g_gdg.total_elapsed.ticks)
 
-#define gdg_proximate_clk1m1_event(now_ticks) (now_ticks + (GDGCLK_CTC0_DIVIDER - (gdg_compute_total_ticks(now_ticks) % GDGCLK_CTC0_DIVIDER)))
+/**
+ * @brief Fáze sestupné hrany CLK0 obvodu 8253 vůči času emulátoru (viz MZ-800).
+ *
+ * Na této platformě neměřeno [neověřeno]: hrana tam, kde
+ * gdg_compute_total_ticks() % GDGCLK_CTC0_DIVIDER == 0 (stav před opravou
+ * na MZ-800). Rozhodne měření U21 (mz800-knowledge hw-measurement/vysledky.md).
+ */
+#define GDG_CTC0_CLK_PHASE_TICKS 0u
+
+/**
+ * @brief Čas první sestupné hrany CLK0 ostře po @p now_ticks (tiky snímku).
+ * @param now_ticks Tiky od začátku snímku.
+ */
+#define gdg_proximate_clk1m1_event(now_ticks) (now_ticks + (GDGCLK_CTC0_DIVIDER - ((gdg_compute_total_ticks(now_ticks) + GDGCLK_CTC0_DIVIDER - GDG_CTC0_CLK_PHASE_TICKS) % GDGCLK_CTC0_DIVIDER)))
 #define gdg_get_event_pointer() (&g_gdg.event)
 #define gdg_get_regct53g7() (g_gdg.regct53g7)
 

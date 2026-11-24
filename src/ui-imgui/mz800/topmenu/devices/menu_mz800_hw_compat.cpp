@@ -11,11 +11,30 @@
 #include "ui-imgui/topmenu/topmenu.h"
 
 #include "emulator/mzarch/mz800/mz800_main.h"
+#include "emulator/mzarch/mz800/memory/mz800_memory.h"
 #include "emulator/mzarch/mzarch_request.h"
 
 extern "C"
 {
     void imgui_menu_mz800_hw_compat(void);
+    void imgui_menu_mz800_exvram(void);
+}
+
+
+/**
+ * @brief Položka menu HW & Devices: rozšíření VRAM MZ-1R25 (roviny III a IV).
+ *
+ * Zaškrtnuto = osazeno (výchozí). Změnu provede emu vlákno
+ * (mzarch_request_exvram()); stav se uloží do INI ([MZ800] exvram).
+ */
+void imgui_menu_mz800_exvram(void)
+{
+    bool installed = g_mz800_exvram_installed ? true : false;
+    if (ImGui::MenuItem(_L("VRAM Extension MZ-1R25"), NULL, installed))
+    {
+        mzarch_request_exvram(!installed);
+    };
+    ImGui::SetItemTooltip(_("Optional extension of the video RAM from 16 KB to 32 KB (planes III and IV). Without it, frame B, the 16-color mode and the 4-color 640x200 mode show only some of the colors: planes III and IV read as 0xFF and writes to them are lost."));
 }
 
 void imgui_menu_mz800_hw_compat(void)

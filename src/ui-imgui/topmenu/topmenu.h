@@ -65,6 +65,7 @@ void imgui_menu_mz800_dip_switch(void);
 
 #if MZARCH == 800
     void imgui_menu_mz800_hw_compat(void);
+    void imgui_menu_mz800_exvram(void);
 #endif
 
     void imgui_customspeed_setup(void);

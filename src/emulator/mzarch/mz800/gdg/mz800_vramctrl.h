@@ -123,7 +123,7 @@ extern "C"
      * mz800_vramwait.h s rozvrhem slotů MZ-700: ve viditelné části řádku
      * čeká čtení do jejího konce, v zatemnění 2-4 TW.
      *
-     * @param addr Offset ve VRAM/CG-RAM (adresa bez bitů 0E000h).
+     * @param addr Offset ve VRAM/CG-RAM (MEMORY_MZ700_VRAM_OFS(): v DMD 08h až 0Bh adresa bez bitů 0E000h, v 0Ch až 0Fh (adresa >> 1) & 1FFFh).
      * @return Přečtený bajt.
      * @pre Volá se z emu vlákna uvnitř instrukce (callback čtení paměti).
      */
@@ -141,7 +141,7 @@ extern "C"
      * předchozí zápis (ve viditelné části řádku tedy druhý zápis čeká
      * do jejího konce). Model mz800_vramwait.h, rozvrh slotů MZ-700.
      *
-     * @param addr Offset ve VRAM/CG-RAM (adresa bez bitů 0E000h).
+     * @param addr Offset ve VRAM/CG-RAM (MEMORY_MZ700_VRAM_OFS(): v DMD 08h až 0Bh adresa bez bitů 0E000h, v 0Ch až 0Fh (adresa >> 1) & 1FFFh).
      * @param value Zapisovaný bajt.
      * @pre Volá se z emu vlákna uvnitř instrukce (callback zápisu paměti).
      */
