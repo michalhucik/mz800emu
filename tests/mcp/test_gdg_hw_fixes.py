@@ -38,6 +38,13 @@ Kroky:
      border končí o 1 px dřív (sloupec 927 je zatemnění); začátek canvasu
      se řídí režimem v okamžiku hrany (zápis DMD s koncem M-cyklu do
      sloupce 162, na stroji /IORQ do 332,5 px).
+ 16  konec pravého borderu se zkrácením řádku (CKSW = 1) a s režimem 640
+     se sčítá: první sloupec zatemnění 928, 927, 912 a 911 pro DMD 00h / 04h
+     a CKSW 0 / 1 (na stroji 1114, 1113, 1098 a 1097 px, měření 15); totéž
+     hned po načtení snapshotu (úplné překreslení).
+ 17  paleta po návratu z DMD 0Ch až 0Fh do grafiky nese barvy bajtu čtvrtého
+     čtení buňky pod paprskem (mimo okno buňky 39), po návratu z DMD 08h dál
+     atribut (C model netlistu; na stroji neměřeno).
   9  (A12) HW scroll s SW, SSA a SEA, které porušují SW = SEA - SSA, se
      nevypne a obraz jde podle vzorce posunu adres (měření U4).
  12  (A8) přepnutí 320 / 640 uprostřed řádku: sloupce 148 až 153 + 16k
@@ -525,6 +532,88 @@ def _step_geometry_640(emu):
     emu.call("io_write", {"port": 0x06CF, "value": 0x00})
 
 
+def _step_border_end_cksw(emu, tmp):
+    """Krok 16: konec pravého borderu pro DMD 00h / 04h a CKSW 0 / 1, i hned po načtení snapshotu."""
+    tmp = Path(tmp or tempfile.mkdtemp(prefix="gdg_bend_"))
+    _run_code(emu, "dbe0" "3e03d3cc" "210080" "36ff" "110180" "013f1f" "edb0" "dbe1", 8)
+    for value in (0x00, 0x14, 0x24, 0x34):          # položky 1 až 3 = barva 4
+        emu.call("io_write", {"port": 0xF0, "value": value})
+    emu.call("io_write", {"port": 0x06CF, "value": 0x02})   # border barva 2
+    line = 100
+
+    def first_black(px, width):
+        """První sloupec zatemnění za pravým borderem (šířka framebufferu = žádné)."""
+        border = px(100, line)
+        return 1 + max(x for x in range(800, width) if px(x, line) == border)
+
+    try:
+        for cksw in (0, 1):
+            h._cksw(emu, cksw)
+            for dmd in (0x00, 0x04):
+                emu.call("io_write", {"port": 0xCE, "value": dmd})
+                emu.call("run", {"frames": 3})
+                width, px = _frame(emu)
+                want = width - 16 * cksw - (1 if dmd == 0x04 else 0)
+                what = f"DMD {dmd:02X}h, CKSW {cksw}"
+                got = first_black(px, width)
+                h.check(got == want, f"{what}: right border ends at column {got}, expected {want} "
+                                     f"({186 + want} px after the HSYNC fall)")
+                black = [x for x in range(want, width) if px(x, line) != bytes(3)]
+                h.check(not black, f"{what}: columns {want} to {width - 1} are blanking (not black: {black[:4]})")
+                snap = {"path": str(tmp / "border-end.mzs")}
+                emu.call("snapshot_save", dict(snap, description="border end"))
+                emu.call("snapshot_load", snap)
+                width, px = _frame(emu)
+                got = first_black(px, width)
+                h.check(got == want, f"{what}: right after a snapshot load the right border ends at column {got}, "
+                                     f"expected {want}")
+                black = [x for x in range(want, width) if px(x, line) != bytes(3)]
+                h.check(not black, f"{what}: after a snapshot load columns {want} to {width - 1} are blanking "
+                                   f"(not black: {black[:4]})")
+    finally:
+        h._cksw(emu, 0)
+        emu.call("io_write", {"port": 0xCE, "value": 0x00})
+        emu.call("io_write", {"port": 0x06CF, "value": 0x00})
+        emu.call("run", {"frames": 2})
+
+
+def _step_palette_after_dmd0c(emu):
+    """Krok 17: paleta po návratu z DMD 0Ch nese bajt čtvrtého čtení, z DMD 08h atribut."""
+    emu.call("io_write", {"port": 0xCE, "value": 0x08})
+    emu.call("io_write", {"port": 0xE4, "value": 0})
+    _run_code(emu, "dbe0", 1)                       # CG-RAM a text do adresního prostoru
+    for page in range(0xC000, 0xD000, 256):
+        emu.call("mem_write", {"addr": page, "data_hex": "00" * 256})
+    # znak 40h: vzor A5h, čtvrté čtení (A5h >> 5) * 100h + 00h + r = 0C500h + r
+    # znak 41h (jen buňka 39): vzor A5h, čtvrté čtení 0C508h + r
+    emu.call("mem_write", {"addr": 0xC200, "data_hex": "a5" * 16})
+    emu.call("mem_write", {"addr": 0xC500, "data_hex": "36" * 8 + "52" * 8})
+    emu.call("mem_write", {"addr": 0xD000, "data_hex": ("40" * 39 + "41") * 25 + "40" * 24})
+    emu.call("mem_write", {"addr": 0xD800, "data_hex": "25" * 1024})
+    line = _CANVAS_ROW + 54
+    cases = ((0x08, 270, 275, [0xA, 0xA, 0xD, 0xD], "attribute 25h of the cell"),
+             (0x0C, 270, 275, [0xB, 0xB, 0xE, 0xE], "fourth byte 36h of the cell"),
+             (0x0C, 510, 515, [0xB, 0xB, 0xE, 0xE], "fourth byte 36h of the cell"),
+             (0x0F, 390, 395, [0xB, 0xB, 0xE, 0xE], "fourth byte 36h of the cell"),
+             (0x0C, 80, 100, [0xD, 0xD, 0xA, 0xA], "fourth byte 52h of cell 39 of the previous line"),
+             (0x0C, 880, 900, [0xD, 0xD, 0xA, 0xA], "fourth byte 52h of cell 39 of this line"))
+    for mode, e_min, e_max, want, what in cases:
+        emu.call("io_write", {"port": 0xCE, "value": 0x00})
+        for value in (0x04, 0x12, 0x21, 0x3F):
+            emu.call("io_write", {"port": 0xF0, "value": value})
+        emu.call("io_write", {"port": 0xCE, "value": mode})
+        emu.call("run", {"frames": 2})
+        e = _out_at(emu, 0xCE, 0x00, line, e_min, e_max)
+        pal = _palette_entries(emu)
+        h.check(pal == want, f"return from DMD {mode:02X}h with M-cycle end {e}: entries 3, 1, 2, 0 = {pal}, "
+                             f"expected {want} ({what})")
+    emu.call("io_write", {"port": 0xCE, "value": 0x08})
+    for page in range(0xC000, 0xD000, 256):
+        emu.call("mem_write", {"addr": page, "data_hex": "00" * 256})
+    _run_code(emu, "dbe1", 1)
+    emu.call("io_write", {"port": 0xCE, "value": 0x00})
+
+
 def _step_scroll_sw(emu):
     """Krok 9 (A12): SW, SSA a SEA porušující SW = SEA - SSA scroll nevypnou."""
     _fill_ruler(emu)
@@ -831,10 +920,12 @@ def run(exe):
         _step_ctc0_phase(emu)
         _step_mode700_switch(emu)
         _step_geometry_640(emu)
+        _step_border_end_cksw(emu, tmp)
         _step_scroll_sw(emu)
         _step_switch_320_640(emu)
         _step_vram_write_fetch(emu)
         _step_dmd0c(emu)
+        _step_palette_after_dmd0c(emu)
         _step_iorqlog_pulse(emu)
         _step_snapshot_row_counter(emu, tmp)
         _step_exvram(emu, exe)

@@ -265,17 +265,32 @@ static inline unsigned framebuffer_border_right_first ( unsigned beam_row ) {
 
 
 /**
- * @brief Konec viditelné části řádku ve framebufferu (border v režimu 640 končí o 1 px dřív).
- * @param beam_row Řádek rastru.
+ * @brief Konec viditelné části řádku ve framebufferu pro danou délku řádku a geometrii.
+ *
+ * Krátký řádek (CKSW = 1) končí o GDG_CKSW_ROW_SHRINK bodů dřív a border
+ * v režimu 640 o další 1 bod dřív, obojí se sčítá. Změřeno na MZ-800
+ * (emu-experiments gdg-meas, měření 15, testy 3 a 4): border končí v 1114 px
+ * (320, CKSW 0), 1113 px (640, CKSW 0), 1098 px (320, CKSW 1) a 1097 px
+ * (640, CKSW 1) po sestupné hraně HSYNC; sloupec 0 framebufferu = 186 px.
+ * C model netlistu GDG dává tytéž čtyři hodnoty.
+ *
+ * @param shrink  Zkrácení řádku v bodech (0 nebo GDG_CKSW_ROW_SHRINK).
+ * @param geom640 Nenulové = konec borderu podle režimu 640.
+ * @return Sloupec za posledním viditelným bodem (928, 927, 912 nebo 911).
+ */
+static inline unsigned framebuffer_visible_end_of ( unsigned shrink, unsigned geom640 ) {
+    return VIDEO_DISPLAY_WIDTH - shrink - ( geom640 ? 1 : 0 );
+}
+
+
+/**
+ * @brief Konec viditelné části řádku ve framebufferu (viz framebuffer_visible_end_of()).
+ * @param beam_row Řádek rastru. Pro jiný než právě kreslený řádek vrací plnou šířku.
  * @return Sloupec za posledním viditelným bodem.
  */
 static inline unsigned framebuffer_visible_end ( unsigned beam_row ) {
-    unsigned end = VIDEO_DISPLAY_WIDTH;
-    if ( beam_row == g_gdg.beam_row ) {
-        end -= g_gdg.row_shrink;
-        if ( g_gdg.geom640_be && !g_gdg.row_shrink ) end -= 1;
-    };
-    return end;
+    if ( beam_row != g_gdg.beam_row ) return VIDEO_DISPLAY_WIDTH;
+    return framebuffer_visible_end_of ( g_gdg.row_shrink, g_gdg.geom640_be );
 }
 
 
@@ -353,7 +368,8 @@ void framebuffer_border_current_row_fill ( void ) {
 
     /* Krátký řádek (CKSW = 1): viditelná část končí o row_shrink bodů dřív,
      * zbytek řádku ve framebufferu je zatemnění (černá, IGRB 0). V režimu
-     * 640 končí border o 1 px dřív (1113 px místo 1114). */
+     * 640 končí border o 1 px dřív (1113 px místo 1114, v krátkém řádku
+     * 1097 místo 1098). */
     unsigned end = framebuffer_visible_end ( beam_row );
     if ( end < VIDEO_DISPLAY_WIDTH ) {
         memset ( &p [ end ], 0x00, VIDEO_DISPLAY_WIDTH - end );
@@ -1176,12 +1192,15 @@ void framebuffer_MZ800_all_screen_rows_fill ( void ) {
 void framebuffer_border_all_rows_fill ( void ) {
 
     int i;
-    /* Geometrie podle současného DMD pro všechny řádky (režim 640: canvas
-     * o 2 sloupce dřív, border končí o 1 sloupec dřív). */
+    /* Geometrie podle současného DMD a bitu CKSW pro všechny řádky (režim
+     * 640: canvas o 2 sloupce dřív, border končí o 1 sloupec dřív; CKSW = 1:
+     * řádek kratší o GDG_CKSW_ROW_SHRINK). Bere se ustálený stav: řádky
+     * nakreslené před změnou DMD nebo CKSW uprostřed snímku se překreslí
+     * podle současných hodnot. */
     unsigned g640 = GDG_DMD_IS_GEOM640 ( g_gdg.regDMD );
     unsigned left_end = g640 ? FB_CANVAS640_FIRST_COLUMN : VIDEO_BORDER_LEFT_WIDTH;
     unsigned right_first = g640 ? ( VIDEO_BEAM_BORDER_RIGHT_FIRST_COLUMN - 2 ) : VIDEO_BEAM_BORDER_RIGHT_FIRST_COLUMN;
-    unsigned vis_end = g640 ? ( VIDEO_DISPLAY_WIDTH - 1 ) : VIDEO_DISPLAY_WIDTH;
+    unsigned vis_end = framebuffer_visible_end_of ( g_gdg.cksw ? GDG_CKSW_ROW_SHRINK : 0, g640 );
 
     for ( i = 0; i < VIDEO_DISPLAY_HEIGHT; i++ ) {
         uint8_t *p = g_framebuffer.pixels + ( i * VIDEO_DISPLAY_WIDTH );
@@ -1191,7 +1210,7 @@ void framebuffer_border_all_rows_fill ( void ) {
             memset ( p, g_gdg.regBOR, left_end );
             memset ( p + right_first, g_gdg.regBOR, vis_end - right_first );
         };
-        if ( vis_end < VIDEO_DISPLAY_WIDTH ) p [ vis_end ] = 0x00;
+        if ( vis_end < VIDEO_DISPLAY_WIDTH ) memset ( p + vis_end, 0x00, VIDEO_DISPLAY_WIDTH - vis_end );
     };
 }
 

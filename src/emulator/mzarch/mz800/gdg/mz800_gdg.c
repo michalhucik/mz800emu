@@ -333,6 +333,18 @@ static inline void gdg_set_regDMD(uint8_t value, unsigned event_ticks)
  * je doložený modelem; měření ho nevyvrací, ale samo ho neurčí
  * (v měření 14 byly kódy všech znaků 00h) [neověřeno na stroji s jinými kódy].
  *
+ * Nedokumentované režimy DMD 0Ch až 0Fh: v registrech je bajt čtvrtého čtení
+ * F buňky (adresa viz framebuffer_DMD0C_row_render()), dekódovaný stejně.
+ * V okně je to buňka pod paprskem (stejné okno a dělení na buňky jako
+ * u DMD 08h), před oknem buňka 39 předchozího řádku rastru, za oknem buňka
+ * 39 tohoto řádku. Zdroj: C model netlistu (gdg-mz800 c-whid-0 2b97ab6;
+ * emu-experiments emucheck-fixes/model): pozadí (sudé položky) sleduje bajt
+ * F přesně, hranice buněk má model v 334,5 + 16k CLK0, tedy o 1,5 px později
+ * než okno DMD 08h změřené na stroji (stejný posun modelu jako u DMD 08h).
+ * Popředí (liché položky) dává model z bajtu F jen v části buňky, jinde
+ * hodnotu závislou na fázi zápisu po půlbodech; emulátor bere bajt F vždy
+ * [popředí a celý přechod z 0Ch neověřeny na stroji].
+ *
  * @pre Emu vlákno; g_gdg.regDMD má ještě bit MZ-700; čas GDG je konec
  *      M-cyklu zápisu DMD.
  * @post g_gdg.regPAL0 až regPAL3 nastavené; PALGRP se nemění.
@@ -342,9 +354,29 @@ static void gdg_palette_after_mz700(void)
     unsigned row;
     unsigned col = gdg_get_beam_pos(g_gdg.total_elapsed.ticks, &row);
     uint8_t src;
+    int before = (row == g_gdg.beam_row) && (col < GDG_PALRET_LEAD_TICKS + VIDEO_BEAM_CANVAS_FIRST_COLUMN);
+    int inside = (row == g_gdg.beam_row) && !before
+                 && (col - GDG_PALRET_LEAD_TICKS <= VIDEO_BEAM_CANVAS_LAST_COLUMN);
 
-    if ((row == g_gdg.beam_row) && (col >= GDG_PALRET_LEAD_TICKS + VIDEO_BEAM_CANVAS_FIRST_COLUMN)
-        && (col - GDG_PALRET_LEAD_TICKS <= VIDEO_BEAM_CANVAS_LAST_COLUMN))
+    if ((g_gdg.regDMD & 0x0c) == 0x0c)
+    {
+        /* DMD 0Ch až 0Fh: bajt čtvrtého čtení buňky pod paprskem; mimo okno
+         * buňky 39 posledního řádku rastru, jehož okno už proběhlo. */
+        unsigned x = inside ? (col - GDG_PALRET_LEAD_TICKS - VIDEO_BEAM_CANVAS_FIRST_COLUMN) / 16 : 39;
+        unsigned row_addr = g_gdg.row_addr;
+        unsigned r = g_gdg.char_row;
+        if (before)
+        {
+            row_addr = g_gdg.row_addr_of_row[(g_gdg.beam_row + VIDEO_SCREEN_HEIGHT - 1) % VIDEO_SCREEN_HEIGHT];
+            r = (r + 7) & 0x07;
+        };
+        unsigned offset = (row_addr * 40u + x) & 0x03ff;
+        unsigned ch = g_memoryVRAM[0x1000 + offset];
+        unsigned set = (g_memoryVRAM[0x1800 + offset] >> 7) * 0x800u;
+        unsigned pt = g_memoryVRAM[set + ch * 8u + r];
+        src = g_memoryVRAM[set + ((pt >> 5) << 8) + ((ch * 8u + r) & 0xffu)];
+    }
+    else if (inside)
     {
         /* v okně: atribut právě zobrazované buňky */
         unsigned x = (col - GDG_PALRET_LEAD_TICKS - VIDEO_BEAM_CANVAS_FIRST_COLUMN) / 16;
@@ -357,7 +389,7 @@ static void gdg_palette_after_mz700(void)
          * rastru, jehož okno už proběhlo. Když M-cyklus končí až v dalším,
          * ještě nezpracovaném řádku, je tím řádkem beam_row. */
         unsigned r = g_gdg.char_row;
-        if ((row == g_gdg.beam_row) && (col < GDG_PALRET_LEAD_TICKS + VIDEO_BEAM_CANVAS_FIRST_COLUMN))
+        if (before)
             r = (r + 7) & 0x07;
         src = g_memoryVRAM[r];
     };
@@ -856,9 +888,10 @@ void gdg_write_byte(unsigned addr, uint8_t value)
         else if (addr_msb == 7)
         {
             /* Bit 7 hodnoty = stav signálu CKSW (1 = řádek kratší
-             * o GDG_CKSW_ROW_SHRINK pxCLK). Status registr (0CEh / 0E008h
-             * bit 2) vidí novou hodnotu hned. Délku řádku čip mění jen při
-             * načtení bitu v HBLN_START (mz800_gdg_event.c): zápis před ním
+             * o GDG_CKSW_ROW_SHRINK pxCLK). Status registr (port 0CEh, bit 2)
+             * vidí novou hodnotu hned; čtení 0E008h bit CKSW nenese. Délku
+             * řádku čip mění jen při načtení bitu v HBLN_START
+             * (mz800_gdg_event.c): zápis před ním
              * platí už pro tento řádek, pozdější až pro další. Zdroj:
              * mz800-knowledge hw/11-palette-attributes.md, "Jak rychle se
              * změna CKSW projeví" (simulace netlistu). */
