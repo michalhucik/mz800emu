@@ -28,15 +28,53 @@
 
 #include "hw-generic/gdg/video.h"
 
+/**
+ * @file mz1500_gdgclk.h
+ * @brief Hodinové konstanty MZ-1500 (NTSC): takt GDG a děliče pro CPU a CTC0.
+ *
+ * Emulátor nepočítá čas z frekvence krystalu, ale z celých snímků:
+ * emulovaný takt je počet taktů snímku krát 60 snímků za sekundu. Je to
+ * záměrné zjednodušení: zvuk, obraz, nahrávání i převod WAV kazety pak
+ * pracují s celým počtem vzorků a taktů na snímek. Důsledek: všechno
+ * odvozené z taktu (CPU, CTC0, zvuk) běží o 0,129 % rychleji než
+ * skutečný počítač.
+ *
+ * | Signál        | Skutečný počítač | Emulátor      |
+ * |---------------|------------------|---------------|
+ * | takt GDG      | 14 318 180 Hz    | 14 336 640 Hz |
+ * | CPU (/4)      | 3 579 545 Hz     | 3 584 160 Hz  |
+ * | CTC0 (/16)    | 894 886 Hz       | 896 040 Hz    |
+ * | snímky        | 59,923 Hz        | 60 Hz         |
+ *
+ * Sloupec "Skutečný počítač" je dopočet z krystalu 14 318 180 Hz.
+ */
+
+/**
+ * @brief Frekvence krystalu skutečného MZ-1500 v Hz.
+ *
+ * Emulace podle ní neběží; slouží jen měření a výpisům (poměr emulovaného
+ * taktu ke skutečnému).
+ */
 #define GDGCLK_REAL_BASE 14318180
-#define GDGCLK_BASE (VIDEO_SCREEN_TICKS * VIDEO_SCREENS_PER_SEC) /* 262 * 912 * 60 = 14 336 640 */
-#define GDGCLK2CPU_DIVIDER 4                                     /* 3,579545 MHz */
-/* MZ-1500 CTC0 dělička je 16, NE 13 (na rozdíl od MZ-700 NTSC kde 13 = true 1M1).
- * Empiricky overeno boot beep frekvenci: ROM zapisuje preset 0x03F8 = 1016
- * (vs MZ-700 0x04EC = 1260), takze pro stejny ~880 Hz boot beep musi byt
- * input clock 1016 * 882 = 896 kHz = 14336640 / 16. Shoduje se s referencnim
- * SVN emulatorem. Predtim chybne nastaveno na 13 (pri MZ-700 mzarch refactoru
- * commit 2aa107f s nespravnym predpokladem MZ-1500 = MZ-700 NTSC). */
-#define GDGCLK_CTC0_DIVIDER 16                                   /* 896,040 kHz */
+
+/**
+ * @brief Emulovaný takt GDG v Hz: 912 * 262 * 60 = 14 336 640.
+ *
+ * Záměrně vázaný na celý počet snímků za sekundu, ne na krystal
+ * (viz popis souboru).
+ */
+#define GDGCLK_BASE (VIDEO_SCREEN_TICKS * VIDEO_SCREENS_PER_SEC)
+
+/** @brief Počet taktů GDG na takt CPU. Emulovaný CPU: 3 584 160 Hz (skutečný 3 579 545 Hz). */
+#define GDGCLK2CPU_DIVIDER 4
+
+/**
+ * @brief Počet taktů GDG na takt vstupu CTC0. Emulovaný vstup: 896 040 Hz (skutečný 894 886 Hz).
+ *
+ * Změřeno na MZ-1500: vstup CTC0 894 945 Hz je čtvrtina hodin CPU, tedy
+ * krystal / 16 (báze mz800-knowledge, hw-measurement/vysledky.md, oddíl 24).
+ * Sedí s tabulkou not v ROM (nota A = 03F8h = 1016, pípnutí asi 881 Hz).
+ */
+#define GDGCLK_CTC0_DIVIDER 16
 
 #endif /* MZ1500_GDGCLK_H */
