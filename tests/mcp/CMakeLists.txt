@@ -613,6 +613,20 @@ if(Python3_FOUND)
     message(STATUS "  tests/mcp: registered mcp_gdg_hw_fixes "
                    "(Python ${Python3_VERSION})")
 
+    # MZ-800, režim MZ-700: zápis do VRAM na D000h přes registr WF jako do
+    # roviny I (SINGLE, XOR, OR, RESET). Pipe, bez TCP. Bez binárky 77.
+    add_test(
+        NAME    mcp_mz700_vram_wf
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_mz700_vram_wf.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_mz700_vram_wf PROPERTIES
+        LABELS  "e2e;mcp;pipe;gdg"
+        TIMEOUT 120
+        SKIP_RETURN_CODE 77
+    )
+
     # Záznamy vstupů pořízené verzí 1564848f (tests/data/replay) při 100 %
     # a 150 %: přehrání musí doběhnout do konce. Hlídá, že termín 20ms
     # události u starého snapshotu zůstává podle původní verze a že klíč
