@@ -205,26 +205,45 @@ uint8_t vramctrl_mz700_read_rf(uint16_t addr)
 {
     uint8_t va = g_memory.VRAM[addr];
     uint8_t vc = g_memoryVRAM_III[addr];
+    unsigned plane = g_vramctrl.regRF_PLANE;
+    uint8_t x2 = 0xff;
+    uint8_t x4 = 0xff;
+
+    /* latche rovin II a IV: čtvrté video čtení buňky 39 posledního řádku */
+    if (g_vramctrl.regRF_SEARCH || (plane & (DEF_PLANE2 | DEF_PLANE4)))
+    {
+        unsigned f = gdg_mz700_cpu_latch_addr();
+        x2 = g_memory.VRAM[f];
+        x4 = g_memoryVRAM_III[f];
+    };
 
     if (!g_vramctrl.regRF_SEARCH)
     {
         uint8_t retval = 0xff;
-        if (g_vramctrl.regRF_PLANE & DEF_PLANE1)
+        if (plane & DEF_PLANE1)
         {
             retval &= va;
         };
-        if (g_vramctrl.regRF_PLANE & DEF_PLANE3)
+        if (plane & DEF_PLANE2)
+        {
+            retval &= x2;
+        };
+        if (plane & DEF_PLANE3)
         {
             retval &= vc;
+        };
+        if (plane & DEF_PLANE4)
+        {
+            retval &= x4;
         };
         return retval;
     };
 
     if (!g_vramctrl.regWFRF_VBANK)
     {
-        return (g_vramctrl.regRF_PLANE & DEF_PLANE1) ? va : (uint8_t) ~va;
+        return (uint8_t) (((plane & DEF_PLANE1) ? va : (uint8_t) ~va) & ((plane & DEF_PLANE2) ? x2 : (uint8_t) ~x2));
     };
-    return (g_vramctrl.regRF_PLANE & DEF_PLANE3) ? vc : (uint8_t) ~vc;
+    return (uint8_t) (((plane & DEF_PLANE3) ? vc : (uint8_t) ~vc) & ((plane & DEF_PLANE4) ? x4 : (uint8_t) ~x4));
 }
 
 /* Dokumentace v mz800_vramctrl.h */

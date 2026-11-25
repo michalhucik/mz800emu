@@ -268,6 +268,57 @@ extern "C"
     extern void gdg_row_counter_enter_row(void);
 
     /**
+     * @brief Adresa čtvrtého video čtení buňky textu v režimu MZ-700.
+     *
+     * Video fetch režimu MZ-700 čte na každou buňku čtyři bajty: znak,
+     * atribut, vzor a čtvrtý bajt F na adrese
+     * sada * 800h + (P >> 5) * 100h + ((8 * C + r) AND 0FFh), kde C je kód
+     * znaku, P bajt vzoru CG[sada * 800h + 8 * C + r], r řádek znaku a sada
+     * bit 7 atributu (C model netlistu GDG, gdg-mz800 gdg-documented kap. 13;
+     * na stroji potvrzeno obrazem DMD 0Ch a čtením s RF v režimu MZ-700,
+     * mz800-knowledge hw-measurement/vysledky.md oddíl 22, emu-experiments
+     * wf700-rf). Text a atribut buňky x leží na offsetu
+     * (40 * row_addr + x) mod 1024.
+     *
+     * @param row_addr Čítač adresy řádku pro řádek rastru (st_GDG.row_addr).
+     * @param r        Řádek znaku 0 až 7.
+     * @param x        Buňka 0 až 39.
+     * @return Offset v rovině I (0000h až 0FFFh, oblast CG-RAM).
+     * @pre Čte g_memoryVRAM (rovina I); bez vedlejších efektů.
+     */
+    extern unsigned gdg_mz700_fourth_read_addr(unsigned row_addr, unsigned r, unsigned x);
+
+    /**
+     * @brief Adresa bajtu, který drží latche rovin II a IV při čtení CPU v režimu MZ-700.
+     *
+     * Čtení CPU v režimu MZ-700 nahraje z buňky své adresy jen latche rovin I
+     * a III; latche rovin II a IV plní video fetch, naposledy čtvrtým čtením
+     * buňky 39 každého řádku rastru, a to i ve svislém zatemnění, kde čítač
+     * adresy řádku běží dál (C model netlistu GDG, gdg-mz800 2026-11-25; na
+     * MZ-800 změřeno programem wf700_meas2, emu-experiments wf700-rf,
+     * 2026-11-25). Čtení vidí řádek, jehož buňka 39 proběhla naposledy:
+     * podle modelu se latch plní v 959,5 px řádku a CPU vzorkuje data
+     * v sestupné hraně T3, 2,5 px před koncem M-cyklu; konec M-cyklu
+     * emulátoru (sloupec E) leží v E + 185,5 px. Nový řádek tedy vidí čtení
+     * s koncem M-cyklu ve sloupci GDG_MZ700_RFLATCH_COLUMN a dál.
+     *
+     * @return Offset v rovině I a III (0000h až 0FFFh) bajtu pro rovinu II
+     *         (VA) a IV (VC).
+     * @pre Emu vlákno; čas GDG je konec M-cyklu čtení (po WAIT).
+     */
+    extern unsigned gdg_mz700_cpu_latch_addr(void);
+
+/**
+ * @brief Sloupec konce M-cyklu čtení CPU, od kterého latche rovin II a IV
+ *        drží buňku 39 aktuálního řádku (viz gdg_mz700_cpu_latch_addr()).
+ *
+ * 959,5 px (plnění latche podle C modelu) + 2,5 px (vzorek dat před koncem
+ * M-cyklu) - 185,5 px (sloupec 0) = 776,5; čtení s koncem ve sloupci 777
+ * a dál vidí nový řádek. Odvozeno, mez po 1 px neměřena.
+ */
+#define GDG_MZ700_RFLATCH_COLUMN 777u
+
+    /**
      * @brief Nastaví čítač adresy řádku a historii po řádcích tak, jako by
      *        celý snímek běžel v současném režimu DMD.
      *

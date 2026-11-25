@@ -629,6 +629,22 @@ if(Python3_FOUND)
         SKIP_RETURN_CODE 77
     )
 
+    # MZ-800, režim MZ-700: čtení přes RF s rovinou II, IV a SEARCH vidí latch
+    # čtvrtého video čtení buňky 39 posledního řádku. Měřicí program
+    # tests/data/mz700_vram_wf/wf700_meas2.mzf, hodnoty změřené na skutečném
+    # MZ-800. Pipe, bez TCP. Bez binárky 77.
+    add_test(
+        NAME    mcp_mz700_rf_latch
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_mz700_rf_latch.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_mz700_rf_latch PROPERTIES
+        LABELS  "e2e;mcp;pipe;gdg"
+        TIMEOUT 120
+        SKIP_RETURN_CODE 77
+    )
+
     # Záznamy vstupů pořízené verzí 1564848f (tests/data/replay) při 100 %
     # a 150 %: přehrání musí doběhnout do konce. Hlídá, že termín 20ms
     # události u starého snapshotu zůstává podle původní verze a že klíč

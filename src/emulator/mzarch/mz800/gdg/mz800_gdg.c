@@ -206,6 +206,57 @@ void gdg_row_counter_enter_row(void)
 }
 
 
+/* Adresa čtvrtého video čtení buňky, viz mz800_gdg.h. */
+unsigned gdg_mz700_fourth_read_addr(unsigned row_addr, unsigned r, unsigned x)
+{
+    unsigned offset = (row_addr * 40u + x) & 0x03ff;
+    unsigned ch = g_memoryVRAM[0x1000 + offset];
+    unsigned set = (g_memoryVRAM[0x1800 + offset] >> 7) * 0x800u;
+    unsigned pt = g_memoryVRAM[set + ch * 8u + r];
+    return set + ((pt >> 5) << 8) + ((ch * 8u + r) & 0xffu);
+}
+
+
+/* Adresa bajtu latchů rovin II a IV při čtení CPU v režimu MZ-700, viz mz800_gdg.h. */
+unsigned gdg_mz700_cpu_latch_addr(void)
+{
+    unsigned row;
+    unsigned col = gdg_get_beam_pos(g_gdg.total_elapsed.ticks, &row);
+    unsigned row_addr, r;
+
+    if (row == g_gdg.beam_row)
+    {
+        if (col >= GDG_MZ700_RFLATCH_COLUMN)
+        {
+            /* buňka 39 tohoto řádku už proběhla */
+            row_addr = g_gdg.row_addr;
+            r = g_gdg.char_row;
+        }
+        else
+        {
+            /* ještě ne: buňka 39 předchozího řádku */
+            row_addr = g_gdg.row_addr_of_row[(g_gdg.beam_row + VIDEO_SCREEN_HEIGHT - 1) % VIDEO_SCREEN_HEIGHT];
+            r = (g_gdg.char_row + 7) & 0x07;
+        };
+    }
+    else
+    {
+        /* M-cyklus končí v dalším, ještě nezpracovaném řádku */
+        if (col >= GDG_MZ700_RFLATCH_COLUMN)
+        {
+            row_addr = g_gdg.row_addr_next;
+            r = g_gdg.char_row_next;
+        }
+        else
+        {
+            row_addr = g_gdg.row_addr;
+            r = g_gdg.char_row;
+        };
+    };
+    return gdg_mz700_fourth_read_addr(row_addr, r, 39);
+}
+
+
 /* Geometrie řádku podle DMD, viz mz800_gdg.h. */
 void gdg_geometry_row_start(void)
 {
@@ -374,11 +425,7 @@ static void gdg_palette_after_mz700(void)
             row_addr = g_gdg.row_addr_of_row[(g_gdg.beam_row + VIDEO_SCREEN_HEIGHT - 1) % VIDEO_SCREEN_HEIGHT];
             r = (r + 7) & 0x07;
         };
-        unsigned offset = (row_addr * 40u + x) & 0x03ff;
-        unsigned ch = g_memoryVRAM[0x1000 + offset];
-        unsigned set = (g_memoryVRAM[0x1800 + offset] >> 7) * 0x800u;
-        unsigned pt = g_memoryVRAM[set + ch * 8u + r];
-        src = g_memoryVRAM[set + ((pt >> 5) << 8) + ((ch * 8u + r) & 0xffu)];
+        src = g_memoryVRAM[gdg_mz700_fourth_read_addr(row_addr, r, x)];
     }
     else if (inside)
     {

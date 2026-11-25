@@ -89,26 +89,28 @@ extern "C"
     /**
      * @brief Čtení z VRAM/CG-RAM v režimu MZ-700 podle registru RF (pomalá cesta).
      *
-     * GDG vede čtení CPU i v režimu MZ-700 (DMD 08h až 0Fh) přes registr RF:
-     * buňka základní VRAM (sběrnice VA, rovina I) se čte s bitem 0, buňka téže
-     * adresy v rozšířené VRAM (sběrnice VC, rovina III) s bitem 2.
+     * GDG vede čtení CPU i v režimu MZ-700 (DMD 08h až 0Fh) přes registr RF
+     * jako 4barevné čtení v režimu 800. Čtení nahraje z buňky adresy jen
+     * latche rovin I (VA[c], základní VRAM) a III (VC[c], buňka téže adresy
+     * v rozšířené VRAM); latche rovin II a IV drží X2 a X4, bajt VA a VC
+     * čtvrtého video čtení buňky 39 posledního řádku rastru
+     * (gdg_mz700_cpu_latch_addr()), takže závisí na obsahu obrazovky a na
+     * poloze paprsku.
      *
      * | RF | Výsledek |
      * |----|----------|
-     * | READ (bit 7 = 0) | AND vybraných buněk (bit 0 = VA, bit 2 = VC); nic vybráno = FFh |
-     * | SEARCH, bit 4 = 0 | bit 0 = 1: VA, jinak NOT VA |
-     * | SEARCH, bit 4 = 1 | bit 2 = 1: VC, jinak NOT VC |
+     * | READ (bit 7 = 0) | 0FFh AND VA[c] (bit 0) AND X2 (bit 1) AND VC[c] (bit 2) AND X4 (bit 3) |
+     * | SEARCH, bit 4 = 0 | (bit 0 ? VA[c] : NOT VA[c]) AND (bit 1 ? X2 : NOT X2) |
+     * | SEARCH, bit 4 = 1 | (bit 2 ? VC[c] : NOT VC[c]) AND (bit 3 ? X4 : NOT X4) |
      *
-     * Zdroje: READ s bity 1 a 3 = 0 změřeno na skutečném MZ-800 s rozšířenou
-     * VRAM programem wf700_meas1 (2026-11-25; všechny porovnávané hodnoty shodné
-     * s C modelem netlistu gdg-mz800). SEARCH je jen z C modelu pro DMD 0Ch
+     * Zdroje: READ s bity 0 a 2 změřeno programem wf700_meas1 (emu-experiments
+     * archive/wf700/), roviny II a IV a SEARCH s bitem 4 = 0 programem
+     * wf700_meas2 (emu-experiments wf700-rf/), obojí na MZ-800 s rozšířenou
+     * VRAM v DMD 08h, 2026-11-25, shodně s C modelem netlistu GDG (mechanismus
+     * dohledal gdg-mz800). SEARCH s bitem 4 = 1 a DMD 0Ch až 0Fh jen z modelu
      * [na stroji neověřeno].
      *
-     * Nemodeluje se: bity 1 a 3 RF (roviny II a IV) a SEARCH v DMD 08h až 0Bh
-     * čtou podle modelu navíc jinou buňku VRAM, která nemá pevný vztah k adrese
-     * CPU; emulátor ji bere jako nevybranou.
-     *
-     * Bez rozšířené VRAM čte VC 0FFh (g_memoryVRAM_III).
+     * Bez rozšířené VRAM čte VC 0FFh (g_memoryVRAM_III), tedy i X4.
      *
      * @param addr Offset ve VRAM/CG-RAM (0x0000 až 0x1FFF, MEMORY_MZ700_VRAM_OFS()).
      * @return Přečtený bajt.
