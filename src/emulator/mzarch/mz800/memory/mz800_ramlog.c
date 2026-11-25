@@ -11,8 +11,8 @@
  * | 0000-0FFF, 1000-1FFF | RAM, s ROM_0000 / ROM_1000 zápis pod ROM (zahodí se) |
  * | 2000-7FFF, F000-FFFF bez ROM | RAM (s MemExt aktivní banka) |
  * | 8000-BFFF s VRAM v režimu 800 | plány grafické VRAM podle vramctrl_mz800_write_target() |
- * | C000-CFFF s CG-RAM (režim 700) | VRAM plán I, offset 0000-0FFF |
- * | D000-DFFF s VRAM 700 | VRAM plán I, offset 1000-1FFF |
+ * | C000-CFFF s CG-RAM (režim 700) | VRAM plán I, offset 0000-0FFF, a/nebo plán III podle WF (vramctrl_mz700_write_target()) |
+ * | D000-DFFF s VRAM 700 | VRAM plán I, offset 1000-1FFF, a/nebo plán III podle WF |
  * | E000-E008 s ROM | port (není paměť) |
  * | E009-FFFF s ROM | zápis pod ROM |
  *
@@ -86,6 +86,18 @@ static void rl_rom(uint16_t addr, st_RAMLOG_TARGET *t)
 }
 
 
+/** @brief Buňka plánu p grafické VRAM na fyzické adrese phy. */
+static uint8_t *rl_plane_cell(unsigned p, unsigned phy)
+{
+    switch (p) {
+        case 0: return &g_memory.VRAM[phy];
+        case 1: return &g_memory.VRAM[MEMORY_SIZE_VRAM_BANK + phy];
+        case 2: return &g_memory.EXVRAM[phy];
+        default: return &g_memory.EXVRAM[MEMORY_SIZE_VRAM_BANK + phy];
+    }
+}
+
+
 /** @brief Buňka VRAM 700 / CG-RAM v plánu I (offset 0000-1FFF). */
 static void rl_vram700(uint16_t addr, st_RAMLOG_TARGET *t)
 {
@@ -96,15 +108,32 @@ static void rl_vram700(uint16_t addr, st_RAMLOG_TARGET *t)
 }
 
 
-/** @brief Buňka plánu p grafické VRAM na fyzické adrese phy. */
-static uint8_t *rl_plane_cell(unsigned p, unsigned phy)
+/**
+ * @brief Cíle zápisu CPU do VRAM 700 / CG-RAM podle registru WF.
+ *
+ * V režimu MZ-700 jde zápis přes WF (vramctrl_mz700_write_target()): podle
+ * něj dopadne do buňky plánu I, do buňky téže adresy v plánu III (rozšířená
+ * VRAM), do obou, nebo nikam.
+ *
+ * @param addr CPU adresa.
+ * @param out  Výstup: nejvýš 2 cíle.
+ * @return Počet cílů (0 = zápis nic nezmění).
+ */
+static unsigned rl_vram700_targets(uint16_t addr, st_RAMLOG_TARGET out[RAMLOG_TARGETS_MAX])
 {
-    switch (p) {
-        case 0: return &g_memory.VRAM[phy];
-        case 1: return &g_memory.VRAM[MEMORY_SIZE_VRAM_BANK + phy];
-        case 2: return &g_memory.EXVRAM[phy];
-        default: return &g_memory.EXVRAM[MEMORY_SIZE_VRAM_BANK + phy];
+    unsigned we = 0, n = 0;
+    vramctrl_mz700_write_target(&we);
+    if (we & 0x01u) rl_vram700(addr, &out[n++]);
+    if (we & 0x04u) {
+        memset(&out[n], 0, sizeof(out[n]));
+        out[n].space = RAMLOG_SPACE_VRAM;
+        out[n].offset = 2 * MEMORY_SIZE_VRAM_BANK + (addr & 0x1FFFu);
+        out[n].plane = 2;
+        out[n].has_plane = true;
+        out[n].cell = rl_plane_cell(2, addr & 0x1FFFu);
+        n++;
     }
+    return n;
 }
 
 
@@ -142,12 +171,12 @@ unsigned ramlog_platform_targets(uint16_t addr, st_RAMLOG_TARGET out[RAMLOG_TARG
             return n;
         }
         case 0xC:
-            if (MEMORY_MZ800_MAP_TEST_CGRAM) rl_vram700(addr, &out[0]);
-            else rl_ram(addr, &out[0]);
+            if (MEMORY_MZ800_MAP_TEST_CGRAM) return rl_vram700_targets(addr, out);
+            rl_ram(addr, &out[0]);
             return 1;
         case 0xD:
-            if (MEMORY_MZ800_MAP_TEST_VRAM_D000) rl_vram700(addr, &out[0]);
-            else rl_ram(addr, &out[0]);
+            if (MEMORY_MZ800_MAP_TEST_VRAM_D000) return rl_vram700_targets(addr, out);
+            rl_ram(addr, &out[0]);
             return 1;
         case 0xE:
             if (MEMORY_MZ800_MAP_TEST_ROM_E000) {

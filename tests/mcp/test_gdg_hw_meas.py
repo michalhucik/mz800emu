@@ -441,6 +441,10 @@ def run(exe):
         free, line, col = _out_after_vram_write(emu, 0x06CF, 100, 20)
         h.check(line == 100 and col == free, f"OUT to 06CFh after a VRAM write served before the visible part does not wait (ended at {line}/{col}, expected {free})")
         emu.call("io_write", {"port": 0x00CE, "value": 0x00})
+        # Zkouška výše zapsala na porty WF a RF 20h; v režimu MZ-700 jde zápis do VRAM přes WF
+        # a čtení přes RF, další kroky proto potřebují zpět hodnotu po resetu (01h).
+        emu.call("io_write", {"port": 0x00CC, "value": 0x01})
+        emu.call("io_write", {"port": 0x00CD, "value": 0x01})
 
         # 11 - paleta po návratu z režimu MZ-700
         emu.call("io_write", {"port": 0xE4, "value": 0})

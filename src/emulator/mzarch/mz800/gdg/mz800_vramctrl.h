@@ -87,32 +87,120 @@ extern "C"
      ******************************************************************************/
 
     /**
-     * Cteni z MZ-700 VRAM bez ohledu na synchronizaci.
+     * @brief Čtení z VRAM/CG-RAM v režimu MZ-700 podle registru RF (pomalá cesta).
      *
-     * @param addr
-     * @return
+     * GDG vede čtení CPU i v režimu MZ-700 (DMD 08h až 0Fh) přes registr RF:
+     * buňka základní VRAM (sběrnice VA, rovina I) se čte s bitem 0, buňka téže
+     * adresy v rozšířené VRAM (sběrnice VC, rovina III) s bitem 2.
+     *
+     * | RF | Výsledek |
+     * |----|----------|
+     * | READ (bit 7 = 0) | AND vybraných buněk (bit 0 = VA, bit 2 = VC); nic vybráno = FFh |
+     * | SEARCH, bit 4 = 0 | bit 0 = 1: VA, jinak NOT VA |
+     * | SEARCH, bit 4 = 1 | bit 2 = 1: VC, jinak NOT VC |
+     *
+     * Zdroje: READ s bity 1 a 3 = 0 změřeno na skutečném MZ-800 s rozšířenou
+     * VRAM programem wf700_meas1 (2026-11-25; všechny porovnávané hodnoty shodné
+     * s C modelem netlistu gdg-mz800). SEARCH je jen z C modelu pro DMD 0Ch
+     * [na stroji neověřeno].
+     *
+     * Nemodeluje se: bity 1 a 3 RF (roviny II a IV) a SEARCH v DMD 08h až 0Bh
+     * čtou podle modelu navíc jinou buňku VRAM, která nemá pevný vztah k adrese
+     * CPU; emulátor ji bere jako nevybranou.
+     *
+     * Bez rozšířené VRAM čte VC 0FFh (g_memoryVRAM_III).
+     *
+     * @param addr Offset ve VRAM/CG-RAM (0x0000 až 0x1FFF, MEMORY_MZ700_VRAM_OFS()).
+     * @return Přečtený bajt.
+     * @pre Režim MZ-700 (DMD bit 3 = 1). Bez vedlejších efektů.
      */
-#define vramctrl_mz700_memop_read_byte(addr) g_memory.VRAM[addr]
+    extern uint8_t vramctrl_mz700_read_rf(uint16_t addr);
 
     /**
-     * Interni subrutina fyzickeho zapisu do MZ-700 VRAM - generuje vsak zmenu ve screenu.
+     * @brief Zápis do VRAM/CG-RAM v režimu MZ-700 podle registru WF (pomalá cesta).
      *
-     * @param addr
-     * @param value
+     * GDG vede zápis CPU i v režimu MZ-700 (DMD 08h až 0Fh) přes registr WF,
+     * stejně pro znaky, atributy i CG-RAM. D = bajt od CPU.
+     *
+     * | WF | Základní VRAM (VA) | Rozšířená VRAM (VC) |
+     * |----|--------------------|---------------------|
+     * | SINGLE, XOR, OR, RESET | zápis při bitu 0 = 1 | zápis při bitu 2 = 1 |
+     * | REPLACE, bit 4 = 0 | D při bitu 0 = 1, jinak 0 | beze změny |
+     * | REPLACE, bit 4 = 1 | beze změny | D při bitu 2 = 1, jinak 0 |
+     * | PSET, bit 4 = 0 | OR D při bitu 0 = 1, jinak AND NOT D | beze změny |
+     * | PSET, bit 4 = 1 | beze změny | OR D při bitu 2 = 1, jinak AND NOT D |
+     *
+     * Bity 1 a 3 WF (roviny II a IV) vliv nemají. Zdroj: C model netlistu
+     * gdg-mz800 a měření na skutečném MZ-800 s rozšířenou VRAM programem
+     * wf700_meas1 (2026-11-25): všech 256 hodnot WF pro znak, atribut a CG-RAM
+     * v DMD 08h a pro znak v DMD 0Ch, shoda s modelem ve všech.
+     *
+     * Bez rozšířené VRAM se zápis do VC ztratí (g_memoryVRAM_III_WR).
+     *
+     * @param addr  Offset ve VRAM/CG-RAM (0x0000 až 0x1FFF, MEMORY_MZ700_VRAM_OFS()).
+     * @param value Bajt od CPU.
+     * @pre Režim MZ-700 (DMD bit 3 = 1).
+     * @post g_framebuffer.screen_changes = SCRSTS_THIS_IS_CHANGED.
+     */
+    extern void vramctrl_mz700_write_wf(uint16_t addr, uint8_t value);
+
+    /**
+     * @brief Kam by zápis do VRAM v režimu MZ-700 zapsal (bez zápisu a bez vedlejších efektů).
+     *
+     * Stejné rozhodnutí jako vramctrl_mz700_write_wf(); pro záznam zápisů debuggeru.
+     *
+     * @param out_we Výstup: bit 0 = buňka základní VRAM (rovina I), bit 2 = buňka
+     *               rozšířené VRAM (rovina III). 0 = zápis nic nezmění.
+     */
+    extern void vramctrl_mz700_write_target(unsigned *out_we);
+
+    /**
+     * @brief Čtení z VRAM/CG-RAM v režimu MZ-700 bez synchronizace.
+     *
+     * S RF = 01h (READ, jen rovina I; hodnota po resetu a z ROM) čte přímo
+     * buňku základní VRAM, jinak přes vramctrl_mz700_read_rf().
+     *
+     * @param addr Offset ve VRAM/CG-RAM (0x0000 až 0x1FFF).
+     * @return Přečtený bajt.
+     */
+    static inline uint8_t vramctrl_mz700_memop_read_byte(uint16_t addr)
+    {
+        if (!g_vramctrl.regRF_SEARCH && (g_vramctrl.regRF_PLANE == 0x01))
+        {
+            return g_memory.VRAM[addr];
+        };
+        return vramctrl_mz700_read_rf(addr);
+    }
+
+    /**
+     * @brief Zápis do VRAM/CG-RAM v režimu MZ-700 bez synchronizace; hlásí změnu obrazu.
+     *
+     * S WF = 01h nebo 11h (SINGLE, jen rovina I; hodnota po resetu a z ROM)
+     * zapíše přímo do buňky základní VRAM, jinak přes vramctrl_mz700_write_wf().
+     *
+     * @param addr  Offset ve VRAM/CG-RAM (0x0000 až 0x1FFF).
+     * @param value Bajt od CPU.
      */
 #define vramctrl_mz700_memop_write_byte_internal(addr, value)                                                     \
     {                                                                                                             \
-        /* TODO: meli by jsme nastavovat jen pokud se zapisuje do CG-RAM, nebo do VRAM, ktera je opravdu videt */ \
-        g_framebuffer.screen_changes = SCRSTS_THIS_IS_CHANGED;                                                    \
-        g_memory.VRAM[addr] = value;                                                                              \
+        if ((g_vramctrl.regWF_MODE == GDG_WF_MODE_SINGLE) && (g_vramctrl.regWF_PLANE == 0x01))                    \
+        {                                                                                                         \
+            /* TODO: meli by jsme nastavovat jen pokud se zapisuje do CG-RAM, nebo do VRAM, ktera je opravdu videt */ \
+            g_framebuffer.screen_changes = SCRSTS_THIS_IS_CHANGED;                                                \
+            g_memory.VRAM[addr] = value;                                                                          \
+        }                                                                                                         \
+        else                                                                                                      \
+        {                                                                                                         \
+            vramctrl_mz700_write_wf(addr, value);                                                                 \
+        };                                                                                                        \
         VRAMCTRL_DBG_NOTIFY_VRAM_TOUCH();                                                                         \
     }
 
     /**
-     * Zapis do MZ-700 VRAM bez synchronizace - generuje vsak zmenu ve screenu.
+     * @brief Zápis do VRAM/CG-RAM v režimu MZ-700 bez synchronizace (viz vramctrl_mz700_memop_write_byte_internal).
      *
-     * @param addr
-     * @param value
+     * @param addr  Offset ve VRAM/CG-RAM (0x0000 až 0x1FFF).
+     * @param value Bajt od CPU.
      */
 #define vramctrl_mz700_memop_write_byte(addr, value) vramctrl_mz700_memop_write_byte_internal(addr, value)
 

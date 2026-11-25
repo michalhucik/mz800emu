@@ -194,6 +194,101 @@ void vramctrl_mz800_set_wf_rf_reg(int addr, uint8_t value)
 #define DEF_PLANE3 (1 << 2)
 #define DEF_PLANE4 (1 << 3)
 
+/*******************************************************************************
+ *
+ * VRAM kontroler pro rezimy MZ-700: pristup pres registry RF a WF
+ *
+ ******************************************************************************/
+
+/* Dokumentace v mz800_vramctrl.h */
+uint8_t vramctrl_mz700_read_rf(uint16_t addr)
+{
+    uint8_t va = g_memory.VRAM[addr];
+    uint8_t vc = g_memoryVRAM_III[addr];
+
+    if (!g_vramctrl.regRF_SEARCH)
+    {
+        uint8_t retval = 0xff;
+        if (g_vramctrl.regRF_PLANE & DEF_PLANE1)
+        {
+            retval &= va;
+        };
+        if (g_vramctrl.regRF_PLANE & DEF_PLANE3)
+        {
+            retval &= vc;
+        };
+        return retval;
+    };
+
+    if (!g_vramctrl.regWFRF_VBANK)
+    {
+        return (g_vramctrl.regRF_PLANE & DEF_PLANE1) ? va : (uint8_t) ~va;
+    };
+    return (g_vramctrl.regRF_PLANE & DEF_PLANE3) ? vc : (uint8_t) ~vc;
+}
+
+/* Dokumentace v mz800_vramctrl.h */
+void vramctrl_mz700_write_target(unsigned *out_we)
+{
+    unsigned sel = g_vramctrl.regWF_PLANE & (DEF_PLANE1 | DEF_PLANE3);
+
+    if ((g_vramctrl.regWF_MODE == GDG_WF_MODE_REPLACE) || (g_vramctrl.regWF_MODE == GDG_WF_MODE_PSET))
+    {
+        /* REPLACE a PSET zapisují vždy, a to do buňky podle bitu B/A */
+        *out_we = g_vramctrl.regWFRF_VBANK ? DEF_PLANE3 : DEF_PLANE1;
+        return;
+    };
+    *out_we = sel;
+}
+
+/**
+ * @brief Nová hodnota jedné buňky VRAM po zápisu podle režimu WF.
+ *
+ * @param old      Původní obsah buňky.
+ * @param value    Bajt od CPU.
+ * @param selected Nenulové = rovina buňky je ve WF vybraná (má význam jen
+ *                 u REPLACE a PSET; ostatní režimy se pro nevybranou rovinu
+ *                 nevolají).
+ * @return Bajt k zápisu.
+ */
+static inline uint8_t vramctrl_mz700_wf_value(uint8_t old, uint8_t value, unsigned selected)
+{
+    switch (g_vramctrl.regWF_MODE)
+    {
+    case GDG_WF_MODE_SINGLE:
+        return value;
+    case GDG_WF_MODE_EXOR:
+        return old ^ value;
+    case GDG_WF_MODE_OR:
+        return old | value;
+    case GDG_WF_MODE_RESET:
+        return old & (uint8_t) ~value;
+    case GDG_WF_MODE_REPLACE:
+        return selected ? value : 0x00;
+    case GDG_WF_MODE_PSET:
+    default:
+        return selected ? (old | value) : (old & (uint8_t) ~value);
+    };
+}
+
+/* Dokumentace v mz800_vramctrl.h */
+void vramctrl_mz700_write_wf(uint16_t addr, uint8_t value)
+{
+    unsigned we;
+
+    vramctrl_mz700_write_target(&we);
+    if (we & DEF_PLANE1)
+    {
+        g_memory.VRAM[addr] = vramctrl_mz700_wf_value(g_memory.VRAM[addr], value, g_vramctrl.regWF_PLANE & DEF_PLANE1);
+    };
+    if (we & DEF_PLANE3)
+    {
+        g_memoryVRAM_III_WR[addr] = vramctrl_mz700_wf_value(g_memoryVRAM_III[addr], value, g_vramctrl.regWF_PLANE & DEF_PLANE3);
+    };
+    /* TODO: meli by jsme nastavovat jen pokud se zapisuje do CG-RAM, nebo do VRAM, ktera je opravdu videt */
+    g_framebuffer.screen_changes = SCRSTS_THIS_IS_CHANGED;
+}
+
 /* Pokud jsme v rozliseni 640x200, tak potrebujeme vedet, zda se saha na dudy^H^H^H^H ;) sudy, nebo lichy byte */
 #define ADDR_IS_ODD (addr & 0x01)
 
