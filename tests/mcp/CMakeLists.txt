@@ -1081,23 +1081,24 @@ if(Python3_FOUND)
                    "(Python ${Python3_VERSION})")
 
     # -----------------------------------------------------------
-    # MZ-700: čekací takt při čtení z monitorové ROM (pipe)
+    # MZ-700 a MZ-1500: čekací takt při čtení z monitorové ROM (pipe)
     # -----------------------------------------------------------
-    # Podle měření na skutečném MZ-700 PAL (2026-11-24): čtecí cyklus z ROM
-    # 0000h až 0FFFh trvá o 1 T déle, když je ROM připojená; zápis, RAM na
-    # jejím místě (OUT 0E0h) a ostatní oblasti nečekají. MZ-1500 nečeká.
+    # Podle měření na skutečném MZ-700 PAL (2026-11-24) a MZ-1500 (2026-11-25):
+    # čtecí cyklus z ROM 0000h až 0FFFh trvá o 1 T déle, když je ROM připojená;
+    # zápis, RAM na jejím místě (OUT 0E0h) a ostatní oblasti nečekají. MZ-800
+    # nečeká (změřeno 2026-11-25, v režimu MZ-700 i MZ-800).
     add_test(
-        NAME    mcp_mz700_rom_wait
+        NAME    mcp_rom_wait
         COMMAND ${Python3_EXECUTABLE}
-                ${CMAKE_CURRENT_SOURCE_DIR}/test_mz700_rom_wait.py
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_rom_wait.py
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     )
-    set_tests_properties(mcp_mz700_rom_wait PROPERTIES
+    set_tests_properties(mcp_rom_wait PROPERTIES
         LABELS  "e2e;mcp;pipe"
-        TIMEOUT 120
+        TIMEOUT 180
         SKIP_RETURN_CODE 77
     )
-    message(STATUS "  tests/mcp: registered mcp_mz700_rom_wait "
+    message(STATUS "  tests/mcp: registered mcp_rom_wait "
                    "(Python ${Python3_VERSION})")
 
     # -----------------------------------------------------------
