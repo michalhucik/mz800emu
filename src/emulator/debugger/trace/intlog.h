@@ -72,7 +72,7 @@ typedef enum en_INTLOG_SOURCE_CHIP
     INTLOG_CHIP_PIOZ80_PORT_A = 21,   /**< PIOZ80 Port A jako celek (pro IRQ ack source) */
     INTLOG_CHIP_PIOZ80_PORT_B = 22,   /**< PIOZ80 Port B jako celek (pro IRQ ack source) */
     INTLOG_CHIP_VECTOR_BUS_LATCH = 23, /**< IM 2 vector source = bus latch / žádný chip
-                                            nedodal vector (CPU dispatch na (I:00) entry).
+                                            nedodal vector (CPU vzal záznam (I:duch sběrnice)).
                                             Typicky když IRQ patří chipu bez intread_cb. */
 } en_INTLOG_SOURCE_CHIP;
 
@@ -208,7 +208,7 @@ void intlog_record_pio_state ( uint32_t state_bits );
  *
  * @param src                 source_chip (PIOZ80_PORT_A / PIOZ80_PORT_B / CTC2 / ...)
  * @param vector_table_addr   Adresa entry v IM 2 tabulce v paměti
- *                            = (cpu->I << 8) | (vector & 0xFE)
+ *                            = (cpu->I << 8) | vector (bit 0 se nemaskuje)
  * @param isr_addr            ISR adresa přečtená z paměti na adrese
  *                            vector_table_addr (16-bit LE), tj. hodnota
  *                            nahrávaná do PC.

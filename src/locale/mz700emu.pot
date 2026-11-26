@@ -3183,9 +3183,9 @@ msgstr ""
 #: src/ui-imgui/debugger/breakpoints/bpt_edit_panel.cpp:2023
 msgid ""
 "Filter triggers only when CPU dispatches IM2 INT through this exact vector "
-"slot. Vector address is computed as (I register << 8) | (low byte from "
-"peripheral & 0xFE). Comparison applies AND with 0xFE on bit 0 (= HW vector "
-"page boundary), so user value bit 0 is ignored at runtime.\n"
+"slot. Vector address is computed as (I register << 8) | low byte from the "
+"data bus, including bit 0 (the Z80 does not mask it). To ignore bit 0, use "
+"match mode Mask with mask 0xFFFE.\n"
 "Reference: docs/cz/debugger/breakpoints/irq-filter.md"
 msgstr ""
 

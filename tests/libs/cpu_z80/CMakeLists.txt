@@ -40,6 +40,16 @@ mz_add_test(cpu_z80_ei_delay
     LABELS   "standalone;libs"
 )
 
+# Pokrývá adresu záznamu tabulky v IM 2 při lichém vektoru: Z80 bit 0 vektoru
+# nemaskuje (bod I1 báze mz800emu/02-rozdily-proti-hw.md). Viz
+# emu-experiments/im2-vector/.
+mz_add_test(cpu_z80_im2_vector
+    TYPE     STANDALONE
+    SOURCES  test_im2_vector.c
+    LIBS     mzlib_cpu_z80
+    LABELS   "standalone;libs"
+)
+
 # Pokriva inkrement R pri opakovanem fetchi HALT a pri prijeti INT/NMI
 # (regrese v2.0.2 - loader hry Interkarate desifruje klicem z R po HALT).
 # Viz emu-experiments/interkarate-cmt/.

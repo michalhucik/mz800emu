@@ -1102,6 +1102,26 @@ if(Python3_FOUND)
                    "(Python ${Python3_VERSION})")
 
     # -----------------------------------------------------------
+    # MZ-800: vektor IM 2 bez Z80 PIO = poslední bajt na sběrnici (pipe)
+    # -----------------------------------------------------------
+    # Ověřovací program tests/data/im2_vector/im2_vector.mzf dal na skutečném
+    # MZ-800 (2026-11-26): bit 0 vektoru se nemaskuje; duch sběrnice je
+    # poslední bajt čtení i zápisu paměti a I/O; v HALT bajt za HALT.
+    add_test(
+        NAME    mcp_im2_vector
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_im2_vector.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_im2_vector PROPERTIES
+        LABELS  "e2e;mcp;pipe"
+        TIMEOUT 180
+        SKIP_RETURN_CODE 77
+    )
+    message(STATUS "  tests/mcp: registered mcp_im2_vector "
+                   "(Python ${Python3_VERSION})")
+
+    # -----------------------------------------------------------
     # Pásky TMZ ve Virtual CMT a načtení MZF ROM na všech platformách (pipe)
     # -----------------------------------------------------------
     # Data v tests/data/cmt/ (kontroluje je unit test cmt_testdata):

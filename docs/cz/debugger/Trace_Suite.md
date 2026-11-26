@@ -396,7 +396,7 @@ Pokryté event class:
   (entry v IM 2 tabulce), high 16 bit = isr_addr (= ISR adresa, kterou
   Z80 nahraje do PC). Source_chip rozlišuje zdroj vector: `PIOZ80_PORT_A`
   / `_PORT_B` (vektor z PIOZ80 daisy chain), `CTC2` / `FDC` (INT pin
-  tažený, vector = 0, dispatch na (I:00)), `VECTOR_BUS_LATCH` (jiný /
+  tažený, vektor = poslední bajt na datové sběrnici), `VECTOR_BUS_LATCH` (jiný /
   neresolutable). Klíčové pro debug ISR dispatchu.
 
 ### hwlog (24 B)

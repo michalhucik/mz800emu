@@ -411,8 +411,8 @@ Covered event classes:
   (entry in the IM 2 table), high 16 bits = isr_addr (= ISR address that
   the Z80 will load into PC). Source_chip distinguishes the vector
   source: `PIOZ80_PORT_A` / `_PORT_B` (vector from the PIOZ80 daisy
-  chain), `CTC2` / `FDC` (INT pin pulled, vector = 0, dispatch onto
-  (I:00)), `VECTOR_BUS_LATCH` (other / not resolvable). Key for
+  chain), `CTC2` / `FDC` (INT pin pulled, vector = last byte left on
+  the data bus), `VECTOR_BUS_LATCH` (other / not resolvable). Key for
   debugging ISR dispatch.
 
 ### hwlog (24 B)

@@ -352,9 +352,8 @@ struct st_BP_ACTION;
          * V1 chování (= fire na každý dispatch).
          *
          * im2_vector_addr je očekávaný IM2 vector table address ve tvaru
-         * (I << 8) | (vec & 0xFE). Při comparison enforce maskuje low byte
-         * 0xFE (= HW omezení vector page boundary), takže user může zadat
-         * libovolnou hodnotu - bit 0 je při matchi ignorován.
+         * (I << 8) | vec. Porovnává se celá adresa včetně bitu 0 (Z80 bit 0
+         * vektoru nemaskuje; lichý vektor přichází jako duch sběrnice).
          *
          * im2_isr_addr je očekávaná ISR jump target adresa (= cpu->pc
          * bezprostředně po dispatchi).
@@ -370,11 +369,11 @@ struct st_BP_ACTION;
          * Pri RANGE = vector_addr <= x <= vector_addr_end.
          * Pri MASK = (x & vector_mask) == (vector_addr & vector_mask).
          *
-         * HW vector page boundary mask 0xFFFE (= bit 0 ignorovan) je
-         * aplikovana na vector_addr PRED bp_match16 testem.
+         * Bit 0 se neignoruje; pro shodu bez ohledu na bit 0 slouží MASK
+         * s im2_vector_mask = 0xFFFE.
          */
         bool im2_vector_enabled;            /* true = filter aktivní (jen pro IM 2) */
-        uint16_t im2_vector_addr;           /* očekávaný (I << 8) | (vec & 0xFE) */
+        uint16_t im2_vector_addr;           /* očekávaný (I << 8) | vec */
         en_BP_MATCH_MODE im2_vector_match_mode; /* V1.6+ 4.4: SINGLE/RANGE/MASK */
         uint16_t im2_vector_addr_end;       /* V1.6+ 4.4: RANGE upper bound (inclusive) */
         uint16_t im2_vector_mask;           /* V1.6+ 4.4: MASK bitmask */
@@ -810,12 +809,12 @@ struct st_BP_ACTION;
     /**
      * @brief Nastaví IM2 vector address filter (BPT_TYPE_IRQ).
      *
-     * Filter aktivní jen v IM 2. Při comparison se aplikuje AND s 0xFE
-     * (= vector page boundary), takže low bit je v match ignorován.
+     * Filter aktivní jen v IM 2. Porovnává se celá adresa záznamu včetně
+     * bitu 0.
      *
      * @param bpt_id  ID breakpointu.
      * @param enabled true = filter zapnutý (BP fire jen pokud match).
-     * @param addr    Očekávaný (I << 8) | (vec & 0xFE).
+     * @param addr    Očekávaný (I << 8) | vec.
      * @return false pokud BP neexistuje.
      */
     extern bool breakpoints_set_im2_vector_filter ( int bpt_id, bool enabled, uint16_t addr );
@@ -1291,7 +1290,7 @@ struct st_BP_ACTION;
      *
      * V1.5.A8: hook se volá až POST-dispatch z mzarch.c (po
      * z80_process_interrupt) kde jsou dostupné vector_addr
-     * (= (I << 8) | (vec & 0xFE)) a isr_addr (= cpu->pc po jumpu).
+     * (= (I << 8) | vec) a isr_addr (= cpu->pc po jumpu).
      * Tím získáme možnost filtrovat per IM2 slot nebo per ISR target.
      *
      * V1.5.A8.5: přidán int_vector_byte parameter (= raw cpu->int_vector
@@ -1305,8 +1304,8 @@ struct st_BP_ACTION;
      * vyžaduje IM 2). BP bez filtrů fire i pro IM 0/1 dispatch (pokud
      * příslušný im{N}_enabled je true).
      *
-     * Vector match aplikuje AND s 0xFE (= HW vector page boundary), takže
-     * uživatelská hodnota im2_vector_addr může mít libovolný bit 0.
+     * Vector match porovnává celou adresu včetně bitu 0 (Z80 bit 0 vektoru
+     * nemaskuje); bit 0 lze vynechat režimem MASK s maskou 0xFFFE.
      *
      * @param raised          INT bus mask před dispatch.
      * @param im_mode         Z80 IM mode (0/1/2) v okamžiku dispatchu.

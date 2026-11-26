@@ -172,7 +172,8 @@ void test_int_ack_im2_increments_r(void)
 {
     g_cpu->external_int_handling = true;
     g_mem[0x0200] = 0x00;                 /* NOP */
-    g_mem[0x40FE] = 0x00; g_mem[0x40FF] = 0x50;
+    /* intread vrací vektor 0FFh; Z80 bit 0 nemaskuje, záznam je 40FFh. */
+    g_mem[0x40FF] = 0x00; g_mem[0x4100] = 0x50;
     g_cpu->pc = 0x0200; g_cpu->sp = 0x8000;
     g_cpu->im = 2; g_cpu->i = 0x40;
     g_cpu->iff1 = 1; g_cpu->iff2 = 1;

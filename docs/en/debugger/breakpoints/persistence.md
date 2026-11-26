@@ -214,7 +214,7 @@ they are caches derived from `event_name` on load.
 | `im2_enabled` | bool | true | Fire on IM 2 dispatch. |
 | `im0_rst_mask` | int (uint8) | 0 | IM 0 RST opcode bitmask (0 = match-all). Bit i = RST opcode 0xC7 + i*8. |
 | `im2_vector_enabled` | bool | false | Filter on the IM 2 vector address. |
-| `im2_vector_addr` | int (uint16) | 0 | Expected `(I << 8) \| (vec & 0xFE)`. |
+| `im2_vector_addr` | int (uint16) | 0 | Expected `(I << 8) \| vec` (including bit 0). |
 | `im2_isr_enabled` | bool | false | Filter on the IM 2 ISR target. |
 | `im2_isr_addr` | int (uint16) | 0 | Expected ISR address. |
 
@@ -553,7 +553,7 @@ Traces writes to the GDG palette 0xF0-0xF3.
 }
 ```
 
-Fires only on IM 2 dispatch with vector `(I << 8) | (vec & 0xFE) =
+Fires only on IM 2 dispatch with vector `(I << 8) | vec =
 0x6900`.
 
 ### IRQ with IM 0 RST 38h filter

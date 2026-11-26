@@ -960,6 +960,14 @@ void mzarch_main_report_screen_done_underflow(unsigned ticks)
  * INT, která přišla méně než MZARCH_INTERRUPT_SETUP_TICKS před koncem
  * instrukce (změřeno na MZ-800, viz interrupt.h).
  *
+ * Přijetí INT v HALT: procesor během HALT na sběrnici opakovaně čte bajt za
+ * instrukcí HALT (změřeno na MZ-800 2026-11-26, emu-experiments
+ * im2-vector/hwtest/VYSLEDKY1.md: vektor IM 2 bez PIO = bajt za HALT).
+ * Jádro v HALT paměť nečte, proto se duch sběrnice (regDBUS_latch) nastaví
+ * na tento bajt až tady, těsně před přijetím; nic jiného ho během HALT
+ * nečte. Čtení je bez vedlejších efektů (memory_read_byte_no_se), aby HALT
+ * neplnil heatmapu, CDL ani breakpointy na čtení.
+ *
  * Bez žádosti jedno čtení masky a dvou příznaků jádra (per-event cesta,
  * ne instrukční smyčka).
  */
@@ -992,6 +1000,10 @@ static inline void mzarch_main_process_interrupt(void)
         if (g_mzarch_main.interrupt && int_enabled && !cpu->int_pending)
             z80_int(cpu);
 
+        /* HALT: duch sběrnice je bajt za HALT (cpu->pc = adresa HALT). */
+        if (!is_nmi && cpu->halted)
+            g_mzarch_main.regDBUS_latch = memory_read_byte_no_se((uint16_t)(cpu->pc + 1));
+
 #ifdef MZ800EMU_CFG_DEBUGGER_ENABLED
         /* trace-suite intlog: snapshot stavu PIOZ80 PŘED z80_process_interrupt().
          * Uvnitř z80_process_interrupt() se v IM 2 cestě volá intread_cb
@@ -1000,9 +1012,9 @@ static inline void mzarch_main_process_interrupt(void)
          * g_pioz80.interrupt na PIOZ80_INTERRUPT_RECEIVED + nastaví
          * g_pioz80.interrupt_port_id. Pokud byl PIOZ80 v stavu PENDING,
          * znamená to že vektor pochází z PIOZ80 daisy chain. Jinak (typicky
-         * CTC2 v mzdos) intread_cb early-returnne 0, CPU dispatch skočí na
-         * (I:00) entry a my zdroj identifikujeme z g_mzarch_main.interrupt
-         * masky. */
+         * CTC2 v mzdos) PIOZ80 sběrnici nebudí, intread_cb vrátí ducha
+         * sběrnice (g_mzarch_main.regDBUS_latch), CPU vezme záznam tabulky
+         * (I:duch) a zdroj identifikujeme z g_mzarch_main.interrupt masky. */
         int was_pioz80_pending = (g_pioz80.interrupt == PIOZ80_INTERRUPT_PENDING);
         uint8_t mzarch_irq_mask_before = g_mzarch_main.interrupt;
         /* Callstack: snapshot PC PŘED z80_process_interrupt(). Po
@@ -1054,25 +1066,26 @@ static inline void mzarch_main_process_interrupt(void)
             /* trace-suite intlog: zaznamenat IM 2 IRQ accept event.
              *
              * Hook musí být zde (= v mzarch.c) a ne v pioz80_interrupt_ack_im2_cb,
-             * protože ten má early return na ř. 874 pro non-PIOZ80 IRQ a v takovém
+             * protože ten má early return pro non-PIOZ80 IRQ a v takovém
              * případě se hook nikdy nevolá, ačkoliv CPU dispatch reálně proběhl.
              *
-             * vector_table_addr = (I << 8) | (vector & 0xFE), kde vector je hodnota
+             * vector_table_addr = (I << 8) | vector, kde vector je hodnota
              * kterou CPU přečetl z datové sběrnice (cpu->int_vector). Pro PIOZ80
              * IRQ je to port->interrupt_vector, pro non-PIOZ80 je to "duch
              * sběrnice" (g_mzarch_main.regDBUS_latch = poslední byte na DBUS),
-             * protože MZ-800 nemá zařízení dodávající vektor.
+             * protože MZ-800 nemá zařízení dodávající vektor. Bit 0 se
+             * nemaskuje, stejně jako v jádře (src/libs/cpu-z80/z80.c).
              *
              * isr_addr = cpu->pc - PC je v tomto okamžiku už nastavený na ISR
-             * adresu (= hodnota přečtená z (I:vector & 0xFE)).
+             * adresu (= hodnota přečtená z (I:vector)).
              *
              * source_chip rozlišuje kdo dodal vector:
              *  - PIOZ80_PORT_A/B = vektor přišel z PIOZ80 daisy chain
-             *  - CTC2 = INT pin tažený CTC2 (vector = 0, CPU skočil na (I:00))
+             *  - CTC2 = INT pin tažený CTC2 (vector = duch sběrnice)
              *  - FDC = INT pin tažený FDC kontrolérem
              *  - VECTOR_BUS_LATCH = jiný / neresolvable zdroj */
             if (TEST_TRACE_INTLOG_DISPATCH && !is_nmi && cpu->im == 2) {
-                uint16_t vector_table_addr = ((uint16_t)cpu->i << 8) | (cpu->int_vector & 0xFE);
+                uint16_t vector_table_addr = (uint16_t)(((uint16_t)cpu->i << 8) | cpu->int_vector);
                 uint16_t isr_addr = cpu->pc;
                 en_INTLOG_SOURCE_CHIP src;
                 if (was_pioz80_pending) {
@@ -1119,7 +1132,7 @@ static inline void mzarch_main_process_interrupt(void)
                 uint16_t bp_vector_addr = 0;
                 uint16_t bp_isr_addr = cpu->pc;
                 if ( cpu->im == 2 ) {
-                    bp_vector_addr = ( (uint16_t) cpu->i << 8 ) | ( cpu->int_vector & 0xFE );
+                    bp_vector_addr = (uint16_t) ( ( (uint16_t) cpu->i << 8 ) | cpu->int_vector );
                 };
                 /* V1.5.A8.5: int_vector_byte = raw cpu->int_vector
                  * (= RST opcode v IM 0, vec byte v IM 2). */
@@ -1147,7 +1160,7 @@ static inline void mzarch_main_process_interrupt(void)
                 uint16_t cs_isr_addr = cpu->pc;
                 uint16_t cs_im2_vec = 0;
                 if ( cpu->im == 2 ) {
-                    cs_im2_vec = ( (uint16_t) cpu->i << 8 ) | ( cpu->int_vector & 0xFE );
+                    cs_im2_vec = (uint16_t) ( ( (uint16_t) cpu->i << 8 ) | cpu->int_vector );
                 }
                 callstack_on_irq_accept ( pc_before_int, cs_isr_addr,
                                            cpu->im, cs_im2_vec );

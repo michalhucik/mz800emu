@@ -2022,10 +2022,10 @@ static void render_section_bp_options(BptEditPanelState *ep)
                 ep->dirty = true;
             help_marker(_("Filter triggers only when CPU dispatches IM2 INT "
                           "through this exact vector slot. Vector address is "
-                          "computed as (I register << 8) | (low byte from "
-                          "peripheral & 0xFE). Comparison applies AND with "
-                          "0xFE on bit 0 (= HW vector page boundary), so "
-                          "user value bit 0 is ignored at runtime.\n"
+                          "computed as (I register << 8) | low byte from the "
+                          "data bus, including bit 0 (the Z80 does not mask "
+                          "it). To ignore bit 0, use match mode Mask with "
+                          "mask 0xFFFE.\n"
                           "Reference: docs/cz/debugger/breakpoints/irq-filter.md"));
 
             /* IM2 Vector adresa - SINGLE label + reused address input. Pri
@@ -2954,9 +2954,9 @@ void bpt_edit_panel_render(void)
                     uint16_t vtmp;
                     if (!parse_hex16(ep->wc_im2_vector_addr, &vtmp))
                         valid = false;
-                    /* V1.6+ 4.4: RANGE/MASK validation - End/Mask musi
-                     * byt parsovatelne. RANGE end >= start na HW page
-                     * mask 0xFFFE (= bit 0 ignored). */
+                    /* V1.6+ 4.4: RANGE/MASK validation - End/Mask musí
+                     * být parsovatelné. RANGE end >= start (celá adresa
+                     * včetně bitu 0, stejně jako v breakpoints_enforce_irq). */
                     if (ep->wc_im2_vector_match_mode == BP_MATCH_RANGE)
                     {
                         uint16_t vend;
@@ -2966,7 +2966,7 @@ void bpt_edit_panel_render(void)
                         {
                             uint16_t vstart;
                             if (parse_hex16(ep->wc_im2_vector_addr, &vstart)
-                                && (vend & 0xFFFE) < (vstart & 0xFFFE))
+                                && vend < vstart)
                                 valid = false;
                         }
                     }

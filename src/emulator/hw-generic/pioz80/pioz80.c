@@ -1205,11 +1205,23 @@ static unsigned dbg_interrupt_ack_ticks = 0;
 
 
 /**
- * Callback volany pro potvrzeni IM 2 interruptu
- * 
- * @param cpu
- * @param user_data
- * @return uint8_t interrupt_vector LSB
+ * @brief Callback jádra Z80 pro potvrzení přerušení (INTACK) v IM 2.
+ *
+ * Z80 PIO položí na sběrnici vektor jen tehdy, když má samo čekající
+ * přerušení (port A má přednost před B); pak port označí jako přijatý.
+ * Jinak (přerušení z CTC2, /EXINT, FDC) zůstane od sběrnice odpojené a CPU
+ * přečte ducha sběrnice (g_mzarch_main.regDBUS_latch). Na MZ-800 je to
+ * poslední bajt, který šel po datové sběrnici: čtení i zápis paměti, OUT,
+ * IN; při přijetí z HALT bajt za instrukcí HALT (změřeno 2026-11-26,
+ * emu-experiments im2-vector/hwtest/VYSLEDKY1.md). Na MZ-1500 drží latch
+ * jen poslední bajt přečtený z paměti (neměřeno). Jádro pak vezme záznam
+ * tabulky (I << 8) | vektor bez maskování bitu 0.
+ *
+ * @param cpu       Instance CPU (využita jen v ladicím výpisu).
+ * @param user_data Nepoužito.
+ * @return Vektor z PIO, nebo duch sběrnice, když PIO přerušení nežádá.
+ * @pre Volá se z emulátorového vlákna při přijetí INT v IM 2.
+ * @post Při vlastním přerušení PIO je port ve stavu RECEIVED.
  */
 uint8_t pioz80_interrupt_ack_im2_cb ( z80_t *cpu, void *user_data ) {
 #if !DBGLEVEL && !defined(MZ800EMU_CFG_DEBUGGER_ENABLED)
@@ -1243,8 +1255,9 @@ uint8_t pioz80_interrupt_ack_im2_cb ( z80_t *cpu, void *user_data ) {
 
     /* Pozn.: dříve zde byl trace-suite intlog hook (IRQ_ACK_IM2 + PIO_STATE
      * IM2_JUMP). Přesunut do mzarch.c:mzarch_main_process_interrupt() kvůli
-     * early return na ř. 874 - pokud IRQ nepatří PIOZ80 (např. CTC2 v mzdos),
-     * tato funkce vrací 0 ještě před hookem a žádný IRQ_ACK_IM2 event se
+     * early return na začátku funkce - pokud IRQ nepatří PIOZ80 (např. CTC2
+     * v mzdos), tato funkce vrací ducha sběrnice (regDBUS_latch) ještě před
+     * hookem a žádný IRQ_ACK_IM2 event se
      * nevyemituje, ačkoliv CPU dispatch v IM 2 reálně proběhl. Centrální hook
      * v mzarch.c pokrývá všechny IRQ zdroje. */
 

@@ -210,7 +210,7 @@ Three different views on the interrupt subsystem:
   sources (PIOZ80_A, PIOZ80_B, CTC2, FDC, OTHER) - see `irq-sig.md`.
 - **IRQ** (post-dispatch) - after the Z80 INT dispatch completes (=
   jump to the ISR address). Filters on IM mode, IM 0 RST opcode, IM 2
-  vector address (`(I << 8) | (vec & 0xFE)`) and ISR target address -
+  vector address (`(I << 8) | vec`) and ISR target address -
   see `irq-filter.md`.
 
 ### Groups + vars

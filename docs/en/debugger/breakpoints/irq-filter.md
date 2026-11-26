@@ -107,24 +107,27 @@ extra filter available".
 | Field | Meaning |
 |-------|---------|
 | `im2_vector_enabled` | true = filter active |
-| `im2_vector_addr` | expected value of `(I << 8) \| (vec & 0xFE)` |
+| `im2_vector_addr` | expected value of `(I << 8) \| vec` |
 | `im2_vector_match_mode` | SINGLE / RANGE / MASK (UI dropdown) |
 | `im2_vector_addr_end` | RANGE upper bound (inclusive) |
 | `im2_vector_mask` | MASK bitmask |
 
-During comparison the enforce applies **AND with 0xFE** to the low
-byte (= HW constraint of vector page boundary - the Z80 IM 2 ignores
-bit 0 of the low byte of the vector). The user may enter any value
-in the UI (e.g. 0x40CF), the runtime masks it to 0x40CE for the
-comparison.
+The comparison uses the **whole entry address including bit 0**. In
+IM 2 the Z80 does not mask bit 0 of the vector (Zilog's documentation
+says otherwise, but the processor uses bit 0). The Z80 PIO always
+supplies an even vector; an odd entry occurs when nobody supplies the
+vector (on the MZ-800 an interrupt from CTC2 or /EXINT) and the
+processor reads the last byte left on the data bus. The value 0x40CF
+therefore matches only entry 0x40CF, not 0x40CE. To ignore bit 0, use
+MASK mode with mask 0xFFFE.
 
 Match modes (per `match-modes.md`):
 
 | Mode | Semantics |
 |------|-----------|
-| `SINGLE` | exact match `(vector_addr & 0xFFFE) == (im2_vector_addr & 0xFFFE)` |
-| `RANGE`  | `im2_vector_addr <= (vector_addr & 0xFFFE) <= im2_vector_addr_end` (both endpoints AND-ed with 0xFFFE) |
-| `MASK`   | `(vector_addr & 0xFFFE & im2_vector_mask) == (im2_vector_addr & 0xFFFE & im2_vector_mask)` |
+| `SINGLE` | exact match `vector_addr == im2_vector_addr` |
+| `RANGE`  | `im2_vector_addr <= vector_addr <= im2_vector_addr_end` |
+| `MASK`   | `(vector_addr & im2_vector_mask) == (im2_vector_addr & im2_vector_mask)` |
 
 UI layout in the Edit BP dialog (IRQ branch, IM 2 sub-section):
 
@@ -152,14 +155,14 @@ Mask) is shown dynamically:
     Vector Mask:       0x [FFE0]      (?)
 ```
 
-OK button validation: RANGE = End must parse and `End >= Start` after
-the HW page mask 0xFFFE. MASK = Mask must parse (any value including
+OK button validation: RANGE = End must parse and `End >= Start`.
+MASK = Mask must parse (any value including
 0xFFFF = identical to SINGLE).
 
 Trigger if (SINGLE):
 1. CPU dispatches INT,
 2. `cpu->im == 2`,
-3. `((cpu->i << 8) | (cpu->int_vector & 0xFE)) == (im2_vector_addr & 0xFFFE)`.
+3. `((cpu->i << 8) | cpu->int_vector) == im2_vector_addr`.
 
 **Use case**: break on a specific interrupt source (= peripheral A vs
 B is identified by the vector slot of their INTACK push). RANGE/MASK

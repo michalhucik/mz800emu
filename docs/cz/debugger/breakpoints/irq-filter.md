@@ -102,23 +102,26 @@ available".
 | Pole | Význam |
 |------|--------|
 | `im2_vector_enabled` | true = filter aktivní |
-| `im2_vector_addr` | očekávaná hodnota `(I << 8) \| (vec & 0xFE)` |
+| `im2_vector_addr` | očekávaná hodnota `(I << 8) \| vec` |
 | `im2_vector_match_mode` | SINGLE / RANGE / MASK (UI dropdown) |
 | `im2_vector_addr_end` | RANGE upper bound (inclusive) |
 | `im2_vector_mask` | MASK bitmask |
 
-Při comparison enforce aplikuje **AND s 0xFE** na low byte (= HW omezení
-vector page boundary - Z80 IM 2 ignoruje bit 0 low byte vektoru).
-Uživatel může v UI zadat libovolnou hodnotu (např. 0x40CF), runtime ji
-maskuje na 0x40CE pro porovnání.
+Porovnává se **celá adresa záznamu včetně bitu 0**. Z80 v IM 2 bit 0
+vektoru nemaskuje (dokumentace Zilogu tvrdí opak, ale procesor bit 0
+použije). Z80 PIO dodává vždy sudý vektor; lichý záznam vznikne, když
+vektor nedodá nikdo (na MZ-800 přerušení z CTC2 nebo /EXINT) a procesor
+přečte poslední bajt, který zůstal na datové sběrnici. Hodnota 0x40CF tedy
+odpovídá jen záznamu 0x40CF, ne 0x40CE. Kdo chce bit 0 ignorovat, zvolí
+režim MASK s maskou 0xFFFE.
 
 Match modes (per `match-modes.md`):
 
 | Mode | Sémantika |
 |------|-----------|
-| `SINGLE` | exact match `(vector_addr & 0xFFFE) == (im2_vector_addr & 0xFFFE)` |
-| `RANGE`  | `im2_vector_addr <= (vector_addr & 0xFFFE) <= im2_vector_addr_end` (oba endpointy AND-ovany s 0xFFFE) |
-| `MASK`   | `(vector_addr & 0xFFFE & im2_vector_mask) == (im2_vector_addr & 0xFFFE & im2_vector_mask)` |
+| `SINGLE` | exact match `vector_addr == im2_vector_addr` |
+| `RANGE`  | `im2_vector_addr <= vector_addr <= im2_vector_addr_end` |
+| `MASK`   | `(vector_addr & im2_vector_mask) == (im2_vector_addr & im2_vector_mask)` |
 
 UI layout v Edit BP dialogu (IRQ branch, IM 2 sub-section):
 
@@ -146,14 +149,14 @@ Při přepnutí dropdownu na RANGE / MASK se dynamicky zobrazí druhý input
     Vector Mask:       0x [FFE0]      (?)
 ```
 
-OK button validation: RANGE = End musí být parsovatelný a `End >= Start`
-po HW page mask 0xFFFE. MASK = Mask musí být parsovatelný (libovolná
+OK button validation: RANGE = End musí být parsovatelný a `End >= Start`.
+MASK = Mask musí být parsovatelný (libovolná
 hodnota včetně 0xFFFF = identical to SINGLE).
 
 Trigger pokud (SINGLE):
 1. CPU dispatchuje INT,
 2. `cpu->im == 2`,
-3. `((cpu->i << 8) | (cpu->int_vector & 0xFE)) == (im2_vector_addr & 0xFFFE)`.
+3. `((cpu->i << 8) | cpu->int_vector) == im2_vector_addr`.
 
 **Use case**: break na konkrétní zdroj přerušení (= peripheral A vs B
 identifikuju podle vector slotu jejich INTACK push). RANGE/MASK pro

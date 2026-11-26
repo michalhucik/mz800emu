@@ -162,9 +162,9 @@ target).
   (bit 0 = RST 00h opcode 0xC7, bit 1 = RST 08h 0xCF, ... bit 7 =
   RST 38h 0xFF). Mask 0 = match-all.
 - IM 2 Vector filter (enable + addr + Match Mode + end + mask) -
-  filter on the IM 2 vector table address `(I << 8) | (vec & 0xFE)`.
-  AND with 0xFE is applied during comparison (= HW vector page
-  boundary).
+  filter on the IM 2 vector table address `(I << 8) | vec`. The whole
+  address including bit 0 is compared (the Z80 does not mask bit 0 of
+  the vector); bit 0 can be left out with MASK mode and mask 0xFFFE.
 - IM 2 ISR filter (enable + addr + Match Mode + end + mask) - filter
   on the ISR jump target (= PC after dispatch).
 - common fields

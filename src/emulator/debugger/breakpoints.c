@@ -3886,16 +3886,15 @@ void breakpoints_enforce_irq ( uint8_t raised, uint8_t im_mode,
         /* V1.5.A8 + V1.6+ 4.4 - IM 2 vector / ISR filter (sub-filter pod IM 2).
          *
          * V1.6+ 4.4 Match modes: SINGLE / RANGE / MASK pres bp_match16.
-         * Vector page boundary 0xFFFE aplikovan na vector_addr i bpt->im2_vector_addr
-         * pred match testem (= bit 0 ignorovan v SINGLE i RANGE i MASK semantics). */
+         * Adresa záznamu se porovnává celá včetně bitu 0: Z80 bit 0 vektoru
+         * nemaskuje a lichý záznam vznikne z ducha sběrnice (CTC2, /EXINT).
+         * Kdo chce bit 0 ignorovat, použije MASK 0FFFEh. */
         if ( bpt->im2_vector_enabled ) {
             /* Filter explicit vyžaduje IM 2. */
             if ( im_mode != 2 ) continue;
-            uint16_t va = vector_addr & 0xFFFEu;
-            uint16_t vref = bpt->im2_vector_addr & 0xFFFEu;
-            uint16_t vend = bpt->im2_vector_addr_end & 0xFFFEu;
-            if ( !bp_match16 ( bpt->im2_vector_match_mode, va,
-                               vref, vend, bpt->im2_vector_mask ) ) continue;
+            if ( !bp_match16 ( bpt->im2_vector_match_mode, vector_addr,
+                               bpt->im2_vector_addr, bpt->im2_vector_addr_end,
+                               bpt->im2_vector_mask ) ) continue;
         };
         if ( bpt->im2_isr_enabled ) {
             if ( im_mode != 2 ) continue;

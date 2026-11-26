@@ -115,7 +115,7 @@ Columns:
 | **#** | Depth index. #0 = TOP (current), #N = deepest (oldest) frame. |
 | **Ret** | Return address - **where RET returns from** this frame. For CALL = `call_site + 3`, for RST = `call_site + 1`, for IRQ/NMI = PC at the moment of IRQ accept (= address after the interrupted instruction). |
 | **Call** | Address of the CALL/RST opcode - **where** in memory the instruction that created this frame was. For an IRQ frame it has the same value as Ret (= the IRQ accept happened **between** instructions). |
-| **Target** | Target call address = **entry of the routine** that was jumped into. For RST `(opcode - 0xC7) / 8 * 8` (= 0x00, 0x08, 0x10, ... 0x38), for NMI always `0066h`. For IM 2 IRQ = address loaded from `(I<<8) | (vector & 0xFE)`. |
+| **Target** | Target call address = **entry of the routine** that was jumped into. For RST `(opcode - 0xC7) / 8 * 8` (= 0x00, 0x08, 0x10, ... 0x38), for NMI always `0066h`. For IM 2 IRQ = address loaded from `(I<<8) | vector`. |
 | **Sym** | Symbol resolved against `target`. If no symbol, `(no sym)`. |
 | **Kind** | Frame type (see table below). Divergent rows show the Kind in yellow. |
 | **Cyc-in** | Real T-states inside the frame = `cycles_now - cycles_at_entry`. The youngest frame (#0) has the smallest value, the oldest (#N) the largest (= it contains the cycles of the entire calling path below it). |
@@ -132,7 +132,7 @@ right-click on the header to hide a column.
 | **RST** | Z80 `RST n` opcode, Target is `n*8` (0x00..0x38). |
 | **IRQ0** | IM 0 IRQ accept - bus latch byte interpreted as RST 38h on MZ-800. |
 | **IRQ1** | IM 1 IRQ accept - hardware fixed call to 0x0038. Default MZ-800 ROM ISR. |
-| **IRQ2** | IM 2 IRQ accept - call to the address loaded from `(I<<8) | (vector & 0xFE)`. Tooltip shows the IM2 vector. |
+| **IRQ2** | IM 2 IRQ accept - call to the address loaded from `(I<<8) | vector`. Tooltip shows the IM2 vector. |
 | **NMI** | NMI accept - call to 0x0066. The MZ HW has no NMI signal source. |
 | **SYNT** | Synthetic frame - emitted on RET over an empty shadow (= divergence). Yellow color. |
 

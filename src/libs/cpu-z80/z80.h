@@ -22,7 +22,7 @@
  * - DAA lookup tabulka (2048 záznamů)
  * - Inline prefix handlery
  *
- * @version multi-v0.5
+ * @version multi-v0.6
  */
 
 #ifndef CPU_Z80_H
@@ -483,9 +483,10 @@ typedef struct z80_s {
     /**
      * Ukazatel na arch-specifický "data bus latch" (mz800: g_mzarch_main.
      * regDBUS_latch). Čistá RAM cesta v memory_read_cb tento latch nastavuje
-     * na přečtenou hodnotu - fast-path read ho proto musí replikovat, jinak
-     * není bit-identický (latch čte např. čtení CTC control registru na E007).
-     * NULL = arch latch nepoužívá (fast-path read ho pak neaktualizuje).
+     * na přečtenou hodnotu a memory_write_cb na zapsanou - fast-path read
+     * i write ho proto musí replikovat, jinak nejsou bit-identické (latch
+     * čte např. čtení CTC control registru na E007 a vektor IM 2 bez PIO).
+     * NULL = arch latch nepoužívá (fast-path ho pak neaktualizuje).
      */
     uint8_t *ram_fp_dbus_latch;
     /**
@@ -608,7 +609,9 @@ void z80_int(z80_t *cpu);
 /**
  * @brief Vyvolání maskovaného přerušení s explicitním vektorem.
  *
- * Pro zpětnou kompatibilitu - vektor je uložen přímo.
+ * Pro zpětnou kompatibilitu - vektor je uložen přímo. IM 0: cíl
+ * vector & 0x38, IM 1: ignorován, IM 2: záznam tabulky na adrese
+ * (I << 8) | vector (bit 0 se nemaskuje).
  *
  * @param cpu Ukazatel na CPU instanci.
  * @param vector Vektor přerušení (použito v IM0 a IM2).
@@ -795,6 +798,6 @@ void z80_add_wait_states(z80_t *cpu, int wait);
 int z80_process_interrupt(z80_t *cpu);
 
 /** Řetězec verze knihovny. */
-#define CPU_Z80_VERSION "multi-v0.5"
+#define CPU_Z80_VERSION "multi-v0.6"
 
 #endif /* CPU_Z80_H */

@@ -68,7 +68,7 @@ dump files).
 | `20` | `INTLOG_CHIP_CPU` | CPU itself (for `CPU_INT_STATE` events) |
 | `21` | `INTLOG_CHIP_PIOZ80_PORT_A` | PIOZ80 Port A as a whole (for `IRQ_ACK_IM2` source = "vector came from Port A") |
 | `22` | `INTLOG_CHIP_PIOZ80_PORT_B` | PIOZ80 Port B as a whole (for `IRQ_ACK_IM2` source = "vector came from Port B") |
-| `23` | `INTLOG_CHIP_VECTOR_BUS_LATCH` | IM 2 vector source = bus latch / no chip supplied a vector. For `IRQ_ACK_IM2` events where PIOZ80 was not in PENDING state and no known chip (CTC2, FDC) holds the INT pin. CPU dispatch in that case jumps to (I:00) entry. |
+| `23` | `INTLOG_CHIP_VECTOR_BUS_LATCH` | IM 2 vector source = bus latch / no chip supplied a vector. For `IRQ_ACK_IM2` events where PIOZ80 was not in PENDING state and no known chip (CTC2, FDC) holds the INT pin. In that case the CPU reads the last byte left on the data bus and takes entry `(I << 8) \| that byte`. |
 
 ### Field source_pin
 
@@ -130,7 +130,7 @@ values:
 
 | Bits | Field | Meaning |
 |------|-------|---------|
-| 0..15 | `vector_table_addr` | Address of the entry in the IM 2 table in memory = `(cpu->I << 8) \| (vector & 0xFE)` |
+| 0..15 | `vector_table_addr` | Address of the entry in the IM 2 table in memory = `(cpu->I << 8) \| vector` (bit 0 is not masked) |
 | 16..31 | `isr_addr` | 16-bit ISR address read from memory at `vector_table_addr` (LE), i.e. the value that Z80 loads into PC. |
 
 Encode at emit: `encoded = (uint32_t)vector_table_addr | ((uint32_t)isr_addr << 16);`
@@ -145,9 +145,9 @@ isr_addr = (state_bits >> 16) & 0xFFFF
 - `21` = `PIOZ80_PORT_A` (vector from PIOZ80 daisy chain, Port A)
 - `22` = `PIOZ80_PORT_B` (vector from PIOZ80 daisy chain, Port B)
 - `1`  = `CTC2` (CTC2 pulled INT, no intread_cb registered for CTC -
-  the CPU received `vector = 0`, dispatch to (I:00))
-- `19` = `FDC` (FDC pulled INT, vector = 0)
-- `23` = `VECTOR_BUS_LATCH` (other / unresolvable source, vector = 0)
+  nobody supplies the vector, the CPU reads the last byte on the data bus)
+- `19` = `FDC` (FDC pulled INT, vector = last byte on the bus)
+- `23` = `VECTOR_BUS_LATCH` (other / unresolvable source, vector = last byte on the bus)
 
 `source_pin` = 0, `edge` = `NONE`.
 

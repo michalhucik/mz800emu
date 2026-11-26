@@ -68,7 +68,7 @@ binární dump soubory).
 | `20` | `INTLOG_CHIP_CPU` | CPU samotná (pro `CPU_INT_STATE` eventy) |
 | `21` | `INTLOG_CHIP_PIOZ80_PORT_A` | PIOZ80 Port A jako celek (pro `IRQ_ACK_IM2` source = "vektor přišel z Portu A") |
 | `22` | `INTLOG_CHIP_PIOZ80_PORT_B` | PIOZ80 Port B jako celek (pro `IRQ_ACK_IM2` source = "vektor přišel z Portu B") |
-| `23` | `INTLOG_CHIP_VECTOR_BUS_LATCH` | IM 2 vector source = bus latch / žádný chip nedodal vector. Pro `IRQ_ACK_IM2` events kdy PIOZ80 nebyl ve stavu PENDING a žádný známý chip (CTC2, FDC) nedrží INT pin. CPU dispatch v takovém případě skočí na (I:00) entry. |
+| `23` | `INTLOG_CHIP_VECTOR_BUS_LATCH` | IM 2 vector source = bus latch / žádný chip nedodal vector. Pro `IRQ_ACK_IM2` events kdy PIOZ80 nebyl ve stavu PENDING a žádný známý chip (CTC2, FDC) nedrží INT pin. CPU v takovém případě přečte poslední bajt na datové sběrnici a vezme záznam `(I << 8) \| tento bajt`. |
 
 ### Pole source_pin
 
@@ -128,7 +128,7 @@ hodnotami:
 
 | Bity | Pole | Význam |
 |------|------|--------|
-| 0..15 | `vector_table_addr` | Adresa entry v IM 2 tabulce v paměti = `(cpu->I << 8) \| (vector & 0xFE)` |
+| 0..15 | `vector_table_addr` | Adresa entry v IM 2 tabulce v paměti = `(cpu->I << 8) \| vector` (bit 0 se nemaskuje) |
 | 16..31 | `isr_addr` | 16-bit ISR adresa přečtená z paměti na adrese `vector_table_addr` (LE), tj. ta hodnota, kterou Z80 nahraje do PC. |
 
 Encode v emit: `encoded = (uint32_t)vector_table_addr | ((uint32_t)isr_addr << 16);`
@@ -143,9 +143,9 @@ isr_addr = (state_bits >> 16) & 0xFFFF
 - `21` = `PIOZ80_PORT_A` (vektor z PIOZ80 daisy chain, Port A)
 - `22` = `PIOZ80_PORT_B` (vektor z PIOZ80 daisy chain, Port B)
 - `1`  = `CTC2` (CTC2 stáhl INT, žádný intread_cb registrován pro CTC -
-  CPU obdržel `vector = 0`, dispatch na (I:00))
-- `19` = `FDC` (FDC stáhl INT, vector = 0)
-- `23` = `VECTOR_BUS_LATCH` (jiný / neresolutable zdroj, vector = 0)
+  vektor nedodá nikdo, CPU přečte poslední bajt na datové sběrnici)
+- `19` = `FDC` (FDC stáhl INT, vektor = poslední bajt na sběrnici)
+- `23` = `VECTOR_BUS_LATCH` (jiný / neresolutable zdroj, vektor = poslední bajt na sběrnici)
 
 `source_pin` = 0, `edge` = `NONE`.
 

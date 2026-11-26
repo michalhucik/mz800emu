@@ -160,8 +160,9 @@ acknowledge cyklu (= PC už ukazuje na ISR jump target).
   RST 00h opcode 0xC7, bit 1 = RST 08h 0xCF, ... bit 7 = RST 38h 0xFF).
   Mask 0 = match-all.
 - IM 2 Vector filter (enable + addr + Match Mode + end + mask) - filter
-  na IM 2 vector table address `(I << 8) | (vec & 0xFE)`. Při comparison
-  se aplikuje AND s 0xFE (= HW vector page boundary).
+  na IM 2 vector table address `(I << 8) | vec`. Porovnává se celá
+  adresa včetně bitu 0 (Z80 bit 0 vektoru nemaskuje); bit 0 lze vynechat
+  režimem MASK s maskou 0xFFFE.
 - IM 2 ISR filter (enable + addr + Match Mode + end + mask) - filter
   na ISR jump target (= PC po dispatch).
 - společná pole

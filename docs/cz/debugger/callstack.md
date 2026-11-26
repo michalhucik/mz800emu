@@ -114,7 +114,7 @@ Sloupce:
 | **#** | Depth index. #0 = TOP (aktuální), #N = nejhlubší (nejstarší) frame. |
 | **Ret** | Návratová adresa - **kam se vrátí RET** z tohoto frame. Pro CALL = `call_site + 3`, pro RST = `call_site + 1`, pro IRQ/NMI = PC v momentě IRQ accept (= adresa za přerušenou instrukcí). |
 | **Call** | Adresa CALL/RST opcode - **kde** v paměti byla instrukce, která tento frame vytvořila. Pro IRQ frame má stejnou hodnotu jako Ret (= IRQ accept proběhl **mezi** instrukcemi). |
-| **Target** | Cílová adresa volání = **entry rutiny** kam se skočilo. Pro RST `(opcode - 0xC7) / 8 * 8` (= 0x00, 0x08, 0x10, ... 0x38), pro NMI vždy `0066h`. Pro IM 2 IRQ = adresa načtená z `(I<<8) | (vector & 0xFE)`. |
+| **Target** | Cílová adresa volání = **entry rutiny** kam se skočilo. Pro RST `(opcode - 0xC7) / 8 * 8` (= 0x00, 0x08, 0x10, ... 0x38), pro NMI vždy `0066h`. Pro IM 2 IRQ = adresa načtená z `(I<<8) | vector`. |
 | **Sym** | Symbol resolvovaný proti `target`. Pokud bez symbolu, `(no sym)`. |
 | **Kind** | Typ frame (viz tabulka níže). Divergent řádky zobrazí Kind žlutě. |
 | **Cyc-in** | Reálné T-states uvnitř framu = `cycles_now - cycles_at_entry`. Nejmladší frame (#0) má nejmenší hodnotu, nejstarší (#N) největší (= obsahuje cykly celé volací cesty pod sebou). |
@@ -131,7 +131,7 @@ skrytí sloupce.
 | **RST** | Z80 `RST n` opcode, Target je `n*8` (0x00..0x38). |
 | **IRQ0** | IM 0 IRQ accept - bus latch byte interpretován jako RST 38h v MZ-800. |
 | **IRQ1** | IM 1 IRQ accept - hardware fixní call na 0x0038. Default MZ-800 ROM ISR. |
-| **IRQ2** | IM 2 IRQ accept - call na adresu načtenou z `(I<<8) | (vector & 0xFE)`. Tooltip ukazuje IM2 vector. |
+| **IRQ2** | IM 2 IRQ accept - call na adresu načtenou z `(I<<8) | vector`. Tooltip ukazuje IM2 vector. |
 | **NMI** | NMI accept - call na 0x0066. V MZ HW není zdroj NMI signálu. |
 | **SYNT** | Synthetic frame - emit při RET nad prázdným shadow (= divergence). Žlutá barva. |
 

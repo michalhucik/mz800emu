@@ -977,7 +977,8 @@ void test_irq_im0_rst_mask_zero_matches_all ( void ) {
 
 
 /**
- * IM 2 vector filter - exact match (low bit ignored).
+ * IM 2 vector filter - exact match včetně bitu 0 (Z80 bit 0 vektoru
+ * nemaskuje, lichý záznam je jiný slot).
  */
 void test_irq_im2_vector_match ( void ) {
     int id = make_irq_bp_no_filter ( );
@@ -989,10 +990,10 @@ void test_irq_im2_vector_match ( void ) {
     breakpoints_enforce_irq ( 0x01, 2, 0xFE10, 0x1234, 0x10 );
     TEST_ASSERT_TRUE ( g_emulator.paused );
 
-    /* Low bit ignored - vector_addr & 0xFE. */
+    /* Bit 0 se neignoruje - lichý záznam FE11h je jiný slot. */
     g_emulator.paused = false;
     breakpoints_enforce_irq ( 0x01, 2, 0xFE11, 0x1234, 0x11 );
-    TEST_ASSERT_TRUE ( g_emulator.paused );
+    TEST_ASSERT_FALSE ( g_emulator.paused );
 
     /* Different vector - no match. */
     g_emulator.paused = false;
@@ -1053,7 +1054,7 @@ void test_irq_im2_vector_and_isr_combined ( void ) {
 
 /**
  * IM2 vector RANGE mode - fire pro vsechny vector_addr v intervalu.
- * Vector_addr je AND-ovan s 0xFFFE pred porovnanim (= bit 0 ignorovan).
+ * Porovnává se celá adresa včetně bitu 0.
  */
 void test_irq_im2_vector_range_mode ( void ) {
     int id = make_irq_bp_no_filter ( );
@@ -1085,6 +1086,11 @@ void test_irq_im2_vector_range_mode ( void ) {
     /* Vector mimo - vyssi. */
     breakpoints_enforce_irq ( 0x01, 2, 0xFE30, 0x1234, 0x30 );
     TEST_ASSERT_FALSE ( g_emulator.paused );
+
+    /* Lichý záznam těsně nad horním okrajem - mimo (dřív maskou 0xFFFE
+     * spadl na FE20h a fire). */
+    breakpoints_enforce_irq ( 0x01, 2, 0xFE21, 0x1234, 0x21 );
+    TEST_ASSERT_FALSE ( g_emulator.paused );
 }
 
 
@@ -1111,6 +1117,31 @@ void test_irq_im2_vector_mask_mode ( void ) {
     /* High byte != 0xFE (no match). */
     g_emulator.paused = false;
     breakpoints_enforce_irq ( 0x01, 2, 0xFD10, 0x1234, 0x10 );
+    TEST_ASSERT_FALSE ( g_emulator.paused );
+}
+
+
+/**
+ * IM2 vector MASK 0xFFFE - doporučený způsob, jak ignorovat bit 0
+ * (sudý i lichý záznam téže dvojice).
+ */
+void test_irq_im2_vector_mask_ignores_bit0 ( void ) {
+    int id = make_irq_bp_no_filter ( );
+    breakpoints_set_im_enabled ( id, 0, false );
+    breakpoints_set_im_enabled ( id, 1, false );
+    breakpoints_set_im2_vector_filter ( id, true, 0xFE10 );
+    breakpoints_set_im2_vector_match_mode ( id, BP_MATCH_MASK );
+    breakpoints_set_im2_vector_mask ( id, 0xFFFE );
+
+    breakpoints_enforce_irq ( 0x01, 2, 0xFE10, 0x1234, 0x10 );
+    TEST_ASSERT_TRUE ( g_emulator.paused );
+
+    g_emulator.paused = false;
+    breakpoints_enforce_irq ( 0x01, 2, 0xFE11, 0x1234, 0x11 );
+    TEST_ASSERT_TRUE ( g_emulator.paused );
+
+    g_emulator.paused = false;
+    breakpoints_enforce_irq ( 0x01, 2, 0xFE12, 0x1234, 0x12 );
     TEST_ASSERT_FALSE ( g_emulator.paused );
 }
 
@@ -1581,6 +1612,7 @@ int main ( int argc, char *argv[] ) {
     /* V1.6+ TODO 4.4: IM2 vector / ISR Match modes (RANGE / MASK) */
     RUN_TEST ( test_irq_im2_vector_range_mode );
     RUN_TEST ( test_irq_im2_vector_mask_mode );
+    RUN_TEST ( test_irq_im2_vector_mask_ignores_bit0 );
     RUN_TEST ( test_irq_im2_isr_range_mode );
     RUN_TEST ( test_irq_im2_isr_mask_mode );
 

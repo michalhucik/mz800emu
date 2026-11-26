@@ -20,7 +20,7 @@
  * - DAA lookup tabulka (2048 záznamů)
  * - Inline prefix handlery (CB/ED/DD/FD/DDCB/FDCB)
  *
- * @version multi-v0.5
+ * @version multi-v0.6
  */
 
 #include "z80.h"
@@ -321,9 +321,10 @@ ALWAYS_INLINE uint8_t z80_fp_read(z80_t *cpu, uint16_t addr, int m1_state) {
  * @param cpu CPU instance.
  * @param addr 16bit adresa.
  * @param val Zapisovaná hodnota.
- * @post Je-li stránka čistá RAM, zapíše přímo; jinak fall-back na
- *       cpu->mwrite_cb (bit-identický s baseline). Čistá RAM write nemá
- *       žádný vedlejší efekt (memory_write_cb pro RAM jen uloží byte).
+ * @post Je-li stránka čistá RAM, zapíše přímo a při ram_fp_dbus_latch !=
+ *       NULL nastaví latch = val (replikace memory_write_cb: zapsaný bajt
+ *       zůstává na sběrnici jako duch); jinak fall-back na cpu->mwrite_cb
+ *       (bit-identický s baseline).
  */
 ALWAYS_INLINE void z80_fp_write(z80_t *cpu, uint16_t addr, uint8_t val) {
 #ifdef MZ800EMU_CFG_RAM_FASTPATH_VERIFY
@@ -342,7 +343,7 @@ ALWAYS_INLINE void z80_fp_write(z80_t *cpu, uint16_t addr, uint8_t val) {
             g_z80_fp_verify_fastpath++;
             cpu->mwrite_cb(cpu, addr, val, cpu->mwrite_data);
             uint8_t after = page[addr & 0x0FFF];
-            if (after != val) {
+            if (after != val || (cpu->ram_fp_dbus_latch && *cpu->ram_fp_dbus_latch != val)) {
                 fprintf(stderr,
                     "[RAM_FASTPATH_VERIFY] WRITE MISMATCH addr=%04X "
                     "val=%02X fp_cell_after_cb=%02X\n",
@@ -358,6 +359,7 @@ ALWAYS_INLINE void z80_fp_write(z80_t *cpu, uint16_t addr, uint8_t val) {
         uint8_t *page = cpu->ram_fp_write[addr >> 12];
         if (page) {
             page[addr & 0x0FFF] = val;
+            if (cpu->ram_fp_dbus_latch) *cpu->ram_fp_dbus_latch = val;
             return;
         }
     }
@@ -446,7 +448,8 @@ static inline void inc_r_on_int_ack(z80_t *cpu) {
 /**
  * @brief Interní handler přerušení.
  *
- * Zpracovává NMI a maskované přerušení (IM0/1/2).
+ * Zpracovává NMI a maskované přerušení (IM0/1/2). V IM 2 čte cílovou
+ * adresu ze záznamu (I << 8) | vektor; bit 0 vektoru se nemaskuje.
  * Volán z execute smyčky - pracuje přímo se strukturou (ne s locals).
  * Při přijetí NMI i INT zvýší R o 1 (inc_r_on_int_ack) a vynuluje
  * registr Q (cpu->q).
@@ -572,7 +575,13 @@ static int handle_interrupts_internal(z80_t *cpu) {
                 cpu->sp -= 2;
                 wr16_stack_slow(cpu, cpu->sp, cpu->pc);
                 {
-                    uint16_t vec_addr = ((uint16_t)cpu->i << 8) | (cpu->int_vector & 0xFE);
+                    /* Adresa záznamu tabulky je I:vektor včetně bitu 0. Zilog
+                     * uvádí, že bit 0 je vždy 0, ale Z80 ho nemaskuje (Sean
+                     * Young, báze cpu/z80/07-interrupts.md; Sharp LH0080A
+                     * v MZ-800 změřeno 2026-11-26). Lichý vektor
+                     * Z80 PIO nedodá; přijde jen jako duch sběrnice, když
+                     * vektor nedodá nikdo (CTC2 nebo /EXINT na MZ-800). */
+                    uint16_t vec_addr = (uint16_t)(((uint16_t)cpu->i << 8) | cpu->int_vector);
                     cpu->pc = rd16_slow(cpu, vec_addr);
                 }
                 cpu->wz.w = cpu->pc;

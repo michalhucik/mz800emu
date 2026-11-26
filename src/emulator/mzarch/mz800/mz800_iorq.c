@@ -56,6 +56,23 @@
 #define TRACELOG_IORQ_MARK_HANDLED()      do { } while (0)
 #endif
 
+/**
+ * @brief Čtení CPU z I/O portu (IN) v MZ-800.
+ *
+ * Nepřipojený port vrací ducha sběrnice (regDBUS_latch). Bajt, který čtení
+ * vrátí, zůstane na sběrnici jako nový duch: regDBUS_latch = návratová
+ * hodnota (změřeno na MZ-800 2026-11-26, emu-experiments
+ * im2-vector/hwtest/VYSLEDKY1.md: po IN A,(0FFh) z Z80 PIO je vektor IM 2
+ * bez PIO hodnota, kterou PIO vrátilo; IN z volného portu 0A0h přečte
+ * ducha, tedy operand 0A0h).
+ *
+ * @param cpu       Instance CPU (nepoužito).
+ * @param addr      Adresa portu (A15 až A0, rozhoduje A7 až A0).
+ * @param user_data Nepoužito.
+ * @return Přečtený bajt.
+ * @post g_mzarch_main.regDBUS_latch == návratová hodnota.
+ * @pre Emu vlákno.
+ */
 uint8_t port_read_cb(z80_t *cpu, uint16_t addr, void *user_data)
 {
     (void)cpu;
@@ -333,15 +350,33 @@ uint8_t port_read_cb(z80_t *cpu, uint16_t addr, void *user_data)
         break;
     };
 
+    g_mzarch_main.regDBUS_latch = retval;
     return retval;
 }
 
+/**
+ * @brief Zápis CPU na I/O port (OUT) v MZ-800.
+ *
+ * Zapisovaný bajt zůstane na datové sběrnici jako duch: regDBUS_latch =
+ * value i u nepřipojeného portu (změřeno na MZ-800 2026-11-26, emu-experiments
+ * im2-vector/hwtest/VYSLEDKY1.md: po OUT (0A1h),A je vektor IM 2 bez PIO
+ * zapsaný bajt).
+ *
+ * @param cpu       Instance CPU (nepoužito).
+ * @param addr      Adresa portu (A15 až A0, rozhoduje A7 až A0).
+ * @param value     Zapisovaný bajt.
+ * @param user_data Nepoužito.
+ * @post g_mzarch_main.regDBUS_latch == value.
+ * @pre Emu vlákno.
+ */
 void port_write_cb(z80_t *cpu, uint16_t addr, uint8_t value, void *user_data)
 {
     (void)cpu;
     (void)user_data;
 
     uint8_t port_lsb = addr & 0xff;
+
+    g_mzarch_main.regDBUS_latch = value;
 
     mzarch_main_insideop_iorq();
 

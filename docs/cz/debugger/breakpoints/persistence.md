@@ -212,7 +212,7 @@ odvozená z `event_name` při loadu.
 | `im2_enabled` | bool | true | Fire na IM 2 dispatch. |
 | `im0_rst_mask` | int (uint8) | 0 | IM 0 RST opcode bitmask (0 = match-all). Bit i = RST opcode 0xC7 + i*8. |
 | `im2_vector_enabled` | bool | false | Filter na IM 2 vector address. |
-| `im2_vector_addr` | int (uint16) | 0 | Očekávaný `(I << 8) \| (vec & 0xFE)`. |
+| `im2_vector_addr` | int (uint16) | 0 | Očekávaný `(I << 8) \| vec` (včetně bitu 0). |
 | `im2_isr_enabled` | bool | false | Filter na IM 2 ISR target. |
 | `im2_isr_addr` | int (uint16) | 0 | Očekávaná ISR adresa. |
 
@@ -547,7 +547,7 @@ Trace zápisy do GDG palety 0xF0-0xF3.
 }
 ```
 
-Fire jen pro IM 2 dispatch s vector `(I << 8) | (vec & 0xFE) = 0x6900`.
+Fire jen pro IM 2 dispatch s vector `(I << 8) | vec = 0x6900`.
 
 ### IRQ s IM 0 RST 38h filter
 

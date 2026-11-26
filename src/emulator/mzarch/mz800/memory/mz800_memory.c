@@ -725,8 +725,9 @@ uint8_t memory_internal_read_sync ( uint16_t addr ) {
  *  - druhé čtení téže instrukce hned za prvním (vyšší bajt u LD rr,(nn),
  *    POP, RET): hodnota předchozího čtení [neověřeno];
  *  - výběr instrukce nebo operandu ze zakázané oblasti a datové čtení, kdy
- *    PC - 1 leží v zakázané oblasti: poslední bajt přečtený přes callback
- *    (g_mzarch_main.regDBUS_latch) [neověřeno].
+ *    PC - 1 leží v zakázané oblasti: duch sběrnice
+ *    (g_mzarch_main.regDBUS_latch, poslední bajt čtení nebo zápisu paměti
+ *    či I/O) [neověřeno].
  *
  * @param addr Čtená adresa v 0E000h-0FFFFh.
  * @return Bajt, který by byl na sběrnici.
@@ -1092,17 +1093,27 @@ static inline void memory_internal_write_rom_e000 ( uint16_t addr, uint8_t value
 
 
 /**
- * Zapis do aktualne mapovane pameti s ohledem na synchronizaci.
- * 
- * @param cpu
- * @param addr
- * @param value
- * @param user_data
+ * @brief Zápis CPU do aktuálně mapované paměti s ohledem na synchronizaci.
+ *
+ * Zapisovaný bajt zůstane na datové sběrnici jako "duch": regDBUS_latch =
+ * value (změřeno na MZ-800 2026-11-26, emu-experiments
+ * im2-vector/hwtest/VYSLEDKY1.md: vektor IM 2 bez PIO po LD (HL),A a PUSH
+ * je zapsaný bajt). Při zápisu přes rychlou cestu RAM totéž dělá
+ * z80_fp_write().
+ *
+ * @param cpu       Instance CPU (nepoužito).
+ * @param addr      Adresa v prostoru CPU.
+ * @param value     Zapisovaný bajt.
+ * @param user_data Nepoužito.
+ * @post g_mzarch_main.regDBUS_latch == value.
+ * @pre Emu vlákno.
  */
 void memory_write_cb ( z80_t *cpu, uint16_t addr, uint8_t value, void *user_data ) {
     ( void ) cpu;
     ( void ) user_data;
     unsigned addr_high = addr >> 12;
+
+    g_mzarch_main.regDBUS_latch = value;
 
     memory_internal_write_0000_0fff ( addr_high );
     memory_internal_write_1000_1fff ( addr_high );
