@@ -8,7 +8,8 @@
  * zvukovém snímku do horizontu, do kterého jsou všechny změny doručené.
  * sdl.wav dostává hotové bloky SDL cesty z háčku v iface_audio_wait_for_data().
  * Paměť zachycení (ringy, souhrn snímků) plní tytéž háčky pod stejným
- * zámkem; čtení kopíruje úsek ringu pod zámkem (audio_capture_stream_copy()).
+ * zámkem; čtení kopíruje úsek ringu pod zámkem (kurzorem
+ * audio_capture_stream_copy(), pevné okno audio_capture_stream_copy_window()).
  *
  * @par Licence: GPLv3
  */
@@ -47,13 +48,41 @@ gint g_audio_capture_flags = 0;
 #define AC_CSV_BUFFER (256u * 1024u)
 /** @brief Vzorků (stereo párů) na jedno volání rendereru. */
 #define AC_RENDER_CHUNK 2048u
+/** @brief Nejmenší délka zahřátí rendereru reference.wav před začátkem [ms]. */
+#define AC_WARMUP_MIN_MS 100u
+
+/** @brief Největší společný dělitel (Eukleidův algoritmus). */
+static uint64_t ac_gcd(uint64_t a, uint64_t b)
+{
+    while (b) {
+        uint64_t t = a % b;
+        a = b;
+        b = t;
+    }
+    return a;
+}
+
 /**
- * @brief Zahřátí rendereru reference.wav před začátkem [takty GDG] = 100 ms.
+ * @brief Zahřátí rendereru reference.wav před začátkem [takty GDG].
  *
- * GDGCLK_BASE je dělitelný 10 na všech platformách (snímek x 50 nebo 60),
- * 100 ms je tedy přesně 4410 vzorků a celý počet taktů.
+ * Renderer převádí takty na vzorky podle krystalu (vzorek n začíná
+ * v `n * GDGCLK_REAL_TICKS_PER_SEC / AUDIO_CAPTURE_WAV_RATE` taktech). Aby
+ * první vzorek reference.wav začínal přesně v okamžiku začátku zachycení,
+ * musí být zahřátí celý počet vzorků i celý počet taktů: násobek
+ * `GDGCLK_REAL_TICKS_PER_SEC / gcd(GDGCLK_REAL_TICKS_PER_SEC, AUDIO_CAPTURE_WAV_RATE)`
+ * taktů, nejméně AC_WARMUP_MIN_MS. PAL: 3 x 709 379 taktů = 5292 vzorků
+ * (120 ms), NTSC: 2 x 715 909 taktů = 4410 vzorků (100 ms).
+ *
+ * @return Délka zahřátí v taktech GDG.
+ * @note Čistá funkce konstant překladu.
  */
-#define AC_WARMUP_TICKS ((uint64_t) GDGCLK_BASE / 10u)
+static uint64_t ac_warmup_ticks(void)
+{
+    const uint64_t hz = GDGCLK_REAL_TICKS_PER_SEC;
+    const uint64_t unit = hz / ac_gcd(hz, AUDIO_CAPTURE_WAV_RATE);
+    const uint64_t min_ticks = (hz * AC_WARMUP_MIN_MS + 999u) / 1000u;
+    return ((min_ticks + unit - 1u) / unit) * unit;
+}
 /**
  * @brief Zvukové snímky rozjezdu SDL cesty před začátkem (jen se sdl.wav).
  *
@@ -84,6 +113,38 @@ typedef struct st_AC_RING {
     uint64_t cap;      /**< Kapacita [záznamy]. */
     uint64_t next;     /**< Pořadové číslo příštího záznamu. */
 } st_AC_RING;
+
+/** @brief Hranice snímku zachycení: index prvního vzorku snímku v proudech PCM. */
+typedef struct st_AC_BOUND {
+    uint64_t ref_first; /**< Proud reference (st_AUDIO_CAPTURE_FRAME_REC::ref_first). */
+    uint64_t sdl_first; /**< Proud SDL cesty (st_AUDIO_CAPTURE_FRAME_REC::sdl_first). */
+} st_AC_BOUND;
+
+/**
+ * @brief Index hranic snímků po dobu uchování PCM (audio_capture_frame_range()).
+ *
+ * Ring hranic uzavřených snímků `[first, next)`; hranice snímku `next`
+ * (konec uzavřených snímků) je `ref_end` / `sdl_end`. Nejstarší hranici
+ * přepíše jen tehdy, když data jejího snímku už nedrží žádný PCM ring;
+ * jinak ring zdvojnásobí (nejvýš na `cap_max`). Výchozí kapacita pokryje
+ * PCM ring při 100 % a vyšší rychlosti (snímek = aspoň 881 / 735 vzorků),
+ * `cap_max` i při rychlosti 1 % (aspoň 8 / 7 vzorků reference na snímek).
+ * Dřív se přepíše jen hranice snímků bez vzorků (SDL cesta bez bloku,
+ * např. MAX SPEED) nebo při nedostatku paměti; dotaz to pak ohlásí
+ * (AUDIO_CAPTURE_RANGE_START_NOT_HELD).
+ *
+ * @invariant data != NULL => 0 < cap <= cap_max, first <= next, next - first <= cap;
+ *            hranice snímku seq leží na indexu seq % cap.
+ */
+typedef struct st_AC_BOUNDS {
+    st_AC_BOUND *data; /**< cap hranic, NULL = index se nedrží (bez PCM ringu). */
+    uint64_t cap;      /**< Kapacita [snímky]. */
+    uint64_t cap_max;  /**< Nejvyšší kapacita [snímky]. */
+    uint64_t first;    /**< Nejstarší držená hranice. */
+    uint64_t next;     /**< Počet uzavřených snímků. */
+    uint64_t ref_end;  /**< Hranice snímku `next` v proudu reference (vzorky reference po posledním uzavřeném snímku). */
+    uint64_t sdl_end;  /**< Hranice snímku `next` v proudu SDL cesty. */
+} st_AC_BOUNDS;
 
 /**
  * @brief Průběžné součty pro souhrn zvukového snímku (st_AUDIO_CAPTURE_FRAME_REC).
@@ -151,6 +212,7 @@ static struct {
     unsigned segment;                /**< Pořadí zachycení (zvýší každý úspěšný start). */
     bool mem;                        /**< Paměť zachycení se drží. */
     st_AC_RING ring[AUDIO_CAPTURE_STREAM_COUNT]; /**< Proudy paměti (en_AUDIO_CAPTURE_STREAM). */
+    st_AC_BOUNDS bounds;             /**< Index hranic snímků v proudech PCM (jen s PCM ringem). */
     st_AC_FRAME_ACC acc;             /**< Součty aktuálního snímku (jen s mem). */
     st_AUDIO_CAPTURE_PSG_INITIAL psg_init; /**< Stav PSG na začátku zachycení. */
 } s_ac;
@@ -244,18 +306,137 @@ static void ac_ring_push(st_AC_RING *r, const void *recs, uint64_t n)
 }
 
 
-/** @brief Uvolní všechny ringy paměti zachycení. */
+/** @brief Uvolní index hranic snímků. */
+static void ac_bounds_free(void)
+{
+    g_free(s_ac.bounds.data);
+    memset(&s_ac.bounds, 0, sizeof(s_ac.bounds));
+}
+
+
+/**
+ * @brief Alokuje prázdný index hranic snímků pro PCM ring o `pcm` vzorcích.
+ *
+ * Výchozí kapacita `pcm / vzorků na snímek + 2` (PAL 881, NTSC 735: celý
+ * PCM ring při 100 % a vyšší rychlosti), nejvyšší `pcm / (vzorků na
+ * snímek / 100) + 2` (rychlost 1 %). Při výchozích 60 s PCM na PAL 3 005
+ * hranic po 16 B (48 KB), nejvýš 330 752 hranic (5,3 MB).
+ *
+ * @param pcm Kapacita PCM ringu [vzorky].
+ * @return false = nedostatek paměti (index zůstane prázdný).
+ */
+static bool ac_bounds_alloc(uint64_t pcm)
+{
+    ac_bounds_free();
+    const uint64_t spf = (uint64_t) AUDIO_CAPTURE_WAV_RATE * (uint64_t) VIDEO_SCREEN_TICKS / GDGCLK_REAL_TICKS_PER_SEC;
+    const uint64_t spf_min = (spf >= 100u) ? spf / 100u : 1u;
+    const uint64_t cap = pcm / (spf ? spf : 1u) + 2u;
+    s_ac.bounds.data = (st_AC_BOUND *) g_try_malloc((gsize) (cap * sizeof(st_AC_BOUND)));
+    if (!s_ac.bounds.data) return false;
+    s_ac.bounds.cap = cap;
+    s_ac.bounds.cap_max = pcm / spf_min + 2u;
+    if (s_ac.bounds.cap_max < cap) s_ac.bounds.cap_max = cap;
+    return true;
+}
+
+
+/**
+ * @brief Drží ještě některý PCM ring data snímku `seq`?
+ * @param seq Snímek, `first <= seq < next` indexu.
+ * @return true = konec snímku leží za nejstarším drženým vzorkem některého PCM ringu.
+ * @pre s_ac.bounds.data, zamčený s_mutex.
+ */
+static bool ac_bound_needed(uint64_t seq)
+{
+    const st_AC_BOUNDS *x = &s_ac.bounds;
+    st_AC_BOUND end = { x->ref_end, x->sdl_end };
+    if (seq + 1u < x->next) end = x->data[(seq + 1u) % x->cap];
+    const st_AC_RING *rr = &s_ac.ring[AUDIO_CAPTURE_STREAM_PCM_REFERENCE];
+    const st_AC_RING *rs = &s_ac.ring[AUDIO_CAPTURE_STREAM_PCM_SDL];
+    return (rr->data && end.ref_first > ac_ring_first(rr)) || (rs->data && end.sdl_first > ac_ring_first(rs));
+}
+
+
+/**
+ * @brief Zdvojnásobí kapacitu indexu hranic (nejvýš cap_max).
+ * @post Při nedostatku paměti nebo na cap_max beze změny.
+ * @pre Zamčený s_mutex.
+ */
+static void ac_bounds_grow(void)
+{
+    st_AC_BOUNDS *x = &s_ac.bounds;
+    const uint64_t cap = (x->cap > x->cap_max / 2u) ? x->cap_max : x->cap * 2u;
+    if (cap <= x->cap) return;
+    st_AC_BOUND *d = (st_AC_BOUND *) g_try_malloc((gsize) (cap * sizeof(st_AC_BOUND)));
+    if (!d) return;
+    for (uint64_t seq = x->first; seq < x->next; seq++) d[seq % cap] = x->data[seq % x->cap];
+    g_free(x->data);
+    x->data = d;
+    x->cap = cap;
+}
+
+
+/**
+ * @brief Přidá hranici uzavřeného snímku do indexu.
+ *
+ * Je-li index plný, nejstarší hranici přepíše, pokud data jejího snímku už
+ * nedrží žádný PCM ring, jinak index zvětší (nejvýš na cap_max; pak přepíše).
+ *
+ * @param b       Hranice uzavíraného snímku (index jeho prvního vzorku v proudech).
+ * @param ref_end Vzorky reference po uzavření snímku (hranice dalšího snímku).
+ * @param sdl_end Vzorky SDL cesty po uzavření snímku.
+ * @pre Zamčený s_mutex.
+ */
+static void ac_bounds_push(st_AC_BOUND b, uint64_t ref_end, uint64_t sdl_end)
+{
+    st_AC_BOUNDS *x = &s_ac.bounds;
+    if (!x->data) return;
+    if (x->next - x->first >= x->cap) {
+        if (ac_bound_needed(x->first)) ac_bounds_grow();
+        if (x->next - x->first >= x->cap) x->first++;
+    }
+    x->data[x->next % x->cap] = b;
+    x->next++;
+    x->ref_end = ref_end;
+    x->sdl_end = sdl_end;
+}
+
+
+/**
+ * @brief Hranice snímku `seq` v proudu (index prvního vzorku), pokud ji index drží.
+ * @param seq Snímek.
+ * @param sdl Proud SDL cesty (jinak reference).
+ * @param out Výstup (jen při návratu true).
+ * @return false = snímek není v `[first, next]` indexu.
+ * @pre Zamčený s_mutex.
+ */
+static bool ac_bound_at(uint64_t seq, bool sdl, uint64_t *out)
+{
+    const st_AC_BOUNDS *x = &s_ac.bounds;
+    if (!x->data || seq < x->first || seq > x->next) return false;
+    if (seq == x->next) {
+        *out = sdl ? x->sdl_end : x->ref_end;
+    } else {
+        const st_AC_BOUND *b = &x->data[seq % x->cap];
+        *out = sdl ? b->sdl_first : b->ref_first;
+    }
+    return true;
+}
+
+
+/** @brief Uvolní všechny ringy paměti zachycení a index hranic snímků. */
 static void ac_mem_free(void)
 {
     for (unsigned i = 0; i < AUDIO_CAPTURE_STREAM_COUNT; i++) ac_ring_free(&s_ac.ring[i]);
+    ac_bounds_free();
     s_ac.mem = false;
 }
 
 
-/** @brief Takty od začátku zachycení na µs jako text s desetinnou tečkou. */
+/** @brief Takty od začátku zachycení na µs skutečného času (podle krystalu) jako text s desetinnou tečkou. */
 static void ac_time_us(uint64_t rel_ticks, char *buf, size_t size)
 {
-    double us = (double) rel_ticks * 1000000.0 / (double) GDGCLK_BASE;
+    double us = (double) rel_ticks * 1000000.0 / (double) GDGCLK_REAL_TICKS_PER_SEC;
     g_ascii_formatd(buf, (int) size, "%.3f", us);
 }
 
@@ -385,6 +566,15 @@ static void ac_write_json(void)
     ac_json_str(fp, s_ac.started);
     fprintf(fp, ",\n  \"gdg_clk_hz\": %llu,\n  \"frames_per_sec\": %u,\n  \"wav_rate\": %u,\n",
             (unsigned long long) GDGCLK_BASE, (unsigned) VIDEO_SCREENS_PER_SEC, AUDIO_CAPTURE_WAV_RATE);
+    /* Skutečný čas (podle krystalu): takty za sekundu, podle kterých jsou WAV
+     * a time_us v CSV, a zlomková snímková frekvence (čitatel / jmenovatel přesně).
+     * gdg_clk_hz a frames_per_sec výše zůstávají jmenovité kvůli kompatibilitě. */
+    char fps_real[32];
+    g_ascii_formatd(fps_real, (int) sizeof(fps_real), "%.6f", GDGCLK_REAL_FPS);
+    fprintf(fp, "  \"real_clk_hz\": %llu,\n  \"frames_per_sec_real\": %s,\n"
+                "  \"frames_per_sec_real_num\": %llu,\n  \"frames_per_sec_real_den\": %llu,\n",
+            (unsigned long long) GDGCLK_REAL_TICKS_PER_SEC, fps_real,
+            (unsigned long long) GDGCLK_REAL_TICKS_PER_SEC, (unsigned long long) VIDEO_SCREEN_TICKS);
     /* Absolutní časy v taktech GDG (stejná časová osa jako total_screens
      * * screen_total_ticks_per_frame + total_ticks v emulator://periph/gdg);
      * null, pokud zachycení nezačalo (stop během čekání na konec snímku)
@@ -534,7 +724,8 @@ static bool ac_start(const st_AUDIO_CAPTURE_PARAMS *p, char *err, size_t err_siz
                                   p->ring_psg_writes ? p->ring_psg_writes : AUDIO_CAPTURE_RING_PSG_DEFAULT)
                  && ac_ring_alloc(&s_ac.ring[AUDIO_CAPTURE_STREAM_FRAMES], sizeof(st_AUDIO_CAPTURE_FRAME_REC), frames)
                  && (!p->pcm_reference || ac_ring_alloc(&s_ac.ring[AUDIO_CAPTURE_STREAM_PCM_REFERENCE], 4u, pcm))
-                 && (!p->pcm_sdl || ac_ring_alloc(&s_ac.ring[AUDIO_CAPTURE_STREAM_PCM_SDL], 4u, pcm));
+                 && (!p->pcm_sdl || ac_ring_alloc(&s_ac.ring[AUDIO_CAPTURE_STREAM_PCM_SDL], 4u, pcm))
+                 && (!(p->pcm_reference || p->pcm_sdl) || ac_bounds_alloc(pcm));
             if (!ok) {
                 ac_mem_free();
                 fail = "memory";
@@ -638,6 +829,7 @@ static void ac_get_status(st_AUDIO_CAPTURE_STATUS *out)
         si->next_seq = r->next;
         out->memory_bytes += r->cap * r->rec;
     }
+    out->memory_bytes += s_ac.bounds.cap * sizeof(st_AC_BOUND);
 }
 
 
@@ -843,14 +1035,17 @@ static void ac_begin(uint64_t horizon)
         float level[VIDEOREC_AUDIO_MAX_CHANNELS][VIDEOREC_AUDIO_LEVELS];
         memset(level, 0, sizeof(level));
         iface_audio_build_videorec_levels(level, VIDEOREC_AUDIO_MAX_CHANNELS);
-        /* Zahřátí: renderer začne AC_WARMUP_TICKS (100 ms) před začátkem se stejnými
+        /* Zahřátí: renderer začne ac_warmup_ticks() (100 až 120 ms) před začátkem se stejnými
          * úrovněmi a tyto vzorky zahodí, aby filtry kanálů začínaly ustálené
          * (bez vazby výstupu i zaparkované trvalé úrovně PSG). Stav střídavých
          * vazeb se po zahřátí nastaví podle emulátoru. Vzorky
          * reference.wav pak začínají přesně v `horizon`, protože
-         * AC_WARMUP_TICKS je celý počet vzorků. */
-        uint64_t warm = (horizon >= AC_WARMUP_TICKS) ? AC_WARMUP_TICKS : 0;
-        videorec_audio_init(&s_ac.renderer, GDGCLK_BASE, AUDIO_CAPTURE_WAV_RATE, AUDIO_SRC_CHANNELS_COUNT,
+         * zahřátí je celý počet vzorků. Renderer převádí takty na vzorky
+         * podle krystalu (GDGCLK_REAL_TICKS_PER_SEC), stejně jako zvukový
+         * výstup (sdl.wav), takže oba soubory mají stejnou délku i výšku tónu. */
+        const uint64_t warmup = ac_warmup_ticks();
+        uint64_t warm = (horizon >= warmup) ? warmup : 0;
+        videorec_audio_init(&s_ac.renderer, GDGCLK_REAL_TICKS_PER_SEC, AUDIO_CAPTURE_WAV_RATE, AUDIO_SRC_CHANNELS_COUNT,
                             (const float (*)[VIDEOREC_AUDIO_LEVELS]) level, values, horizon - warm, true);
         s_ac.renderer_init = true;
         /* výstupní propust podle volby hned od začátku (bez přechodu) */
@@ -908,7 +1103,12 @@ static uint32_t ac_sat32(uint64_t v)
 
 /**
  * @brief Uzavře souhrn snímku [frame_start, horizon) do ringu frames a vynuluje součty snímku.
- * @pre s_ac.mem, s_ac.frame je číslo uzavíraného snímku.
+ *
+ * Kromě součtů zapíše indexy prvního vzorku snímku v proudech PCM
+ * (ref_first, sdl_first): vzorky snímku jsou posledních ref_n (sdl_n)
+ * přijatých, takže sousední snímky na sebe přesně navazují.
+ *
+ * @pre s_ac.mem, s_ac.frame je číslo uzavíraného snímku; zamčený s_mutex.
  */
 static void ac_push_frame(uint64_t frame_start, uint64_t horizon)
 {
@@ -944,6 +1144,14 @@ static void ac_push_frame(uint64_t frame_start, uint64_t horizon)
             r.ref_peak[c] = (uint16_t) a->ref_peak[c];
         }
         r.ref_samples = a->ref_n;
+    }
+    /* Začátek snímku v proudech PCM: vzorky snímku jsou poslední ref_n (sdl_n) přijaté. */
+    r.ref_first = s_ac.ref_total - a->ref_n;
+    r.sdl_first = s_ac.sdl_total - a->sdl_n;
+    {
+        /* index hranic pro výřezy po snímcích po celou dobu uchování PCM */
+        const st_AC_BOUND b = { r.ref_first, r.sdl_first };
+        ac_bounds_push(b, s_ac.ref_total, s_ac.sdl_total);
     }
     if (s_ac.sdl_on) {
         r.flags |= AUDIO_CAPTURE_FRAME_FLAG_SDL;
@@ -1125,14 +1333,15 @@ void audio_capture_exit(void)
 }
 
 
-bool audio_capture_stream_copy(en_AUDIO_CAPTURE_STREAM stream, uint64_t from_seq,
-                               uint64_t count, size_t max_bytes,
-                               st_AUDIO_CAPTURE_STREAM_COPY *out)
+/**
+ * @brief Vyplní metadata kopie proudu (segment, živost, počátek, držený úsek).
+ * @param stream Proud (platný).
+ * @param out    Výstup (vynulovaný volajícím).
+ * @return Ring proudu.
+ * @pre Drží se s_mutex.
+ */
+static const st_AC_RING *ac_copy_meta_locked(en_AUDIO_CAPTURE_STREAM stream, st_AUDIO_CAPTURE_STREAM_COPY *out)
 {
-    memset(out, 0, sizeof(*out));
-    if ((unsigned) stream >= AUDIO_CAPTURE_STREAM_COUNT) return true;
-    bool ok = true;
-    g_mutex_lock(&s_mutex);
     out->segment = s_ac.segment;
     out->live = s_ac.pending || s_ac.active;
     out->origin_ticks = s_ac.began ? s_ac.origin : 0;
@@ -1142,32 +1351,133 @@ bool audio_capture_stream_copy(en_AUDIO_CAPTURE_STREAM stream, uint64_t from_seq
         out->record_size = r->rec;
         out->first_seq = ac_ring_first(r);
         out->next_seq = r->next;
+    }
+    return r;
+}
+
+
+/**
+ * @brief Zkopíruje záznamy `[lo, hi)` ringu do nové paměti `out->data`.
+ *
+ * @param r   Ring (s daty).
+ * @param lo  První záznam.
+ * @param hi  Za posledním záznamem; `[lo, hi)` leží v drženém úseku ringu.
+ * @param out Výstup: data, data_seq, data_count (při `lo >= hi` beze změny).
+ * @return false = nedostatek paměti (out bez dat).
+ * @pre Drží se s_mutex.
+ */
+static bool ac_ring_copy_locked(const st_AC_RING *r, uint64_t lo, uint64_t hi, st_AUDIO_CAPTURE_STREAM_COPY *out)
+{
+    if (lo >= hi) return true;
+    out->data = (uint8_t *) g_try_malloc((gsize) ((hi - lo) * r->rec));
+    if (!out->data) return false;
+    uint8_t *dst = out->data;
+    for (uint64_t seq = lo; seq < hi; ) {
+        uint64_t idx = seq % r->cap;
+        uint64_t k = r->cap - idx;
+        if (k > hi - seq) k = hi - seq;
+        memcpy(dst, r->data + idx * r->rec, (size_t) (k * r->rec));
+        dst += k * r->rec;
+        seq += k;
+    }
+    out->data_seq = lo;
+    out->data_count = hi - lo;
+    return true;
+}
+
+
+bool audio_capture_stream_copy(en_AUDIO_CAPTURE_STREAM stream, uint64_t from_seq,
+                               uint64_t count, size_t max_bytes,
+                               st_AUDIO_CAPTURE_STREAM_COPY *out)
+{
+    memset(out, 0, sizeof(*out));
+    if ((unsigned) stream >= AUDIO_CAPTURE_STREAM_COUNT) return true;
+    bool ok = true;
+    g_mutex_lock(&s_mutex);
+    const st_AC_RING *r = ac_copy_meta_locked(stream, out);
+    if (r->data) {
+        /* kurzor: od nejstaršího drženého záznamu, `count` záznamů od něj */
         uint64_t lo = (from_seq > out->first_seq) ? from_seq : out->first_seq;
         uint64_t hi = r->next;
         if (lo < hi && count < hi - lo) hi = lo + count;
         uint64_t max_rec = max_bytes / r->rec;
         if (lo < hi && hi - lo > max_rec) hi = lo + max_rec;
-        if (lo < hi) {
-            out->data = (uint8_t *) g_try_malloc((gsize) ((hi - lo) * r->rec));
-            if (!out->data) {
-                ok = false;
-            } else {
-                uint8_t *dst = out->data;
-                for (uint64_t seq = lo; seq < hi; ) {
-                    uint64_t idx = seq % r->cap;
-                    uint64_t k = r->cap - idx;
-                    if (k > hi - seq) k = hi - seq;
-                    memcpy(dst, r->data + idx * r->rec, (size_t) (k * r->rec));
-                    dst += k * r->rec;
-                    seq += k;
-                }
-                out->data_seq = lo;
-                out->data_count = hi - lo;
-            }
-        }
+        ok = ac_ring_copy_locked(r, lo, hi, out);
     }
     g_mutex_unlock(&s_mutex);
     return ok;
+}
+
+
+bool audio_capture_stream_copy_window(en_AUDIO_CAPTURE_STREAM stream, uint64_t from_seq,
+                                      uint64_t to_seq, size_t max_bytes,
+                                      st_AUDIO_CAPTURE_STREAM_COPY *out)
+{
+    memset(out, 0, sizeof(*out));
+    out->held_seq = out->data_seq = from_seq;
+    if ((unsigned) stream >= AUDIO_CAPTURE_STREAM_COUNT) return true;
+    bool ok = true;
+    g_mutex_lock(&s_mutex);
+    const st_AC_RING *r = ac_copy_meta_locked(stream, out);
+    if (r->data) {
+        /* průnik okna s drženým úsekem a kopie pod týmž zámkem: ring mezi nimi neposkočí */
+        uint64_t lo = from_seq;
+        const uint64_t n = audio_capture_clip_window(from_seq, to_seq, out->first_seq, out->next_seq, &lo);
+        out->held_seq = out->data_seq = lo;
+        out->held_count = n;
+        const uint64_t max_rec = max_bytes / r->rec;
+        ok = ac_ring_copy_locked(r, lo, lo + ((n > max_rec) ? max_rec : n), out);
+    }
+    g_mutex_unlock(&s_mutex);
+    return ok;
+}
+
+
+bool audio_capture_frame_range(en_AUDIO_CAPTURE_STREAM stream, uint64_t first, uint64_t frames,
+                               st_AUDIO_CAPTURE_FRAME_RANGE *out)
+{
+    memset(out, 0, sizeof(*out));
+    if (stream != AUDIO_CAPTURE_STREAM_PCM_REFERENCE && stream != AUDIO_CAPTURE_STREAM_PCM_SDL) return false;
+    const bool sdl = (stream == AUDIO_CAPTURE_STREAM_PCM_SDL);
+    g_mutex_lock(&s_mutex);
+    const st_AC_BOUNDS *x = &s_ac.bounds;
+    if (!x->data || !s_ac.ring[stream].data) {
+        g_mutex_unlock(&s_mutex);
+        return false;
+    }
+    out->closed_frames = x->next;
+    out->held_from = x->first;
+    out->segment = s_ac.segment;
+    const uint64_t last = (frames > UINT64_MAX - first) ? UINT64_MAX : first + frames;
+    uint64_t a = first, b = last;
+    if (x->next == 0) {
+        out->flags = AUDIO_CAPTURE_RANGE_NO_FRAMES;
+        a = b = 0;
+    } else if (first >= x->next) {
+        out->flags = AUDIO_CAPTURE_RANGE_START_NOT_CLOSED;
+        a = b = x->next;
+    } else {
+        if (b > x->next) {
+            b = x->next;
+            out->flags |= AUDIO_CAPTURE_RANGE_END_NOT_CLOSED;
+        }
+        if (a < x->first) {
+            a = x->first;
+            out->flags |= AUDIO_CAPTURE_RANGE_START_NOT_HELD;
+        }
+        if (b < a) b = a;
+    }
+    uint64_t sa = 0, sb = 0;
+    if (x->next > 0) {
+        ac_bound_at(a, sdl, &sa);   /* a i b leží v [first, next] */
+        ac_bound_at(b, sdl, &sb);
+    }
+    out->frame_from = a;
+    out->frame_to = b;
+    out->sample_from = sa;
+    out->samples = (sb > sa) ? sb - sa : 0u;
+    g_mutex_unlock(&s_mutex);
+    return true;
 }
 
 

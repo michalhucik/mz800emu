@@ -1270,7 +1270,7 @@ Sloupce (vždy v tomto pořadí, `columns` v odpovědi):
 | `eventlog` | `seq`, `t`, `frame`, `pos`, `cat`, `sub`, `pc`, `text` |
 | `audio_psg_writes` | `seq`, `t`, `time_us`, `frame`, `psg`, `byte`, `ch`, `reg`, `value`, `hz`, `note` |
 | `audio_levels` | `seq`, `t`, `time_us`, `frame`, `channel`, `level` |
-| `audio_frames` | `seq`, `t`, `time_us`, `len_ticks`, `edges`, `on_pct`, `rms_level`, `max_level`, `ref_rms`, `ref_peak`, `sdl_rms`, `sdl_peak`, `sdl_blocks` |
+| `audio_frames` | `seq`, `t`, `time_us`, `len_ticks`, `edges`, `on_pct`, `rms_level`, `max_level`, `ref_rms`, `ref_peak`, `sdl_rms`, `sdl_peak`, `sdl_blocks` (výchozí); na požádání `ref_first`, `sdl_first` |
 | `ramlog` | `seq`, `t`, `frame`, `pc`, `sym`, `addr`, `space`, `offset`, `plane`, `old`, `new`, `src`, `flags`, `count`, `tin` |
 | `bplog` | `seq`, `t`, `frame`, `insn_pc`, `sym`, `pc`, `bp`, `name`, `kind`, `text`, `flags` |
 
@@ -1282,9 +1282,14 @@ záznam přijetí přerušení ukazuje `INT ACK`. `kind` u cputrack je `insn`,
 jinak volání selže. Řádek `sync` (`asm` `SYNC start`, `SYNC pc_range`,
 `SYNC write`) nese stav CPU na začátku záznamu, při návratu do rozsahu
 filtru PC a po změně mimo instrukci; čas nezabírá. `audio_*`: `t` absolutně,
-`time_us` od začátku zachycení; `hz` / `note` jen u nového děliče tónu;
+`time_us` od začátku zachycení ve skutečném čase podle krystalu; `hz` / `note`
+(také podle krystalu) jen u nového děliče tónu;
 pole `audio_frames` jsou v pořadí `channels` z `emu_audio_capture_status`,
-`ref_*` / `sdl_*` jsou [L, R] int16 (bez zachycení null).
+`ref_rms`, `ref_peak`, `sdl_rms`, `sdl_peak` jsou [L, R] int16 (bez zachycení null);
+`ref_first` / `sdl_first` je index prvního vzorku snímku v PCM reference / zvukového
+výstupu (= `from_sample` okna `emu_audio_capture_pcm` po snímcích; bez proudu null);
+oba sloupce jsou jen na vyžádání v `columns` (výchozí řádek má 13 sloupců jako
+vydaná verze).
 
 Odpověď nese `segment`, `first_seq`, `next_seq`, `live`, `truncated`,
 `lost`, `gap` (ring Event Vieweru: `{from_seq, to_seq}`, když kurzor
@@ -2018,11 +2023,12 @@ i v GUI (Tools -> Audio Capture, `Alt + Q`) a v příkazové řádce
 | `psg_writes.csv` | `ticks,time_us,frame,psg,byte,channel,reg,value` - každý zápis do PSG s dekódováním |
 | `reference.wav` | zvuk vyrenderovaný přesně v emulovaném čase (renderer video záznamu) |
 | `sdl.wav` | zvuk ze zvukové výstupní cesty emulátoru - to, co slyší uživatel |
-| `capture.json` | platforma, `gdg_clk_hz`, `frames_per_sec`, názvy kanálů, počty, důvod konce, absolutní časy `origin_ticks`, `end_ticks`, `last_event_ticks` a hodiny platformy `clocks` (zapisuje se na konci, viz audio-capture.md) |
+| `capture.json` | platforma, `gdg_clk_hz`, `frames_per_sec` (jmenovitě), `real_clk_hz`, `frames_per_sec_real` (podle krystalu), názvy kanálů, počty, důvod konce, absolutní časy `origin_ticks`, `end_ticks`, `last_event_ticks` a hodiny platformy `clocks` (zapisuje se na konci, viz audio-capture.md) |
 
-- `ticks` jsou takty GDG od začátku zachycení (`gdg_clk_hz` v
-  capture.json), `time_us` totéž v mikrosekundách, `frame` zvukový snímek
-  (= snímek obrazu, 20 ms PAL / 16,7 ms NTSC) od začátku.
+- `ticks` jsou takty GDG od začátku zachycení, `time_us` totéž ve
+  skutečných mikrosekundách (děleno `real_clk_hz` v capture.json), `frame`
+  zvukový snímek (= snímek obrazu, 19,985 ms PAL / 16,688 ms NTSC, 881,36 /
+  735,95 vzorku WAV) od začátku.
 - Kanály: `ctc0` (reproduktor řízený CTC0 a PIO, úroveň 0 nebo 15; 31 při
   CTC0 v režimu 3 s děličem 2 a PC0 = 1),
   `psg0_0`..`psg0_3` a na MZ-1500 nebo MZ-800 s druhým PSG
@@ -2099,7 +2105,9 @@ Souhrn paměti zachycení, několik kB textu. Argumenty (volitelné):
 200), `lag_frames` (-1 = najít zpoždění zvukového výstupu)
 a `max_lag_frames` (výchozí 8). Vrací:
 
-- `frames` [od, do], `frames_available`, `fps`, `platform`, `stereo`;
+- `frames` [od, do], `frames_available`, `fps` (jmenovitě), `fps_real`
+  a `real_clk_hz` (podle krystalu; Hz, us a sekundy souhrnu se počítají z něj),
+  `platform`, `stereo`;
 - `sound_spans` / `silent_spans` ([[od, do]], nejvýš po 50, `*_total` =
   všechny) - ticho = RMS reference pod `silence_rms`;
 - `channels` - po kanálech `active_frames`, `edges`, `max_level`,
@@ -2111,11 +2119,77 @@ a `max_lag_frames` (výchozí 8). Vrací:
 - `ctc0` - reproduktor: `edges`, `edge_interval_hist_us` [[koš_od_us,
   počet]], `likely` (`tone`, `pcm`, `irregular`, `silent`) - odhad
   heuristikou, pravidlo je v `likely_rule`;
-- `ref_vs_sdl` (potřebuje `pcm` s `reference` i `sdl`) - `lag_samples`,
-  `lag_frames`, `lag_ambiguous` (v porovnaném úseku jen ustálený tón,
-  zpoždění nejde určit), `diff_rms`, `diff_max` (-1..1, mono),
-  `reference_rms`, `worst_frames` [[snímek, diff_rms]], `sdl_missing_blocks`;
-  porovnají se nejvýš 2 s.
+- `ref_vs_sdl` (potřebuje `pcm` s `reference` i `sdl`) - `status` (`ok`,
+  `no_overlap` nebo `not_comparable`; bez čísel má objekt vždy `error`
+  a `reason`, jako vydaná verze, která `status` neměla), `window`
+  [od, do) = okno zvolených snímků v indexech vzorků reference z uložených
+  hranic snímků, tedy stejné jako `frame_range.samples_requested`
+  u `emu_audio_capture_pcm` s `frame_from` (okna sousedních rozsahů
+  navazují; při `not_comparable` chybí), při `ok`
+  `lag_samples` (hledané zpoždění je ODHAD: `lag_ambiguous` false znamená
+  jen, že hledání nenašlo rovnocenného konkurenta, ne důkaz nejlepšího
+  zarovnání; o regresi rozhodujte s pevným `lag_frames`; úsek do 2048 dvojic
+  při výchozím rozsahu se hledá přesně přes všechna zpoždění, delší přes
+  obálku, kde může zarovnání mimo hrubou mřížku uniknout),
+  `lag_frames`, `lag_ambiguous` (zpoždění z dat určit nejde,
+  `lag_samples` je jen první z rovnocenných: v porovnaném úseku jen
+  ustálený tón, ticho nebo stálá úroveň, i v krátkém úseku, nebo jiné
+  zpoždění sedí v toleranci stejně dobře, např. tón v úseku pod 256 vzorků
+  po každé periodě nebo dvě přesné kopie blízko sebe, nebo krátký úsek
+  zarovnání nevysvětlí; zkouší se jen zpoždění s aspoň polovinou největšího
+  překryvu; heuristika emulátoru, mění jen příznak, ne zpoždění ani čísla;
+  pravidla a meze jsou v `emulator://docs/audio_capture_read`),
+  `from_sample` a `compared_samples`
+  (první porovnaný index reference a počet dvojic), `sdl_from_sample`
+  (první porovnaný index zvukového výstupu), `diff_rms`, `diff_max`
+  (-1..1, mono), `reference_rms`, `worst_frames` [[snímek, diff_rms]]
+  (nejvýš 5 snímků s největším rozdílem, dvojice jako ve vydané verzi;
+  každý snímek se hodnotí z části, která se porovnala, i když začíná před
+  `from_sample`), `worst_frames_detail` (tytéž snímky v témž pořadí jako
+  objekty `{frame, diff_rms, compared_samples}`, `compared_samples` = počet
+  porovnaných dvojic snímku, u částečného méně než délka snímku); vždy
+  `sdl_missing_blocks`; porovnají se nejvýš 2 s. Porovnávají se jen dvojice
+  (vzorek reference i, vzorek výstupu i + zpoždění), které obě paměti PCM
+  v okně ještě drží; s pevným `lag_frames` při tomto zpoždění, při
+  hledání zpoždění od prvního indexu drženého v obou proudech (zpoždění 0).
+  Když jeden proud vzorky okna už nedrží (paměť PCM je přepsala), je
+  výsledek `no_overlap` a `reason` řekne který, nikdy číslo ze vzorků mimo
+  okno. Na nejstarším okraji paměti může reference ještě držet konec okna,
+  výstup ale už jen indexy za ním (zvuk téhož okamžiku je ve výstupu až po
+  zpoždění): hledání pak nemá společný počátek, výsledek je `no_overlap`
+  s vlastním `reason` ("no start for the delay search"),
+  `fixed_lag_min_samples` (nejmenší zpoždění s aspoň jednou dvojicí)
+  a `fixed_lag_min_frames` (nejmenší pevný `lag_frames` 1-60 s dvojicemi,
+  jinak null; zaručeně funguje jen tato hodnota, větší už může přesáhnout
+  držený výstup). Zpoždění se tu záměrně neodhaduje (zachovaná část je
+  kratší než zpoždění výstupu); porovnat ji jde s pevným `lag_frames`.
+  `not_comparable`: snímek
+  úseku nebo snímek před ním běžel vlastní rychlostí (délka nebo začátek
+  snímku jinde než jmenovitě o víc než 1/1000 snímku); reference má na
+  snímek vzorky jeho emulovaného času, zvukový výstup jeden blok, jedno
+  okno by tedy porovnávalo jiná místa - místo čísel `error`, `reason`,
+  `frames_off_nominal`, `nominal_frame_ticks`, `sdl_minus_ref_samples`.
+  Totéž pravidlo délky platí i pro snímky za oknem, kam sahá pevný
+  `lag_frames` nebo které může prohledat hledání zpoždění (celý rozsah
+  `max_lag_frames`, ne jen nalezené zpoždění): snímek s vlastní rychlostí
+  tam dá `not_comparable` se stejným `error`, s `reason`,
+  `frames_off_nominal` (snímky dosahu mimo jmenovitou délku),
+  `first_off_nominal_frame`, `nominal_frame_ticks`, `sdl_minus_ref_samples`
+  a `sdl_missing_blocks`, bez čísel a bez `window`. Porovnat jde s menším
+  `max_lag_frames` nebo s pevným `lag_frames`, jehož dosah končí před
+  `first_off_nominal_frame`; změna rychlosti za dosahem výsledek
+  neovlivní. Vzorky výstupu za posledním uloženým snímkem (otevřený snímek
+  živého zachycení, zbytek po zastavení) délku snímku ještě nemají, tato
+  kontrola je nepokrývá.
+  Druhá příčina `not_comparable`: v porovnávaném úseku nebo v části za ním,
+  kam sahá pevné nebo hledané zpoždění, chybí bloky zvukového výstupu
+  (zvukové zařízení je v MAX SPEED vynechá, headless ne), od toho snímku je
+  výstup proti referenci posunutý - místo čísel `error`, `reason`,
+  `sdl_shift_frame` (první snímek se změněným posunem), `sdl_empty_frames`,
+  `sdl_minus_ref_samples`, bez `window`. Ztráta bloků později nezneplatní
+  starší úsek a souvislý úsek po mezeře se porovná se vzorky výstupu od
+  skutečného začátku svého prvního snímku. Ve vydané verzi dalo takové okno
+  `ok` se vzorky výstupu z jiného snímku.
 
 ### `emu_audio_capture_pcm`
 
@@ -2128,8 +2202,65 @@ base64, výchozí 32768, nejvýš 4 MiB). Převzorkování průměruje (analytic
 náhled); `rate` 44100 se `stereo` vrací vzorky reference.wav / sdl.wav
 bajt po bajtu. Vrací `source`, `segment`, `live`, `rate`, `channels`,
 `from_sample`, `samples`, `frames_out`, `next_sample` (odsud pokračovat),
-`end_of_data`, `truncated`, `available` [první, příští], `gap`,
+`end_of_data`, `truncated`, `available` [první, příští], `gap` (jen
+u neprázdného požadavku), `frame_range` (u okna podle snímků, jinak null),
 `encoding`, `data_b64`.
+
+Okno podle snímků (`frame_from`, `frames`) začíná prvním vzorkem snímku
+`frame_from` a končí před prvním vzorkem snímku `frame_from + frames`
+ve zvoleném proudu, takže rozsahy vzorků oken po snímcích na sebe
+navazují (`from_sample` dalšího = `next_sample` předchozího). Hranice drží
+zachycení v indexu po celou dobu, co je zvuk snímku v paměti PCM (nezávisle
+na paměti souhrnů snímků, při každé rychlosti i po její změně), takže
+snímek přečtený po zahození jeho souhrnu vrátí tytéž vzorky. Okno pokrývá
+jen uzavřené snímky; co pokrýt nejde, ohlásí `frame_range`: `requested`
+[od, do), `returned` [od, do), `closed_frames` (počet uzavřených snímků
+= číslo dosud otevřeného), `held_from` (nejstarší snímek s drženou
+hranicí), `status` (`complete`, `partial`, `empty`) a `reasons`
+(`start_after_last_closed_frame` - okno začíná na otevřeném snímku nebo
+za koncem zachycení, je prázdné a `from_sample` je konec uzavřených snímků,
+další PCM, např. blok zvukového výstupu po posledním snímku, se čte přes
+`sample_from`; `end_after_last_closed_frame` - konec oříznut na poslední
+uzavřený snímek, takže snímky N-1 a N společně = N-1 samostatně;
+`start_boundary_not_held` - hranice začátku se už nedrží, zvuk těch snímků
+paměť zahodila, okno začíná `held_from`; `no_closed_frames`). `status`
+a `reasons` popisují jen hranice snímků. Zvuk snímku může paměť PCM
+přepsat, i když hranice ještě drží (index je společný pro oba proudy).
+Okno vzorků podle snímků je pevné: vrátí se jen vzorky okna, které paměť
+PCM ještě drží, nikdy vzorky dalšího snímku. `frame_range` to hlásí
+zvlášť: `samples_requested` [od, do) = okno vzorků vrácených snímků (se
+`samples` od začátku prvního z nich; konec je jako u `requested` nasycený
+na INT64_MAX, takže ani `samples` = INT64_MAX nedá záporné číslo; všechny
+parametry jsou celá čísla do INT64_MAX), `samples_held` [od, do) = jeho část
+v paměti v okamžiku kopie, `audio_status` (`complete` celé okno,
+`partial` část přepsaná nebo ještě nezachycená, `lost` žádný vzorek -
+odpověď má 0 vzorků a `from_sample` = `next_sample` = konec okna u přepsaného
+zvuku a začátek okna u ještě nezachyceného, `none`
+prázdné okno) a `audio_reasons` (`pcm_overwritten`, `pcm_not_captured`).
+`gap` [od, do) jsou přepsané vzorky jen uvnitř požadovaného okna. Strop
+`max_bytes` platí pro zachovanou část (`truncated`); pokračovat se dá přes
+`sample_from` = `next_sample` a `samples` do konce okna. Za běhu zachycení
+se průnik bere spolu s kopií (pod jedním zámkem), `available` v téže
+odpovědi je držený úsek v tom okamžiku. Čtení přes `sample_from` (kurzor)
+se nemění: přepsaný začátek přeskočí a vrátí `samples` vzorků od
+nejstaršího drženého (`gap` = přeskočená část). Odhad ani zvuk z jiného
+času se nevrací; `samples` u prázdného okna nic nepřidá.
+Index zabere 16 B na snímek: při výchozích 60 s PCM PAL 48 KB a roste
+podle potřeby (nejvýš asi 5,3 MB při rychlosti 1 %). Při `rate` 44100 se `stereo` je spojení dat oken
+bajt po bajtu totéž co jedno okno přes stejné snímky. Při jiném `rate` se
+každé okno převzorkuje zvlášť (počet výstupních vzorků se zaokrouhlí pro
+každé okno, průměrování začíná na začátku okna), takže se spojení od
+jednoho okna může lišit délkou i hodnotami (12 oken po snímku při 11025 Hz mono
+na MZ-800: 2640 místo 2644 hodnot, liší se 2420 z nich, na hranách
+obdélníku až o 57 % špičky); pro souvislý převzorkovaný úsek je lepší jedno
+okno. Snímek zachycení je
+jedna synchronizační událost emulace: při 100 % snímek obrazu, při
+vlastní rychlosti úsek o délce rychlost krát snímek. Reference má za něj
+vzorky jeho emulovaného času (při 50 % asi 441, při 200 % asi 1763 na
+PAL), zvukový výstup jeden blok 881 nebo 882 vzorků (NTSC 735 nebo 736)
+bez ohledu na rychlost; bez zvukového zařízení je to blok předchozího
+snímku. Okno se `sample_from` a bez `samples` má délku `frames` snímků
+podle krystalu (881,36 nebo 735,95 vzorku na snímek).
 
 ## Media tools
 
@@ -2762,7 +2893,7 @@ klávesu bez SHIFT. Odpověď nese
 `emu_frames` (skutečně uplynulé snímky emulace), `complete`
 a `interrupted` (`true` = sekvenci ukončil breakpoint, pauza nebo
 reset; držená klávesa byla uvolněna). Při normální rychlosti trvá
-sekvence reálný čas (50 snímků = 1 s).
+sekvence reálný čas (50 snímků = 0,999 s, snímky běží podle krystalu).
 
 Všechny HID tools nesou **WARNING** token v description - user
 simulation může vyvolat nezamýšlené chování (= RUN+RETURN, BASIC

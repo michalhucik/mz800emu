@@ -78,7 +78,15 @@ typedef struct st_DISPATCH_STUB_STATE {
     unsigned             aud_segment;               /**< audio_capture_stream_copy: segment (0 = žádné zachycení). */
     unsigned             aud_records;               /**< audio_capture_stream_copy: next_seq každého proudu. */
     uint64_t             aud_origin;                /**< audio_capture_stream_copy: origin_ticks. */
-    int                  aud_copy_calls;            /**< Počet audio_capture_stream_copy. */
+    uint64_t             aud_frame_ticks;           /**< audio_capture_stream_copy: délka snímku v souhrnech [takty] (0 = 1000). */
+    int                  aud_copy_calls;            /**< Počet audio_capture_stream_copy a audio_capture_stream_copy_window. */
+    uint64_t             aud_first_ref;             /**< Nejstarší držený vzorek PCM reference (dřívější ring "přepsal"; 0 = drží vše). */
+    uint64_t             aud_first_sdl;             /**< Nejstarší držený vzorek PCM SDL cesty (0 = drží vše). */
+    uint64_t             aud_sdl_drop_from;         /**< S aud_pcm_bounds_by_ticks: první snímek bez bloku SDL (vynechaný blok). */
+    uint64_t             aud_sdl_drop_count;        /**< S aud_pcm_bounds_by_ticks: počet snímků bez bloku SDL od aud_sdl_drop_from (0 = žádný); sdl_first dalších snímků je o jejich vzorky menší. */
+    uint64_t             aud_speed_from;            /**< S aud_pcm_bounds_by_ticks a aud_speed_ticks: první snímek s vlastní rychlostí (délka aud_speed_ticks místo aud_frame_ticks; t, ref_first a ref_samples podle skutečných taktů, sdl_first a sdl_samples dál jeden jmenovitý blok na snímek). */
+    uint64_t             aud_speed_ticks;           /**< Délka snímků od aud_speed_from [takty] (0 = všechny snímky jmenovité). */
+    bool                 aud_pcm_bounds_by_ticks;   /**< true = ref_first / sdl_first / ref_samples záznamu snímku i podle taktů (floor(takty * 44100 / krystal), jako 0374ca6a počítal okno souhrnu); false = snímek i = vzorek i (1 vzorek na snímek). */
     st_DBGAPI_RAMLOG_PARAM rl_last;                 /**< Kopie vstupu posledního DBGAPI_CMD_RAMLOG (výstupní ukazatele neplatné). */
     int                  rl_calls;                  /**< Počet DBGAPI_CMD_RAMLOG. */
     st_DBGAPI_BPLOG_PARAM bpl_last;                 /**< Kopie vstupu posledního DBGAPI_CMD_BPLOG. */

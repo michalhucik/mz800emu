@@ -13,8 +13,10 @@
  *   nezávisle na rychlosti emulace (100 %, custom speed, MAX SPEED).
  * - **Režim podle reality** (časová základna **realtime**, přepínatelná za
  *   běhu přes videorec_request_timebase()): vlákno vzorkovače
- *   ("videorec-rt") 50x (60x u NTSC) za sekundu monotónních hodin zapíše poslední snímek,
- *   který šel na obrazovku (tap videorec_on_displayed_frame() v
+ *   ("videorec-rt") tiká podle monotónních hodin tempem emulace (krystal /
+ *   takty snímku: 50,036 za sekundu PAL, 59,923 NTSC) a každý tik zapíše
+ *   další emulovaný snímek z malé fronty (snímek vkládá konec emulovaného
+ *   snímku, obraz je to, co šlo na obrazovku - tap videorec_on_displayed_frame() v
  *   iface_video_framebuffer_screen_done()), se zvukem z výstupu SDL cesty
  *   (tap videorec_rt_audio_output() v iface_audio_wait_for_data()),
  *   převzorkovaným a zarovnaným k obrazu (videorec_rt.h). Nahrávka tak
@@ -59,7 +61,7 @@
  * | `g_vr.mutex` | stav session (požadavky, pipe, sidecar, větve, realtime fronta) | emu vlákno (hooky), UI/MCP (`videorec_request_*()`), vzorkovač (tick) |
  * | `g_vr_status_mutex` | zveřejněná kopie stavu pro videorec_get_status() | lepidlo pod `g_vr.mutex`, UI, writer |
  * | `g_vr_err_mutex` | text poslední chyby | kdokoli, i pod `g_vr.mutex` |
- * | `g_vr_rtv_mutex` | poslední zobrazený snímek (realtime) | emu vlákno (tap), vzorkovač pod `g_vr.mutex` |
+ * | `g_vr_rtv_mutex` | poslední zobrazený snímek a fronta emulovaných snímků (realtime) | emu vlákno (tap, konec snímku), vzorkovač pod `g_vr.mutex` |
  * | `g_vr_rtc.mutex` | řízení vlákna vzorkovače (termín, běh) | vzorkovač jen při čekání, lepidlo pod `g_vr.mutex` |
  * | mutex jitter bufferu (st_VIDEOREC_RT_AUDIO) | zvuk SDL cesty pro realtime | SDL audio callback (jen tento zámek), vzorkovač pod `g_vr.mutex` |
  * | mutex bariéry st_VR_SYNC | retake bariéra s writerem | emu vlákno (čeká pod `g_vr.mutex`), writer (nikdy nebere `g_vr.mutex`) |
@@ -84,19 +86,37 @@
  *   události). Tick bere zámek modulu jen na dobu zpracování ticku (kopie
  *   snímku, vyrobení zvuku jednoho snímku, předání writeru); na writer nikdy nečeká
  *   (reálný čas nelze zdržet - backpressure se nepoužívá). Emu vlákno
- *   v ustáleném realtime stavu stojí na konci snímku jedno atomické čtení;
- *   tap zobrazeného snímku kopíruje snímek pod vlastním krátkým zámkem
- *   (nejvýš 50x / 60x za sekundu i při MAX SPEED, protože i zobrazení je omezené
- *   na jeden snímek); tap zvuku kopíruje blok SDL cesty (882 / 735 vzorků)
- *   pod zámkem jitter bufferu.
+ *   v ustáleném realtime stavu na konci snímku jen vloží ukazatel na obraz do
+ *   fronty snímků pod krátkým listovým zámkem (bez kopie);
+ *   tap zobrazeného snímku kopíruje snímek mimo zámek do nového sdíleného
+ *   obrazu (nejvýš 50x / 60x za sekundu i při MAX SPEED, protože i zobrazení je omezené
+ *   na jeden snímek); tap zvuku kopíruje blok SDL cesty (881 / 882, NTSC
+ *   735 / 736 vzorků) pod zámkem jitter bufferu.
+ * - **Fronta snímků:** vzorkovač nebere poslední zobrazený obraz, ale další
+ *   emulovaný snímek v pořadí (st_VIDEOREC_RT_FRAMEQ). Při 100 % se tak každý
+ *   emulovaný snímek zapíše právě jednou bez ohledu na to, jak blízko ticku
+ *   se dokončil (rezerva fronty pohltí kolísání plánovače i periodu
+ *   zvukového zařízení). Opakuje se nebo zahazuje jen při skutečném rozchodu
+ *   emulace a hodin: pauza, vlastní rychlost, MAX SPEED, zaseknutí, trvalý
+ *   rozdíl hodin zvukového zařízení proti systémovým (jednotlivé snímky).
  * - **Zpoždění obrazu:** obraz se zapisuje se zpožděním
  *   VIDEOREC_RT_VIDEO_DELAY_MS (40 ms, na ticky zaokrouhleno: 2 při 50 i 60
- *   snímcích/s), aby seděl se zvukem, který prochází jitter bufferem
- *   (VIDEOREC_RT_AUDIO_TARGET_MS); naměřená průměrná odchylka zvuku proti
- *   obrazu je do +-15 ms při 50 i 60 snímcích/s (GUI i headless), měření
- *   viz videorec_rt.h. Značky (markery, události,
+ *   snímcích/s; skládá ho zpožďovací fronta a rezerva fronty snímků), aby
+ *   seděl se zvukem, který prochází jitter bufferem
+ *   (VIDEOREC_RT_AUDIO_TARGET_MS); naměřený průměrný posun zvuku proti
+ *   obrazu (vzorkovač tempem emulace, proti nahrávce v emulačním čase):
+ *   MZ-800 headless -20 ms, se zvukovým zařízením +7 až +8 ms; MZ-1500
+ *   headless -3 až -6 ms, se zařízením +10 až +14 ms (docs video-recording.md).
+ *   Značky (markery, události,
  *   hranice segmentů) se proto v realtime vztahují k pozici `počet snímků +
- *   délka zpožďovací fronty` = snímek, ve kterém se aktuální obraz objeví.
+ *   délka zpožďovací fronty + snímky fronty, které se zapíšou před aktuálním
+ *   obrazem` (videorec_rt_frameq_pos_offset()) = snímek, ve kterém se aktuální
+ *   obraz objeví. V simulaci fronty (test_frameq_slow_machine_marker_position)
+ *   sedí přesně v ustáleném živém běhu i v pomalém režimu; je-li ve frontě
+ *   přebytek nad cíl (posun dokončování snímků se zvukovým zařízením, dohnané
+ *   zaseknutí, CKSW), leží značka o přebytek dřív, protože pozice počítá
+ *   nejvýš s rezervou fronty. `stop_after_frames` počítá zapsané a čekající
+ *   snímky, takže nahrávka má přesně tolik snímků v každém režimu.
  * - **Pauza emulace** podle `realtime_pause`: `skip` = nezapisuje se (hodiny
  *   vzorkovače stojí, obraz i zvuk po pauze navážou), `freeze` = zapisuje se
  *   zamrzlý obraz a ticho, `freeze_capped` = jako freeze nejvýš
@@ -148,7 +168,7 @@
  * se vkládá v obou základnách. V emulačním čase sleduje pauzu i rychlost
  * emu vlákno (začátek pauzy v paused smyčce, konec a změnu rychlosti na
  * konci emulovaného snímku) - pozice jsou přesné a zachytí se i pauza
- * kratší než jeden snímek. V realtime je sleduje vzorkovač (50 / 60 Hz); pozice je
+ * kratší než jeden snímek. V realtime je sleduje vzorkovač (tempem emulace); pozice je
  * pozice obrazu, pauza kratší než tick se nezaznamená.
  * Retake zahodí události od bodu snapshotu a v bodě snapshotu znovu zapíše
  * platný stav (časová základna, rychlost, probíhající pauza; bez auto
@@ -398,14 +418,19 @@ static inline bool videorec_wants_emu_audio(void)
 /**
  * @brief Tap zobrazeného snímku pro režim podle reality (volá iface_video_framebuffer_screen_done()).
  *
- * Zkopíruje snímek do slotu "poslední zobrazený snímek" (latest wins), ze
- * kterého si vzorkovač bere obraz. Bez nahrávání stojí jedno atomické čtení.
- * Aktivní je po celou session (i v emulačním čase), aby při přepnutí na
- * realtime byl k dispozici aktuální obraz; počet kopií je omezený počtem
- * zobrazených snímků (nejvýš cca 50 / 60 za sekundu i při MAX SPEED).
+ * Zkopíruje snímek do nového sdíleného obrazu (kopie mimo zámek, buffer ze
+ * zásobníku volných obrazů) a zveřejní ho jako "poslední zobrazený snímek".
+ * Na něj odkazuje fronta snímků, do které ho vloží nejbližší konec
+ * emulovaného snímku (videorec_on_screen_done()), a vzorkovač ho použije
+ * při prázdné frontě (pauza, krok debuggeru). Bez nahrávání stojí jedno
+ * atomické čtení. Aktivní je po celou session (i v emulačním čase), aby při
+ * přepnutí na realtime byl k dispozici aktuální obraz; počet kopií je omezený
+ * počtem zobrazených snímků (nejvýš cca 50 / 60 za sekundu i při MAX SPEED).
  *
  * @param pixels Framebuffer VIDEO_DISPLAY_WIDTH x VIDEO_DISPLAY_HEIGHT (indexy barev).
- * @pre Volá jen emu vlákno (framebuffer patří emu vláknu).
+ * @pre Volá jen emu vlákno (framebuffer patří emu vláknu); volající nedrží
+ *      listový zámek obrazů (g_vr.mutex smí).
+ * @note Při nedostatku paměti ukončí proces g_malloc (jako ostatní alokace modulu).
  */
 void videorec_rt_video_tap(const uint8_t *pixels);
 
@@ -690,7 +715,10 @@ unsigned videorec_get_fps(void);
  * @brief Hook konce emulovaného snímku (emu vlákno, každý snímek).
  *
  * Když se nenahrává a nečeká žádný požadavek (g_videorec_active == 0),
- * vrací po jednom atomickém čtení. Jinak pod zámkem zpracuje požadavky (start, marker, snapshot,
+ * vrací po jednom atomickém čtení. V realtime (bit VIDEOREC_FLAG_RT) jen vloží
+ * snímek do fronty pro vzorkovač (krátký listový zámek, bez kopie obrazu);
+ * návrat do emulačního času provede tento hook (dopíše frontu, tento snímek
+ * už patří emulačnímu času). Jinak pod zámkem zpracuje požadavky (start, marker, snapshot,
  * pauza, stop), předá framebuffer párování (při pauze jen spotřebuje zvuk),
  * při nesouvislosti času (reset, nahrání snapshotu) udělá šev (rebase + nový
  * segment), hlídá `stop_after_frames` a chybu writeru. Po uvolnění zámku
@@ -880,8 +908,8 @@ void videorec_get_status(st_VIDEOREC_STATUS *out);
  *
  * Nastaví `g_videorec_settings.timebase` a požadovanou časovou základnu
  * běžící nebo čekající session. emulated -> realtime provede vlákno
- * vzorkovače na nejbližším ticku (nejvýš jedna perioda snímku, 20 ms při 50
- * a 16,7 ms při 60 snímcích/s), i v pauze emulace. realtime -> emulated
+ * vzorkovače na nejbližším ticku (nejvýš jedna perioda snímku, asi 20 ms při 50
+ * a 16,7 ms při 60 snímcích/s; vzorkovač tiká tempem emulace), i v pauze emulace. realtime -> emulated
  * ohlásí už tento požadavek a provede se na nejbližším konci emulovaného
  * snímku po něm (emulační osa musí začít na hranici snímku; v pauze emulace
  * se do té doby nezapisuje), takže v nahrávce žádný snímek nechybí. Přepnutí je hranice segmentu s výchozím přechodem, začíná
@@ -976,10 +1004,12 @@ void videorec_on_reset(void);
 typedef struct st_VIDEOREC_RT_STATS {
     uint64_t ticks;            /**< Zpracovaných ticků vzorkovače v realtime (zapsaných i přeskočených). */
     uint64_t frames_written;   /**< Snímků zapsaných v realtime. */
-    uint64_t frames_repeated;  /**< Z toho snímků, kdy se od minulého ticku nezobrazil nový snímek (opakování). */
+    uint64_t frames_repeated;  /**< Z toho snímků se stejným zobrazeným obrazem jako minulý zapsaný (opakování, ale i nezměněný emulovaný snímek, který se nezobrazuje znovu). */
     uint64_t multi_ticks;      /**< Probuzení vzorkovače, která zpracovala víc než 1 tick (pozdní probuzení). */
     uint64_t clock_rebased;    /**< Nová založení řady ticků (zpoždění nad limit dohánění). */
     uint64_t lost_ticks;       /**< Ticky ztracené při novém založení řady. */
+    st_VIDEOREC_RT_FRAMEQ_STATS queue; /**< Statistiky fronty emulovaných snímků (za celou session). */
+    uint64_t end_drops;        /**< Čekajících snímků nezapsaných při stopu, protože k nim nevznikl zvuk. */
     st_VIDEOREC_RT_AUDIO_STATS audio; /**< Statistiky jitter bufferu zvuku. */
 } st_VIDEOREC_RT_STATS;
 

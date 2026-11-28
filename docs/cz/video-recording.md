@@ -139,11 +139,25 @@ Ticho je v nahrávce nulová úroveň.
 
 ### Podle reality
 
-Nahrávka sleduje hodiny na zdi: 50krát za sekundu (na MZ-700 NTSC a MZ-1500
-60krát) vezme obraz, který byl naposledy na obrazovce, a zvuk, který šel do
-reproduktorů. Hodí se pro návody
-a živé ukázky, kde má divák vidět to, co jste viděli vy - včetně pauz,
-zrychlení a práce v debuggeru.
+Nahrávka sleduje hodiny na zdi: zapisuje obraz, který šel na obrazovku, a zvuk,
+který šel do reproduktorů, a to tempem emulace při 100 % (stejně jako skutečný
+počítač asi 50,04 snímku za sekundu, na MZ-700 NTSC a MZ-1500 asi 59,92). Při
+normální rychlosti tak emulované snímky jdou ve videu za sebou bez opakování
+a vynechávání, i když je emulátor dokončuje nerovnoměrně. Snímek se opakuje
+nebo vynechá jen tam, kde se emulace od hodin na zdi opravdu rozejde: pauza,
+jiná rychlost než 100 %, zaseknutí nebo počítač, který emulaci nestíhá (záznam
+se pak snaží opakovat snímky po jednom a rozložit je rovnoměrně). Na začátku
+nahrávky a po přepnutí z emulačního času se první obraz dvakrát až třikrát
+zopakuje a hned za tím se může vynechat jeden snímek; po pauze emulace
+s nastavením Skip a po pauze nahrávání video navazuje bez opakování (měřeno bez
+okna na MZ-800). Na konci nahrávky vypadnou poslední emulované snímky, ke kterým
+ještě nevznikl zvuk: obvykle nejvýš dva, na MZ-800 se zapnutým bitem CKSW až
+čtyři. MZ-800 se zapnutým
+bitem CKSW (zkrácené řádky) má snímky asi o 1/70 kratší, takže se asi každý
+70. snímek vynechá. Ve velmi dlouhé nahrávce se navíc může výjimečně zopakovat
+nebo vynechat i jednotlivý snímek, protože hodiny zvukové karty nejdou přesně
+jako hodiny počítače. Hodí se pro návody a živé ukázky, kde má
+divák vidět to, co jste viděli vy - včetně pauz, zrychlení a práce v debuggeru.
 
 - **Pauza emulace** se nahraje podle nastavení **Emulation paused**: *Skip*
   (výchozí; během pauzy se nic nezapisuje, video po ní plynule pokračuje),
@@ -180,16 +194,19 @@ a pauza ve videu není, takže změna rychlosti, načtení snapshotu ani pauza
 značku nedostanou - zůstanou jen jako značky stavu v `cuts.json`. Pokud
 kapitoly nechcete, vypněte **Automatic markers** nebo je smažte z `cuts.json`.
 
-Naměřené vlastnosti režimu podle reality (dva testovací programy, jedno až tři
-měření na variantu; obraz o 60 snímcích za sekundu v okně byl měřen jen na
-MZ-1500, MZ-700 NTSC jen bez okna - berte je jako orientační, ne jako
-záruku):
+Naměřené vlastnosti režimu podle reality (MZ-800 a MZ-1500, tři nahrávky na
+variantu, na jednom počítači a jeho zvukové kartě; MZ-700 neměřeno - berte je
+jako orientační, ne jako záruku):
 
-- Zvuk a obraz jsou sladěné v rámci jednoho snímku videa: průměrná odchylka
-  zvuku proti obrazu byla při 50 i 60 snímcích za sekundu od -15 ms (zvuk dřív)
-  do +12 ms (zvuk později); jednotlivá místa se liší až o jeden snímek videa.
-- Po každé pauze emulace začne zvuk znovu s asi 60 až 80 ms ticha (asi
-  4 snímky videa; měřeno na MZ-800).
+- Zvuk a obraz jsou sladěné zhruba v rámci jednoho snímku videa. Měřeno
+  programem, který ve stejném okamžiku změní obraz a pustí tón, jako posun
+  zvuku proti obrazu oproti nahrávce v emulačním čase: MZ-800 bez okna -20 ms
+  (zvuk dřív), v okně se zvukovou kartou +7 až +8 ms (zvuk později); MZ-1500
+  bez okna -3 až -6 ms, v okně +10 až +14 ms. Jednotlivá místa nahrávky se od
+  průměru liší nejvýš asi o půl snímku.
+- Na začátku nahrávky a po přepnutí z emulačního času zpět podle reality začne
+  zvuk s asi 40 až 60 ms ticha (2 až 3 snímky videa); po pauze emulace
+  s nastavením Skip navazuje zvuk bez ticha (měřeno bez okna na MZ-800).
 - Nahrávka obsahuje přesně zvuk, který šel do reproduktorů. Proto se v ní
   může objevit i vlastnost zvukového výstupu emulátoru: tón PSG občas asi na
   jeden snímek "zamrzne" na stálé úrovni (změřeno na MZ-1500, v testu dvakrát
@@ -427,11 +444,15 @@ Skript upozorní, pokud je kapitol méně než 3 nebo je některá kratší než
 - Nahrávka nezahrnuje okno emulátoru, debugger ani oznámení.
 - Poměr stran `tv43` je přibližný [neověřeno]; výchozí `emulator` odpovídá
   zobrazení v okně emulátoru.
-- Videa jsou 50 snímků/s s přesnou frekvencí 50,000 (emulátor při 100 % běží
-  přesně 50 snímků za sekundu, skutečný MZ-800 asi 50,04); z MZ-700 NTSC
-  a MZ-1500 přesně 60 snímků/s (emulátor při 100 %).
-- Podle reality: zvuk a obraz sladěné v rámci jednoho snímku videa, po každé
-  pauze emulace asi 60 až 80 ms ticha (naměřeno, viz [Podle reality](#podle-reality)).
+- Videa jsou 50 snímků/s s přesnou frekvencí 50,000, z MZ-700 NTSC a MZ-1500
+  přesně 60 snímků/s. Emulátor při 100 % běží jako skutečný počítač asi 50,04
+  (59,92) snímku za sekundu a emulované snímky jdou do videa za sebou (v emulačním
+  čase vždy, podle reality při normální rychlosti), takže video běží o 0,07 %
+  pomaleji (MZ-700 NTSC a MZ-1500 o 0,13 % rychleji) než skutečnost a tóny v něm
+  zní o 1,3 centu níž (o 2,2 centu výš).
+- Podle reality: zvuk a obraz sladěné zhruba v rámci jednoho snímku videa, na
+  začátku a po přepnutí z emulačního času asi 40 až 60 ms ticha (naměřeno, viz
+  [Podle reality](#podle-reality)).
 - Při nahrávání podle reality se může tón PSG občas asi na jeden snímek
   "zamrzne" na stálé úrovni (vlastnost zvukového výstupu emulátoru, týká se
   všech platforem s PSG); nahrávka v emulačním čase je čistá.

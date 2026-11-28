@@ -22,7 +22,7 @@
  *   - F3 note event detector: state machine per (chip, channel) detekuje
  *     přechody silent ↔ playing v `psg_audio_scope_tick()`, zaznamenává
  *     note on/off do per-kanál events ring bufferu (1024 not kapacita).
- *     Pitch (TONE) přes `GDGCLK_BASE/(32*divider*GDGCLK2CPU_DIVIDER)` → MIDI 0..127 + cents
+ *     Pitch (TONE) přes `GDGCLK_REAL_TICKS_PER_SEC/(32*divider*GDGCLK2CPU_DIVIDER)` → MIDI 0..127 + cents
  *     -50..+50; NOISE má pitch=-1. Velocity z attn jako MIDI standard
  *     `round(127*(1-attn/15))`. Channel type swap během aktivní noty
  *     ukončí + případně začne novou.
@@ -127,7 +127,7 @@ extern "C"
  *
  * Časový údaj `t_frame` je hodnota `gdg_get_total_ticks()` v okamžiku
  * snapshotu - tj. monotónní pxCLK time base (= 17.7345 MHz pro MZ-800).
- * Tato volba zaručuje, že derivace času v sekundách (`t_frame / GDGCLK_BASE`)
+ * Tato volba zaručuje, že derivace času v sekundách (`t_frame / GDGCLK_REAL_TICKS_PER_SEC`)
  * odpovídá reálnému emu času bez ohledu na frekvenci UI render loopu
  * (60 Hz / 75 Hz / 144 Hz monitor, vsync mode, atd.). Driftu sampling
  * rastr nepřímo ovlivňuje jen rozlišení snapshotů, ne časové známky.
@@ -180,8 +180,8 @@ static st_PSG_SCOPE_RING g_psg_scope[PSG_MAX_COUNT][PSG_CHANNELS_COUNT];
  *
  * Aktualizuje se v `psg_audio_scope_tick()` z `gdg_get_total_ticks()`. Slouží
  * jako monotonní pxCLK časová známka pro envelope / piano roll renderery a
- * pro derivaci doby v sekundách (`t / GDGCLK_BASE`). Hodnota neroste lineárně
- * (delta mezi po sobě jdoucími tickny ~ GDGCLK_BASE / UI_render_hz).
+ * pro derivaci doby v sekundách (`t / GDGCLK_REAL_TICKS_PER_SEC`). Hodnota neroste lineárně
+ * (delta mezi po sobě jdoucími tickny ~ GDGCLK_REAL_TICKS_PER_SEC / UI_render_hz).
  * Pauza emulátoru gate-uje update, takže paused interval nepřetváří t_frame.
  *
  * Historický název `frame_counter` zachován kvůli inkrementální refaktorizaci -
@@ -295,20 +295,20 @@ static inline void psg_events_push(st_PSG_SCOPE_EVENTS *ev,
 /**
  * @brief Frekvence v Hz pro TONE divider.
  *
- * Vzorec: `f = GDGCLK_BASE / (32 * divider * GDGCLK2CPU_DIVIDER)`,
+ * Vzorec: `f = GDGCLK_REAL_TICKS_PER_SEC / (32 * divider * GDGCLK2CPU_DIVIDER)`,
  * ekvivalentní `CPU_CLOCK / (32 * divider)` (standardní SN76489 formule
  * s input clock = CPU clock + interní /16 prescaler + 2x toggle).
  *
  * Divider 0 se počítá jako 1024. Pro `divider == 1` vrací 0 (DC případ,
- * stálá úroveň 0,49 plné výchylky, není to slyšitelná oscilace). `GDGCLK_BASE` a `GDGCLK2CPU_DIVIDER` jsou per-arch
- * makra: MZ-800 (17 721 600 Hz, /5 → 3.5469 MHz CPU),
- * MZ-700/MZ-1500 (14 336 640 Hz, /4 → 3.5796 MHz CPU).
+ * stálá úroveň 0,49 plné výchylky, není to slyšitelná oscilace). `GDGCLK_REAL_TICKS_PER_SEC` a `GDGCLK2CPU_DIVIDER` jsou per-arch
+ * makra (krystal, okno ukazuje Hz skutečného stroje): MZ-800 (17 734 475 Hz, /5 → 3,5469 MHz CPU),
+ * MZ-700 NTSC a MZ-1500 (14 318 180 Hz, /4 → 3,5795 MHz CPU).
  *
  * Odvození: `PSG_DIVIDER = 16 * GDGCLK2CPU_DIVIDER` GDG ticků mezi
  * `psg_step()` voláními (psg.h), per step se interní timer dekrementuje
  * o 1, toggle output při dosažení 0. Full period = 2 * divider * PSG_DIVIDER
- * GDG ticků → f_out = GDGCLK_BASE / (2 * divider * PSG_DIVIDER)
- * = GDGCLK_BASE / (32 * divider * GDGCLK2CPU_DIVIDER).
+ * GDG ticků → f_out = GDGCLK_REAL_TICKS_PER_SEC / (2 * divider * PSG_DIVIDER)
+ * = GDGCLK_REAL_TICKS_PER_SEC / (32 * divider * GDGCLK2CPU_DIVIDER).
  *
  * Počítá sdílená audio_psg_tone_hz() (audio_analysis.h), stejně jako
  * `psg_window.cpp::psg_tone_frequency_hz` a MCP souhrn zachyceného zvuku.
@@ -318,7 +318,7 @@ static inline void psg_events_push(st_PSG_SCOPE_EVENTS *ev,
  */
 static double psg_scope_tone_frequency_hz(unsigned divider)
 {
-    return audio_psg_tone_hz(divider, (uint64_t)GDGCLK_BASE, (unsigned)GDGCLK2CPU_DIVIDER);
+    return audio_psg_tone_hz(divider, GDGCLK_REAL_TICKS_PER_SEC, (unsigned)GDGCLK2CPU_DIVIDER);
 }
 
 /**
@@ -346,7 +346,7 @@ static inline bool psg_sample_is_playing(const st_PSG_SCOPE_SAMPLE *s)
  * @brief Spočte MIDI pitch (0..127) + cents detune pro daný TONE divider.
  *
  * Postup:
- *   1) frekvence Hz = GDGCLK_BASE / (32 * divider * GDGCLK2CPU_DIVIDER)
+ *   1) frekvence Hz = GDGCLK_REAL_TICKS_PER_SEC / (32 * divider * GDGCLK2CPU_DIVIDER)
  *   2) midi_float = 12 * log2(f/440) + 69
  *   3) nearest MIDI = round(midi_float), cents = round((midi_float - nearest) * 100)
  *   4) clamp MIDI do 0..127, cents do -50..+50
@@ -523,7 +523,7 @@ static void psg_audio_scope_clear_all(void)
  *
  * Tab-separated, jeden řádek per (chip, channel, frame). Sloupce:
  *  - frame: pxCLK total ticks (= `g_psg_scope_frame_counter`, gdg timebase)
- *  - t_sec: čas v sekundách (frame / GDGCLK_BASE), `.` decimal separator (locale-safe)
+ *  - t_sec: čas v sekundách (frame / GDGCLK_REAL_TICKS_PER_SEC), `.` decimal separator (locale-safe)
  *  - chip: 0 nebo 1
  *  - channel: 0..3
  *  - attn: 0..15 raw z mirror
@@ -726,8 +726,8 @@ static void psg_log_write_sample(unsigned chip, unsigned ch,
     }
 
     char t_buf[32], f_buf[32];
-    /* t_frame je pxCLK total (gdg ticks); převod na sekundy = / GDGCLK_BASE. */
-    psg_log_format_double((double)s->t_frame / (double)GDGCLK_BASE, t_buf, sizeof(t_buf));
+    /* t_frame je pxCLK total (gdg ticks); převod na sekundy = / GDGCLK_REAL_TICKS_PER_SEC. */
+    psg_log_format_double((double)s->t_frame / (double)GDGCLK_REAL_TICKS_PER_SEC, t_buf, sizeof(t_buf));
     psg_log_format_double(freq_hz, f_buf, sizeof(f_buf));
 
     fprintf(g_psg_log.samples_fp,
@@ -781,8 +781,8 @@ static void psg_log_write_event(uint64_t frame, unsigned chip, unsigned ch,
     }
 
     char t_buf[32];
-    /* `frame` je pxCLK total (gdg ticks); převod na sekundy = / GDGCLK_BASE. */
-    psg_log_format_double((double)frame / (double)GDGCLK_BASE, t_buf, sizeof(t_buf));
+    /* `frame` je pxCLK total (gdg ticks); převod na sekundy = / GDGCLK_REAL_TICKS_PER_SEC. */
+    psg_log_format_double((double)frame / (double)GDGCLK_REAL_TICKS_PER_SEC, t_buf, sizeof(t_buf));
 
     fprintf(g_psg_log.events_fp,
             "%llu\t%s\t%u\t%u\t%s\t%s\t%s\t%s\t%s\n",
@@ -837,7 +837,7 @@ static void psg_log_emit_note_on(const st_PSG_SCOPE_EVENTS *ev,
  *
  * Volá se hned PŘED `psg_events_note_off` (= aby active_note byla ještě
  * platná pro získání t_on a duration). Duration ve frame jednotkách
- * převedeno na sekundy přes / GDGCLK_BASE (pxCLK timebase).
+ * převedeno na sekundy přes / GDGCLK_REAL_TICKS_PER_SEC (pxCLK timebase).
  */
 static void psg_log_emit_note_off(const st_PSG_SCOPE_EVENTS *ev,
                                   const st_PSG_SCOPE_SAMPLE *s,
@@ -848,8 +848,8 @@ static void psg_log_emit_note_off(const st_PSG_SCOPE_EVENTS *ev,
     if (!ev->note_active)
         return;
     char dur_buf[32], notes_buf[64];
-    /* t_frame / t_on jsou pxCLK total ticks; sekundy = delta / GDGCLK_BASE. */
-    double dur_s = (double)(s->t_frame - ev->active_note.t_on) / (double)GDGCLK_BASE;
+    /* t_frame / t_on jsou pxCLK total ticks; sekundy = delta / GDGCLK_REAL_TICKS_PER_SEC. */
+    double dur_s = (double)(s->t_frame - ev->active_note.t_on) / (double)GDGCLK_REAL_TICKS_PER_SEC;
     psg_log_format_double(dur_s, dur_buf, sizeof(dur_buf));
     snprintf(notes_buf, sizeof(notes_buf), "dur=%ss", dur_buf);
     psg_log_write_event(s->t_frame, chip, ch, "NOTE_OFF",
@@ -1459,7 +1459,8 @@ static void psg_audio_scope_render_chip(unsigned chip, const char *id_prefix,
  *
  * Od fáze fixu monitor-rate-dependent timing (2026-05-23) je `t_frame`
  * hodnotou `gdg_get_total_ticks()` (= pxCLK monotonní counter, 17.7345 MHz
- * pro MZ-800). Dělitel je tedy `GDGCLK_BASE` ticks/s, ne 60 Hz.
+ * pro MZ-800). Dělitel je tedy `GDGCLK_REAL_TICKS_PER_SEC` ticks/s (skutečné takty
+ * za sekundu podle krystalu, stejně jako zvukový výstup), ne 60 Hz.
  *
  * Reálný frame rate UI render loopu (vsync, 60/75/144 Hz monitor) NEMĚNÍ
  * tempo metadata - ovlivňuje jen rozlišení vzorkování (1/UI_hz s mezera
@@ -1468,7 +1469,7 @@ static void psg_audio_scope_render_chip(unsigned chip, const char *id_prefix,
  *
  * Název `FRAMES_PER_SECOND` historicky zachován, ale sémantika = pxCLK ticks/s.
  */
-static const double PSG_SCOPE_FRAMES_PER_SECOND = (double) GDGCLK_BASE;
+static const double PSG_SCOPE_FRAMES_PER_SECOND = (double) GDGCLK_REAL_TICKS_PER_SEC;
 
 /**
  * @brief Time range selector hodnoty pro piano roll (frames).
@@ -2000,7 +2001,7 @@ static void psg_audio_scope_render_piano_roll(void)
     dl->AddText(ImVec2(p0.x + 4.0f, pitch_plot_y1 + 1.0f),
                 label_col, _("NS"));
 
-    /* Vertikální časové dělení každých ~5s (5 * GDGCLK_BASE pxCLK ticks). */
+    /* Vertikální časové dělení každých ~5s (5 * GDGCLK_REAL_TICKS_PER_SEC pxCLK ticks). */
     {
         double sec_per_px = (total_frames / PSG_SCOPE_FRAMES_PER_SECOND) /
                             (double)(plot_x1 - plot_x0 > 1.0f ? plot_x1 - plot_x0 : 1.0f);
@@ -2283,7 +2284,7 @@ static void psg_scope_collect_notes ( std::vector< st_PSG_SCOPE_EXPORT_NOTE > &o
  *
  * Formát:
  *   header `time_s,channel,chip,pitch_midi,note_name,duration_s,velocity,cents,attn_changes`
- *   per nota: `<t_on/GDGCLK_BASE>,<ch>,<chip>,<pitch | -1>,<name | NOISE>,<dur>,<vel>,<cents>,<attn_history_count>`
+ *   per nota: `<t_on/GDGCLK_REAL_TICKS_PER_SEC>,<ch>,<chip>,<pitch | -1>,<name | NOISE>,<dur>,<vel>,<cents>,<attn_history_count>`
  *
  * Sloupec `attn_changes` (0..PSG_SCOPE_MAX_ATTN_POINTS) = počet volume
  * envelope změn během noty (= MIDI CC 7 eventů v ekvivalentním MIDI
@@ -2491,7 +2492,7 @@ static bool psg_midi_patch_be32 ( FILE *f, long pos, uint32_t value )
  * @brief Zkonvertuje pxCLK total ticks na MIDI ticks @ PPQN.
  *
  * Postup:
- *   seconds   = frames / GDGCLK_BASE      (= 17.7345 MHz pro MZ-800)
+ *   seconds   = frames / GDGCLK_REAL_TICKS_PER_SEC      (= 17.7345 MHz pro MZ-800)
  *   quarters  = seconds * (tempo_bpm / 60)
  *   ticks     = quarters * PPQN
  *

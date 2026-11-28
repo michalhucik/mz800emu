@@ -7577,7 +7577,7 @@ void test_trace_read_audio_channels(void) {
     TEST_ASSERT_EQUAL_UINT(6, json_array_get_length(json_object_get_array_member(data, "columns")));
     JsonArray *r1 = _tr_row(data, 1);
     TEST_ASSERT_EQUAL_INT64(1010, json_array_get_int_element(r1, 1));             /* t absolutně */
-    TEST_ASSERT_DOUBLE_WITHIN(0.001, 10.0 * 1e6 / GDGCLK_BASE, json_array_get_double_element(r1, 2));
+    TEST_ASSERT_DOUBLE_WITHIN(0.0005, 10.0 * 1e6 / GDGCLK_REAL_BASE, json_array_get_double_element(r1, 2));
     TEST_ASSERT_EQUAL_STRING("psg0_0", json_array_get_string_element(r1, 4));
     TEST_ASSERT_EQUAL_INT64(1, json_array_get_int_element(r1, 5));
     TEST_ASSERT_TRUE(json_object_get_boolean_member(data, "end_of_data"));
@@ -7600,7 +7600,7 @@ void test_trace_read_audio_channels(void) {
     JsonArray *w = _tr_row(data, 0);
     TEST_ASSERT_EQUAL_STRING("tone", json_array_get_string_element(w, 7));
     TEST_ASSERT_EQUAL_INT64(254, json_array_get_int_element(w, 8));
-    double hz = (double) GDGCLK_BASE / (32.0 * 254.0 * GDGCLK2CPU_DIVIDER);
+    double hz = (double) GDGCLK_REAL_BASE / (32.0 * 254.0 * GDGCLK2CPU_DIVIDER); /* skutečný čas podle krystalu */
     TEST_ASSERT_DOUBLE_WITHIN(0.01, hz, json_array_get_double_element(w, 9));
     TEST_ASSERT_NOT_NULL(json_array_get_string_element(w, 10));
     g_object_unref(parser);
@@ -7627,6 +7627,18 @@ void test_trace_read_audio_channels(void) {
     TEST_ASSERT_DOUBLE_WITHIN(0.01, 10.61, json_array_get_double_element(json_array_get_array_element(f, 6), 0));
     TEST_ASSERT_EQUAL_INT64(200, json_array_get_int_element(json_array_get_array_element(f, 8), 1));
     TEST_ASSERT_TRUE(JSON_NODE_HOLDS_NULL(json_array_get_element(f, 10)));        /* bez SDL cesty */
+    /* výchozí řádek má 13 sloupců jako ve 2.0.7 (ref_first a sdl_first jen jménem) */
+    TEST_ASSERT_EQUAL_UINT(13, json_array_get_length(f));
+    TEST_ASSERT_EQUAL_UINT(13, json_array_get_length(json_object_get_array_member(data, "columns")));
+    g_object_unref(parser);
+    free(resp);
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, _ss_request("trace_read",
+        "{\"channel\":\"audio_frames\",\"from\":\"seq:2\",\"limit\":1,\"columns\":[\"seq\",\"ref_first\",\"sdl_first\"]}", &resp));
+    data = _tr_data(resp, &parser);
+    f = _tr_row(data, 0);
+    TEST_ASSERT_EQUAL_UINT(3, json_array_get_length(f));
+    TEST_ASSERT_EQUAL_INT64(2, json_array_get_int_element(f, 1));                 /* ref_first (stub: snímek i = vzorek i) */
+    TEST_ASSERT_TRUE(JSON_NODE_HOLDS_NULL(json_array_get_element(f, 2)));         /* sdl_first bez SDL cesty */
     g_object_unref(parser);
     free(resp);
 
@@ -8176,6 +8188,7 @@ void test_audio_capture_summary(void) {
     g_stub_state.aud_segment = 2;
     g_stub_state.aud_records = 10;
     g_stub_state.aud_origin = 1000;
+    g_stub_state.aud_frame_ticks = VIDEO_SCREEN_TICKS;   /* jmenovité snímky: proudy jdou porovnat */
     TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, _ss_request("audio_capture_summary", "{}", &resp));
     JsonParser *parser = NULL;
     JsonObject *data = _tr_data(resp, &parser);
@@ -8209,10 +8222,26 @@ void test_audio_capture_summary(void) {
     TEST_ASSERT_EQUAL_INT64(2, json_object_get_int_member(ctc, "edges"));          /* levels src 0: i = 0 a 9 */
     JsonObject *rv = json_object_get_object_member(data, "ref_vs_sdl");
     TEST_ASSERT_NOT_NULL(rv);
+    TEST_ASSERT_EQUAL_STRING("ok", json_object_get_string_member(rv, "status"));
     TEST_ASSERT_EQUAL_INT64(0, json_object_get_int_member(rv, "lag_samples"));
     TEST_ASSERT_EQUAL_DOUBLE(0.0, json_object_get_double_member(rv, "diff_rms"));
     g_object_unref(parser);
     free(resp);
+
+    /* Vlastní rychlost (snímky delší než jmenovitý): reference a SDL mají v okně jiné
+     * časové měřítko => not_comparable s důvodem, bez diff_rms. */
+    g_stub_state.aud_frame_ticks = 2u * (uint64_t) VIDEO_SCREEN_TICKS;
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, _ss_request("audio_capture_summary", "{\"lag_frames\":0}", &resp));
+    data = _tr_data(resp, &parser);
+    rv = json_object_get_object_member(data, "ref_vs_sdl");
+    TEST_ASSERT_EQUAL_STRING("not_comparable", json_object_get_string_member(rv, "status"));
+    TEST_ASSERT_NOT_NULL(strstr(json_object_get_string_member(rv, "reason"), "custom speed"));
+    TEST_ASSERT_EQUAL_INT64(10, json_object_get_int_member(rv, "frames_off_nominal"));
+    TEST_ASSERT_FALSE(json_object_has_member(rv, "diff_rms"));
+    TEST_ASSERT_TRUE(json_object_has_member(rv, "error"));   /* klient vydané verze pozná neúspěch podle error */
+    g_object_unref(parser);
+    free(resp);
+    g_stub_state.aud_frame_ticks = VIDEO_SCREEN_TICKS;
 
     /* rozsah snímků */
     TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, _ss_request("audio_capture_summary", "{\"frame_from\":3,\"frame_to\":4}", &resp));
@@ -8228,7 +8257,7 @@ void test_audio_capture_summary(void) {
 }
 
 
-/** @brief audio_capture_pcm: přesná kopie 44100 stereo, převzorkovaný WAV, chyby. */
+/** @brief audio_capture_pcm: přesná kopie 44100 stereo, převzorkovaný WAV, výřezy po snímcích podle indexů proudu, chyby. */
 void test_audio_capture_pcm(void) {
     dispatch_stub_reset();
     TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_EMU_ERROR, _ss_request("audio_capture_pcm", "{}", NULL));
@@ -8267,11 +8296,685 @@ void test_audio_capture_pcm(void) {
     g_object_unref(parser);
     free(resp);
 
+    /* Výřezy podle snímků: hranice jsou indexy proudu ze souhrnů snímků (stub: snímek i =
+     * vzorek i), sousední výřezy navazují; za nejnovějším snímkem konec jeho konce. */
+    static const struct { const char *src; int64_t f, n, from, cnt; } fr_cases[] = {
+        { "reference", 2, 1, 2, 1 }, { "reference", 3, 4, 3, 4 }, { "sdl", 7, 1, 7, 1 },
+        { "sdl", 8, 5, 8, 2 }, { "reference", 9, 1, 9, 1 },
+    };
+    for (size_t i = 0; i < G_N_ELEMENTS(fr_cases); i++) {
+        char q[160];
+        g_snprintf(q, sizeof(q), "{\"source\":\"%s\",\"frame_from\":%" G_GINT64_FORMAT ",\"frames\":%" G_GINT64_FORMAT
+                   ",\"rate\":44100,\"stereo\":true,\"encoding\":\"pcm_b64\"}", fr_cases[i].src, fr_cases[i].f, fr_cases[i].n);
+        TEST_ASSERT_EQUAL_INT_MESSAGE(MCP_DISPATCH_OK, _ss_request("audio_capture_pcm", q, &resp), q);
+        data = _tr_data(resp, &parser);
+        TEST_ASSERT_EQUAL_INT64_MESSAGE(fr_cases[i].from, json_object_get_int_member(data, "from_sample"), q);
+        TEST_ASSERT_EQUAL_INT64_MESSAGE(fr_cases[i].cnt, json_object_get_int_member(data, "samples"), q);
+        g_object_unref(parser);
+        free(resp);
+    }
+
+    /* Kontrakt konce: výřez pokrývá jen uzavřené snímky (10). Snímek 10 samostatně je prázdný
+     * s důvodem, 9 a 10 společně = 9 samostatně (oříznuto, důvod), `samples` prázdný výřez
+     * nezvětší; se sample_from je frame_range null. */
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, _ss_request("audio_capture_pcm",
+        "{\"source\":\"sdl\",\"frame_from\":10,\"frames\":1,\"samples\":5,\"rate\":44100,\"stereo\":true,\"encoding\":\"pcm_b64\"}", &resp));
+    data = _tr_data(resp, &parser);
+    TEST_ASSERT_EQUAL_INT64(0, json_object_get_int_member(data, "samples"));
+    TEST_ASSERT_EQUAL_INT64(10, json_object_get_int_member(data, "from_sample"));
+    JsonObject *frr = json_object_get_object_member(data, "frame_range");
+    TEST_ASSERT_NOT_NULL(frr);
+    TEST_ASSERT_EQUAL_STRING("empty", json_object_get_string_member(frr, "status"));
+    TEST_ASSERT_EQUAL_INT64(10, json_object_get_int_member(frr, "closed_frames"));
+    TEST_ASSERT_EQUAL_STRING("start_after_last_closed_frame",
+                             json_array_get_string_element(json_object_get_array_member(frr, "reasons"), 0));
+    g_object_unref(parser);
+    free(resp);
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, _ss_request("audio_capture_pcm",
+        "{\"source\":\"sdl\",\"frame_from\":9,\"frames\":2,\"rate\":44100,\"stereo\":true,\"encoding\":\"pcm_b64\"}", &resp));
+    data = _tr_data(resp, &parser);
+    TEST_ASSERT_EQUAL_INT64(9, json_object_get_int_member(data, "from_sample"));
+    TEST_ASSERT_EQUAL_INT64(1, json_object_get_int_member(data, "samples"));
+    frr = json_object_get_object_member(data, "frame_range");
+    TEST_ASSERT_EQUAL_STRING("partial", json_object_get_string_member(frr, "status"));
+    TEST_ASSERT_EQUAL_INT64(10, json_array_get_int_element(json_object_get_array_member(frr, "returned"), 1));
+    TEST_ASSERT_EQUAL_INT64(11, json_array_get_int_element(json_object_get_array_member(frr, "requested"), 1));
+    TEST_ASSERT_EQUAL_STRING("end_after_last_closed_frame",
+                             json_array_get_string_element(json_object_get_array_member(frr, "reasons"), 0));
+    g_object_unref(parser);
+    free(resp);
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, _ss_request("audio_capture_pcm",
+        "{\"frame_from\":3,\"frames\":2,\"rate\":44100,\"encoding\":\"pcm_b64\"}", &resp));
+    data = _tr_data(resp, &parser);
+    frr = json_object_get_object_member(data, "frame_range");
+    TEST_ASSERT_EQUAL_STRING("complete", json_object_get_string_member(frr, "status"));
+    TEST_ASSERT_EQUAL_UINT(0, json_array_get_length(json_object_get_array_member(frr, "reasons")));
+    g_object_unref(parser);
+    free(resp);
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, _ss_request("audio_capture_pcm",
+        "{\"sample_from\":3,\"samples\":2,\"rate\":44100,\"encoding\":\"pcm_b64\"}", &resp));
+    data = _tr_data(resp, &parser);
+    TEST_ASSERT_TRUE(json_object_get_null_member(data, "frame_range"));
+    g_object_unref(parser);
+    free(resp);
+
+    /* Velký počet snímků: 1 180 179 884 * 44100 * 354432 přeteče 64 bitů (zbylo by 584 vzorků
+     * a odpověď by nebyla zkrácená); správně je to asi 1,04e12 vzorků, tedy zkráceno na max_bytes. */
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, _ss_request("audio_capture_pcm",
+        "{\"sample_from\":0,\"frames\":1180179884,\"rate\":44100,\"stereo\":true,\"encoding\":\"pcm_b64\"}", &resp));
+    data = _tr_data(resp, &parser);
+    TEST_ASSERT_TRUE(json_object_get_boolean_member(data, "truncated"));
+    TEST_ASSERT_EQUAL_INT64(10, json_object_get_int_member(data, "samples"));
+    g_object_unref(parser);
+    free(resp);
+    /* Začátek daleko za koncem (frame_from až INT64_MAX): žádná data, bez přetečení. */
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, _ss_request("audio_capture_pcm",
+        "{\"frame_from\":9223372036854775807,\"frames\":9223372036854775807,\"rate\":44100,\"encoding\":\"pcm_b64\"}", &resp));
+    data = _tr_data(resp, &parser);
+    TEST_ASSERT_EQUAL_INT64(0, json_object_get_int_member(data, "samples"));
+    TEST_ASSERT_TRUE(json_object_get_boolean_member(data, "end_of_data"));
+    g_object_unref(parser);
+    free(resp);
+
+    /* Krajní délka `samples` = INT64_MAX od snímku 3: konec okna se nasytí na INT64_MAX
+     * (na 1a6773d4 přetekl do záporného čísla), vrátí se držené vzorky [3, 10). Žádná mez
+     * ani index odpovědi není záporný. */
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, _ss_request("audio_capture_pcm",
+        "{\"frame_from\":3,\"frames\":1,\"samples\":9223372036854775807,\"rate\":44100,\"stereo\":true,"
+        "\"encoding\":\"pcm_b64\"}", &resp));
+    data = _tr_data(resp, &parser);
+    TEST_ASSERT_EQUAL_INT64(3, json_object_get_int_member(data, "from_sample"));
+    TEST_ASSERT_EQUAL_INT64(7, json_object_get_int_member(data, "samples"));
+    TEST_ASSERT_EQUAL_INT64(10, json_object_get_int_member(data, "next_sample"));
+    frr = json_object_get_object_member(data, "frame_range");
+    JsonArray *sq = json_object_get_array_member(frr, "samples_requested");
+    TEST_ASSERT_EQUAL_INT64(3, json_array_get_int_element(sq, 0));
+    TEST_ASSERT_EQUAL_INT64(INT64_MAX, json_array_get_int_element(sq, 1));
+    JsonArray *sh = json_object_get_array_member(frr, "samples_held");
+    TEST_ASSERT_EQUAL_INT64(3, json_array_get_int_element(sh, 0));
+    TEST_ASSERT_EQUAL_INT64(10, json_array_get_int_element(sh, 1));
+    TEST_ASSERT_EQUAL_STRING("partial", json_object_get_string_member(frr, "audio_status"));
+    JsonArray *rqa = json_object_get_array_member(frr, "requested");
+    TEST_ASSERT_EQUAL_INT64(4, json_array_get_int_element(rqa, 1));
+    g_object_unref(parser);
+    free(resp);
+    /* totéž s frames = INT64_MAX od velkého snímku: oba konce nasycené, nic záporného */
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, _ss_request("audio_capture_pcm",
+        "{\"frame_from\":9223372036854775806,\"frames\":9223372036854775807,\"samples\":9223372036854775807,"
+        "\"rate\":44100,\"encoding\":\"pcm_b64\"}", &resp));
+    data = _tr_data(resp, &parser);
+    frr = json_object_get_object_member(data, "frame_range");
+    rqa = json_object_get_array_member(frr, "requested");
+    TEST_ASSERT_EQUAL_INT64(INT64_MAX - 1, json_array_get_int_element(rqa, 0));
+    TEST_ASSERT_EQUAL_INT64(INT64_MAX, json_array_get_int_element(rqa, 1));
+    sq = json_object_get_array_member(frr, "samples_requested");
+    TEST_ASSERT_TRUE(json_array_get_int_element(sq, 0) >= 0);
+    TEST_ASSERT_TRUE(json_array_get_int_element(sq, 1) >= json_array_get_int_element(sq, 0));
+    TEST_ASSERT_TRUE(json_object_get_int_member(data, "from_sample") >= 0);
+    TEST_ASSERT_TRUE(json_object_get_int_member(data, "next_sample") >= 0);
+    g_object_unref(parser);
+    free(resp);
+    /* kurzor se sample_from = INT64_MAX: za koncem, bez přetečení */
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, _ss_request("audio_capture_pcm",
+        "{\"sample_from\":9223372036854775807,\"samples\":9223372036854775807,\"rate\":44100,\"encoding\":\"pcm_b64\"}", &resp));
+    data = _tr_data(resp, &parser);
+    TEST_ASSERT_EQUAL_INT64(0, json_object_get_int_member(data, "samples"));
+    TEST_ASSERT_TRUE(json_object_get_int_member(data, "from_sample") >= 0);
+    TEST_ASSERT_TRUE(json_object_get_int_member(data, "next_sample") >= 0);
+    g_object_unref(parser);
+    free(resp);
+
     const char *bad[] = { "{\"source\":\"mix\"}", "{\"rate\":500}", "{\"encoding\":\"mp3\"}",
                           "{\"max_bytes\":10}", "{\"frames\":0}", "{\"stereo\":1}" };
     for (size_t i = 0; i < G_N_ELEMENTS(bad); i++) {
         TEST_ASSERT_EQUAL_INT_MESSAGE(MCP_DISPATCH_INVALID_PARAMS, _ss_request("audio_capture_pcm", bad[i], NULL), bad[i]);
     }
+}
+
+
+/**
+ * @brief Pomocná: audio_capture_pcm 44100 stereo pcm_b64, vrátí data odpovědi.
+ * @param q      Členy JSON parametrů bez složených závorek (rate, stereo a encoding doplní).
+ * @param parser Výstup: parser odpovědi (uvolní volající g_object_unref()).
+ * @param resp   Výstup: text odpovědi (uvolní volající free()).
+ * @return Objekt `data` odpovědi (platí do uvolnění parseru).
+ */
+static JsonObject *_ow_pcm(const char *q, JsonParser **parser, char **resp) {
+    char req[256];
+    g_snprintf(req, sizeof(req), "{%s,\"rate\":44100,\"stereo\":true,\"encoding\":\"pcm_b64\"}", q);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(MCP_DISPATCH_OK, _ss_request("audio_capture_pcm", req, resp), req);
+    return _tr_data(*resp, parser);
+}
+
+/** @brief Pomocná: prvky dvouprvkového pole `name` objektu `o`. */
+static void _ow_pair(JsonObject *o, const char *name, int64_t a, int64_t b) {
+    TEST_ASSERT_TRUE_MESSAGE(json_object_has_member(o, name), name);
+    JsonArray *x = json_object_get_array_member(o, name);
+    TEST_ASSERT_EQUAL_INT64_MESSAGE(a, json_array_get_int_element(x, 0), name);
+    TEST_ASSERT_EQUAL_INT64_MESSAGE(b, json_array_get_int_element(x, 1), name);
+}
+
+/**
+ * @brief audio_capture_pcm nad přepsaným PCM (stub: ring reference drží jen
+ *        vzorky od aud_first_ref, SDL od aud_first_sdl).
+ *
+ * Výřez podle snímku je pevné okno: zcela přepsaný snímek 0 vzorků ("lost",
+ * `gap` jen uvnitř okna), částečně přepsaný jen zachovaný konec ("partial"),
+ * zachovaný celý ("complete"); sousední výřezy se nepřekrývají, strop
+ * `max_bytes` se uplatní na zachovaný úsek a pokračování přes `next_sample`
+ * končí na konci okna. Kurzor (`sample_from`) dál od nejstaršího drženého
+ * vzorku `samples` vzorků.
+ */
+void test_audio_capture_overwritten_pcm(void) {
+    dispatch_stub_reset();
+    g_stub_state.aud_segment = 3;
+    g_stub_state.aud_records = 2000;
+    g_stub_state.aud_first_ref = 1500;
+    JsonParser *parser = NULL;
+    char *resp = NULL;
+
+    /* zcela přepsaný snímek: 0 vzorků, začátek = konec okna, mezera jen v okně */
+    JsonObject *data = _ow_pcm("\"frame_from\":1400,\"frames\":50", &parser, &resp);
+    TEST_ASSERT_EQUAL_INT64(0, json_object_get_int_member(data, "samples"));
+    TEST_ASSERT_EQUAL_INT64(1450, json_object_get_int_member(data, "from_sample"));
+    TEST_ASSERT_EQUAL_INT64(1450, json_object_get_int_member(data, "next_sample"));
+    TEST_ASSERT_FALSE(json_object_get_boolean_member(data, "truncated"));
+    JsonObject *gap = json_object_get_object_member(data, "gap");
+    TEST_ASSERT_EQUAL_INT64(1400, json_object_get_int_member(gap, "from_sample"));
+    TEST_ASSERT_EQUAL_INT64(1450, json_object_get_int_member(gap, "to_sample"));
+    JsonObject *frr = json_object_get_object_member(data, "frame_range");
+    TEST_ASSERT_EQUAL_STRING("complete", json_object_get_string_member(frr, "status"));   /* hranice drží */
+    TEST_ASSERT_EQUAL_STRING("lost", json_object_get_string_member(frr, "audio_status"));
+    TEST_ASSERT_EQUAL_STRING("pcm_overwritten",
+                             json_array_get_string_element(json_object_get_array_member(frr, "audio_reasons"), 0));
+    _ow_pair(frr, "samples_requested", 1400, 1450);
+    _ow_pair(frr, "samples_held", 1450, 1450);
+    g_object_unref(parser);
+    free(resp);
+
+    /* částečně přepsaný: jen zachovaný konec, nic z dalšího snímku */
+    data = _ow_pcm("\"source\":\"reference\",\"frame_from\":1490,\"frames\":20", &parser, &resp);
+    TEST_ASSERT_EQUAL_INT64(1500, json_object_get_int_member(data, "from_sample"));
+    TEST_ASSERT_EQUAL_INT64(10, json_object_get_int_member(data, "samples"));
+    TEST_ASSERT_EQUAL_INT64(1510, json_object_get_int_member(data, "next_sample"));
+    gsize len = 0;
+    guchar *raw = g_base64_decode(json_object_get_string_member(data, "data_b64"), &len);
+    TEST_ASSERT_EQUAL_UINT(10 * 4, len);
+    TEST_ASSERT_EQUAL_INT16(1500, ((const int16_t *) raw)[0]);
+    TEST_ASSERT_EQUAL_INT16(1509, ((const int16_t *) raw)[18]);
+    g_free(raw);
+    gap = json_object_get_object_member(data, "gap");
+    TEST_ASSERT_EQUAL_INT64(1490, json_object_get_int_member(gap, "from_sample"));
+    TEST_ASSERT_EQUAL_INT64(1500, json_object_get_int_member(gap, "to_sample"));
+    frr = json_object_get_object_member(data, "frame_range");
+    TEST_ASSERT_EQUAL_STRING("partial", json_object_get_string_member(frr, "audio_status"));
+    _ow_pair(frr, "samples_held", 1500, 1510);
+    g_object_unref(parser);
+    free(resp);
+
+    /* zachovaný soused navazuje bez opakování a bez mezery */
+    data = _ow_pcm("\"frame_from\":1510,\"frames\":5", &parser, &resp);
+    TEST_ASSERT_EQUAL_INT64(1510, json_object_get_int_member(data, "from_sample"));
+    TEST_ASSERT_EQUAL_INT64(5, json_object_get_int_member(data, "samples"));
+    TEST_ASSERT_TRUE(json_object_get_null_member(data, "gap"));
+    frr = json_object_get_object_member(data, "frame_range");
+    TEST_ASSERT_EQUAL_STRING("complete", json_object_get_string_member(frr, "audio_status"));
+    TEST_ASSERT_EQUAL_UINT(0, json_array_get_length(json_object_get_array_member(frr, "audio_reasons")));
+    g_object_unref(parser);
+    free(resp);
+
+    /* `samples` u snímku: okno [1490, 1520), zachováno 20 vzorků */
+    data = _ow_pcm("\"frame_from\":1490,\"frames\":1,\"samples\":30", &parser, &resp);
+    TEST_ASSERT_EQUAL_INT64(1500, json_object_get_int_member(data, "from_sample"));
+    TEST_ASSERT_EQUAL_INT64(20, json_object_get_int_member(data, "samples"));
+    g_object_unref(parser);
+    free(resp);
+
+    /* stránkování: max_bytes 1024 = 256 stereo vzorků, strop až na zachovaný úsek [1500, 1990) */
+    data = _ow_pcm("\"frame_from\":1490,\"frames\":500,\"max_bytes\":1024", &parser, &resp);
+    TEST_ASSERT_TRUE(json_object_get_boolean_member(data, "truncated"));
+    TEST_ASSERT_EQUAL_INT64(1500, json_object_get_int_member(data, "from_sample"));
+    TEST_ASSERT_EQUAL_INT64(256, json_object_get_int_member(data, "samples"));
+    TEST_ASSERT_EQUAL_INT64(1756, json_object_get_int_member(data, "next_sample"));
+    g_object_unref(parser);
+    free(resp);
+    data = _ow_pcm("\"sample_from\":1756,\"samples\":234,\"max_bytes\":1024", &parser, &resp);
+    TEST_ASSERT_FALSE(json_object_get_boolean_member(data, "truncated"));
+    TEST_ASSERT_EQUAL_INT64(1756, json_object_get_int_member(data, "from_sample"));
+    TEST_ASSERT_EQUAL_INT64(1990, json_object_get_int_member(data, "next_sample"));
+    g_object_unref(parser);
+    free(resp);
+
+    /* kurzor beze změny: přepsaný začátek přeskočí a vrátí `samples` od nejstaršího */
+    data = _ow_pcm("\"sample_from\":1400,\"samples\":50", &parser, &resp);
+    TEST_ASSERT_EQUAL_INT64(1500, json_object_get_int_member(data, "from_sample"));
+    TEST_ASSERT_EQUAL_INT64(50, json_object_get_int_member(data, "samples"));
+    gap = json_object_get_object_member(data, "gap");
+    TEST_ASSERT_EQUAL_INT64(1500, json_object_get_int_member(gap, "to_sample"));
+    g_object_unref(parser);
+    free(resp);
+}
+
+
+/**
+ * @brief audio_capture_summary nad přepsaným PCM (stub: ring reference drží jen
+ *        vzorky od aud_first_ref, SDL od aud_first_sdl).
+ *
+ * Porovnají se jen dvojice, které oba proudy v okně snímku drží (`from_sample`
+ * = první společný index, `compared_samples` = jejich počet), i s pevným
+ * posunem `lag_frames`; okno, jehož vzorky jeden z proudů už nedrží, dá
+ * `no_overlap` s důvodem, nikdy číslo z jiného úseku.
+ */
+void test_audio_capture_summary_overwritten_pcm(void) {
+    dispatch_stub_reset();
+    g_stub_state.aud_segment = 3;
+    g_stub_state.aud_records = 2000;
+    JsonParser *parser = NULL;
+    char *resp = NULL;
+    JsonObject *data = NULL;
+    /* Snímek 0 = okno [0, 881) v souřadnicích reference (jmenovité snímky; hranice
+     * v záznamech snímků podle taktů, souhrn je bere ze záznamů). */
+    g_stub_state.aud_origin = 1000;
+    g_stub_state.aud_frame_ticks = VIDEO_SCREEN_TICKS;
+    g_stub_state.aud_pcm_bounds_by_ticks = true;
+    const uint64_t f1 = (uint64_t) VIDEO_SCREEN_TICKS * 44100u / GDGCLK_REAL_TICKS_PER_SEC;       /* 881 PAL */
+    const uint64_t f2 = 2u * (uint64_t) VIDEO_SCREEN_TICKS * 44100u / GDGCLK_REAL_TICKS_PER_SEC;
+    static const struct { uint64_t fr, fs; const char *q; const char *status; int64_t from, cnt; } sc[] = {
+        { 870, 0, "{\"frame_from\":0,\"frame_to\":0,\"lag_frames\":0}", "ok", 870, -1 },        /* jen konec reference */
+        { 0, 875, "{\"frame_from\":0,\"frame_to\":0,\"lag_frames\":0}", "ok", 875, -1 },        /* jen konec SDL */
+        { 2000, 0, "{\"frame_from\":0,\"frame_to\":0,\"lag_frames\":0}", "no_overlap", 0, 0 },  /* reference pryč */
+        { 0, 1000, "{\"frame_from\":0,\"frame_to\":0,\"lag_frames\":0}", "no_overlap", 0, 0 },  /* SDL pryč */
+        { 0, 875, "{\"frame_from\":0,\"frame_to\":0,\"max_lag_frames\":1}", "ok", 875, -2 },     /* hledání posunu */
+    };
+    for (size_t i = 0; i < G_N_ELEMENTS(sc); i++) {
+        g_stub_state.aud_first_ref = sc[i].fr;
+        g_stub_state.aud_first_sdl = sc[i].fs;
+        TEST_ASSERT_EQUAL_INT_MESSAGE(MCP_DISPATCH_OK, _ss_request("audio_capture_summary", sc[i].q, &resp), sc[i].q);
+        data = _tr_data(resp, &parser);
+        JsonObject *rv = json_object_get_object_member(data, "ref_vs_sdl");
+        char msg[96];
+        g_snprintf(msg, sizeof(msg), "case %u", (unsigned) i);
+        TEST_ASSERT_EQUAL_STRING_MESSAGE(sc[i].status, json_object_get_string_member(rv, "status"), msg);
+        _ow_pair(rv, "window", 0, (int64_t) f1);
+        if (sc[i].cnt == 0) {
+            TEST_ASSERT_FALSE_MESSAGE(json_object_has_member(rv, "diff_rms"), msg);
+            TEST_ASSERT_NOT_NULL_MESSAGE(strstr(json_object_get_string_member(rv, "reason"),
+                                                (sc[i].fr ? "reference" : "output path")), msg);
+        } else {
+            TEST_ASSERT_EQUAL_INT64_MESSAGE(sc[i].from, json_object_get_int_member(rv, "from_sample"), msg);
+            const int64_t n = json_object_get_int_member(rv, "compared_samples");
+            if (sc[i].cnt == -1) TEST_ASSERT_EQUAL_INT64_MESSAGE((int64_t) f1 - sc[i].from, n, msg);
+            else TEST_ASSERT_TRUE_MESSAGE(n >= 1 && n <= (int64_t) f1 - sc[i].from, msg);
+        }
+        g_object_unref(parser);
+        free(resp);
+    }
+    /* Pevný posun 1 snímek (f1 vzorků): snímek 1 = okno [f1, f2); SDL drží [1800, 2000), tedy
+     * dvojice reference i a SDL i + f1 jen pro i v [1800 - f1, 2000 - f1). */
+    g_stub_state.aud_first_ref = 0;
+    g_stub_state.aud_first_sdl = 1800;
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, _ss_request("audio_capture_summary",
+        "{\"frame_from\":1,\"frame_to\":1,\"lag_frames\":1}", &resp));
+    data = _tr_data(resp, &parser);
+    JsonObject *rv = json_object_get_object_member(data, "ref_vs_sdl");
+    TEST_ASSERT_EQUAL_STRING("ok", json_object_get_string_member(rv, "status"));
+    _ow_pair(rv, "window", (int64_t) f1, (int64_t) f2);
+    TEST_ASSERT_EQUAL_INT64((int64_t) f1, json_object_get_int_member(rv, "lag_samples"));
+    TEST_ASSERT_EQUAL_INT64(1800 - (int64_t) f1, json_object_get_int_member(rv, "from_sample"));
+    TEST_ASSERT_EQUAL_INT64(200, json_object_get_int_member(rv, "compared_samples"));
+    TEST_ASSERT_TRUE(json_object_has_member(rv, "diff_rms"));   /* stub: mono průměr páru (i, -i) je 0 */
+    g_object_unref(parser);
+    free(resp);
+
+    /* worst_frames: snímek se hodnotí z průniku s porovnaným úsekem, i když začíná před
+     * ním (přepsaný začátek). worst_frames zůstává [snímek, diff_rms] (tvar vydané verze;
+     * 0374ca6a přidal třetí prvek a rozbil klienty), počet dvojic je ve worst_frames_detail.
+     * SDL drží od 875: snímek 0 má jen f1 - 875 dvojic. Na 1a6773d4 byl seznam prázdný. */
+    g_stub_state.aud_first_ref = 0;
+    g_stub_state.aud_first_sdl = 875;
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, _ss_request("audio_capture_summary",
+        "{\"frame_from\":0,\"frame_to\":0,\"lag_frames\":0}", &resp));
+    data = _tr_data(resp, &parser);
+    rv = json_object_get_object_member(data, "ref_vs_sdl");
+    JsonArray *worst = json_object_get_array_member(rv, "worst_frames");
+    TEST_ASSERT_EQUAL_UINT(1, json_array_get_length(worst));
+    JsonArray *w0 = json_array_get_array_element(worst, 0);
+    TEST_ASSERT_EQUAL_UINT(2, json_array_get_length(w0));
+    TEST_ASSERT_EQUAL_INT64(0, json_array_get_int_element(w0, 0));
+    JsonArray *detail = json_object_get_array_member(rv, "worst_frames_detail");
+    TEST_ASSERT_NOT_NULL(detail);
+    TEST_ASSERT_EQUAL_UINT(1, json_array_get_length(detail));
+    JsonObject *d0 = json_array_get_object_element(detail, 0);
+    TEST_ASSERT_EQUAL_INT64(0, json_object_get_int_member(d0, "frame"));
+    TEST_ASSERT_EQUAL_DOUBLE(json_array_get_double_element(w0, 1), json_object_get_double_member(d0, "diff_rms"));
+    TEST_ASSERT_EQUAL_INT64((int64_t) f1 - 875, json_object_get_int_member(d0, "compared_samples"));
+    g_object_unref(parser);
+    free(resp);
+    /* delší okno snímků 0 a 1: první částečně (f1 - 875 dvojic), druhý celý (f2 - f1) */
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, _ss_request("audio_capture_summary",
+        "{\"frame_from\":0,\"frame_to\":1,\"lag_frames\":0}", &resp));
+    data = _tr_data(resp, &parser);
+    rv = json_object_get_object_member(data, "ref_vs_sdl");
+    worst = json_object_get_array_member(rv, "worst_frames");
+    TEST_ASSERT_EQUAL_UINT(2, json_array_get_length(worst));
+    detail = json_object_get_array_member(rv, "worst_frames_detail");
+    TEST_ASSERT_EQUAL_UINT(2, json_array_get_length(detail));
+    int64_t pairs[2] = { -1, -1 };
+    for (guint k = 0; k < 2; k++) {
+        JsonArray *w = json_array_get_array_element(worst, k);
+        TEST_ASSERT_EQUAL_UINT(2, json_array_get_length(w));
+        const int64_t f = json_array_get_int_element(w, 0);
+        TEST_ASSERT_TRUE(f == 0 || f == 1);
+        JsonObject *d = json_array_get_object_element(detail, k);
+        TEST_ASSERT_EQUAL_INT64(f, json_object_get_int_member(d, "frame"));     /* stejné pořadí */
+        pairs[f] = json_object_get_int_member(d, "compared_samples");
+    }
+    TEST_ASSERT_EQUAL_INT64((int64_t) f1 - 875, pairs[0]);
+    TEST_ASSERT_EQUAL_INT64((int64_t) (f2 - f1), pairs[1]);
+    TEST_ASSERT_EQUAL_INT64((int64_t) f2 - 875, json_object_get_int_member(rv, "compared_samples"));
+    g_object_unref(parser);
+    free(resp);
+
+    /* Hledání posunu bez společného počátku: reference drží konec snímku 0 [870, f1), výstup
+     * až od 1000 (za ním). Dvojice jsou jen při posunu >= 1000 - (f1 - 1); posun se neodhaduje,
+     * odpověď řekne nejmenší pevný posun. Na 1a6773d4 jen obecné no_overlap s důvodem
+     * "output path". */
+    g_stub_state.aud_first_ref = 870;
+    g_stub_state.aud_first_sdl = 1000;
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, _ss_request("audio_capture_summary",
+        "{\"frame_from\":0,\"frame_to\":0}", &resp));
+    data = _tr_data(resp, &parser);
+    rv = json_object_get_object_member(data, "ref_vs_sdl");
+    TEST_ASSERT_EQUAL_STRING("no_overlap", json_object_get_string_member(rv, "status"));
+    TEST_ASSERT_NOT_NULL(strstr(json_object_get_string_member(rv, "reason"), "delay search"));
+    TEST_ASSERT_EQUAL_INT64(1000 - ((int64_t) f1 - 1), json_object_get_int_member(rv, "fixed_lag_min_samples"));
+    TEST_ASSERT_EQUAL_INT64(1, json_object_get_int_member(rv, "fixed_lag_min_frames"));
+    TEST_ASSERT_FALSE(json_object_has_member(rv, "lag_samples"));
+    g_object_unref(parser);
+    free(resp);
+    /* doporučený pevný posun opravdu porovná dvojice: [870, f1) proti [870 + f1, 2 f1) */
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, _ss_request("audio_capture_summary",
+        "{\"frame_from\":0,\"frame_to\":0,\"lag_frames\":1}", &resp));
+    data = _tr_data(resp, &parser);
+    rv = json_object_get_object_member(data, "ref_vs_sdl");
+    TEST_ASSERT_EQUAL_STRING("ok", json_object_get_string_member(rv, "status"));
+    TEST_ASSERT_EQUAL_INT64(870, json_object_get_int_member(rv, "from_sample"));
+    TEST_ASSERT_EQUAL_INT64((int64_t) f1 - 870, json_object_get_int_member(rv, "compared_samples"));
+    worst = json_object_get_array_member(rv, "worst_frames");
+    TEST_ASSERT_EQUAL_UINT(1, json_array_get_length(worst));
+    TEST_ASSERT_EQUAL_UINT(2, json_array_get_length(json_array_get_array_element(worst, 0)));
+    detail = json_object_get_array_member(rv, "worst_frames_detail");
+    TEST_ASSERT_EQUAL_INT64((int64_t) f1 - 870,
+                            json_object_get_int_member(json_array_get_object_element(detail, 0), "compared_samples"));
+    g_object_unref(parser);
+    free(resp);
+    /* výstup drží jen poslední vzorek záznamu: žádný pevný posun 1..60 dvojice nedá => null */
+    g_stub_state.aud_first_sdl = 1999;
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, _ss_request("audio_capture_summary",
+        "{\"frame_from\":0,\"frame_to\":0}", &resp));
+    data = _tr_data(resp, &parser);
+    rv = json_object_get_object_member(data, "ref_vs_sdl");
+    TEST_ASSERT_EQUAL_STRING("no_overlap", json_object_get_string_member(rv, "status"));
+    TEST_ASSERT_EQUAL_INT64(1999 - ((int64_t) f1 - 1), json_object_get_int_member(rv, "fixed_lag_min_samples"));
+    TEST_ASSERT_TRUE(json_object_get_null_member(rv, "fixed_lag_min_frames"));
+    g_object_unref(parser);
+    free(resp);
+    /* s pevným posunem se nic nového nehlásí (jen obecný důvod) */
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, _ss_request("audio_capture_summary",
+        "{\"frame_from\":0,\"frame_to\":0,\"lag_frames\":0}", &resp));
+    data = _tr_data(resp, &parser);
+    rv = json_object_get_object_member(data, "ref_vs_sdl");
+    TEST_ASSERT_EQUAL_STRING("no_overlap", json_object_get_string_member(rv, "status"));
+    TEST_ASSERT_FALSE(json_object_has_member(rv, "fixed_lag_min_samples"));
+    g_object_unref(parser);
+    free(resp);
+}
+
+
+/** @brief Pomocná: vzorek začátku snímku `f` při jmenovitých snímcích (jako stub s aud_pcm_bounds_by_ticks). */
+static int64_t _gap_s(uint64_t f) {
+    return (int64_t) ((uint64_t) VIDEO_SCREEN_TICKS * f * 44100u / GDGCLK_REAL_TICKS_PER_SEC);
+}
+
+/** @brief Pomocná: ref_vs_sdl souhrnu `q`; parser a odpověď uvolní volající. */
+static JsonObject *_gap_rv(const char *q, JsonParser **parser, char **resp) {
+    TEST_ASSERT_EQUAL_INT_MESSAGE(MCP_DISPATCH_OK, _ss_request("audio_capture_summary", q, resp), q);
+    return json_object_get_object_member(_tr_data(*resp, parser), "ref_vs_sdl");
+}
+
+/**
+ * @brief audio_capture_summary po vynechaných blocích SDL (stub: snímky 10 až 12 bez bloku).
+ *
+ * Posudek 4c69d5cc: se zvukovým zařízením v MAX SPEED SDL cesta celé bloky
+ * vynechá a souhrn pak (i na masteru) porovnal referenci s SDL z úplně jiného
+ * snímku (index reference + posun). Nově: okno před mezerou `ok` jako dřív;
+ * okno, jehož pevný nebo hledaný posun zasahuje do mezery, a okno v mezeře
+ * `not_comparable` s `error`, `reason` a `sdl_shift_frame`, bez čísel; okno po
+ * mezeře `ok` se SDL ze skutečného začátku snímku (`sdl_from_sample` = index
+ * reference + posun + lag, kde posun = -vzorky vynechaných snímků). Na
+ * 4c69d5cc dávala okna v mezeře `ok` a pole `sdl_from_sample` neexistovalo.
+ */
+void test_audio_capture_summary_sdl_gap(void) {
+    dispatch_stub_reset();
+    g_stub_state.aud_segment = 3;
+    g_stub_state.aud_records = 30000;
+    g_stub_state.aud_origin = 1000;
+    g_stub_state.aud_frame_ticks = VIDEO_SCREEN_TICKS;
+    g_stub_state.aud_pcm_bounds_by_ticks = true;
+    g_stub_state.aud_sdl_drop_from = 10;
+    g_stub_state.aud_sdl_drop_count = 3;
+    const int64_t f1 = _gap_s(1);
+    const int64_t lost = _gap_s(13) - _gap_s(10);
+    JsonParser *parser = NULL;
+    char *resp = NULL;
+
+    /* před mezerou, pevný posun 1 snímek nezasahuje do mezery: ok, SDL beze změny indexů */
+    JsonObject *rv = _gap_rv("{\"frame_from\":5,\"frame_to\":5,\"lag_frames\":1}", &parser, &resp);
+    TEST_ASSERT_EQUAL_STRING("ok", json_object_get_string_member(rv, "status"));
+    TEST_ASSERT_EQUAL_INT64(_gap_s(5), json_object_get_int_member(rv, "from_sample"));
+    TEST_ASSERT_EQUAL_INT64(_gap_s(5) + f1, json_object_get_int_member(rv, "sdl_from_sample"));
+    g_object_unref(parser);
+    free(resp);
+    rv = _gap_rv("{\"frame_from\":7,\"frame_to\":7,\"lag_frames\":1}", &parser, &resp);
+    TEST_ASSERT_EQUAL_STRING("ok", json_object_get_string_member(rv, "status"));
+    g_object_unref(parser);
+    free(resp);
+
+    /* hledaný posun (3 snímky) z okna 7 zasahuje do mezery: not_comparable */
+    rv = _gap_rv("{\"frame_from\":7,\"frame_to\":7,\"max_lag_frames\":3}", &parser, &resp);
+    TEST_ASSERT_EQUAL_STRING("not_comparable", json_object_get_string_member(rv, "status"));
+    TEST_ASSERT_TRUE(json_object_has_member(rv, "error"));
+    TEST_ASSERT_FALSE(json_object_has_member(rv, "diff_rms"));
+    TEST_ASSERT_EQUAL_INT64(10, json_object_get_int_member(rv, "sdl_shift_frame"));
+    g_object_unref(parser);
+    free(resp);
+
+    /* pevný posun z okna 9 sahá do snímku 10 bez bloku; okno 11 je v mezeře */
+    static const char *const in_gap[] = {
+        "{\"frame_from\":9,\"frame_to\":9,\"lag_frames\":1}",
+        "{\"frame_from\":11,\"frame_to\":11,\"lag_frames\":0}",
+        "{\"frame_from\":11,\"frame_to\":11,\"lag_frames\":1}",
+        "{\"frame_from\":11,\"frame_to\":11}",
+        "{\"frame_from\":8,\"frame_to\":16,\"lag_frames\":0}",
+    };
+    for (size_t i = 0; i < G_N_ELEMENTS(in_gap); i++) {
+        rv = _gap_rv(in_gap[i], &parser, &resp);
+        TEST_ASSERT_EQUAL_STRING_MESSAGE("not_comparable", json_object_get_string_member(rv, "status"), in_gap[i]);
+        TEST_ASSERT_TRUE_MESSAGE(json_object_has_member(rv, "error"), in_gap[i]);
+        TEST_ASSERT_NOT_NULL_MESSAGE(strstr(json_object_get_string_member(rv, "reason"), "blocks are missing"), in_gap[i]);
+        TEST_ASSERT_FALSE_MESSAGE(json_object_has_member(rv, "compared_samples"), in_gap[i]);
+        TEST_ASSERT_TRUE_MESSAGE(json_object_get_int_member(rv, "sdl_empty_frames") >= 1, in_gap[i]);
+        g_object_unref(parser);
+        free(resp);
+    }
+
+    /* po mezeře: souvislý úsek, SDL ze skutečného začátku snímku (posun -lost) */
+    rv = _gap_rv("{\"frame_from\":15,\"frame_to\":15,\"lag_frames\":1}", &parser, &resp);
+    TEST_ASSERT_EQUAL_STRING("ok", json_object_get_string_member(rv, "status"));
+    TEST_ASSERT_EQUAL_INT64(_gap_s(15), json_object_get_int_member(rv, "from_sample"));
+    TEST_ASSERT_EQUAL_INT64(_gap_s(15) + f1 - lost, json_object_get_int_member(rv, "sdl_from_sample"));
+    TEST_ASSERT_EQUAL_INT64(_gap_s(16) - _gap_s(15), json_object_get_int_member(rv, "compared_samples"));
+    g_object_unref(parser);
+    free(resp);
+    rv = _gap_rv("{\"frame_from\":15,\"frame_to\":15,\"max_lag_frames\":2}", &parser, &resp);
+    TEST_ASSERT_EQUAL_STRING("ok", json_object_get_string_member(rv, "status"));
+    TEST_ASSERT_EQUAL_INT64(_gap_s(15), json_object_get_int_member(rv, "from_sample"));
+    g_object_unref(parser);
+    free(resp);
+
+    /* bez vynechaných bloků (stejný stub): okno 9 s posunem 1 ok jako dřív */
+    g_stub_state.aud_sdl_drop_count = 0;
+    rv = _gap_rv("{\"frame_from\":9,\"frame_to\":9,\"lag_frames\":1}", &parser, &resp);
+    TEST_ASSERT_EQUAL_STRING("ok", json_object_get_string_member(rv, "status"));
+    TEST_ASSERT_EQUAL_INT64(_gap_s(9) + f1, json_object_get_int_member(rv, "sdl_from_sample"));
+    g_object_unref(parser);
+    free(resp);
+}
+
+
+/**
+ * @brief audio_capture_summary: časová základna v dosahu posunu (stub: od snímku 20 vlastní rychlost).
+ *
+ * Posudek 1a0f1a18: okno posledního jmenovitého snímku s pevným posunem přes
+ * přechod na 90 nebo 110 % dalo `ok` s plným počtem dvojic, protože délka
+ * snímků se ověřovala jen v okně a návaznost SDL s tolerancí poloviny bloku
+ * mírně jiný takt nepozná (rozdíl indexů roste o asi 88 vzorků na snímek).
+ * Stub: snímky 0 až 19 jmenovité, od 20 délka 90 % nebo 110 % jmenovité;
+ * reference má vzorky podle skutečných taktů, SDL dál jeden jmenovitý blok
+ * na snímek. Očekává se: snímek 19 s posunem 0 `ok`; s pevným posunem 1 a 3
+ * a s hledáním přes 3 snímky `not_comparable` s `error`, důvodem
+ * a `first_off_nominal_frame` 20, bez čísel; snímek 16 s pevným posunem
+ * i hledáním přes 3 snímky (dosah končí na začátku snímku 20) `ok`; snímek 10
+ * s výchozím hledáním (8 snímků) `ok`, snímek 12 `not_comparable`; okno
+ * snímku 20 `not_comparable` jako dřív. Na 1a0f1a18 dal snímek 19 s posunem
+ * 1 a 3 i s hledáním `ok`.
+ */
+void test_audio_capture_summary_speed_reach(void) {
+    static const unsigned pct[] = { 90, 110 };
+    for (size_t p = 0; p < G_N_ELEMENTS(pct); p++) {
+        dispatch_stub_reset();
+        g_stub_state.aud_segment = 3;
+        g_stub_state.aud_records = 30000;
+        g_stub_state.aud_origin = 1000;
+        g_stub_state.aud_frame_ticks = VIDEO_SCREEN_TICKS;
+        g_stub_state.aud_pcm_bounds_by_ticks = true;
+        g_stub_state.aud_speed_from = 20;
+        g_stub_state.aud_speed_ticks = (uint64_t) VIDEO_SCREEN_TICKS * pct[p] / 100u;
+        JsonParser *parser = NULL;
+        char *resp = NULL;
+        char msg[160];
+
+        /* dosah nezasahuje do snímku 20: ok s celým snímkem dvojic */
+        static const char *const ok_q[] = {
+            "{\"frame_from\":19,\"frame_to\":19,\"lag_frames\":0}",
+            "{\"frame_from\":16,\"frame_to\":16,\"lag_frames\":3}",
+            "{\"frame_from\":16,\"frame_to\":16,\"max_lag_frames\":3}",
+            "{\"frame_from\":10,\"frame_to\":10}",
+            "{\"frame_from\":5,\"frame_to\":5,\"lag_frames\":3}",
+        };
+        for (size_t i = 0; i < G_N_ELEMENTS(ok_q); i++) {
+            g_snprintf(msg, sizeof(msg), "%u %%: %s", pct[p], ok_q[i]);
+            JsonObject *rv = _gap_rv(ok_q[i], &parser, &resp);
+            TEST_ASSERT_EQUAL_STRING_MESSAGE("ok", json_object_get_string_member(rv, "status"), msg);
+            TEST_ASSERT_TRUE_MESSAGE(json_object_get_int_member(rv, "compared_samples") > 0, msg);
+            TEST_ASSERT_FALSE_MESSAGE(json_object_has_member(rv, "first_off_nominal_frame"), msg);
+            g_object_unref(parser);
+            free(resp);
+        }
+        /* pevný posun 0 na posledním jmenovitém snímku: celý snímek, SDL beze změny indexů */
+        JsonObject *rv = _gap_rv("{\"frame_from\":19,\"frame_to\":19,\"lag_frames\":0}", &parser, &resp);
+        TEST_ASSERT_EQUAL_INT64(_gap_s(20) - _gap_s(19), json_object_get_int_member(rv, "compared_samples"));
+        TEST_ASSERT_EQUAL_INT64(_gap_s(19), json_object_get_int_member(rv, "sdl_from_sample"));
+        g_object_unref(parser);
+        free(resp);
+
+        /* dosah pevného posunu nebo hledání zasahuje do snímku 20: rozdílná časová základna */
+        static const struct { const char *q; const char *why; } nc[] = {
+            { "{\"frame_from\":19,\"frame_to\":19,\"lag_frames\":1}", "fixed lag reaches" },
+            { "{\"frame_from\":19,\"frame_to\":19,\"lag_frames\":3}", "fixed lag reaches" },
+            { "{\"frame_from\":18,\"frame_to\":18,\"lag_frames\":3}", "fixed lag reaches" },
+            { "{\"frame_from\":19,\"frame_to\":19,\"max_lag_frames\":3}", "delay search can reach" },
+            { "{\"frame_from\":12,\"frame_to\":12}", "delay search can reach" },
+            { "{\"frame_from\":15,\"frame_to\":19,\"lag_frames\":1}", "fixed lag reaches" },
+        };
+        for (size_t i = 0; i < G_N_ELEMENTS(nc); i++) {
+            g_snprintf(msg, sizeof(msg), "%u %%: %s", pct[p], nc[i].q);
+            rv = _gap_rv(nc[i].q, &parser, &resp);
+            TEST_ASSERT_EQUAL_STRING_MESSAGE("not_comparable", json_object_get_string_member(rv, "status"), msg);
+            TEST_ASSERT_EQUAL_STRING_MESSAGE("reference and output path have a different time scale in this range",
+                                             json_object_get_string_member(rv, "error"), msg);
+            TEST_ASSERT_NOT_NULL_MESSAGE(strstr(json_object_get_string_member(rv, "reason"), nc[i].why), msg);
+            TEST_ASSERT_EQUAL_INT64_MESSAGE(20, json_object_get_int_member(rv, "first_off_nominal_frame"), msg);
+            TEST_ASSERT_TRUE_MESSAGE(json_object_get_int_member(rv, "frames_off_nominal") >= 1, msg);
+            TEST_ASSERT_EQUAL_INT64_MESSAGE(VIDEO_SCREEN_TICKS, json_object_get_int_member(rv, "nominal_frame_ticks"), msg);
+            TEST_ASSERT_FALSE_MESSAGE(json_object_has_member(rv, "diff_rms"), msg);
+            TEST_ASSERT_FALSE_MESSAGE(json_object_has_member(rv, "compared_samples"), msg);
+            TEST_ASSERT_FALSE_MESSAGE(json_object_has_member(rv, "window"), msg);
+            g_object_unref(parser);
+            free(resp);
+        }
+
+        /* okno se snímkem vlastní rychlosti: not_comparable jako dosud (kontrola okna) */
+        g_snprintf(msg, sizeof(msg), "%u %%: window 20", pct[p]);
+        rv = _gap_rv("{\"frame_from\":20,\"frame_to\":20,\"lag_frames\":0}", &parser, &resp);
+        TEST_ASSERT_EQUAL_STRING_MESSAGE("not_comparable", json_object_get_string_member(rv, "status"), msg);
+        TEST_ASSERT_NOT_NULL_MESSAGE(strstr(json_object_get_string_member(rv, "reason"), "frames in this range"), msg);
+        TEST_ASSERT_EQUAL_INT64_MESSAGE(1, json_object_get_int_member(rv, "frames_off_nominal"), msg);
+        g_object_unref(parser);
+        free(resp);
+    }
+}
+
+
+/**
+ * @brief audio_capture_summary bere okno a hranice snímků z uložených indexů záznamů
+ *        (ref_first, ref_samples), ne přepočtem z taktů.
+ *
+ * Stub bez aud_pcm_bounds_by_ticks: snímek i = vzorek i (jeden vzorek na
+ * snímek), takty jsou jmenovité (podle taktů by snímek 3 začínal na vzorku
+ * floor(3 * 881,36) = 2644). Okno snímků 3 a 4 je tedy [3, 5) jako u výřezu
+ * audio_capture_pcm, sousední rozsahy navazují a každý snímek má 1 dvojici.
+ * Na 0374ca6a vyšlo okno z taktů (posudek 0374ca6a: o 1 vzorek jinde než PCM).
+ */
+void test_audio_capture_summary_stored_bounds(void) {
+    dispatch_stub_reset();
+    g_stub_state.aud_segment = 3;
+    g_stub_state.aud_records = 2000;
+    g_stub_state.aud_origin = 1000;
+    g_stub_state.aud_frame_ticks = VIDEO_SCREEN_TICKS;
+    JsonParser *parser = NULL;
+    char *resp = NULL;
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, _ss_request("audio_capture_summary",
+        "{\"frame_from\":3,\"frame_to\":4,\"lag_frames\":0}", &resp));
+    JsonObject *data = _tr_data(resp, &parser);
+    JsonObject *rv = json_object_get_object_member(data, "ref_vs_sdl");
+    TEST_ASSERT_EQUAL_STRING("ok", json_object_get_string_member(rv, "status"));
+    _ow_pair(rv, "window", 3, 5);
+    TEST_ASSERT_EQUAL_INT64(3, json_object_get_int_member(rv, "from_sample"));
+    TEST_ASSERT_EQUAL_INT64(2, json_object_get_int_member(rv, "compared_samples"));
+    JsonArray *detail = json_object_get_array_member(rv, "worst_frames_detail");
+    TEST_ASSERT_EQUAL_UINT(2, json_array_get_length(detail));
+    for (guint k = 0; k < 2; k++) {
+        JsonObject *d = json_array_get_object_element(detail, k);
+        TEST_ASSERT_EQUAL_INT64(1, json_object_get_int_member(d, "compared_samples"));
+    }
+    g_object_unref(parser);
+    free(resp);
+    /* soused: snímky 5 a 6 = [5, 7), navazuje bez mezery i překryvu */
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, _ss_request("audio_capture_summary",
+        "{\"frame_from\":5,\"frame_to\":6,\"lag_frames\":0}", &resp));
+    data = _tr_data(resp, &parser);
+    rv = json_object_get_object_member(data, "ref_vs_sdl");
+    _ow_pair(rv, "window", 5, 7);
+    g_object_unref(parser);
+    free(resp);
+    /* totéž okno jako výřez audio_capture_pcm s frame_from (index hranic stubu: snímek i = vzorek i) */
+    TEST_ASSERT_EQUAL_INT(MCP_DISPATCH_OK, _ss_request("audio_capture_pcm",
+        "{\"frame_from\":3,\"frames\":2,\"rate\":44100,\"stereo\":true,\"encoding\":\"pcm_b64\"}", &resp));
+    data = _tr_data(resp, &parser);
+    _ow_pair(json_object_get_object_member(data, "frame_range"), "samples_requested", 3, 5);
+    g_object_unref(parser);
+    free(resp);
 }
 
 
@@ -10251,6 +10954,11 @@ int main(void) {
     RUN_TEST(test_audio_capture_start_memory_params);
     RUN_TEST(test_audio_capture_summary);
     RUN_TEST(test_audio_capture_pcm);
+    RUN_TEST(test_audio_capture_summary_overwritten_pcm);
+    RUN_TEST(test_audio_capture_summary_stored_bounds);
+    RUN_TEST(test_audio_capture_summary_sdl_gap);
+    RUN_TEST(test_audio_capture_summary_speed_reach);
+    RUN_TEST(test_audio_capture_overwritten_pcm);
     RUN_TEST(test_get_video_text_dump_available);
     RUN_TEST(test_get_video_text_dump_unavailable);
 

@@ -50,8 +50,15 @@ static GString *format_uint32_with_thousands(uint32_t number)
     return formatted;
 }
 
-#define NATIVE_FPS (float)((float)GDGCLK_REAL_BASE / VIDEO_SCREEN_TICKS)
-#define SIMULATED_FPS (float)((float)GDGCLK_BASE / VIDEO_SCREEN_TICKS)
+/**
+ * @brief Snímková frekvence skutečného stroje podle krystalu.
+ *
+ * Emulace běží podle krystalu (GDGCLK_REAL_TICKS_PER_SEC), takže je to
+ * zároveň cílové tempo emulace při 100 %; okno proto už nemá zvláštní
+ * řádky "Simulated" (jmenovitý takt GDGCLK_BASE by tempu emulace
+ * neodpovídal a krystal by jen opakovaly).
+ */
+#define NATIVE_FPS ((float)GDGCLK_REAL_FPS)
 
 void imgui_measuring_gdg(bool *p_open)
 {
@@ -112,27 +119,6 @@ void imgui_measuring_gdg(bool *p_open)
             str = g_string_new(NULL);
             g_string_printf(str, "%.4f Hz", NATIVE_FPS);
             printRow(_("Native FPS:"), str->str);
-            g_string_free(str, TRUE);
-
-            ImGui::TableNextRow();
-            ImGui::TableNextColumn();
-            ImGui::Separator();
-            ImGui::TableNextColumn();
-            ImGui::Separator();
-
-            str = format_uint32_with_thousands(GDGCLK_BASE);
-            g_string_append_printf(str, " Hz");
-            printRow(_("Simulated GDG freq.:"), str->str);
-            g_string_free(str, TRUE);
-
-            str = format_uint32_with_thousands(GDGCLK_BASE / GDGCLK2CPU_DIVIDER);
-            g_string_append_printf(str, " Hz");
-            printRow(_("Simulated CPU freq.:"), str->str);
-            g_string_free(str, TRUE);
-
-            str = g_string_new(NULL);
-            g_string_printf(str, "%.4f Hz", SIMULATED_FPS);
-            printRow(_("Simulated FPS:"), str->str);
             g_string_free(str, TRUE);
 
             ImGui::TableNextRow();

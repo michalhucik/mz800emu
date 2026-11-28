@@ -16,6 +16,7 @@
 #include "emulator.h"
 #include "emulator_measuring.h"
 #include "hw-generic/gdg/video.h"
+#include "hw-generic/gdg/gdgclk.h"
 
 extern "C"
 {
@@ -65,7 +66,8 @@ void imgui_measuring_frame_timing(bool *p_open)
 
                 st_EMULATOR_MEASURING_FRAME_TIMING_STATS *stats = &g_emulator_measuring.frame_timing.stats;
 
-                float ref_frame_time = 1000.0f / VIDEO_SCREENS_PER_SEC;
+                /* skutečná délka snímku podle krystalu (PAL 19,985 ms, NTSC 16,688 ms) */
+                float ref_frame_time = (float)(1000.0 / GDGCLK_REAL_FPS);
                 printRow(_("Reference frame time:"), ref_frame_time);
                 printRow(_("Average time:"), stats->mean);
                 printRow(_("Max time:"), stats->max);

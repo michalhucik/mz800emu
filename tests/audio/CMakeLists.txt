@@ -46,3 +46,41 @@ mz_add_test(audio_master
     SOURCES  test_audio_master.c
     LABELS   "emu;audio"
 )
+
+# Převod snímků na skutečný čas podle krystalu ve zvukové cestě: akumulátor
+# délky bloku SDL cesty bez driftu (PAL i NTSC), termíny tempa bez zvukového
+# zařízení, násobitel CTC0 pro skutečnou délku bloku.
+mz_add_test(audio_exact_clock
+    TYPE     EMU
+    SOURCES  test_audio_exact_clock.c
+    LABELS   "emu;audio"
+)
+
+# Převod CTC0 SDL cesty (iface_audio_resampler_ctc0_run()): vnitřní buňky
+# intervalu se jen počítají, krajní se váží; výstup musí být bitově stejný
+# jako u dřívějšího vážení každé buňky (referenční kopie v testu), PAL i NTSC.
+mz_add_test(audio_ctc0_resample_equiv
+    TYPE     EMU
+    SOURCES  test_audio_ctc0_resample_equiv.c
+    LABELS   "emu;audio"
+)
+
+# Průměr výchylky PSG přes interval výstupního vzorku SDL cesty
+# (iface_audio_resampler_psg_average()): bitová shoda s integrálem po taktech
+# na globální ose, přenos kusu vzorku přes hranici bloku, PAL i NTSC,
+# 100 %, 50 % a 200 %, navazující i nenavazující log.
+mz_add_test(audio_psg_average
+    TYPE     EMU
+    SOURCES  test_audio_psg_average.c
+    LABELS   "emu;audio"
+)
+
+# Zrychlené cesty převodu PSG (kanál beze změny v logu) jsou bitově shodné
+# s dřívější implementací (doslovná kopie z f9da3035 v testu): průměry,
+# hodnoty na konci intervalu, stav přenosu i výstup kanálu, PAL i NTSC,
+# 100 %, 50 % a 200 %.
+mz_add_test(audio_psg_average_equiv
+    TYPE     EMU
+    SOURCES  test_audio_psg_average_equiv.c
+    LABELS   "emu;audio"
+)

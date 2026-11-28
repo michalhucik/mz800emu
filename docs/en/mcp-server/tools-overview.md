@@ -1304,7 +1304,7 @@ Columns (always in this order, `columns` in the response):
 | `eventlog` | `seq`, `t`, `frame`, `pos`, `cat`, `sub`, `pc`, `text` |
 | `audio_psg_writes` | `seq`, `t`, `time_us`, `frame`, `psg`, `byte`, `ch`, `reg`, `value`, `hz`, `note` |
 | `audio_levels` | `seq`, `t`, `time_us`, `frame`, `channel`, `level` |
-| `audio_frames` | `seq`, `t`, `time_us`, `len_ticks`, `edges`, `on_pct`, `rms_level`, `max_level`, `ref_rms`, `ref_peak`, `sdl_rms`, `sdl_peak`, `sdl_blocks` |
+| `audio_frames` | `seq`, `t`, `time_us`, `len_ticks`, `edges`, `on_pct`, `rms_level`, `max_level`, `ref_rms`, `ref_peak`, `sdl_rms`, `sdl_peak`, `sdl_blocks` (default); on request `ref_first`, `sdl_first` |
 | `ramlog` | `seq`, `t`, `frame`, `pc`, `sym`, `addr`, `space`, `offset`, `plane`, `old`, `new`, `src`, `flags`, `count`, `tin` |
 | `bplog` | `seq`, `t`, `frame`, `insn_pc`, `sym`, `pc`, `bp`, `name`, `kind`, `text`, `flags` |
 
@@ -1317,10 +1317,15 @@ registers, otherwise the call fails. A `sync` row (`asm` `SYNC start`,
 `SYNC pc_range`, `SYNC write`) carries the CPU state at the start of the
 recording, on return into the PC range record filter and after a change
 outside an instruction; it takes no time.
-`audio_*`: `t` absolute, `time_us` since the capture start; `hz` / `note`
-only for a new tone divider; the `audio_frames` arrays follow the
-`channels` of `emu_audio_capture_status`, `ref_*` / `sdl_*` are [L, R]
-int16 (null when not captured).
+`audio_*`: `t` absolute, `time_us` since the capture start in real time
+following the crystal; `hz` / `note` (also following the crystal) only for a
+new tone divider; the `audio_frames` arrays follow the
+`channels` of `emu_audio_capture_status`, `ref_rms`, `ref_peak`, `sdl_rms`,
+`sdl_peak` are [L, R] int16 (null when not captured); `ref_first` /
+`sdl_first` is the index of the first sample of the frame in the reference /
+output path PCM (= `from_sample` of an `emu_audio_capture_pcm` window by
+frames; null without that stream); both columns only on request in
+`columns` (the default row has 13 columns as in the released version).
 
 The response carries `segment`, `first_seq`, `next_seq`, `live`,
 `truncated`, `lost`, `gap` (Event Viewer ring: `{from_seq, to_seq}`
@@ -2076,12 +2081,12 @@ and on the command line (`--audio-capture`), see
 | `psg_writes.csv` | `ticks,time_us,frame,psg,byte,channel,reg,value` - every write to the PSG, decoded |
 | `reference.wav` | the sound rendered exactly in emulated time (the renderer of the video recording) |
 | `sdl.wav` | the sound produced by the emulator's audio output path - what the user hears |
-| `capture.json` | platform, `gdg_clk_hz`, `frames_per_sec`, channel names, counts, stop reason, absolute times `origin_ticks`, `end_ticks`, `last_event_ticks` and the platform clocks `clocks` (written at the end, see audio-capture.md) |
+| `capture.json` | platform, `gdg_clk_hz`, `frames_per_sec` (nominal), `real_clk_hz`, `frames_per_sec_real` (crystal), channel names, counts, stop reason, absolute times `origin_ticks`, `end_ticks`, `last_event_ticks` and the platform clocks `clocks` (written at the end, see audio-capture.md) |
 
-- `ticks` are GDG clock ticks since the start of the capture
-  (`gdg_clk_hz` in capture.json), `time_us` the same in microseconds,
-  `frame` the audio frame (= video frame, 20 ms PAL / 16.7 ms NTSC)
-  since the start.
+- `ticks` are GDG clock ticks since the start of the capture, `time_us`
+  the same in real microseconds (divided by `real_clk_hz` in capture.json),
+  `frame` the audio frame (= video frame, 19.985 ms PAL / 16.688 ms NTSC,
+  881.36 / 735.95 WAV samples) since the start.
 - Channels: `ctc0` (the speaker driven by CTC0 and the PIO, level 0 or
   15; 31 while CTC0 runs in mode 3 with divider 2 and PC0 = 1),
   `psg0_0`..`psg0_3` and, on the MZ-1500 or an MZ-800 with the second
@@ -2162,7 +2167,9 @@ Summary of the capture memory, a few kB of text. Arguments (optional):
 200), `lag_frames` (-1 = search the delay of the audio output), and
 `max_lag_frames` (default 8). Returns:
 
-- `frames` [from, to], `frames_available`, `fps`, `platform`, `stereo`;
+- `frames` [from, to], `frames_available`, `fps` (nominal), `fps_real`
+  and `real_clk_hz` (crystal; the Hz, us and seconds of the summary follow
+  it), `platform`, `stereo`;
 - `sound_spans` / `silent_spans` ([[from, to]], at most 50 each,
   `*_total` = all) - silent = reference RMS below `silence_rms`;
 - `channels` - per channel `active_frames`, `edges`, `max_level`,
@@ -2174,11 +2181,84 @@ Summary of the capture memory, a few kB of text. Arguments (optional):
 - `ctc0` - the speaker: `edges`, `edge_interval_hist_us` [[bucket_from_us,
   count]], `likely` (`tone`, `pcm`, `irregular`, `silent`) - a heuristic
   estimate, the rule is in `likely_rule`;
-- `ref_vs_sdl` (needs `pcm` with `reference` and `sdl`) - `lag_samples`,
-  `lag_frames`, `lag_ambiguous` (only a steady tone in the compared part,
-  the delay cannot be determined), `diff_rms`, `diff_max` (-1..1, mono),
-  `reference_rms`, `worst_frames` [[frame, diff_rms]],
-  `sdl_missing_blocks`; at most 2 s are compared.
+- `ref_vs_sdl` (needs `pcm` with `reference` and `sdl`) - `status` (`ok`,
+  `no_overlap` or `not_comparable`; without numbers the object always has
+  `error` and `reason`, as the released version, which had no `status`;
+  with `not_comparable` a
+  frame of the range or a frame before it ran at a custom speed - its
+  length or start differs from the nominal one by more than 1/1000 of a
+  frame - the reference holds the emulated time of each frame and the
+  audio output one block, so one window would compare different moments;
+  instead of the numbers it has `error`, `reason`, `frames_off_nominal`,
+  `nominal_frame_ticks`, `sdl_minus_ref_samples`; the same length rule
+  applies to the frames after the window that the fixed `lag_frames`
+  reaches or that the delay search can reach (the whole `max_lag_frames`
+  range, not only the delay it finds): a frame at a custom speed there
+  gives `not_comparable` with the same `error`, a `reason`,
+  `frames_off_nominal` (frames of that reach off the nominal length),
+  `first_off_nominal_frame`, `nominal_frame_ticks`,
+  `sdl_minus_ref_samples` and `sdl_missing_blocks`, no numbers and no
+  `window`; a smaller `max_lag_frames` or a fixed `lag_frames` whose reach
+  ends before `first_off_nominal_frame` can be compared, a speed change
+  after the reach does not affect the answer; output samples after the
+  last stored frame (the open frame of a live capture, the rest after
+  stop) have no frame length yet and this check does not cover them; the
+  second cause of
+  `not_comparable`: audio output blocks are missing in the compared part
+  or in the part after it the fixed or searched delay reaches - the audio
+  device skips them in MAX SPEED, headless it does not - and from that
+  frame on the output is shifted against the reference; instead of the
+  numbers `error`, `reason`, `sdl_shift_frame` (first frame with a changed
+  shift), `sdl_empty_frames`, `sdl_minus_ref_samples`, no `window`; blocks
+  missing later do not affect an earlier part, a continuous part after the
+  gap is compared with the output from the real start of its first frame;
+  in the released version such a window gave `ok` with output samples of
+  another frame), `window` [from, to) =
+  the sample window of the chosen frames in reference indexes from the
+  stored frame boundaries, the same as `frame_range.samples_requested` of
+  `emu_audio_capture_pcm` with `frame_from` (windows of adjacent ranges
+  join; not present with `not_comparable`), with `ok`
+  `lag_samples` (a searched delay is an ESTIMATE: `lag_ambiguous` false
+  only means the search found no equally good rival, not a proof of the
+  best alignment; decide about a regression with a fixed `lag_frames`;
+  parts up to 2048 pairs with the default range are searched exactly over
+  every delay, longer ones by the envelope, where an alignment off the
+  coarse grid can be missed), `lag_frames`, `lag_ambiguous` (the data do not determine
+  the delay, `lag_samples` is only the first of equally good ones: only a
+  steady tone, silence or a constant level in the compared part, also in
+  a short part, or another delay fits as well within a tolerance, e.g. a
+  tone in a part below 256 samples at every period or two exact copies
+  close to each other, or a short part the alignment does not explain;
+  only delays with at least half of the largest overlap are tried; a
+  heuristic of the emulator, it changes only the flag, not the delay or
+  the numbers; rules and limits in `emulator://docs/audio_capture_read`),
+  `from_sample` and
+  `compared_samples` (first compared reference index and number of
+  pairs), `sdl_from_sample` (first compared index of the audio output),
+  `diff_rms`, `diff_max` (-1..1, mono), `reference_rms`,
+  `worst_frames` [[frame, diff_rms]] (at most 5 frames with the largest
+  difference, pairs as in the released version; every frame is rated on
+  the part of it that was compared, also when it starts before
+  `from_sample`), `worst_frames_detail` (the same frames in the same order
+  as objects `{frame, diff_rms, compared_samples}`, `compared_samples` =
+  the number of compared pairs of the frame, fewer than the frame length
+  for a partly compared frame), `sdl_missing_blocks`; at most 2 s are
+  compared. Only pairs (reference sample i, output sample i + delay) that
+  both PCM memories still hold inside the window are compared; with a
+  fixed `lag_frames` at that delay, with the delay search from the first
+  index held in both streams (delay 0). When one stream no longer holds
+  the samples of the window (the PCM memory overwrote them) the result is
+  `no_overlap` with `reason` naming it, never a number from samples
+  outside the window. At the oldest end of the PCM memory the reference
+  may still hold the end of a window while the output holds only later
+  indexes (the sound of the same moment is there only after the delay):
+  the search then has no common start, the result is `no_overlap` with its
+  own `reason` ("no start for the delay search"), `fixed_lag_min_samples`
+  (smallest delay with at least one pair) and `fixed_lag_min_frames`
+  (smallest fixed `lag_frames` 1-60 with pairs, otherwise null; only this
+  value is promised to work, a larger one may run past the held output). The
+  delay is deliberately not estimated there (the held part is shorter
+  than the output delay); compare it with a fixed `lag_frames`.
 
 ### `emu_audio_capture_pcm`
 
@@ -2192,7 +2272,71 @@ averages (an analysis preview); `rate` 44100 with `stereo` returns the
 samples of reference.wav / sdl.wav byte for byte. Returns `source`,
 `segment`, `live`, `rate`, `channels`, `from_sample`, `samples`,
 `frames_out`, `next_sample` (continue there), `end_of_data`, `truncated`,
-`available` [first, next], `gap`, `encoding`, `data_b64`.
+`available` [first, next], `gap` (only for a non-empty request),
+`frame_range` (for a window by frames, otherwise null), `encoding`,
+`data_b64`.
+
+A window by frames (`frame_from`, `frames`) starts at the first sample of
+frame `frame_from` and ends before the first sample of frame `frame_from +
+frames` in the chosen stream, so the sample ranges of windows frame by
+frame join without a gap (`from_sample` of the next = `next_sample` of the
+previous). The capture keeps the boundaries in an index for as long as
+the PCM memory holds the sound of the frame (independent of the frame
+summary memory, at any speed and after a speed change), so a frame read
+after its summary was dropped returns the same samples. A window covers
+closed frames only; what it cannot cover is reported in `frame_range`:
+`requested` [from, to), `returned` [from, to), `closed_frames` (number of
+closed frames = number of the frame still open), `held_from` (oldest frame
+with a held boundary), `status` (`complete`, `partial`, `empty`) and
+`reasons` (`start_after_last_closed_frame` - the window starts at the open
+frame or after the end of the capture, it is empty and `from_sample` is the
+end of the closed frames, further PCM such as an audio output block after
+the last frame is read with `sample_from`; `end_after_last_closed_frame` -
+the end is cut at the last closed frame, so frames N-1 and N together give
+the same as N-1 alone; `start_boundary_not_held` - the start boundary is no
+longer held, the memory dropped the sound of those frames, the window
+starts at `held_from`; `no_closed_frames`). `status` and `reasons`
+describe the frame boundaries only. The PCM memory may overwrite the
+sound of a frame while its boundaries are still held (the index is shared
+by both streams). The sample window of a frame window is fixed: only the
+samples of the window the PCM memory still holds are returned, never
+samples of the next frame. `frame_range` reports it separately:
+`samples_requested` [from, to) = the sample window of the returned frames
+(with `samples` from the start of the first of them; like the end of
+`requested` its end is capped at INT64_MAX, so even `samples` = INT64_MAX
+gives no negative number; all parameters are integers up to INT64_MAX),
+`samples_held`
+[from, to) = the part held when it was copied, `audio_status` (`complete`
+whole window, `partial` part overwritten or not captured yet, `lost` no
+sample - the answer has 0 samples and `from_sample` = `next_sample` = end
+of the window for overwritten sound and start of the window for sound not
+captured yet, `none` empty window) and `audio_reasons`
+(`pcm_overwritten`, `pcm_not_captured`). `gap` [from, to) are the
+overwritten samples inside the requested window only. The `max_bytes`
+limit applies to the kept part (`truncated`); continue with `sample_from`
+= `next_sample` and `samples` up to the end of the window. While the
+capture runs the intersection is taken together with the copy (one lock),
+`available` in the same answer is the held range at that moment. Reading
+with `sample_from` (a cursor) is unchanged: it skips an overwritten start
+and returns `samples` samples from the oldest held one (`gap` = the
+skipped part). Neither an estimate nor sound from another time is
+returned; `samples` adds nothing to an empty window.
+The index takes 16 B per frame: 48 KB with the default 60 s of PCM on PAL,
+growing as needed (at most about 5.3 MB at 1 % speed). With `rate` 44100
+and `stereo` the joined data equal one window over the same frames byte for
+byte. With another `rate` each window is resampled on its own (the number of
+output samples is rounded per window and the averaging starts at the window
+start), so the joined data may differ from one window in length and values
+(12 one-frame windows at 11025 Hz mono on the MZ-800: 2640 instead of 2644
+values, 2420 of them differ, at square wave edges by up to 57 % of the
+peak); use one window for a continuous resampled stretch. A capture frame
+is one synchronisation event of the emulation: a picture frame at 100 %,
+at a custom speed a stretch of speed times a frame. The reference has the
+samples of its emulated time for it (about 441 at 50 % and 1763 at 200 %
+on PAL), the output path one block of 881 or 882 samples (NTSC 735 or
+736) at any speed; without an audio device it is the block of the
+previous frame. A window with `sample_from` and no `samples` is `frames`
+frames long after the crystal (881.36 or 735.95 samples per frame).
 
 ## Media tools
 
@@ -2841,7 +2985,7 @@ The reply carries
 `emu_frames` (emulated frames that actually elapsed), `complete` and
 `interrupted` (`true` = cut short by a breakpoint, a pause or a reset;
 the held key was released). At normal speed a sequence takes real time
-(50 frames = 1 s).
+(50 frames = 0.999 s, frames follow the crystal).
 
 All HID tools carry a **WARNING** token in their description - user
 simulation can trigger unintended behavior (= RUN+RETURN, BASIC

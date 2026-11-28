@@ -23,6 +23,7 @@
 #include "ui-imgui/filechooser/imgui_filechooser.h"
 #include "mzarch/mzarch_config.h"
 #include "gdg/video.h"
+#include "hw-generic/gdg/gdgclk.h"
 #include "ui-imgui/audiocap/audio_capture_ui.h"
 #include "emulator/audio_capture.h"
 #include "emulator/screenshot/screenshot_series.h"
@@ -48,10 +49,10 @@ static bool s_pending_report = false;
 static bool s_setup_open = false;
 
 
-/** @brief Délka zachycení v sekundách podle počtu zvukových snímků. */
+/** @brief Délka zachycení ve skutečných sekundách (snímky podle krystalu, PAL 50,036 za sekundu). */
 static double ac_ui_seconds(uint64_t frames)
 {
-    return (double) frames / (double) VIDEO_SCREENS_PER_SEC;
+    return (double) frames / GDGCLK_REAL_FPS;
 }
 
 

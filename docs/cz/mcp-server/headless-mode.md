@@ -37,7 +37,7 @@ konce automatického běhu (viz [Automatické běhy](#automatické-běhy)).
 | Konzole stdout/stderr | jen v `FORCE_CONSOLE=1` buildu (viz níže) |
 | GUI okno | **ne** (přeskočeno) |
 | Audio výstup | **ne** (no-op SDL audio device) |
-| Tempo emulace | podle systémových hodin: 100 % = reálný čas (MZ-800: 50 snímků/s), vlastní rychlost i MAX SPEED jako v okně |
+| Tempo emulace | podle systémových hodin: 100 % = reálný čas podle krystalu (MZ-800: 50,036 snímku/s, MZ-1500: 59,923), vlastní rychlost i MAX SPEED jako v okně |
 | ImGui debugger | **ne** (kontext se nevytvoří) |
 
 Bezhlavá emulace tedy běží v reálném čase. Pro rychlejší běh (testy, dávky) zvolte rychlost při startu volbou `--speed` (`--speed max` = MAX SPEED, `--speed 400` = čtyřnásobek reálné rychlosti; platné jsou 1-4000 %), nebo ji změňte za běhu MCP nástrojem `set_speed`. Volba `--speed` platí pro `mz800emu --headless`; s `--mcp-pipe` se `--speed` odmítne (`Unknown option: --speed`, start skončí chybou); v pipe režimu rychlost nastavte nástrojem `set_speed`.

@@ -367,19 +367,22 @@ G_STATIC_ASSERT(AUDIO_SRC_CHANNELS_COUNT <= VIDEOREC_AUDIO_MAX_CHANNELS);
 G_STATIC_ASSERT(GDGCLK_BASE == VIDEO_SCREEN_TICKS * VIDEO_SCREENS_PER_SEC);
 
 /**
- * @brief Velikost bloku SDL cesty [stereo vzorky] na této platformě.
+ * @brief Velikost bloku SDL cesty [stereo vzorky] na této platformě (delší z obou délek).
  *
- * Výstup jedné synchronizační události emulace (jeden snímek): 882 při 50,
- * 735 při 60 snímcích/s (iface_audio_wait_for_data()). Režim podle reality
- * podle ní pozná, zda jitter buffer potřebuje další blok. Snímková frekvence
- * jen z g_vr_platform (jediný zdroj fps v lepidle); že blok vyjde celý,
- * hlídá G_STATIC_ASSERT v iface_audio.c.
+ * Výstup jedné synchronizační události emulace (jeden snímek,
+ * iface_audio_wait_for_data()): emulace i SDL cesta běží podle krystalu, blok
+ * má 881 nebo 882 vzorků (PAL) a 735 nebo 736 (NTSC). Režim podle reality
+ * podle ní pozná, zda jitter buffer potřebuje další blok; vrací se delší
+ * délka (882, 736), aby práh pokryl celý blok. Krystal a takty snímku jsou tu
+ * (stejně jako u rozvrhu vzorkovače, vr_rt_fps_num()) výjimkou z pravidla "fps
+ * jen z g_vr_platform": soubor (hlavička AVI, zvuk na snímek, sidecar) dál
+ * používá g_vr_platform (50/1, 60/1).
  *
- * @return videorec_rt_sdl_chunk() pro fps platformy.
+ * @return videorec_rt_sdl_chunk() pro GDGCLK_REAL_TICKS_PER_SEC / VIDEO_SCREEN_TICKS.
  */
 static inline unsigned vr_sdl_chunk(void)
 {
-    return videorec_rt_sdl_chunk(g_vr_platform.fps_num, g_vr_platform.fps_den);
+    return videorec_rt_sdl_chunk((unsigned)GDGCLK_REAL_TICKS_PER_SEC, (unsigned)VIDEO_SCREEN_TICKS);
 }
 
 /**
@@ -389,6 +392,60 @@ static inline unsigned vr_sdl_chunk(void)
 static inline unsigned vr_rt_delay_ticks(void)
 {
     return videorec_rt_video_delay_ticks(g_vr_platform.fps_num, g_vr_platform.fps_den);
+}
+
+/**
+ * @brief Délka zpožďovací fronty obrazu v režimu podle reality [snímky].
+ *
+ * Zpoždění obrazu vr_rt_delay_ticks() skládá zpožďovací fronta a rezerva
+ * fronty emulovaných snímků (VIDEOREC_RT_FRAMEQ_TARGET - 1, viz
+ * st_VIDEOREC_RT_FRAMEQ): zapsaný snímek je v průměru stejně starý jako dřív,
+ * kdy vzorkovač bral poslední zobrazený snímek a celé zpoždění dávala
+ * zpožďovací fronta (VIDEOREC_RT_VIDEO_DELAY_MS).
+ *
+ * @return `vr_rt_delay_ticks() - (VIDEOREC_RT_FRAMEQ_TARGET - 1)`, nejméně 0
+ *         (0 při 50 i 60 snímcích/s: celé zpoždění dává fronta snímků).
+ */
+static inline unsigned vr_rt_fifo_len(void)
+{
+    unsigned d = vr_rt_delay_ticks();
+    return (d > VIDEOREC_RT_FRAMEQ_TARGET - 1u) ? d - (VIDEOREC_RT_FRAMEQ_TARGET - 1u) : 0u;
+}
+
+/**
+ * @brief Tempo vzorkovače v režimu podle reality, čitatel: krystal [Hz].
+ *
+ * Vzorkovač tiká stejným tempem jako emulace (GDGCLK_REAL_TICKS_PER_SEC /
+ * VIDEO_SCREEN_TICKS = 50,036326 PAL, 59,922743 NTSC ticku za sekundu), aby
+ * každý tik vzal právě jeden emulovaný snímek z fronty. Soubor (hlavička AVI,
+ * zvuk na snímek, sidecar) a záznam v emulačním čase dál používají
+ * g_vr_platform (50/1, 60/1).
+ *
+ * @return GDGCLK_REAL_TICKS_PER_SEC.
+ */
+static inline unsigned vr_rt_fps_num(void)
+{
+    return (unsigned)GDGCLK_REAL_TICKS_PER_SEC;
+}
+
+/** @brief Jmenovatel k vr_rt_fps_num(): takty snímku. @return VIDEO_SCREEN_TICKS. */
+static inline unsigned vr_rt_fps_den(void)
+{
+    return (unsigned)VIDEO_SCREEN_TICKS;
+}
+
+/**
+ * @brief Skutečná délka ticku vzorkovače / jmenovitá délka snímku souboru.
+ *
+ * Pro videorec_rt_audio_set_tick_scale(): tik trvá VIDEO_SCREEN_TICKS /
+ * krystal s, snímek souboru fps_den / fps_num s.
+ *
+ * @return PAL 0,999274, NTSC 1,001289.
+ */
+static inline double vr_rt_tick_scale(void)
+{
+    return ((double)VIDEO_SCREEN_TICKS * (double)g_vr_platform.fps_num) /
+           ((double)GDGCLK_REAL_TICKS_PER_SEC * (double)g_vr_platform.fps_den);
 }
 
 unsigned videorec_get_fps(void)
@@ -584,7 +641,7 @@ typedef struct st_VR_GLUE {
     /* režim podle reality - stav */
     bool rt_on;                        /**< Efektivní základna realtime (bit VIDEOREC_FLAG_RT); snímky zapisuje vzorkovač. */
     bool rt_leaving;                   /**< Čeká návrat do emulačního času na nejbližším konci emulovaného snímku. */
-    GQueue *rt_fifo;                   /**< Zpožďovací fronta obrazu (uint8_t* snímky VR_WIDTH*VR_HEIGHT, g_free); nejvýš vr_rt_delay_ticks(). */
+    GQueue *rt_fifo;                   /**< Zpožďovací fronta obrazu (uint8_t* snímky VR_WIDTH*VR_HEIGHT, g_free); nejvýš vr_rt_fifo_len(). */
     st_VIDEOREC_RT_CLOCK rt_clock;     /**< Rozvrh ticků vzorkovače (běží po celou session). */
     bool obs_paused;                   /**< Pozorovaný stav pauzy emulace (pro události). */
     char obs_pause_value[16];          /**< Hodnota pause_start aktuální pozorované pauzy ("user", ...); platí při `obs_paused`. */
@@ -618,14 +675,54 @@ static st_VIDEOREC_RT_AUDIO g_vr_rta;
 static volatile gint g_vr_rta_ready = 0;
 
 /**
- * Zámek slotu posledního zobrazeného snímku (g_vr_rtv_pixels, g_vr_rtv_seq).
- * Listový zámek: pod ním se jen kopíruje snímek.
+ * @brief Sdílený obraz pro režim podle reality (jeden zobrazený snímek).
+ *
+ * Vzniká v tapu zobrazeného snímku (videorec_rt_video_tap()) a po zveřejnění
+ * se už nemění, takže ho vzorkovač smí kopírovat bez zámku, dokud drží
+ * referenci. Odkazuje na něj poslední zobrazený snímek, položky fronty
+ * snímků (jeden obraz může patřit víc emulovaným snímkům, když se obraz
+ * nezměnil) a obraz minulého ticku.
+ *
+ * Invarianty: `refs` se mění jen pod g_vr_rtv_mutex; při `refs == 0` se obraz
+ * vrací do zásobníku g_vr_rtv_pool nebo uvolňuje.
+ */
+typedef struct st_VR_RT_IMG {
+    uint32_t refs;                   /**< Počet referencí. */
+    uint32_t seq;                    /**< Pořadí zobrazeného snímku (g_vr_rtv_seq v okamžiku tapu). */
+    uint8_t px[VR_WIDTH * VR_HEIGHT]; /**< Indexy barev bez masky. */
+} st_VR_RT_IMG;
+
+/** @brief Velikost zásobníku volných obrazů (omezuje alokace na horké cestě tapu). */
+#define VR_RT_IMG_POOL 4u
+
+/**
+ * Zámek sdílených obrazů a fronty snímků (g_vr_rtv_*, g_vr_rtq). Pod ním se
+ * jen přesouvají ukazatele a počítají reference; obraz se kopíruje mimo něj.
+ * Pořadí zámků: g_vr.mutex -> g_vr_rtv_mutex -> zámek jitter bufferu zvuku
+ * (`g_vr_rta.mutex`; vr_rt_drain_fifo() pod g_vr_rtv_mutex volá
+ * videorec_rt_audio_fill()). Jiný zámek se pod g_vr_rtv_mutex nebere a pod
+ * zámkem jitter bufferu se g_vr_rtv_mutex nebere nikdy (videorec_rt.c ho
+ * nezná), takže smí brát emu vlákno (konec snímku, tap) i vzorkovač.
  */
 static GMutex g_vr_rtv_mutex;
-/** Poslední zobrazený snímek (indexy barev bez masky), viz videorec_rt_video_tap(). Pod g_vr_rtv_mutex. */
-static uint8_t g_vr_rtv_pixels[VR_WIDTH * VR_HEIGHT];
+/** Poslední zobrazený snímek (viz videorec_rt_video_tap()), NULL před prvním tapem. Pod g_vr_rtv_mutex. */
+static st_VR_RT_IMG *g_vr_rtv_latest = NULL;
+/** Obraz, který vzorkovač naposledy vložil do zpožďovací fronty (opakování při plnění fronty snímků). Pod g_vr_rtv_mutex. */
+static st_VR_RT_IMG *g_vr_rtv_prev = NULL;
+/** Zásobník volných obrazů (g_vr_rtv_pool[0 .. g_vr_rtv_pool_n - 1]). Pod g_vr_rtv_mutex. */
+static st_VR_RT_IMG *g_vr_rtv_pool[VR_RT_IMG_POOL];
+/** Počet obrazů v zásobníku. Pod g_vr_rtv_mutex. */
+static unsigned g_vr_rtv_pool_n = 0;
 /** Pořadí posledního zobrazeného snímku (roste s každým tapem). Pod g_vr_rtv_mutex. */
 static uint32_t g_vr_rtv_seq = 0;
+/**
+ * Fronta emulovaných snímků realtime (položky st_VR_RT_IMG*, značka 1 =
+ * snímek z běhu k dočasnému breakpointu). Plní ji konec emulovaného snímku
+ * (vr_rt_frame_done()), odebírá vzorkovač. Pod g_vr_rtv_mutex.
+ */
+static st_VIDEOREC_RT_FRAMEQ g_vr_rtq;
+/** g_vr_rtq je inicializovaná (videorec_init()). Pod g_vr_rtv_mutex. */
+static bool g_vr_rtq_ready = false;
 
 /** Čítač dokončených kroků debuggeru (videorec_on_debugger_step()); atomický. */
 static volatile gint g_vr_dbg_steps = 0;
@@ -1397,19 +1494,24 @@ static bool vr_rt_want(void)
     return true;
 }
 
+static unsigned vr_rtq_pos_offset(void);
+
 /**
  * @brief Pozice v nahrávce, ke které se vztahují značky (markery, události, hranice).
  *
  * V emulačním čase počet snímků nahrávky. V realtime při nahrávání navíc
- * délka zpožďovací fronty: aktuálně zobrazený obraz se do nahrávky dostane
- * až za vr_rt_delay_ticks() ticků.
+ * délka zpožďovací fronty a vr_rtq_pos_offset() (snímky fronty emulovaných
+ * snímků, které se zapíšou před obrazem zobrazeným v okamžiku značky): pozice
+ * je snímek, ve kterém se tento obraz objeví (jako dřív s konstantním
+ * zpožděním vr_rt_delay_ticks(); +-1 snímek podle fáze).
  *
  * @return Globální index snímku.
  */
 static uint64_t vr_pos(void)
 {
     uint64_t n = vr_frame_count();
-    if (g_vr.rt_on && g_vr.state == VIDEOREC_STATE_RECORDING && g_vr.rt_fifo) n += g_queue_get_length(g_vr.rt_fifo);
+    if (g_vr.rt_on && g_vr.state == VIDEOREC_STATE_RECORDING && g_vr.rt_fifo)
+        n += g_queue_get_length(g_vr.rt_fifo) + vr_rtq_pos_offset();
     return n;
 }
 
@@ -1578,19 +1680,184 @@ static void vr_reemit_state(uint64_t at)
 }
 
 /**
- * @brief Zkopíruje poslední zobrazený snímek (s maskou `& 0x0F`) do nového bufferu.
- * @param seq_out Výstup: pořadí snímku (viz g_vr_rtv_seq), nebo NULL.
- * @return Nový buffer VR_WIDTH*VR_HEIGHT (g_free).
+ * @brief Přidá referenci na sdílený obraz.
+ * @param img Obraz, nebo NULL.
+ * @return `img`.
+ * @pre Pod g_vr_rtv_mutex.
  */
-static uint8_t *vr_rt_grab(uint32_t *seq_out)
+static st_VR_RT_IMG *vr_rtv_ref(st_VR_RT_IMG *img)
+{
+    if (img) img->refs++;
+    return img;
+}
+
+/**
+ * @brief Odebere referenci; poslední reference vrátí obraz do zásobníku nebo ho uvolní.
+ * @param img Obraz, nebo NULL.
+ * @pre Pod g_vr_rtv_mutex.
+ */
+static void vr_rtv_unref(st_VR_RT_IMG *img)
+{
+    if (!img || --img->refs > 0) return;
+    if (g_vr_rtv_pool_n < VR_RT_IMG_POOL) {
+        g_vr_rtv_pool[g_vr_rtv_pool_n++] = img;
+    } else {
+        g_free(img);
+    }
+}
+
+/** @brief Uvolnění položky fronty snímků (callback st_VIDEOREC_RT_FRAMEQ). @param item st_VR_RT_IMG* nebo NULL. */
+static void vr_rtq_release(void *item)
+{
+    vr_rtv_unref((st_VR_RT_IMG *)item);
+}
+
+/**
+ * @brief Zkopíruje sdílený obraz (s maskou `& 0x0F`) do nového bufferu.
+ * @param img     Obraz (volající drží referenci), nebo NULL = černý snímek.
+ * @param seq_out Výstup: pořadí obrazu (0 pro NULL), nebo NULL.
+ * @return Nový buffer VR_WIDTH*VR_HEIGHT (g_free).
+ * @note Bez zámku: obraz se po zveřejnění nemění.
+ */
+static uint8_t *vr_rt_img_copy(const st_VR_RT_IMG *img, uint32_t *seq_out)
 {
     uint8_t *px = g_malloc((size_t)VR_WIDTH * VR_HEIGHT);
-    g_mutex_lock(&g_vr_rtv_mutex);
-    memcpy(px, g_vr_rtv_pixels, (size_t)VR_WIDTH * VR_HEIGHT);
-    if (seq_out) *seq_out = g_vr_rtv_seq;
-    g_mutex_unlock(&g_vr_rtv_mutex);
-    for (size_t i = 0; i < (size_t)VR_WIDTH * VR_HEIGHT; i++) px[i] &= 0x0F;
+    if (img) {
+        memcpy(px, img->px, (size_t)VR_WIDTH * VR_HEIGHT);
+        for (size_t i = 0; i < (size_t)VR_WIDTH * VR_HEIGHT; i++) px[i] &= 0x0F;
+    } else {
+        memset(px, 0, (size_t)VR_WIDTH * VR_HEIGHT);
+    }
+    if (seq_out) *seq_out = img ? img->seq : 0u;
     return px;
+}
+
+/**
+ * @brief Zkopíruje poslední zobrazený snímek a nastaví ho jako obraz minulého ticku.
+ *
+ * Plnění zpožďovací fronty (vr_rt_fifo_prime()): další opakování při plnění
+ * fronty snímků navazuje na tento obraz.
+ *
+ * @return Nový buffer VR_WIDTH*VR_HEIGHT (g_free).
+ */
+static uint8_t *vr_rt_grab(void)
+{
+    g_mutex_lock(&g_vr_rtv_mutex);
+    st_VR_RT_IMG *img = vr_rtv_ref(g_vr_rtv_latest);
+    vr_rtv_unref(g_vr_rtv_prev);
+    g_vr_rtv_prev = vr_rtv_ref(img);
+    g_mutex_unlock(&g_vr_rtv_mutex);
+    uint8_t *px = vr_rt_img_copy(img, NULL);
+    g_mutex_lock(&g_vr_rtv_mutex);
+    vr_rtv_unref(img);
+    g_mutex_unlock(&g_vr_rtv_mutex);
+    return px;
+}
+
+/**
+ * @brief Režim odběru z fronty snímků pro tento tik.
+ * @param paused Emulace stojí (tik se přesto zapisuje - freeze, krokování).
+ * @return DRAIN v pauze, LIVE při 100 %, jinak FREE (vlastní rychlost, MAX SPEED).
+ */
+static en_VIDEOREC_RT_FRAMEQ_MODE vr_rt_take_mode(bool paused)
+{
+    if (paused) return VIDEOREC_RT_FRAMEQ_DRAIN;
+    return (vr_cur_speed() == 100) ? VIDEOREC_RT_FRAMEQ_LIVE : VIDEOREC_RT_FRAMEQ_FREE;
+}
+
+/**
+ * @brief Obraz pro jeden tik vzorkovače: další emulovaný snímek z fronty, nebo opakování.
+ *
+ * Podle videorec_rt_frameq_take(): další snímek v pořadí, při plnění fronty
+ * obraz minulého ticku, při prázdné frontě poslední zobrazený snímek.
+ * Vybraný obraz se stane obrazem minulého ticku.
+ *
+ * @param mode    Režim odběru (vr_rt_take_mode()).
+ * @param seq_out Výstup: pořadí obrazu (statistika opakování), nebo NULL.
+ * @return Nový buffer VR_WIDTH*VR_HEIGHT (g_free).
+ * @pre Pod g_vr.mutex, `rt_on`.
+ */
+static uint8_t *vr_rt_take(en_VIDEOREC_RT_FRAMEQ_MODE mode, uint32_t *seq_out)
+{
+    g_mutex_lock(&g_vr_rtv_mutex);
+    void *it = NULL;
+    en_VIDEOREC_RT_TAKE take = videorec_rt_frameq_take(&g_vr_rtq, mode, &it);
+    st_VR_RT_IMG *img;
+    if (take == VIDEOREC_RT_TAKE_FRAME) {
+        img = (st_VR_RT_IMG *)it; /* reference položky přechází sem */
+    } else {
+        img = vr_rtv_ref((take == VIDEOREC_RT_TAKE_PREV) ? g_vr_rtv_prev : g_vr_rtv_latest);
+    }
+    vr_rtv_unref(g_vr_rtv_prev);
+    g_vr_rtv_prev = vr_rtv_ref(img);
+    g_mutex_unlock(&g_vr_rtv_mutex);
+    uint8_t *px = vr_rt_img_copy(img, seq_out);
+    g_mutex_lock(&g_vr_rtv_mutex);
+    vr_rtv_unref(img);
+    g_mutex_unlock(&g_vr_rtv_mutex);
+    return px;
+}
+
+/**
+ * @brief Konec emulovaného snímku v realtime: vloží snímek do fronty pro vzorkovač.
+ *
+ * Položka odkazuje na poslední zobrazený obraz (tap proběhl na konci snímku
+ * těsně předtím; nezměněný snímek se nezobrazuje a sdílí obraz s předchozím).
+ * Značka 1 = snímek z běhu k dočasnému breakpointu (step over, run to
+ * cursor), který se bez `record_debugger_steps` nezapisuje.
+ *
+ * @pre Emu vlákno; volající nedrží g_vr_rtv_mutex (g_vr.mutex smí).
+ */
+static void vr_rt_frame_done(void)
+{
+    uint8_t tag = g_atomic_int_get(&g_vr_dbg_run_inflight) ? 1u : 0u;
+    g_mutex_lock(&g_vr_rtv_mutex);
+    if (g_vr_rtq_ready) videorec_rt_frameq_push(&g_vr_rtq, vr_rtv_ref(g_vr_rtv_latest), tag);
+    g_mutex_unlock(&g_vr_rtv_mutex);
+}
+
+/**
+ * @brief Kolik snímků z fronty emulovaných snímků se zapíše před aktuálně zobrazeným obrazem (pro vr_pos()).
+ * @return videorec_rt_frameq_pos_offset() pod g_vr_rtv_mutex.
+ */
+static unsigned vr_rtq_pos_offset(void)
+{
+    g_mutex_lock(&g_vr_rtv_mutex);
+    unsigned n = videorec_rt_frameq_pos_offset(&g_vr_rtq);
+    g_mutex_unlock(&g_vr_rtv_mutex);
+    return n;
+}
+
+/**
+ * @brief Kolik snímků by se při ukončení úseku právě teď dopsalo (zpožďovací fronta + fronta snímků).
+ *
+ * Pro `stop_after_frames`: limit je dosažen, když počet zapsaných a čekajících
+ * snímků dosáhne limitu; dopsání se pak omezí na limit, takže nahrávka má
+ * přesně tolik snímků v každém režimu (živý běh, pauza se zápisem, jiná
+ * rychlost). Na rozdíl od vr_pos() nepředpokládá opakování, která by se teprve
+ * vložila. Snímky z běhu k dočasnému breakpointu (bez `record_debugger_steps`)
+ * musí být z fronty odebrané předem (vr_rt_purge_debugger_frames()).
+ *
+ * @return Délka zpožďovací fronty + délka fronty snímků (po posledním odběru
+ *         v režimu FREE počet různých obrazů, nejvýš rezerva - víc
+ *         vr_rt_drain_fifo() nedopíše).
+ * @note Ve FREE sloučí sousední snímky se stejným obrazem
+ *       (videorec_rt_frameq_merge_dups()), jako to udělá další odběr.
+ * @pre Pod zámkem g_vr.mutex, `rt_on`.
+ */
+static uint64_t vr_rt_pending(void)
+{
+    g_mutex_lock(&g_vr_rtv_mutex);
+    if (g_vr_rtq.last_mode == VIDEOREC_RT_FRAMEQ_FREE) {
+        /* jako vr_rt_drain_fifo(): počítají se různé obrazy (sloučení je totéž, co udělá
+         * další odběr ve FREE) */
+        (void)videorec_rt_frameq_merge_dups(&g_vr_rtq);
+    }
+    unsigned n = videorec_rt_frameq_len(&g_vr_rtq);
+    if (g_vr_rtq.last_mode == VIDEOREC_RT_FRAMEQ_FREE && n > VIDEOREC_RT_FRAMEQ_TARGET - 1u)
+        n = VIDEOREC_RT_FRAMEQ_TARGET - 1u;
+    g_mutex_unlock(&g_vr_rtv_mutex);
+    return (uint64_t)g_queue_get_length(g_vr.rt_fifo) + n;
 }
 
 /**
@@ -1631,15 +1898,41 @@ static void vr_rt_write_frame(uint8_t *px)
 }
 
 /**
- * @brief Vyprázdní zpožďovací frontu obrazu.
+ * @brief Vyprázdní zpožďovací frontu obrazu a pak frontu emulovaných snímků (v tomto pořadí).
+ *
+ * Obojí je minulost před koncem úseku (stop, record-pause, návrat do
+ * emulačního času), takže se při nahrávání dopíše: nejdřív zpožďovací fronta,
+ * pak čekající emulované snímky v pořadí. Snímky z běhu k dočasnému
+ * breakpointu (značka 1) se bez `record_debugger_steps` nezapisují. Při jiné
+ * rychlosti než 100 % (poslední odběr v režimu FREE; při MAX SPEED se fronta
+ * mezi tiky plní až do kapacity) se dopíše nejvýš rezerva nejnovějších
+ * různých obrazů (VIDEOREC_RT_FRAMEQ_TARGET - 1; sousední snímky se stejným
+ * obrazem se nejdřív sloučí), jako by je odebíraly další tiky -
+ * zrychlený běh by jinak na konci úseku dopsal desítky snímků bez zvuku.
+ * Fronta snímků pak přejde do stavu plnění (videorec_rt_frameq_restart()).
+ *
+ * S `audio_only` (konec nahrávky) se čekající emulované snímky dopíšou jen,
+ * dokud k nim jitter buffer má zvuk (aspoň půl bloku SDL cesty): emulace se
+ * před stopem obvykle zastaví mezi koncem snímku a synchronizací, která
+ * vyrábí jeho zvuk, a poslední snímek by jinak skončil tichem (naměřeno 14
+ * až 32 ms ticha na konci). Uprostřed nahrávky (pauza nahrávání, návrat do
+ * emulačního času) se dopisuje vše, aby navazující úsek nic nevynechal.
+ *
  * @param write      true = snímky zapsat (se zvukem z jitter bufferu), false = zahodit.
  * @param max_write  Nejvýš tolik snímků zapsat, zbytek zahodit (UINT64_MAX = vše).
+ * @param audio_only true = snímky fronty snímků bez zvuku zahodit (`end_drops`).
  * @pre Pod zámkem, `rt_on`; při `write` stav RECORDING.
- * @post Fronta prázdná.
+ * @post Obě fronty prázdné, fronta snímků ve stavu plnění.
  */
-static void vr_rt_drain_fifo(bool write, uint64_t max_write)
+static void vr_rt_drain_fifo(bool write, uint64_t max_write, bool audio_only)
 {
     uint8_t *px;
+    g_mutex_lock(&g_vr_rtv_mutex);
+    if (g_vr_rtq.last_mode == VIDEOREC_RT_FRAMEQ_FREE) {
+        (void)videorec_rt_frameq_merge_dups(&g_vr_rtq);
+        (void)videorec_rt_frameq_trim(&g_vr_rtq, VIDEOREC_RT_FRAMEQ_TARGET - 1u);
+    }
+    g_mutex_unlock(&g_vr_rtv_mutex);
     while ((px = g_queue_pop_head(g_vr.rt_fifo)) != NULL) {
         if (write && max_write > 0) {
             vr_rt_write_frame(px);
@@ -1648,32 +1941,68 @@ static void vr_rt_drain_fifo(bool write, uint64_t max_write)
             g_free(px);
         }
     }
+    for (;;) {
+        g_mutex_lock(&g_vr_rtv_mutex);
+        if (videorec_rt_frameq_len(&g_vr_rtq) == 0) {
+            g_mutex_unlock(&g_vr_rtv_mutex);
+            break;
+        }
+        uint8_t tag = 0;
+        st_VR_RT_IMG *img = videorec_rt_frameq_pop(&g_vr_rtq, &tag);
+        bool keep = write && max_write > 0 && (tag == 0 || g_vr.record_debugger_steps);
+        if (keep && audio_only && videorec_rt_audio_fill(&g_vr_rta) < vr_sdl_chunk() / 2u) {
+            keep = false;
+            g_vr.rt_stats.end_drops++;
+        }
+        if (keep) {
+            vr_rtv_unref(g_vr_rtv_prev);
+            g_vr_rtv_prev = vr_rtv_ref(img);
+        }
+        g_mutex_unlock(&g_vr_rtv_mutex);
+        if (keep) {
+            vr_rt_write_frame(vr_rt_img_copy(img, NULL));
+            max_write--;
+        }
+        g_mutex_lock(&g_vr_rtv_mutex);
+        vr_rtv_unref(img);
+        g_mutex_unlock(&g_vr_rtv_mutex);
+    }
+    g_mutex_lock(&g_vr_rtv_mutex);
+    videorec_rt_frameq_restart(&g_vr_rtq);
+    g_mutex_unlock(&g_vr_rtv_mutex);
 }
 
 /**
- * @brief Doplní zpožďovací frontu obrazu aktuálním zobrazeným snímkem na vr_rt_delay_ticks().
+ * @brief Doplní zpožďovací frontu obrazu aktuálním zobrazeným snímkem na vr_rt_fifo_len() a frontu snímků naplní znovu.
  *
- * Zpoždění obrazu proti zvuku dává délka fronty (každý zapisující tick
- * vloží 1 snímek a 1 vyjme) - fronta kratší než vr_rt_delay_ticks()
- * by zvuk trvale posunula za obraz. Chybějící snímky se doplní na konec
- * fronty (nejstarší obsah zůstává na začátku).
+ * Zpoždění obrazu proti zvuku dává délka zpožďovací fronty (každý
+ * zapisující tick vloží 1 snímek a 1 vyjme) a rezerva fronty emulovaných
+ * snímků - kratší fronty by zvuk trvale posunuly za obraz. Chybějící snímky
+ * se doplní na konec zpožďovací fronty (nejstarší obsah zůstává na začátku)
+ * a fronta snímků přejde do stavu plnění (do naplnění na cíl se opakuje obraz
+ * minulého ticku, viz videorec_rt_frameq_take()).
  *
  * @pre Pod zámkem, `rt_on`.
- * @post Fronta obsahuje alespoň vr_rt_delay_ticks() snímků.
+ * @post Zpožďovací fronta obsahuje alespoň vr_rt_fifo_len() snímků.
  */
 static void vr_rt_fifo_prime(void)
 {
-    while (g_queue_get_length(g_vr.rt_fifo) < vr_rt_delay_ticks())
-        g_queue_push_tail(g_vr.rt_fifo, vr_rt_grab(NULL));
+    while (g_queue_get_length(g_vr.rt_fifo) < vr_rt_fifo_len()) g_queue_push_tail(g_vr.rt_fifo, vr_rt_grab());
+    g_mutex_lock(&g_vr_rtv_mutex);
+    videorec_rt_frameq_restart(&g_vr_rtq);
+    g_mutex_unlock(&g_vr_rtv_mutex);
 }
 
 /**
- * @brief Uloží statistiky jitter bufferu do rt_stats (před jeho resetem).
+ * @brief Uloží statistiky jitter bufferu a fronty snímků do rt_stats (před resetem jitter bufferu).
  * @pre Pod zámkem.
  */
 static void vr_rt_keep_audio_stats(void)
 {
     videorec_rt_audio_get_stats(&g_vr_rta, &g_vr.rt_stats.audio);
+    g_mutex_lock(&g_vr_rtv_mutex);
+    g_vr.rt_stats.queue = g_vr_rtq.stats;
+    g_mutex_unlock(&g_vr_rtv_mutex);
     g_vr.rt_stats.clock_rebased = g_vr.rt_clock.rebased;
     g_vr.rt_stats.lost_ticks = g_vr.rt_clock.lost_ticks;
 }
@@ -1681,20 +2010,29 @@ static void vr_rt_keep_audio_stats(void)
 /**
  * @brief Přepne efektivní časovou základnu na realtime (emulated -> realtime).
  *
- * Dopíše čekající emulační snímky, nastaví bit VIDEOREC_FLAG_RT, vynuluje
+ * Dopíše čekající emulační snímky, vyprázdní frontu emulovaných snímků,
+ * nastaví bit VIDEOREC_FLAG_RT (od té doby konec snímku plní frontu), vynuluje
  * jitter buffer a povolí do něj zápis, naplní zpožďovací frontu aktuálním
  * zobrazeným snímkem, začne realtime větev a (při nahrávání, mimo snímek 0)
  * nový segment s výchozím přechodem. Událost `timebase = realtime`.
  *
  * @pre Pod zámkem, stav != IDLE, `!rt_on`. Libovolné vlákno (tick vzorkovače,
  *      start session v emu vlákně).
- * @post `rt_on`, fronta obsahuje vr_rt_delay_ticks() snímků.
+ * @post `rt_on`, zpožďovací fronta obsahuje vr_rt_fifo_len() snímků, fronta
+ *       snímků je prázdná ve stavu plnění.
  */
 static void vr_rt_enter(void)
 {
     videorec_pipe_flush(&g_vr.pipe);
     vr_hold_end();
     uint64_t at = vr_frame_count();
+    /* Fronta snímků od nuly (před nastavením bitu RT, od kterého ji plní konec snímku);
+     * obraz minulého ticku = aktuální obraz, na který realtime navazuje. */
+    g_mutex_lock(&g_vr_rtv_mutex);
+    videorec_rt_frameq_clear(&g_vr_rtq);
+    vr_rtv_unref(g_vr_rtv_prev);
+    g_vr_rtv_prev = vr_rtv_ref(g_vr_rtv_latest);
+    g_mutex_unlock(&g_vr_rtv_mutex);
     g_vr.rt_on = true;
     g_vr.rt_leaving = false;
     vr_flag_set(VIDEOREC_FLAG_RT);
@@ -1713,7 +2051,9 @@ static void vr_rt_enter(void)
 /**
  * @brief Vrátí se do emulačního času na konci emulovaného snímku (realtime -> emulated).
  *
- * Dopíše zpožďovací frontu (při nahrávání), zakáže zápis do jitter bufferu,
+ * Dopíše zpožďovací frontu a čekající emulované snímky (při nahrávání; tento
+ * snímek do fronty nepřišel, zapíše se už v emulačním čase - každý emulovaný
+ * snímek je v nahrávce právě jednou), zakáže zápis do jitter bufferu,
  * založí emulační osu (rebase pipe na začátek aktuálního snímku s aktuálními
  * hodnotami kanálů - aktuální snímek na ni přesně padne), začne emulační
  * větev a (při nahrávání) nový segment. Událost `timebase = emulated`.
@@ -1724,7 +2064,7 @@ static void vr_rt_enter(void)
  */
 static void vr_rt_leave(uint64_t frame_end)
 {
-    vr_rt_drain_fifo(g_vr.state == VIDEOREC_STATE_RECORDING, UINT64_MAX);
+    vr_rt_drain_fifo(g_vr.state == VIDEOREC_STATE_RECORDING, UINT64_MAX, false);
     vr_rt_keep_audio_stats();
     g_vr.rt_on = false;
     g_vr.rt_leaving = false;
@@ -1766,9 +2106,10 @@ static void vr_finalize(void);
  *
  * V realtime nevznikají požadavky vázané na konec emulovaného snímku -
  * zpracovává je tick vzorkovače (i v pauze emulace). Record-pause dopíše
- * zpožďovací frontu obrazu; obnovení ji doplní aktuálním obrazem na
- * vr_rt_delay_ticks() (vr_rt_fifo_prime()), aby zůstal zachovaný
- * posun obrazu proti zvuku.
+ * zpožďovací frontu obrazu i čekající emulované snímky; obnovení doplní
+ * zpožďovací frontu aktuálním obrazem na vr_rt_fifo_len() a frontu snímků
+ * naplní znovu (vr_rt_fifo_prime()), aby zůstal zachovaný posun obrazu proti
+ * zvuku.
  *
  * @pre Pod zámkem, `rt_on && !rt_leaving`, stav != IDLE.
  * @post Při stopu stav IDLE.
@@ -1786,7 +2127,7 @@ static void vr_rt_requests(void)
         g_vr.req_pause_toggle = false;
         if (g_vr.state == VIDEOREC_STATE_RECORDING) {
             /* Obraz ve frontě je minulost před pauzou - dopsat, pak uzavřít segment. */
-            vr_rt_drain_fifo(true, UINT64_MAX);
+            vr_rt_drain_fifo(true, UINT64_MAX, false);
             uint64_t at = vr_frame_count();
             videorec_sidecar_segment_end(g_vr.sidecar, at);
             g_array_append_val(g_vr.pause_frames, at);
@@ -1794,7 +2135,7 @@ static void vr_rt_requests(void)
             fprintf(stderr, "[videorec] Recording paused\n");
         } else {
             /* Během pauzy nahrávání se fronta doplňuje jen při běžící emulaci - při
-             * obnovení v pauze emulace nebo do vr_rt_delay_ticks() ticků by
+             * obnovení v pauze emulace nebo do vr_rt_fifo_len() ticků by
              * byla kratší a zvuk by trvale zaostával za obrazem (final review M1). */
             vr_rt_fifo_prime();
             videorec_sidecar_segment_begin(g_vr.sidecar, vr_frame_count(), g_vr.transition);
@@ -1807,17 +2148,42 @@ static void vr_rt_requests(void)
 }
 
 /**
+ * @brief Bez `record_debugger_steps` odebere z fronty snímků snímky z běhu k dočasnému breakpointu (značka 1).
+ *
+ * Ty se nezapisují (krokování). Volá se v každém ticku před kontrolou
+ * `stop_after_frames`, aby vr_rt_pending() nepočítal snímky, které se
+ * nezapíšou (jinak by limit skončil nahrávku o tyto snímky dřív).
+ *
+ * @pre Pod zámkem g_vr.mutex, `rt_on`; nedrží g_vr_rtv_mutex.
+ * @post Ve frontě nejsou snímky se značkou 1 (bez `record_debugger_steps`).
+ */
+static void vr_rt_purge_debugger_frames(void)
+{
+    if (g_vr.record_debugger_steps) return;
+    g_mutex_lock(&g_vr_rtv_mutex);
+    (void)videorec_rt_frameq_purge_tag(&g_vr_rtq, 1);
+    g_mutex_unlock(&g_vr_rtv_mutex);
+}
+
+/**
  * @brief Jeden tick vzorkovače v realtime: rozhodne o zápisu a zapíše snímek.
  *
- * - record-pause: fronta obrazu se posouvá (nejstarší snímek se zahodí)
- *   a zvuk se spotřebuje naprázdno - po obnovení obraz i zvuk navazují;
+ * Obraz ticku dává vr_rt_take(): další emulovaný snímek z fronty snímků
+ * (při stejném tempu emulace a vzorkovače každý právě jednou), při plnění
+ * nebo vyprázdnění fronty opakování (viz videorec_rt_frameq_take()). Snímky
+ * z běhu k dočasnému breakpointu odebere z fronty už volající
+ * (vr_rt_purge_debugger_frames(), před kontrolou `stop_after_frames`).
+ *
+ * - record-pause: obraz ticku projde zpožďovací frontou (nejstarší snímek se
+ *   zahodí) a zvuk se spotřebuje naprázdno - po obnovení obraz i zvuk navazují;
  * - pauza emulace: krokování debuggeru (vr_pause_is_debugger()) podle
  *   `record_debugger_steps`, jinak podle `realtime_pause`; běh k dočasnému
  *   breakpointu (step over, run to cursor) bez `record_debugger_steps` se
  *   také nezapisuje;
- *   když se nezapisuje, nic se nespotřebuje (hodiny nahrávky stojí);
- * - jinak se navzorkuje poslední zobrazený snímek do fronty a zapíše se
- *   nejstarší snímek fronty se zvukem jednoho snímku.
+ *   když se nezapisuje, nic se nespotřebuje (hodiny nahrávky stojí, snímky
+ *   před pauzou čekají ve frontě);
+ * - jinak se obraz ticku vloží do zpožďovací fronty a zapíše se její
+ *   nejstarší snímek se zvukem jednoho snímku.
  *
  * @pre Pod zámkem, `rt_on && !rt_leaving`, stav != IDLE.
  */
@@ -1832,8 +2198,8 @@ static void vr_rt_emit_tick(void)
     if (g_vr.state == VIDEOREC_STATE_PAUSED) {
         g_vr.rt_activity = VIDEOREC_RT_ACTIVITY_SKIPPING;
         if (paused) return;
-        g_queue_push_tail(g_vr.rt_fifo, vr_rt_grab(NULL));
-        while (g_queue_get_length(g_vr.rt_fifo) > vr_rt_delay_ticks()) g_free(g_queue_pop_head(g_vr.rt_fifo));
+        g_queue_push_tail(g_vr.rt_fifo, vr_rt_take(vr_rt_take_mode(false), NULL));
+        while (g_queue_get_length(g_vr.rt_fifo) > vr_rt_fifo_len()) g_free(g_queue_pop_head(g_vr.rt_fifo));
         videorec_rt_audio_pull(&g_vr_rta, NULL, spf, 1.0f);
         return;
     }
@@ -1866,7 +2232,7 @@ static void vr_rt_emit_tick(void)
     }
 
     uint32_t seq = 0;
-    uint8_t *px = vr_rt_grab(&seq);
+    uint8_t *px = vr_rt_take(vr_rt_take_mode(paused), &seq);
     if (g_vr.rt_have_seq && seq == g_vr.rt_last_seq) g_vr.rt_stats.frames_repeated++;
     g_vr.rt_last_seq = seq;
     g_vr.rt_have_seq = true;
@@ -1932,11 +2298,13 @@ static void vr_rt_tick(int64_t now)
         vr_observe_speed_reset();
         vr_rt_requests();
         for (unsigned i = 0; i < due && g_vr.state != VIDEOREC_STATE_IDLE; i++) {
-            if (g_vr.stop_after_frames && vr_pos() >= g_vr.stop_after_frames) {
+            vr_rt_purge_debugger_frames();
+            uint64_t pending = (g_vr.state == VIDEOREC_STATE_RECORDING) ? vr_rt_pending() : 0u;
+            if (g_vr.stop_after_frames && vr_frame_count() + pending >= g_vr.stop_after_frames) {
                 /* Fronta obsahuje snímky do limitu - dopsat jen je, pak ukončit. */
                 uint64_t n = vr_frame_count();
                 vr_rt_drain_fifo(g_vr.state == VIDEOREC_STATE_RECORDING,
-                                 g_vr.stop_after_frames > n ? g_vr.stop_after_frames - n : 0);
+                                 g_vr.stop_after_frames > n ? g_vr.stop_after_frames - n : 0, false);
                 quit = g_vr.quit_after_stop;
                 vr_finalize();
                 break;
@@ -2063,7 +2431,9 @@ static void vr_do_start(uint64_t frame_end)
     g_vr.rt_on = false;
     g_vr.rt_leaving = false;
     g_vr.rt_fifo = g_queue_new();
-    videorec_rt_clock_init_fps(&g_vr.rt_clock, g_vr_platform.fps_num, g_vr_platform.fps_den, vr_rt_max_catchup());
+    /* Vzorkovač stejným tempem jako emulace (krystal / takty snímku): každý tik vezme
+     * další emulovaný snímek z fronty. Soubor má dál g_vr_platform (50/1, 60/1). */
+    videorec_rt_clock_init_fps(&g_vr.rt_clock, vr_rt_fps_num(), vr_rt_fps_den(), vr_rt_max_catchup());
     g_vr.obs_paused = g_emulator.paused;
     g_strlcpy(g_vr.obs_pause_value, "user", sizeof(g_vr.obs_pause_value));
     g_vr.obs_speed = vr_cur_speed();
@@ -2075,11 +2445,11 @@ static void vr_do_start(uint64_t frame_end)
     g_vr.rt_have_seq = false;
     g_vr.rt_activity = VIDEOREC_RT_ACTIVITY_OFF;
     memset(&g_vr.rt_stats, 0, sizeof(g_vr.rt_stats));
-    /* Slot zobrazeného snímku: aktuální obraz (emu vlákno, konec snímku - framebuffer je hotový). */
     g_mutex_lock(&g_vr_rtv_mutex);
-    memcpy(g_vr_rtv_pixels, g_framebuffer.pixels, sizeof(g_vr_rtv_pixels));
-    g_vr_rtv_seq++;
+    memset(&g_vr_rtq.stats, 0, sizeof(g_vr_rtq.stats));
     g_mutex_unlock(&g_vr_rtv_mutex);
+    /* Poslední zobrazený snímek: aktuální obraz (emu vlákno, konec snímku - framebuffer je hotový). */
+    videorec_rt_video_tap(g_framebuffer.pixels);
 
     vr_take_begin(0);
     vr_flag_set(VIDEOREC_FLAG_ACTIVE);
@@ -2099,8 +2469,9 @@ static void vr_do_start(uint64_t frame_end)
 /**
  * @brief Ukončí session: dopíše čekající snímky, předá sidecar writeru a zavře AVI.
  *
- * V realtime nejdřív dopíše zpožďovací frontu obrazu (při nahrávání) a zakáže
- * zápis do jitter bufferu; vlákno vzorkovače uspí.
+ * V realtime nejdřív dopíše zpožďovací frontu obrazu a čekající emulované
+ * snímky (při nahrávání) a zakáže zápis do jitter bufferu; vlákno vzorkovače
+ * uspí.
  *
  * @pre Pod zámkem, emu vlákno nebo vlákno vzorkovače, stav != IDLE.
  * @post Stav IDLE, bity VIDEOREC_FLAG_ACTIVE a VIDEOREC_FLAG_RT smazány; pipe
@@ -2109,8 +2480,8 @@ static void vr_do_start(uint64_t frame_end)
 static void vr_finalize(void)
 {
     if (g_vr.rt_on) {
-        /* realtime: obraz ve zpožďovací frontě je minulost - dopsat (při nahrávání) */
-        vr_rt_drain_fifo(g_vr.state == VIDEOREC_STATE_RECORDING, UINT64_MAX);
+        /* realtime: obraz ve zpožďovací frontě a ve frontě snímků je minulost - dopsat (při nahrávání) */
+        vr_rt_drain_fifo(g_vr.state == VIDEOREC_STATE_RECORDING, UINT64_MAX, true);
         vr_rt_keep_audio_stats();
         g_vr.rt_on = false;
         g_vr.rt_leaving = false;
@@ -2126,13 +2497,19 @@ static void vr_finalize(void)
     if (g_vr.rt_stats.ticks) {
         fprintf(stderr,
                 "[videorec] Real time: %llu ticks, %llu frames written (%llu repeated), %llu late wakeups, "
-                "%llu clock rebases; audio %llu underruns, %llu overruns, mean buffer fill %.0f samples, "
+                "%llu clock rebases; frame queue %llu taken, %llu dropped, %llu trimmed at priming, %llu refills, "
+                "%llu restored, %llu without audio at stop; "
+                "audio %llu underruns, %llu overruns, mean buffer fill %.0f samples, "
                 "max drift correction %.4f %%\n",
                 (unsigned long long)g_vr.rt_stats.ticks, (unsigned long long)g_vr.rt_stats.frames_written,
                 (unsigned long long)g_vr.rt_stats.frames_repeated, (unsigned long long)g_vr.rt_stats.multi_ticks,
-                (unsigned long long)g_vr.rt_stats.clock_rebased, (unsigned long long)g_vr.rt_stats.audio.underruns,
-                (unsigned long long)g_vr.rt_stats.audio.overruns, g_vr.rt_stats.audio.fill_ema,
-                g_vr.rt_stats.audio.max_abs_corr * 100.0);
+                (unsigned long long)g_vr.rt_stats.clock_rebased, (unsigned long long)g_vr.rt_stats.queue.taken,
+                (unsigned long long)(g_vr.rt_stats.queue.overflow_drops + g_vr.rt_stats.queue.surplus_drops),
+                (unsigned long long)g_vr.rt_stats.queue.prime_trims,
+                (unsigned long long)g_vr.rt_stats.queue.underflows,
+                (unsigned long long)g_vr.rt_stats.queue.restore_fills, (unsigned long long)g_vr.rt_stats.end_drops,
+                (unsigned long long)g_vr.rt_stats.audio.underruns, (unsigned long long)g_vr.rt_stats.audio.overruns,
+                g_vr.rt_stats.audio.fill_ema, g_vr.rt_stats.audio.max_abs_corr * 100.0);
     }
     videorec_pipe_flush(&g_vr.pipe);
     uint64_t n = videorec_pipe_next_index(&g_vr.pipe);
@@ -2395,6 +2772,14 @@ void videorec_init(void)
                                    VIDEOREC_RT_AUDIO_CAPACITY_MS);
             g_atomic_int_set(&g_vr_rta_ready, 1);
         }
+        /* vzorkovač tiká tempem emulace, soubor má jmenovitou délku snímku */
+        videorec_rt_audio_set_tick_scale(&g_vr_rta, vr_rt_tick_scale());
+        g_mutex_lock(&g_vr_rtv_mutex);
+        if (!g_vr_rtq_ready) {
+            videorec_rt_frameq_init(&g_vr_rtq, vr_rt_max_catchup(), vr_rtq_release);
+            g_vr_rtq_ready = true;
+        }
+        g_mutex_unlock(&g_vr_rtv_mutex);
         g_mutex_lock(&g_vr_rtc.mutex);
         g_vr_rtc.quit = false;
         g_vr_rtc.run = false;
@@ -2442,6 +2827,15 @@ void videorec_exit(void)
     g_vr.writer = NULL;
     g_ptr_array_free(g_vr.req_markers, TRUE);
     g_vr.req_markers = NULL;
+    /* Obrazy režimu podle reality (tap ani konec snímku po ukončení session nic nevkládají). */
+    g_mutex_lock(&g_vr_rtv_mutex);
+    videorec_rt_frameq_clear(&g_vr_rtq);
+    vr_rtv_unref(g_vr_rtv_prev);
+    g_vr_rtv_prev = NULL;
+    vr_rtv_unref(g_vr_rtv_latest);
+    g_vr_rtv_latest = NULL;
+    while (g_vr_rtv_pool_n) g_free(g_vr_rtv_pool[--g_vr_rtv_pool_n]);
+    g_mutex_unlock(&g_vr_rtv_mutex);
     g_mutex_unlock(&g_vr.mutex);
 }
 
@@ -2627,9 +3021,18 @@ bool videorec_request_timebase(en_VIDEOREC_TIMEBASE tb)
 
 void videorec_rt_video_tap(const uint8_t *pixels)
 {
+    st_VR_RT_IMG *img = NULL;
     g_mutex_lock(&g_vr_rtv_mutex);
-    memcpy(g_vr_rtv_pixels, pixels, sizeof(g_vr_rtv_pixels));
-    g_vr_rtv_seq++;
+    if (g_vr_rtv_pool_n) img = g_vr_rtv_pool[--g_vr_rtv_pool_n];
+    g_mutex_unlock(&g_vr_rtv_mutex);
+    if (!img) img = g_malloc(sizeof(*img));
+    /* kopie mimo zámek: nový obraz ještě nikdo jiný nevidí */
+    memcpy(img->px, pixels, sizeof(img->px));
+    img->refs = 1;
+    g_mutex_lock(&g_vr_rtv_mutex);
+    img->seq = ++g_vr_rtv_seq;
+    vr_rtv_unref(g_vr_rtv_latest);
+    g_vr_rtv_latest = img;
     g_mutex_unlock(&g_vr_rtv_mutex);
 }
 
@@ -2671,6 +3074,9 @@ void videorec_get_rt_stats(st_VIDEOREC_RT_STATS *out)
     *out = g_vr.rt_stats;
     if (g_vr.rt_on) {
         videorec_rt_audio_get_stats(&g_vr_rta, &out->audio);
+        g_mutex_lock(&g_vr_rtv_mutex);
+        out->queue = g_vr_rtq.stats;
+        g_mutex_unlock(&g_vr_rtv_mutex);
         out->clock_rebased = g_vr.rt_clock.rebased;
         out->lost_ticks = g_vr.rt_clock.lost_ticks;
     }
@@ -2781,8 +3187,11 @@ void videorec_on_screen_done(void)
     /* Nečinný stav: jediné atomické čtení (aktivita i požadavky jsou bity jednoho slova). */
     gint flags = g_atomic_int_get(&g_videorec_active);
     if (flags == 0) return;
-    /* Realtime bez požadavku: snímky zapisuje vzorkovač, konec snímku nic nedělá (stejné jedno čtení). */
-    if ((flags & (VIDEOREC_FLAG_RT | VIDEOREC_FLAG_REQ)) == VIDEOREC_FLAG_RT) return;
+    /* Realtime bez požadavku: snímky zapisuje vzorkovač, konec snímku jen vloží snímek do jeho fronty. */
+    if ((flags & (VIDEOREC_FLAG_RT | VIDEOREC_FLAG_REQ)) == VIDEOREC_FLAG_RT) {
+        vr_rt_frame_done();
+        return;
+    }
 
     bool quit = false;
     g_mutex_lock(&g_vr.mutex);
@@ -2815,7 +3224,8 @@ void videorec_on_screen_done(void)
 
     if (g_vr.rt_on) {
         if (!g_vr.rt_leaving) {
-            /* Požadavky v realtime zpracovává vzorkovač. */
+            /* Požadavky v realtime zpracovává vzorkovač; snímek patří do jeho fronty. */
+            vr_rt_frame_done();
             g_mutex_unlock(&g_vr.mutex);
             return;
         }

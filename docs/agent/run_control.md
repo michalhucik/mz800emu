@@ -75,6 +75,10 @@ of `deadline_frames`, `deadline_ms`, `deadline_ticks`:
   MZ-800 frames are shorter, down to 349440 ticks, while the program
   keeps the CKSW bit (bit 7 of port 0x07CF) set - the run still stops at the
   frame boundary).
+- `deadline_ms` converts with the nominal clock (1000 ms = 50 frames on
+  PAL, 60 on NTSC), not with the crystal the emulator plays at (50.036 and
+  59.923 frames per second of real time); it is part of the deterministic
+  emulated time.
 - `deadline_frames` stops exactly at the N-th frame boundary.
   `deadline_ms` / `deadline_ticks` stop at the first emulation event
   point at or after the deadline, less than one frame late.

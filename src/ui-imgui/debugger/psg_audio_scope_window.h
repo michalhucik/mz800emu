@@ -96,7 +96,7 @@ typedef struct st_PSG_SCOPE_ATTN_POINT
  *
  * Časové údaje `t_on` / `t_off` jsou hodnoty `gdg_get_total_ticks()` v
  * okamžiku přechodu (= pxCLK monotonní timebase, 17.7345 MHz pro MZ-800).
- * Pro MIDI/CSV export se konvertují na sekundy přes dělení `GDGCLK_BASE`,
+ * Pro MIDI/CSV export se konvertují na sekundy přes dělení `GDGCLK_REAL_TICKS_PER_SEC`,
  * což je nezávislé na frekvenci UI render loopu (60/75/144 Hz monitor).
  *
  * Invarianty:

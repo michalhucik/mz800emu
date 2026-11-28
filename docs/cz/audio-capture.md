@@ -53,9 +53,10 @@ Příkazová řádka používá stejný výběr souborů.
 
 ## Soubory
 
-Časy v CSV: `ticks` = takty hodin videočipu od začátku zachycení (frekvence
-je `gdg_clk_hz` v capture.json), `time_us` = totéž v mikrosekundách,
-`frame` = snímek od začátku (20 ms PAL, 16,7 ms NTSC).
+Časy v CSV: `ticks` = takty hodin videočipu od začátku zachycení, `time_us`
+= totéž ve skutečných mikrosekundách podle krystalu (`ticks` děleno
+`real_clk_hz` v capture.json), `frame` = snímek od začátku (19,985 ms PAL,
+16,688 ms NTSC; snímek má vždy stejný počet taktů).
 
 **events.csv** - `ticks,time_us,frame,channel,level`. Kanály: `ctc0`
 (reproduktor, úroveň 0, 15 nebo 31), `psg0_0` .. `psg0_3` (PSG, kanál 3 = šum) a na
@@ -95,14 +96,34 @@ nejsou.
 
 **reference.wav** a **sdl.wav** - 44100 Hz, 16 bit, stereo, stejný formát,
 lze je přímo porovnat. reference.wav je spočítaný přesně v emulovaném čase,
-sdl.wav je to, co vyrobil zvukový výstup emulátoru. Jejich rozdíl ukazuje
+sdl.wav je to, co vyrobil zvukový výstup emulátoru. Oba převádějí takty na
+vzorky podle krystalu skutečného počítače, takže tóny mají jeho výšku a na
+snímek připadá 881,36 vzorku (NTSC 735,95); zvukový výstup proto dává bloky
+po 881 nebo 882 vzorcích (NTSC 735 nebo 736). Jejich rozdíl ukazuje
 vady zvukového výstupu. sdl.wav je opožděný: bez zvukového zařízení
 (`--headless`) přesně o jeden snímek, se zařízením podle jeho bufferu. Se
 zařízením při MAX SPEED zvukový výstup snímky vynechává - capture.json má pak
 `sdl_blocks` menší než `frames`.
 
-**capture.json** - platforma, `gdg_clk_hz`, `frames_per_sec`, `wav_rate`,
-názvy kanálů, počty (`frames`, `events`, `psg_writes`, `reference_samples`,
+Snímek zachycení (`frames`, souhrny snímků, okna PCM po snímcích) je jedna
+synchronizační událost emulace. Při 100 % je to snímek obrazu, při vlastní
+rychlosti úsek emulace o délce rychlost krát snímek: reference.wav za něj
+dostane vzorky jeho emulovaného času (při 50 % asi polovinu), sdl.wav jeden
+blok 881 nebo 882 vzorků (NTSC 735 nebo 736) bez ohledu na rychlost - proto
+při vlastní rychlosti nemají oba soubory stejnou délku a tón v sdl.wav má
+výšku změněnou podle rychlosti jako to, co hraje reproduktor. Okna PCM po
+snímcích (MCP) mají přesné hranice snímků po celou dobu, co paměť drží jejich
+zvuk, i po změně rychlosti; pokrývají jen uzavřené snímky. Porovnání
+reference a zvukového výstupu v souhrnu při vlastní rychlosti neměří
+(oba proudy mají jiné časové měřítko), ani když do snímku s vlastní
+rychlostí sahá zpoždění zvukového výstupu, a řekne to.
+
+**capture.json** - platforma, `gdg_clk_hz` a `frames_per_sec` (zaokrouhlený
+takt a celé snímky za sekundu, beze změny kvůli kompatibilitě), `wav_rate`,
+`real_clk_hz` (krystal: takty za skutečnou sekundu, podle kterých jsou WAV
+a `time_us`), `frames_per_sec_real` (skutečné snímky za sekundu, 50.036326
+nebo 59.922743) a přesně jako zlomek `frames_per_sec_real_num` /
+`frames_per_sec_real_den` (krystal / takty snímku), názvy kanálů, počty (`frames`, `events`, `psg_writes`, `reference_samples`,
 `sdl_blocks`, `sdl_samples`) a `stop_reason`. Dále časy v taktech GDG od
 spuštění emulace (stejná časová osa jako `total_screens` *
 `screen_total_ticks_per_frame` + `total_ticks` v MCP `emulator://periph/gdg`):
@@ -118,7 +139,7 @@ spuštění emulace (stejná časová osa jako `total_screens` *
 
 (bez začátku nebo bez řádků CSV jsou hodnoty `null`) a `clocks` - hodiny
 platformy se stejnými názvy jako v MCP `emulator://platform/info`:
-`gdg_base_hz` (zaokrouhlená frekvence, na které běží emulovaný čas),
+`gdg_base_hz` (zaokrouhlená frekvence: takty snímku krát celé snímky za sekundu),
 `gdg_real_base_hz` (skutečný krystal), `cpu_divider`, `ctc0_divider`,
 `psg_divider` (bez PSG `null`) a `screen_total_ticks_per_frame`.
 

@@ -64,11 +64,15 @@
  * (`a = 1 - (1 - a44)^(44100/rate)`) a stejnými dobami parkování v ms
  * (videorec_audio_coef_init()).
  *
- * Proti SDL cestě se liší jen vstupní převzorkování: SDL bere bodové vzorky
- * (PSG) a u CTC0 podíl nenulových vzorků 553,8 kHz proudu dělený
- * `(délka bloku + 1)`; renderer průměruje přesně přes interval vzorku
- * a zesílení CTC0 dorovnává konstantou videorec_audio_sdl_ctc0_gain()
- * (zapečenou do tabulky úrovní). Paritu ověřuje
+ * Proti SDL cestě se liší jen vstupní převzorkování CTC0: PSG průměrují obě
+ * cesty stejně přes interval vzorku v celých taktech (SDL cesta po blocích,
+ * s přenosem kusu vzorku přes hranici bloku, iface_audio_resampler_psg_average()),
+ * u CTC0 bere SDL cesta buňky 553,8 kHz proudu
+ * (bodové vzorky po 32 taktech) vážené překryvem s intervalem vzorku,
+ * dělené `(délka intervalu v buňkách + 1)`; renderer průměruje
+ * přesně přes interval vzorku a zesílení CTC0 dorovnává konstantou
+ * iface_audio_ctc0_sdl_gain() (zapečenou do tabulky úrovní). Intervaly
+ * vzorků obou cest leží na stejné souvislé časové ose. Paritu ověřuje
  * tests/videorec/test_videorec_audio_sdl_parity.c.
  *
  * Trvalou úroveň (CTC0 držený na 1), která by zabrala rozsah, odstraňuje
@@ -311,13 +315,18 @@ typedef struct st_VIDEOREC_AUDIO {
 void videorec_audio_coef_init(st_VIDEOREC_AUDIO_COEF *c, unsigned rate);
 
 /**
- * @brief Střední zesílení převzorkování CTC0 v SDL cestě.
+ * @brief Střední zesílení převzorkování CTC0 při dělení snímku na stejné díly.
  *
- * SDL cesta (iface_audio_resampler_output_stream_ctc0(), iface_audio_resampler.c:203-227)
- * počítá vzorek jako `počet nenulových / (délka bloku + 1)` z proudu
- * `ctc_samples` bodových vzorků na snímek do `out_samples` výstupních. Pro
- * trvale nenulový vstup to dává `délka / (délka + 1)` (cca 0,926 u MZ-800);
- * funkce vrací průměr přes snímek, kterým renderer dorovnává hlasitost CTC0.
+ * Vzorek je `počet nenulových / (počet buněk + 1)` z proudu `ctc_samples`
+ * bodových vzorků (buněk) na snímek rozděleného na `out_samples` dílů
+ * `[floor(i * r), floor((i + 1) * r))`, `r = ctc_samples / out_samples`,
+ * s horní mezí poslední buňky `ctc_samples - 1`. Pro trvale nenulový vstup
+ * to dává `počet / (počet + 1)` (cca 0,926 u MZ-800); funkce vrací průměr
+ * přes snímek. Tak dělila snímek SDL cesta do 2026-11-26; od té doby leží
+ * vzorky na souvislé časové ose s krajními buňkami váženými překryvem
+ * a zesílení, kterým se dorovnává hlasitost CTC0 (tabulka úrovní rendereru
+ * i mix), je iface_audio_ctc0_sdl_gain() (iface_audio.h; MZ-800 0,926291,
+ * tato funkce pro 11076 buněk a 882 vzorků 0,926142).
  *
  * @param ctc_samples Vzorky CTC0 proudu na snímek (IFACE_AUDIO_CTC5253_SAMPLE_RATE / fps); nenulové.
  * @param out_samples Výstupní vzorky na snímek (44100 / fps); nenulové, `<= ctc_samples`.

@@ -17,8 +17,9 @@
  * free, viz CHECKLIST 2.5). Žádné `psg_write_byte()` / `psg_step()`.
  *
  * Frekvenční vzorec (SN76489):
- *   f_out = GDGCLK_BASE / (32 * divider * GDGCLK2CPU_DIVIDER)
+ *   f_out = GDGCLK_REAL_TICKS_PER_SEC / (32 * divider * GDGCLK2CPU_DIVIDER)
  *         = CPU_CLOCK / (32 * divider)
+ *   (Hz skutečného stroje: takty se na sekundy převádějí podle krystalu),
  *   - PSG_DIVIDER = 16 * GDGCLK2CPU_DIVIDER GDG ticků mezi `psg_step()`
  *     voláními (psg.h),
  *   - každý `psg_step` dekrementuje timer, při 0 toggle output_signal,
@@ -126,14 +127,16 @@ static void format_attn_db(unsigned attn, char *out, size_t sz)
 /**
  * @brief Vypočte frekvenci square-wave výstupu TONE kanálu.
  *
- * Vzorec: f = GDGCLK_BASE / (32 * divider * GDGCLK2CPU_DIVIDER),
+ * Vzorec: f = GDGCLK_REAL_TICKS_PER_SEC / (32 * divider * GDGCLK2CPU_DIVIDER),
  * ekvivalentně CPU_CLOCK / (32 * divider). Divider 0 se počítá jako 1024.
  * Pro divider 1 vrací 0 (stálá úroveň 0,49 plné výchylky, ve slyšitelném pásmu to není oscilace).
  *
- * GDGCLK_BASE a GDGCLK2CPU_DIVIDER jsou per-arch makra. Výsledný CPU
- * clock: MZ-800 = 17 721 600 / 5 = 3.5469 MHz, MZ-700/MZ-1500 =
- * 14 336 640 / 4 = 3.5796 MHz. Standardní SN76489 formule s input
- * clock = CPU clock, interní /16 prescaler a 2x toggle pro plnou periodu.
+ * GDGCLK_REAL_TICKS_PER_SEC (krystal) a GDGCLK2CPU_DIVIDER jsou per-arch
+ * makra; emulátor běží a hraje podle krystalu, proto okno ukazuje Hz
+ * skutečného stroje. Výsledný CPU clock: MZ-800 = 17 734 475 / 5 =
+ * 3,5469 MHz, MZ-700 NTSC a MZ-1500 = 14 318 180 / 4 = 3,5795 MHz.
+ * Standardní SN76489 formule s input clock = CPU clock, interní /16
+ * prescaler a 2x toggle pro plnou periodu.
  *
  * Počítá sdílená audio_psg_tone_hz() (audio_analysis.h), stejně jako PSG
  * Audio Scope a MCP souhrn zachyceného zvuku.
@@ -143,7 +146,7 @@ static void format_attn_db(unsigned attn, char *out, size_t sz)
  */
 static double psg_tone_frequency_hz(unsigned divider)
 {
-    return audio_psg_tone_hz(divider, (uint64_t)GDGCLK_BASE, (unsigned)GDGCLK2CPU_DIVIDER);
+    return audio_psg_tone_hz(divider, GDGCLK_REAL_TICKS_PER_SEC, (unsigned)GDGCLK2CPU_DIVIDER);
 }
 
 /**

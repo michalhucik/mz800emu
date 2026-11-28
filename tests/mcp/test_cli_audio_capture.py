@@ -10,7 +10,10 @@ ROM) a ověří:
      a capture.json; capture.json má ``frames`` = zadaný počet,
      ``stop_reason`` = ``Frame count reached`` a v headless režimu
      ``sdl_blocks`` = ``frames`` (SDL cesta vyrábí blok každý snímek),
-  3. velikost obou WAV odpovídá počtu vzorků v capture.json (hlavička 44 B),
+  3. velikost obou WAV odpovídá počtu vzorků v capture.json (hlavička 44 B);
+     počet vzorků odpovídá skutečnému času podle krystalu (881,36 vzorku na
+     snímek PAL), capture.json má vedle jmenovitých ``gdg_clk_hz``
+     a ``frames_per_sec`` i ``real_clk_hz`` a ``frames_per_sec_real*``,
   4. výběr souborů z INI ``[AUDIO_CAPTURE]`` (psg_writes=0, sdl_wav=0) se
      použije - tyto soubory chybí.
 
@@ -99,10 +102,18 @@ def test_all_files(exe):
         check(info["platform"] == "mz800", f"platform mz800 (got {info['platform']!r})")
         # Absolutní časy: reference.wav pokrývá origin_ticks..end_ticks.
         check(info["began"] is True, "capture.json began == true")
+        # WAV je ve skutečném čase podle krystalu: takty na vzorek = real_clk_hz / wav_rate.
         span = info["end_ticks"] - info["origin_ticks"]
-        expect = info["reference_samples"] * info["gdg_clk_hz"] / info["wav_rate"]
-        check(abs(span - expect) <= info["gdg_clk_hz"] / info["wav_rate"] * 2,
+        expect = info["reference_samples"] * info["real_clk_hz"] / info["wav_rate"]
+        check(abs(span - expect) <= info["real_clk_hz"] / info["wav_rate"] * 2,
               f"end_ticks - origin_ticks matches reference.wav length ({span} vs {expect:.0f})")
+        check(info["gdg_clk_hz"] == 17721600 and info["frames_per_sec"] == 50,
+              "capture.json keeps the nominal gdg_clk_hz and frames_per_sec")
+        check(info["real_clk_hz"] == 17734475, f"capture.json real_clk_hz (got {info['real_clk_hz']})")
+        check(info["frames_per_sec_real_num"] == 17734475 and info["frames_per_sec_real_den"] == 354432,
+              "capture.json frames_per_sec_real_num / _den = crystal / ticks per frame")
+        check(abs(info["frames_per_sec_real"] - 50.036326) < 1e-6,
+              f"capture.json frames_per_sec_real (got {info['frames_per_sec_real']})")
         check(info["last_event_ticks"] is None or info["last_event_ticks"] >= info["origin_ticks"],
               "last_event_ticks >= origin_ticks")
         clocks = info["clocks"]
@@ -112,9 +123,13 @@ def test_all_files(exe):
         for name, key in (("reference.wav", "reference_samples"), ("sdl.wav", "sdl_samples")):
             size = (out / name).stat().st_size
             check(size == 44 + info[key] * 4, f"{name} size matches {key} ({size} bytes)")
-        per_frame = 44100 // info["frames_per_sec"]
-        check(abs(info["reference_samples"] - FRAMES * per_frame) <= 1,
-              f"reference.wav has {FRAMES} frames of samples (got {info['reference_samples']})")
+        # snímek podle krystalu má 44100 * 354432 / 17734475 = 881,36 vzorku
+        expect_samples = FRAMES * 44100 * info["frames_per_sec_real_den"] // info["frames_per_sec_real_num"]
+        check(abs(info["reference_samples"] - expect_samples) <= 1,
+              f"reference.wav has {FRAMES} frames of samples ({expect_samples}, got {info['reference_samples']})")
+        # sdl.wav: bloky SDL cesty 881 nebo 882 vzorků (akumulátor podle krystalu)
+        check(abs(info["sdl_samples"] - info["sdl_blocks"] * 44100 * 354432 / 17734475) <= 1,
+              f"sdl.wav: sdl_blocks blocks of 881 or 882 samples (got {info['sdl_samples']} in {info['sdl_blocks']})")
         events = (out / "events.csv").read_text(encoding="utf-8").splitlines()
         check(events[0] == "ticks,time_us,frame,channel,level", "events.csv header")
         check(events[1].startswith("0,0.000,0,ctc0,"), "events.csv starts with the initial levels")

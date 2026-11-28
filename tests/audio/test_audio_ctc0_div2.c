@@ -522,17 +522,20 @@ void test_div2_level_in_audio_paths(void)
     g_free(a);
 
     /* převzorkování SDL cesty: první vzorek po střídavé vazbě ze stavu 0 */
-    const size_t in_count = IFACE_AUDIO_CTC5253_SAMPLE_RATE / 50;
-    const size_t out_count = IFACE_AUDIO_SAMPLE_RATE / 50;
+    const size_t in_count = IFACE_AUDIO_CTC0_SAMPLES_PER_FRAME;
+    const size_t out_count = IFACE_AUDIO_BLOCK_SAMPLES_MAX - 1u;
     uint8_t *in = g_malloc(in_count);
     float *raw = g_malloc0(out_count * sizeof(float));
+    int64_t *edges = g_malloc((out_count + 1u) * sizeof(int64_t));
+    /* první blok od nulové fáze akumulátoru (881 vzorků PAL) */
+    iface_audio_block_timing(0, out_count, 0, VIDEO_SCREEN_TICKS, NULL, edges);
     float first[2];
     static const uint8_t v[2] = { AUDIO_MAXVAL_PER_CHANNEL, AUDIO_LEVEL_CTC0_DIV2 };
     for (unsigned i = 0; i < 2; i++)
     {
         memset(in, v[i], in_count);
         iface_audio_resampler_ctc0_ac_seed(0.0);
-        float *out = iface_audio_resampler_output_stream_ctc0(in, in_count, out_count, raw);
+        float *out = iface_audio_resampler_output_stream_ctc0(in, in_count, edges, out_count, false, raw);
         TEST_ASSERT_NOT_NULL(out);
         first[i] = raw[0];
         g_free(out);
@@ -540,6 +543,7 @@ void test_div2_level_in_audio_paths(void)
     iface_audio_resampler_ctc0_ac_seed(0.0);
     g_free(in);
     g_free(raw);
+    g_free(edges);
     TEST_ASSERT_TRUE(first[0] > 0.5f);
     TEST_ASSERT_FLOAT_WITHIN(1e-3f, 0.64f, first[1] / first[0]);
 }

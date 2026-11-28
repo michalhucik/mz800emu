@@ -39,7 +39,10 @@ extern "C" {
  * a výstup se překlápí jednou za periodu děliče.
  *
  * @param divider     10bitový dělič tónu 0..1023.
- * @param gdg_hz      Takt GDG [Hz] (GDGCLK_BASE platformy).
+ * @param gdg_hz      Takty GDG za sekundu [Hz], podle kterých se počítá výsledek;
+ *                    volající v emulátoru předávají krystal
+ *                    (GDGCLK_REAL_TICKS_PER_SEC), aby vyšel kmitočet skutečného
+ *                    stroje.
  * @param cpu_divider Takty GDG na takt CPU (GDGCLK2CPU_DIVIDER).
  * @return Frekvence [Hz]; divider 0 se počítá jako 1024 (chování SN76489AN);
  *         0 pro divider 1 (emulátor drží stejnosměrný výstup) nebo nulový
@@ -176,20 +179,56 @@ typedef struct st_AUDIO_COMPARE {
     double diff_rms;  /**< RMS rozdílu (mono průměr L,R) při `lag`, v jednotkách -1..1. */
     double diff_max;  /**< Největší absolutní rozdíl při `lag`, -1..1. */
     double a_rms;     /**< RMS prvního signálu v porovnaném úseku, -1..1. */
-    bool lag_ambiguous; /**< audio_compare(): obálka nemá výrazné minimum (ustálený signál bez nástupu), posun z dat určit nejde. */
+    bool lag_ambiguous; /**< audio_compare(): posun z dat určit nejde - skóre posunů nemá výrazné minimum (ustálený signál bez nástupu, konstantní nebo nulový vstup) nebo má jiné stejně dobré minimum (periodický signál v krátkém úseku, opakovaný nástup, dvě kopie), nebo krátký úsek zarovnání nevysvětlí; `lag` je pak jen první nejlepší z rovnocenných. audio_diff() ho nenastavuje (false). */
 } st_AUDIO_COMPARE;
 
 /**
  * @brief Najde posun druhého signálu (0..max_lag vzorků), při kterém se nejvíc shoduje s prvním.
  *
- * Hledá podle obálky (průměr |x| mono průměru přes 256 vzorků): nejmenší
- * průměrný čtverec rozdílu obálek nejdřív hrubě po 16 vzorcích, pak přesně
- * v okolí ±32 vzorků; nakonec zpřesní na surovém signálu v okolí ±8 vzorků.
- * Obálka je u ustáleného periodického signálu plochá, takže posun určí
- * nástupy a změny hlasitosti, ne minima rozdílu po periodách tónu. Bez
- * výrazného minima (nejlepší skóre aspoň polovina mediánu) nastaví
- * out->lag_ambiguous. Porovnává nejvýš `window` párů od začátku signálu a;
- * signály kratší než okno obálky porovná přímo.
+ * Krátká porovnání (páry krát zkoušené posuny nejvýš 2048 x 7051, nebo
+ * méně párů než okno obálky 256) hledá přesně: průměrný čtverec rozdílu
+ * původních vzorků pro každý dovolený posun, posun = první nejmenší skóre.
+ * Delší hledá podle obálky (průměr |x| mono průměru přes 256 vzorků):
+ * nejmenší průměrný čtverec rozdílu obálek nejdřív hrubě po 16 vzorcích, pak
+ * přesně v okolí ±32 vzorků; nakonec zpřesní na surovém signálu v okolí ±8
+ * vzorků. Obálka je u ustáleného periodického signálu plochá, takže posun
+ * určí nástupy a změny hlasitosti, ne minima rozdílu po periodách tónu; přesné
+ * zarovnání mimo hrubou mřížku a dál než 8 vzorků od zpřesněného posunu tu
+ * může uniknout (posun je odhad). Bez výrazného minima (nejlepší skóre aspoň
+ * polovina mediánu) nastaví out->lag_ambiguous. Porovnává nejvýš `window`
+ * párů od začátku signálu a.
+ *
+ * Dovolené posuny: 0..max_lag, ale jen takové, při kterých zbývá aspoň
+ * polovina největšího možného překryvu (min(na, nb, window) párů, zaokrouhleno
+ * nahoru); posun s několika zbylými dvojicemi by jinak vyhrál náhodou (jedna
+ * shodná dvojice = skóre 0). out->compared je proto aspoň tato polovina.
+ * Když je b aspoň o max_lag delší než a (volání ze souhrnu zachycení), mez
+ * nic neubírá.
+ *
+ * out->lag_ambiguous je true, když:
+ * - medián skóre všech posunů není kladný (konstantní nebo nulový vstup),
+ * - nejlepší skóre není pod polovinou mediánu,
+ * - jiné lokální minimum skóre je od nejlepšího nejvýš o 1 % mediánu
+ *   (stejně dobrá minima: periodický tón v krátkém úseku, ustálený tón,
+ *   opakovaný úsek, rovina); u obálky jen minima dál než 256 vzorků,
+ * - u obálky: lokální minimum hrubých skóre do 256 vzorků od nejlepšího
+ *   (předvýběr: skóre nejvýš o 25 % mediánu nad nejlepším), zpřesněné na
+ *   původních vzorcích (±8) na samostatné minimum dál než 8 vzorků od
+ *   zvoleného posunu, je při stejné délce překryvu nejvýš o 5 % horší
+ *   (dvě přesné kopie blízko sebe); obálka tu jen rozmazává (nástup tónu
+ *   má vedlejší minima o periodu tónu vedle, na původních vzorcích 3,6krát
+ *   horší),
+ * - u přesného hledání: nejlepší skóre je větší než čtvrtina součtu energií
+ *   obou úseků při zvoleném posunu (nezávislé signály, náhodné minimum);
+ *   jiné minimum o 1 % mediánu se tu bere v celém rozsahu posunů, i o vzorek
+ *   vedle (dvě přesné kopie jakkoli blízko).
+ * Pravidla jsou heuristika emulátoru; nastavují jen příznak, zvolený posun
+ * ani rozdíl nemění. Bez paměti na výpočet se příznak nastaví (nelze
+ * rozhodnout). Omezení (jen hledání přes obálku): dvě rovnocenné kopie blíž
+ * než 9 vzorků od sebe (jedna dolina na původních vzorcích) se jako
+ * nejednoznačné nepoznají, kandidát mimo předvýběr se na původních vzorcích
+ * nezkoumá a přesné zarovnání mimo mřížku může uniknout. Nejednoznačnost
+ * false je i u přesného hledání jen to, že se nenašel rovnocenný konkurent.
  *
  * @param a       První signál (prokládané L,R), `na` párů.
  * @param na      Počet párů a.

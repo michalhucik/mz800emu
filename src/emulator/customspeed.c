@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include "hw-generic/gdg/video.h"
+#include "hw-generic/gdg/gdgclk.h"
 #include "mzarch/mzarch.h"
 #include "customspeed.h"
 #include "emulator.h"
@@ -19,9 +20,17 @@
 
 st_CUSTOMSPEED g_customspeed;
 
+/**
+ * @brief Vypíše požadovanou rychlost, délku snímku a snímky za sekundu.
+ *
+ * Délka snímku i FPS jsou ve skutečném čase podle krystalu (při 100 %
+ * 19,99 ms a 50,04 FPS na PAL, 16,69 ms a 59,92 FPS na NTSC), protože
+ * emulace podle krystalu běží. Jen výpis; takty a události synchronizace
+ * (speed_frame_width_requested) se tu nemění.
+ */
 void customspeed_print(void)
 {
-    float frame_time = ((float)VIDEO_SCREEN_TICKS / g_customspeed.speed_frame_width_requested) * (1000.0f / VIDEO_SCREENS_PER_SEC);
+    float frame_time = ((float)VIDEO_SCREEN_TICKS / g_customspeed.speed_frame_width_requested) * (float)(1000.0 / GDGCLK_REAL_FPS);
     float fps = (1 / frame_time) * 1000;
     g_print("%s speed: %d %% => frame time: %0.2f ms, FPS: %0.2f\n", (EMULATOR_TEST_CUSTOM_SPEED) ? "Custom" : "Normal", g_customspeed.speed_in_percentage_requested, frame_time, fps);
 }

@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mz800emu 1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-23 22:23+0100\n"
+"POT-Creation-Date: 2026-11-25 17:54+0100\n"
 "PO-Revision-Date: 2026-03-11 22:00+0100\n"
 "Last-Translator: Claude Code\n"
 "Language-Team: Polski\n"
@@ -532,33 +532,33 @@ msgstr ""
 "Filtr dolnoprzepustowy wyjścia dźwięku prawdziwego MZ-800 (346 Hz). "
 "Wyłączony = poprzedni, jaśniejszy dźwięk."
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:66
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:67
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:172
 #: src/ui-imgui/videorec/videorec_menu.cpp:422
 #, c-format
 msgid "Cannot open folder: %s"
 msgstr "Nie można otworzyć folderu: %s"
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:67
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:86
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:141
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:68
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:87
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:142
 msgid "Audio Capture Error"
 msgstr "Błąd przechwytywania dźwięku"
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:85
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:86
 #, c-format
 msgid "Cannot start the audio capture: %s"
 msgstr "Nie można uruchomić przechwytywania dźwięku: %s"
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:94
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:95
 msgid "Audio Capture"
 msgstr "Przechwytywanie dźwięku"
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:97
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:98
 msgid "Record Audio Capture"
 msgstr "Przechwyć dźwięk"
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:101
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:102
 msgid ""
 "Records what the sound hardware does into a new folder until you stop it:\n"
 "changes of the channel levels, PSG writes, the exact sound (reference.wav)\n"
@@ -569,12 +569,12 @@ msgstr ""
 "zmiany poziomów kanałów, zapisy do PSG, dokładny dźwięk (reference.wav)\n"
 "i dźwięk, który słyszysz (sdl.wav). Do szukania błędów dźwięku."
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:106
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:107
 msgid "Audio Capture Control..."
 msgstr "Sterowanie przechwytywaniem dźwięku..."
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:110
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:431
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:111
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:432
 #: src/ui-imgui/mz700/devbus/menu_devbus.cpp:340
 #: src/ui-imgui/overlay/overlay_actions.cpp:1306
 #: src/ui-imgui/overlay/overlay_actions.cpp:1311
@@ -588,8 +588,8 @@ msgstr "Sterowanie przechwytywaniem dźwięku..."
 msgid "Settings..."
 msgstr "Ustawienia..."
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:113
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:429
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:114
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:430
 #: src/ui-imgui/overlay/overlay_actions.cpp:1305
 #: src/ui-imgui/overlay/overlay_actions.cpp:1310
 #: src/ui-imgui/overlay/overlay_tab_capture.cpp:102
@@ -602,84 +602,84 @@ msgstr "Ustawienia..."
 msgid "Open Output Folder"
 msgstr "Otwórz folder wyjściowy"
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:140
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:141
 #, c-format
 msgid "Audio capture stopped after %.1f s: %s"
 msgstr "Przechwytywanie dźwięku zatrzymane po %.1f s: %s"
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:145
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:146
 #, c-format
 msgid "Audio capture ended (%s): %.1f s saved to %s"
 msgstr "Przechwytywanie dźwięku zakończone (%s): %.1f s zapisano w %s"
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:150
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:151
 #, c-format
 msgid "Audio capture saved: %.1f s to %s"
 msgstr "Przechwytywanie dźwięku zapisane: %.1f s w %s"
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:165
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:166
 #, c-format
 msgid "AUDIO %.1f s"
 msgstr "DŹWIĘK %.1f s"
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:167
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:168
 msgid "AUDIO starting"
 msgstr "DŹWIĘK start"
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:212
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:213
 msgid "Audio Capture Settings"
 msgstr "Ustawienia przechwytywania dźwięku"
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:215
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:216
 msgid "Files to write"
 msgstr "Pliki do zapisu"
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:216
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:217
 msgid "events.csv - changes of the channel levels"
 msgstr "events.csv - zmiany poziomów kanałów"
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:217
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:218
 msgid "psg_writes.csv - PSG writes, decoded"
 msgstr "psg_writes.csv - zapisy do PSG, zdekodowane"
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:218
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:219
 msgid "reference.wav - exact sound in emulated time"
 msgstr "reference.wav - dokładny dźwięk w czasie emulowanym"
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:219
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:220
 msgid "sdl.wav - sound of the audio output (what you hear)"
 msgstr "sdl.wav - dźwięk wyjścia audio (to, co słyszysz)"
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:223
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:410
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:224
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:411
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:407
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:594
 #: src/ui-imgui/videorec/videorec_setup_dialog.cpp:260
 msgid "Output folder"
 msgstr "Folder wyjściowy"
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:226
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:227
 msgid "(default: audio_captures folder next to the emulator)"
 msgstr "(domyślnie: folder audio_captures obok emulatora)"
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:236
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:237
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:420
 #: src/ui-imgui/snapshot/snapshot_setup_dialog.cpp:80
 #: src/ui-imgui/videorec/videorec_setup_dialog.cpp:273
 msgid "Select Directory"
 msgstr "Wybierz katalog"
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:239
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:426
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:240
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:427
 msgid "Each capture creates a new folder in the output folder."
 msgstr "Każde przechwycenie tworzy nowy folder w folderze wyjściowym."
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:240
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:241
 #, c-format
 msgid "Record Audio Capture (%s) starts and stops the capture."
 msgstr "Przechwyć dźwięk (%s) uruchamia i zatrzymuje przechwytywanie."
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:249
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:250
 #: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:953
 #: src/ui-imgui/cmt/cmt_tapeinfo_dialog.cpp:753
 #: src/ui-imgui/cmt/cmt_view.cpp:172 src/ui-imgui/cmt/ImGuiCmt.cpp:186
@@ -696,7 +696,7 @@ msgstr "Przechwyć dźwięk (%s) uruchamia i zatrzymuje przechwytywanie."
 msgid "OK"
 msgstr "OK"
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:255
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:256
 #: src/ui-imgui/cmt/cmt_analyze_dialog.cpp:2277
 #: src/ui-imgui/cmt/cmt_convert_dialog.cpp:609
 #: src/ui-imgui/cmt/cmt_tape_actions.cpp:1091
@@ -729,25 +729,25 @@ msgstr "OK"
 msgid "Cancel"
 msgstr "Anuluj"
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:360
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:361
 msgid "Audio Capture Control"
 msgstr "Sterowanie przechwytywaniem dźwięku"
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:376
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:377
 #: src/ui-imgui/topmenu/replay_window.cpp:201
 #: src/ui-imgui/videorec/videorec_remote_window.cpp:171
 msgid "State"
 msgstr "Stan"
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:379
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:380
 msgid "Capturing"
 msgstr "Przechwytywanie"
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:381
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:382
 msgid "Starting"
 msgstr "Uruchamianie"
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:383
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:384
 #: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:306
 #: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:348
 #: src/ui-imgui/debugger/menu/dbg_topmenu.cpp:391
@@ -758,56 +758,56 @@ msgstr "Uruchamianie"
 msgid "Off"
 msgstr "Wył"
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:388
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:389
 #: src/ui-imgui/videorec/videorec_remote_window.cpp:177
 msgid "Time"
 msgstr "Czas"
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:388
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:389
 msgid "Last length"
 msgstr "Ostatnia długość"
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:389
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:390
 msgid "Folder"
 msgstr "Folder"
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:390
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:391
 #, c-format
 msgid "%llu level changes, %llu PSG writes"
 msgstr "%llu zmian poziomu, %llu zapisów PSG"
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:392
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:393
 msgid "Recorded"
 msgstr "Zapisano"
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:395
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:397
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:396
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:398
 #: src/ui-imgui/topmenu/replay_window.cpp:290
 msgid "Last result"
 msgstr "Ostatni wynik"
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:405
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:406
 msgid "Files"
 msgstr "Pliki"
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:414
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:415
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:633
 #: src/ui-imgui/topmenu/replay_window.cpp:307
 #: src/ui-imgui/videorec/videorec_remote_window.cpp:227
 msgid "Controls"
 msgstr "Sterowanie"
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:416
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:421
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:417
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:422
 msgid "Start Audio Capture"
 msgstr "Rozpocznij przechwytywanie dźwięku"
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:417
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:421
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:418
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:422
 msgid "Stop Audio Capture"
 msgstr "Zatrzymaj przechwytywanie dźwięku"
 
-#: src/ui-imgui/audiocap/audio_capture_ui.cpp:434
+#: src/ui-imgui/audiocap/audio_capture_ui.cpp:435
 #: src/ui-imgui/screenshot/screenshot_ui.cpp:661
 #: src/ui-imgui/topmenu/replay_window.cpp:361
 #: src/ui-imgui/videorec/videorec_remote_window.cpp:320
@@ -4647,7 +4647,7 @@ msgstr "Polityka konfliktu:"
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:2156
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:2682
 #: src/ui-imgui/debugger/eventview/event_viewer_window.cpp:2845
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3161
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3162
 #: src/ui-imgui/debugger/ramlog_window/ramlog_window.cpp:312
 #: src/ui-imgui/topmenu/menu_replay.cpp:247
 #: src/ui-imgui/topmenu/replay_window.cpp:245
@@ -4773,10 +4773,10 @@ msgstr "Ostatnie słowo sterujące"
 #: src/ui-imgui/debugger/pioz80_window.cpp:268
 #: src/ui-imgui/debugger/pioz80_window.cpp:293
 #: src/ui-imgui/debugger/pioz80_window.cpp:405
-#: src/ui-imgui/debugger/psg_window.cpp:366
-#: src/ui-imgui/debugger/psg_window.cpp:416
-#: src/ui-imgui/debugger/psg_window.cpp:462
-#: src/ui-imgui/debugger/psg_window.cpp:540
+#: src/ui-imgui/debugger/psg_window.cpp:369
+#: src/ui-imgui/debugger/psg_window.cpp:419
+#: src/ui-imgui/debugger/psg_window.cpp:465
+#: src/ui-imgui/debugger/psg_window.cpp:543
 msgid "Field"
 msgstr "Pole"
 
@@ -4787,10 +4787,10 @@ msgstr "Pole"
 #: src/ui-imgui/debugger/memsearch_window/memsearch_window.cpp:701
 #: src/ui-imgui/debugger/pioz80_window.cpp:294
 #: src/ui-imgui/debugger/pioz80_window.cpp:406
-#: src/ui-imgui/debugger/psg_window.cpp:367
-#: src/ui-imgui/debugger/psg_window.cpp:417
-#: src/ui-imgui/debugger/psg_window.cpp:463
-#: src/ui-imgui/debugger/psg_window.cpp:541
+#: src/ui-imgui/debugger/psg_window.cpp:370
+#: src/ui-imgui/debugger/psg_window.cpp:420
+#: src/ui-imgui/debugger/psg_window.cpp:466
+#: src/ui-imgui/debugger/psg_window.cpp:544
 #: src/ui-imgui/debugger/vars/vars_window.cpp:1504
 #: src/ui-imgui/debugger/watch/watch_window.cpp:1703
 msgid "Value"
@@ -7332,7 +7332,7 @@ msgid "Size (hex)###mb_save_size"
 msgstr "Rozmiar (hex)###mb_save_size"
 
 #: src/ui-imgui/debugger/membrowser/membrowser_fileio.cpp:473
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1834
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1835
 #: src/ui-imgui/debugger/sections/dbg_coverage.cpp:433
 #: src/ui-imgui/debugger/sections/dbg_profiler_pc.cpp:307
 #: src/ui-imgui/mz700/devbus/menu_devbus.cpp:231
@@ -9713,241 +9713,241 @@ msgid "no data"
 msgstr "brak danych"
 
 #: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1168
-#: src/ui-imgui/debugger/psg_window.cpp:266
+#: src/ui-imgui/debugger/psg_window.cpp:269
 msgid "silent"
 msgstr "cisza"
 
 #: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1187
-#: src/ui-imgui/debugger/psg_window.cpp:286
+#: src/ui-imgui/debugger/psg_window.cpp:289
 msgid "DC"
 msgstr "DC"
 
 #: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1436
-#: src/ui-imgui/debugger/psg_window.cpp:75
+#: src/ui-imgui/debugger/psg_window.cpp:76
 msgid "TONE"
 msgstr "TON"
 
 #: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1438
-#: src/ui-imgui/debugger/psg_window.cpp:76
+#: src/ui-imgui/debugger/psg_window.cpp:77
 msgid "NOISE"
 msgstr "SZUM"
 
 #: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1442
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1773
-#: src/ui-imgui/debugger/psg_window.cpp:598
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1774
+#: src/ui-imgui/debugger/psg_window.cpp:601
 msgid "Channel"
 msgstr "Kanał"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1774
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1775
 msgid "chip"
 msgstr "chip"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1777
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1778
 msgid "Pitch: Noise"
 msgstr "Wysokość: szum"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1782
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1783
 msgid "Pitch"
 msgstr "Wysokość"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1783
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1784
 msgid "cents"
 msgstr "centy"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1785
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1786
 msgid "Duration"
 msgstr "Czas trwania"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1786
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1787
 msgid "Velocity"
 msgstr "Velocity"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1799
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1800
 msgid "Volume changes"
 msgstr "Zmiany głośności"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1803
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1804
 msgid "overflowed"
 msgstr "przepełniony"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1807
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3179
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1808
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3180
 msgid "active"
 msgstr "aktywny"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1836
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1837
 msgid "Last 10s###PSGScopeRoll10s"
 msgstr "Ostatnie 10s###PSGScopeRoll10s"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1839
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1840
 msgid "Last 30s###PSGScopeRoll30s"
 msgstr "Ostatnie 30s###PSGScopeRoll30s"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1842
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1843
 msgid "All###PSGScopeRollAll"
 msgstr "Wszystko###PSGScopeRollAll"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1846
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1847
 msgid "Channels:"
 msgstr "Kanały:"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1858
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1859
 msgid "CH3 (Noise)"
 msgstr "CH3 (szum)"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1924
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:1925
 msgid "No notes recorded yet. Play some audio to populate the piano roll."
 msgstr "Brak nagranych nut. Odtwórz audio, aby zapełnić piano roll."
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:2001
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:2002
 msgid "NS"
 msgstr "NS"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:2941
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:2942
 msgid "Export PSG notes as CSV"
 msgstr "Eksportuj nuty PSG jako CSV"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:2969
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:2970
 msgid "Export PSG notes as MIDI"
 msgstr "Eksportuj nuty PSG jako MIDI"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3051
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3052
 msgid "Export error###PSGScopeExportError"
 msgstr "Błąd eksportu###PSGScopeExportError"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3054
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3055
 msgid "Failed to open file for writing"
 msgstr "Nie udało się otworzyć pliku do zapisu"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3058
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3059
 msgid "OK###PSGScopeExportErrorOK"
 msgstr "OK###PSGScopeExportErrorOK"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3088
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3089
 msgid "Export MIDI...###PSGScopeExportMidiBtn"
 msgstr "Eksportuj MIDI...###PSGScopeExportMidiBtn"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3095
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3107
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3096
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3108
 msgid "No notes recorded yet"
 msgstr "Brak nagranych nut"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3100
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3101
 msgid "Export CSV...###PSGScopeExportCsvBtn"
 msgstr "Eksportuj CSV...###PSGScopeExportCsvBtn"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3118
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3119
 msgid "Tempo BPM###PSGScopeTempoBpm"
 msgstr "Tempo BPM###PSGScopeTempoBpm"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3129
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3130
 msgid "Clear###PSGScopeClearBtn"
 msgstr "Wyczyść###PSGScopeClearBtn"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3136
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3137
 msgid "Reset scope sample buffer and recorded notes"
 msgstr "Resetuj bufor próbek scope i nagrane nuty"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3167
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3168
 msgid "Notes"
 msgstr "Nuty"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3189
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3190
 msgid "Log samples###PSGScopeLogSamples"
 msgstr "Loguj próbki###PSGScopeLogSamples"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3198
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3199
 msgid "Write per-frame sample log to TSV file"
 msgstr "Zapisz log próbek na klatkę do pliku TSV"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3203
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3204
 msgid "Log events###PSGScopeLogEvents"
 msgstr "Loguj zdarzenia###PSGScopeLogEvents"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3212
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3213
 msgid "Write state machine event log to TSV file"
 msgstr "Zapisz log zdarzeń automatu stanowego do pliku TSV"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3223
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3224
 msgid "Log writes###PSGScopeLogWrites"
 msgstr "Loguj zapisy###PSGScopeLogWrites"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3258
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3259
 msgid "Log every PSG register write to file (1:1 reconstruction)"
 msgstr "Loguj każdy zapis do rejestru PSG do pliku (rekonstrukcja 1:1)"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3287
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3288
 msgid "PSG Audio Scope###PSGAudioScope"
 msgstr "PSG Audio Scope###PSGAudioScope"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3358
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3359
 msgid "PSG Left (chip 0)###PSGScopeLeftHdr"
 msgstr "PSG lewy (chip 0)###PSGScopeLeftHdr"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3364
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3365
 msgid "PSG Right (chip 1)###PSGScopeRightHdr"
 msgstr "PSG prawy (chip 1)###PSGScopeRightHdr"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3373
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3374
 msgid "PSG (chip 0)###PSGScopeMonoHdr"
 msgstr "PSG (chip 0)###PSGScopeMonoHdr"
 
-#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3381
+#: src/ui-imgui/debugger/psg_audio_scope_window.cpp:3382
 msgid "Piano roll###PSGScopePianoRollHdr"
 msgstr "Piano roll###PSGScopePianoRollHdr"
 
-#: src/ui-imgui/debugger/psg_window.cpp:85
+#: src/ui-imgui/debugger/psg_window.cpp:86
 msgid "DIV /16 (fast)"
 msgstr "DIV /16 (szybko)"
 
-#: src/ui-imgui/debugger/psg_window.cpp:86
+#: src/ui-imgui/debugger/psg_window.cpp:87
 msgid "DIV /32 (mid)"
 msgstr "DIV /32 (średnio)"
 
-#: src/ui-imgui/debugger/psg_window.cpp:87
+#: src/ui-imgui/debugger/psg_window.cpp:88
 msgid "DIV /64 (slow)"
 msgstr "DIV /64 (wolno)"
 
-#: src/ui-imgui/debugger/psg_window.cpp:88
+#: src/ui-imgui/debugger/psg_window.cpp:89
 msgid "DIV from CH2 tone"
 msgstr "DIV z tonu CH2"
 
-#: src/ui-imgui/debugger/psg_window.cpp:95
+#: src/ui-imgui/debugger/psg_window.cpp:96
 msgid "PERIODIC"
 msgstr "OKRESOWY"
 
-#: src/ui-imgui/debugger/psg_window.cpp:96
+#: src/ui-imgui/debugger/psg_window.cpp:97
 msgid "WHITE"
 msgstr "BIAŁY"
 
-#: src/ui-imgui/debugger/psg_window.cpp:119
+#: src/ui-imgui/debugger/psg_window.cpp:120
 msgid "0 dB (max)"
 msgstr "0 dB (maks)"
 
-#: src/ui-imgui/debugger/psg_window.cpp:121
+#: src/ui-imgui/debugger/psg_window.cpp:122
 msgid "silent (off)"
 msgstr "cisza (wył)"
 
-#: src/ui-imgui/debugger/psg_window.cpp:368
-#: src/ui-imgui/debugger/psg_window.cpp:418
-#: src/ui-imgui/debugger/psg_window.cpp:464
-#: src/ui-imgui/debugger/psg_window.cpp:542
+#: src/ui-imgui/debugger/psg_window.cpp:371
+#: src/ui-imgui/debugger/psg_window.cpp:421
+#: src/ui-imgui/debugger/psg_window.cpp:467
+#: src/ui-imgui/debugger/psg_window.cpp:545
 msgid "Bin/Note"
 msgstr "Bin/nuta"
 
-#: src/ui-imgui/debugger/psg_window.cpp:374
+#: src/ui-imgui/debugger/psg_window.cpp:377
 msgid "Latched channel (CS)"
 msgstr "Zatrzasniety kanal (CS)"
 
-#: src/ui-imgui/debugger/psg_window.cpp:375
+#: src/ui-imgui/debugger/psg_window.cpp:378
 msgid "Index kanalu (0..3) ktery prijme dalsi DATA byte."
 msgstr "Indeks kanalu (0..3) ktory przyjmie nastepny bajt DATA."
 
-#: src/ui-imgui/debugger/psg_window.cpp:380
+#: src/ui-imgui/debugger/psg_window.cpp:383
 msgid "Next DATA byte targets"
 msgstr "Cel nastepnego bajtu DATA"
 
-#: src/ui-imgui/debugger/psg_window.cpp:383
+#: src/ui-imgui/debugger/psg_window.cpp:386
 msgid ""
 "Bit [4] posledniho LATCH bytu. 1 = attn, 0 = tone (TONE kanal) / noise cfg "
 "(CH3)."
@@ -9955,44 +9955,44 @@ msgstr ""
 "Bit [4] ostatniego bajtu LATCH. 1 = attn, 0 = tone (kanal TONE) / noise cfg "
 "(CH3)."
 
-#: src/ui-imgui/debugger/psg_window.cpp:386
+#: src/ui-imgui/debugger/psg_window.cpp:389
 msgid "attenuation"
 msgstr "tłumienie"
 
-#: src/ui-imgui/debugger/psg_window.cpp:388
+#: src/ui-imgui/debugger/psg_window.cpp:391
 msgid "tone / noise cfg"
 msgstr "tone / noise cfg"
 
-#: src/ui-imgui/debugger/psg_window.cpp:422
+#: src/ui-imgui/debugger/psg_window.cpp:425
 msgid "Channel type"
 msgstr "Typ kanału"
 
-#: src/ui-imgui/debugger/psg_window.cpp:424
+#: src/ui-imgui/debugger/psg_window.cpp:427
 msgid "CH0-2 vzdy TONE, CH3 vzdy NOISE (initializace v psg_instance_init)."
 msgstr ""
 "CH0-2 zawsze TONE, CH3 zawsze NOISE (inicjalizacja w psg_instance_init)."
 
-#: src/ui-imgui/debugger/psg_window.cpp:429
+#: src/ui-imgui/debugger/psg_window.cpp:432
 msgid "Attenuation"
 msgstr "Tłumienie"
 
-#: src/ui-imgui/debugger/psg_window.cpp:432
+#: src/ui-imgui/debugger/psg_window.cpp:435
 msgid "4-bit volume: 0 = max (0 dB), krok -2 dB, 15 = silent (channel off)."
 msgstr "4-bit glosnosc: 0 = max (0 dB), krok -2 dB, 15 = silent (kanal off)."
 
-#: src/ui-imgui/debugger/psg_window.cpp:470
+#: src/ui-imgui/debugger/psg_window.cpp:473
 msgid "Tone divider (10-bit)"
 msgstr "Dzielnik tonu (10-bit)"
 
-#: src/ui-imgui/debugger/psg_window.cpp:473
+#: src/ui-imgui/debugger/psg_window.cpp:476
 msgid "10-bit value 0..1023. f_out = CPU_CLOCK / (32 * divider). <2 = DC."
 msgstr "Wartość 10-bit 0..1023. f_out = CPU_CLOCK / (32 * dzielnik). <2 = DC."
 
-#: src/ui-imgui/debugger/psg_window.cpp:482
+#: src/ui-imgui/debugger/psg_window.cpp:485
 msgid "Frequency"
 msgstr "Czestotliwosc"
 
-#: src/ui-imgui/debugger/psg_window.cpp:485
+#: src/ui-imgui/debugger/psg_window.cpp:488
 msgid ""
 "CPU_CLOCK / (32 * divider). MZ-800: 3.5469 MHz, MZ-700/MZ-1500: 3.5796 MHz "
 "CPU clock."
@@ -10000,15 +10000,15 @@ msgstr ""
 "CPU_CLOCK / (32 * dzielnik). MZ-800: 3.5469 MHz, MZ-700/MZ-1500: 3.5796 MHz "
 "zegar CPU."
 
-#: src/ui-imgui/debugger/psg_window.cpp:488
+#: src/ui-imgui/debugger/psg_window.cpp:491
 msgid "DC (no oscillation)"
 msgstr "DC (brak oscylacji)"
 
-#: src/ui-imgui/debugger/psg_window.cpp:502
+#: src/ui-imgui/debugger/psg_window.cpp:505
 msgid "MIDI note"
 msgstr "Nuta MIDI"
 
-#: src/ui-imgui/debugger/psg_window.cpp:505
+#: src/ui-imgui/debugger/psg_window.cpp:508
 msgid ""
 "12 * log2(f / 440) + 69. A4 = 440 Hz = 69. Cents = odchylka od rovnomerne "
 "temperace."
@@ -10016,37 +10016,37 @@ msgstr ""
 "12 * log2(f / 440) + 69. A4 = 440 Hz = 69. Cents = odchylenie od stroju "
 "rownomiernie temperowanego."
 
-#: src/ui-imgui/debugger/psg_window.cpp:545
+#: src/ui-imgui/debugger/psg_window.cpp:548
 msgid "Noise divider type"
 msgstr "Typ dzielnika szumu"
 
-#: src/ui-imgui/debugger/psg_window.cpp:548
+#: src/ui-imgui/debugger/psg_window.cpp:551
 msgid "0..2 = fixed PSG dividery 16/32/64, 3 = CH2 tone divider rizeny shift."
 msgstr ""
 "0..2 = stałe dzielniki PSG 16/32/64, 3 = shift sterowany dzielnikiem tonu "
 "CH2.0..2 = stale dzielniki PSG 16/32/64, 3 = shift sterowany dzielnikem tonu "
 "CH2."
 
-#: src/ui-imgui/debugger/psg_window.cpp:550
+#: src/ui-imgui/debugger/psg_window.cpp:553
 msgid "Noise feedback"
 msgstr "Sprzezenie zwrotne szumu"
 
-#: src/ui-imgui/debugger/psg_window.cpp:553
+#: src/ui-imgui/debugger/psg_window.cpp:556
 msgid "Periodic = LFSR top bit only, White = XOR feedback (sirsi spektrum)."
 msgstr ""
 "Periodic = tylko górny bit LFSR, White = sprzężenie XOR (szersze "
 "widmo).Periodic = tylko gorny bit LFSR, White = XOR feedback (szersze "
 "spektrum)."
 
-#: src/ui-imgui/debugger/psg_window.cpp:558
+#: src/ui-imgui/debugger/psg_window.cpp:561
 msgid "Tone divider: N/A (NOISE channel)"
 msgstr "Tone divider: N/A (kanal NOISE)"
 
-#: src/ui-imgui/debugger/psg_window.cpp:563
+#: src/ui-imgui/debugger/psg_window.cpp:566
 msgid "Waveform"
 msgstr "Przebieg"
 
-#: src/ui-imgui/debugger/psg_window.cpp:566
+#: src/ui-imgui/debugger/psg_window.cpp:569
 msgid ""
 "Oscilloscope view: TONE = square wave (4 periods fixed), NOISE = pseudo-"
 "random pattern. Amplitude scaled by attenuation."
@@ -10054,23 +10054,23 @@ msgstr ""
 "Widok oscyloskopu: TONE = fala prostokątna (stałe 4 okresy), NOISE = wzór "
 "pseudolosowy. Amplituda skalowana tłumieniem."
 
-#: src/ui-imgui/debugger/psg_window.cpp:582
+#: src/ui-imgui/debugger/psg_window.cpp:585
 msgid "Latch state"
 msgstr "Stan latch"
 
-#: src/ui-imgui/debugger/psg_window.cpp:617
+#: src/ui-imgui/debugger/psg_window.cpp:620
 msgid "PSG SN76489 State###PSGState"
 msgstr "Stan PSG SN76489###PSGState"
 
-#: src/ui-imgui/debugger/psg_window.cpp:632
+#: src/ui-imgui/debugger/psg_window.cpp:635
 msgid "PSG Left (chip 0)###PSGLeftHdr"
 msgstr "PSG lewy (chip 0)###PSGLeftHdr"
 
-#: src/ui-imgui/debugger/psg_window.cpp:639
+#: src/ui-imgui/debugger/psg_window.cpp:642
 msgid "PSG Right (chip 1)###PSGRightHdr"
 msgstr "PSG prawy (chip 1)###PSGRightHdr"
 
-#: src/ui-imgui/debugger/psg_window.cpp:649
+#: src/ui-imgui/debugger/psg_window.cpp:652
 msgid "PSG (chip 0)###PSGMonoHdr"
 msgstr "PSG (chip 0)###PSGMonoHdr"
 
@@ -13345,7 +13345,7 @@ msgid "No MAX SPEED time measured yet."
 msgstr "Nie zmierzono jeszcze czasu w MAX SPEED."
 
 #: src/ui-imgui/maxspeed_bench_window.cpp:114
-#: src/ui-imgui/measuring_gdg_window.cpp:93
+#: src/ui-imgui/measuring_gdg_window.cpp:100
 msgid "Measured time:"
 msgstr "Zmierzony czas:"
 
@@ -13631,11 +13631,11 @@ msgstr "Klienci"
 msgid "Settings...##mcp_tcp_settings"
 msgstr "Ustawienia...##mcp_tcp_settings"
 
-#: src/ui-imgui/measuring_frame_timing_window.cpp:32
+#: src/ui-imgui/measuring_frame_timing_window.cpp:33
 msgid "Frame Timing Accuracy"
 msgstr "Dokładność synchronizacji klatek"
 
-#: src/ui-imgui/measuring_frame_timing_window.cpp:38
+#: src/ui-imgui/measuring_frame_timing_window.cpp:39
 msgid ""
 "Frame timing measurement is disabled when the emulator is running at max "
 "speed."
@@ -13643,95 +13643,83 @@ msgstr ""
 "Pomiar synchronizacji klatek jest wyłączony, gdy emulator działa z "
 "maksymalną prędkością."
 
-#: src/ui-imgui/measuring_frame_timing_window.cpp:69
+#: src/ui-imgui/measuring_frame_timing_window.cpp:71
 msgid "Reference frame time:"
 msgstr "Referencyjny czas klatki:"
 
-#: src/ui-imgui/measuring_frame_timing_window.cpp:70
+#: src/ui-imgui/measuring_frame_timing_window.cpp:72
 msgid "Average time:"
 msgstr "Średni czas:"
 
-#: src/ui-imgui/measuring_frame_timing_window.cpp:71
+#: src/ui-imgui/measuring_frame_timing_window.cpp:73
 msgid "Max time:"
 msgstr "Maks. czas:"
 
-#: src/ui-imgui/measuring_frame_timing_window.cpp:72
+#: src/ui-imgui/measuring_frame_timing_window.cpp:74
 msgid "Min time:"
 msgstr "Min. czas:"
 
-#: src/ui-imgui/measuring_frame_timing_window.cpp:73
+#: src/ui-imgui/measuring_frame_timing_window.cpp:75
 msgid "Median:"
 msgstr "Mediana:"
 
-#: src/ui-imgui/measuring_frame_timing_window.cpp:74
+#: src/ui-imgui/measuring_frame_timing_window.cpp:76
 msgid "Std. deviation:"
 msgstr "Odch. stand.:"
 
-#: src/ui-imgui/measuring_frame_timing_window.cpp:82
+#: src/ui-imgui/measuring_frame_timing_window.cpp:84
 msgid "Frames count:"
 msgstr "Liczba klatek:"
 
-#: src/ui-imgui/measuring_frame_timing_window.cpp:83
+#: src/ui-imgui/measuring_frame_timing_window.cpp:85
 msgid "Total width:"
 msgstr "Całkowita szerokość:"
 
-#: src/ui-imgui/measuring_frame_timing_window.cpp:84
+#: src/ui-imgui/measuring_frame_timing_window.cpp:86
 msgid "Real total width:"
 msgstr "Rzeczywista całkowita szerokość:"
 
-#: src/ui-imgui/measuring_frame_timing_window.cpp:91
+#: src/ui-imgui/measuring_frame_timing_window.cpp:93
 msgid "Statistics Update Interval (s):"
 msgstr "Interwał aktualizacji statystyk (s):"
 
-#: src/ui-imgui/measuring_frame_timing_window.cpp:104
+#: src/ui-imgui/measuring_frame_timing_window.cpp:106
 msgid "Statistics from last (s):"
 msgstr "Statystyki z ostatnich (s):"
 
-#: src/ui-imgui/measuring_gdg_window.cpp:63
+#: src/ui-imgui/measuring_gdg_window.cpp:70
 msgid "Accuracy of GDG"
 msgstr "Dokładność GDG"
 
-#: src/ui-imgui/measuring_gdg_window.cpp:104
+#: src/ui-imgui/measuring_gdg_window.cpp:111
 msgid "Native GDG freq.:"
 msgstr "Natywna częst. GDG:"
 
-#: src/ui-imgui/measuring_gdg_window.cpp:109
+#: src/ui-imgui/measuring_gdg_window.cpp:116
 msgid "Native CPU freq.:"
 msgstr "Natywna częst. CPU:"
 
-#: src/ui-imgui/measuring_gdg_window.cpp:114
+#: src/ui-imgui/measuring_gdg_window.cpp:121
 msgid "Native FPS:"
 msgstr "Natywne FPS:"
 
-#: src/ui-imgui/measuring_gdg_window.cpp:125
-msgid "Simulated GDG freq.:"
-msgstr "Symulowana częst. GDG:"
-
-#: src/ui-imgui/measuring_gdg_window.cpp:130
-msgid "Simulated CPU freq.:"
-msgstr "Symulowana częst. CPU:"
-
-#: src/ui-imgui/measuring_gdg_window.cpp:135
-msgid "Simulated FPS:"
-msgstr "Symulowane FPS:"
-
-#: src/ui-imgui/measuring_gdg_window.cpp:146
+#: src/ui-imgui/measuring_gdg_window.cpp:132
 msgid "Current GDG freq.:"
 msgstr "Bieżąca częst. GDG:"
 
-#: src/ui-imgui/measuring_gdg_window.cpp:151
+#: src/ui-imgui/measuring_gdg_window.cpp:137
 msgid "Current CPU freq.:"
 msgstr "Bieżąca częst. CPU:"
 
-#: src/ui-imgui/measuring_gdg_window.cpp:156
+#: src/ui-imgui/measuring_gdg_window.cpp:142
 msgid "Current FPS:"
 msgstr "Bieżące FPS:"
 
-#: src/ui-imgui/measuring_gdg_window.cpp:161
+#: src/ui-imgui/measuring_gdg_window.cpp:147
 msgid "Current is:"
 msgstr "Bieżąca jest:"
 
-#: src/ui-imgui/measuring_gdg_window.cpp:169
+#: src/ui-imgui/measuring_gdg_window.cpp:155
 msgid "Update Interval (s):"
 msgstr "Interwał aktualizacji (s):"
 
@@ -14083,7 +14071,11 @@ msgid ""
 "Without it, frame B, the 16-color mode and the 4-color 640x200 mode show "
 "only some of the colors: planes III and IV read as 0xFF and writes to them "
 "are lost."
-msgstr "Opcjonalne rozszerzenie pamięci wideo z 16 KB do 32 KB (płaszczyzny III i IV). Bez niego frame B, tryb 16 kolorów i 4-kolorowy tryb 640x200 pokazują tylko część kolorów: płaszczyzny III i IV są odczytywane jako 0xFF, a zapisy do nich są tracone."
+msgstr ""
+"Opcjonalne rozszerzenie pamięci wideo z 16 KB do 32 KB (płaszczyzny III i "
+"IV). Bez niego frame B, tryb 16 kolorów i 4-kolorowy tryb 640x200 pokazują "
+"tylko część kolorów: płaszczyzny III i IV są odczytywane jako 0xFF, a zapisy "
+"do nich są tracone."
 
 #: src/ui-imgui/mz800/topmenu/devices/menu_mz800_hw_compat.cpp:42
 msgid "HW Compatibility Experiments"
@@ -17460,6 +17452,15 @@ msgstr "MZ-1500 Wirtualna klawiatura"
 #: src/ui-imgui/vkbd_window.cpp:229
 msgid "MZ-800 Virtual Keyboard"
 msgstr "MZ-800 Wirtualna klawiatura"
+
+#~ msgid "Simulated GDG freq.:"
+#~ msgstr "Symulowana częst. GDG:"
+
+#~ msgid "Simulated CPU freq.:"
+#~ msgstr "Symulowana częst. CPU:"
+
+#~ msgid "Simulated FPS:"
+#~ msgstr "Symulowane FPS:"
 
 #~ msgid ""
 #~ "The device code a program gets in register BC when an MZF file is started "

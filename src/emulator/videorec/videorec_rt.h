@@ -1,16 +1,22 @@
 /**
  * @file   videorec_rt.h
- * @brief  Čisté části režimu "podle reality": hodiny vzorkovače a převzorkování zvuku SDL výstupu.
+ * @brief  Čisté části režimu "podle reality": hodiny vzorkovače, fronta snímků a převzorkování zvuku SDL výstupu.
  *
- * V režimu podle reality (časová základna `realtime`, viz videorec.h) se video
- * snímek nezapisuje za každý emulovaný snímek, ale fps-krát za sekundu reálného
- * času (50 nebo 60 podle platformy, monotónní hodiny), a zvuk se bere z výstupu SDL cesty (to, co šlo do
- * reproduktoru), ne z emulačního rendereru. Tento modul obsahuje části bez
- * závislosti na emulátoru, aby šly testovat samostatně:
+ * V režimu podle reality (časová základna `realtime`, viz videorec.h) zapisuje
+ * video snímky vzorkovač v tikách monotónních hodin, a to tempem emulace
+ * (krystal / takty snímku, PAL 50,036326, NTSC 59,922743 ticku za sekundu);
+ * zvuk se bere z výstupu SDL cesty (to, co šlo do reproduktoru), ne
+ * z emulačního rendereru. Tento modul obsahuje části bez závislosti na
+ * emulátoru, aby šly testovat samostatně:
  *
  * - **st_VIDEOREC_RT_CLOCK** - rozvrh ticků vzorkovače s absolutními termíny
  *   `base + k * period` (bez driftu), dohánění zpoždění a nové založení řady
  *   při velkém zpoždění;
+ * - **st_VIDEOREC_RT_FRAMEQ** - malá fronta emulovaných snímků mezi koncem
+ *   snímku (emu vlákno) a tikem vzorkovače: každý tik vezme další snímek
+ *   v pořadí, takže při stejném tempu se každý emulovaný snímek zapíše právě
+ *   jednou bez ohledu na fázi dokončení snímku proti tiku (rezerva fronty
+ *   pohltí kolísání); opakování a zahození jen při skutečném rozchodu tempa;
  * - **st_VIDEOREC_RT_AUDIO** - kruhový buffer F32 stereo vzorků SDL výstupu
  *   (producent = SDL audio callback, v headless synchronizace emu vlákna
  *   jednou za snímek), převzorkování na `audio_rate` lineární interpolací a korekce
@@ -30,6 +36,8 @@
  *
  * @par Vlákna
  * st_VIDEOREC_RT_CLOCK není thread-safe (používá ho jen vlákno vzorkovače).
+ * st_VIDEOREC_RT_FRAMEQ není thread-safe; lepidlo (videorec.c) ho používá jen
+ * pod svým listovým zámkem zobrazeného snímku.
  * st_VIDEOREC_RT_AUDIO je thread-safe: má vlastní krátký GMutex, pod kterým
  * se jen kopírují vzorky (push) nebo vyrobí jeden tick výstupu (pull);
  * žádný jiný zámek se pod ním nebere.
@@ -58,9 +66,10 @@ extern "C" {
  * @brief Největší blok SDL cesty [stereo vzorky] - pro dimenzování bufferů.
  *
  * Blok SDL cesty je výstup jedné synchronizační události emulace (jeden
- * snímek): videorec_rt_sdl_chunk() = `VIDEOREC_RT_SDL_RATE / fps`, tj. 882
- * při 50 snímcích/s (MZ-800, MZ-700 PAL) a 735 při 60 snímcích/s (MZ-1500,
- * MZ-700 NTSC). Největší je při nejnižší podporované frekvenci 50 snímků/s.
+ * snímek). Snímek trvá podle krystalu, blok má proto 881 nebo 882 vzorků
+ * (MZ-800, MZ-700 PAL) a 735 nebo 736 vzorků (MZ-1500, MZ-700 NTSC);
+ * videorec_rt_sdl_chunk() pro frekvenci krystal / takty snímku vrací ten
+ * delší. Největší je 882 (PAL); iface_audio.c hlídá, že se blok vejde.
  * Jitter buffer sám na velikosti bloku nezávisí.
  */
 #define VIDEOREC_RT_SDL_CHUNK_MAX (VIDEOREC_RT_SDL_RATE / 50u)
@@ -73,6 +82,13 @@ extern "C" {
  * VIDEOREC_RT_AUDIO_TARGET_MS (naplnění se měří včetně bloku přidaného
  * v aktuální periodě). Zpoždění je dané v milisekundách, aby platilo pro
  * 50 i 60 snímků/s; obě dávají po zaokrouhlení 2 ticky (40 ms, resp. 33,3 ms).
+ * Zpoždění skládá zpožďovací fronta obrazu v lepidle a rezerva fronty snímků
+ * (VIDEOREC_RT_FRAMEQ_TARGET - 1 snímků; při 50 i 60 snímcích/s celé
+ * zpoždění, zpožďovací fronta je prázdná): zapsaný snímek je v průměru
+ * `ticky * perioda + půl periody` starý jako dřív, kdy vzorkovač bral poslední
+ * zobrazený snímek a celé zpoždění dávala zpožďovací fronta. Při prázdné
+ * frontě snímků (pauza, krokování debuggeru) se zapisuje poslední zobrazený
+ * obraz bez zpoždění.
  *
  * Měření (report Task 18 a Task 26, e2e/realtime_av_sync*.sh a testovací
  * program s nástupem tónu CTC0 současně s vyplněním VRAM; chyba = posun
@@ -106,6 +122,16 @@ extern "C" {
  * u VIDEOREC_RT_VIDEO_DELAY_MS.
  */
 #define VIDEOREC_RT_AUDIO_TARGET_MS 60u
+
+/**
+ * @brief Tolerance náběhu jitter bufferu [ms]: čtení začne, když naplnění chybí do cíle nejvýš tolik.
+ *
+ * Bloky SDL cesty podle krystalu mají 881 nebo 882 vzorků (PAL): tři bloky
+ * 881 = 2643 vzorků jsou o 3 vzorky pod cílem 2646. Bez tolerance by se čekalo
+ * na čtvrtý blok, ticho na začátku každého úseku by bylo o snímek delší
+ * (naměřeno 60 ms místo 40 ms) a přebytek by se zahazoval.
+ */
+#define VIDEOREC_RT_AUDIO_PRIME_TOL_MS 5u
 
 /** @brief Kapacita zvukového bufferu [ms]; přebytek nad ní se zahazuje od nejstarších vzorků. */
 #define VIDEOREC_RT_AUDIO_CAPACITY_MS 1000u
@@ -181,8 +207,11 @@ void videorec_rt_clock_init(st_VIDEOREC_RT_CLOCK *c, int64_t period_us, unsigned
 /**
  * @brief Inicializuje rozvrh pro snímkovou frekvenci `fps_num / fps_den` (perioda bez zaokrouhlení).
  *
- * Perioda je `1000000 * fps_den / fps_num` us jako zlomek; např. 60 snímků/s
- * dá přesně 60 ticků za každou sekundu monotónních hodin.
+ * Perioda je `1000000 * fps_den / fps_num` us jako zlomek (zkrácený
+ * největším společným dělitelem); např. 60 snímků/s dá přesně 60 ticků za
+ * každou sekundu monotónních hodin, krystal / takty snímku (17 734 475 /
+ * 354 432) přesně 50,036326 ticku za sekundu. Mezivýsledky nepřetečou pro
+ * řadu delší než 100 dní ani u zlomku krystalu.
  *
  * @param c           Instance (nesmí být NULL).
  * @param fps_num     Čitatel snímkové frekvence, > 0 (0 se nahradí 1).
@@ -208,9 +237,10 @@ unsigned videorec_rt_video_delay_ticks(unsigned fps_num, unsigned fps_den);
 /**
  * @brief Velikost bloku SDL cesty [stereo vzorky] pro danou snímkovou frekvenci.
  *
- * `VIDEOREC_RT_SDL_RATE * fps_den / fps_num` (celočíselné dělení): 882 při 50,
- * 735 při 60 snímcích/s. Celé je jen u frekvencí, které přijme
- * videorec_platform_check() se vzorkovací frekvencí VIDEOREC_RT_SDL_RATE.
+ * Horní celá část `VIDEOREC_RT_SDL_RATE * fps_den / fps_num`: 882 při 50,
+ * 735 při 60 snímcích/s (tam dělení vyjde celé); pro frekvenci krystal /
+ * takty snímku 882 (PAL) a 736 (NTSC), tedy delší ze dvou délek bloku, které
+ * SDL cesta podle krystalu vydává.
  *
  * @param fps_num Čitatel snímkové frekvence (0 se nahradí 1).
  * @param fps_den Jmenovatel snímkové frekvence (0 se nahradí 1).
@@ -218,6 +248,291 @@ unsigned videorec_rt_video_delay_ticks(unsigned fps_num, unsigned fps_den);
  * @note Čistá funkce bez vedlejších efektů, libovolné vlákno.
  */
 unsigned videorec_rt_sdl_chunk(unsigned fps_num, unsigned fps_den);
+
+/**
+ * @brief Cílová úroveň fronty snímků [snímky], měřená v tiku před odebráním.
+ *
+ * Vzorkovač začne odebírat, až fronta obsahuje tolik snímků; v ustáleném
+ * stavu (emulace i vzorkovač stejným tempem) je před každým tikem ve frontě
+ * právě tolik snímků a tik vezme nejstarší. Rezerva `TARGET - 1` snímků
+ * pokryje zpoždění dokončení snímku o fázi plus dvě periody (aspoň 40 ms
+ * PAL, 33,3 ms NTSC) bez opakování; dřívější dokončení frontu jen dočasně
+ * prodlouží. Naměřeno (mz800emu, emu-experiments exact-clock/mereni/):
+ * headless kolísá dokončení snímku do +-1,8 ms (rtrec-diag-phase-800.txt),
+ * se zvukovým zařízením do +-10 ms (snímky se dokončují v periodě zařízení)
+ * a navíc se dokončování na několik sekund posouvá o celý snímek oběma směry
+ * (rtrec-diag-queue-device-800.txt; zvuk se posouvá s ním). Zpoždění obrazu
+ * `(TARGET - 1) * perioda + fáze` je stejné jako celé zpoždění
+ * VIDEOREC_RT_VIDEO_DELAY_MS (2 ticky), zpožďovací fronta lepidla je proto
+ * při 50 i 60 snímcích/s prázdná.
+ */
+#define VIDEOREC_RT_FRAMEQ_TARGET 3u
+
+/**
+ * @brief Přebytek nad cíl [snímky], který musí trvat celé okno, aby regulace začala zahazovat.
+ *
+ * Úroveň 1 až TARGET + SURPLUS - 1 (1 až 4) je normální stav: posun
+ * dokončování snímků o celý snímek se zvukovým zařízením (viz
+ * VIDEOREC_RT_FRAMEQ_TARGET) spolu s periodou zařízení posune úroveň o 2
+ * oběma směry a nesmí se opravovat opakováním nebo zahozením (zvuk se
+ * posouvá stejně). Nedostatek se neopravuje oknem: až když fronta opravdu
+ * dojde, zopakuje se obraz a fronta se naplní znovu (simulace s posunem
+ * o snímek a periodou zařízení 10 ms dávala s opravou nedostatku oknem
+ * zbytečná opakování).
+ */
+#define VIDEOREC_RT_FRAMEQ_SURPLUS 2u
+
+/**
+ * @brief Doba [s], do které druhé vyprázdnění fronty v živém běhu přepne do pomalého režimu.
+ *
+ * Emulace, která opakovaně nestíhá tempo krystalu (pomalý počítač, ladicí
+ * sestavení), by jinak po každém vyprázdnění opakovala obraz po dávkách do
+ * naplnění rezervy. V pomalém režimu se plní jen na 1 snímek, takže se
+ * opakuje po jednom a rovnoměrně (jako dřívější vzorkovač "poslední obraz");
+ * rezerva se obnoví po jednom opakování za okno, až se fronta po tuto dobu
+ * nevyprázdní.
+ *
+ * Pomalý režim se zapne jen při trvalém nedostatku: druhé vyprázdnění do této
+ * doby, mezi kterým a předchozím vyprázdněním úroveň fronty nedosáhla
+ * VIDEOREC_RT_FRAMEQ_TARGET + VIDEOREC_RT_FRAMEQ_SURPLUS (`ahead`). Emulace,
+ * která jen ojediněle zasekla a pak zaostání dohnala, frontu po zaseknutí
+ * přeplní nad tuto mez; pomalý počítač snímky nikdy nedohání, takže mez
+ * nepřekročí (rozkolísání o jeden snímek ji nedosáhne). Úroveň nad cílem
+ * v pomalém režimu (emulace zase napřed) pomalý režim hned ukončí, aby
+ * přebytek vybíjela běžná regulace.
+ */
+#define VIDEOREC_RT_FRAMEQ_SLOW_S 10u
+
+/**
+ * @brief Kapacita fronty snímků [snímky]; při přetečení se zahazuje nejstarší.
+ *
+ * Fronta drží jen ukazatele (obraz sdílí lepidlo, nezměněné snímky mají
+ * společný obraz). Pokryje cíl plus dohnání pozdního probuzení vzorkovače
+ * až o 1 s (max_catchup lepidla = ticky za 1 s), takže se při něm nic
+ * nezahodí. Paměť v nejhorším případě (100 %, vzorkovač stojí 1 s, každý
+ * snímek jiný obraz): 64 obrazů, na MZ-800 asi 17 MB. Při MAX SPEED se
+ * zobrazuje nejvýš 50 (60) obrazů za sekundu, položky sdílejí málo obrazů.
+ */
+#define VIDEOREC_RT_FRAMEQ_CAP 64u
+
+/** @brief Režim odběru z fronty snímků (videorec_rt_frameq_take()). */
+typedef enum {
+    VIDEOREC_RT_FRAMEQ_LIVE = 0, /**< Živý běh 100 %: plnění na cíl, zahození trvalého přebytku (okno), prázdná fronta = opakování a nové plnění. */
+    VIDEOREC_RT_FRAMEQ_FREE,     /**< Rychlost != 100 %: přebytek nad cíl se zahodí, jinak další snímek, prázdná = poslední obraz. */
+    VIDEOREC_RT_FRAMEQ_DRAIN     /**< Pauza emulace se zápisem: dopsat zbylé snímky, pak poslední obraz. */
+} en_VIDEOREC_RT_FRAMEQ_MODE;
+
+/** @brief Co má tik zapsat (výsledek videorec_rt_frameq_take()). */
+typedef enum {
+    VIDEOREC_RT_TAKE_FRAME = 0, /**< Další snímek z fronty (`*item_out`, vlastnictví přechází na volajícího). */
+    VIDEOREC_RT_TAKE_PREV,      /**< Zopakovat obraz zapsaný minulým tikem (ve frontě jsou novější snímky, ještě se nesmí předběhnout). */
+    VIDEOREC_RT_TAKE_LATEST     /**< Fronta je prázdná: poslední zobrazený obraz (může být novější než minulý zápis, např. krok debuggeru). */
+} en_VIDEOREC_RT_TAKE;
+
+/** @brief Statistiky fronty snímků (čítače od videorec_rt_frameq_init(); videorec_rt_frameq_clear() je nemaže). */
+typedef struct st_VIDEOREC_RT_FRAMEQ_STATS {
+    uint64_t pushed;         /**< Vložených snímků. */
+    uint64_t taken;          /**< Snímků odebraných tikem (VIDEOREC_RT_TAKE_FRAME). */
+    uint64_t overflow_drops; /**< Zahozených při plné kapacitě (vkládání). */
+    uint64_t surplus_drops;  /**< Zahozených regulací (přebytek v okně LIVE, nad cíl ve FREE, videorec_rt_frameq_trim(), duplicity obrazu videorec_rt_frameq_merge_dups()). */
+    uint64_t underflows;     /**< Vyprázdnění fronty v živém běhu mimo plnění (emulace nestíhá; opakování a nové plnění). */
+    uint64_t restore_fills;  /**< Opakování při obnově rezervy po pomalém režimu. */
+    uint64_t prime_trims;    /**< Zahozených při dokončení plnění nad cíl (dva snímky mezi tiky v náběhu). */
+    uint64_t purged;         /**< Odebraných podle značky (videorec_rt_frameq_purge_tag()). */
+} st_VIDEOREC_RT_FRAMEQ_STATS;
+
+/**
+ * @brief Fronta emulovaných snímků pro vzorkovač (kruhová, pevná kapacita).
+ *
+ * Položky jsou neprůhledné ukazatele (lepidlo: sdílený obraz s počitadlem
+ * referencí); fronta je uvolňuje callbackem `release` při zahození
+ * a vyčištění. Ke každé položce patří 8bitová značka (lepidlo: snímek
+ * z běhu k dočasnému breakpointu).
+ *
+ * Regulace v režimu LIVE: nejmenší úroveň fronty před odebráním se sleduje
+ * v okně `window` ticků; je-li v celém okně aspoň VIDEOREC_RT_FRAMEQ_TARGET +
+ * VIDEOREC_RT_FRAMEQ_SURPLUS, začne vybíjení přebytku (emulace trvale
+ * napřed: zkrácené snímky CKSW, zvukové zařízení s rychlejšími hodinami,
+ * dohnané zaseknutí): po jednom nejstarším snímku za okno, dokud úroveň
+ * v celém okně neklesne na cíl (velký přebytek se nejdřív srazí najednou na
+ * horní mez normálního stavu). Emulace pozadu se pozná až prázdnou frontou:
+ * zopakuje se obraz a fronta se naplní na cíl; opakuje-li se vyprázdnění do
+ * VIDEOREC_RT_FRAMEQ_SLOW_S bez dohnání mezi nimi, plní se jen na 1 snímek
+ * (pomalý režim, ukončí ho úroveň nad cílem). Krátké
+ * kolísání (jednotlivé snímky dřív nebo později) ani posun o snímek se
+ * neopravuje, takže nevznikají páry opakování a zahození.
+ *
+ * Invarianty: `len <= VIDEOREC_RT_FRAMEQ_CAP`, `head < VIDEOREC_RT_FRAMEQ_CAP`;
+ * platné položky jsou `item[(head + i) % CAP]` pro `i < len`.
+ *
+ * Ownership: položky ve frontě vlastní fronta; videorec_rt_frameq_pop()
+ * a videorec_rt_frameq_take() s VIDEOREC_RT_TAKE_FRAME předávají vlastnictví
+ * volajícímu.
+ */
+typedef struct st_VIDEOREC_RT_FRAMEQ {
+    void *item[VIDEOREC_RT_FRAMEQ_CAP];  /**< Položky (kruhově od `head`). */
+    uint8_t tag[VIDEOREC_RT_FRAMEQ_CAP]; /**< Značky položek. */
+    unsigned head;                       /**< Index nejstarší položky. */
+    unsigned len;                        /**< Počet položek. */
+    unsigned window;                     /**< Délka okna regulace [ticky], >= 1. */
+    unsigned win_n;                      /**< Ticků v aktuálním okně. */
+    unsigned win_min;                    /**< Nejmenší úroveň v okně (UINT_MAX = prázdné okno). */
+    bool starved;                        /**< Plní se na cíl (start, po vyprázdnění, po pauze nebo jiné rychlosti). */
+    bool filling;                        /**< Plnění už probíhá v režimu LIVE (vkládají se opakování); `filling` => `starved`. */
+    bool draining;                       /**< Vybíjí se trvalý přebytek (po jednom snímku za okno). */
+    bool slow;                           /**< Pomalý režim: plní se jen na 1 snímek (viz VIDEOREC_RT_FRAMEQ_SLOW_S). */
+    bool restarted;                      /**< Plnění po vyčištění nebo videorec_rt_frameq_restart() (ne po vyprázdnění): přesah při dokončení se zahodí. */
+    bool ahead;                          /**< Od posledního vyprázdnění v LIVE dosáhla úroveň TARGET + SURPLUS (emulace dohnala zaostání); vyprázdnění pak pomalý režim nezapne. */
+    unsigned underflow_ago;              /**< Odběrů od posledního vyprázdnění v LIVE (UINT_MAX = žádné). */
+    en_VIDEOREC_RT_FRAMEQ_MODE last_mode; /**< Režim posledního odběru (VIDEOREC_RT_FRAMEQ_LIVE po vyčištění). */
+    void (*release)(void *item);         /**< Uvolnění zahozené položky (NULL = nic). */
+    st_VIDEOREC_RT_FRAMEQ_STATS stats;   /**< Statistiky. */
+} st_VIDEOREC_RT_FRAMEQ;
+
+/**
+ * @brief Inicializuje prázdnou frontu ve stavu plnění.
+ * @param q       Instance (nesmí být NULL; obsah se přepíše).
+ * @param window  Délka okna regulace [ticky] (0 se nahradí 1); lepidlo: ticky za 1 s.
+ * @param release Uvolnění položky, nebo NULL.
+ * @post Prázdná, `starved`, statistiky nulové.
+ */
+void videorec_rt_frameq_init(st_VIDEOREC_RT_FRAMEQ *q, unsigned window, void (*release)(void *item));
+
+/**
+ * @brief Uvolní všechny položky a přejde do stavu plnění (statistiky zůstávají).
+ * @param q Instance.
+ * @post `len == 0`, `starved`, ne pomalý režim, `last_mode == LIVE`.
+ */
+void videorec_rt_frameq_clear(st_VIDEOREC_RT_FRAMEQ *q);
+
+/**
+ * @brief Přejde do stavu plnění bez zahození položek (po dopsání fronty, po obnovení pauzy nahrávání).
+ *
+ * Další odběr v LIVE nejdřív naplní frontu na cíl; prázdná fronta se přitom
+ * nepočítá jako vyprázdnění (`underflows`).
+ *
+ * @param q Instance.
+ * @post `starved`, `!filling`, `!draining`, nové okno regulace. Příznak `ahead` se nemění
+ *       (dohnání před přerušením živého běhu platí dál, nuluje ho až vyprázdnění fronty).
+ */
+void videorec_rt_frameq_restart(st_VIDEOREC_RT_FRAMEQ *q);
+
+/**
+ * @brief Zahodí nejstarší položky nad `keep` (`surplus_drops`).
+ * @param q    Instance.
+ * @param keep Kolik nejnovějších položek ponechat.
+ * @return Počet zahozených.
+ */
+unsigned videorec_rt_frameq_trim(st_VIDEOREC_RT_FRAMEQ *q, unsigned keep);
+
+/**
+ * @brief Sloučí sousední položky se stejným obrazem (stejný ukazatel a značka) do jedné.
+ *
+ * Při rychlosti nad 100 % emulace zobrazí jen jeden obraz za synchronizaci
+ * (20 ms), takže několik emulovaných snímků za sebou ve frontě sdílí tentýž
+ * obraz (naměřeno při 200 %: dvojice). Režim FREE pak nesmí odebírat po
+ * položkách - tik by podle fáze vzal tentýž obraz dvakrát za sebou
+ * (opakování) a jindy dva obrazy přeskočil. Po sloučení odpovídá jedna
+ * položka jednomu zobrazenému obrazu (jako dřívější slot "poslední obraz").
+ * V režimu LIVE se neslučuje: tam je každý emulovaný snímek jeden snímek
+ * videa i při nezměněném obraze.
+ *
+ * @param q Instance.
+ * @return Počet zahozených duplicit (počítají se do `surplus_drops`, uvolní je `release`).
+ * @post Žádné dvě sousední položky nemají stejný ukazatel a značku; pořadí zachováno.
+ */
+unsigned videorec_rt_frameq_merge_dups(st_VIDEOREC_RT_FRAMEQ *q);
+
+/**
+ * @brief Kolik snímků se podle aktuálního stavu zapíše před obrazem, který je právě na obrazovce (pozice značek).
+ *
+ * Podle režimu posledního odběru:
+ * - FREE: další tik vezme nejstarší z nejvýš TARGET různých obrazů (sousední
+ *   položky se stejným obrazem se slučují, videorec_rt_frameq_merge_dups()),
+ *   obraz na obrazovce je nejnovější: `min(různých, TARGET) - 1` (0 u prázdné
+ *   fronty);
+ * - LIVE v pomalém režimu (plní se jen na 1 snímek, opakování se nevkládají
+ *   před obraz z fronty): `len - 1` (0 u prázdné fronty: zapíše se právě
+ *   zobrazený obraz), nejvýš TARGET - 1;
+ * - LIVE při plnění (`filling`): rezerva TARGET - 1 (opakování až do ní);
+ * - jinak (LIVE, DRAIN, stav plnění po pauze nebo dopsání, který ještě
+ *   neplní): `min(len, TARGET - 1)`.
+ * V ustáleném živém běhu je to rezerva, takže pozice odpovídá dřívějšímu
+ * konstantnímu zpoždění; +-1 snímek podle fáze.
+ *
+ * @param q Instance.
+ * @return Počet snímků (0 .. TARGET - 1).
+ * @note Čistá funkce bez vedlejších efektů.
+ */
+unsigned videorec_rt_frameq_pos_offset(const st_VIDEOREC_RT_FRAMEQ *q);
+
+/**
+ * @brief Vloží snímek na konec fronty; plná fronta zahodí nejstarší (`overflow_drops`).
+ * @param q    Instance.
+ * @param item Položka (vlastnictví přechází na frontu; smí být NULL).
+ * @param tag  Značka položky.
+ */
+void videorec_rt_frameq_push(st_VIDEOREC_RT_FRAMEQ *q, void *item, uint8_t tag);
+
+/**
+ * @brief Odebere nejstarší položku bez regulace (dopsání fronty na konci úseku).
+ * @param q       Instance.
+ * @param tag_out Výstup značky, nebo NULL.
+ * @return Položka (vlastnictví přechází na volajícího), NULL u prázdné fronty
+ *         (prázdnou frontu od položky NULL rozliší videorec_rt_frameq_len() před voláním).
+ */
+void *videorec_rt_frameq_pop(st_VIDEOREC_RT_FRAMEQ *q, uint8_t *tag_out);
+
+/**
+ * @brief Odebere (a uvolní) všechny položky se značkou `tag`; pořadí ostatních zůstává.
+ * @param q   Instance.
+ * @param tag Značka.
+ * @return Počet odebraných položek (přičte se k `purged`).
+ */
+unsigned videorec_rt_frameq_purge_tag(st_VIDEOREC_RT_FRAMEQ *q, uint8_t tag);
+
+/** @brief Počet snímků ve frontě. @param q Instance. @return `len`. */
+static inline unsigned videorec_rt_frameq_len(const st_VIDEOREC_RT_FRAMEQ *q)
+{
+    return q->len;
+}
+
+/**
+ * @brief Rozhodne, co zapíše jeden tik vzorkovače, a případně odebere snímek.
+ *
+ * - VIDEOREC_RT_FRAMEQ_LIVE: ve stavu plnění vrací VIDEOREC_RT_TAKE_PREV
+ *   (fronta neprázdná) nebo VIDEOREC_RT_TAKE_LATEST (prázdná), dokud úroveň
+ *   nedosáhne VIDEOREC_RT_FRAMEQ_TARGET (v pomalém režimu 1); přesah nad cíl
+ *   v okamžiku dokončení plnění po startu nebo po videorec_rt_frameq_restart()
+ *   (dva snímky mezi tiky; ne po vyprázdnění, kdy by přesah vznikal z doběhnutí
+ *   emulace a zahození by dělalo páry opakování a vynechání) se zahodí
+ *   (`prime_trims`; jinak by obraz zůstal trvale o snímek později proti
+ *   zvuku); pak odebírá jeden snímek za tik. Prázdná fronta = vyprázdnění (`underflows`),
+ *   VIDEOREC_RT_TAKE_LATEST a nové plnění; druhé vyprázdnění do
+ *   VIDEOREC_RT_FRAMEQ_SLOW_S, mezi kterým a předchozím úroveň nedosáhla
+ *   cíl + VIDEOREC_RT_FRAMEQ_SURPLUS (`ahead`), zapne pomalý režim; úroveň
+ *   nad cílem ho hned ukončí. Na konci každého okna
+ *   regulace: úroveň v celém okně aspoň cíl + VIDEOREC_RT_FRAMEQ_SURPLUS
+ *   zahájí vybíjení (po jednom snímku za okno do cíle, `surplus_drops`, ve
+ *   frontě zůstane aspoň 1 snímek); v pomalém režimu po
+ *   VIDEOREC_RT_FRAMEQ_SLOW_S bez vyprázdnění jedno VIDEOREC_RT_TAKE_PREV za
+ *   okno (`restore_fills`), dokud úroveň nedosáhne cíle.
+ * - VIDEOREC_RT_FRAMEQ_FREE: sloučí sousední položky se stejným obrazem
+ *   (videorec_rt_frameq_merge_dups()), zahodí přebytek nad cíl
+ *   (`surplus_drops`), pak jako DRAIN.
+ * - VIDEOREC_RT_FRAMEQ_DRAIN: neprázdná fronta = další snímek, prázdná =
+ *   VIDEOREC_RT_TAKE_LATEST.
+ * FREE a DRAIN nastaví stav plnění (videorec_rt_frameq_restart()), takže po
+ * návratu do LIVE se fronta nejdřív naplní na cíl (zpoždění obrazu proti
+ * zvuku se obnoví). Režim se zapamatuje (`last_mode`, pro
+ * videorec_rt_frameq_pos_offset()).
+ *
+ * @param q        Instance.
+ * @param mode     Režim odběru.
+ * @param item_out Výstup položky při VIDEOREC_RT_TAKE_FRAME (jinak NULL); nesmí být NULL.
+ * @return Co zapsat.
+ */
+en_VIDEOREC_RT_TAKE videorec_rt_frameq_take(st_VIDEOREC_RT_FRAMEQ *q, en_VIDEOREC_RT_FRAMEQ_MODE mode, void **item_out);
 
 /**
  * @brief Vrátí počet ticků, jejichž termín už nastal, a označí je za vydané.
@@ -251,7 +566,8 @@ typedef struct st_VIDEOREC_RT_AUDIO_STATS {
     uint64_t underruns;      /**< Počet podtečení (data došla uprostřed ticku). */
     uint64_t overruns;       /**< Počet zahození přebytku (naplnění nad cíl + rezervu). */
     uint64_t overflow_drops; /**< Vstupních vzorků zahozených při plné kapacitě bufferu. */
-    double corr;             /**< Aktuální relativní korekce poměru převzorkování. */
+    uint64_t prime_drops;    /**< Vstupních vzorků zahozených při náběhu nad cíl (náběh přesně na `target`). */
+    double corr;            /**< Aktuální relativní korekce poměru převzorkování. */
     double max_abs_corr;     /**< Největší |korekce| od resetu (po prvním naplnění). */
     double fill_ema;         /**< Průměrné naplnění [vstupní vzorky]. */
 } st_VIDEOREC_RT_AUDIO_STATS;
@@ -282,7 +598,8 @@ typedef struct st_VIDEOREC_RT_AUDIO {
     uint32_t target;   /**< Cílové naplnění [vstupní vzorky]. */
     volatile gint enabled; /**< Producent smí zapisovat (režim podle reality aktivní); 0/1, atomicky. */
     bool starved;      /**< Čeká se na naplnění do `target` (start, po podtečení). */
-    st_VIDEOREC_RT_AUDIO_STATS stats; /**< Statistiky (corr a fill_ema jsou zároveň stav regulátoru). */
+    double tick_scale; /**< Skutečná délka ticku / jmenovitá (`out_frames / out_rate` s); násobí poměr převzorkování, > 0, výchozí 1. */
+    st_VIDEOREC_RT_AUDIO_STATS stats;/**< Statistiky (corr a fill_ema jsou zároveň stav regulátoru). */
 } st_VIDEOREC_RT_AUDIO;
 
 /**
@@ -292,11 +609,32 @@ typedef struct st_VIDEOREC_RT_AUDIO {
  * @param out_rate   Výstupní frekvence [Hz] (> 0).
  * @param target_ms  Cílové naplnění [ms] (VIDEOREC_RT_AUDIO_TARGET_MS).
  * @param capacity_ms Kapacita [ms] (> target_ms; VIDEOREC_RT_AUDIO_CAPACITY_MS).
- * @post Prázdný, `enabled == false`, `starved == true`, statistiky nulové.
+ * @post Prázdný, `enabled == false`, `starved == true`, statistiky nulové, `tick_scale == 1`.
  * @note Selhat nemůže (g_malloc při nedostatku paměti ukončí proces).
  */
 void videorec_rt_audio_init(st_VIDEOREC_RT_AUDIO *ra, unsigned in_rate, unsigned out_rate, unsigned target_ms,
                             unsigned capacity_ms);
+
+/**
+ * @brief Nastaví poměr skutečné délky ticku vzorkovače ke jmenovité (dopředná část korekce driftu).
+ *
+ * Spotřebitel bere za tik `out_frames` výstupních vzorků, které v souboru
+ * trvají `out_frames / out_rate` s (jmenovitý tik, AVI 50/1 nebo 60/1).
+ * Tiká-li vzorkovač jiným známým tempem (tempem emulace podle krystalu),
+ * přichází za tik `in_rate * skutečná délka ticku` vstupních vzorků; poměr
+ * převzorkování se proto násobí `scale` = skutečná / jmenovitá délka ticku
+ * (PAL 50 * 354 432 / 17 734 475 = 0,999274, NTSC 60 * 238 944 / 14 318 180 =
+ * 1,001289). Regulátor driftu pak dorovnává jen hodiny zařízení a nedrží
+ * trvalou odchylku naplnění (posun zvuku proti obrazu by byl
+ * `(scale - 1) * in_rate * VIDEOREC_RT_AUDIO_DRIFT_TC_S` vzorků: PAL -7,3 ms,
+ * NTSC +12,9 ms).
+ *
+ * @param ra    Instance.
+ * @param scale Poměr (> 0; jinak se použije 1). Platí do další změny,
+ *              videorec_rt_audio_reset() ho nemění.
+ * @par Vlákna Libovolné vlákno (bere zámek instance).
+ */
+void videorec_rt_audio_set_tick_scale(st_VIDEOREC_RT_AUDIO *ra, double scale);
 
 /**
  * @brief Uvolní buffer a zámek.
@@ -355,11 +693,14 @@ bool videorec_rt_audio_is_enabled(st_VIDEOREC_RT_AUDIO *ra);
  * @brief Spotřebitel: vyrobí `out_frames` výstupních stereo vzorků (int16) jednoho ticku.
  *
  * - Ve stavu `starved` vydá ticho a nic nespotřebuje, dokud naplnění
- *   nedosáhne `target`; pak začne číst.
+ *   nedosáhne `target` (s tolerancí VIDEOREC_RT_AUDIO_PRIME_TOL_MS); pak začne
+ *   číst. Přesah posledního bloku nad `target` (do `target * 4`) se přitom
+ *   zahodí od nejstarších vzorků (`prime_drops`), takže čtení začíná
+ *   s cílovým naplněním (nejvýš o toleranci méně).
  * - Naplnění nad `target * 4` (producent přidal víc, než se stihlo
  *   spotřebovat - např. dlouho nevolaný pull) se zahodí na `target`
  *   (`overruns`).
- * - Poměr převzorkování `in_rate / out_rate * (1 + corr)`, kde `corr` je
+ * - Poměr převzorkování `in_rate / out_rate * tick_scale * (1 + corr)`, kde `corr` je
  *   P regulace průměrného naplnění k `target` (VIDEOREC_RT_AUDIO_DRIFT_TC_S,
  *   omezeno na +-VIDEOREC_RT_AUDIO_MAX_CORR). Interpolace lineární.
  * - Dojdou-li data uprostřed ticku, zbytek je ticho, buffer se vyprázdní

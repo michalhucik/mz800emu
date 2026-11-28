@@ -17,7 +17,11 @@
  * - paměť zachycení: ringy levels a psg_writes odpovídají CSV, přetečení
  *   ringu (first_seq), segment a čitelnost po stopu, zachycení jen do
  *   paměti bez složky, souhrn snímku (hrany, čas a energie úrovně, RMS
- *   reference) a PCM ringy bajtově shodné s reference.wav a sdl.wav.
+ *   reference) a PCM ringy bajtově shodné s reference.wav a sdl.wav,
+ * - index hranic snímků (audio_capture_frame_range()): výřez snímku je
+ *   přesný i po přepsání souhrnu (rozsah i obsah, 100 %, 50 %, 200 %
+ *   a změna rychlosti), kontrakt konce (jen uzavřené snímky, ruční stop,
+ *   automatický konec, živé čtení), snímky bez dat po přepsání PCM.
  *
  * @par Licence: GPLv3
  */
@@ -37,7 +41,7 @@
 static char *s_dir;
 /** @brief Délka snímku v taktech GDG. */
 static const uint64_t T_FRAME = (uint64_t) GDGCLK_BASE / VIDEO_SCREENS_PER_SEC;
-/** @brief Začátek zachycení v testech (větší než zahřátí rendereru 100 ms). */
+/** @brief Začátek zachycení v testech (větší než zahřátí rendereru, 100 až 120 ms). */
 static const uint64_t T0 = (uint64_t) GDGCLK_BASE;
 
 
@@ -144,7 +148,9 @@ void test_audio_capture_start_events_psg(void)
     char *ev = read_file("events.csv", NULL);
     TEST_ASSERT_EQUAL_UINT(AUDIO_SRC_CHANNELS_COUNT + 2, data_lines(ev));
     TEST_ASSERT_NOT_NULL(strstr(ev, "ticks,time_us,frame,channel,level\n0,0.000,0,ctc0,0\n"));
-    TEST_ASSERT_NOT_NULL(strstr(ev, "\n100,"));
+    /* time_us ve skutečném čase podle krystalu: 100 taktů / 17 734 475 Hz = 5,639 us
+     * (s jmenovitým taktem 17 721 600 Hz by vyšlo 5,643 us) */
+    TEST_ASSERT_NOT_NULL(strstr(ev, "\n100,5.639,"));
     TEST_ASSERT_NOT_NULL(strstr(ev, ",0,psg0_0,13\n"));
     char line[64];
     g_snprintf(line, sizeof(line), "\n%llu,", (unsigned long long) (T_FRAME + 5));
@@ -179,6 +185,17 @@ void test_audio_capture_start_events_psg(void)
     TEST_ASSERT_NOT_NULL(strstr(js, "\"ctc0_divider\": "));
     TEST_ASSERT_NOT_NULL(strstr(js, "\"psg_divider\": "));
     TEST_ASSERT_NOT_NULL(strstr(js, "\"screen_total_ticks_per_frame\": "));
+    /* Skutečný čas: takty za sekundu podle krystalu a zlomková snímková frekvence
+     * (stávající gdg_clk_hz a frames_per_sec zůstávají jmenovité). */
+    g_snprintf(line, sizeof(line), "\"gdg_clk_hz\": %llu,", (unsigned long long) GDGCLK_BASE);
+    TEST_ASSERT_NOT_NULL_MESSAGE(strstr(js, line), line);
+    g_snprintf(line, sizeof(line), "\"real_clk_hz\": %llu,", (unsigned long long) GDGCLK_REAL_BASE);
+    TEST_ASSERT_NOT_NULL_MESSAGE(strstr(js, line), line);
+    TEST_ASSERT_NOT_NULL(strstr(js, "\"frames_per_sec_real\": 50.036326,"));
+    g_snprintf(line, sizeof(line), "\"frames_per_sec_real_num\": %llu,", (unsigned long long) GDGCLK_REAL_BASE);
+    TEST_ASSERT_NOT_NULL_MESSAGE(strstr(js, line), line);
+    g_snprintf(line, sizeof(line), "\"frames_per_sec_real_den\": %llu,", (unsigned long long) VIDEO_SCREEN_TICKS);
+    TEST_ASSERT_NOT_NULL_MESSAGE(strstr(js, line), line);
     g_free(js);
 }
 
@@ -212,9 +229,12 @@ void test_audio_capture_reference_wav(void)
     audio_capture_get_status(&st);
     TEST_ASSERT_FALSE(st.active);
     TEST_ASSERT_EQUAL_STRING("Frame count reached", st.stop_reason);
-    uint64_t per_frame = AUDIO_CAPTURE_WAV_RATE / VIDEO_SCREENS_PER_SEC;
+    /* Vzorků na snímek podle krystalu (MZ-800: 881,36; dřív s 50 snímky/s 882). */
+    uint64_t per_frame = AUDIO_CAPTURE_WAV_RATE * T_FRAME / GDGCLK_REAL_BASE;
+    uint64_t two_frames = 2u * AUDIO_CAPTURE_WAV_RATE * T_FRAME / GDGCLK_REAL_BASE;
     /* Renderer zapíše úplné vzorky do horizontu (případně o 1 méně kvůli zaokrouhlení hranice). */
-    TEST_ASSERT_UINT64_WITHIN(1, 2 * per_frame, st.reference_samples);
+    TEST_ASSERT_UINT64_WITHIN(1, two_frames, st.reference_samples);
+    TEST_ASSERT_TRUE(st.reference_samples <= two_frames);
 
     gsize len = 0;
     char *wav = read_file("reference.wav", &len);
@@ -675,6 +695,438 @@ void test_audio_capture_memory_copy_time(void)
 }
 
 
+/** @brief Nejvíc snímků v testech indexu hranic. */
+#define FI_FRAMES_MAX 200u
+
+/**
+ * @brief Běh zachycení pro test indexu hranic snímků.
+ *
+ * `bound[k]` jsou skutečné hranice snímku k (vzorky reference a SDL cesty
+ * přijaté do uzavření snímku k - 1) zjištěné ze stavu zachycení po každém
+ * konci snímku, nezávisle na indexu; `closed` je počet uzavřených snímků.
+ */
+typedef struct {
+    uint64_t bound[FI_FRAMES_MAX + 1][2]; /**< [snímek][0 = reference, 1 = SDL]. */
+    uint64_t closed;                      /**< Uzavřené snímky. */
+    uint64_t t;                           /**< Čas posledního konce snímku [takty]. */
+    unsigned events;                      /**< Pořadí synchronizační události (pro délky bloků a rychlost). */
+} st_FI_RUN;
+
+/**
+ * @brief Délka synchronizační události [takty] při rychlosti profilu.
+ * @param profile 100, 50, 200, nebo 0 = změna rychlosti (50 % do události 60, pak 200 %).
+ * @param ev      Pořadí události.
+ */
+static uint64_t fi_event_ticks(unsigned profile, unsigned ev)
+{
+    const unsigned pct = profile ? profile : ((ev < 60u) ? 50u : 200u);
+    return T_FRAME * pct / 100u;
+}
+
+/**
+ * @brief Jedna synchronizační událost: změny CTC0 uvnitř, konec snímku, blok SDL cesty.
+ *
+ * Reference dostane v každé události jinou polohu hrany (obsah snímků se
+ * liší), blok SDL cesty má délku podle `ntsc` (735 / 736, jinak 881 / 882)
+ * a obsah z pořadí události.
+ */
+static void fi_event(st_FI_RUN *r, unsigned profile, bool ntsc, bool sdl_block)
+{
+    const uint64_t len = fi_event_ticks(profile, r->events);
+    audio_capture_on_change(0, 15, r->t + 1u + (uint64_t) (r->events * 977u) % (len / 2u));
+    audio_capture_on_change(0, 0, r->t + len / 2u + (uint64_t) (r->events * 331u) % (len / 3u));
+    r->t += len;
+    audio_capture_on_frame(r->t);
+    st_AUDIO_CAPTURE_STATUS st;
+    audio_capture_get_status(&st);
+    if (st.frames > r->closed && st.frames <= FI_FRAMES_MAX) {
+        r->closed = st.frames;
+        r->bound[st.frames][0] = st.reference_samples;
+        r->bound[st.frames][1] = st.sdl_samples;
+    }
+    if (sdl_block) {
+        static float block[2 * 882];
+        const size_t n = (ntsc ? 735u : 881u) + ((r->events % 3u) == 1u ? 1u : 0u);
+        for (size_t i = 0; i < 2 * n; i++) block[i] = (float) (((r->events * 7u + i) % 64u) - 32u) / 64.0f;
+        audio_capture_sdl_output(block, n);
+    }
+    r->events++;
+}
+
+/**
+ * @brief Otisk vzorků `[from, from + n)` proudu (FNV-1a nad bajty); n = 0 dá prázdný otisk.
+ */
+static uint64_t fi_hash(en_AUDIO_CAPTURE_STREAM s, uint64_t from, uint64_t n)
+{
+    uint64_t h = 0xCBF29CE484222325ull;
+    if (n == 0) return h;
+    st_AUDIO_CAPTURE_STREAM_COPY c;
+    TEST_ASSERT_TRUE(audio_capture_stream_copy(s, from, n, (size_t) (n * 4u), &c));
+    TEST_ASSERT_EQUAL_UINT64(from, c.data_seq);
+    TEST_ASSERT_EQUAL_UINT64(n, c.data_count);
+    for (uint64_t i = 0; i < c.data_count * 4u; i++) h = (h ^ c.data[i]) * 0x100000001B3ull;
+    audio_capture_stream_copy_clear(&c);
+    return h;
+}
+
+/**
+ * @brief Index hranic: výřez snímku je přesný i po přepsání souhrnu (rozsah i obsah).
+ *
+ * Ring souhrnů jen 16 snímků, PCM drží všechny. Pro snímky 5, 9 a 13 se
+ * před přepsáním souhrnu a po něm srovná rozsah (proti hranicím ze stavu
+ * zachycení) i otisk obsahu, v proudu reference i SDL. Profily 100 %,
+ * 50 %, 200 % a změna rychlosti uprostřed, bloky SDL délky PAL i NTSC.
+ * Na 04ee7d22 (hranice odhadem 881,36 vzorku na snímek po přepsání
+ * souhrnu) funkce audio_capture_frame_range() neexistovala; odhad dával
+ * při 50 % a 200 % jiný snímek reference (viz okraje_pcm.py --ring).
+ */
+void test_audio_capture_frame_index_after_summary_overwrite(void)
+{
+    static const unsigned profiles[] = { 100, 50, 200, 0 };
+    static const unsigned probe[] = { 5, 9, 13 };
+    const en_AUDIO_CAPTURE_STREAM streams[2] = { AUDIO_CAPTURE_STREAM_PCM_REFERENCE, AUDIO_CAPTURE_STREAM_PCM_SDL };
+    for (unsigned pi = 0; pi < G_N_ELEMENTS(profiles); pi++) {
+        for (int ntsc = 0; ntsc < 2; ntsc++) {
+            st_AUDIO_CAPTURE_PARAMS p = params(false, 0);
+            p.events = p.psg_writes = p.reference_wav = false;
+            p.memory = true;
+            p.pcm_reference = p.pcm_sdl = true;
+            p.ring_frames = 16;
+            p.ring_pcm = 400000;
+            TEST_ASSERT_TRUE(audio_capture_start(&p, NULL, 0));
+            static st_FI_RUN r;
+            memset(&r, 0, sizeof(r));
+            r.t = T0;
+            uint64_t before[G_N_ELEMENTS(probe)][2][3];
+            while (r.closed < 15) fi_event(&r, profiles[pi], ntsc, true);
+            for (unsigned k = 0; k < G_N_ELEMENTS(probe); k++) {
+                for (unsigned s = 0; s < 2; s++) {
+                    st_AUDIO_CAPTURE_FRAME_RANGE fr;
+                    TEST_ASSERT_TRUE(audio_capture_frame_range(streams[s], probe[k], 1, &fr));
+                    TEST_ASSERT_EQUAL_UINT(0, fr.flags);
+                    TEST_ASSERT_EQUAL_UINT64(r.bound[probe[k]][s], fr.sample_from);
+                    TEST_ASSERT_EQUAL_UINT64(r.bound[probe[k] + 1][s] - r.bound[probe[k]][s], fr.samples);
+                    TEST_ASSERT_TRUE(fr.samples > 0);
+                    before[k][s][0] = fr.sample_from;
+                    before[k][s][1] = fr.samples;
+                    before[k][s][2] = fi_hash(streams[s], fr.sample_from, fr.samples);
+                }
+            }
+            while (r.closed < 120) fi_event(&r, profiles[pi], ntsc, true);
+            st_AUDIO_CAPTURE_STATUS st;
+            audio_capture_get_status(&st);
+            TEST_ASSERT_TRUE(st.streams[AUDIO_CAPTURE_STREAM_FRAMES].first_seq > probe[G_N_ELEMENTS(probe) - 1]);
+            TEST_ASSERT_EQUAL_UINT64(0, st.streams[AUDIO_CAPTURE_STREAM_PCM_REFERENCE].first_seq);
+            TEST_ASSERT_EQUAL_UINT64(0, st.streams[AUDIO_CAPTURE_STREAM_PCM_SDL].first_seq);
+            for (unsigned k = 0; k < G_N_ELEMENTS(probe); k++) {
+                for (unsigned s = 0; s < 2; s++) {
+                    st_AUDIO_CAPTURE_FRAME_RANGE fr;
+                    TEST_ASSERT_TRUE(audio_capture_frame_range(streams[s], probe[k], 1, &fr));
+                    TEST_ASSERT_EQUAL_UINT(0, fr.flags);
+                    TEST_ASSERT_EQUAL_UINT64(before[k][s][0], fr.sample_from);
+                    TEST_ASSERT_EQUAL_UINT64(before[k][s][1], fr.samples);
+                    TEST_ASSERT_EQUAL_UINT64(before[k][s][2], fi_hash(streams[s], fr.sample_from, fr.samples));
+                }
+            }
+            /* všechny snímky po jednom navazují a odpovídají hranicím ze stavu */
+            for (uint64_t g = 0; g < r.closed; g++) {
+                for (unsigned s = 0; s < 2; s++) {
+                    st_AUDIO_CAPTURE_FRAME_RANGE fr;
+                    TEST_ASSERT_TRUE(audio_capture_frame_range(streams[s], g, 1, &fr));
+                    TEST_ASSERT_EQUAL_UINT64(r.bound[g][s], fr.sample_from);
+                    TEST_ASSERT_EQUAL_UINT64(r.bound[g + 1][s] - r.bound[g][s], fr.samples);
+                }
+            }
+            TEST_ASSERT_TRUE(audio_capture_stop());
+        }
+    }
+}
+
+/**
+ * @brief Konec zachycení: dotazy podle snímku pokrývají jen uzavřené snímky.
+ *
+ * Ruční stop s blokem SDL přijatým po posledním uzavřeném snímku (SDL má
+ * o blok víc), automatický konec po `frames` a živé čtení s otevřeným
+ * snímkem; 100 %, 50 % a 200 %. Společný dotaz (N - 1, 2) = samostatný
+ * (N - 1, 1); samostatný (N, 1) je prázdný s AUDIO_CAPTURE_RANGE_START_NOT_CLOSED
+ * a začíná na konci uzavřených snímků, odkud je dodatečný blok čitelný podle
+ * indexu vzorku. Na 04ee7d22 vracel (N, 1) dalších 881 vzorků SDL, zatímco
+ * (N - 1, 2) končil na konci snímku N - 1.
+ */
+void test_audio_capture_frame_range_end_contract(void)
+{
+    static const unsigned profiles[] = { 100, 50, 200 };
+    const en_AUDIO_CAPTURE_STREAM streams[2] = { AUDIO_CAPTURE_STREAM_PCM_REFERENCE, AUDIO_CAPTURE_STREAM_PCM_SDL };
+    for (unsigned pi = 0; pi < G_N_ELEMENTS(profiles); pi++) {
+        for (int mode = 0; mode < 3; mode++) {   /* 0 = ruční stop, 1 = frames, 2 = živé čtení */
+            st_AUDIO_CAPTURE_PARAMS p = params(false, (mode == 1) ? 20u : 0u);
+            p.events = p.psg_writes = p.reference_wav = false;
+            p.memory = true;
+            p.pcm_reference = p.pcm_sdl = true;
+            TEST_ASSERT_TRUE(audio_capture_start(&p, NULL, 0));
+            static st_FI_RUN r;
+            memset(&r, 0, sizeof(r));
+            r.t = T0;
+            for (unsigned e = 0; e < 40 && r.closed < 20; e++) fi_event(&r, profiles[pi], false, true);
+            if (mode != 2) {
+                /* blok SDL po posledním uzavřeném snímku, pak konec */
+                fi_event(&r, profiles[pi], false, false);
+                static float extra[2 * 881];
+                for (size_t i = 0; i < 2 * 881; i++) extra[i] = 0.25f;
+                audio_capture_sdl_output(extra, 881);
+                if (mode == 0) TEST_ASSERT_TRUE(audio_capture_stop());
+            }
+            st_AUDIO_CAPTURE_STATUS st;
+            audio_capture_get_status(&st);
+            const uint64_t n = st.frames;
+            TEST_ASSERT_EQUAL_UINT64(r.closed, n);
+            if (mode == 1) TEST_ASSERT_EQUAL_UINT64(20, n);
+            for (unsigned s = 0; s < 2; s++) {
+                st_AUDIO_CAPTURE_FRAME_RANGE last, after, both;
+                TEST_ASSERT_TRUE(audio_capture_frame_range(streams[s], n - 1u, 1, &last));
+                TEST_ASSERT_TRUE(audio_capture_frame_range(streams[s], n, 1, &after));
+                TEST_ASSERT_TRUE(audio_capture_frame_range(streams[s], n - 1u, 2, &both));
+                TEST_ASSERT_EQUAL_UINT(0, last.flags);
+                TEST_ASSERT_EQUAL_UINT64(r.bound[n - 1u][s], last.sample_from);
+                TEST_ASSERT_EQUAL_UINT64(r.bound[n][s] - r.bound[n - 1u][s], last.samples);
+                TEST_ASSERT_EQUAL_UINT(AUDIO_CAPTURE_RANGE_START_NOT_CLOSED, after.flags);
+                TEST_ASSERT_EQUAL_UINT64(0, after.samples);
+                TEST_ASSERT_EQUAL_UINT64(r.bound[n][s], after.sample_from);
+                TEST_ASSERT_EQUAL_UINT64(n, after.closed_frames);
+                TEST_ASSERT_EQUAL_UINT(AUDIO_CAPTURE_RANGE_END_NOT_CLOSED, both.flags);
+                TEST_ASSERT_EQUAL_UINT64(last.sample_from, both.sample_from);
+                TEST_ASSERT_EQUAL_UINT64(last.samples, both.samples);
+                TEST_ASSERT_EQUAL_UINT64(last.samples + after.samples, both.samples);
+                /* dodatečný blok SDL (ruční stop) zůstává čitelný podle indexu vzorku */
+                st_AUDIO_CAPTURE_STREAM_COPY c;
+                TEST_ASSERT_TRUE(audio_capture_stream_copy(streams[s], after.sample_from, UINT64_MAX, 1u << 20, &c));
+                const uint64_t extra_n = c.data_count;
+                audio_capture_stream_copy_clear(&c);
+                if (mode == 0 && s == 1) TEST_ASSERT_EQUAL_UINT64(881, extra_n);
+                if (mode == 1) TEST_ASSERT_EQUAL_UINT64(0, extra_n);   /* po automatickém konci se nic nepřijme */
+            }
+            if (mode == 2) TEST_ASSERT_TRUE(audio_capture_stop());
+        }
+    }
+}
+
+/**
+ * @brief Index hranic po přepsání PCM: snímky bez dat se hlásí, ne odhadují; při 50 % index roste.
+ */
+void test_audio_capture_frame_index_pcm_overwrite(void)
+{
+    const en_AUDIO_CAPTURE_STREAM streams[2] = { AUDIO_CAPTURE_STREAM_PCM_REFERENCE, AUDIO_CAPTURE_STREAM_PCM_SDL };
+    st_AUDIO_CAPTURE_PARAMS p = params(false, 0);
+    p.events = p.psg_writes = p.reference_wav = false;
+    p.memory = true;
+    p.pcm_reference = p.pcm_sdl = true;
+    p.ring_frames = 8;
+    p.ring_pcm = 20000;   /* reference při 50 % asi 45 snímků, SDL asi 22 snímků; výchozí index 24 hranic */
+    TEST_ASSERT_TRUE(audio_capture_start(&p, NULL, 0));
+    static st_FI_RUN r;
+    memset(&r, 0, sizeof(r));
+    r.t = T0;
+    while (r.closed < 150) fi_event(&r, 50, false, true);
+    st_AUDIO_CAPTURE_STATUS st;
+    audio_capture_get_status(&st);
+    const uint64_t ref_first = st.streams[AUDIO_CAPTURE_STREAM_PCM_REFERENCE].first_seq;
+    TEST_ASSERT_TRUE(ref_first > 0);
+    /* Každý snímek, jehož data reference ring ještě celá drží, má přesnou hranici. */
+    uint64_t checked = 0;
+    for (uint64_t g = 0; g < r.closed; g++) {
+        st_AUDIO_CAPTURE_FRAME_RANGE fr;
+        TEST_ASSERT_TRUE(audio_capture_frame_range(streams[0], g, 1, &fr));
+        if (r.bound[g][0] >= ref_first) {
+            TEST_ASSERT_EQUAL_UINT(0, fr.flags);
+            TEST_ASSERT_EQUAL_UINT64(r.bound[g][0], fr.sample_from);
+            TEST_ASSERT_EQUAL_UINT64(r.bound[g + 1][0] - r.bound[g][0], fr.samples);
+            checked++;
+        } else if (fr.flags) {
+            /* hranice už nedržená: ohlášeno, bez vzorků z jiného času */
+            TEST_ASSERT_EQUAL_UINT(AUDIO_CAPTURE_RANGE_START_NOT_HELD, fr.flags);
+            TEST_ASSERT_EQUAL_UINT64(0, fr.samples);
+        }
+    }
+    TEST_ASSERT_TRUE(checked >= 40);
+    TEST_ASSERT_TRUE(st.memory_bytes > 2u * 20000u * 4u + 24u * 16u);   /* index se zvětšil */
+    /* Rozsah přes okraj držených hranic začíná na nejstarší držené a hlásí to. */
+    st_AUDIO_CAPTURE_FRAME_RANGE fr;
+    TEST_ASSERT_TRUE(audio_capture_frame_range(streams[1], 0, 200, &fr));
+    TEST_ASSERT_TRUE(fr.flags & AUDIO_CAPTURE_RANGE_START_NOT_HELD);
+    TEST_ASSERT_TRUE(fr.flags & AUDIO_CAPTURE_RANGE_END_NOT_CLOSED);
+    TEST_ASSERT_EQUAL_UINT64(fr.held_from, fr.frame_from);
+    TEST_ASSERT_EQUAL_UINT64(r.closed, fr.frame_to);
+    TEST_ASSERT_EQUAL_UINT64(r.bound[fr.frame_from][1], fr.sample_from);
+    TEST_ASSERT_EQUAL_UINT64(r.bound[r.closed][1] - r.bound[fr.frame_from][1], fr.samples);
+    TEST_ASSERT_TRUE(audio_capture_stop());
+}
+
+
+/**
+ * @brief audio_capture_clip_window(): průnik okna s drženým úsekem včetně okrajů.
+ *
+ * Prázdný proud, okno přesně na hranicích, jeden záznam, plný ring (okno
+ * větší než držený úsek), okno celé před / za drženým úsekem, obrácené
+ * okno a indexy u UINT64_MAX (bez přetečení).
+ */
+void test_audio_capture_clip_window(void)
+{
+    static const struct { uint64_t from, to, first, next, lo, n; } c[] = {
+        { 0, 10, 0, 0, 0, 0 },                       /* prázdný proud */
+        { 100, 200, 500, 500, 200, 0 },              /* prázdný proud po přepsání: okno před ním */
+        { 500, 600, 500, 500, 500, 0 },              /* prázdný proud na začátku okna */
+        { 500, 600, 500, 600, 500, 100 },            /* okno přesně na hranicích */
+        { 499, 601, 500, 600, 500, 100 },            /* plný ring uvnitř většího okna */
+        { 599, 600, 500, 600, 599, 1 },              /* jeden záznam na konci */
+        { 500, 501, 500, 600, 500, 1 },              /* jeden záznam na začátku */
+        { 400, 500, 500, 600, 500, 0 },              /* okno končí přesně na prvním drženém: ztraceno */
+        { 400, 501, 500, 600, 500, 1 },              /* zbude jeden záznam */
+        { 600, 700, 500, 600, 600, 0 },              /* okno začíná na příštím záznamu */
+        { 650, 700, 500, 600, 650, 0 },              /* okno za drženým úsekem */
+        { 550, 550, 500, 600, 550, 0 },              /* prázdné okno uvnitř */
+        { 550, 540, 500, 600, 550, 0 },              /* obrácené okno = prázdné */
+        { UINT64_MAX - 5, UINT64_MAX, UINT64_MAX - 3, UINT64_MAX, UINT64_MAX - 3, 3 },
+        { 0, UINT64_MAX, UINT64_MAX - 1, UINT64_MAX, UINT64_MAX - 1, 1 },
+        { UINT64_MAX, UINT64_MAX, 0, UINT64_MAX, UINT64_MAX, 0 },
+        { 0, UINT64_MAX, 0, UINT64_MAX, 0, UINT64_MAX },
+    };
+    for (size_t i = 0; i < G_N_ELEMENTS(c); i++) {
+        uint64_t lo = 12345;
+        const uint64_t n = audio_capture_clip_window(c[i].from, c[i].to, c[i].first, c[i].next, &lo);
+        char msg[32];
+        g_snprintf(msg, sizeof(msg), "case %u", (unsigned) i);
+        TEST_ASSERT_EQUAL_UINT64_MESSAGE(c[i].n, n, msg);
+        TEST_ASSERT_EQUAL_UINT64_MESSAGE(c[i].lo, lo, msg);
+    }
+}
+
+/**
+ * @brief audio_capture_lag_overlap(): společné dvojice (a[i], b[i + lag]) i u okrajů.
+ */
+void test_audio_capture_lag_overlap(void)
+{
+    static const struct { uint64_t as, an, bs, bn, lag, from, n; } c[] = {
+        { 100, 50, 100, 50, 0, 100, 50 },            /* totéž */
+        { 100, 50, 120, 50, 0, 120, 30 },            /* b začíná později */
+        { 100, 50, 90, 20, 0, 100, 10 },             /* b končí uvnitř a */
+        { 100, 50, 150, 10, 0, 100, 0 },             /* b až za a */
+        { 100, 50, 150, 10, 50, 100, 10 },           /* posun: b[150..160) patří k a[100..110) */
+        { 100, 50, 149, 1, 50, 100, 0 },             /* b[149] by patřil k a[99] */
+        { 100, 50, 0, 10, 5, 100, 0 },               /* b celý před posunem okna a */
+        { 0, 10, 0, 3, 5, 0, 0 },                    /* b končí před posunem */
+        { 0, 10, 0, 8, 5, 0, 3 },                    /* b[5..8) = a[0..3) */
+        { 7, 1, 7, 1, 0, 7, 1 },                     /* jeden vzorek */
+        { 5, 0, 5, 10, 0, 5, 0 },                    /* prázdný a */
+        { UINT64_MAX - 10, 10, UINT64_MAX - 4, 4, 2, UINT64_MAX - 6, 4 },
+        { UINT64_MAX - 10, UINT64_MAX, UINT64_MAX - 10, UINT64_MAX, 0, UINT64_MAX - 10, 10 },  /* nasycené konce */
+    };
+    for (size_t i = 0; i < G_N_ELEMENTS(c); i++) {
+        uint64_t from = 12345;
+        const uint64_t n = audio_capture_lag_overlap(c[i].as, c[i].an, c[i].bs, c[i].bn, c[i].lag, &from);
+        char msg[32];
+        g_snprintf(msg, sizeof(msg), "case %u", (unsigned) i);
+        TEST_ASSERT_EQUAL_UINT64_MESSAGE(c[i].n, n, msg);
+        TEST_ASSERT_EQUAL_UINT64_MESSAGE(c[i].from, from, msg);
+    }
+}
+
+/**
+ * @brief audio_capture_stream_copy_window() po přepsání PCM: jen zachované vzorky snímku.
+ *
+ * Malý PCM ring (5 000 vzorků) při 100 %, 50 % a 200 %, bloky SDL PAL
+ * i NTSC: pro každý uzavřený snímek s drženou hranicí vrátí okno snímku
+ * přesně `[max(začátek, první držený), konec)` (nic z dalšího snímku,
+ * zcela přepsaný snímek 0 vzorků a `held_seq` = konec), obsah je týž jako
+ * kurzorová kopie od stejného indexu a sousední snímky na sebe navazují bez
+ * opakování. Strop `max_bytes` zkrátí kopii, ne průnik. Kurzorová
+ * audio_capture_stream_copy() dál od nejstaršího drženého vzorku odměří
+ * celou délku (beze změny). Na f9da3035 neexistovala okenní kopie; výřez
+ * podle snímku tam braly obsluhy přes kurzorovou kopii, která po přepsání
+ * přidala vzorky dalšího snímku.
+ */
+void test_audio_capture_copy_window_pcm_overwrite(void)
+{
+    static const unsigned profiles[] = { 100, 50, 200 };
+    const en_AUDIO_CAPTURE_STREAM streams[2] = { AUDIO_CAPTURE_STREAM_PCM_REFERENCE, AUDIO_CAPTURE_STREAM_PCM_SDL };
+    for (unsigned pi = 0; pi < G_N_ELEMENTS(profiles); pi++) {
+        for (int ntsc = 0; ntsc < 2; ntsc++) {
+            st_AUDIO_CAPTURE_PARAMS p = params(false, 0);
+            p.events = p.psg_writes = p.reference_wav = false;
+            p.memory = true;
+            p.pcm_reference = p.pcm_sdl = true;
+            p.ring_pcm = 5000;
+            TEST_ASSERT_TRUE(audio_capture_start(&p, NULL, 0));
+            static st_FI_RUN r;
+            memset(&r, 0, sizeof(r));
+            r.t = T0;
+            while (r.closed < 60) fi_event(&r, profiles[pi], ntsc, true);
+            st_AUDIO_CAPTURE_STATUS st;
+            audio_capture_get_status(&st);
+            unsigned partial = 0, lost = 0, whole = 0;
+            for (unsigned s = 0; s < 2; s++) {
+                const uint64_t first = st.streams[streams[s]].first_seq;
+                const uint64_t next = st.streams[streams[s]].next_seq;
+                TEST_ASSERT_TRUE(first > 0);
+                uint64_t expect_next = 0;
+                bool have_prev = false;
+                for (uint64_t g = 0; g < r.closed; g++) {
+                    st_AUDIO_CAPTURE_FRAME_RANGE fr;
+                    TEST_ASSERT_TRUE(audio_capture_frame_range(streams[s], g, 1, &fr));
+                    if (fr.flags) continue;                      /* hranici index už nedrží */
+                    const uint64_t a = r.bound[g][s], b = r.bound[g + 1][s];
+                    TEST_ASSERT_EQUAL_UINT64(a, fr.sample_from);
+                    TEST_ASSERT_EQUAL_UINT64(b - a, fr.samples);
+                    const uint64_t lo = (a > first) ? a : first;
+                    const uint64_t n = (b > lo) ? b - lo : 0u;
+                    st_AUDIO_CAPTURE_STREAM_COPY c;
+                    TEST_ASSERT_TRUE(audio_capture_stream_copy_window(streams[s], a, b, 1u << 20, &c));
+                    TEST_ASSERT_EQUAL_UINT64(first, c.first_seq);
+                    TEST_ASSERT_EQUAL_UINT64(next, c.next_seq);
+                    TEST_ASSERT_EQUAL_UINT64(n, c.held_count);
+                    TEST_ASSERT_EQUAL_UINT64(n, c.data_count);
+                    TEST_ASSERT_EQUAL_UINT64(n ? lo : b, c.held_seq);
+                    TEST_ASSERT_EQUAL_UINT64(c.held_seq, c.data_seq);
+                    if (n) {
+                        /* obsah = kurzorová kopie od zachovaného začátku; navazuje na předchozí snímek */
+                        st_AUDIO_CAPTURE_STREAM_COPY k;
+                        TEST_ASSERT_TRUE(audio_capture_stream_copy(streams[s], lo, n, (size_t) (n * 4u), &k));
+                        TEST_ASSERT_EQUAL_UINT64(n, k.data_count);
+                        TEST_ASSERT_EQUAL_MEMORY(k.data, c.data, (size_t) (n * 4u));
+                        audio_capture_stream_copy_clear(&k);
+                        if (have_prev) TEST_ASSERT_EQUAL_UINT64(expect_next, c.data_seq);
+                        expect_next = c.data_seq + c.data_count;
+                        have_prev = true;
+                        if (n < b - a) partial++;
+                        else whole++;
+                    } else {
+                        lost++;
+                    }
+                    audio_capture_stream_copy_clear(&c);
+                    if (n > 3) {
+                        /* strop výstupu zkrátí kopii, průnik zůstane */
+                        TEST_ASSERT_TRUE(audio_capture_stream_copy_window(streams[s], a, b, 3u * 4u, &c));
+                        TEST_ASSERT_EQUAL_UINT64(3, c.data_count);
+                        TEST_ASSERT_EQUAL_UINT64(n, c.held_count);
+                        TEST_ASSERT_EQUAL_UINT64(lo, c.data_seq);
+                        audio_capture_stream_copy_clear(&c);
+                    }
+                    if (a < first && b > first) {
+                        /* kurzor beze změny: od prvního drženého celá délka snímku (sahá do dalšího) */
+                        TEST_ASSERT_TRUE(audio_capture_stream_copy(streams[s], a, b - a, 1u << 20, &c));
+                        TEST_ASSERT_EQUAL_UINT64(first, c.data_seq);
+                        TEST_ASSERT_EQUAL_UINT64((next - first < b - a) ? next - first : b - a, c.data_count);
+                        audio_capture_stream_copy_clear(&c);
+                    }
+                }
+            }
+            TEST_ASSERT_TRUE(whole > 0);
+            TEST_ASSERT_TRUE(partial + lost > 0);
+            TEST_ASSERT_TRUE(audio_capture_stop());
+        }
+    }
+}
+
+
 /** @brief Paměť jako jediný výstup je platný výběr; bez výstupu chyba zmiňuje memory. */
 void test_audio_capture_memory_start_errors(void)
 {
@@ -708,5 +1160,11 @@ int main(int argc, char *argv[])
     RUN_TEST(test_audio_capture_memory_pcm_matches_wav);
     RUN_TEST(test_audio_capture_memory_start_errors);
     RUN_TEST(test_audio_capture_memory_copy_time);
+    RUN_TEST(test_audio_capture_frame_index_after_summary_overwrite);
+    RUN_TEST(test_audio_capture_frame_range_end_contract);
+    RUN_TEST(test_audio_capture_frame_index_pcm_overwrite);
+    RUN_TEST(test_audio_capture_clip_window);
+    RUN_TEST(test_audio_capture_lag_overlap);
+    RUN_TEST(test_audio_capture_copy_window_pcm_overwrite);
     return UNITY_END();
 }

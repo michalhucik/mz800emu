@@ -17,7 +17,7 @@
 ## Emulace
 
 - MZ-700 NTSC (japonská verze): poloha obrazu v řádku, čekání při přístupu do VRAM a vstup čítače CTC0 jsou převzaté z MZ-1500, který má stejný krystal, čekací takt při čtení z monitorové ROM z evropského MZ-700; na japonském MZ-700 změřené nejsou.
-- Přesný takt: emulátor odvozuje takt od celých snímků za sekundu, ne od krystalu. PAL běží na 17 721 600 Hz místo 17 734 475 Hz (o 0,07 % pomaleji), NTSC na 14 336 640 Hz místo 14 318 180 Hz (o 0,13 % rychleji); stejně se posouvá všechno odvozené, včetně tónů CTC0. V plánu je přesnější emulace: počet taktů na snímek zůstane stejný, ale převod na skutečný čas (zvuk, nahrávání AVI, zápis a čtení WAV kazety, synchronizace bez zvuku) bude vycházet z frekvence krystalu, případně jako volitelné nastavení.
+- Přesný takt, zbývající části: tempo emulace, živý zvuk, zachycení zvuku a výpisy už odpovídají krystalu skutečného počítače (PAL 50,036 snímku za sekundu, NTSC 59,923). Podle jmenovitých 50 a 60 snímků za sekundu zatím dál pracuje kazeta (převod WAV a dalších formátů na takty, o 0,07 % jinak u PAL a o 0,13 % u NTSC) a soubor AVI (hlavička 50 nebo 60 snímků za sekundu, výška tónů v souboru o 1,3 centu níž u PAL a o 2,2 centu výš u NTSC). U kazety jde o změnu chování emulovaného počítače s páskou, proto se řeší zvlášť.
 
 ### Čítač 8253: známé rozdíly proti skutečnému počítači
 

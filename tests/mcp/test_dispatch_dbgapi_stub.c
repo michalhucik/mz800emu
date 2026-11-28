@@ -41,6 +41,7 @@
 #include "emulator/state_hash.h"
 #include "emulator/debugger/memsearch/memsearch.h"
 #include "emulator/audio_capture.h"
+#include "emulator/hw-generic/gdg/gdgclk.h"
 /* Pozn.: dbgapi_ui.h NEincludujeme - viz komentář ve stub headeru. */
 /* F015a - dispatch.c v _handle_bp_list volá bpt_type_to_string /
  * bp_zone_to_string. V standalone testu se breakpoints.c nelinkuje,
@@ -3192,33 +3193,48 @@ const char *snapshot_result_to_string(en_SNAPSHOT_RESULT result)
 
 
 /**
- * @brief Mock audio_capture_stream_copy(): proud s aud_records syntetickými záznamy.
+ * @brief Nejstarší držený záznam proudu ve stubu (aud_first_ref / aud_first_sdl u PCM, jinak 0).
+ * @param stream Proud.
+ * @return První držený záznam (nejvýš aud_records).
+ */
+static uint64_t stub_aud_first(en_AUDIO_CAPTURE_STREAM stream)
+{
+    uint64_t f = (stream == AUDIO_CAPTURE_STREAM_PCM_REFERENCE) ? g_stub_state.aud_first_ref
+               : (stream == AUDIO_CAPTURE_STREAM_PCM_SDL) ? g_stub_state.aud_first_sdl : 0u;
+    return (f > g_stub_state.aud_records) ? g_stub_state.aud_records : f;
+}
+
+
+/**
+ * @brief Metadata kopie a syntetické záznamy `[lo, hi)` (společné pro oba mocky kopie).
  *
  * Záznam i: levels t = origin + 10 i, frame i / 5, src i % 9, level i % 16;
  * psg_writes t = origin + 10 i, PSG0, kanál 0, liché i = tón 254, sudé =
- * hlasitost 2; frames t = origin + 1000 i, délka 1000, kanál 0: i hran,
- * 500 taktů na úrovni 15, reference RMS 100 / 200; PCM pár (i, -i).
+ * hlasitost 2; frames t = origin + L i, délka L = aud_frame_ticks (0 = 1000
+ * taktů; VIDEO_SCREEN_TICKS = jmenovitý snímek; od aud_speed_from délka
+ * aud_speed_ticks, je-li nenulová - vlastní rychlost), kanál 0: i hran,
+ * 500 taktů na úrovni 15, reference RMS 100 / 200, v obou proudech PCM
+ * jeden vzorek od indexu i (s aud_pcm_bounds_by_ticks hranice podle taktů
+ * snímku); PCM pár (i, -i).
+ *
+ * @param stream Proud.
+ * @param lo     První záznam (`lo >= hi` = jen metadata).
+ * @param hi     Za posledním záznamem.
+ * @param out    Výstup (vynulovaný volajícím; metadata se vyplní i bez dat).
+ * @return Velikost záznamu proudu.
  */
-bool audio_capture_stream_copy(en_AUDIO_CAPTURE_STREAM stream, uint64_t from_seq,
-                               uint64_t count, size_t max_bytes,
-                               st_AUDIO_CAPTURE_STREAM_COPY *out)
+static size_t stub_aud_fill(en_AUDIO_CAPTURE_STREAM stream, uint64_t lo, uint64_t hi,
+                            st_AUDIO_CAPTURE_STREAM_COPY *out)
 {
-    memset(out, 0, sizeof(*out));
-    g_stub_state.aud_copy_calls++;
-    out->segment = g_stub_state.aud_segment;
-    out->origin_ticks = g_stub_state.aud_origin;
-    if (g_stub_state.aud_segment == 0) return true;
     size_t rs = (stream == AUDIO_CAPTURE_STREAM_LEVELS) ? sizeof(st_AUDIO_CAPTURE_LEVEL_REC)
               : (stream == AUDIO_CAPTURE_STREAM_PSG_WRITES) ? sizeof(st_AUDIO_CAPTURE_PSG_REC)
               : (stream == AUDIO_CAPTURE_STREAM_FRAMES) ? sizeof(st_AUDIO_CAPTURE_FRAME_REC) : 4u;
     out->live = true;
     out->present = true;
     out->record_size = rs;
+    out->first_seq = stub_aud_first(stream);
     out->next_seq = g_stub_state.aud_records;
-    uint64_t lo = from_seq, hi = out->next_seq;
-    if (lo < hi && count < hi - lo) hi = lo + count;
-    if (lo < hi && (hi - lo) * rs > max_bytes) hi = lo + max_bytes / rs;
-    if (lo >= hi) return true;
+    if (lo >= hi) return rs;
     out->data = (uint8_t *) g_malloc0((gsize) ((hi - lo) * rs));
     out->data_seq = lo;
     out->data_count = hi - lo;
@@ -3235,16 +3251,136 @@ bool audio_capture_stream_copy(en_AUDIO_CAPTURE_STREAM stream, uint64_t from_seq
             w->value = (uint16_t) ((i & 1) ? 254 : 2);
         } else if (stream == AUDIO_CAPTURE_STREAM_FRAMES) {
             st_AUDIO_CAPTURE_FRAME_REC *f = (st_AUDIO_CAPTURE_FRAME_REC *) r;
-            f->t = o + 1000u * i; f->frame = (uint32_t) i; f->len_ticks = 1000;
+            const uint64_t flen = g_stub_state.aud_frame_ticks ? g_stub_state.aud_frame_ticks : 1000u;
+            /* vlastní rychlost od snímku aud_speed_from: začátek snímku = součet skutečných délek */
+            const uint64_t sp = g_stub_state.aud_speed_ticks ? g_stub_state.aud_speed_from : UINT64_MAX;
+            const uint64_t slen = g_stub_state.aud_speed_ticks;
+            const uint64_t t_i = (i <= sp) ? flen * i : flen * sp + slen * (i - sp);
+            const uint64_t t_n = (i + 1u <= sp) ? flen * (i + 1u) : flen * sp + slen * (i + 1u - sp);
+            f->t = o + t_i; f->frame = (uint32_t) i; f->len_ticks = (uint32_t) (t_n - t_i);
             f->ch[0].edges = (uint32_t) i; f->ch[0].on_ticks = 500; f->ch[0].energy = 225u * 500u;
             f->ch[0].max_level = 15;
             f->flags = AUDIO_CAPTURE_FRAME_FLAG_REF;
             f->ref_rms[0] = 100; f->ref_rms[1] = 200;
+            if (g_stub_state.aud_pcm_bounds_by_ticks) {
+                /* hranice podle taktů snímku: vzorek floor((t - origin) * 44100 / krystal);
+                 * snímky [aud_sdl_drop_from, + aud_sdl_drop_count) bez bloku SDL (vynechaný
+                 * blok): SDL dalších snímků začíná o jejich vzorky dřív */
+                const uint64_t s0 = flen * i * AUDIO_CAPTURE_WAV_RATE / GDGCLK_REAL_TICKS_PER_SEC;
+                const uint64_t s1 = flen * (i + 1u) * AUDIO_CAPTURE_WAV_RATE / GDGCLK_REAL_TICKS_PER_SEC;
+                /* reference podle skutečných taktů snímku (při vlastní rychlosti jiný počet
+                 * vzorků), SDL cesta dál jeden jmenovitý blok na snímek (s0, s1) */
+                const uint64_t r0 = t_i * AUDIO_CAPTURE_WAV_RATE / GDGCLK_REAL_TICKS_PER_SEC;
+                const uint64_t r1 = t_n * AUDIO_CAPTURE_WAV_RATE / GDGCLK_REAL_TICKS_PER_SEC;
+                const uint64_t df = g_stub_state.aud_sdl_drop_from, dn = g_stub_state.aud_sdl_drop_count;
+                const uint64_t de = (i < df + dn) ? i : df + dn;
+                const uint64_t lost = (dn && i > df)
+                    ? flen * de * AUDIO_CAPTURE_WAV_RATE / GDGCLK_REAL_TICKS_PER_SEC
+                      - flen * df * AUDIO_CAPTURE_WAV_RATE / GDGCLK_REAL_TICKS_PER_SEC
+                    : 0u;
+                const bool dropped = dn && i >= df && i < df + dn;
+                f->ref_first = r0; f->sdl_first = s0 - lost;
+                f->ref_samples = (uint32_t) (r1 - r0); f->sdl_samples = dropped ? 0u : (uint32_t) (s1 - s0);
+                f->sdl_blocks = dropped ? 0u : 1u;
+            } else {
+                /* jeden vzorek PCM na snímek v obou proudech: snímek i = vzorek i */
+                f->ref_samples = 1; f->sdl_samples = 1;
+                f->ref_first = i; f->sdl_first = i;
+            }
         } else {
             int16_t *pcm = (int16_t *) r;
             pcm[0] = (int16_t) i; pcm[1] = (int16_t) -(int16_t) i;
         }
     }
+    return rs;
+}
+
+
+/**
+ * @brief Mock audio_capture_stream_copy(): kurzorové čtení jako skutečná funkce
+ *        (od max(from_seq, nejstarší držený) `count` záznamů), záznamy viz stub_aud_fill().
+ */
+bool audio_capture_stream_copy(en_AUDIO_CAPTURE_STREAM stream, uint64_t from_seq,
+                               uint64_t count, size_t max_bytes,
+                               st_AUDIO_CAPTURE_STREAM_COPY *out)
+{
+    memset(out, 0, sizeof(*out));
+    g_stub_state.aud_copy_calls++;
+    out->segment = g_stub_state.aud_segment;
+    out->origin_ticks = g_stub_state.aud_origin;
+    if (g_stub_state.aud_segment == 0) return true;
+    const uint64_t first = stub_aud_first(stream);
+    uint64_t lo = (from_seq > first) ? from_seq : first, hi = g_stub_state.aud_records;
+    const size_t rs = (stream == AUDIO_CAPTURE_STREAM_LEVELS) ? sizeof(st_AUDIO_CAPTURE_LEVEL_REC)
+                    : (stream == AUDIO_CAPTURE_STREAM_PSG_WRITES) ? sizeof(st_AUDIO_CAPTURE_PSG_REC)
+                    : (stream == AUDIO_CAPTURE_STREAM_FRAMES) ? sizeof(st_AUDIO_CAPTURE_FRAME_REC) : 4u;
+    if (lo < hi && count < hi - lo) hi = lo + count;
+    if (lo < hi && (hi - lo) * rs > max_bytes) hi = lo + max_bytes / rs;
+    stub_aud_fill(stream, lo, hi, out);
+    return true;
+}
+
+
+/**
+ * @brief Mock audio_capture_stream_copy_window(): průnik okna s drženým úsekem
+ *        (audio_capture_clip_window()) a strop `max_bytes` jako skutečná funkce.
+ */
+bool audio_capture_stream_copy_window(en_AUDIO_CAPTURE_STREAM stream, uint64_t from_seq,
+                                      uint64_t to_seq, size_t max_bytes,
+                                      st_AUDIO_CAPTURE_STREAM_COPY *out)
+{
+    memset(out, 0, sizeof(*out));
+    g_stub_state.aud_copy_calls++;
+    out->segment = g_stub_state.aud_segment;
+    out->origin_ticks = g_stub_state.aud_origin;
+    out->held_seq = out->data_seq = from_seq;
+    if (g_stub_state.aud_segment == 0) return true;
+    uint64_t lo = from_seq;
+    const uint64_t n = audio_capture_clip_window(from_seq, to_seq, stub_aud_first(stream),
+                                                 g_stub_state.aud_records, &lo);
+    const size_t rs = (stream == AUDIO_CAPTURE_STREAM_LEVELS) ? sizeof(st_AUDIO_CAPTURE_LEVEL_REC)
+                    : (stream == AUDIO_CAPTURE_STREAM_PSG_WRITES) ? sizeof(st_AUDIO_CAPTURE_PSG_REC)
+                    : (stream == AUDIO_CAPTURE_STREAM_FRAMES) ? sizeof(st_AUDIO_CAPTURE_FRAME_REC) : 4u;
+    const uint64_t max_rec = max_bytes / rs;
+    stub_aud_fill(stream, lo, lo + ((n > max_rec) ? max_rec : n), out);
+    out->held_seq = out->data_seq = lo;
+    out->held_count = n;
+    return true;
+}
+
+
+/**
+ * @brief Mock audio_capture_frame_range(): hranice snímku i = vzorek i, aud_records
+ *        uzavřených snímků, index drží všechny (held_from 0); stejné ořezy a bity
+ *        jako skutečná funkce.
+ */
+bool audio_capture_frame_range(en_AUDIO_CAPTURE_STREAM stream, uint64_t first, uint64_t frames,
+                               st_AUDIO_CAPTURE_FRAME_RANGE *out)
+{
+    memset(out, 0, sizeof(*out));
+    if (g_stub_state.aud_segment == 0
+        || (stream != AUDIO_CAPTURE_STREAM_PCM_REFERENCE && stream != AUDIO_CAPTURE_STREAM_PCM_SDL)) {
+        return false;
+    }
+    out->segment = g_stub_state.aud_segment;
+    const uint64_t closed = g_stub_state.aud_records;
+    const uint64_t last = (frames > UINT64_MAX - first) ? UINT64_MAX : first + frames;
+    uint64_t a = first, b = last;
+    out->closed_frames = closed;
+    if (closed == 0) {
+        out->flags = AUDIO_CAPTURE_RANGE_NO_FRAMES;
+        a = b = 0;
+    } else if (first >= closed) {
+        out->flags = AUDIO_CAPTURE_RANGE_START_NOT_CLOSED;
+        a = b = closed;
+    } else if (b > closed) {
+        b = closed;
+        out->flags = AUDIO_CAPTURE_RANGE_END_NOT_CLOSED;
+    }
+    out->frame_from = a;
+    out->frame_to = b;
+    out->sample_from = a;
+    out->samples = b - a;
     return true;
 }
 
@@ -3281,6 +3417,7 @@ void audio_capture_get_status(st_AUDIO_CAPTURE_STATUS *out)
         out->streams[i].record_size = rs[i];
         out->streams[i].capacity = 1000;
         out->streams[i].next_seq = g_stub_state.aud_records;
+        out->streams[i].first_seq = stub_aud_first((en_AUDIO_CAPTURE_STREAM) i);
         out->memory_bytes += 1000u * rs[i];
     }
 }

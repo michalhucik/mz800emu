@@ -8,20 +8,21 @@
  * |------------------|-------|
  * | `events.csv`     | každá změna výstupní úrovně zvukového kanálu (CTC0 = reproduktor, kanály PSG) |
  * | `psg_writes.csv` | každý zápis do PSG s dekódováním (kanál, registr, hodnota po zápisu) |
- * | `reference.wav`  | zvuk z rendereru videa (videorec_audio, přesné převzorkování v emulovaném čase) |
+ * | `reference.wav`  | zvuk z rendereru videa (videorec_audio, přesné převzorkování v emulovaném čase, takty na vzorky podle krystalu) |
  * | `sdl.wav`        | zvuk tak, jak ho vyrobila skutečná SDL cesta (iface_audio_wait_for_data()) |
  * | `capture.json`   | metadata (platforma, takt, kanály, počty, důvod konce); zapisuje se při konci |
  *
  * Časy v CSV jsou v taktech GDG od začátku zachycení (`ticks`) a v µs
- * (`time_us`); `frame` je pořadí zvukového snímku (20 ms PAL / 16,7 ms NTSC)
- * od začátku zachycení.
+ * (`time_us`, skutečný čas podle krystalu, GDGCLK_REAL_TICKS_PER_SEC); `frame`
+ * je pořadí zvukového snímku (19,985 ms PAL / 16,688 ms NTSC) od začátku
+ * zachycení.
  *
  * Začátek: audio_capture_start() zachycení jen naplánuje, skutečně začne na
  * konci zvukového snímku (audio_capture_on_frame()), kdy jsou dopočítané
  * všechny kanály PSG - stejně jako začátek video záznamu. Se sdl.wav až po
  * rozjezdu SDL cesty (6 snímků, bloky se zahazují), bez něj na konci
  * nejbližšího snímku. Úrovně kanálů na začátku se berou z živého audio logu;
- * renderer reference.wav se zahřeje 100 ms se stejnými úrovněmi a stav
+ * renderer reference.wav se zahřeje 100 až 120 ms (celý počet vzorků) se stejnými úrovněmi a stav
  * střídavých vazeb (CTC0, celý výstup) převezme od emulátoru, takže začíná
  * stejně jako SDL cesta.
  *
@@ -41,7 +42,7 @@
  * |-------------------------------|--------|---------|
  * | `psg_writes`    | st_AUDIO_CAPTURE_PSG_REC (24 B), jako řádek psg_writes.csv | zápis do PSG |
  * | `levels`        | st_AUDIO_CAPTURE_LEVEL_REC (16 B), jako řádek events.csv | změna úrovně kanálu |
- * | `frames`        | st_AUDIO_CAPTURE_FRAME_REC (192 B), souhrn zvukového snímku | konec snímku |
+ * | `frames`        | st_AUDIO_CAPTURE_FRAME_REC (208 B), souhrn zvukového snímku | konec snímku |
  * | `pcm_reference` | stereo pár int16 (4 B), stejná data jako reference.wav | konec snímku |
  * | `pcm_sdl`       | stereo pár int16 (4 B), stejná data jako sdl.wav | blok SDL cesty |
  *
@@ -176,6 +177,16 @@ typedef struct st_AUDIO_CAPTURE_FRAME_CH {
  * Úrovně SDL cesty jsou z bloků, které přišly od konce předchozího snímku
  * (SDL cesta je o snímek a víc zpožděná).
  *
+ * Snímek zachycení je jedna synchronizační událost emulace (konec
+ * zvukového logu): při 100 % jeden snímek obrazu, při vlastní rychlosti
+ * úsek emulace o délce rychlost krát snímek. Reference za něj vyrenderuje
+ * vzorky jeho emulovaného času (při 50 % asi polovinu), SDL cesta dodá
+ * jeden blok (881 nebo 882, NTSC 735 nebo 736 vzorků) bez ohledu na
+ * rychlost. ref_first a sdl_first jsou indexy prvního vzorku snímku
+ * v proudech `pcm_reference` a `pcm_sdl` (= `seq` těchto proudů), takže
+ * `[x_first, x_first + x_samples)` sousedních snímků na sebe přesně
+ * navazují (audio_capture_pcm po snímcích).
+ *
  * @invariant ch[i] pro i >= počet kanálů platformy je nulový.
  */
 typedef struct st_AUDIO_CAPTURE_FRAME_REC {
@@ -192,11 +203,13 @@ typedef struct st_AUDIO_CAPTURE_FRAME_REC {
     uint16_t sdl_blocks;  /**< Bloky SDL cesty od předchozího snímku. */
     uint8_t flags;        /**< AUDIO_CAPTURE_FRAME_FLAG_*. */
     uint8_t reserved[5];  /**< 0. */
+    uint64_t ref_first;   /**< Index prvního vzorku snímku v proudu reference (vzorky vyrenderované před ním). */
+    uint64_t sdl_first;   /**< Index prvního vzorku snímku v proudu SDL cesty (vzorky bloků přijaté před ním). */
 } st_AUDIO_CAPTURE_FRAME_REC;
 
 G_STATIC_ASSERT(sizeof(st_AUDIO_CAPTURE_LEVEL_REC) == 16);
 G_STATIC_ASSERT(sizeof(st_AUDIO_CAPTURE_PSG_REC) == 24);
-G_STATIC_ASSERT(sizeof(st_AUDIO_CAPTURE_FRAME_REC) == 192);
+G_STATIC_ASSERT(sizeof(st_AUDIO_CAPTURE_FRAME_REC) == 208);
 
 /** @brief Parametry zachycení. */
 typedef struct st_AUDIO_CAPTURE_PARAMS {
@@ -266,15 +279,23 @@ typedef struct st_AUDIO_CAPTURE_STATUS {
     unsigned channels;           /**< Počet zvukových kanálů platformy (AUDIO_SRC_CHANNELS_COUNT). */
     bool stereo;                 /**< Druhé PSG je zapnuté (MZ-800 / MZ-1500). */
     bool memory;                 /**< Paměť zachycení se drží. */
-    uint64_t memory_bytes;       /**< Alokovaná paměť ringů [B]. */
+    uint64_t memory_bytes;       /**< Alokovaná paměť ringů a indexu hranic snímků [B] (index roste podle potřeby, viz audio_capture_frame_range()). */
     st_AUDIO_CAPTURE_STREAM_INFO streams[AUDIO_CAPTURE_STREAM_COUNT]; /**< Proudy paměti. */
 } st_AUDIO_CAPTURE_STATUS;
 
 /**
- * @brief Kopie úseku proudu paměti zachycení (audio_capture_stream_copy()).
+ * @brief Kopie úseku proudu paměti zachycení (audio_capture_stream_copy(),
+ *        audio_capture_stream_copy_window()).
+ *
+ * @par Invarianty
+ * `first_seq <= next_seq`; zkopírované záznamy jsou
+ * `[data_seq, data_seq + data_count)` a leží v `[first_seq, next_seq)`.
+ * U audio_capture_stream_copy_window() navíc `data_seq == held_seq`,
+ * `data_count <= held_count` a `[held_seq, held_seq + held_count)` leží
+ * v požadovaném okně.
  *
  * @par Vlastnictví
- * `data` alokuje audio_capture_stream_copy() (g_malloc), uvolní
+ * `data` alokuje kopírovací funkce (g_malloc), uvolní
  * audio_capture_stream_copy_clear().
  */
 typedef struct st_AUDIO_CAPTURE_STREAM_COPY {
@@ -286,9 +307,102 @@ typedef struct st_AUDIO_CAPTURE_STREAM_COPY {
     uint64_t next_seq;    /**< Příští záznam. */
     uint64_t origin_ticks; /**< Absolutní čas začátku zachycení [takty GDG] (0 = nezačalo). */
     uint8_t *data;        /**< Zkopírované záznamy (NULL = žádné). */
-    uint64_t data_seq;    /**< seq prvního zkopírovaného záznamu. */
+    uint64_t data_seq;    /**< seq prvního zkopírovaného záznamu (u okna i bez dat: viz `held_seq`). */
     uint64_t data_count;  /**< Počet zkopírovaných záznamů. */
+    uint64_t held_seq;    /**< Jen audio_capture_stream_copy_window(): začátek průniku okna s drženým úsekem (u prázdného průniku audio_capture_clip_window()). */
+    uint64_t held_count;  /**< Jen audio_capture_stream_copy_window(): délka průniku před omezením `max_bytes` (`held_count > data_count` = kopie zkrácená). */
 } st_AUDIO_CAPTURE_STREAM_COPY;
+
+/**
+ * @brief Průnik požadovaného okna záznamů `[from, to)` s drženým úsekem `[first, next)`.
+ *
+ * Čistá funkce bez zámku a bez stavu (volá ji audio_capture_stream_copy_window()
+ * pod zámkem modulu; jednotkové testy přímo). Nic nepřičítá, takže nepřeteče
+ * ani pro indexy u UINT64_MAX.
+ *
+ * @param from   Začátek okna.
+ * @param to     Konec okna (bez); `to < from` se bere jako prázdné okno `[from, from)`.
+ * @param first  Nejstarší držený záznam proudu.
+ * @param next   Příští záznam proudu (`first <= next`; `first == next` = prázdný proud).
+ * @param lo_out Výstup: začátek průniku. U prázdného průniku místo v okně,
+ *               kde by data začínala: konec okna `to`, leží-li celé okno před
+ *               `first` (data ztracena), jinak `max(from, first)` omezené na `to`
+ *               (okno za `next` nebo prázdné okno).
+ * @return Délka průniku (0 = žádný záznam okna se nedrží).
+ * @post `from <= *lo_out <= max(from, to)` a `[*lo_out, *lo_out + návrat)`
+ *       leží v `[from, to)` i v `[first, next)`.
+ */
+static inline uint64_t audio_capture_clip_window(uint64_t from, uint64_t to, uint64_t first, uint64_t next,
+                                                 uint64_t *lo_out)
+{
+    if (to < from) to = from;
+    const uint64_t lo = (from > first) ? from : first;
+    const uint64_t hi = (to < next) ? to : next;
+    if (lo >= hi) {
+        *lo_out = (lo < to) ? lo : to;
+        return 0;
+    }
+    *lo_out = lo;
+    return hi - lo;
+}
+
+/**
+ * @brief Společné dvojice dvou úseků proudu při pevném posunu druhého.
+ *
+ * Dvojice je (a[i], b[i + lag]) pro index i v souřadnicích prvního proudu.
+ * Úseky jsou `[a_seq, a_seq + a_count)` a `[b_seq, b_seq + b_count)`;
+ * vrátí, pro kolik po sobě jdoucích i od `*from_out` existují oba prvky.
+ * Bez přetečení (odečítá jen tam, kde nepodteče, součty nasytí).
+ *
+ * @param a_seq    Začátek prvního úseku (souřadnice reference).
+ * @param a_count  Délka prvního úseku.
+ * @param b_seq    Začátek druhého úseku (souřadnice druhého proudu).
+ * @param b_count  Délka druhého úseku.
+ * @param lag      Posun druhého proudu za prvním [záznamy], >= 0.
+ * @param from_out Výstup: první společné i (u nulového výsledku `a_seq`).
+ * @return Počet společných dvojic (0 = žádné).
+ */
+static inline uint64_t audio_capture_lag_overlap(uint64_t a_seq, uint64_t a_count, uint64_t b_seq,
+                                                 uint64_t b_count, uint64_t lag, uint64_t *from_out)
+{
+    *from_out = a_seq;
+    const uint64_t a_end = (a_count > UINT64_MAX - a_seq) ? UINT64_MAX : a_seq + a_count;
+    const uint64_t b_end = (b_count > UINT64_MAX - b_seq) ? UINT64_MAX : b_seq + b_count;
+    if (b_end <= lag) return 0;                         /* celý druhý úsek před posunem */
+    const uint64_t b_lo = (b_seq > lag) ? b_seq - lag : 0u;   /* první i s b[i + lag] */
+    const uint64_t b_hi = b_end - lag;
+    const uint64_t lo = (a_seq > b_lo) ? a_seq : b_lo;
+    const uint64_t hi = (a_end < b_hi) ? a_end : b_hi;
+    if (lo >= hi) return 0;
+    *from_out = lo;
+    return hi - lo;
+}
+
+/** @brief Bit st_AUDIO_CAPTURE_FRAME_RANGE::flags: zatím žádný uzavřený snímek (prázdný výřez). */
+#define AUDIO_CAPTURE_RANGE_NO_FRAMES       0x01u
+/** @brief Bit st_AUDIO_CAPTURE_FRAME_RANGE::flags: začátek za posledním uzavřeným snímkem (prázdný výřez). */
+#define AUDIO_CAPTURE_RANGE_START_NOT_CLOSED 0x02u
+/** @brief Bit st_AUDIO_CAPTURE_FRAME_RANGE::flags: konec za posledním uzavřeným snímkem, oříznuto na jeho konec. */
+#define AUDIO_CAPTURE_RANGE_END_NOT_CLOSED  0x04u
+/** @brief Bit st_AUDIO_CAPTURE_FRAME_RANGE::flags: hranice začátku se už nedrží, začátek posunut na nejstarší drženou (při `samples == 0` celý rozsah). */
+#define AUDIO_CAPTURE_RANGE_START_NOT_HELD  0x08u
+
+/**
+ * @brief Výřez proudu PCM podle snímků zachycení (audio_capture_frame_range()).
+ *
+ * Pokrývá jen uzavřené snímky, jejichž hranice index drží; vše ostatní
+ * hlásí bity `flags`. Indexy vzorků jsou přesné (ne odhad podle krystalu).
+ */
+typedef struct st_AUDIO_CAPTURE_FRAME_RANGE {
+    uint64_t sample_from;    /**< První vzorek výřezu v proudu (u prázdného výřezu hranice, u které skončil). */
+    uint64_t samples;        /**< Počet vzorků (0 = prázdný výřez). */
+    uint64_t frame_from;     /**< První pokrytý snímek. */
+    uint64_t frame_to;       /**< Konec pokrytých snímků (bez); `frame_to == frame_from` u prázdného výřezu. */
+    uint64_t closed_frames;  /**< Počet uzavřených snímků zachycení (= číslo dosud otevřeného snímku). */
+    uint64_t held_from;      /**< Nejstarší snímek, jehož hranici index drží. */
+    unsigned flags;          /**< AUDIO_CAPTURE_RANGE_* (0 = celý požadovaný rozsah). */
+    unsigned segment;        /**< Pořadí zachycení, ke kterému hranice patří (k ověření, že kopie vzorků je z téhož). */
+} st_AUDIO_CAPTURE_FRAME_RANGE;
 
 /** @brief Stav kanálu PSG na začátku zachycení (pro detektor not). */
 typedef struct st_AUDIO_CAPTURE_PSG_INITIAL {
@@ -416,6 +530,11 @@ void audio_capture_exit(void);
  * `max_bytes` bajtů; volající proto drží `max_bytes` malé (zámek blokuje
  * zvukovou cestu po dobu kopie).
  *
+ * Kurzorové čtení: když ring začátek už přepsal, kopie začne nejstarším
+ * drženým záznamem a odměří od něj `count` záznamů (může tedy sahat za
+ * `from_seq + count`). Pro pevné okno (výřez podle snímku, srovnání úseků)
+ * slouží audio_capture_stream_copy_window().
+ *
  * @param stream    Proud.
  * @param from_seq  První požadovaný záznam.
  * @param count     Nejvýš záznamů (0 = jen metadata).
@@ -427,6 +546,60 @@ void audio_capture_exit(void);
 bool audio_capture_stream_copy(en_AUDIO_CAPTURE_STREAM stream, uint64_t from_seq,
                                uint64_t count, size_t max_bytes,
                                st_AUDIO_CAPTURE_STREAM_COPY *out);
+
+/**
+ * @brief Zkopíruje z proudu jen záznamy pevného okna `[from_seq, to_seq)`, které ring ještě drží.
+ *
+ * Pod jedním zámkem modulu spočte průnik okna s drženým úsekem
+ * `[first_seq, next_seq)` (audio_capture_clip_window()) a zkopíruje jeho
+ * začátek, nejvýš `max_bytes` bajtů. Průnik i kopie jsou tak atomické vůči
+ * zápisu (živé čtení): mezi nimi ring nemůže poskočit. Okno se nikdy
+ * neposouvá: přepsaný začátek se vynechá, nic za `to_seq` se nepřidá.
+ * Zcela ztracené okno dá `data_count == 0`, `held_count == 0`
+ * a `held_seq == to_seq`.
+ *
+ * @param stream    Proud.
+ * @param from_seq  Začátek okna.
+ * @param to_seq    Konec okna (bez; `to_seq <= from_seq` = prázdné okno).
+ * @param max_bytes Nejvýš bajtů kopie (omezení se uplatní až na průnik).
+ * @param out       Výstup (uvolnit audio_capture_stream_copy_clear()); kromě
+ *                  metadat `held_seq`, `held_count` a `data_seq == held_seq`.
+ * @return false = nedostatek paměti pro kopii (out bez dat, metadata a průnik platí).
+ * @post `[data_seq, data_seq + data_count)` leží v `[from_seq, to_seq)`
+ *       i v drženém úseku v okamžiku kopie.
+ * @note Libovolné vlákno.
+ */
+bool audio_capture_stream_copy_window(en_AUDIO_CAPTURE_STREAM stream, uint64_t from_seq,
+                                      uint64_t to_seq, size_t max_bytes,
+                                      st_AUDIO_CAPTURE_STREAM_COPY *out);
+
+/**
+ * @brief Rozsah vzorků proudu PCM pro snímky zachycení `[first, first + frames)`.
+ *
+ * Hranice snímků bere z indexu hranic, který modul drží po celou dobu,
+ * co jsou v PCM ringu data snímku (nezávisle na ringu souhrnů snímků,
+ * který mohl souhrn už přepsat): začátek je index prvního vzorku snímku
+ * `first` v proudu, konec index prvního vzorku snímku `first + frames`.
+ * Platí stejně při jakékoli rychlosti emulace (reference má na snímek
+ * vzorky jeho emulovaného času, SDL cesta bloky, které přišly).
+ *
+ * Kontrakt: výřez pokrývá jen uzavřené snímky. Konec za posledním
+ * uzavřeným snímkem se ořízne na jeho konec (AUDIO_CAPTURE_RANGE_END_NOT_CLOSED),
+ * začátek za ním dá prázdný výřez (AUDIO_CAPTURE_RANGE_START_NOT_CLOSED,
+ * `sample_from` = konec uzavřených snímků; další PCM, např. blok SDL
+ * přijatý po zastavení, zůstává čitelné přes index vzorku). Snímky, jejichž
+ * hranici index už nedrží, se vynechají (AUDIO_CAPTURE_RANGE_START_NOT_HELD).
+ * Pro dva sousední dotazy i jeden společný tak vyjdou stejné indexy.
+ *
+ * @param stream AUDIO_CAPTURE_STREAM_PCM_REFERENCE nebo AUDIO_CAPTURE_STREAM_PCM_SDL.
+ * @param first  První snímek.
+ * @param frames Počet snímků, >= 1 (součet se nasytí).
+ * @param out    Výstup (vynuluje se).
+ * @return false = jiný proud, proud se nedrží nebo zachycení nemá index hranic (out nulový).
+ * @note Libovolné vlákno (pod zámkem modulu, konzistentní stav).
+ */
+bool audio_capture_frame_range(en_AUDIO_CAPTURE_STREAM stream, uint64_t first, uint64_t frames,
+                               st_AUDIO_CAPTURE_FRAME_RANGE *out);
 
 /**
  * @brief Uvolní data kopie a vynuluje ji.

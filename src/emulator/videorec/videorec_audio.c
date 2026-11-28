@@ -7,9 +7,9 @@
  *   tj. střídavá vazba -> iface_audio_lowpass_filter() (alpha 0,4)
  *   -> iface_audio_anti_glitch_filter() (0,2); celý řetězec je sdílená funkce
  *   videorec_audio_chain_ctc0(), kterou SDL cesta volá také;
- * - PSG: iface_audio_resampler_process_psg_audio_log(), tj. hlasitostní
- *   tabulka (v rendereru zapečená do `level`) -> parkování -> IIR
- *   `sample += (x - sample) / 6`;
+ * - PSG: iface_audio_resampler_process_psg_audio_log(), tj. průměr výchylky
+ *   přes interval vzorku (hlasitostní tabulka, v rendereru zapečená do
+ *   `level`) -> parkování -> IIR `sample += (x - sample) / 6`;
  * - výstupní stupeň: videorec_audio_output_stage() (sdílený s mixem SDL cesty);
  * - mix: iface_audio_mix_channels_with_gain() (iface_audio.c, mono):
  *   CTC0 * gain * iface_audio_ctc0_mix_level() + průměr PSG0 kanálů * gain;
@@ -68,7 +68,7 @@ void videorec_audio_coef_init(st_VIDEOREC_AUDIO_COEF *c, unsigned rate)
 
 float videorec_audio_sdl_ctc0_gain(size_t ctc_samples, size_t out_samples)
 {
-    /* Stejné dělení na bloky jako iface_audio_resampler.c:203-227, vstup trvale nenulový. */
+    /* Dělení snímku na stejné díly (SDL cesta do 2026-11-26), vstup trvale nenulový. */
     double ratio = (double)ctc_samples / (double)out_samples;
     double sum = 0.0;
     for (size_t i = 0; i < out_samples; i++) {

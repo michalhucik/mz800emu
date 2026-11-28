@@ -9231,7 +9231,8 @@ static en_MCP_DISPATCH_RESULT _trace_read_exec(int64_t req_id, JsonObject *d,
         if (_trace_kind_is_audio(kind)) {
             pr.cpu_divider = GDGCLK2CPU_DIVIDER;
             pr.audio_origin = audio_origin;
-            pr.gdg_hz = GDGCLK_BASE;
+            /* time_us a Hz tónu PSG ve skutečném čase (podle krystalu), stejně jako CSV zachycení */
+            pr.gdg_hz = GDGCLK_REAL_TICKS_PER_SEC;
             pr.audio_channels = AUDIO_SRC_CHANNELS_COUNT;
         }
         if (trace_reader_page(&pr, &p.out, _trace_resolve_cb, NULL, resp, &next) != 0) {
@@ -17468,9 +17469,11 @@ static en_MCP_DISPATCH_RESULT _handle_get_platform_info(
      * GDGCLK / GDGCLK2CPU_DIVIDER, CTC0 input je GDGCLK / CTC0_DIVIDER,
      * PSG input je CPU_CLOCK / 16 (= PSG_DIVIDER = 16 * CPU_DIVIDER).
      *
-     * GDGCLK_BASE = simulovaná frekvence (= clean násobky pro
-     * timing matematiku). GDGCLK_REAL_BASE = skutečná krystalová
-     * frekvence (= 14.318 MHz NTSC, 17.734 MHz PAL).
+     * GDGCLK_BASE = emulované takty za jmenovitou sekundu (= celé
+     * snímky x 50 / 60, čísla pro determinismus stroje). GDGCLK_REAL_BASE
+     * = skutečná krystalová frekvence (= 14.318 MHz NTSC, 17.734 MHz PAL);
+     * podle ní běží tempo emulace a zvukový výstup, proto pole *_real_hz
+     * (stávající pole zůstávají kvůli kompatibilitě).
      *
      * CTC1+CTC2 vstupy jsou cascade-driven (= výstup CTC0 nebo
      * per-platform routing); klient čte aktuální mode + count
@@ -17486,13 +17489,20 @@ static en_MCP_DISPATCH_RESULT _handle_get_platform_info(
     json_object_set_int_member(clocks, "ctc0_input_hz",
                                (gint64)(GDGCLK_BASE / GDGCLK_CTC0_DIVIDER));
     json_object_set_int_member(clocks, "ctc0_divider", GDGCLK_CTC0_DIVIDER);
+    json_object_set_double_member(clocks, "cpu_real_hz",
+                                  (double)GDGCLK_REAL_TICKS_PER_SEC / (double)GDGCLK2CPU_DIVIDER);
+    json_object_set_double_member(clocks, "ctc0_input_real_hz",
+                                  (double)GDGCLK_REAL_TICKS_PER_SEC / (double)GDGCLK_CTC0_DIVIDER);
 #if HAVE_PSG
     json_object_set_int_member(clocks, "psg_input_hz",
                                (gint64)(GDGCLK_BASE / PSG_DIVIDER));
     json_object_set_int_member(clocks, "psg_divider", PSG_DIVIDER);
+    json_object_set_double_member(clocks, "psg_input_real_hz",
+                                  (double)GDGCLK_REAL_TICKS_PER_SEC / (double)PSG_DIVIDER);
 #else
     json_object_set_null_member(clocks, "psg_input_hz");
     json_object_set_null_member(clocks, "psg_divider");
+    json_object_set_null_member(clocks, "psg_input_real_hz");
 #endif
     json_object_set_null_member(clocks, "ctc1_input_hz");
     json_object_set_null_member(clocks, "ctc2_input_hz");
@@ -17513,6 +17523,8 @@ static en_MCP_DISPATCH_RESULT _handle_get_platform_info(
                                (gint64)VIDEO_SCREEN_TICKS);
     json_object_set_int_member(scanline, "screens_per_sec",
                                (gint64)VIDEO_SCREENS_PER_SEC);
+    /* skutečná snímková frekvence podle krystalu (50,036326 PAL, 59,922743 NTSC) */
+    json_object_set_double_member(scanline, "screens_per_sec_real", GDGCLK_REAL_FPS);
     json_object_set_int_member(scanline, "display_width",
                                (gint64)VIDEO_DISPLAY_WIDTH);
     json_object_set_int_member(scanline, "display_height",
@@ -18529,13 +18541,18 @@ static double _ac_round(double v, int dec) {
 /**
  * @brief Zkopíruje rozsah proudu [from, to) po kusech (zámek modulu jen na kus).
  *
+ * Kusy bere audio_capture_stream_copy_window(): kopie je vždy podmnožina
+ * okna [from, to) (přepsaný začátek se vynechá, nic za `to` se nepřidá),
+ * průnik s drženým úsekem se počítá pod zámkem spolu s kopií kusu.
+ *
  * @param st        Proud.
  * @param from      První požadovaný záznam.
  * @param to        Za posledním požadovaným záznamem.
  * @param out_rs    Výstup: velikost záznamu (0 = proud se nedrží).
  * @param out_seq   Výstup: seq prvního zkopírovaného záznamu (>= from; vyšší =
  *                  starší záznamy ring už přepsal).
- * @param out_count Výstup: počet souvisle zkopírovaných záznamů.
+ * @param out_count Výstup: počet souvisle zkopírovaných záznamů
+ *                  (`*out_seq + *out_count <= to`).
  * @param out_seg   Výstup: segment (zachycení) první kopie.
  * @return Záznamy (g_free volající), NULL = nic; při změně segmentu nebo
  *         díře uprostřed (ring přepisoval během kopie) skončí dřív.
@@ -18552,7 +18569,7 @@ static uint8_t *_ac_copy_range(en_AUDIO_CAPTURE_STREAM st, uint64_t from, uint64
     bool first = true;
     while (seq < to) {
         st_AUDIO_CAPTURE_STREAM_COPY c;
-        if (!audio_capture_stream_copy(st, seq, to - seq, AC_READ_CHUNK_BYTES, &c)) {
+        if (!audio_capture_stream_copy_window(st, seq, to, AC_READ_CHUNK_BYTES, &c)) {
             audio_capture_stream_copy_clear(&c);
             break;
         }
@@ -18614,10 +18631,296 @@ static JsonArray *_ac_spans_json(const uint8_t *flags, size_t n, uint64_t base, 
     return a;
 }
 
-/** @brief Index vzorku PCM (44100 Hz) pro absolutní čas [takty GDG]. */
-static uint64_t _ac_sample_at(uint64_t t, uint64_t origin) {
-    if (t <= origin) return 0;
-    return (t - origin) * AUDIO_CAPTURE_WAV_RATE / GDGCLK_BASE;
+/**
+ * @brief Konec snímku v indexech vzorků reference (za posledním vzorkem snímku).
+ *
+ * Hranice snímků v souhrnu se berou z uložených indexů záznamu snímku
+ * (`ref_first`, `ref_samples`), tedy ze stejného zdroje jako index hranic,
+ * podle kterého vrací vzorky audio_capture_pcm (ac_push_frame() zapisuje
+ * do záznamu i do indexu tutéž hodnotu). Přepočet z taktů by se na části
+ * hranic lišil o 1 vzorek: renderer počítá vzorek ukončený přesně na konci
+ * snímku ještě do snímku (floor(((t + 1) * R - 1) / F)), floor(t * R / F)
+ * ne. Bez rendereru (ref_samples 0) je konec roven začátku, stejně jako
+ * v indexu hranic.
+ *
+ * @param r Záznam snímku z paměti zachycení.
+ * @return ref_first + ref_samples.
+ */
+static uint64_t _ac_frame_ref_end(const st_AUDIO_CAPTURE_FRAME_REC *r) {
+    return r->ref_first + (uint64_t) r->ref_samples;
+}
+
+/**
+ * @brief Počet vzorků PCM (44100 Hz) na `frames` snímků ve skutečném čase (zaokrouhleno dolů).
+ *
+ * Snímek má podle krystalu zlomkový počet vzorků (PAL 881,36, NTSC 735,95):
+ * `floor(frames * 44100 * takty snímku / krystal)`. Počítá se přes podíl
+ * a zbytek `frames` po dělení krystalem, takže mezivýsledek nepřeteče;
+ * výsledek nad UINT64_MAX (frames nad asi 2,1e16) se nasytí na UINT64_MAX.
+ *
+ * @param frames Počet snímků (libovolný).
+ * @return Počet vzorků, nejvýš UINT64_MAX.
+ */
+static uint64_t _ac_frames_to_samples(uint64_t frames) {
+    const uint64_t num = (uint64_t) AUDIO_CAPTURE_WAV_RATE * (uint64_t) VIDEO_SCREEN_TICKS;
+    const uint64_t den = GDGCLK_REAL_TICKS_PER_SEC;
+    const uint64_t q = frames / den, r = frames % den;
+    const uint64_t part = r * num / den;   /* r < den: r * num < 2^63 */
+    if (q > (UINT64_MAX - part) / num) return UINT64_MAX;
+    return q * num + part;
+}
+
+/**
+ * @brief Výsledek kontroly návaznosti SDL cesty na referenci (_ac_sdl_continuity()).
+ *
+ * @invariant ok == false => shift_frame je číslo prvního snímku, na kterém se
+ *            posun SDL proti referenci změnil.
+ */
+typedef struct st_AC_SDL_CONT {
+    bool ok;               /**< Posun SDL proti referenci je v celém úseku stálý (do tolerance). */
+    int64_t delta;         /**< Posun sdl_first - ref_first prvního snímku úseku [vzorky]. */
+    int64_t shift;         /**< Posun pro mapování indexů: delta, když je větší než tolerance (po vynechaných blocích), jinak 0. */
+    uint64_t shift_frame;  /**< První snímek se změněným posunem (jen při ok == false). */
+    uint64_t empty_frames; /**< Snímky úseku bez jediného vzorku SDL (vynechaný blok). */
+    uint64_t frames;       /**< Zkontrolované snímky. */
+} st_AC_SDL_CONT;
+
+/**
+ * @brief Ověří z uložených hranic snímků, že SDL cesta v úseku navazuje na referenci.
+ *
+ * Souhrn páruje vzorek reference i se vzorkem SDL i + posun + lag. To platí jen
+ * tam, kde se počítadla obou proudů rozcházejí o stálý posun: SDL blok, který
+ * zvukové zařízení v MAX SPEED nevyžádalo, se do zachycení nedostane, a od toho
+ * snímku je SDL vůči referenci posunutá o celý blok (881 / 882, 735 / 736
+ * vzorků). Kontroluje se posun sdl_first - ref_first na začátku i konci každého
+ * snímku, jehož vzorky reference zasahují do [from, to); tolerance je polovina
+ * bloku (jmenovité zachycení kolísá o 0 až 2 vzorky zaokrouhlením, vynechaný blok
+ * o celý blok). Záznamy snímků jdou za sebou: nejdřív `fr` (snímky first ..),
+ * pak `fx` (následující snímky za oknem).
+ *
+ * @param fr    Záznamy snímků okna, `nfr` položek (snímek first + i).
+ * @param nfr   Počet záznamů okna.
+ * @param fx    Záznamy snímků za oknem (smí být NULL), `nx` položek.
+ * @param nx    Počet záznamů za oknem.
+ * @param first Číslo snímku fr[0].
+ * @param from  Začátek úseku v indexech reference.
+ * @param to    Konec úseku (bez) v indexech reference.
+ * @param out   Výstup.
+ */
+static void _ac_sdl_continuity(const st_AUDIO_CAPTURE_FRAME_REC *fr, uint64_t nfr,
+                               const st_AUDIO_CAPTURE_FRAME_REC *fx, uint64_t nx,
+                               uint64_t first, uint64_t from, uint64_t to, st_AC_SDL_CONT *out) {
+    memset(out, 0, sizeof(*out));
+    out->ok = true;
+    const int64_t tol = (int64_t) (_ac_frames_to_samples(1) / 2u);
+    bool have = false;
+    for (uint64_t k = 0; k < nfr + nx; k++) {
+        const st_AUDIO_CAPTURE_FRAME_REC *r = (k < nfr) ? &fr[k] : &fx[k - nfr];
+        const uint64_t a = r->ref_first, e = r->ref_first + (uint64_t) r->ref_samples;
+        if (e <= from) continue;
+        if (a >= to) break;
+        const int64_t d0 = (int64_t) r->sdl_first - (int64_t) a;
+        const int64_t d1 = (int64_t) (r->sdl_first + (uint64_t) r->sdl_samples) - (int64_t) e;
+        if (!have) {
+            out->delta = d0;
+            have = true;
+        }
+        out->frames++;
+        if (r->ref_samples && !r->sdl_samples) out->empty_frames++;
+        const int64_t x0 = d0 - out->delta, x1 = d1 - out->delta;
+        if (out->ok && (x0 > tol || x0 < -tol || x1 > tol || x1 < -tol)) {
+            out->ok = false;
+            out->shift_frame = first + k;
+        }
+    }
+    out->shift = (out->delta > tol || out->delta < -tol) ? out->delta : 0;
+}
+
+/**
+ * @brief Výsledek kontroly časové základny v dosahu posunu (_ac_timescale_reach()).
+ *
+ * @invariant off_nominal > 0 <=> first_frame je číslo prvního snímku dosahu
+ *            s délkou mimo jmenovitou o víc než toleranci.
+ */
+typedef struct st_AC_TIMESCALE_REACH {
+    uint64_t off_nominal; /**< Snímky dosahu s délkou mimo jmenovitou (vlastní rychlost). */
+    uint64_t first_frame; /**< První z nich (jen při off_nominal > 0). */
+    uint64_t frames;      /**< Zkontrolované snímky dosahu. */
+} st_AC_TIMESCALE_REACH;
+
+/**
+ * @brief Ověří délku snímků, které porovnání skutečně použije, i za koncem okna.
+ *
+ * Pravidlo délky je stejné jako pro snímky okna v _handle_audio_capture_summary()
+ * (odchylka `len_ticks` od VIDEO_SCREEN_TICKS nejvýš `tol` taktů). Kontrola
+ * návaznosti (_ac_sdl_continuity()) s tolerancí poloviny bloku pozná vynechaný
+ * blok SDL, ale ne několik snímků s mírně jiným taktem (90 %, 110 %): reference
+ * má na takový snímek vzorky jeho emulovaného času, SDL cesta jeden blok, takže
+ * od něj tentýž index ukazuje v obou proudech jinam, a rozdíl indexů roste jen
+ * o desítky vzorků na snímek (posudek 1a0f1a18: 881 dvojic `ok` přes přechod
+ * na 110 %). Zkontroluje se proto každý snímek, jehož vzorky reference zasahují
+ * do [from, to), nebo jehož vzorky SDL zasahují do [from + shift, to + shift)
+ * (souřadnice SDL po mapování přes posun souvislého úseku). Záznamy jdou za
+ * sebou: nejdřív `fr` (snímky first ..), pak `fx`.
+ *
+ * Snímek bez uloženého záznamu (otevřený snímek živého zachycení, zbytek SDL
+ * po zastavení) se zkontrolovat nedá a do výsledku se nezapočítá - viz
+ * popis _handle_audio_capture_summary().
+ *
+ * @param fr    Záznamy snímků okna, `nfr` položek (snímek first + i).
+ * @param nfr   Počet záznamů okna.
+ * @param fx    Záznamy snímků za oknem (smí být NULL), `nx` položek.
+ * @param nx    Počet záznamů za oknem.
+ * @param first Číslo snímku fr[0].
+ * @param from  Začátek dosahu v indexech reference.
+ * @param to    Konec dosahu (bez) v indexech reference (konec porovnávaného úseku + posun).
+ * @param shift Posun SDL proti referenci pro mapování indexů (st_AC_SDL_CONT::shift).
+ * @param tol   Tolerance délky snímku [takty].
+ * @param out   Výstup.
+ */
+static void _ac_timescale_reach(const st_AUDIO_CAPTURE_FRAME_REC *fr, uint64_t nfr,
+                                const st_AUDIO_CAPTURE_FRAME_REC *fx, uint64_t nx,
+                                uint64_t first, uint64_t from, uint64_t to, int64_t shift,
+                                uint64_t tol, st_AC_TIMESCALE_REACH *out) {
+    memset(out, 0, sizeof(*out));
+    const int64_t sf = (int64_t) from + shift, st = (int64_t) to + shift;
+    for (uint64_t k = 0; k < nfr + nx; k++) {
+        const st_AUDIO_CAPTURE_FRAME_REC *r = (k < nfr) ? &fr[k] : &fx[k - nfr];
+        const uint64_t a = r->ref_first, e = r->ref_first + (uint64_t) r->ref_samples;
+        const int64_t sa = (int64_t) r->sdl_first, se = sa + (int64_t) r->sdl_samples;
+        const bool in_ref = (e > from && a < to);
+        const bool in_sdl = (r->sdl_samples > 0 && se > sf && sa < st);
+        if (!in_ref && !in_sdl) continue;
+        out->frames++;
+        const uint64_t len = r->len_ticks;
+        const uint64_t dev = (len > VIDEO_SCREEN_TICKS) ? len - VIDEO_SCREEN_TICKS : VIDEO_SCREEN_TICKS - len;
+        if (dev > tol) {
+            if (out->off_nominal == 0) out->first_frame = first + k;
+            out->off_nominal++;
+        }
+    }
+}
+
+/**
+ * @brief _ac_copy_range() proudu SDL pro indexy reference posunuté o `shift`.
+ *
+ * Kopíruje SDL [from + shift, to + shift) a začátek vrací zpět v indexech
+ * reference (*out_seq - shift), takže zbytek souhrnu počítá v jedněch
+ * souřadnicích. Začátek pod nulou se ořízne.
+ *
+ * @param from    Začátek v indexech reference.
+ * @param to      Konec (bez) v indexech reference.
+ * @param shift   Posun SDL proti referenci (sdl index = index reference + shift).
+ * @param rs      Výstup: velikost záznamu.
+ * @param out_seq Výstup: index reference prvního zkopírovaného vzorku.
+ * @param out_n   Výstup: počet zkopírovaných vzorků.
+ * @param seg     Výstup: segment zachycení.
+ * @return Data (vlastní volající, g_free), NULL = nic.
+ */
+static uint8_t *_ac_copy_sdl_shifted(uint64_t from, uint64_t to, int64_t shift, size_t *rs,
+                                     uint64_t *out_seq, uint64_t *out_n, unsigned *seg) {
+    const int64_t f = (int64_t) from + shift, t = (int64_t) to + shift;
+    *out_seq = 0;
+    *out_n = 0;
+    if (t <= 0 || t <= f) return NULL;
+    uint64_t q = 0;
+    uint8_t *d = _ac_copy_range(AUDIO_CAPTURE_STREAM_PCM_SDL, (uint64_t) ((f > 0) ? f : 0), (uint64_t) t, rs, &q, out_n, seg);
+    *out_seq = (uint64_t) ((int64_t) q - shift);
+    return d;
+}
+
+/**
+ * @brief Konec intervalu [from, from + count) nasycený na INT64_MAX.
+ *
+ * Meze intervalů a indexy se v odpovědích MCP zapisují jako znaménkové
+ * celé číslo JSON (gint64); konec požadavku, který by INT64_MAX překročil
+ * (např. `samples` = INT64_MAX od nenulového začátku), se proto nasytí
+ * stejně jako konec intervalu snímků `frame_range.requested`. Nasycený
+ * konec leží za každým drženým vzorkem, výsledek kopie se tím nemění.
+ *
+ * @param from  Začátek intervalu (libovolný; nad INT64_MAX vrátí INT64_MAX).
+ * @param count Délka intervalu.
+ * @return min(from + count, INT64_MAX) bez přetečení.
+ */
+static uint64_t _ac_sat_end(uint64_t from, uint64_t count) {
+    const uint64_t lim = (uint64_t) INT64_MAX;
+    if (from >= lim || count > lim - from) return lim;
+    return from + count;
+}
+
+/**
+ * @brief Objekt `frame_range` odpovědi audio_capture_pcm (výřez podle snímků).
+ *
+ * `requested` [frame_from, frame_from + frames), `returned` [první, konec)
+ * skutečně pokrytých snímků, `closed_frames` (počet uzavřených snímků =
+ * číslo dosud otevřeného), `held_from` (nejstarší snímek s drženou
+ * hranicí), `status` "complete" / "partial" / "empty" a `reasons` (pole
+ * kódů, prázdné u "complete"): "no_closed_frames",
+ * "start_after_last_closed_frame", "end_after_last_closed_frame",
+ * "start_boundary_not_held". `status` a `reasons` popisují jen dostupnost
+ * HRANIC snímků (index hranic).
+ *
+ * Konce `requested` a `samples_requested` jsou nasycené na INT64_MAX
+ * (_ac_sat_end()), takže v JSON nikdy nevyjde záporné číslo.
+ *
+ * Dostupnost ZVUKU vrácených snímků zvlášť: `samples_requested` [od, do)
+ * je okno vzorků podle hranic (u `samples` od začátku prvního snímku),
+ * `samples_held` [od, do) jeho část, kterou PCM ring v okamžiku kopie
+ * držel (před stropem `max_bytes`), `audio_status` "complete" (okno celé
+ * v ringu), "partial" (část okna přepsaná nebo ještě nezachycená),
+ * "lost" (ani jeden vzorek okna se nedrží) nebo "none" (okno je prázdné,
+ * např. snímek ještě neuzavřený) a `audio_reasons`: "pcm_overwritten"
+ * (začátek okna ring už přepsal), "pcm_not_captured" (konec okna je za
+ * posledním zachyceným vzorkem).
+ *
+ * @param r      Výsledek audio_capture_frame_range().
+ * @param first  Požadovaný první snímek.
+ * @param frames Požadovaný počet snímků.
+ * @param s_from Začátek okna vzorků.
+ * @param s_to   Konec okna vzorků (bez).
+ * @param c      Výsledek audio_capture_stream_copy_window() pro toto okno.
+ * @return Nový objekt (vlastní volající).
+ */
+static JsonObject *_ac_frame_range_json(const st_AUDIO_CAPTURE_FRAME_RANGE *r, uint64_t first, uint64_t frames,
+                                        uint64_t s_from, uint64_t s_to, const st_AUDIO_CAPTURE_STREAM_COPY *c) {
+    JsonObject *o = json_object_new();
+    const uint64_t last = _ac_sat_end(first, frames);
+    JsonArray *rq = json_array_new();
+    json_array_add_int_element(rq, (gint64) first);
+    json_array_add_int_element(rq, (gint64) last);
+    json_object_set_array_member(o, "requested", rq);
+    JsonArray *rt = json_array_new();
+    json_array_add_int_element(rt, (gint64) r->frame_from);
+    json_array_add_int_element(rt, (gint64) r->frame_to);
+    json_object_set_array_member(o, "returned", rt);
+    json_object_set_int_member(o, "closed_frames", (gint64) r->closed_frames);
+    json_object_set_int_member(o, "held_from", (gint64) r->held_from);
+    const char *status = (r->frame_to <= r->frame_from) ? "empty" : (r->flags ? "partial" : "complete");
+    json_object_set_string_member(o, "status", status);
+    JsonArray *why = json_array_new();
+    if (r->flags & AUDIO_CAPTURE_RANGE_NO_FRAMES) json_array_add_string_element(why, "no_closed_frames");
+    if (r->flags & AUDIO_CAPTURE_RANGE_START_NOT_CLOSED) json_array_add_string_element(why, "start_after_last_closed_frame");
+    if (r->flags & AUDIO_CAPTURE_RANGE_END_NOT_CLOSED) json_array_add_string_element(why, "end_after_last_closed_frame");
+    if (r->flags & AUDIO_CAPTURE_RANGE_START_NOT_HELD) json_array_add_string_element(why, "start_boundary_not_held");
+    json_object_set_array_member(o, "reasons", why);
+    /* zvuk okna: průnik s drženým PCM spočtený pod zámkem spolu s kopií */
+    JsonArray *sq = json_array_new();
+    json_array_add_int_element(sq, (gint64) s_from);
+    json_array_add_int_element(sq, (gint64) s_to);
+    json_object_set_array_member(o, "samples_requested", sq);
+    JsonArray *sh = json_array_new();
+    json_array_add_int_element(sh, (gint64) c->held_seq);
+    json_array_add_int_element(sh, (gint64) (c->held_seq + c->held_count));
+    json_object_set_array_member(o, "samples_held", sh);
+    const uint64_t span = (s_to > s_from) ? s_to - s_from : 0u;
+    const char *audio = (span == 0) ? "none" : (c->held_count == span) ? "complete"
+                      : (c->held_count == 0) ? "lost" : "partial";
+    json_object_set_string_member(o, "audio_status", audio);
+    JsonArray *aw = json_array_new();
+    if (span && s_from < c->first_seq) json_array_add_string_element(aw, "pcm_overwritten");
+    if (span && s_to > c->next_seq) json_array_add_string_element(aw, "pcm_not_captured");
+    json_object_set_array_member(o, "audio_reasons", aw);
+    return o;
 }
 
 /**
@@ -18693,6 +18996,67 @@ static GArray *_ac_psg_notes(uint64_t first, uint64_t last, bool stereo, bool *i
  * Response: frames, fps, platforma, kanály, sound_spans / silent_spans,
  * channels (po kanálech), psg_notes, ctc0 (histogram intervalů a odhad),
  * ref_vs_sdl. Bez paměti zachycení nebo bez snímků => EMU_ERROR.
+ *
+ * `ref_vs_sdl.window` [od, do) je okno zvolených snímků v indexech vzorků
+ * reference z uložených hranic snímků (`ref_first`, `ref_samples` záznamů,
+ * stejné indexy jako audio_capture_pcm s `frame_from`; okna sousedních
+ * rozsahů na sebe navazují). Porovnávají se jen dvojice (reference i, SDL i + lag), které
+ * oba PCM ringy v tomto okně skutečně drží: `from_sample` je první
+ * společný index reference, `compared_samples` počet dvojic (nejvýš
+ * AC_COMPARE_WINDOW od `from_sample`); vzorek mimo okno ani z přepsaného
+ * úseku se nezapočítá. S pevným `lag_frames` jde o dvojice při tomto
+ * posunu; při hledání posunu (`lag_frames` -1) začíná úsek prvním
+ * indexem drženým v obou proudech (posun 0) a posun se hledá jen od něj
+ * (audio_compare(); `lag_ambiguous` i u krátkého nebo konstantního úseku
+ * a u stejně dobrých minim). Když reference v okně ještě vzorky drží, ale
+ * výstup už jen od indexu za nimi (nejstarší část paměti), posun se
+ * neodhaduje: "no_overlap" s vlastním `reason`, `fixed_lag_min_samples`
+ * (nejmenší posun s aspoň jednou společnou dvojicí) a `fixed_lag_min_frames`
+ * (nejmenší pevný `lag_frames` 1..60 s dvojicemi, jinak null; větší
+ * hodnoty dvojice mít nemusí).
+ * `worst_frames` [[snímek, diff_rms], ...] (nejvýš 5, sestupně; tvar
+ * vydané verze) hodnotí každý snímek z průniku jeho vzorků s porovnaným
+ * úsekem, i když snímek začíná před ním; `worst_frames_detail` jsou tytéž
+ * snímky v témž pořadí jako objekty {frame, diff_rms, compared_samples}
+ * (počet porovnaných dvojic snímku).
+ *
+ * `ref_vs_sdl.status`: "ok" (porovnáno), "no_overlap" (společné dvojice
+ * v okně nejsou, `reason` řekne, který proud chybí; nikdy číslo z jiného
+ * úseku) nebo "not_comparable": některý snímek okna, snímek před ním
+ * nebo snímek v dosahu posunu (viz níže) běžel vlastní rychlostí (délka
+ * nebo začátek snímku jinde než jmenovitě o víc než 1/1000 snímku), takže
+ * reference (emulovaný čas) a SDL cesta (jeden blok na snímek) mají
+ * v porovnávaném úseku jiné časové měřítko; místo
+ * diff_rms pak `error`, `reason`, `frames_off_nominal`, `nominal_frame_ticks`
+ * a `sdl_minus_ref_samples` (posun indexů na začátku okna). Bez čísel má
+ * `ref_vs_sdl` vždy `error` (no_overlap i not_comparable), jako ve vydané
+ * verzi, kde `status` ještě nebyl.
+ *
+ * Časová základna v dosahu posunu (_ac_timescale_reach()): stejné pravidlo
+ * délky snímku (1/1000) platí i pro snímky za oknem, do kterých sahá pevný
+ * `lag_frames` nebo které může prohledat hledání posunu (celý rozsah
+ * `max_lag_frames`, ne jen nalezený posun - jinak by odhad mohl skončit na
+ * posunu přes jinou časovou základnu). Snímek s vlastní rychlostí v dosahu =>
+ * "not_comparable" s `error` jako u okna, `reason`, `frames_off_nominal`
+ * (snímky dosahu mimo jmenovitou délku), `first_off_nominal_frame`,
+ * `nominal_frame_ticks`, `sdl_minus_ref_samples` a `sdl_missing_blocks`, bez
+ * čísel a bez `window`; menší `max_lag_frames` nebo pevný posun, jehož dosah
+ * končí před tímto snímkem, porovnat jde. Změna rychlosti za dosahem výsledek
+ * neovlivní. Vyhodnotí se před návazností (obecnější příčina). Omezení: vzorky
+ * SDL za posledním uloženým záznamem snímku (otevřený snímek živého zachycení,
+ * zbytek SDL po zastavení) délku snímku ještě nemají a tato kontrola je
+ * nepokrývá; porovnají se jako dosud.
+ *
+ * Návaznost SDL cesty (_ac_sdl_continuity()): v porovnávaném úseku reference
+ * i v části za ním, do které sahá pevný nebo hledaný posun, se z uložených
+ * hranic snímků (sdl_first, sdl_samples) ověří stálý posun proudů. Chybí-li
+ * tam bloky SDL (zvukové zařízení je v MAX SPEED nevyžádalo), je výsledek
+ * "not_comparable" s `error`, `reason`, `sdl_shift_frame` (první snímek se
+ * změněným posunem), `sdl_empty_frames` a `sdl_minus_ref_samples`, bez čísel
+ * a bez `window`. Souvislý úsek po mezeře se porovná se SDL ze skutečného
+ * začátku svého prvního snímku (posun sdl_first - ref_first, když přesahuje
+ * polovinu bloku; jinak 0 jako dosud). `sdl_from_sample` u "ok" = první
+ * porovnaný index proudu SDL.
  */
 static en_MCP_DISPATCH_RESULT _handle_audio_capture_summary(const st_JSONL_MESSAGE *req,
                                                             char **out_response) {
@@ -18756,6 +19120,9 @@ static en_MCP_DISPATCH_RESULT _handle_audio_capture_summary(const st_JSONL_MESSA
     json_object_set_string_member(resp, "platform", MZARCH_NAME);
     json_object_set_int_member(resp, "fps", (gint64) VIDEO_SCREENS_PER_SEC);
     json_object_set_int_member(resp, "gdg_clk_hz", (gint64) GDGCLK_BASE);
+    /* skutečný čas (podle krystalu): Hz, us a vzorky souhrnu se počítají z něj */
+    json_object_set_double_member(resp, "fps_real", _ac_round(GDGCLK_REAL_FPS, 6));
+    json_object_set_int_member(resp, "real_clk_hz", (gint64) GDGCLK_REAL_TICKS_PER_SEC);
     json_object_set_int_member(resp, "segment", (gint64) seg);
     json_object_set_boolean_member(resp, "live", st.pending || st.active);
     json_object_set_boolean_member(resp, "stereo", st.stereo);
@@ -18806,7 +19173,7 @@ static en_MCP_DISPATCH_RESULT _handle_audio_capture_summary(const st_JSONL_MESSA
             if (x->max_level > maxl) maxl = x->max_level;
             if (x->edges) {
                 active++;
-                if (fr[i].len_ticks) hz[nh++] = (double) x->edges / 2.0 / ((double) fr[i].len_ticks / (double) GDGCLK_BASE);
+                if (fr[i].len_ticks) hz[nh++] = (double) x->edges / 2.0 / ((double) fr[i].len_ticks / (double) GDGCLK_REAL_TICKS_PER_SEC);
             }
         }
         JsonObject *o = json_object_new();
@@ -18837,7 +19204,7 @@ static en_MCP_DISPATCH_RESULT _handle_audio_capture_summary(const st_JSONL_MESSA
         if (o->n.noise) {
             json_object_set_string_member(n, "note", "noise");
         } else {
-            double f = audio_psg_tone_hz(o->n.divider, GDGCLK_BASE, GDGCLK2CPU_DIVIDER);
+            double f = audio_psg_tone_hz(o->n.divider, GDGCLK_REAL_TICKS_PER_SEC, GDGCLK2CPU_DIVIDER);
             int pitch = 0, cents = 0;
             char nm[8];
             audio_hz_to_midi(f, &pitch, &cents);
@@ -18874,13 +19241,13 @@ static en_MCP_DISPATCH_RESULT _handle_audio_capture_summary(const st_JSONL_MESSA
             if (l->src != 0 || l->frame < first) continue;
             if (l->frame > last) break;
             edges++;
-            if (have_prev && l->t > prev_t) audio_hist_add(hist, (double) (l->t - prev_t) * 1e6 / (double) GDGCLK_BASE);
+            if (have_prev && l->t > prev_t) audio_hist_add(hist, (double) (l->t - prev_t) * 1e6 / (double) GDGCLK_REAL_TICKS_PER_SEC);
             prev_t = l->t;
             have_prev = true;
         }
         g_free(ld);
         double share = 0.0;
-        double secs = (double) ticks_total / (double) GDGCLK_BASE;
+        double secs = (double) ticks_total / (double) GDGCLK_REAL_TICKS_PER_SEC;
         JsonObject *c0 = json_object_new();
         json_object_set_int_member(c0, "edges", (gint64) edges);
         JsonArray *ha = json_array_new();
@@ -18904,53 +19271,227 @@ static en_MCP_DISPATCH_RESULT _handle_audio_capture_summary(const st_JSONL_MESSA
     /* Reference vs SDL cesta (potřebuje oba PCM ringy). */
     const st_AUDIO_CAPTURE_STREAM_INFO *pr = &st.streams[AUDIO_CAPTURE_STREAM_PCM_REFERENCE];
     const st_AUDIO_CAPTURE_STREAM_INFO *ps = &st.streams[AUDIO_CAPTURE_STREAM_PCM_SDL];
-    if (pr->present && ps->present) {
-        uint64_t spf = AUDIO_CAPTURE_WAV_RATE / VIDEO_SCREENS_PER_SEC;
-        uint64_t s0 = _ac_sample_at(fr[0].t, st.origin_ticks);
-        uint64_t s1 = _ac_sample_at(fr[nfr - 1].t + fr[nfr - 1].len_ticks, st.origin_ticks);
-        if (s1 > s0 + AC_COMPARE_WINDOW) s1 = s0 + AC_COMPARE_WINDOW;
-        uint64_t max_lag = (lag_frames >= 0 ? (uint64_t) lag_frames : (uint64_t) max_lag_frames) * spf;
+    /* Časová měřítka proudů: reference má na snímek vzorky jeho emulovaného času,
+     * SDL cesta jeden blok (881 / 735 vzorků) bez ohledu na rychlost. Jedno okno
+     * z emulovaného času měří v obou proudech totéž místo jen tehdy, když všechny
+     * snímky okna mají jmenovitou délku a všechny snímky od začátku zachycení
+     * také (začátek prvního snímku okna = jeho číslo krát jmenovitá délka).
+     * Konec snímku zachycení je poslední krok PSG (nejvýš PSG_DIVIDER - 1 taktů
+     * před koncem synchronizační události), proto tolerance 1/1000 snímku
+     * (PAL 354 taktů): je nad tímto posunem a hluboko pod nejmenším rozdílem
+     * vlastní rychlosti (1 % snímku, PAL 3 544 taktů); posun se nesčítá. */
+    const uint64_t ts_tol = (uint64_t) VIDEO_SCREEN_TICKS / 1000u;
+    uint64_t ts_offnominal = 0;
+    for (uint64_t i = 0; i < nfr; i++) {
+        const uint64_t len = fr[i].len_ticks;
+        const uint64_t dev = (len > VIDEO_SCREEN_TICKS) ? len - VIDEO_SCREEN_TICKS : VIDEO_SCREEN_TICKS - len;
+        if (dev > ts_tol) ts_offnominal++;
+    }
+    const uint64_t ts_want = first * (uint64_t) VIDEO_SCREEN_TICKS;
+    const uint64_t ts_rel = (fr[0].t >= st.origin_ticks) ? fr[0].t - st.origin_ticks : UINT64_MAX;
+    const bool ts_start_nominal = (ts_rel != UINT64_MAX)
+                                  && (((ts_rel > ts_want) ? ts_rel - ts_want : ts_want - ts_rel) <= ts_tol);
+    if (pr->present && ps->present && (ts_offnominal > 0 || !ts_start_nominal)) {
+        /* Vlastní rychlost: okna se v proudech časově neshodují; místo zavádějícího čísla vysvětlení. */
+        JsonObject *rv = json_object_new();
+        json_object_set_string_member(rv, "status", "not_comparable");
+        /* `error` jako u no_overlap: klient vydané verze pozná neúspěch podle něj (bez čísel) */
+        json_object_set_string_member(rv, "error", "reference and output path have a different time scale in this range");
+        json_object_set_string_member(rv, "reason",
+            ts_offnominal > 0
+                ? "frames in this range ran at a custom speed: the reference holds the emulated time of each frame, "
+                  "the output path one block per frame, so one sample window does not cover the same sound in both"
+                : "earlier frames of the capture ran at a custom speed: the same sample index points to a different "
+                  "time in the reference and in the output path");
+        json_object_set_int_member(rv, "frames_off_nominal", (gint64) ts_offnominal);
+        json_object_set_int_member(rv, "nominal_frame_ticks", (gint64) VIDEO_SCREEN_TICKS);
+        json_object_set_int_member(rv, "sdl_minus_ref_samples", (gint64) fr[0].sdl_first - (gint64) fr[0].ref_first);
+        json_object_set_int_member(rv, "sdl_missing_blocks",
+                                   (gint64) ((st.frames > st.sdl_blocks) ? st.frames - st.sdl_blocks : 0));
+        json_object_set_object_member(resp, "ref_vs_sdl", rv);
+    } else if (pr->present && ps->present) {
+        /* vzorků na snímek podle krystalu (zlomek; na celé vzorky se zaokrouhluje až výsledek) */
+        const double spf = (double) AUDIO_CAPTURE_WAV_RATE * (double) VIDEO_SCREEN_TICKS / (double) GDGCLK_REAL_TICKS_PER_SEC;
+        /* Okno zvolených snímků v souřadnicích reference z uložených hranic snímků
+         * (ref_first, ref_samples; stejné indexy jako u audio_capture_pcm, žádný přepočet
+         * z taktů). Při jmenovité rychlosti má SDL cesta tytéž indexy, posun `lag` se k nim
+         * přičítá. Porovnávají se jen dvojice, které
+         * oba proudy v okně skutečně drží: začátek se posune na první společný vzorek
+         * (podle stavu ringů; kopie pod zámkem případný další posun ringu ořízne), teprve
+         * od něj platí strop AC_COMPARE_WINDOW. Kopie nikdy nepřidá vzorek za koncem okna. */
+        const uint64_t w0 = fr[0].ref_first;
+        const uint64_t w1 = _ac_frame_ref_end(&fr[nfr - 1]);
+        const bool fixed = (lag_frames >= 0);
+        const uint64_t max_lag = _ac_frames_to_samples(fixed ? (uint64_t) lag_frames : (uint64_t) max_lag_frames);
+        const uint64_t ref_lo = (w0 > pr->first_seq) ? w0 : pr->first_seq;
+        /* Návaznost SDL z uložených hranic (sdl_first, sdl_samples záznamů): posun
+         * proudů od začátku porovnávaného úseku. Po vynechaných blocích (MAX SPEED se
+         * zařízením) je SDL vůči referenci posunutá o celé bloky; souvislý úsek se pak
+         * mapuje přes skutečný posun jeho prvního snímku (shift), ne přes index reference.
+         * Snímky za oknem, do kterých zasahuje pevný nebo hledaný posun: záznamy navíc. */
+        size_t xrs = 0;
+        uint64_t xseq = 0, nx = 0;
+        unsigned xseg = 0;
+        const uint64_t extra = (uint64_t) (fixed ? lag_frames : max_lag_frames) + 1u;
+        uint8_t *xdata = (last + 1u < fi->next_seq)
+                         ? _ac_copy_range(AUDIO_CAPTURE_STREAM_FRAMES, last + 1u, last + 1u + extra, &xrs, &xseq, &nx, &xseg)
+                         : NULL;
+        if (!xdata || xrs != sizeof(st_AUDIO_CAPTURE_FRAME_REC) || xseq != last + 1u || xseg != seg) nx = 0;
+        const st_AUDIO_CAPTURE_FRAME_REC *fx = (const st_AUDIO_CAPTURE_FRAME_REC *) xdata;
+        st_AC_SDL_CONT cont;
+        _ac_sdl_continuity(fr, nfr, fx, nx, first, ref_lo, w1, &cont);
+        const int64_t shift = cont.shift;
+        /* první a za posledním drženým vzorkem SDL v indexech reference (po mapování) */
+        const uint64_t ps_first = ((int64_t) ps->first_seq - shift > 0) ? (uint64_t) ((int64_t) ps->first_seq - shift) : 0u;
+        const uint64_t ps_next = ((int64_t) ps->next_seq - shift > 0) ? (uint64_t) ((int64_t) ps->next_seq - shift) : 0u;
+        uint64_t s0 = ref_lo;
+        /* SDL index i + lag (pevný posun) nebo i (hledání posunu od 0) musí být držený */
+        const uint64_t sdl_lo = fixed ? ((ps_first > max_lag) ? ps_first - max_lag : 0u) : ps_first;
+        if (sdl_lo > s0) s0 = sdl_lo;
+        uint64_t s1 = w1;
+        if (s1 > s0 && s1 - s0 > AC_COMPARE_WINDOW) s1 = s0 + AC_COMPARE_WINDOW;
+        /* porovnávaný úsek reference i s dosahem posunu: v něm se posun proudů nesmí změnit */
+        if (s0 < s1) _ac_sdl_continuity(fr, nfr, fx, nx, first, ref_lo, s1 + max_lag, &cont);
+        else cont.ok = true;                      /* bez vzorků reference rozhodne no_overlap */
+        /* Časová základna i v dosahu posunu: délka snímků okna je ověřená výše, snímky za
+         * oknem, do kterých sahá pevný posun nebo které může prohledat hledání posunu (celý
+         * rozsah max_lag_frames), se ověří stejným pravidlem 1/1000. */
+        st_AC_TIMESCALE_REACH tsr;
+        memset(&tsr, 0, sizeof(tsr));
+        if (s0 < s1) _ac_timescale_reach(fr, nfr, fx, nx, first, ref_lo, s1 + max_lag, shift, ts_tol, &tsr);
         size_t r1 = 0, r2 = 0;
         uint64_t q1 = 0, n1 = 0, q2 = 0, n2 = 0;
         unsigned g1 = 0, g2 = 0;
-        uint8_t *ref = _ac_copy_range(AUDIO_CAPTURE_STREAM_PCM_REFERENCE, s0, s1, &r1, &q1, &n1, &g1);
-        uint8_t *sdl = _ac_copy_range(AUDIO_CAPTURE_STREAM_PCM_SDL, q1, q1 + n1 + max_lag, &r2, &q2, &n2, &g2);
+        uint8_t *ref = (s0 < s1 && cont.ok && tsr.off_nominal == 0)
+                       ? _ac_copy_range(AUDIO_CAPTURE_STREAM_PCM_REFERENCE, s0, s1, &r1, &q1, &n1, &g1) : NULL;
+        uint8_t *sdl = NULL;
+        /* Společné dvojice: začátek c a délky obou úseků od c; lag_buf = posun uvnitř bufferů. */
+        uint64_t c = q1, na = 0, nb = 0;
+        int lag_buf = 0;
+        if (ref && n1 > 0) {
+            if (fixed) {
+                sdl = _ac_copy_sdl_shifted(q1 + max_lag, q1 + n1 + max_lag, shift, &r2, &q2, &n2, &g2);
+                na = nb = sdl ? audio_capture_lag_overlap(q1, n1, q2, n2, max_lag, &c) : 0u;
+            } else {
+                sdl = _ac_copy_sdl_shifted(q1, q1 + n1 + max_lag, shift, &r2, &q2, &n2, &g2);
+                c = (q2 > q1) ? q2 : q1;
+                if (sdl && c < q1 + n1 && c < q2 + n2) {
+                    na = q1 + n1 - c;
+                    nb = q2 + n2 - c;
+                }
+            }
+        }
+        if (na == 0 || nb == 0 || g2 != g1) na = nb = 0;
+        /* pevný posun: SDL buffer začíná na c + lag, dvojice jsou ve stejném indexu bufferu */
+        const int16_t *refp = na ? (const int16_t *) ref + 2u * (size_t) (c - q1) : NULL;
+        const int16_t *sdlp = na ? (const int16_t *) sdl + 2u * (size_t) (fixed ? c + max_lag - q2 : c - q2) : NULL;
         JsonObject *rv = json_object_new();
         st_AUDIO_COMPARE cmp;
-        bool ok = ref && sdl && n1 > 0 && q2 == q1;
-        if (ok && lag_frames >= 0) {
-            audio_diff((const int16_t *) ref, n1, (const int16_t *) sdl, n2, (int) max_lag, 0, n1, &cmp);
+        bool ok = (na > 0);
+        if (tsr.off_nominal > 0) {
+            /* Dosah posunu zasahuje do snímku s vlastní rychlostí: číslo by srovnávalo proudy
+             * s jiným časovým měřítkem (vyhodnotí se před návazností, je to obecnější příčina). */
+            json_object_set_string_member(rv, "status", "not_comparable");
+            json_object_set_string_member(rv, "error", "reference and output path have a different time scale in this range");
+            json_object_set_string_member(rv, "reason",
+                fixed
+                    ? "a frame that the fixed lag reaches ran at a custom speed: from first_off_nominal_frame on "
+                      "the reference holds the emulated time of each frame, the output path one block per frame, "
+                      "so the same index pair would compare different moments; a smaller lag_frames whose reach "
+                      "ends before that frame can be compared"
+                    : "a frame that the delay search can reach (max_lag_frames) ran at a custom speed: from "
+                      "first_off_nominal_frame on the reference holds the emulated time of each frame, the output "
+                      "path one block per frame, so the same index pair would compare different moments; a smaller "
+                      "max_lag_frames or a fixed lag_frames whose reach ends before that frame can be compared");
+            json_object_set_int_member(rv, "frames_off_nominal", (gint64) tsr.off_nominal);
+            json_object_set_int_member(rv, "first_off_nominal_frame", (gint64) tsr.first_frame);
+            json_object_set_int_member(rv, "nominal_frame_ticks", (gint64) VIDEO_SCREEN_TICKS);
+            json_object_set_int_member(rv, "sdl_minus_ref_samples", (gint64) cont.delta);
+            json_object_set_int_member(rv, "sdl_missing_blocks",
+                                       (gint64) ((st.frames > st.sdl_blocks) ? st.frames - st.sdl_blocks : 0));
+            json_object_set_object_member(resp, "ref_vs_sdl", rv);
+            g_free(ref);
+            g_free(sdl);
+            g_free(xdata);
+            g_free(fdata);
+            return _ok_response(req_id, resp, out_response);
+        }
+        if (!cont.ok) {
+            /* SDL cesta v úseku nenavazuje (vynechané bloky): číslo by srovnávalo jiný zvuk */
+            json_object_set_string_member(rv, "status", "not_comparable");
+            json_object_set_string_member(rv, "error",
+                "the output path does not follow the reference continuously in this range");
+            json_object_set_string_member(rv, "reason",
+                "output path blocks are missing in the compared range or in the part the delay reaches "
+                "(dropped by the audio device in MAX SPEED): from "
+                "sdl_shift_frame on the output path is shifted against the reference, so the same index pair "
+                "would compare different moments");
+            json_object_set_int_member(rv, "sdl_shift_frame", (gint64) cont.shift_frame);
+            json_object_set_int_member(rv, "sdl_empty_frames", (gint64) cont.empty_frames);
+            json_object_set_int_member(rv, "sdl_minus_ref_samples", (gint64) cont.delta);
+            json_object_set_int_member(rv, "sdl_missing_blocks",
+                                       (gint64) ((st.frames > st.sdl_blocks) ? st.frames - st.sdl_blocks : 0));
+            json_object_set_object_member(resp, "ref_vs_sdl", rv);
+            g_free(ref);
+            g_free(sdl);
+            g_free(xdata);
+            g_free(fdata);
+            return _ok_response(req_id, resp, out_response);
+        }
+        if (ok && fixed) {
+            audio_diff(refp, (size_t) na, sdlp, (size_t) nb, 0, 0, (size_t) na, &cmp);
+            cmp.lag = (int) max_lag;
             ok = cmp.compared > 0;
         } else if (ok) {
-            ok = audio_compare((const int16_t *) ref, n1, (const int16_t *) sdl, n2, (int) max_lag, 0, &cmp);
+            ok = audio_compare(refp, (size_t) na, sdlp, (size_t) nb, (int) max_lag, 0, &cmp);
+            lag_buf = cmp.lag;
         }
+        JsonArray *wa = json_array_new();
+        json_array_add_int_element(wa, (gint64) w0);
+        json_array_add_int_element(wa, (gint64) w1);
+        json_object_set_array_member(rv, "window", wa);
         if (ok) {
+            json_object_set_string_member(rv, "status", "ok");
             json_object_set_int_member(rv, "lag_samples", cmp.lag);
-            json_object_set_double_member(rv, "lag_frames", _ac_round((double) cmp.lag / (double) spf, 2));
+            json_object_set_double_member(rv, "lag_frames", _ac_round((double) cmp.lag / spf, 2));
             json_object_set_boolean_member(rv, "lag_searched", lag_frames < 0);
             /* Bez nástupu nebo změny hlasitosti v okně (jen ustálený tón) posun
              * z dat určit nejde; lag_samples pak může být o periody tónu vedle. */
             json_object_set_boolean_member(rv, "lag_ambiguous", lag_frames < 0 && cmp.lag_ambiguous);
             json_object_set_int_member(rv, "compared_samples", (gint64) cmp.compared);
-            json_object_set_int_member(rv, "from_sample", (gint64) q1);
+            json_object_set_int_member(rv, "from_sample", (gint64) c);
+            /* první porovnaný vzorek SDL (index proudu SDL, po vynechaných blocích přes skutečný posun) */
+            json_object_set_int_member(rv, "sdl_from_sample", (gint64) c + (gint64) cmp.lag + (gint64) shift);
             json_object_set_double_member(rv, "diff_rms", _ac_round(cmp.diff_rms, 5));
             json_object_set_double_member(rv, "diff_max", _ac_round(cmp.diff_max, 5));
             json_object_set_double_member(rv, "reference_rms", _ac_round(cmp.a_rms, 5));
-            /* Nejhorší snímky porovnaného úseku. */
+            /* Nejhorší snímky porovnaného úseku [c, c + compared): každý snímek se hodnotí
+             * z průniku svého intervalu vzorků (uložené hranice) s tímto úsekem, tedy i snímek,
+             * jehož začátek je před úsekem (přepsaný začátek) nebo konec za ním (strop 2 s).
+             * `worst_frames` zůstává ve tvaru [snímek, diff_rms] (formát vydané verze, klienti
+             * rozbalují dvojice); `worst_frames_detail` je v témž pořadí a navíc nese počet
+             * porovnaných dvojic snímku (u částečně pokrytého menší než délka snímku). */
             JsonArray *worst = json_array_new();
+            JsonArray *worst_detail = json_array_new();
             double best[5] = { -1, -1, -1, -1, -1 };
-            uint64_t bf[5] = { 0 };
+            uint64_t bf[5] = { 0 }, bn[5] = { 0 };
+            const uint64_t cend = c + cmp.compared;
             for (uint64_t i = 0; i < nfr; i++) {
-                uint64_t a = _ac_sample_at(fr[i].t, st.origin_ticks);
-                if (a < q1) continue;
-                if (a >= q1 + cmp.compared) break;
+                /* hranice snímku z uložených indexů (jako audio_capture_pcm), ne z taktů */
+                const uint64_t a = fr[i].ref_first;
+                const uint64_t e = _ac_frame_ref_end(&fr[i]);
+                if (a >= cend) break;
+                const uint64_t lo = (a > c) ? a : c;
+                const uint64_t hi = (e < cend) ? e : cend;
+                if (hi <= lo) continue;
                 st_AUDIO_COMPARE d;
-                audio_diff((const int16_t *) ref, n1, (const int16_t *) sdl, n2, cmp.lag, (size_t) (a - q1), spf, &d);
+                audio_diff(refp, (size_t) na, sdlp, (size_t) nb, lag_buf, (size_t) (lo - c), (size_t) (hi - lo), &d);
                 for (int k = 0; k < 5; k++) {
                     if (d.compared && d.diff_rms > best[k]) {
-                        for (int m = 4; m > k; m--) { best[m] = best[m - 1]; bf[m] = bf[m - 1]; }
+                        for (int m = 4; m > k; m--) { best[m] = best[m - 1]; bf[m] = bf[m - 1]; bn[m] = bn[m - 1]; }
                         best[k] = d.diff_rms;
                         bf[k] = first + i;
+                        bn[k] = d.compared;
                         break;
                     }
                 }
@@ -18960,16 +19501,51 @@ static en_MCP_DISPATCH_RESULT _handle_audio_capture_summary(const st_JSONL_MESSA
                 json_array_add_int_element(w, (gint64) bf[k]);
                 json_array_add_double_element(w, _ac_round(best[k], 5));
                 json_array_add_array_element(worst, w);
+                JsonObject *wd = json_object_new();
+                json_object_set_int_member(wd, "frame", (gint64) bf[k]);
+                json_object_set_double_member(wd, "diff_rms", _ac_round(best[k], 5));
+                json_object_set_int_member(wd, "compared_samples", (gint64) bn[k]);
+                json_array_add_object_element(worst_detail, wd);
             }
             json_object_set_array_member(rv, "worst_frames", worst);
+            json_object_set_array_member(rv, "worst_frames_detail", worst_detail);
         } else {
+            json_object_set_string_member(rv, "status", "no_overlap");
             json_object_set_string_member(rv, "error", "reference and output path samples do not overlap in this range");
+            /* Hledání posunu začíná na indexu drženém v obou proudech (posun 0). Když reference
+             * v okně ještě něco drží, ale výstup už jen od indexu za touto částí (nejstarší
+             * část paměti: zvuk téhož okamžiku je ve výstupu až po zpoždění), dvojice existují
+             * jen při kladném posunu. Posun se pak NEodhaduje (úsek je kratší než zpoždění
+             * výstupu, odhad by nebyl spolehlivý); odpověď řekne nejmenší pevný posun s dvojicemi. */
+            const uint64_t ref_hi = (pr->next_seq < w1) ? pr->next_seq : w1;
+            if (!fixed && ref_lo < ref_hi && ps_first >= ref_hi) {
+                const uint64_t min_lag = ps_first - (ref_hi - 1u);
+                json_object_set_string_member(rv, "reason",
+                    "no start for the delay search: the output path no longer holds the samples at the indexes "
+                    "of the held reference samples of this range (delay 0), it holds only later ones; "
+                    "the fixed lag_frames given in fixed_lag_min_frames is the smallest that pairs them with "
+                    "held output path samples (larger ones may run past the held output path)");
+                json_object_set_int_member(rv, "fixed_lag_min_samples", (gint64) min_lag);
+                gint64 kmin = -1;
+                for (gint64 k = 1; k <= 60 && kmin < 0; k++) {
+                    const uint64_t l = _ac_frames_to_samples((uint64_t) k);
+                    if (l >= min_lag && ps_next > ref_lo && l < ps_next - ref_lo) kmin = k;
+                }
+                if (kmin > 0) json_object_set_int_member(rv, "fixed_lag_min_frames", kmin);
+                else json_object_set_null_member(rv, "fixed_lag_min_frames");
+            } else {
+                json_object_set_string_member(rv, "reason",
+                    (ref_lo >= w1 || (n1 == 0 && sdl_lo <= ref_lo)) ? "the reference samples of this range are no longer held (overwritten) or not captured"
+                              : "the output path samples paired with the held reference samples of this range "
+                                "are no longer held (overwritten) or not captured");
+            }
         }
         json_object_set_int_member(rv, "sdl_missing_blocks",
                                    (gint64) ((st.frames > st.sdl_blocks) ? st.frames - st.sdl_blocks : 0));
         json_object_set_object_member(resp, "ref_vs_sdl", rv);
         g_free(ref);
         g_free(sdl);
+        g_free(xdata);
     } else {
         json_object_set_null_member(resp, "ref_vs_sdl");
         json_object_set_string_member(resp, "ref_vs_sdl_note",
@@ -18989,11 +19565,33 @@ static en_MCP_DISPATCH_RESULT _handle_audio_capture_summary(const st_JSONL_MESSA
  * ("wav_b64" výchozí | "pcm_b64"), `max_bytes` (1024..4 MiB, výchozí
  * 32768 = strop dat před base64).
  *
+ * S `frame_from` jsou začátek i konec přesné indexy zvoleného proudu na
+ * hranicích uzavřených snímků zachycení z indexu hranic, který zachycení
+ * drží po celou dobu uchování PCM (audio_capture_frame_range()), při
+ * jakékoli rychlosti a i po přepsání souhrnů snímků; výřezy po snímcích na
+ * sebe navazují a dva sousední dotazy dají totéž co jeden společný. Co
+ * pokrýt nejde (snímek ještě neuzavřený, hranice už nedržená), se vynechá
+ * a ohlásí v `frame_range` (nikdy odhad z jiného času); `samples` u
+ * prázdného výřezu nic nepřidá. Okno vzorků podle snímku je pevné: vrátí
+ * se jen jeho vzorky, které PCM ring ještě drží (průnik pod zámkem spolu
+ * s kopií, audio_capture_stream_copy_window()), přepsaný začátek se
+ * vynechá a ohlásí v `gap` (jen uvnitř okna) a `frame_range.audio_status`,
+ * zcela přepsané okno dá 0 vzorků; strop `max_bytes` se uplatní až na
+ * zachovaný úsek (`truncated`, pokračování přes `sample_from` =
+ * `next_sample`). Se `sample_from` (kurzor) se přepsaný začátek přeskočí
+ * a vrátí se `samples` vzorků od nejstaršího drženého, jako dosud. Se
+ * `sample_from` a bez `samples` je délka `frames` snímků podle krystalu
+ * (_ac_frames_to_samples()). Všechny parametry jsou do INT64_MAX; konec
+ * okna podle snímku, který by INT64_MAX překročil (`samples` velké), se
+ * nasytí na INT64_MAX (_ac_sat_end(), jako `frame_range.requested`), takže
+ * žádná mez ani index odpovědi není záporný.
+ *
  * Převzorkování je průměrování (analytický náhled); `rate` 44100 se
  * `stereo` vrací bajtově totéž co reference.wav / sdl.wav. Response:
  * source, segment, live, rate, channels, from_sample, samples, frames_out,
- * next_sample, end_of_data, truncated, available [first, next), gap,
- * encoding, data_b64.
+ * next_sample, end_of_data, truncated, available [first, next), gap
+ * (jen u neprázdného požadavku), frame_range (_ac_frame_range_json(), se
+ * `sample_from` null), encoding, data_b64.
  */
 static en_MCP_DISPATCH_RESULT _handle_audio_capture_pcm(const st_JSONL_MESSAGE *req,
                                                         char **out_response) {
@@ -19037,51 +19635,72 @@ static en_MCP_DISPATCH_RESULT _handle_audio_capture_pcm(const st_JSONL_MESSAGE *
     }
 
     /* Začátek a délka ve vzorcích 44100 Hz. */
-    uint64_t spf_num = AUDIO_CAPTURE_WAV_RATE, spf_den = VIDEO_SCREENS_PER_SEC;
     uint64_t from = 0, want = 0;
-    if (iv[0] >= 0) {
+    const bool by_frame = (iv[0] < 0);
+    st_AUDIO_CAPTURE_FRAME_RANGE fr;
+    memset(&fr, 0, sizeof(fr));
+    if (!by_frame) {
         from = (uint64_t) iv[0];
+        /* délka `frames` podle krystalu (zlomkový počet vzorků na snímek, bez přetečení) */
+        want = (iv[2] > 0) ? (uint64_t) iv[2] : _ac_frames_to_samples((uint64_t) iv[3]);
     } else {
-        /* Začátek snímku z jeho souhrnu (přesný čas), jinak podle fps. */
-        st_AUDIO_CAPTURE_STREAM_COPY c;
-        audio_capture_stream_copy(AUDIO_CAPTURE_STREAM_FRAMES, (uint64_t) iv[1], 1, sizeof(st_AUDIO_CAPTURE_FRAME_REC), &c);
-        if (c.data_count == 1 && c.data_seq == (uint64_t) iv[1]) {
-            from = _ac_sample_at(((const st_AUDIO_CAPTURE_FRAME_REC *) c.data)->t, st.origin_ticks);
-        } else {
-            from = (uint64_t) iv[1] * spf_num / spf_den;
+        /* Přesné hranice uzavřených snímků z indexu zachycení; co pokrýt nejde, hlásí frame_range. */
+        if (!audio_capture_frame_range(stream, (uint64_t) iv[1], (uint64_t) iv[3], &fr)) {
+            return _err_response(req_id, "Audio capture frame boundaries unavailable (a new capture started?)",
+                                 MCP_DISPATCH_EMU_ERROR, out_response);
         }
-        audio_capture_stream_copy_clear(&c);
+        from = fr.sample_from;
+        want = fr.samples;
+        /* `samples` mění jen délku od začátku pokrytého snímku; prázdný výřez zůstane prázdný */
+        if (iv[2] > 0 && fr.frame_to > fr.frame_from) want = (uint64_t) iv[2];
     }
-    want = (iv[2] > 0) ? (uint64_t) iv[2] : (uint64_t) iv[3] * spf_num / spf_den;
 
     unsigned ch = stereo ? 2u : 1u;
     size_t hdr = wav ? 44u : 0u;
     size_t out_max = (max_bytes > hdr) ? (max_bytes - hdr) / (2u * ch) : 0;
     uint64_t in_max = (uint64_t) out_max * AUDIO_CAPTURE_WAV_RATE / rate;
     bool truncated = false;
-    if (want > in_max) {
-        want = in_max;
-        truncated = true;
-    }
 
     JsonObject *resp = json_object_new();
     st_AUDIO_CAPTURE_STREAM_COPY c;
-    bool okc = audio_capture_stream_copy(stream, from, want, (size_t) (want * 4u), &c);
-    if (!okc) {
+    bool okc;
+    uint64_t win_to = from;
+    if (by_frame) {
+        /* Pevné okno snímků [from, win_to): průnik s drženým PCM a kopie pod jedním zámkem
+         * (živé čtení), teprve potom strop výstupu; přepsaný začátek se vynechá, vzorek
+         * za koncem okna (další snímek) se nikdy nepřidá. Konec nasycený na INT64_MAX
+         * (zapisuje se jako znaménkové číslo v `samples_requested`). */
+        win_to = _ac_sat_end(from, want);
+        okc = audio_capture_stream_copy_window(stream, from, win_to, (size_t) (in_max * 4u), &c);
+        truncated = okc && c.held_count > c.data_count;
+    } else {
+        /* Kurzor: od nejstaršího drženého vzorku dál, `want` vzorků (jako dosud). */
+        if (want > in_max) {
+            want = in_max;
+            truncated = true;
+        }
+        okc = audio_capture_stream_copy(stream, from, want, (size_t) (want * 4u), &c);
+    }
+    if (!okc || (by_frame && c.segment != fr.segment)) {
         audio_capture_stream_copy_clear(&c);
         json_object_unref(resp);
-        return _err_response(req_id, "Not enough memory for the PCM copy", MCP_DISPATCH_EMU_ERROR, out_response);
+        return _err_response(req_id, okc ? "Audio capture changed during the read (a new capture started?)"
+                                         : "Not enough memory for the PCM copy",
+                             MCP_DISPATCH_EMU_ERROR, out_response);
     }
-    if (from < c.first_seq) {
+    /* Mezera: požadované vzorky, které ring už přepsal; u výřezu podle snímku jen uvnitř okna. */
+    const uint64_t gap_to = by_frame ? ((c.first_seq < win_to) ? c.first_seq : win_to) : c.first_seq;
+    if (want > 0 && from < gap_to) {
         JsonObject *gap = json_object_new();
         json_object_set_int_member(gap, "from_sample", (gint64) from);
-        json_object_set_int_member(gap, "to_sample", (gint64) c.first_seq);
+        json_object_set_int_member(gap, "to_sample", (gint64) gap_to);
         json_object_set_object_member(resp, "gap", gap);
     } else {
         json_object_set_null_member(resp, "gap");
     }
+    JsonObject *frange = by_frame ? _ac_frame_range_json(&fr, (uint64_t) iv[1], (uint64_t) iv[3], from, win_to, &c) : NULL;
     uint64_t got = c.data_count;
-    uint64_t start = c.data_count ? c.data_seq : ((from > c.next_seq) ? c.next_seq : from);
+    uint64_t start = by_frame ? c.data_seq : (c.data_count ? c.data_seq : ((from > c.next_seq) ? c.next_seq : from));
     size_t nout = audio_resample_frames((size_t) got, AUDIO_CAPTURE_WAV_RATE, rate);
     uint8_t *buf = (uint8_t *) g_malloc(hdr + nout * 2u * ch + 2u);
     if (got) audio_resample_s16((const int16_t *) c.data, (size_t) got, AUDIO_CAPTURE_WAV_RATE, rate, stereo,
@@ -19103,6 +19722,8 @@ static en_MCP_DISPATCH_RESULT _handle_audio_capture_pcm(const st_JSONL_MESSAGE *
     json_array_add_int_element(av, (gint64) c.first_seq);
     json_array_add_int_element(av, (gint64) c.next_seq);
     json_object_set_array_member(resp, "available", av);
+    if (frange) json_object_set_object_member(resp, "frame_range", frange);
+    else json_object_set_null_member(resp, "frame_range");
     json_object_set_string_member(resp, "encoding", wav ? "wav_b64" : "pcm_b64");
     json_object_set_string_member(resp, "data_b64", b64);
     g_free(b64);

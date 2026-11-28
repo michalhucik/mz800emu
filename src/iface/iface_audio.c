@@ -22,11 +22,20 @@
 #include "videorec/videorec.h"
 #include "audio_capture.h"
 
-/* Režim podle reality převzorkovává výstup této cesty - musí znát jeho frekvenci a blok
- * (blok = IFACE_AUDIO_SAMPLE_RATE / VIDEO_SCREENS_PER_SEC: 882 při 50, 735 při 60 snímcích/s;
- * musí vyjít celý, jinak by se zvuk proti obrazu posouval). */
+/* Režim podle reality převzorkovává výstup této cesty - musí znát jeho frekvenci. Blok má
+ * podle krystalu proměnnou délku (iface_audio_block_clock_next(): PAL 881 nebo 882, NTSC 735
+ * nebo 736 vzorků); bez driftu proti obrazu ho drží akumulátor, ne celý počet vzorků na snímek.
+ * Buffery dimenzované na největší blok (VIDEOREC_RT_SDL_CHUNK_MAX) ho musí pojmout. */
 G_STATIC_ASSERT(IFACE_AUDIO_SAMPLE_RATE == VIDEOREC_RT_SDL_RATE);
-G_STATIC_ASSERT(IFACE_AUDIO_SAMPLE_RATE % VIDEO_SCREENS_PER_SEC == 0);
+G_STATIC_ASSERT(IFACE_AUDIO_BLOCK_SAMPLES_MAX <= VIDEOREC_RT_SDL_CHUNK_MAX);
+/* Souvislá časová osa: buňky CTC0 přenášené do dalšího bloku (aspoň jedna, méně než celý snímek)
+ * a délka snímku, se kterou hranice vzorku PSG (iface_audio_block_tick()) nepřeteče. */
+G_STATIC_ASSERT(IFACE_AUDIO_CTC0_CARRY_MAX >= 1 && IFACE_AUDIO_CTC0_CARRY_MAX < IFACE_AUDIO_CTC0_SAMPLES_PER_FRAME);
+G_STATIC_ASSERT(IFACE_AUDIO_SPAN_TICKS_MAX >= 64u * (uint64_t)VIDEO_SCREEN_TICKS);
+/* Mezilehlý proud CTC0 má na snímek celý počet vzorků (32 taktů na vzorek). */
+G_STATIC_ASSERT(IFACE_AUDIO_CTC0_SAMPLES_PER_FRAME * GDGCLK_CTC0_DIVIDER * 2 == VIDEO_SCREEN_TICKS);
+/* iface_audio_frames_to_real_us(): zbytek po dělení krystalem krát takty snímku v us nepřeteče. */
+G_STATIC_ASSERT((GDGCLK_REAL_TICKS_PER_SEC - 1u) <= UINT64_MAX / ((uint64_t)VIDEO_SCREEN_TICKS * 1000000u));
 /* Tabulka úrovní video záznamu musí pojmout všechny hodnoty zvukového logu. */
 G_STATIC_ASSERT(AUDIO_LEVEL_VALUES_COUNT <= VIDEOREC_AUDIO_LEVELS);
 /* Dorovnání hlasitosti a koleno omezovače: konstanty výstupního stupně (videorec_audio.h) musí souhlasit s audio.h. */
@@ -70,11 +79,43 @@ void print_audiolog(const st_AUDIO_SOURCE_LOG *source, uint64_t start_time, uint
 }
 
 /* Doxygen viz iface_audio.h. */
+size_t iface_audio_block_clock_next(st_IFACE_AUDIO_BLOCK_CLOCK *c)
+{
+    return iface_audio_block_clock_step(c, IFACE_AUDIO_SAMPLE_RATE, VIDEO_SCREEN_TICKS, GDGCLK_REAL_TICKS_PER_SEC);
+}
+
+/* Doxygen viz iface_audio.h. */
+int64_t iface_audio_frames_to_real_us(uint64_t frames)
+{
+    return iface_audio_frames_to_us(frames, VIDEO_SCREEN_TICKS, GDGCLK_REAL_TICKS_PER_SEC);
+}
+
+/* Doxygen viz iface_audio.h. */
+void iface_audio_block_ticks(uint64_t lead, size_t samples, uint64_t span, int64_t *ticks)
+{
+    iface_audio_block_ticks_for(lead, samples, span, IFACE_AUDIO_SAMPLE_RATE, VIDEO_SCREEN_TICKS,
+                                GDGCLK_REAL_TICKS_PER_SEC, ticks);
+}
+
+/* Doxygen viz iface_audio.h. */
+void iface_audio_block_timing(uint64_t lead, size_t samples, uint64_t offset, uint64_t span, uint64_t *points,
+                              int64_t *edge_pos)
+{
+    iface_audio_block_timing_for(lead, samples, offset, span, IFACE_AUDIO_SAMPLE_RATE, VIDEO_SCREEN_TICKS,
+                                 GDGCLK_REAL_TICKS_PER_SEC, IFACE_AUDIO_CTC0_SAMPLES_PER_FRAME, points, edge_pos);
+}
+
+/* Doxygen viz iface_audio.h. */
+float iface_audio_ctc0_sdl_gain(void)
+{
+    return (float)iface_audio_ctc0_sdl_gain_for(IFACE_AUDIO_SAMPLE_RATE, VIDEO_SCREEN_TICKS, GDGCLK_REAL_TICKS_PER_SEC,
+                                                IFACE_AUDIO_CTC0_SAMPLES_PER_FRAME);
+}
+
+/* Doxygen viz iface_audio.h. */
 float iface_audio_ctc0_mix_level(void)
 {
-    float ctc0_gain = videorec_audio_sdl_ctc0_gain(IFACE_AUDIO_CTC5253_SAMPLE_RATE / VIDEO_SCREENS_PER_SEC,
-                                                   IFACE_AUDIO_SAMPLE_RATE / VIDEO_SCREENS_PER_SEC);
-    return AUDIO_CTC0_TO_PSG_CHANNEL_RATIO / (float)PSG_CHANNELS_COUNT / ctc0_gain;
+    return AUDIO_CTC0_TO_PSG_CHANNEL_RATIO / (float)PSG_CHANNELS_COUNT / iface_audio_ctc0_sdl_gain();
 }
 
 /** @brief Koeficienty výstupního stupně pro IFACE_AUDIO_SAMPLE_RATE (videorec_audio_coef_init()). Jen vlákno mixu. */
@@ -213,7 +254,8 @@ void iface_audio_apply_master(float *samples, size_t frames, unsigned channels)
  * @brief Střední hodnota součtu kanálů každé strany ze středních hodnot kanálů.
  *
  * Váží střední hodnoty kanálů stejně jako mix: CTC0 hlasitostí, násobitelem
- * iface_audio_ctc0_mix_level() a středním zesílením převzorkování, kanály PSG
+ * iface_audio_ctc0_mix_level() a středním zesílením převzorkování
+ * iface_audio_ctc0_sdl_gain(), kanály PSG
  * hlasitostí a výchylkou plné úrovně děleno PSG_CHANNELS_COUNT. Stereo: L =
  * CTC0 + PSG0, R = CTC0 + PSG1; mono: obě strany CTC0 + PSG0.
  *
@@ -223,8 +265,7 @@ void iface_audio_apply_master(float *samples, size_t frames, unsigned channels)
  */
 static void iface_audio_output_ac_from_means(const double *mean, bool stereo, double out[2])
 {
-    float ctc0_gain = videorec_audio_sdl_ctc0_gain(IFACE_AUDIO_CTC5253_SAMPLE_RATE / VIDEO_SCREENS_PER_SEC,
-                                                   IFACE_AUDIO_SAMPLE_RATE / VIDEO_SCREENS_PER_SEC);
+    float ctc0_gain = iface_audio_ctc0_sdl_gain();
     double ctc0 = mean[0] * (double)g_iface_audio.gain[0] * (double)iface_audio_ctc0_mix_level() * (double)ctc0_gain;
     double psg[2] = {0.0, 0.0};
     for (int ch = 1; ch < AUDIO_SRC_CHANNELS_COUNT; ch++)
@@ -580,7 +621,12 @@ float *iface_audio_wait_for_data(size_t *output_samples_size)
     float *all_samples[AUDIO_SRC_CHANNELS_COUNT];
     /* kanály před jejich filtry (CTC0 po střídavé vazbě, PSG po parkování): vstup výstupní propusti */
     float *raw_samples[AUDIO_SRC_CHANNELS_COUNT];
-    size_t output_samples_count = IFACE_AUDIO_SAMPLE_RATE / VIDEO_SCREENS_PER_SEC;
+    /* Délka bloku podle krystalu (PAL 881 nebo 882, NTSC 735 nebo 736 vzorků); stav vede jen
+     * vlákno, které bloky vyrábí (zvukový výstup, bez zařízení vlákno emulátoru). Zbytek
+     * akumulátoru před krokem je fáze prvního vzorku na souvislé časové ose. */
+    static st_IFACE_AUDIO_BLOCK_CLOCK s_block_clock;
+    const uint64_t block_lead = s_block_clock.rem;
+    size_t output_samples_count = iface_audio_block_clock_next(&s_block_clock);
     for (int i = 0; i < AUDIO_SRC_CHANNELS_COUNT; i++)
     {
         raw_samples[i] = g_malloc0(output_samples_count * sizeof(float));
@@ -592,34 +638,70 @@ float *iface_audio_wait_for_data(size_t *output_samples_size)
     // 20 ms => pocet vzorku do kterych rozprostreme prechod zaparkovane hodnoty k 0
     size_t parked_samples_fade = (IFACE_AUDIO_SAMPLE_RATE / 1000) * 20;
 
-    // CTC0 resamplujeme samostatne
-    uint64_t log_count_samples = (audiolog->last_timestamp - audiolog->first_timestamp);
-    size_t ctc0_samples_uint8_count = IFACE_AUDIO_CTC5253_SAMPLE_RATE / VIDEO_SCREENS_PER_SEC;
-    uint8_t *ctc0_samples_uint8 = iface_audio_resampler_process_audio_log(audiolog->src[0], log_count_samples, ctc0_samples_uint8_count);
-
-    /* Střídavá vazba CTC0: log, který nenavazuje na předchozí zpracovaný
-     * (start, pauza, MAX SPEED, headless bez odběru), převezme stav vedený
-     * emulátorem v emulovaném čase; navazující log pokračuje ve vlastním stavu. */
+    /* Navazuje log na předchozí zpracovaný? Nenavazuje první log po startu, log po
+     * zahozených logech (MAX SPEED, headless bez odběru bloků) a log po skoku času
+     * (reset, načtení snapshotu); časová osa vzorků se pak založí znovu. */
     static uint64_t next_first_timestamp = UINT64_MAX;
-    if (audiolog->first_timestamp != next_first_timestamp)
+    /* Konec snímku předchozího logu (last_timestamp): začátek tohoto snímku v čase emulace. */
+    static uint64_t prev_last_timestamp = 0;
+    const bool contiguous = (audiolog->first_timestamp == next_first_timestamp);
+
+    /* Snímek v logu: log začíná na posledním kroku PSG předchozího snímku (first_timestamp,
+     * nejvýš PSG_DIVIDER - 1 taktů před koncem předchozího snímku) a končí koncem tohoto
+     * snímku (last_timestamp). Vzorky se mapují na snímek [konec předchozího, konec tohoto),
+     * takže sousední bloky pokrývají čas emulace bez překryvu. Bez návaznosti (nebo
+     * s nečekanými časy) snímek začíná začátkem logu. Při 100 % je délka snímku
+     * VIDEO_SCREEN_TICKS, při vlastní rychlosti délka synchronizační události. */
+    uint64_t frame_start = audiolog->first_timestamp;
+    if (contiguous && (prev_last_timestamp >= audiolog->first_timestamp) && (prev_last_timestamp < audiolog->last_timestamp))
+    {
+        frame_start = prev_last_timestamp;
+    };
+    const uint64_t frame_offset = frame_start - audiolog->first_timestamp;
+    uint64_t frame_span = (audiolog->last_timestamp > frame_start) ? (audiolog->last_timestamp - frame_start) : 1u;
+    if (frame_span > IFACE_AUDIO_SPAN_TICKS_MAX)
+    {
+        frame_span = IFACE_AUDIO_SPAN_TICKS_MAX;
+    };
+
+    /* Časy vzorků na souvislé ose: polohy hranic vzorků v proudu buněk CTC0 a hranice
+     * vzorků v taktech snímku pro průměr PSG. */
+    static int64_t s_edge_pos[IFACE_AUDIO_BLOCK_SAMPLES_MAX + 1];
+    static uint8_t s_ctc0_cells[IFACE_AUDIO_CTC0_SAMPLES_PER_FRAME];
+    iface_audio_block_timing(block_lead, output_samples_count, frame_offset, frame_span, NULL, s_edge_pos);
+#if HAVE_PSG >= 1
+    static int64_t s_psg_ticks[IFACE_AUDIO_BLOCK_SAMPLES_MAX + 1];
+    iface_audio_block_ticks(block_lead, output_samples_count, frame_span, s_psg_ticks);
+#endif
+
+    // CTC0 resamplujeme samostatne
+    iface_audio_resampler_ctc0_cells(audiolog->src[0], frame_offset, frame_span, s_ctc0_cells, IFACE_AUDIO_CTC0_SAMPLES_PER_FRAME);
+
+    /* Střídavá vazba CTC0: log, který nenavazuje na předchozí zpracovaný,
+     * převezme stav vedený emulátorem v emulovaném čase; navazující log
+     * pokračuje ve vlastním stavu. */
+    if (!contiguous)
     {
         iface_audio_resampler_ctc0_ac_seed(audiolog->ctc0_ac_mean);
         /* totéž pro střídavou vazbu celého výstupu (bez ní jsou střední hodnoty nulové) */
         iface_audio_output_ac_from_means(audiolog->out_ac_mean, stereo, s_out_ac);
     };
     next_first_timestamp = audiolog->last_psg_timestamp;
+    prev_last_timestamp = audiolog->last_timestamp;
 
-    all_samples[0] = iface_audio_resampler_output_stream_ctc0(ctc0_samples_uint8, ctc0_samples_uint8_count, output_samples_count, raw_samples[0]);
-    free(ctc0_samples_uint8);
+    all_samples[0] = iface_audio_resampler_output_stream_ctc0(s_ctc0_cells, IFACE_AUDIO_CTC0_SAMPLES_PER_FRAME, s_edge_pos,
+                                                              output_samples_count, contiguous, raw_samples[0]);
 
 #if HAVE_PSG >= 1
     // resamplujeme zvukove kanaly PSG (MZ-800 / MZ-1500); MZ-700 nema PSG
     for (int i = 1; i < AUDIO_SRC_CHANNELS_COUNT; i++)
     {
-        //uint8_t *psg_samples_uint8 = iface_audio_resampler_process_audio_log(audiolog->src[i], log_count_samples, IFACE_AUDIO_PSG_SAMPLE_RATE, 20, NULL);
-
-        all_samples[i] = iface_audio_resampler_process_psg_audio_log(i, audiolog->src[i], log_count_samples, g_iface_audio.SN76489_volume_value[i], output_samples_count, parked_samples, parked_samples_fade, raw_samples[i]);
-        // all_samples[i] = iface_audio_resampler_output_stream_psg(i, psg_samples_uint8, psg_samples_uint8_count, output_samples_count, g_iface_audio.SN76489_volume_value[i], parked_samples, parked_samples_fade);
+        all_samples[i] = iface_audio_resampler_process_psg_audio_log(i, audiolog->src[i], frame_offset, frame_span,
+                                                                     audiolog->last_psg_timestamp - audiolog->first_timestamp,
+                                                                     s_psg_ticks,
+                                                                     contiguous, g_iface_audio.SN76489_volume_value[i],
+                                                                     output_samples_count, parked_samples, parked_samples_fade,
+                                                                     raw_samples[i]);
     };
 #endif /* HAVE_PSG >= 1 */
 
@@ -698,17 +780,16 @@ void iface_audio_set_src_volume(int id, int volume)
 
 void iface_audio_build_videorec_levels(float level[][VIDEOREC_AUDIO_LEVELS], unsigned channels)
 {
-    /* Střední zesílení převzorkování CTC0 v SDL cestě (podíl nenulových / (délka bloku + 1)),
-     * stejné rozměry bloků jako iface_audio_wait_for_data(). */
-    float ctc0_gain = videorec_audio_sdl_ctc0_gain(IFACE_AUDIO_CTC5253_SAMPLE_RATE / VIDEO_SCREENS_PER_SEC,
-                                                   IFACE_AUDIO_SAMPLE_RATE / VIDEO_SCREENS_PER_SEC);
+    /* Zesílení převzorkování CTC0 v SDL cestě (vážený součet buněk / (délka v buňkách + 1));
+     * v úrovni se krátí s násobitelem iface_audio_ctc0_mix_level(). */
+    float ctc0_gain = iface_audio_ctc0_sdl_gain();
     const float ctc0_mix = iface_audio_ctc0_mix_level();
     for (unsigned ch = 0; ch < channels && ch < AUDIO_SRC_CHANNELS_COUNT; ch++)
     {
         for (unsigned v = 0; v < VIDEOREC_AUDIO_LEVELS; v++)
         {
             if (ch == 0)
-                /* CTC0: SDL cesta počítá podíl nenulových vzorků => 0 / zesílení bloku
+                /* CTC0: SDL cesta počítá vážený podíl nenulových buněk => 0 / zesílení
                  * (hodnota 31, režim 3 s děličem 2, váhou AUDIO_CTC0_DIV2_FACTOR);
                  * poměr k PSG jako v mixu SDL cesty */
                 level[ch][v] = (v ? ctc0_gain : 0.0f) * (audio_level_is_ctc0_div2(v) ? AUDIO_CTC0_DIV2_FACTOR : 1.0f)
@@ -815,9 +896,11 @@ void iface_audio_exit(void)
 /**
  * @brief Časová synchronizace jedné 20ms události bez audio zařízení.
  *
- * Termín k-té události je `timer_base_us + k * 1000000 / VIDEO_SCREENS_PER_SEC`
- * (absolutní, takže hrubá granularita uspání ve Windows nezpůsobí drift -
- * přesah jedné události zkrátí čekání té následující). Pokud je aktuální čas
+ * Termín k-té události je `timer_base_us + iface_audio_frames_to_real_us(k)`,
+ * tedy k snímků podle krystalu (PAL 19 985,48 us, NTSC 16 688,15 us na
+ * snímek). Termín se počítá přímo z k (absolutní, takže hrubá granularita
+ * uspání ve Windows ani zaokrouhlení na celé us nezpůsobí drift - přesah
+ * jedné události zkrátí čekání té následující). Pokud je aktuální čas
  * za termínem o víc než IFACE_AUDIO_TIMER_MAX_LAG_EVENTS period, nebo jde
  * o první událost, řada se založí znovu od aktuálního času a nečeká se.
  *
@@ -826,11 +909,11 @@ void iface_audio_exit(void)
  */
 static void iface_audio_timer_sync(void)
 {
-    const int64_t period_us = 1000000 / VIDEO_SCREENS_PER_SEC;
+    const int64_t period_us = iface_audio_frames_to_real_us(1);
     int64_t now = g_get_monotonic_time();
 
     g_iface_audio.timer_events++;
-    int64_t deadline = g_iface_audio.timer_base_us + (int64_t)((g_iface_audio.timer_events * 1000000) / VIDEO_SCREENS_PER_SEC);
+    int64_t deadline = g_iface_audio.timer_base_us + iface_audio_frames_to_real_us(g_iface_audio.timer_events);
 
     if ((g_iface_audio.timer_base_us == 0) || ((now - deadline) > (IFACE_AUDIO_TIMER_MAX_LAG_EVENTS * period_us)))
     {

@@ -37,40 +37,52 @@ extern "C"
  * @file mz800_gdgclk.h
  * @brief Hodinové konstanty MZ-800 (PAL): takt GDG a děliče pro CPU a CTC0.
  *
- * Emulátor nepočítá čas z frekvence krystalu, ale z celých snímků:
- * emulovaný takt je počet taktů snímku krát 50 snímků za sekundu. Je to
- * záměrné zjednodušení: zvuk, obraz, nahrávání i převod WAV kazety pak
- * pracují s celým počtem vzorků a taktů na snímek. Důsledek: všechno
- * odvozené z taktu (CPU, CTC0, zvuk) běží o 0,073 % pomaleji než
- * skutečný počítač.
+ * Takty jsou dvojí. Emulovaný stroj má celý počet taktů na snímek
+ * (VIDEO_SCREEN_TICKS = 1136 x 312) a pro všechno, co patří k determinismu
+ * stroje, platí jmenovitý takt GDGCLK_BASE = takty snímku krát 50. Skutečný
+ * čas se z taktů počítá podle krystalu (GDGCLK_REAL_BASE): snímek trvá
+ * 354 432 / 17 734 475 s, tedy 50,036326 snímku za sekundu, a CPU, CTC0
+ * i zvuk mají kmitočet skutečného počítače.
  *
- * | Signál        | Skutečný počítač | Emulátor      |
- * |---------------|------------------|---------------|
- * | takt GDG      | 17 734 475 Hz    | 17 721 600 Hz |
- * | CPU (/5)      | 3 546 895 Hz     | 3 544 320 Hz  |
- * | CTC0 (/16)    | 1 108 405 Hz     | 1 107 600 Hz  |
- * | snímky        | 50,036 Hz        | 50 Hz         |
+ * Podle krystalu: zvukový výstup a tempo
+ * emulace (živý zvuk, termíny bez zvukového zařízení), zachycení zvuku
+ * (reference.wav, sdl.wav, časy v CSV) a výpisy v Hz a sekundách
+ * převádějí takty na skutečný čas přes GDGCLK_REAL_TICKS_PER_SEC (gdgclk.h).
+ * Zatím podle jmenovitého taktu GDGCLK_BASE: kazeta (převod času pásky na
+ * takty) a video záznam AVI (celočíselná snímková frekvence, v emulačním
+ * čase pevný počet vzorků na snímek; záznam podle reality bere zvuk ze
+ * zvukového výstupu, tedy podle krystalu, obraz vzorkuje 50 / 60 ticky za
+ * sekundu).
+ *
+ * | Signál        | Skutečný počítač | Jmenovitý takt (GDGCLK_BASE) |
+ * |---------------|------------------|------------------------------|
+ * | takt GDG      | 17 734 475 Hz    | 17 721 600 Hz                |
+ * | CPU (/5)      | 3 546 895 Hz     | 3 544 320 Hz                 |
+ * | CTC0 (/16)    | 1 108 405 Hz     | 1 107 600 Hz                 |
+ * | snímky        | 50,036 Hz        | 50 Hz                        |
  */
 
 /**
  * @brief Frekvence krystalu skutečného MZ-800 v Hz.
  *
- * Emulace podle ní neběží; slouží jen měření a výpisům (poměr emulovaného
- * taktu ke skutečnému).
+ * Podle ní se převádějí takty na skutečný čas (tempo emulace, zvukový
+ * výstup, zachycení zvuku, výpisy); v kódu přes GDGCLK_REAL_TICKS_PER_SEC
+ * (gdgclk.h).
  */
 #define GDGCLK_REAL_BASE 17734475
 
 /**
- * @brief Emulovaný takt GDG v Hz: 1136 * 312 * 50 = 17 721 600.
+ * @brief Jmenovitý takt GDG v Hz: emulované takty za jmenovitou sekundu, 1136 * 312 * 50 = 17 721 600.
  *
- * Záměrně vázaný na celý počet snímků za sekundu, ne na krystal
- * (viz popis souboru).
+ * Vázaný na celý počet snímků za sekundu, ne na krystal; patří
+ * k determinismu stroje (časové konstanty v taktech, kazeta, replay,
+ * video záznam). Pro převod na skutečný čas se nepoužívá (viz popis souboru).
  */
 #define GDGCLK_BASE (VIDEO_SCREEN_TICKS * VIDEO_SCREENS_PER_SEC)
 
-/** @brief Počet taktů GDG na takt CPU. Emulovaný CPU: 3 544 320 Hz (skutečný 3 546 895 Hz). */
+/** @brief Počet taktů GDG na takt CPU. CPU: 3 546 895 Hz podle krystalu (jmenovitě 3 544 320 Hz). */
 #define GDGCLK2CPU_DIVIDER 5
-/** @brief Počet taktů GDG na takt vstupu CTC0. Emulovaný vstup: 1 107 600 Hz (skutečný 1 108 405 Hz). */
+/** @brief Počet taktů GDG na takt vstupu CTC0. Vstup: 1 108 405 Hz podle krystalu (jmenovitě 1 107 600 Hz). */
 #define GDGCLK_CTC0_DIVIDER 16
 
 #ifdef __cplusplus

@@ -41,6 +41,8 @@ G_STATIC_ASSERT ( offsetof ( st_AUDIO_CAPTURE_FRAME_REC, sdl_rms ) == 168 );
 G_STATIC_ASSERT ( offsetof ( st_AUDIO_CAPTURE_FRAME_REC, sdl_peak ) == 172 );
 G_STATIC_ASSERT ( offsetof ( st_AUDIO_CAPTURE_FRAME_REC, sdl_blocks ) == 184 );
 G_STATIC_ASSERT ( offsetof ( st_AUDIO_CAPTURE_FRAME_REC, flags ) == 186 );
+G_STATIC_ASSERT ( offsetof ( st_AUDIO_CAPTURE_FRAME_REC, ref_first ) == 192 );
+G_STATIC_ASSERT ( offsetof ( st_AUDIO_CAPTURE_FRAME_REC, sdl_first ) == 200 );
 G_STATIC_ASSERT ( AUDIO_CAPTURE_FRAME_FLAG_REF == 1u && AUDIO_CAPTURE_FRAME_FLAG_SDL == 2u );
 G_STATIC_ASSERT ( AUDIO_CAPTURE_PSG_REG_TONE == 1 );
 /* Dekodér ramlog čte st_RAMLOG_REC po bajtech. */
@@ -100,9 +102,13 @@ static const char *const s_cols_eventlog[] = { "seq", "t", "frame", "pos", "cat"
 static const char *const s_cols_audio_psg[] = { "seq", "t", "time_us", "frame", "psg", "byte", "ch", "reg", "value", "hz", "note" };
 /** @brief Sloupce audio_levels (změny úrovní kanálů). */
 static const char *const s_cols_audio_levels[] = { "seq", "t", "time_us", "frame", "channel", "level" };
-/** @brief Sloupce audio_frames (souhrny zvukových snímků; pole po kanálech platformy). */
+/** @brief Sloupce audio_frames (souhrny zvukových snímků; pole po kanálech platformy).
+ *  `ref_first`, `sdl_first` = index prvního vzorku snímku v PCM reference a SDL cesty
+ *  (přidané na konec, dosavadní pořadí beze změny; jen na vyžádání jménem,
+ *  viz TRACE_AUDIO_FRAMES_DEFAULT_COLS_MASK). */
 static const char *const s_cols_audio_frames[] = { "seq", "t", "time_us", "len_ticks", "edges", "on_pct", "rms_level",
-                                                   "max_level", "ref_rms", "ref_peak", "sdl_rms", "sdl_peak", "sdl_blocks" };
+                                                   "max_level", "ref_rms", "ref_peak", "sdl_rms", "sdl_peak", "sdl_blocks",
+                                                   "ref_first", "sdl_first" };
 
 /** @brief Sloupce ramlog (zápisy do paměti). `t` = začátek zapisující
  *  instrukce, `tin` = T-stav uvnitř instrukce v okamžiku zápisu (jen zdroj
@@ -129,8 +135,14 @@ static const char *const s_cols_bplog[] = { "seq", "t", "frame", "insn_pc", "sym
 #define TRACE_COL_CPUTRACK_KIND 8
 /** @brief Výchozí sloupce cputrack (formát v2: seq .. sym). */
 #define TRACE_CPUTRACK_DEFAULT_COLS_MASK ( ( 1u << ( TRACE_COL_CPUTRACK_SYM + 1 ) ) - 1u )
+/** @brief Index sloupce `ref_first` u audio_frames (první sloupec přidaný po verzi 2.0.7). */
+#define TRACE_COL_AUDIO_FRAMES_REF_FIRST 13
+/** @brief Výchozí sloupce audio_frames (seq .. sdl_blocks, jako ve verzi 2.0.7): řádek bez
+ *  výběru sloupců má stejný počet prvků jako dřív, `ref_first` a `sdl_first` jen jménem. */
+#define TRACE_AUDIO_FRAMES_DEFAULT_COLS_MASK ( ( 1u << TRACE_COL_AUDIO_FRAMES_REF_FIRST ) - 1u )
 
 G_STATIC_ASSERT ( TRACE_COL_CPUTRACK_REG0 == TRACE_COL_CPUTRACK_KIND + 1 );
+G_STATIC_ASSERT ( G_N_ELEMENTS ( s_cols_audio_frames ) == TRACE_COL_AUDIO_FRAMES_REF_FIRST + 2 );
 G_STATIC_ASSERT ( G_N_ELEMENTS ( s_cols_cputrack ) == TRACE_COL_CPUTRACK_REG0 + TRACE_CPUTRACK_REG_COUNT );
 /** @brief Index sloupce `name` u marklog. */
 #define TRACE_COL_MARKLOG_NAME 5
@@ -177,6 +189,7 @@ uint32_t trace_columns_mask ( en_TRACE_KIND kind, const char *const *names, size
     if ( !cols ) return 0;
     if ( !names || n == 0 ) {
         if ( kind == TRACE_KIND_CPUTRACK ) return TRACE_CPUTRACK_DEFAULT_COLS_MASK;
+        if ( kind == TRACE_KIND_AUDIO_FRAMES ) return TRACE_AUDIO_FRAMES_DEFAULT_COLS_MASK;
         return ( nc >= 32 ) ? 0xFFFFFFFFu : ( ( 1u << nc ) - 1u );
     }
     uint32_t mask = 0;
@@ -909,7 +922,7 @@ static JsonArray *trace_row_audio ( const st_TRACE_PAGE_REQ *req, const st_TRACE
     } else {
         /* audio_frames: t(0) frame(8) len(12) ch[9] x 16 B (16..159), ref_rms(160)
          * ref_peak(164) sdl_rms(168) sdl_peak(172) ref_samples(176) sdl_samples(180)
-         * sdl_blocks(184) flags(186). */
+         * sdl_blocks(184) flags(186) ref_first(192) sdl_first(200). */
         uint32_t len = rd32 ( r + 12 );
         unsigned nch = req->audio_channels;
         if ( nch == 0 || nch > 9 ) nch = 9;
@@ -933,6 +946,15 @@ static JsonArray *trace_row_audio ( const st_TRACE_PAGE_REQ *req, const st_TRACE
         if ( COL ( 11 ) ) add_lr16 ( a, r + 172, flags & 2u );
         if ( COL ( 12 ) ) {
             if ( flags & 2u ) json_array_add_int_element ( a, rd16 ( r + 184 ) );
+            else json_array_add_null_element ( a );
+        }
+        /* ref_first(192), sdl_first(200): bez příslušného proudu null */
+        if ( COL ( 13 ) ) {
+            if ( flags & 1u ) json_array_add_int_element ( a, (gint64) rd64 ( r + 192 ) );
+            else json_array_add_null_element ( a );
+        }
+        if ( COL ( 14 ) ) {
+            if ( flags & 2u ) json_array_add_int_element ( a, (gint64) rd64 ( r + 200 ) );
             else json_array_add_null_element ( a );
         }
     }

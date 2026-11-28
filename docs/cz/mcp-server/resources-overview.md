@@ -130,7 +130,7 @@ přesné clocks, kompletní scanline geometrie).
 | `mode` | `native` / `compat700` | Runtime z GDG regDMD bit (MZ-700 vždy native) |
 | `tv_system` | `PAL` / `NTSC` | Compile-time z MZTVSYS makra |
 | `framerate_hz` | 50 / 60 | Vyplývá z TV systému |
-| `pxclk_hz` | např. 14336640 / 17760000 | Simulovaný GDG base = `screen_ticks * screens_per_sec` |
+| `pxclk_hz` | např. 14336640 / 17721600 | Jmenovitý takt GDG = `screen_ticks * screens_per_sec` (skutečný čas běží podle `clocks.gdg_real_base_hz`) |
 | `mzarch` | shodný s `platform` | Legacy alias (= zachováno pro zpětnou kompatibilitu) |
 | `mzarch_numeric` | 700 / 800 / 1500 | Číselná varianta platformy |
 | `rom_version` | `unknown` | Plánováno pro budoucí verzi (= z ROM header signatury) |
@@ -155,14 +155,17 @@ aktuálně runtime attached. Pro runtime stav viz `emulator://media/state`,
 
 | Field | Popis | Typický rozsah |
 |-------|-------|---------------|
-| `gdg_base_hz` | Simulovaný GDG base | 14,336,640 (NTSC) / 17,760,000 (PAL) |
-| `gdg_real_base_hz` | Reálná krystalová frekvence | 14,318,180 / 17,734,475 |
-| `cpu_hz` | Z80 efektivní clock | 3,584,160 (NTSC) / 3,552,000 (PAL) |
+| `gdg_base_hz` | Jmenovitý takt GDG (takty snímku x celé snímky za sekundu) | 14,336,640 (NTSC) / 17,721,600 (PAL) |
+| `gdg_real_base_hz` | Reálná krystalová frekvence; podle ní běží tempo emulace a zvuk | 14,318,180 / 17,734,475 |
+| `cpu_hz` | Z80 clock podle jmenovitého taktu | 3,584,160 (NTSC) / 3,544,320 (PAL) |
 | `cpu_divider` | GDGCLK2CPU_DIVIDER | 4 (NTSC) / 5 (PAL) |
-| `ctc0_input_hz` | 8253 counter 0 input | 896,040 (NTSC) / 1,110,000 (PAL) |
+| `ctc0_input_hz` | 8253 counter 0 input podle jmenovitého taktu | 896,040 (NTSC) / 1,107,600 (PAL) |
 | `ctc0_divider` | GDGCLK_CTC0_DIVIDER | 16 |
-| `psg_input_hz` | SN76489 PSG input | cpu_hz / 16 |
+| `cpu_real_hz` | Z80 clock podle krystalu (double) | 3,579,545 (NTSC) / 3,546,895 (PAL) |
+| `ctc0_input_real_hz` | 8253 counter 0 input podle krystalu (double) | 894,886.25 (NTSC) / 1,108,404.6875 (PAL) |
+| `psg_input_hz` | Krok vnitřních čítačů PSG (SN76489) podle jmenovitého taktu: vstup CLOCK čipu po jeho vnitřním děliči 16, **ne** kmitočet vstupu CLOCK | cpu_hz / 16 |
 | `psg_divider` | PSG_DIVIDER = 16 * cpu_divider | 64 (NTSC) / 80 (PAL) |
+| `psg_input_real_hz` | Totéž podle krystalu (double; bez PSG **null**): krok vnitřních čítačů, tón kanálu je `psg_input_real_hz / (2 * N)` | cpu_real_hz / 16 (MZ-800 221 680,9375) |
 | `ctc1_input_hz` | **null** | 8253 counter 1 je cascade-driven |
 | `ctc2_input_hz` | **null** | 8253 counter 2 je cascade-driven |
 | `ctc12_note` | "read emulator://periph/i8253 for runtime state" | Per-platform routing |
@@ -171,14 +174,23 @@ aktuálně runtime attached. Pro runtime stav viz `emulator://media/state`,
 CTC0 děličku 16 (vstup CTC0 je čtvrtina hodin CPU). Na MZ-1500 je to
 změřené, pro MZ-700 NTSC to plyne z tabulky not japonské ROM.
 
+**Pozn k `psg_input_hz` a `psg_input_real_hz`**: obě pole udávají krok
+vnitřních čítačů PSG, tedy hodiny CPU děleno 16 (MZ-800 podle krystalu
+221 680,9375 Hz). Vstup CLOCK čipu má na MZ-800 hodiny CPU (3 546 895 Hz
+podle krystalu) a čip si je dělí šestnácti sám; kdo počítá tón podle
+datového listu `f = CLOCK / (32 * N)`, má za CLOCK dosadit `cpu_real_hz`.
+Názvy polí zůstávají kvůli kompatibilitě. Vstup CLOCK na MZ-1500
+[neověřeno]; emulátor tam počítá se stejným krokem hodiny CPU / 16.
+
 ### `scanline` sub-object - raster geometrie
 
 | Field | Popis | Typický rozsah |
 |-------|-------|---------------|
-| `screen_total_width_ticks` | Celkový raster line (= sync + back + display + front porch) | 912 (NTSC) / 1056 (PAL) |
+| `screen_total_width_ticks` | Celkový raster line (= sync + back + display + front porch) | 912 (NTSC) / 1136 (PAL) |
 | `screen_total_height_lines` | Celkový počet scan lines | 262 (NTSC) / 312 (PAL) |
-| `screen_total_ticks_per_frame` | width × height | 238944 / 329472 |
-| `screens_per_sec` | = framerate_hz | 60 / 50 |
+| `screen_total_ticks_per_frame` | width × height | 238944 / 354432 |
+| `screens_per_sec` | = framerate_hz (jmenovitě, celé číslo) | 60 / 50 |
+| `screens_per_sec_real` | Synchronizační události za sekundu podle krystalu (double) = krystal / `screen_total_ticks_per_frame`: tempo emulace při 100 % a časová základna zvuku. Je to obrazová frekvence standardního rastru (MZ-800 s CKSW = 0); s CKSW = 1 má obrazový snímek MZ-800 jinou délku a hodnota se nemění | 59.922743 / 50.036326 |
 | `display_width` | Viditelný display (= canvas + border) | např. 704 (MZ-700 PAL) |
 | `display_height` | Viditelný display | např. 232 |
 | `canvas_width` | Kreslicí plocha bez border | 640 |
@@ -188,6 +200,16 @@ změřené, pro MZ-700 NTSC to plyne z tabulky not japonské ROM.
 | `h_sync_ticks` | HSync interval | 81 (MZ-700 PAL) / 80 (MZ-800) / 65 (NTSC) |
 | `h_back_porch_ticks` | Back porch po HSync | 225 (MZ-700 PAL) / 106 (MZ-800) / 98 (NTSC) |
 | `h_front_porch_ticks` | Front porch před HSync | 126 (MZ-700 PAL) / 22 (MZ-800) / 45 (NTSC) |
+
+**Pozn ke `screens_per_sec_real`**: hodnota se počítá z délky
+standardního snímku (`screen_total_ticks_per_frame`) a nemění se se
+stavem CKSW na MZ-800. Při CKSW = 1 je obrazový snímek kratší
+(349 440 taktů, z krystalu 50,751130 snímku/s; změřeno 2026-11-26),
+emulace ale dál dělá synchronizační událost (tempo, zvukový blok,
+snímek zachycení zvuku) po 354 432 taktech. Frekvenci právě běžícího
+rastru spočte klient z jeho skutečné délky: rozdíl `ticks - frame_ticks`
+v `time` z `emu_state_observe` na začátku dvou po sobě jdoucích snímků,
+pak `gdg_real_base_hz` / délka.
 
 ### Subset v hello capabilities
 
@@ -219,23 +241,27 @@ detail je dostupný přes `resources/read` na `emulator://platform/info`.
     "cpu_model": "Z80"
   },
   "clocks": {
-    "gdg_base_hz": 17760000,
+    "gdg_base_hz": 17721600,
     "gdg_real_base_hz": 17734475,
-    "cpu_hz": 3552000,
+    "cpu_hz": 3544320,
     "cpu_divider": 5,
-    "ctc0_input_hz": 1110000,
+    "ctc0_input_hz": 1107600,
     "ctc0_divider": 16,
-    "psg_input_hz": 222000,
+    "cpu_real_hz": 3546895.0,
+    "ctc0_input_real_hz": 1108404.6875,
+    "psg_input_hz": 221520,
     "psg_divider": 80,
+    "psg_input_real_hz": 221680.9375,
     "ctc1_input_hz": null,
     "ctc2_input_hz": null,
     "ctc12_note": "cascade from CTC0 / per-platform routing; read emulator://periph/i8253 for runtime state"
   },
   "scanline": {
-    "screen_total_width_ticks": 1056,
+    "screen_total_width_ticks": 1136,
     "screen_total_height_lines": 312,
-    "screen_total_ticks_per_frame": 329472,
+    "screen_total_ticks_per_frame": 354432,
     "screens_per_sec": 50,
+    "screens_per_sec_real": 50.036325726796676,
     "display_width": 704,
     "display_height": 232,
     "canvas_width": 640,

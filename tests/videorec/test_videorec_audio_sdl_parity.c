@@ -19,14 +19,25 @@
  *    bit po bitu shodný (tolerance 0) - stejné operace ve float ve stejném pořadí.
  * 2. **Celá cesta** ze stejných událostí (syntetický audio log v taktech
  *    dané platformy): liší se jen vstupní převzorkování - renderer průměruje úroveň
- *    přes interval vzorku (box filtr, přesný čas), SDL cesta bere bodové
- *    vzorky (PSG; krok `log_count / 882` celočíselně, tj. 401 místo 401,85
- *    taktu - časová osa se uvnitř snímku zkracuje až o cca 1,9 vzorku a na
- *    začátku snímku se srovná) a u CTC0 podíl nenulových vzorků 553,8 kHz
- *    proudu dělený `(délka bloku + 1)` (zesílení cca 0,926; renderer ho
- *    nahrazuje průměrnou korekcí videorec_audio_sdl_ctc0_gain()). Rozdíly jsou
- *    proto jen na hranách obdélníků (posun hrany o zlomek až cca 2 vzorky),
- *    ne v úrovních ani v časování parkování. Tolerance viz jednotlivé asserty.
+ *    přes interval vzorku (box filtr, přesný čas), SDL cesta u PSG také
+ *    (průměr výchylky přes stejné hranice v celých taktech, kus prvního
+ *    vzorku před začátkem snímku z konce předchozího bloku; dřív bodový
+ *    vzorek na konci intervalu) a u CTC0 vážený součet
+ *    nenulových buněk 553,8 kHz (NTSC 448 kHz) proudu přes interval vzorku
+ *    (krajní buňky podílem překryvu) dělený `(délka v buňkách + 1)`
+ *    (zesílení cca 0,926; renderer ho nahrazuje korekcí ref_ctc0_gain()).
+ *    Intervaly vzorků SDL cesty leží na stejné
+ *    souvislé ose jako vzorky rendereru (iface_audio_block_timing():
+ *    vzorek n pokrývá `[n * krystal / 44100, (n + 1) * krystal / 44100)`
+ *    taktů, bez nového začátku v každém bloku). Rozdíly jsou proto jen na
+ *    hranách obdélníků (posun hrany o zlomek vzorku), ne v úrovních ani
+ *    v časování parkování. Tolerance viz jednotlivé asserty.
+ *
+ * Obě cesty převádějí takty na vzorky podle krystalu (plat_t::real): blok SDL
+ * cesty (jeden snímek) má proměnnou délku z akumulátoru (MZ-800 881 nebo 882,
+ * NTSC 735 nebo 736 vzorků, kopie iface_audio_block_clock_step()) a renderer
+ * dostane skutečné takty za sekundu jako zachycení zvuku (reference.wav).
+ * Snímek f začíná ve vzorku T_SPF_AT(f) = floor(f * 44100 * takty snímku / krystal).
  *
  * @par Licence: GPLv3
  */
@@ -55,25 +66,37 @@ typedef struct {
     unsigned ctc_div;  /**< GDGCLK_CTC0_DIVIDER. */
     unsigned ch;       /**< Počet kanálů v logu (AUDIO_SRC_CHANNELS_COUNT; MZ-800 bez druhého PSG jen 5). */
     bool stereo;       /**< Mix iface_audio_mix_channels_stereo() (jinak _with_gain()). */
+    uint64_t real;     /**< Krystal = skutečné takty za sekundu (GDGCLK_REAL_TICKS_PER_SEC). */
 } plat_t;
 
 /** MZ-800: PAL 50 Hz, druhý PSG vypnutý (mono mix CTC0 + PSG0). */
-static const plat_t PLAT_MZ800 = { "MZ-800", 17721600ull, 354432ull, 50, 16, 5, false };
+static const plat_t PLAT_MZ800 = { "MZ-800", 17721600ull, 354432ull, 50, 16, 5, false, 17734475ull };
 /** MZ-1500: NTSC 60 Hz, dva PSG (stereo mix). */
-static const plat_t PLAT_MZ1500 = { "MZ-1500", 14336640ull, 238944ull, 60, 16, 9, true };
-/** MZ-700 NTSC: 60 Hz, jen CTC0 (dělička CTC0 13). */
-static const plat_t PLAT_MZ700N = { "MZ-700 NTSC", 14336640ull, 238944ull, 60, 13, 1, false };
+static const plat_t PLAT_MZ1500 = { "MZ-1500", 14336640ull, 238944ull, 60, 16, 9, true, 14318180ull };
+/** MZ-700 NTSC: 60 Hz, jen CTC0 (dělička CTC0 16 jako GDGCLK_CTC0_DIVIDER v mz700_gdgclk.h). */
+static const plat_t PLAT_MZ700N = { "MZ-700 NTSC", 14336640ull, 238944ull, 60, 16, 1, false, 14318180ull };
 
 /** Platforma aktuálního testu (nastavuje každý test, výchozí MZ-800 v setUp()). */
 static const plat_t *P = &PLAT_MZ800;
+
+/**
+ * @brief První vzorek snímku `f` podle krystalu: floor(f * 44100 * takty snímku / krystal).
+ *
+ * Součet délek bloků SDL cesty od začátku (akumulátor začíná nulou) i index
+ * vzorku rendereru, ve kterém snímek začíná (do jednoho vzorku).
+ */
+static size_t spf_at(uint64_t f)
+{
+    return (size_t)(f * 44100u * P->tpf / P->real);
+}
 
 #define T_CLK (P->clk)                 /* GDGCLK_BASE */
 #define T_TPF (P->tpf)                 /* VIDEO_SCREEN_TICKS */
 #define T_FPS (P->fps)                 /* VIDEO_SCREENS_PER_SEC */
 #define T_RATE 44100u                  /* IFACE_AUDIO_SAMPLE_RATE */
-#define T_SPF (T_RATE / T_FPS)         /* 882 / 735, iface_audio.c:220 */
-/* IFACE_AUDIO_CTC5253_SAMPLE_RATE / fps (celočíselně jako iface_audio.h:22 a iface_audio.c:230):
- * MZ-800 11076, MZ-1500 7467, MZ-700 NTSC 551409 / 60 = 9190 */
+#define T_SPF_AT(f) spf_at(f)          /* první vzorek snímku f (podle krystalu) */
+/* IFACE_AUDIO_CTC0_SAMPLES_PER_FRAME (IFACE_AUDIO_CTC5253_SAMPLE_RATE / fps, iface_audio.h):
+ * MZ-800 11076, MZ-1500 a MZ-700 NTSC 7467 */
 #define T_CTC_N ((size_t)((T_CLK / (P->ctc_div * 2)) / T_FPS))
 #define T_PARK ((T_RATE / 1000) * 45)  /* iface_audio.c:224 */
 #define T_FADE ((T_RATE / 1000) * 20)  /* iface_audio.c:226 */
@@ -91,8 +114,9 @@ static const plat_t *P = &PLAT_MZ800;
 #define T_COUPLING (P->ch > 1)
 
 #define T_CH_MAX 9                     /* CTC0 + 2x4 PSG */
-#define T_SPF_MAX 882                  /* největší T_SPF (50 snímků/s) */
+#define T_SPF_MAX 882                  /* největší blok SDL cesty (IFACE_AUDIO_BLOCK_SAMPLES_MAX, PAL) */
 #define T_CTC_MAX 11076                /* největší T_CTC_N (MZ-800) */
+#define T_CARRY_MAX 16                 /* nad IFACE_AUDIO_CTC0_CARRY_MAX všech platforem (PAL 13, NTSC 11) */
 #define T_FRAMES_MAX 100               /* nejdelší scénář [snímky] */
 
 /* ================================================================
@@ -110,31 +134,68 @@ typedef struct {
     double ctc_ac_mean;                            /* střídavá vazba CTC0: střední hodnota 0..1 */
     uint8_t psg_park_prev[T_CH_MAX]; size_t psg_park_cnt[T_CH_MAX]; float psg_park_gain[T_CH_MAX]; int psg_park_gcnt[T_CH_MAX]; /* :337-340 */
     float psg_iir[T_CH_MAX];                       /* :377 */
+    double psg_carry_sum[T_CH_MAX];                /* kus vzorku za poslední hranicí bloku (s_psg_carry) */
+    int64_t psg_carry_len[T_CH_MAX];               /* jeho délka [takty] */
+    bool psg_carry_valid[T_CH_MAX];                /* platí pro navazující log */
     double out_lp[2];                              /* výstupní propust L, R (iface_audio.c s_out_lp) */
     double out_ac[2];                              /* střídavá vazba výstupu L, R (iface_audio.c s_out_ac) */
+    uint8_t ctc_carry[T_CARRY_MAX];                /* přenesené buňky CTC0 (iface_audio_resampler.c s_ctc0_carry) */
+    size_t ctc_carry_n;                            /* s_ctc0_carry_count */
 } ref_state_t;
 
 /** Volba výstupní propusti pro oba běhy scénáře (SDL cesta i renderer); nastavuje test. */
 static bool s_filter_on = false;
 
-/** Kopie iface_audio_resampler_process_audio_log() (iface_audio_resampler.c:29-67). */
-static void ref_process_audio_log(const ref_src_t *source, uint64_t log_count_samples, size_t samples_count, uint8_t *samples)
+/**
+ * Kopie iface_audio_resampler_ctc0_cells() (iface_audio_resampler.c): buňka j
+ * v taktu `offset + floor(j * span / samples_count)` logu (zde přímo dělením).
+ */
+static void ref_ctc0_cells(const ref_src_t *source, uint64_t offset, uint64_t span, size_t samples_count, uint8_t *samples)
 {
     if (source->samples_count == 0) {
         memset(samples, source->last_value, samples_count);
         return;
     }
-    uint64_t step = log_count_samples / samples_count;
-    uint64_t current_time = 0;
     size_t event_index = 0;
     uint64_t total_time = source->samples[event_index].count_ticks;
-    for (size_t i = 0; i < samples_count; i++, current_time += step) {
+    for (size_t i = 0; i < samples_count; i++) {
+        const uint64_t current_time = offset + (uint64_t)i * span / samples_count;
         while ((current_time + 1 >= total_time) && (event_index + 1 < source->samples_count)) {
             event_index++;
             total_time += source->samples[event_index].count_ticks;
         }
         samples[i] = source->samples[event_index].value;
     }
+}
+
+/**
+ * Nezávislý zápis iface_audio_block_timing() (iface_audio.h): vzorek i bloku se
+ * zbytkem akumulátoru `lead` (před krokem) pokrývá na souvislé ose jednotky
+ * `[i * krystal - lead, (i + 1) * krystal - lead)` (1 / 44100 taktu od začátku
+ * snímku); bod PSG je poslední takt intervalu `ceil(konec * span / (44100 *
+ * takty)) - 1`, poloha hrany v proudu buněk CTC0 `hrana * buňky` (jednotky
+ * 1 / (44100 * takty) buňky).
+ */
+static void ref_block_timing(uint64_t lead, size_t spf, uint64_t span, int64_t *ticks, int64_t *edges)
+{
+    const int64_t den = (int64_t)T_RATE * (int64_t)T_TPF;
+    for (size_t i = 0; i <= spf; i++) {
+        const int64_t e = (int64_t)i * (int64_t)P->real - (int64_t)lead;
+        edges[i] = e * (int64_t)T_CTC_N;
+        /* hranice vzorku v taktech snímku, zaokrouhleno dolů (iface_audio_block_tick()) */
+        const int64_t x = e * (int64_t)span;
+        ticks[i] = (x >= 0) ? x / den : -((-x + den - 1) / den);
+    }
+}
+
+/**
+ * Nezávislý zápis iface_audio_ctc0_sdl_gain_for(): interval vzorku má vždy
+ * r = krystal * buňky / (44100 * takty) buněk, zesílení r / (r + 1).
+ */
+static double ref_ctc0_gain(void)
+{
+    const double r = (double)P->real * (double)T_CTC_N / ((double)T_RATE * (double)T_TPF);
+    return r / (r + 1.0);
 }
 
 /** Kopie iface_audio_lowpass_filter() (iface_audio_resampler.c:76-83). */
@@ -204,56 +265,126 @@ static float ref_psg_chain(ref_state_t *s, int channel, float resampled, uint8_t
     return s->psg_iir[channel];
 }
 
-/** Kopie iface_audio_resampler_output_stream_ctc0() (iface_audio_resampler.c:190-293). */
-static void ref_output_stream_ctc0(ref_state_t *s, const uint8_t *input_samples, size_t input_samples_count,
-                                   size_t output_samples_count, float *output_samples, float *raw_out)
+/**
+ * Kopie iface_audio_resampler_output_stream_ctc0() (iface_audio_resampler.c):
+ * vzorek i je vážený součet buněk přes přesný interval [edges[i], edges[i + 1])
+ * (polohy, buňka b pokrývá [b * d, (b + 1) * d), d = 44100 * takty; krajní
+ * buňky podílem překryvu) dělený (délka v buňkách + 1); záporné buňky jsou
+ * přenesené z konce předchozího snímku, první blok (`contiguous` false)
+ * je nahradí první buňkou snímku.
+ */
+static void ref_output_stream_ctc0(ref_state_t *s, const uint8_t *cells, size_t cells_count, const int64_t *edges,
+                                   size_t output_samples_count, bool contiguous, float *output_samples, float *raw_out)
 {
-    double ratio = (double)input_samples_count / (double)output_samples_count;
+    const int64_t d = (int64_t)T_RATE * (int64_t)T_TPF;
+#define REF_CELL(x) (((x) >= 0) ? ((x) / d) : -((-(x) + d - 1) / d))
+    const size_t need = (size_t)(-REF_CELL(edges[0]));
+    TEST_ASSERT_TRUE(need <= T_CARRY_MAX);
+    if (!contiguous || need != s->ctc_carry_n) {
+        memset(s->ctc_carry, cells[0], need);
+        s->ctc_carry_n = need;
+    }
     for (size_t i = 0; i < output_samples_count; i++) {
-        double index = i * ratio;
-        size_t start = (size_t)index;
-        size_t end = (size_t)((i + 1) * ratio);
-        if (end >= input_samples_count) end = input_samples_count - 1;
-        size_t ones_count = 0;
-        for (size_t j = start; j < end; j++)
-            if (input_samples[j]) ones_count++;
-        float resampled = (float)ones_count / (float)(end - start + 1);
-        float unit = (float)(end - start) / (float)(end - start + 1);
+        const int64_t a = edges[i], b = edges[i + 1];
+        const int64_t ja = REF_CELL(a), jb = REF_CELL(b);
+        int64_t ones_w = 0;
+        for (int64_t j = ja; j <= jb && j < (int64_t)cells_count; j++) {
+            const int64_t lo = (j == ja) ? a : j * d;
+            const int64_t hi = (j == jb) ? b : (j + 1) * d;
+            if (hi > lo && ((j < 0) ? s->ctc_carry[(int64_t)s->ctc_carry_n + j] : cells[j])) ones_w += hi - lo;
+        }
+        const double div = (double)(b - a) + (double)d;
+        float resampled = (float)((double)ones_w / div);
+        float unit = (float)((double)(b - a) / div);
         output_samples[i] = ref_ctc_chain(s, resampled, unit, &raw_out[i]);
     }
+    const size_t tail = cells_count - (size_t)REF_CELL(edges[output_samples_count]);
+#undef REF_CELL
+    TEST_ASSERT_TRUE(tail <= T_CARRY_MAX);
+    memcpy(s->ctc_carry, cells + (cells_count - tail), tail);
+    s->ctc_carry_n = tail;
 }
 
-/** Kopie iface_audio_resampler_process_psg_audio_log() (iface_audio_resampler.c:295-409). */
-static void ref_process_psg(ref_state_t *s, int channel, const ref_src_t *source, uint64_t log_count_samples,
-                            const float *volume, size_t samples_count, float *samples, float *raw_out)
+/**
+ * Integrál výchylky kanálu přes takty `[lo, hi)` logu (úsek j platí na
+ * `[S_j, S_j + count_ticks)`, poslední trvá dál); nezávislý zápis průměru
+ * iface_audio_resampler_psg_average(), úseky se sčítají ve stejném pořadí.
+ */
+static double ref_psg_integral(const ref_src_t *src, const float *volume, int64_t lo, int64_t hi, uint8_t *end_value)
 {
-    if (source->samples_count == 0) {
-        for (size_t i = 0; i < samples_count; i++) raw_out[i] = samples[i] = volume[source->last_value];
-        return;
+    if (src->samples_count == 0) {
+        if (end_value) *end_value = src->last_value;
+        return (hi > lo) ? (double)volume[src->last_value] * (double)(hi - lo) : 0.0;
     }
-    uint64_t step = log_count_samples / samples_count;
-    uint64_t current_time = 0;
-    size_t event_index = 0;
-    uint64_t total_time = source->samples[event_index].count_ticks;
-    for (size_t i = 0; i < samples_count; i++, current_time += step) {
-        while ((current_time + 1 >= total_time) && (event_index + 1 < source->samples_count)) {
-            event_index++;
-            total_time += source->samples[event_index].count_ticks;
+    double sum = 0.0;
+    int64_t start = 0;
+    for (unsigned j = 0; j < src->samples_count; j++) {
+        const int64_t end = (j + 1 < src->samples_count) ? start + (int64_t)src->samples[j].count_ticks : INT64_MAX;
+        const int64_t a = (lo > start) ? lo : start, b = (hi < end) ? hi : end;
+        if (b > a) sum += (double)volume[src->samples[j].value] * (double)(b - a);
+        if (end_value && start <= ((hi > lo) ? hi - 1 : lo) && ((hi > lo) ? hi - 1 : lo) < end) *end_value = src->samples[j].value;
+        start = end;
+        if (start >= hi) break;
+    }
+    return sum;
+}
+
+/**
+ * Kopie iface_audio_resampler_process_psg_audio_log() (iface_audio_resampler.c):
+ * vzorek i = integrál výchylky přes takty [ticks[i], ticks[i + 1]) snímku
+ * děleno délkou; kus prvního vzorku před začátkem snímku z konce předchozího
+ * bloku (`contiguous`), jinak výchylkou na začátku snímku. Syntetický log
+ * začíná přesně na začátku snímku a trvá T_TPF taktů.
+ */
+static void ref_process_psg(ref_state_t *s, int channel, const ref_src_t *source, const int64_t *ticks,
+                            bool contiguous, const float *volume, size_t samples_count, float *samples, float *raw_out)
+{
+    if (!contiguous || !s->psg_carry_valid[channel]) {
+        uint8_t v0 = 0;
+        ref_psg_integral(source, volume, 0, 1, &v0);
+        const int64_t len0 = (ticks[0] < 0) ? -ticks[0] : 0;
+        s->psg_carry_len[channel] = len0;
+        s->psg_carry_sum[channel] = (double)volume[v0] * (double)len0;
+    }
+    int64_t prev = 0;
+    for (size_t i = 0; i < samples_count; i++) {
+        const int64_t hi = ticks[i + 1];
+        uint8_t ev = 0;
+        double sum = ref_psg_integral(source, volume, prev, hi, &ev);
+        int64_t len = hi - prev;
+        if (i == 0) {
+            sum += s->psg_carry_sum[channel];
+            len += s->psg_carry_len[channel];
         }
-        uint8_t current_value = source->samples[event_index].value;
-        float resampled = volume[current_value];
-        samples[i] = ref_psg_chain(s, channel, resampled, current_value, &raw_out[i], !T_COUPLING);
+        const float x = (len > 0) ? (float)(sum / (double)len) : volume[ev];
+        if (source->samples_count == 0) {
+            raw_out[i] = samples[i] = x;   /* beze změny v logu: bez parkování a IIR */
+        } else {
+            samples[i] = ref_psg_chain(s, channel, x, ev, &raw_out[i], !T_COUPLING);
+        }
+        prev = hi;
     }
+    s->psg_carry_sum[channel] = ref_psg_integral(source, volume, prev, (int64_t)T_TPF, NULL);
+    s->psg_carry_len[channel] = (int64_t)T_TPF - prev;
+    s->psg_carry_valid[channel] = true;
 }
 
 /**
  * Kopie iface_audio_ctc0_mix_level() (iface_audio.c): poměr CTC0 k jednomu
- * kanálu PSG dělený počtem kanálů a středním zesílením převzorkování CTC0;
- * stejně i bez PSG (MZ-700).
+ * kanálu PSG dělený počtem kanálů a středním zesílením převzorkování CTC0
+ * souvislé osy (ref_ctc0_gain()); stejně i bez PSG (MZ-700).
  */
 static float ref_ctc0_mix_level(void)
 {
-    return T_CTC0_TO_PSG / (float)T_PSG_CH / videorec_audio_sdl_ctc0_gain(T_CTC_N, T_SPF);
+    return T_CTC0_TO_PSG / (float)T_PSG_CH / (float)ref_ctc0_gain();
+}
+
+/** Kopie iface_audio_block_clock_step() (iface_audio.h): délka dalšího bloku SDL cesty podle krystalu. */
+static size_t ref_block_clock(uint64_t *rem)
+{
+    const uint64_t acc = *rem + (uint64_t)T_RATE * P->tpf;
+    *rem = acc % P->real;
+    return (size_t)(acc / P->real);
 }
 
 /**
@@ -298,10 +429,10 @@ static double ref_makeup(void)
 }
 
 /** Kopie iface_audio_mix_channels_with_gain() (iface_audio.c), bez měření úrovní; PSG jen při HAVE_PSG >= 1. */
-static void ref_mix(ref_state_t *s, float ch[T_CH_MAX][T_SPF_MAX], float raw[T_CH_MAX][T_SPF_MAX], const float *gain, float *output)
+static void ref_mix(ref_state_t *s, float ch[T_CH_MAX][T_SPF_MAX], float raw[T_CH_MAX][T_SPF_MAX], const float *gain, float *output, size_t spf)
 {
     const float ctc0_mix = ref_ctc0_mix_level();
-    for (size_t i = 0; i < T_SPF; i++) {
+    for (size_t i = 0; i < spf; i++) {
         float sample_ctc0 = ch[0][i] * gain[0];
         sample_ctc0 *= ctc0_mix;
         float raw_ctc0 = raw[0][i] * gain[0] * ctc0_mix;
@@ -316,10 +447,10 @@ static void ref_mix(ref_state_t *s, float ch[T_CH_MAX][T_SPF_MAX], float raw[T_C
 }
 
 /** Kopie iface_audio_mix_channels_stereo() (iface_audio.c), bez měření úrovní; výstup prokládaně L, R. */
-static void ref_mix_stereo(ref_state_t *s, float ch[T_CH_MAX][T_SPF_MAX], float raw[T_CH_MAX][T_SPF_MAX], const float *gain, float *output)
+static void ref_mix_stereo(ref_state_t *s, float ch[T_CH_MAX][T_SPF_MAX], float raw[T_CH_MAX][T_SPF_MAX], const float *gain, float *output, size_t spf)
 {
     const float ctc0_mix = ref_ctc0_mix_level();
-    for (size_t i = 0; i < T_SPF; i++) {
+    for (size_t i = 0; i < spf; i++) {
         float sample_ctc0 = ch[0][i] * gain[0];
         sample_ctc0 *= ctc0_mix;
         float raw_ctc0 = raw[0][i] * gain[0] * ctc0_mix;
@@ -420,8 +551,9 @@ static void psg_volume(float vol[VIDEOREC_AUDIO_LEVELS])
 }
 
 /**
- * Výstup SDL cesty (reference) pro celý scénář: `frames * T_SPF` vzorků int16
- * levé (`out`) a pravé strany (`out_r`, nebo NULL). Mono mix jde do obou
+ * Výstup SDL cesty (reference) pro celý scénář: `T_SPF_AT(frames)` vzorků int16
+ * levé (`out`) a pravé strany (`out_r`, nebo NULL), blok snímku f od vzorku
+ * T_SPF_AT(f) s délkou z akumulátoru podle krystalu. Mono mix jde do obou
  * stran stejně (iface_audio_wait_for_data() ho duplikuje do L = R).
  */
 static void run_sdl(unsigned frames, const float *gain, int16_t *out, int16_t *out_r)
@@ -437,7 +569,15 @@ static void run_sdl(unsigned frames, const float *gain, int16_t *out, int16_t *o
     float mix[2 * T_SPF_MAX];
     uint8_t cur[T_CH_MAX] = { 0 };
     size_t e = 0;
+    uint64_t rem = 0;   /* akumulátor délky bloku (iface_audio_wait_for_data()) */
+    size_t pos = 0;     /* první vzorek bloku */
+    static int64_t ticks[T_SPF_MAX + 1];
+    static int64_t edges[T_SPF_MAX + 1];
     for (unsigned f = 0; f < frames; f++) {
+        const uint64_t lead = rem;   /* fáze prvního vzorku (zbytek před krokem) */
+        const size_t spf = ref_block_clock(&rem);
+        ref_block_timing(lead, spf, T_TPF, ticks, edges);
+        TEST_ASSERT_EQUAL_size_t(T_SPF_AT(f), pos);
         uint64_t f0 = f * T_TPF, f1 = f0 + T_TPF;
         /* Log snímku jako audio_changed() / audiolog_finish_20ms_frame(): samples[0] = hodnota
          * před první změnou, count_ticks = trvání; žádná změna -> samples_count 0, last_value. */
@@ -460,20 +600,22 @@ static void run_sdl(unsigned frames, const float *gain, int16_t *out, int16_t *o
             src[c].samples[src[c].samples_count].count_ticks = 0; /* zarážka (originál ji nečte, viz hlavička) */
             src[c].samples[src[c].samples_count].value = src[c].last_value;
         }
-        ref_process_audio_log(&src[0], T_TPF, T_CTC_N, ctc);
-        ref_output_stream_ctc0(&s, ctc, T_CTC_N, T_SPF, chs[0], raws[0]);
-        for (unsigned c = 1; c < T_CH; c++) ref_process_psg(&s, (int)c, &src[c], T_TPF, vol, T_SPF, chs[c], raws[c]);
-        if (P->stereo) ref_mix_stereo(&s, chs, raws, gain, mix);
-        else ref_mix(&s, chs, raws, gain, mix);
-        for (unsigned i = 0; i < T_SPF; i++) {
+        /* syntetický log začíná přesně na začátku snímku: posun 0, délka T_TPF */
+        ref_ctc0_cells(&src[0], 0, T_TPF, T_CTC_N, ctc);
+        ref_output_stream_ctc0(&s, ctc, T_CTC_N, edges, spf, f > 0, chs[0], raws[0]);
+        for (unsigned c = 1; c < T_CH; c++) ref_process_psg(&s, (int)c, &src[c], ticks, f > 0, vol, spf, chs[c], raws[c]);
+        if (P->stereo) ref_mix_stereo(&s, chs, raws, gain, mix, spf);
+        else ref_mix(&s, chs, raws, gain, mix, spf);
+        for (unsigned i = 0; i < spf; i++) {
             for (unsigned side = 0; side < 2; side++) {
                 int16_t *o = side ? out_r : out;
                 if (!o) continue;
                 float y = P->stereo ? mix[i * 2 + side] : mix[i];
                 if (y < -1.0f) y = -1.0f;
-                o[f * T_SPF + i] = (int16_t)lrint(y * 32767.0);
+                o[pos + i] = (int16_t)lrint(y * 32767.0);
             }
         }
+        pos += spf;
     }
 }
 
@@ -487,20 +629,23 @@ static void run_renderer(unsigned frames, const float *gain, int16_t *out, int16
     float vol[VIDEOREC_AUDIO_LEVELS];
     psg_volume(vol);
     float lv[T_CH_MAX][VIDEOREC_AUDIO_LEVELS];
-    float k = videorec_audio_sdl_ctc0_gain(T_CTC_N, T_SPF);
+    /* střední zesílení souvislé osy; s násobitelem se krátí */
+    float k = (float)ref_ctc0_gain();
     for (int v = 0; v < VIDEOREC_AUDIO_LEVELS; v++) {
         lv[0][v] = (v ? 1.0f : 0.0f) * gain[0] * k * ref_ctc0_mix_level();
         for (unsigned c = 1; c < T_CH; c++) lv[c][v] = vol[v] * gain[c] / (float)T_PSG_CH;
     }
     static st_VIDEOREC_AUDIO a;
-    videorec_audio_init(&a, T_CLK, T_RATE, T_CH, (const float (*)[VIDEOREC_AUDIO_LEVELS])lv, NULL, 0, true);
+    /* skutečné takty za sekundu jako zachycení zvuku (audio_capture.c) */
+    videorec_audio_init(&a, P->real, T_RATE, T_CH, (const float (*)[VIDEOREC_AUDIO_LEVELS])lv, NULL, 0, true);
     videorec_audio_set_stereo(&a, P->stereo);
     videorec_audio_set_output_filter(&a, s_filter_on, true);
     videorec_audio_set_output_coupling(&a, T_COUPLING);
     for (size_t e = 0; e < s_nev; e++) TEST_ASSERT_EQUAL_INT(0, videorec_audio_event(&a, s_ev[e].ch, s_ev[e].v, s_ev[e].t));
     static int16_t st[T_FRAMES_MAX * T_SPF_MAX * 2];
-    TEST_ASSERT_EQUAL_size_t(frames * T_SPF, videorec_audio_render(&a, frames * T_TPF, st, frames * T_SPF));
-    for (size_t i = 0; i < frames * T_SPF; i++) {
+    const size_t n = T_SPF_AT(frames);
+    TEST_ASSERT_EQUAL_size_t(n, videorec_audio_render(&a, frames * T_TPF, st, n));
+    for (size_t i = 0; i < n; i++) {
         out[i] = st[i * 2];
         if (out_r) out_r[i] = st[i * 2 + 1];
     }
@@ -560,10 +705,15 @@ static void test_chain_bit_exact(void)
  * - RMS rozdílu <= 10 % RMS signálu a max. |rozdíl| <= 4000 (12 % rozsahu;
  *   mez podílu byla 5 %, dokud CTC0 nesl stejnosměrnou složku a byl hlasitější -
  *   rozdíl sám se nezměnil, RMS 319,6, viz compare()):
- *   rozdíly jsou jen na hranách obdélníků - hrana se proti SDL posune
- *   o zlomek až cca 2 vzorky (bodové vzorkování SDL s krokem 401 místo
- *   401,85 taktu) a box filtr dá na hraně mezihodnotu; obdélník 1-2 kHz má
- *   hranu každých 11-22 vzorků. Naměřeno: RMS 2,3 %, max 2986.
+ *   rozdíly byly jen na hranách obdélníků - hrana se proti SDL posunula
+ *   o zlomek vzorku (bodové vzorkování PSG v SDL cestě; do opravy kroku PSG
+ *   s krokem 401 místo 401,85 taktu až cca 2 vzorky) a box filtr dal na hraně
+ *   mezihodnotu; obdélník 1-2 kHz má hranu každých 11-22 vzorků. Naměřeno
+ *   (2026-11-25): s bloky 882 a jmenovitým taktem RMS 7,1 %, max 4030;
+ *   s bloky podle krystalu, ale s časem vzorků založeným znovu v každém
+ *   bloku RMS 6,4 %, max 2511; se souvislou časovou osou (2026-11-26) RMS
+ *   2,9 %, max 1770; s průměrem PSG přes interval vzorku (2026-11-26) RMS
+ *   0,1 %, max 831 (zbývá CTC0: buňky po 32 taktech a dělitel délka + 1).
  * - Střední hodnota plató CTC0 do 1 % (korekce zesílení CTC0).
  * - Střídavá vazba CTC0 a celého výstupu: plató (trvale 1 od snímku 30)
  *   doznívá - poměr středních hodnot snímků 45 a 31 je pod
@@ -582,8 +732,9 @@ static void test_full_path_parity(void)
     run_sdl(F, gain, ref, NULL);
     run_renderer(F, gain, ren, NULL);
 
+    const size_t N = T_SPF_AT(F);
     double se = 0, sr = 0, mx = 0;
-    for (size_t i = 0; i < F * T_SPF; i++) {
+    for (size_t i = 0; i < N; i++) {
         double d = (double)ren[i] - ref[i];
         se += d * d;
         sr += (double)ref[i] * ref[i];
@@ -591,26 +742,27 @@ static void test_full_path_parity(void)
     }
     if (getenv("PARITY_DUMP")) {
         FILE *fd = fopen(getenv("PARITY_DUMP"), "wb");
-        for (size_t i = 0; i < F * T_SPF; i++) { fwrite(&ref[i], 2, 1, fd); fwrite(&ren[i], 2, 1, fd); }
+        for (size_t i = 0; i < N; i++) { fwrite(&ref[i], 2, 1, fd); fwrite(&ren[i], 2, 1, fd); }
         fclose(fd);
     }
-    double rms_d = sqrt(se / (F * T_SPF)), rms_r = sqrt(sr / (F * T_SPF));
+    double rms_d = sqrt(se / (double)N), rms_r = sqrt(sr / (double)N);
     printf("full path: RMS ref %.1f, RMS diff %.1f (%.1f %%), max |diff| %.0f\n", rms_r, rms_d, 100.0 * rms_d / rms_r, mx);
     TEST_ASSERT_TRUE_MESSAGE(rms_d <= 0.10 * rms_r, "RMS difference above 10 % of the signal");
     TEST_ASSERT_TRUE_MESSAGE(mx <= 4000.0 * ref_makeup(), "max difference above 4000 times the makeup gain");
 
     /* Plató CTC0 (snímek 31: trvale 1, ostatní kanály tiché nebo už zaparkované) */
     double m_ref = 0, m_ren = 0;
-    for (size_t i = 31 * T_SPF; i < 32 * T_SPF; i++) { m_ref += ref[i]; m_ren += ren[i]; }
-    printf("CTC0 plateau mean: SDL %.1f, renderer %.1f\n", m_ref / T_SPF, m_ren / T_SPF);
-    TEST_ASSERT_TRUE(m_ref / T_SPF > 2000.0);
+    const double n31 = (double)(T_SPF_AT(32) - T_SPF_AT(31));
+    for (size_t i = T_SPF_AT(31); i < T_SPF_AT(32); i++) { m_ref += ref[i]; m_ren += ren[i]; }
+    printf("CTC0 plateau mean: SDL %.1f, renderer %.1f\n", m_ref / n31, m_ren / n31);
+    TEST_ASSERT_TRUE(m_ref / n31 > 2000.0);
     TEST_ASSERT_DOUBLE_WITHIN(0.01 * fabs(m_ref), m_ref, m_ren);
 
     /* Střídavá vazba: plató doznívá stejně v obou cestách. Vazbou CTC0 (0,85 s)
      * by kleslo na 0,719; vazba celého výstupu (0,57 s) a doznívající střední
      * hodnota předchozího tónu PSG pokles ještě zrychlí. */
     double d_ref = 0, d_ren = 0;
-    for (size_t i = 45 * T_SPF; i < 46 * T_SPF; i++) { d_ref += ref[i]; d_ren += ren[i]; }
+    for (size_t i = T_SPF_AT(45); i < T_SPF_AT(46); i++) { d_ref += ref[i]; d_ren += ren[i]; }
     double decay = exp(-14.0 * 0.02 / T_CTC0_AC_TAU_S);
     printf("CTC0 AC coupling: frame 45 / frame 31 SDL %.3f, renderer %.3f (expected %.3f)\n", d_ref / m_ref, d_ren / m_ren, decay);
     TEST_ASSERT_TRUE(d_ref / m_ref < decay && d_ren / m_ren < decay);
@@ -648,9 +800,9 @@ static void test_psg_constant_level_decays(void)
     double lvl = 32767.0 * pow(10, -0.5) / 4.0 * ref_makeup(); /* hlasitost 10 = 10^-0,5, průměr 4 kanálů, dorovnání hlasitosti */
     double want = lvl * exp(-0.11 / T_OUT_AC_TAU_S); /* střed snímku 5 = 0,11 s po skoku */
     printf("PSG constant level: SDL frame 5 mean %.1f, renderer %.1f (level %.1f, expected %.1f)\n",
-           mean16(ref, 5 * T_SPF, 6 * T_SPF), mean16(ren, 5 * T_SPF, 6 * T_SPF), lvl, want);
-    TEST_ASSERT_DOUBLE_WITHIN(0.02 * want, want, mean16(ref, 5 * T_SPF, 6 * T_SPF));
-    TEST_ASSERT_DOUBLE_WITHIN(0.02 * want, want, mean16(ren, 5 * T_SPF, 6 * T_SPF));
+           mean16(ref, T_SPF_AT(5), T_SPF_AT(6)), mean16(ren, T_SPF_AT(5), T_SPF_AT(6)), lvl, want);
+    TEST_ASSERT_DOUBLE_WITHIN(0.02 * want, want, mean16(ref, T_SPF_AT(5), T_SPF_AT(6)));
+    TEST_ASSERT_DOUBLE_WITHIN(0.02 * want, want, mean16(ren, T_SPF_AT(5), T_SPF_AT(6)));
     free(s_ev);
     s_ev = NULL;
     s_cap = s_nev = 0;
@@ -679,7 +831,7 @@ static void test_event_at_frame_start(void)
     run_renderer(3, gain, ren, NULL);
     /* PSG2 (hlasitost 15, úroveň 0,25) ve snímku 1: SDL cesta i renderer ho
      * pustí (dříve SDL chyběl celou úrovní 0,25 = 8192); PSG1 v obou. */
-    double d1 = mean16(ren, T_SPF + 100, 2 * T_SPF) - mean16(ref, T_SPF + 100, 2 * T_SPF);
+    double d1 = mean16(ren, T_SPF_AT(1) + 100, T_SPF_AT(2)) - mean16(ref, T_SPF_AT(1) + 100, T_SPF_AT(2));
     printf("event at frame start: renderer - SDL mean in frame 1 = %.1f (PSG2 level %.1f)\n", d1, 32767.0 * 0.25);
     TEST_ASSERT_DOUBLE_WITHIN(400.0, 0.0, d1);
     free(s_ev);
@@ -699,8 +851,9 @@ static void free_events(void)
  * Porovná výstup rendereru se SDL cestou: RMS rozdílu <= 10 % RMS signálu,
  * max <= 4000.
  *
- * Rozdíl cest je jen na hranách obdélníků PSG (bodové vzorky proti průměru
- * přes vzorek) a jeho absolutní velikost na úrovni CTC0 nezávisí. Od snížení
+ * Rozdíl cest byl jen na hranách obdélníků PSG (bodové vzorky proti průměru
+ * přes vzorek; od průměru PSG i v SDL cestě je RMS rozdílu pod 0,1 %) a jeho
+ * absolutní velikost na úrovni CTC0 nezávisí. Od snížení
  * CTC0 na 1,49 násobek kanálu PSG (dřív asi 3,7 násobek) je ale signál tišší,
  * takže stejný rozdíl dává větší podíl: MZ-800 s druhým PSG, levá strana,
  * RMS rozdílu 284,6 -> 283,2, RMS signálu 9038,8 -> 4948,5, podíl 3,1 % -> 5,7 %;
@@ -737,7 +890,7 @@ static double rms_lr(const int16_t *l, const int16_t *r, size_t n)
 }
 
 /*
- * 3. Stereo MZ-1500 (60 snímků/s, 735 vzorků na snímek, 9 kanálů): mix
+ * 3. Stereo MZ-1500 (59,92 snímku/s, 735 nebo 736 vzorků na snímek, 9 kanálů): mix
  *    iface_audio_mix_channels_stereo() - L = CTC0 + PSG0, R = CTC0 + PSG1.
  *    Scénář: CTC0 obdélník ve snímcích 0-20 (do obou stran), PSG0 kanál 1
  *    tón jen vlevo, PSG1 kanál 5 tón jen vpravo, PSG1 kanál 7 nepravidelné
@@ -769,7 +922,7 @@ static void test_stereo_parity_mz1500(void)
 
     run_sdl(F, gain, refl, refr);
     run_renderer(F, gain, renl, renr);
-    size_t n = (size_t)F * T_SPF;
+    size_t n = T_SPF_AT(F);
     compare("stereo L", refl, renl, n);
     compare("stereo R", refr, renr, n);
 
@@ -781,11 +934,15 @@ static void test_stereo_parity_mz1500(void)
 }
 
 /*
- * 4. Mono MZ-700 NTSC (jen CTC0, dělička 13 => proud 551 409 Hz, 9190 vzorků
- *    CTC na snímek, 735 výstupních): obdélník, plató (doznívá střídavou vazbou), obdélník.
+ * 4. Mono MZ-700 NTSC (jen CTC0, dělička 16 jako produkční sestavení => proud
+ *    448 020 Hz, 7467 buněk CTC na snímek, 735 nebo 736 výstupních vzorků):
+ *    obdélník, plató (doznívá střídavou vazbou), obdélník.
  *    Samostatný MZ-700 výstupní propust nemá (AUDIO_HAVE_OUTPUT_FILTER 0), test
  *    proto běží jen s vypnutou volbou; střídavá vazba je tam pomůcka emulátoru.
- *    Hrany na násobcích 26 taktů (perioda CTC proudu). L == R v obou cestách.
+ *    Hrany na násobcích 32 taktů (perioda CTC proudu). L == R v obou cestách.
+ *    Naměřeno (2026-11-26): s děličem 13 a časem vzorků založeným znovu
+ *    v každém bloku RMS 4,6 %, max 1608; s děličem 16 tamtéž 4,9 %, max 1718;
+ *    se souvislou časovou osou 0,5 %, max 166 (před přechodem na krystal 0,8 %).
  */
 static void test_mono_parity_mz700_ntsc(void)
 {
@@ -796,23 +953,23 @@ static void test_mono_parity_mz700_ntsc(void)
     static int16_t refl[T_FRAMES_MAX * T_SPF_MAX], refr[T_FRAMES_MAX * T_SPF_MAX];
     static int16_t renl[T_FRAMES_MAX * T_SPF_MAX], renr[T_FRAMES_MAX * T_SPF_MAX];
     s_nev = 0;
-    square(0, 260, 20 * T_TPF + 260, 26 * 170, 15);               /* ~1,6 kHz */
-    add_ev(20 * T_TPF + 520, 0, 15);                              /* trvale 1 -> parkování */
-    add_ev(35 * T_TPF + 520, 0, 0);
-    square(0, 40 * T_TPF + 260, 60 * T_TPF - 2600, 26 * 340, 15); /* ~0,8 kHz */
+    square(0, 320, 20 * T_TPF + 320, 32 * 138, 15);               /* ~1,6 kHz */
+    add_ev(20 * T_TPF + 640, 0, 15);                              /* trvale 1 -> parkování */
+    add_ev(35 * T_TPF + 640, 0, 0);
+    square(0, 40 * T_TPF + 320, 60 * T_TPF - 3200, 32 * 276, 15); /* ~0,8 kHz */
     qsort(s_ev, s_nev, sizeof(*s_ev), ev_cmp);
     for (size_t i = 0; i < s_nev; i++) TEST_ASSERT_NOT_EQUAL_MESSAGE(0, s_ev[i].t % T_TPF, "event on a frame start");
 
     run_sdl(F, gain, refl, refr);
     run_renderer(F, gain, renl, renr);
-    size_t n = (size_t)F * T_SPF;
+    size_t n = T_SPF_AT(F);
     compare("mono", refl, renl, n);
     /* Úroveň CTC0 bez PSG je stejná jako na MZ-800: rozkmit obdélníku je
      * hlasitost 0,8 krát 1,49 / 4 (obdélník 0,8 kHz ve snímcích 45 až 55; rychlejší
      * obdélník filtry kanálu nenechají doběhnout). Na skutečném MZ-700 neměřeno. */
     double swing = 0.8 * T_CTC0_TO_PSG / T_PSG_CH * 32767.0 * ref_makeup(); /* krát dorovnání hlasitosti; pod kolenem omezovače */
     int mn_ref = 32767, mx_ref = -32768, mn_ren = 32767, mx_ren = -32768;
-    for (size_t i = 45 * T_SPF; i < 55 * T_SPF; i++) {
+    for (size_t i = T_SPF_AT(45); i < T_SPF_AT(55); i++) {
         if (refl[i] < mn_ref) mn_ref = refl[i];
         if (refl[i] > mx_ref) mx_ref = refl[i];
         if (renl[i] < mn_ren) mn_ren = renl[i];
@@ -828,12 +985,12 @@ static void test_mono_parity_mz700_ntsc(void)
 }
 
 /*
- * 5. MZ-800 s druhým PSG (allow_psg1): stereo mix 9 kanálů při 50 snímcích/s
+ * 5. MZ-800 s druhým PSG (allow_psg1): stereo mix 9 kanálů při 50,04 snímku/s
  *    (stejná matematika jako MZ-1500, jiné takty).
  */
 static void test_stereo_parity_mz800_psg1(void)
 {
-    static const plat_t mz800_stereo = { "MZ-800 + PSG1", 17721600ull, 354432ull, 50, 16, 9, true };
+    static const plat_t mz800_stereo = { "MZ-800 + PSG1", 17721600ull, 354432ull, 50, 16, 9, true, 17734475ull };
     P = &mz800_stereo;
     const unsigned F = 40;
     const float gain[T_CH_MAX] = { 0.8f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f };
@@ -846,7 +1003,7 @@ static void test_stereo_parity_mz800_psg1(void)
     qsort(s_ev, s_nev, sizeof(*s_ev), ev_cmp);
     run_sdl(F, gain, refl, refr);
     run_renderer(F, gain, renl, renr);
-    size_t n = (size_t)F * T_SPF;
+    size_t n = T_SPF_AT(F);
     compare("stereo L", refl, renl, n);
     compare("stereo R", refr, renr, n);
     TEST_ASSERT_TRUE(rms_lr(renl, renr, n) > 1000.0);
@@ -856,8 +1013,8 @@ static void test_stereo_parity_mz800_psg1(void)
 /*
  * 6. Výstupní propust zapnutá (volba [AUDIO] output_filter): stejné scénáře,
  *    obě cesty vynechají filtry kanálů a součet pustí dolní propustí 460 us.
- *    Bodové vzorky SDL cesty a průměr rendereru se liší jen na hranách a propust
- *    rozdíl dál vyhladí; meze jako compare().
+ *    SDL cesta a renderer se liší jen převzorkováním CTC0 a propust rozdíl
+ *    dál vyhladí; meze jako compare().
  */
 static void test_full_path_parity_output_filter(void)
 {
@@ -870,7 +1027,7 @@ static void test_full_path_parity_output_filter(void)
     s_filter_on = true;
     run_sdl(F, gain, ref, NULL);
     run_renderer(F, gain, ren, NULL);
-    compare("output filter", ref, ren, (size_t)F * T_SPF);
+    compare("output filter", ref, ren, T_SPF_AT(F));
 
     /* propust opravdu působí: výstup se od vypnuté volby liší a je hladší (kroky bez dorovnání
      * hlasitosti, které je se zapnutou propustí o 4 dB větší) */
@@ -879,11 +1036,11 @@ static void test_full_path_parity_output_filter(void)
     const double mk_off = ref_makeup();
     s_filter_on = true;
     double step_on = 0, step_off = 0;
-    for (size_t i = 1; i < (size_t)F * T_SPF; i++) {
+    for (size_t i = 1; i < T_SPF_AT(F); i++) {
         step_on += fabs((double)ref[i] - ref[i - 1]) / mk_on;
         step_off += fabs((double)ref_off[i] - ref_off[i - 1]) / mk_off;
     }
-    printf("output filter: mean |step| on %.1f, off %.1f\n", step_on / (F * T_SPF), step_off / (F * T_SPF));
+    printf("output filter: mean |step| on %.1f, off %.1f\n", step_on / (double)T_SPF_AT(F), step_off / (double)T_SPF_AT(F));
     TEST_ASSERT_TRUE(step_on < 0.5 * step_off);
     free_events();
 }
@@ -903,7 +1060,7 @@ static void test_stereo_parity_mz1500_output_filter(void)
     qsort(s_ev, s_nev, sizeof(*s_ev), ev_cmp);
     run_sdl(F, gain, refl, refr);
     run_renderer(F, gain, renl, renr);
-    size_t n = (size_t)F * T_SPF;
+    size_t n = T_SPF_AT(F);
     compare("stereo L, output filter", refl, renl, n);
     compare("stereo R, output filter", refr, renr, n);
     double dref = rms_lr(refl, refr, n), dren = rms_lr(renl, renr, n);

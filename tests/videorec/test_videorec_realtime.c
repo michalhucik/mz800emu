@@ -30,6 +30,7 @@
 #include "emulator/videorec/videorec.h"
 #include "hw-generic/gdg/framebuffer.h"
 #include "hw-generic/gdg/gdg.h"
+#include "hw-generic/gdg/gdgclk.h"
 #include "hw-generic/gdg/video.h"
 
 static const char *AVI = "tests/data/tmp/test_vr_rt.avi";
@@ -134,21 +135,35 @@ static void sdl_block(float v)
     videorec_rt_audio_output(buf, chunk);
 }
 
-/** Jeden tick vzorkovače (čas + jedna perioda snímku). */
+/**
+ * Perioda vzorkovače [us], zaokrouhlená nahoru: vzorkovač běží stejným tempem
+ * jako emulace, tedy jeden snímek podle krystalu (MZ-800: 354 432 / 17 734 475 s
+ * = 19 985,48 us). Krok tick() o celou zaokrouhlenou periodu je splatný vždy
+ * právě jeden tick (dva až po asi 38 000 ticích).
+ */
+#define TICK_US ((int64_t)((1000000ull * VIDEO_SCREEN_TICKS + GDGCLK_REAL_TICKS_PER_SEC - 1u) / GDGCLK_REAL_TICKS_PER_SEC))
+
+/** Jeden tick vzorkovače (čas + jedna perioda snímku podle krystalu, TICK_US). */
 static void tick(void)
 {
     videorec_test_rt_tick(s_now);
-    s_now += 20000;
+    s_now += TICK_US;
 }
 
 /**
  * `n` ticků živého běhu: před každým tickem nový zobrazený snímek (hodnota
- * 1..14 cyklicky) a jeden blok zvuku SDL cesty (jako 100 % s audio zařízením).
+ * 1..14 cyklicky), v efektivní realtime i konec emulovaného snímku (vloží
+ * snímek do fronty vzorkovače, jako emulace 100 %) a jeden blok zvuku SDL
+ * cesty (jako 100 % s audio zařízením). V emulačním čase ticky jen sledují
+ * stav (konec snímku by tam snímek zapsal).
  */
+static st_VIDEOREC_STATUS status(void);
+
 static void live_ticks(int n)
 {
     for (int i = 0; i < n; i++) {
         show((uint8_t)(1 + (s_shown % 14)));
+        if (status().timebase_effective == VIDEOREC_TIMEBASE_REALTIME) emu_frame();
         sdl_block(AUDIO_V);
         tick();
     }
@@ -174,9 +189,15 @@ static void rec_start(void)
     rec_start_ex(0);
 }
 
-/** Stop v realtime: požadavek zpracuje nejbližší tick vzorkovače; pak join writeru. */
+/**
+ * Stop v realtime: požadavek zpracuje nejbližší tick vzorkovače; pak join writeru.
+ * Před stopem dodá zvuk k čekajícím snímkům (8 bloků SDL cesty, jako by je emulace
+ * vyrobila): stop dopisuje jen snímky, ke kterým zvuk je (viz
+ * test_stop_drops_frames_without_audio()).
+ */
 static void rec_stop_rt(void)
 {
+    for (int i = 0; i < 8; i++) sdl_block(AUDIO_V);
     videorec_request_stop();
     tick();
     TEST_ASSERT_EQUAL_INT(VIDEOREC_STATE_IDLE, videorec_get_state());
@@ -351,8 +372,11 @@ static void assert_marker(const char *json, unsigned frame, const char *label)
 /*
  * Základ: start v realtime, 20 živých ticků. Každý tick zapíše 1 snímek;
  * obraz je zpožděný o D (první snímky = obraz
- * v okamžiku startu), zvuk = výstup SDL cesty převzorkovaný na 48 kHz (první
- * 2 snímky ticho - plnění jitter bufferu na 3 bloky). Stop dopíše frontu.
+ * v okamžiku startu, opakovaný při plnění fronty snímků), zvuk = výstup SDL
+ * cesty převzorkovaný na 48 kHz (první 2 snímky ticho - plnění jitter bufferu
+ * na 3 bloky). Emulované snímky mezi tiky čekají ve frontě; stop dopíše
+ * frontu (rezervu D i 5 snímků navíc), takže každý emulovaný snímek je
+ * v nahrávce právě jednou.
  */
 static void test_realtime_basic_delay_and_audio(void)
 {
@@ -370,7 +394,7 @@ static void test_realtime_basic_delay_and_audio(void)
     TEST_ASSERT_EQUAL_INT(VIDEOREC_RT_ACTIVITY_LIVE, st.rt_activity);
     TEST_ASSERT_EQUAL_UINT64(20, st.frames);
 
-    /* emulované snímky v realtime nic nezapisují */
+    /* emulované snímky v realtime nic nezapisují hned - čekají ve frontě na vzorkovač */
     emu_frames(5);
     TEST_ASSERT_EQUAL_UINT64(20, videorec_get_frames());
 
@@ -378,7 +402,10 @@ static void test_realtime_basic_delay_and_audio(void)
     videorec_get_rt_stats(&rs);
     TEST_ASSERT_EQUAL_UINT64(20, rs.ticks);
     TEST_ASSERT_EQUAL_UINT64(20, rs.frames_written);
-    TEST_ASSERT_EQUAL_UINT64(0, rs.frames_repeated);
+    /* jediné opakování: obraz startu při plnění fronty snímků (D snímků stejného obrazu) */
+    TEST_ASSERT_EQUAL_UINT64(D - 1, rs.frames_repeated);
+    TEST_ASSERT_EQUAL_UINT64(20 - D, rs.queue.taken);
+    TEST_ASSERT_EQUAL_UINT64(0, rs.queue.overflow_drops + rs.queue.surplus_drops + rs.queue.underflows);
     TEST_ASSERT_EQUAL_UINT64(0, rs.audio.underruns);
 
     rec_stop_rt();
@@ -386,9 +413,10 @@ static void test_realtime_basic_delay_and_audio(void)
     int16_t *au = NULL;
     size_t na = 0;
     uint32_t frames = avi_read(&px, &au, &na);
-    TEST_ASSERT_EQUAL_UINT32(20 + D, frames);
+    TEST_ASSERT_EQUAL_UINT32(20 + D + 5, frames);
     for (unsigned i = 0; i < frames; i++) {
-        uint8_t expect = (i < D) ? 0x0F : shown[i - D];
+        /* 5 snímků bez nového zobrazení má obraz posledního zobrazeného */
+        uint8_t expect = (i < D) ? 0x0F : (i < 20 + D) ? shown[i - D] : shown[19];
         char msg[64];
         g_snprintf(msg, sizeof(msg), "frame %u", i);
         if (px[i] != PX_UNKNOWN) TEST_ASSERT_EQUAL_HEX8_MESSAGE(expect, px[i], msg);
@@ -409,7 +437,11 @@ static void test_realtime_basic_delay_and_audio(void)
     g_free(j);
 }
 
-/* Bez nových zobrazených snímků se opakuje poslední obraz (statistika opakování). */
+/*
+ * Bez konců emulovaných snímků (emulace nedodává snímky, obraz se jen překreslí -
+ * např. obnova obrazovky) je fronta snímků prázdná a opakuje se poslední zobrazený
+ * obraz (statistika opakování), hned od prvního ticku: nic nečeká, stop nic nedopisuje.
+ */
 static void test_realtime_repeats_last_displayed_frame(void)
 {
     rec_start();
@@ -425,10 +457,116 @@ static void test_realtime_repeats_last_displayed_frame(void)
     rec_stop_rt();
     uint8_t *px = NULL;
     uint32_t frames = avi_read(&px, NULL, NULL);
-    TEST_ASSERT_EQUAL_UINT32(10 + D, frames);
-    for (unsigned i = D; i < frames; i++)
+    TEST_ASSERT_EQUAL_UINT32(10, frames);
+    for (unsigned i = 0; i < frames; i++)
         if (px[i] != PX_UNKNOWN) TEST_ASSERT_EQUAL_HEX8(3, px[i]);
     g_free(px);
+}
+
+/**
+ * Jeden běh "emulace tempem krystalu" proti vzorkovači (pomocník
+ * test_realtime_every_emulated_frame_once()).
+ *
+ * Emulovaný snímek k (hodnota 1 + k % 14) se zobrazí a skončí v čase
+ * `t0 + phase + k * perioda + kolísání` (kolísání pseudonáhodně v +-`jitter_us`,
+ * s `grid_us` > 0 zaokrouhlené nahoru na periodu zvukového zařízení), se
+ * zvukovým blokem podle krystalu; čas běží po 1 ms a vzorkovač si ticky
+ * rozvrhuje sám. Ověří se obsah AVI: za snímky plnění (obraz startu, D plus ticky
+ * před prvním koncem snímku) následují
+ * emulované snímky v pořadí, každý právě jednou, a statistiky (žádné opakování
+ * kromě plnění, nic zahozeno, fronta nedošla).
+ */
+static void run_paced_like_emulation(int64_t phase_us, int64_t jitter_us, int64_t grid_us, uint32_t seed)
+{
+    rec_start();
+    const uint64_t num = 1000000ull * VIDEO_SCREEN_TICKS; /* perioda snímku = num / den us */
+    const uint64_t den = GDGCLK_REAL_TICKS_PER_SEC;
+    const int64_t t0 = s_now;
+    const int64_t dur = 30 * 1000000ll;
+    uint64_t frames = 0;  /* emulované snímky */
+    uint64_t rem = 0;     /* akumulátor délky bloku SDL cesty */
+    int64_t last_t = 0;
+    static float buf[VIDEOREC_RT_SDL_CHUNK_MAX * 2];
+    for (unsigned i = 0; i < VIDEOREC_RT_SDL_CHUNK_MAX * 2; i++) buf[i] = AUDIO_V;
+    for (int64_t t = t0; t < t0 + dur; t += 1000) {
+        for (;;) {
+            /* konec snímku `frames` (deterministický, nezávislý na počtu průchodů) */
+            uint32_t x = seed ^ (uint32_t)(frames * 2654435761u);
+            x ^= x << 13;
+            x ^= x >> 17;
+            x ^= x << 5;
+            int64_t end = phase_us + (int64_t)((frames * num) / den) + ((int64_t)(x % 2001u) - 1000) * jitter_us / 1000;
+            if (grid_us > 0) end = ((end + grid_us - 1) / grid_us) * grid_us;
+            if (end < last_t) end = last_t;
+            if (t0 + end > t) break;
+            last_t = end;
+            show((uint8_t)(1 + (frames % 14)));
+            emu_frame();
+            const uint64_t acc = rem + 44100ull * VIDEO_SCREEN_TICKS;
+            rem = acc % den;
+            videorec_rt_audio_output(buf, (size_t)(acc / den));
+            frames++;
+        }
+        videorec_test_rt_tick(t);
+    }
+    s_now = t0 + dur + TICK_US; /* další tick vzorkovače je splatný (zpracuje stop) */
+    st_VIDEOREC_RT_STATS rs;
+    videorec_get_rt_stats(&rs);
+    printf("paced like emulation (phase %lld us, jitter %lld us, grid %lld us): %llu frames, %llu ticks, %llu taken, "
+           "%llu repeated, %llu dropped, %llu refills, %llu underruns, %llu overruns, max corr %.4f %%\n",
+           (long long)phase_us, (long long)jitter_us, (long long)grid_us, (unsigned long long)frames,
+           (unsigned long long)rs.ticks, (unsigned long long)rs.queue.taken, (unsigned long long)rs.frames_repeated,
+           (unsigned long long)(rs.queue.overflow_drops + rs.queue.surplus_drops),
+           (unsigned long long)rs.queue.underflows, (unsigned long long)rs.audio.underruns,
+           (unsigned long long)rs.audio.overruns, rs.audio.max_abs_corr * 100.0);
+    TEST_ASSERT_TRUE(rs.ticks > 1490);
+    TEST_ASSERT_EQUAL_UINT64(0, rs.queue.overflow_drops + rs.queue.surplus_drops);
+    TEST_ASSERT_EQUAL_UINT64(0, rs.queue.underflows);
+    TEST_ASSERT_EQUAL_UINT64(0, rs.audio.underruns);
+    TEST_ASSERT_EQUAL_UINT64(0, rs.audio.overruns);
+    TEST_ASSERT_TRUE(rs.audio.max_abs_corr < VIDEOREC_RT_AUDIO_MAX_CORR);
+    /* plnění = ticky, které nevzaly snímek z fronty: D (rezerva fronty) plus ticky před
+     * prvním koncem snímku (první tik je hned při startu; fáze až perioda, s mřížkou o 10 ms víc) */
+    const uint64_t prime = rs.ticks - rs.queue.taken;
+    TEST_ASSERT_TRUE(prime >= D && prime <= D + 2);
+    /* jediná opakování jsou plnění (obraz startu) */
+    TEST_ASSERT_EQUAL_UINT64(prime - 1, rs.frames_repeated);
+    rec_stop_rt();
+    /* AVI: snímky plnění (obraz startu), pak všechny emulované snímky v pořadí, každý právě jednou */
+    uint8_t *px = NULL;
+    uint32_t n = avi_read(&px, NULL, NULL);
+    TEST_ASSERT_EQUAL_UINT32(frames + prime, n);
+    unsigned checked = 0;
+    for (unsigned i = 0; i < n; i++) {
+        if (px[i] == PX_UNKNOWN) continue;
+        uint8_t expect = (i < prime) ? 0x0F : (uint8_t)(1 + ((i - prime) % 14));
+        char msg[64];
+        g_snprintf(msg, sizeof(msg), "frame %u", i);
+        TEST_ASSERT_EQUAL_HEX8_MESSAGE(expect, px[i], msg);
+        checked++;
+    }
+    TEST_ASSERT_TRUE(checked > n / 3);
+    g_free(px);
+}
+
+/*
+ * Emulace a vzorkovač stejným tempem (krystal / takty snímku): každý emulovaný snímek se
+ * zapíše právě jednou bez ohledu na to, jak blízko ticku skončí. Fáze 0 = konec snímku
+ * přímo na tiku s kolísáním +-2 ms (headless naměřeno +-1,8 ms) - dřívější vzorkovač
+ * "poslední zobrazený snímek" tu rozhodoval o každém snímku náhodou (naměřeno 87 / 90
+ * opakovaných / vynechaných za 120 s); dále snímky dokončované v periodě zvukového
+ * zařízení 10 ms. Test z původní varianty "vzorkovač tempem emulace" se starým rozvrhem
+ * 50 ticků selhal na 2 snímcích za 60 s.
+ */
+static void test_realtime_every_emulated_frame_once(void)
+{
+    run_paced_like_emulation(0, 2000, 0, 11u);
+    tearDown();
+    setUp();
+    run_paced_like_emulation(TICK_US / 2, 2000, 0, 12u);
+    tearDown();
+    setUp();
+    run_paced_like_emulation(TICK_US - 300, 2000, 10000, 13u);
 }
 
 /*
@@ -568,32 +706,35 @@ static void test_breakpoint_pause(void)
  */
 static void test_emulated_when_fast(void)
 {
+    /* Snímek emulovaný v živém ticku, ve kterém vzorkovač rozhodl o návratu: čeká ve frontě
+     * snímků a návrat ho dopíše (dřív se ztratil - každý emulovaný snímek právě jednou). */
+    const unsigned L = 1;
     g_videorec_settings.realtime_speed = VIDEOREC_RT_SPEED_EMULATED_WHEN_FAST;
     rec_start();
     live_ticks(10);
     g_customspeed.speed_in_percentage = 200;
     live_ticks(1); /* rozhodnutí o návratu */
-    emu_frame();   /* návrat: fronta (D) + tento snímek */
+    emu_frame();   /* návrat: fronta (D + L) + tento snímek */
     st_VIDEOREC_STATUS st = status();
     TEST_ASSERT_EQUAL_INT(VIDEOREC_TIMEBASE_REALTIME, st.timebase);
     TEST_ASSERT_EQUAL_INT(VIDEOREC_TIMEBASE_EMULATED, st.timebase_effective);
     emu_frames(20);
-    TEST_ASSERT_EQUAL_UINT64(10 + D + 21, videorec_get_frames());
+    TEST_ASSERT_EQUAL_UINT64(10 + D + L + 21, videorec_get_frames());
     g_customspeed.speed_in_percentage = 100;
     emu_frame();   /* změna rychlosti zaznamenaná na konci snímku */
     live_ticks(1); /* zpět do realtime */
     TEST_ASSERT_EQUAL_INT(VIDEOREC_TIMEBASE_REALTIME, status().timebase_effective);
     live_ticks(9);
     rec_stop_rt();
-    TEST_ASSERT_EQUAL_UINT32(10 + D + 22 + 9 + 1 + D, avi_frames());
+    TEST_ASSERT_EQUAL_UINT32(10 + D + L + 22 + 9 + 1 + D, avi_frames());
     gchar *j = cuts_json();
-    assert_event(j, 10 + D, "speed", "200");
-    assert_event(j, 10 + D, "timebase", "emulated");
-    assert_event(j, 10 + D + 21, "speed", "100");
+    assert_event(j, 10 + D + L, "speed", "200");
+    assert_event(j, 10 + D + L, "timebase", "emulated");
+    assert_event(j, 10 + D + L + 21, "speed", "100");
     TEST_ASSERT_EQUAL_INT_MESSAGE(0, count_str(j, "\"label\": \"Speed"), j);
-    assert_event(j, 10 + D + 22, "timebase", "realtime");
-    assert_segment(j, 0, 10 + D, "none");
-    assert_segment(j, 10 + D, 10 + D + 22, "fade");
+    assert_event(j, 10 + D + L + 22, "timebase", "realtime");
+    assert_segment(j, 0, 10 + D + L, "none");
+    assert_segment(j, 10 + D + L, 10 + D + L + 22, "fade");
     g_free(j);
 }
 
@@ -773,9 +914,14 @@ static void test_marker_position_realtime(void)
     g_free(j);
 }
 
-/* Record-pause v realtime: fronta se dopíše, segment se uzavře, po obnovení nový segment. */
+/*
+ * Record-pause v realtime: fronta se dopíše, segment se uzavře, po obnovení nový segment.
+ * Dopíše se i snímek emulovaný v živém ticku, ve kterém se pauza nahrávání zpracovala
+ * (L, čekal ve frontě snímků; dřív se ztratil).
+ */
 static void test_record_pause_realtime(void)
 {
+    const unsigned L = 1;
     rec_start();
     live_ticks(10);
     TEST_ASSERT_TRUE(videorec_request_pause_set(true));
@@ -783,14 +929,14 @@ static void test_record_pause_realtime(void)
     st_VIDEOREC_STATUS st = status();
     TEST_ASSERT_EQUAL_INT(VIDEOREC_STATE_PAUSED, st.state);
     TEST_ASSERT_EQUAL_INT(VIDEOREC_RT_ACTIVITY_SKIPPING, st.rt_activity);
-    TEST_ASSERT_EQUAL_UINT64(10 + D, st.frames);
+    TEST_ASSERT_EQUAL_UINT64(10 + D + L, st.frames);
     TEST_ASSERT_TRUE(videorec_request_pause_set(false));
     live_ticks(10);
     rec_stop_rt();
-    TEST_ASSERT_EQUAL_UINT32(10 + D + 10 + D, avi_frames());
+    TEST_ASSERT_EQUAL_UINT32(10 + D + L + 10 + D, avi_frames());
     gchar *j = cuts_json();
-    assert_segment(j, 0, 10 + D, "none");
-    assert_segment(j, 10 + D, 20 + 2 * D, "fade");
+    assert_segment(j, 0, 10 + D + L, "none");
+    assert_segment(j, 10 + D + L, 20 + 2 * D + L, "fade");
     g_free(j);
 }
 
@@ -844,6 +990,213 @@ static void test_stop_after_frames_realtime(void)
     TEST_ASSERT_EQUAL_INT(VIDEOREC_STATE_IDLE, videorec_get_state());
     videorec_exit();
     TEST_ASSERT_EQUAL_UINT32(30, avi_frames());
+}
+
+/*
+ * stop_after_frames v realtime i mimo živý běh: v pauze emulace se zápisem (freeze,
+ * fronta prázdná, zapisuje se poslední obraz), při 50 % (snímek každý druhý tik) a při
+ * MAX SPEED (víc snímků za tik, fronta se ořezává) má nahrávka přesně N snímků. Regrese:
+ * limit se počítal z pozice značek, která po pauze nebo jiné rychlosti předpokládala
+ * rezervu fronty - ve freeze vyšlo 28 snímků místo 30.
+ */
+static void test_stop_after_frames_not_live(void)
+{
+    for (int mode = 0; mode < 3; mode++) {
+        if (mode == 0) g_videorec_settings.realtime_pause = VIDEOREC_RT_PAUSE_FREEZE;
+        rec_start_ex(30);
+        if (mode == 0) {
+            g_emulator.paused = true;
+            g_emulator.pause_reason = EMU_PAUSE_REASON_MANUAL;
+        } else if (mode == 1) {
+            g_customspeed.speed_in_percentage = 50;
+        } else {
+            g_emulator.max_speed = true;
+        }
+        for (int i = 0; i < 100 && videorec_get_state() != VIDEOREC_STATE_IDLE; i++) {
+            if (mode == 1 && (i % 2) == 0) {
+                show((uint8_t)(1 + (s_shown % 14)));
+                emu_frame();
+            } else if (mode == 2) {
+                for (int k = 0; k < 12; k++) {
+                    show((uint8_t)(1 + (s_shown % 14)));
+                    emu_frame();
+                }
+            }
+            sdl_block(AUDIO_V);
+            tick();
+        }
+        TEST_ASSERT_EQUAL_INT(VIDEOREC_STATE_IDLE, videorec_get_state());
+        videorec_exit();
+        char msg[32];
+        g_snprintf(msg, sizeof(msg), "mode %d", mode);
+        TEST_ASSERT_EQUAL_UINT32_MESSAGE(30, avi_frames(), msg);
+        tearDown();
+        setUp();
+    }
+}
+
+/*
+ * stop_after_frames a běh k dočasnému breakpointu (step over, run to cursor) bez
+ * record_debugger_steps: snímky z běhu se nezapisují, takže se nesmí počítat do limitu.
+ * Těsně před limitem step over, během kterého emulace dokončí několik snímků (10 za tik),
+ * pak pauza na dočasném breakpointu a ruční pokračování: nahrávka má přesně N snímků.
+ * Regrese: limit počítal čekající snímky dřív, než tik odebral snímky z běhu, a dopsání je
+ * pak nezapsalo - nahrávka skončila s méně snímky.
+ */
+static void test_stop_after_frames_debugger_run(void)
+{
+    g_videorec_settings.record_debugger_steps = false;
+    g_videorec_settings.realtime_pause = VIDEOREC_RT_PAUSE_SKIP;
+    rec_start_ex(30);
+    live_ticks(22);
+    TEST_ASSERT_EQUAL_INT(VIDEOREC_STATE_RECORDING, videorec_get_state());
+    videorec_on_debugger_run(); /* step over: mzarch_run_to_temporary_breakpoint() */
+    g_emulator.paused = false;
+    for (int i = 0; i < 3; i++) {
+        for (int k = 0; k < 10; k++) {
+            show((uint8_t)(1 + (s_shown % 14)));
+            emu_frame();
+        }
+        sdl_block(AUDIO_V);
+        tick();
+    }
+    g_emulator.paused = true; /* dočasný breakpoint */
+    g_emulator.pause_reason = EMU_PAUSE_REASON_MANUAL;
+    tick();
+    videorec_on_emulation_stopped();
+    videorec_on_emulation_paused();
+    tick();
+    g_emulator.paused = false; /* ruční pokračování */
+    for (int i = 0; i < 60 && videorec_get_state() != VIDEOREC_STATE_IDLE; i++) live_ticks(1);
+    TEST_ASSERT_EQUAL_INT(VIDEOREC_STATE_IDLE, videorec_get_state());
+    videorec_exit();
+    TEST_ASSERT_EQUAL_UINT32(30, avi_frames());
+}
+
+/**
+ * @brief Snímek markeru se zadaným popiskem v sidecaru (formát videorec_sidecar_to_json()).
+ * @param json Sidecar. @param label Popisek.
+ * @return Index snímku, nebo -1.
+ */
+static long marker_frame(const char *json, const char *label)
+{
+    char needle[64];
+    g_snprintf(needle, sizeof(needle), "\"label\": \"%s\" }", label);
+    const char *p = strstr(json, needle);
+    if (!p) return -1;
+    const char *f = p;
+    while (f > json && strncmp(f, "\"frame\": ", 9) != 0) f--;
+    return strtol(f + 9, NULL, 10);
+}
+
+/**
+ * Pomocník test_marker_shows_current_picture(): požádá o marker a provede tik, při kterém
+ * se zpracuje; zapamatuje obraz zobrazený v tu chvíli.
+ * @param label Popisek. @param shown_out Výstup: hodnota zobrazeného obrazu.
+ */
+static void marker_tick(const char *label, uint8_t *shown_out)
+{
+    videorec_request_marker(label);
+    *shown_out = s_shown;
+    sdl_block(AUDIO_V);
+    tick();
+}
+
+/*
+ * Marker leží na snímku, který ukazuje obraz zobrazený ve chvíli, kdy se marker zpracoval
+ * (živý běh, 50 %, pauza se zápisem). Regrese: po pauze a při jiné rychlosti pozice
+ * předpokládala rezervu fronty, marker ležel o 1 až 2 snímky dál (na jiném obrazu).
+ * Ověřuje se jen u snímků, které jdou rozbalit (klíčové snímky); aspoň jeden z každé
+ * dvojice markerů jde.
+ */
+static void test_marker_shows_current_picture(void)
+{
+    g_videorec_settings.realtime_pause = VIDEOREC_RT_PAUSE_FREEZE;
+    uint8_t want[6];
+    const char *names[6] = { "L1", "L2", "H1", "H2", "P1", "P2" };
+    rec_start();
+    live_ticks(10);
+    for (int i = 0; i < 2; i++) {
+        show((uint8_t)(1 + (s_shown % 14)));
+        emu_frame();
+        marker_tick(names[i], &want[i]); /* živý běh: nový snímek před tikem */
+    }
+    live_ticks(5);
+    g_customspeed.speed_in_percentage = 50;
+    for (int i = 0; i < 6; i++) {
+        if ((i % 2) == 0) {
+            show((uint8_t)(1 + (s_shown % 14)));
+            emu_frame();
+        }
+        if (i == 2) {
+            marker_tick(names[2], &want[2]); /* 50 %: s novým snímkem */
+        } else if (i == 3) {
+            marker_tick(names[3], &want[3]); /* 50 %: bez nového snímku */
+        } else {
+            sdl_block(AUDIO_V);
+            tick();
+        }
+    }
+    g_customspeed.speed_in_percentage = 100;
+    live_ticks(5);
+    g_emulator.paused = true;
+    g_emulator.pause_reason = EMU_PAUSE_REASON_MANUAL;
+    tick();
+    marker_tick(names[4], &want[4]); /* pauza se zápisem */
+    marker_tick(names[5], &want[5]);
+    g_emulator.paused = false;
+    live_ticks(5);
+    rec_stop_rt();
+    uint8_t *px = NULL;
+    uint32_t n = avi_read(&px, NULL, NULL);
+    gchar *j = cuts_json();
+    for (int pair = 0; pair < 3; pair++) {
+        unsigned checked = 0;
+        for (int k = 0; k < 2; k++) {
+            int i = pair * 2 + k;
+            long f = marker_frame(j, names[i]);
+            char msg[96];
+            g_snprintf(msg, sizeof(msg), "marker %s at %ld (shown %u)", names[i], f, want[i]);
+            TEST_ASSERT_TRUE_MESSAGE(f >= 0 && f < (long)n, msg);
+            printf("%s\n", msg);
+            if (px[f] == PX_UNKNOWN) continue;
+            TEST_ASSERT_EQUAL_HEX8_MESSAGE(want[i], px[f], msg);
+            checked++;
+        }
+        TEST_ASSERT_TRUE(checked >= 1);
+    }
+    g_free(j);
+    g_free(px);
+}
+
+/*
+ * Stop dopíše čekající emulované snímky jen se zvukem: snímky, ke kterým SDL cesta ještě
+ * nevyrobila zvuk (emulace se zastavila mezi koncem snímku a synchronizací), by končily
+ * tichem - zahodí se (`end_drops`). Snímky se zvukem se dopíšou všechny a nahrávka nekončí
+ * tichem.
+ */
+static void test_stop_drops_frames_without_audio(void)
+{
+    rec_start();
+    live_ticks(20);
+    emu_frames(4); /* 4 emulované snímky bez zvuku (emulace stojí před synchronizací) */
+    videorec_request_stop();
+    tick();
+    TEST_ASSERT_EQUAL_INT(VIDEOREC_STATE_IDLE, videorec_get_state());
+    st_VIDEOREC_RT_STATS rs;
+    videorec_get_rt_stats(&rs);
+    videorec_exit();
+    int16_t *au = NULL;
+    size_t na = 0;
+    uint32_t frames = avi_read(NULL, &au, &na);
+    printf("stop without audio: %u frames, %llu dropped without audio, %llu audio underruns\n", frames,
+           (unsigned long long)rs.end_drops, (unsigned long long)rs.audio.underruns);
+    /* 20 ticků + čekající snímky se zvukem; aspoň 4 snímky bez zvuku zahozené */
+    TEST_ASSERT_TRUE(rs.end_drops >= 4);
+    TEST_ASSERT_EQUAL_UINT32(20 + 2 + 4 - rs.end_drops, frames);
+    /* poslední zapsaný snímek má zvuk (nekončí tichem) */
+    TEST_ASSERT_INT16_WITHIN(2, AUDIO_S16_LEVEL, au[na - SPF / 2]);
+    g_free(au);
 }
 
 /* state_marks = none a auto_markers = false: žádné události ani automatické markery. */
@@ -939,7 +1292,11 @@ static void test_step_over_is_debugger(void)
     uint32_t frames = run_step_over_scenario(&j);
     TEST_ASSERT_EQUAL_UINT32(10 + 1 + 10 + D, frames);
     assert_event(j, 10 + D, "pause_start", "user");
-    assert_event(j, 11 + D, "pause_start", "debugger");
+    /* Pauza freeze dopsala jeden snímek z fronty (11 zapsaných), ve frontě čeká snímek, který
+     * byl na obrazovce i během kroku - zapíše se na 12 (po návratu se před něj vloží jedno
+     * opakování z plnění). Dřívější vzorkovač udával 11 + D (o snímek dál, protože obraz
+     * v pauze vzorkoval znovu). */
+    assert_event(j, 12, "pause_start", "debugger");
     TEST_ASSERT_EQUAL_INT(1, count_str(j, "\"label\": \"Pause\""));
     g_free(j);
 }
@@ -1122,6 +1479,7 @@ int main(int argc, char *argv[])
     UNITY_BEGIN();
     RUN_TEST(test_realtime_basic_delay_and_audio);
     RUN_TEST(test_realtime_repeats_last_displayed_frame);
+    RUN_TEST(test_realtime_every_emulated_frame_once);
     RUN_TEST(test_switch_timebase_segments_and_events);
     RUN_TEST(test_leave_realtime_from_request);
     RUN_TEST(test_pause_skip);
@@ -1141,6 +1499,10 @@ int main(int argc, char *argv[])
     RUN_TEST(test_record_pause_realtime);
     RUN_TEST(test_record_pause_resume_keeps_video_delay);
     RUN_TEST(test_stop_after_frames_realtime);
+    RUN_TEST(test_stop_after_frames_not_live);
+    RUN_TEST(test_stop_after_frames_debugger_run);
+    RUN_TEST(test_marker_shows_current_picture);
+    RUN_TEST(test_stop_drops_frames_without_audio);
     RUN_TEST(test_state_marks_none);
     RUN_TEST(test_emulated_pause_positions_exact);
     RUN_TEST(test_step_over_is_debugger);

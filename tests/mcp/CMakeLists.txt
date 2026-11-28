@@ -698,6 +698,133 @@ if(Python3_FOUND)
     message(STATUS "  tests/mcp: registered mcp_audio_read "
                    "(Python ${Python3_VERSION})")
 
+    # Výška tónu podle krystalu: tón CTC0 (režim 3) a PSG v sdl.wav
+    # i reference.wav do +-0,1 centu od krystal / dělič (MZ-800, MZ-1500,
+    # MZ-700 PAL a NTSC, pokud binárky existují); kmitočet přes okno 4 s.
+    # Pipe; měří obsah WAV zachycení, ne reálný čas, proto bez RUN_SERIAL.
+    add_test(
+        NAME    mcp_audio_crystal_pitch
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_audio_crystal_pitch.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_audio_crystal_pitch PROPERTIES
+        LABELS  "e2e;mcp;pipe;audio"
+        TIMEOUT 300
+        SKIP_RETURN_CODE 77
+    )
+    message(STATUS "  tests/mcp: registered mcp_audio_crystal_pitch "
+                   "(Python ${Python3_VERSION})")
+
+    # Souvislá fáze zvukového výstupu: stálý tón PSG i CTC0 (PAL i NTSC)
+    # v sdl.wav bez postranních složek z délky bloků, výška a počet vzorků.
+    # Pipe, MAX SPEED; měří obsah WAV, ne reálný čas.
+    add_test(
+        NAME    mcp_audio_phase_sidebands
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_audio_phase_sidebands.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_audio_phase_sidebands PROPERTIES
+        LABELS  "e2e;mcp;pipe;audio"
+        TIMEOUT 300
+        SKIP_RETURN_CODE 77
+    )
+    message(STATUS "  tests/mcp: registered mcp_audio_phase_sidebands "
+                   "(Python ${Python3_VERSION})")
+
+    # Výřezy emu_audio_capture_pcm po snímcích na sebe navazují (reference
+    # i SDL cesta, PAL i NTSC, 100 %, 50 % a 200 %). Pipe.
+    add_test(
+        NAME    mcp_audio_pcm_frames
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_audio_pcm_frames.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_audio_pcm_frames PROPERTIES
+        LABELS  "e2e;mcp;pipe;audio"
+        TIMEOUT 300
+        SKIP_RETURN_CODE 77
+    )
+    message(STATUS "  tests/mcp: registered mcp_audio_pcm_frames "
+                   "(Python ${Python3_VERSION})")
+
+    # Vysoký tón PSG bez falešného basu v sdl.wav: průměr výchylky přes
+    # interval vzorku místo bodového vzorku (MZ-800, MZ-1500, nejhorší ze
+    # 6 fází mřížky bloků; děliče 28 až 45 nejvýš o 6 dB nad reference.wav,
+    # dělič 20 se zbytkovou chybou drženého konce snímku výkon pásma nejvýš
+    # o 12 dB). Pipe, asi 1 min.
+    add_test(
+        NAME    mcp_audio_psg_bass
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_audio_psg_bass.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_audio_psg_bass PROPERTIES
+        LABELS  "e2e;mcp;pipe;audio"
+        TIMEOUT 300
+        SKIP_RETURN_CODE 77
+    )
+    message(STATUS "  tests/mcp: registered mcp_audio_psg_bass "
+                   "(Python ${Python3_VERSION})")
+
+    # Výřezy emu_audio_capture_pcm podle snímku z indexu hranic: rozsah
+    # i obsah snímku po přepsání souhrnu při vlastní rychlosti a její změně
+    # (PAL i NTSC), kontrakt konce zachycení (jen uzavřené snímky) a stav
+    # porovnání reference a SDL při vlastní rychlosti. Pipe, asi 70 s.
+    add_test(
+        NAME    mcp_audio_pcm_frame_index
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_audio_pcm_frame_index.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_audio_pcm_frame_index PROPERTIES
+        LABELS  "e2e;mcp;pipe;audio"
+        TIMEOUT 300
+        SKIP_RETURN_CODE 77
+    )
+    message(STATUS "  tests/mcp: registered mcp_audio_pcm_frame_index "
+                   "(Python ${Python3_VERSION})")
+
+    # Čtení zachyceného zvuku po přepsání PCM (paměť PCM 1 s): výřez podle
+    # snímku vrátí jen zachované vzorky okna (zcela, částečně přepsaný
+    # i zachovaný snímek, 100, 50 a 200 %, oba proudy, PAL i NTSC,
+    # stránkování), souhrn porovná jen společné vzorky (lag 0 a 1 snímek,
+    # ruční i automatický konec) a živé čtení při běžícím zachycení.
+    # Pipe, asi 45 s.
+    add_test(
+        NAME    mcp_audio_pcm_overwrite
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_audio_pcm_overwrite.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_audio_pcm_overwrite PROPERTIES
+        LABELS  "e2e;mcp;pipe;audio"
+        TIMEOUT 300
+        SKIP_RETURN_CODE 77
+    )
+    message(STATUS "  tests/mcp: registered mcp_audio_pcm_overwrite "
+                   "(Python ${Python3_VERSION})")
+
+    # Okno souhrnu zvuku podle uložených hranic snímků: pro každý snímek
+    # (MZ-800, MZ-1500, MZ-700 NTSC) okno souhrnu = výřez audio_capture_pcm,
+    # počet dvojic = průnik, sousedé navazují; pořadí worst_frames z PCM
+    # (i u dvousekundového stropu) a worst_frames_detail; klient rozbalující
+    # dvojice [snímek, diff_rms]. Pipe.
+    add_test(
+        NAME    mcp_audio_summary_window
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test_audio_summary_window.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(mcp_audio_summary_window PROPERTIES
+        LABELS  "e2e;mcp;pipe;audio"
+        TIMEOUT 300
+        SKIP_RETURN_CODE 77
+    )
+    message(STATUS "  tests/mcp: registered mcp_audio_summary_window "
+                   "(Python ${Python3_VERSION})")
+
     # Záznam zápisů do paměti (ramlog) přes MCP: insn_pc, old/new, PUSH,
     # LDIR, dotazy kdo zapsal, malý ring, přijetí přerušení, banking RAM/VRAM
     # a plány WF REPLACE, reset a snapshot, bitová shoda se zapnutým záznamem,

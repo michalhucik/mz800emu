@@ -6,7 +6,12 @@
  * - výšku tónu PSG z děliče a převod na notu MIDI a jméno noty,
  * - souvislé úseky snímků, histogram intervalů a odhad CTC0 (tón / PCM),
  * - převzorkování (shoda 1:1, stejnosměrná úroveň, mono průměr) a hlavičku WAV,
- * - nalezení posunu dvou signálů a rozdíl při posunu,
+ * - nalezení posunu dvou signálů a rozdíl při posunu, příznak nejednoznačného
+ *   posunu (ticho a konstanta krátké i dlouhé, dvě stejně dobrá minima,
+ *   ustálený tón; jednoznačný tón s nástupem beze změny; dvě přesné kopie
+ *   uvnitř ochranného pásma obálky a jediné zarovnání; nezávislé krátké
+ *   signály a nejmenší překryv; dvě přesné kopie periodického signálu mimo
+ *   mřížku obálky a jediná kopie na různých posunech),
  * - detektor not (začátek, změna děliče, ztišení, konec úseku).
  *
  * Takty GDG v testech jsou konstanty MZ-800 (17 721 600 Hz, dělič CPU 5),
@@ -17,6 +22,8 @@
 
 #include "unity.h"
 
+#include <math.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "audio_analysis.h"
@@ -233,6 +240,256 @@ void test_audio_analysis_compare_lag_tone_onset(void)
 }
 
 
+/** @brief Pomocná: oba kanály vzorku i signálu s na hodnotu v. */
+static void put(int16_t *s, int i, int16_t v)
+{
+    s[i * 2] = v;
+    s[i * 2 + 1] = v;
+}
+
+
+/**
+ * @brief Nejednoznačný posun u ticha a konstantního vstupu, krátkého (pod okno
+ *        obálky 256 vzorků, přímé hledání) i dlouhého.
+ *
+ * Při nulovém nebo konstantním signálu dávají všechny posuny stejné skóre,
+ * posun z dat určit nejde. Na 1a6773d4 krátká cesta vracela
+ * lag_ambiguous false (32 nulových vzorků, posun 0).
+ */
+void test_audio_analysis_compare_ambiguous_flat(void)
+{
+    enum { SHORT = 32, LONG = 3000, MAXLAG = 900 };
+    static int16_t a[2 * LONG], b[2 * (LONG + MAXLAG)];
+    static const struct { int n; int16_t va, vb; } cases[] = {
+        { SHORT, 0, 0 }, { LONG, 0, 0 },            /* ticho */
+        { SHORT, 5000, 5000 }, { LONG, 5000, 5000 }, /* konstanta, stejná */
+        { SHORT, 5000, 3000 }, { LONG, 5000, 3000 }, /* konstanta, jiná úroveň */
+    };
+    for (size_t k = 0; k < sizeof(cases) / sizeof(cases[0]); k++) {
+        const int n = cases[k].n;
+        for (int i = 0; i < n; i++) put(a, i, cases[k].va);
+        for (int i = 0; i < n + MAXLAG; i++) put(b, i, cases[k].vb);
+        st_AUDIO_COMPARE c;
+        TEST_ASSERT_TRUE(audio_compare(a, (size_t) n, b, (size_t) (n + MAXLAG), MAXLAG, 0, &c));
+        TEST_ASSERT_EQUAL_UINT((unsigned) n, c.compared);
+        TEST_ASSERT_TRUE_MESSAGE(c.lag_ambiguous, (n == SHORT) ? "short flat" : "long flat");
+    }
+}
+
+
+/**
+ * @brief Dvě stejně dobrá minima: druhý signál obsahuje úsek prvního dvakrát.
+ *
+ * Krátký signál (100 vzorků): v a jeden úsek 20 vzorků (+-8000 střídavě),
+ * v b tentýž úsek o 10 a o 60 vzorků později; při posunu 10 i 60 je jeden
+ * úsek přesně, z druhého zasahuje do okna právě polovina (stejná energie).
+ * Dlouhý signál (3000): úsek 400 vzorků, kopie o 304 a 1104 později, obě
+ * celé uvnitř okna. Na 1a6773d4 dávaly oba lag_ambiguous false.
+ */
+void test_audio_analysis_compare_ambiguous_two_minima(void)
+{
+    {
+        enum { N = 100, MAXLAG = 120, AT = 40, LEN = 20, L1 = 10, L2 = 60 };
+        static int16_t a[2 * N], b[2 * (N + MAXLAG)];
+        memset(a, 0, sizeof(a));
+        memset(b, 0, sizeof(b));
+        for (int i = 0; i < LEN; i++) {
+            int16_t v = (i & 1) ? -8000 : 8000;
+            put(a, AT + i, v);
+            put(b, AT + L1 + i, v);
+            put(b, AT + L2 + i, v);
+        }
+        st_AUDIO_COMPARE c;
+        TEST_ASSERT_TRUE(audio_compare(a, N, b, N + MAXLAG, MAXLAG, 0, &c));
+        TEST_ASSERT_TRUE(c.lag == L1 || c.lag == L2);
+        TEST_ASSERT_TRUE(c.lag_ambiguous);
+    }
+    {
+        enum { N = 3000, MAXLAG = 2000, AT = 1000, LEN = 400, L1 = 304, L2 = 1104 };
+        static int16_t a[2 * N], b[2 * (N + MAXLAG)];
+        memset(a, 0, sizeof(a));
+        memset(b, 0, sizeof(b));
+        uint32_t x = 777;
+        for (int i = 0; i < LEN; i++) {
+            x = x * 1103515245u + 12345u;
+            int16_t v = (int16_t) ((int) ((x >> 16) & 0x7FFF) - 16384);
+            put(a, AT + i, v);
+            put(b, AT + L1 + i, v);
+            put(b, AT + L2 + i, v);
+        }
+        st_AUDIO_COMPARE c;
+        TEST_ASSERT_TRUE(audio_compare(a, N, b, N + MAXLAG, MAXLAG, 0, &c));
+        TEST_ASSERT_TRUE(c.lag == L1 || c.lag == L2);
+        TEST_ASSERT_TRUE(c.lag_ambiguous);
+    }
+}
+
+
+/**
+ * @brief Jednoznačný tón s nástupem v krátkém signálu (přímé hledání):
+ *        posun i příznak beze změny proti dřívějšímu výsledku.
+ *
+ * a: 100 vzorků ticho, pak 100 vzorků obdélníku s periodou 40; b: totéž
+ * o 37 vzorků později. Posun 37 je jediné nulové skóre, minima po
+ * periodách (77) nesedí s nástupem.
+ */
+void test_audio_analysis_compare_short_tone_onset(void)
+{
+    enum { N = 200, MAXLAG = 100, ONSET = 100, PER = 40, LAG = 37 };
+    static int16_t a[2 * N], b[2 * (N + MAXLAG)];
+    memset(a, 0, sizeof(a));
+    memset(b, 0, sizeof(b));
+    for (int i = ONSET; i < N; i++) {
+        int16_t v = (((i - ONSET) % PER) < PER / 2) ? 12000 : -12000;
+        put(a, i, v);
+        put(b, i + LAG, v);
+    }
+    st_AUDIO_COMPARE c;
+    TEST_ASSERT_TRUE(audio_compare(a, N, b, N + MAXLAG, MAXLAG, 0, &c));
+    TEST_ASSERT_EQUAL_INT(LAG, c.lag);
+    TEST_ASSERT_FALSE(c.lag_ambiguous);
+    TEST_ASSERT_EQUAL_DOUBLE(0.0, c.diff_rms);
+    TEST_ASSERT_EQUAL_UINT(N, c.compared);
+
+    /* Ustálený tón bez nástupu v krátkém úseku: minima po periodách jsou stejně dobrá. */
+    for (int i = 0; i < N; i++) put(a, i, ((i % PER) < PER / 2) ? 12000 : -12000);
+    for (int i = 0; i < N + MAXLAG; i++) put(b, i, (((i + 7) % PER) < PER / 2) ? 12000 : -12000);
+    TEST_ASSERT_TRUE(audio_compare(a, 32, b, 32 + MAXLAG, MAXLAG, 0, &c));
+    TEST_ASSERT_TRUE(c.lag_ambiguous);
+}
+
+
+/** @brief Pomocná: pseudonáhodný vzorek -8000..8000 (LCG, deterministický). */
+static int16_t noise_s16(uint32_t *x)
+{
+    *x = *x * 1103515245u + 12345u;
+    return (int16_t) ((int) ((*x >> 16) % 16001u) - 8000);
+}
+
+
+/**
+ * @brief Dvě přesná zarovnání blízko sebe (uvnitř ochranného pásma obálky 256 vzorků).
+ *
+ * Podle sondy minima.py posudku 0374ca6a: a = 882 vzorků periodického šumu
+ * s periodou P, b = tentýž periodický úsek dlouhý 882 + P (přesná kopie
+ * a při posunu 0 i P) a za ním nezávislý šum. Pro P = 96, 160 a 256 vracel
+ * 0374ca6a lag_ambiguous false (obálka v pásmu nerozhodovala), pro 320 true.
+ * Kontrola: jediné přesné zarovnání (a vložené do šumu o 160 vzorků
+ * později) zůstane jednoznačné s posunem 160.
+ */
+void test_audio_analysis_compare_two_near_copies(void)
+{
+    enum { N = 882, MAXLAG = 881 };
+    static int16_t a[2 * N], b[2 * (N + MAXLAG + 1)];
+    static const int periods[] = { 96, 160, 256, 320 };
+    for (size_t k = 0; k < sizeof(periods) / sizeof(periods[0]); k++) {
+        const int per = periods[k];
+        uint32_t x = 6247u + (uint32_t) per;
+        int16_t pat[320];
+        for (int i = 0; i < per; i++) pat[i] = noise_s16(&x);
+        for (int i = 0; i < N; i++) put(a, i, pat[i % per]);
+        for (int i = 0; i < N + MAXLAG + 1; i++) put(b, i, (i < N + per) ? pat[i % per] : noise_s16(&x));
+        st_AUDIO_COMPARE c;
+        TEST_ASSERT_TRUE(audio_compare(a, N, b, N + MAXLAG + 1, MAXLAG, 0, &c));
+        TEST_ASSERT_TRUE(c.lag == 0 || c.lag == per);
+        TEST_ASSERT_EQUAL_DOUBLE(0.0, c.diff_rms);
+        TEST_ASSERT_TRUE_MESSAGE(c.lag_ambiguous, (per == 96) ? "96" : (per == 160) ? "160" : (per == 256) ? "256" : "320");
+    }
+    /* jediné přesné zarovnání: jednoznačně 160 */
+    uint32_t x = 99u;
+    for (int i = 0; i < N; i++) put(a, i, noise_s16(&x));
+    for (int i = 0; i < N + MAXLAG + 1; i++) {
+        const int16_t v = (i >= 160 && i < 160 + N) ? a[(i - 160) * 2] : noise_s16(&x);
+        put(b, i, v);
+    }
+    st_AUDIO_COMPARE c;
+    TEST_ASSERT_TRUE(audio_compare(a, N, b, N + MAXLAG + 1, MAXLAG, 0, &c));
+    TEST_ASSERT_EQUAL_INT(160, c.lag);
+    TEST_ASSERT_EQUAL_DOUBLE(0.0, c.diff_rms);
+    TEST_ASSERT_FALSE(c.lag_ambiguous);
+}
+
+
+/**
+ * @brief Krátká cesta: dva nezávislé signály po 32 vzorcích se shodou jen v jedné dvojici.
+ *
+ * Podle sondy minima.py posudku 0374ca6a (b[31] = a[0], max_lag 31):
+ * 0374ca6a vrátil jistý posun 31 s RMS 0 na jediné dvojici. Posun musí
+ * mít aspoň polovinu překryvu (16 dvojic) a nezávislé signály nesmí dát
+ * jistý výsledek.
+ */
+void test_audio_analysis_compare_short_independent(void)
+{
+    enum { N = 32 };
+    static int16_t a[2 * N], b[2 * N];
+    for (uint32_t seed = 1; seed <= 20; seed++) {
+        uint32_t x = seed * 7919u;
+        for (int i = 0; i < N; i++) put(a, i, noise_s16(&x));
+        for (int i = 0; i < N; i++) put(b, i, noise_s16(&x));
+        put(b, N - 1, a[0]);
+        st_AUDIO_COMPARE c;
+        TEST_ASSERT_TRUE(audio_compare(a, N, b, N, N - 1, 0, &c));
+        TEST_ASSERT_TRUE(c.compared >= N / 2);
+        TEST_ASSERT_TRUE(c.lag <= N / 2);
+        TEST_ASSERT_TRUE(c.lag_ambiguous);
+    }
+}
+
+
+/**
+ * @brief Dvě přesné kopie periodického signálu mimo mřížku obálky (sonda posuny.py posudku 4c69d5cc).
+ *
+ * a = 882 vzorků periodického signálu s periodou P (sinus nebo náhodný
+ * vzor), b = `lead` vzorků šumu, týž periodický úsek dlouhý 882 + P (přesná
+ * kopie při posunu lead i lead + P) a šum. Na 4c69d5cc vrátil sinus s
+ * periodou 28 a lead 7 posun 13 s RMS 0,19 a lag_ambiguous false (hrubý krok
+ * obálky 16 a zpřesnění ±8 obě kopie minuly), náhodná perioda 2 a 300 vrátila
+ * přesnou kopii jako jistou. Výsledek musí být jedna z kopií a nejednoznačný.
+ * Kontrola: jediná kopie na několika posunech zůstane jednoznačná.
+ */
+void test_audio_analysis_compare_periodic_copies(void)
+{
+    enum { N = 882, MAXLAG = 881, NB = N + MAXLAG };
+    static int16_t a[2 * N], b[2 * NB];
+    static const struct { bool sine; int lead, per; } cases[] = {
+        { true, 7, 28 }, { true, 7, 35 }, { true, 0, 40 }, { true, 23, 57 },
+        { false, 0, 2 }, { false, 7, 24 }, { false, 7, 96 }, { false, 23, 129 }, { false, 0, 300 },
+    };
+    for (size_t k = 0; k < sizeof(cases) / sizeof(cases[0]); k++) {
+        const int per = cases[k].per, lead = cases[k].lead;
+        uint32_t x = 893122u + (uint32_t) per;
+        int16_t pat[320];
+        for (int i = 0; i < per; i++) {
+            pat[i] = cases[k].sine ? (int16_t) lround(7000.0 * sin(2.0 * 3.14159265358979323846 * i / per + 0.23))
+                                   : noise_s16(&x);
+        }
+        for (int i = 0; i < N; i++) put(a, i, pat[i % per]);
+        for (int i = 0; i < NB; i++) {
+            const int j = i - lead;
+            put(b, i, (j >= 0 && j < N + per) ? pat[j % per] : noise_s16(&x));
+        }
+        st_AUDIO_COMPARE c;
+        char msg[48];
+        snprintf(msg, sizeof(msg), "%s period %d lead %d", cases[k].sine ? "sine" : "random", per, lead);
+        TEST_ASSERT_TRUE_MESSAGE(audio_compare(a, N, b, NB, MAXLAG, 0, &c), msg);
+        TEST_ASSERT_TRUE_MESSAGE(c.lag == lead || c.lag == lead + per, msg);
+        TEST_ASSERT_EQUAL_DOUBLE_MESSAGE(0.0, c.diff_rms, msg);
+        TEST_ASSERT_TRUE_MESSAGE(c.lag_ambiguous, msg);
+    }
+    /* jediná přesná kopie: jednoznačně na svém posunu */
+    static const int at[] = { 0, 7, 100, 160, 333, 700 };
+    for (size_t k = 0; k < sizeof(at) / sizeof(at[0]); k++) {
+        uint32_t x = 4242u + (uint32_t) k;
+        for (int i = 0; i < N; i++) put(a, i, noise_s16(&x));
+        for (int i = 0; i < NB; i++) put(b, i, (i >= at[k] && i < at[k] + N) ? a[(i - at[k]) * 2] : noise_s16(&x));
+        st_AUDIO_COMPARE c;
+        TEST_ASSERT_TRUE(audio_compare(a, N, b, NB, MAXLAG, 0, &c));
+        TEST_ASSERT_EQUAL_INT(at[k], c.lag);
+        TEST_ASSERT_FALSE(c.lag_ambiguous);
+    }
+}
+
+
 /** @brief Detektor not: začátek, změna děliče, ztišení, konec úseku. */
 void test_audio_analysis_note_track(void)
 {
@@ -273,6 +530,12 @@ int main(void)
     RUN_TEST(test_audio_analysis_resample_wav);
     RUN_TEST(test_audio_analysis_compare_lag);
     RUN_TEST(test_audio_analysis_compare_lag_tone_onset);
+    RUN_TEST(test_audio_analysis_compare_ambiguous_flat);
+    RUN_TEST(test_audio_analysis_compare_ambiguous_two_minima);
+    RUN_TEST(test_audio_analysis_compare_short_tone_onset);
+    RUN_TEST(test_audio_analysis_compare_two_near_copies);
+    RUN_TEST(test_audio_analysis_compare_short_independent);
+    RUN_TEST(test_audio_analysis_compare_periodic_copies);
     RUN_TEST(test_audio_analysis_note_track);
     return UNITY_END();
 }

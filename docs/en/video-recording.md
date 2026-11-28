@@ -144,10 +144,28 @@ recording.
 
 ### Real time
 
-The recording follows the clock on the wall: 50 times per second (60 times on
-the MZ-700 NTSC and MZ-1500) it takes the picture that was last shown on the
-screen, and the sound that went to the speakers. It is meant for tutorials and live sessions, where the viewer should
-see what you saw - including pauses, speed-up and work in the debugger.
+The recording follows the clock on the wall: it writes the picture that went to
+the screen and the sound that went to the speakers, at the pace of the emulation
+at 100 % (like the real computer, about 50.04 frames per second, about 59.92 on
+the MZ-700 NTSC and MZ-1500). At normal speed the emulated frames therefore
+follow one another in the video without repeats or gaps, even though the
+emulator finishes them unevenly. A frame is repeated or left out only where the
+emulation really drifts away from the clock on the wall: a pause, a speed other
+than 100 %, the computer stalling or being unable to keep up with the
+emulation (the recording then tries to repeat frames one at a time and spread
+them evenly). At the start of the recording and after a switch from emulated
+time the first picture is repeated two or three times and one frame may be left
+out right after that; after an emulation pause with the Skip setting and after a
+recording pause the video continues without repeats (measured without a window
+on the MZ-800). At the end of the recording the last emulated frames that have
+no sound yet are left out: usually at most two, up to four on the MZ-800 with the
+CKSW bit set. On the
+MZ-800 with the CKSW bit set (shortened lines) the frames are about 1/70
+shorter, so about every 70th frame is left out. In a very long recording a
+single frame may also occasionally be repeated or left out, because the clock
+of the sound card does not run exactly like the clock of the computer. It is meant for tutorials and
+live sessions, where the viewer should see what you saw - including pauses,
+speed-up and work in the debugger.
 
 - **Emulation pause** is recorded according to the **Emulation paused** setting:
   *Skip* (default; nothing is written during the pause, the video continues
@@ -185,17 +203,21 @@ a speed change, a snapshot load or a pause gets no marker - it stays only as
 a state mark in `cuts.json`. If you do not want these chapters, uncheck
 **Automatic markers** or delete them from `cuts.json`.
 
-Measured properties of real time (two test programs, one to three measurements per
-variant; 60 frames per second in the window was measured only on the MZ-1500,
-the MZ-700 NTSC only without a window, so take them as an indication, not a
-guarantee):
+Measured properties of real time (MZ-800 and MZ-1500, three recordings per
+variant, on one computer and its sound card; the MZ-700 was not measured, so
+take them as an indication, not a guarantee):
 
-- Sound and picture are aligned to within one video frame: the mean offset of
-  the sound against the picture was from -15 ms (sound early) to +12 ms (sound
-  late) at both 50 and 60 frames per second; individual points differ by up to
-  one video frame.
-- After each emulation pause the sound starts again with about 60 to 80 ms of
-  silence (about 4 video frames; measured on the MZ-800).
+- Sound and picture are aligned to roughly one video frame. Measured with a
+  program that changes the picture and starts a tone at the same moment, as the
+  offset of the sound against the picture compared with a recording in emulated
+  time: MZ-800 without a window -20 ms (sound early), in a window with the sound
+  card +7 to +8 ms (sound late); MZ-1500 without a window -3 to -6 ms, in a
+  window +10 to +14 ms. Individual points of a recording differ from the mean by
+  at most about half a frame.
+- At the start of a recording and after switching from emulated time back to
+  real time the sound starts with about 40 to 60 ms of silence (2 to 3 video
+  frames); after an emulation pause with the Skip setting the sound continues
+  without silence (measured without a window on the MZ-800).
 - The recording contains exactly the sound that went to the speakers. It can
   therefore also contain a property of the emulator sound output: a PSG tone
   sometimes "freezes" at a constant level for about one frame (measured on the
@@ -442,11 +464,16 @@ than 10 s (YouTube may not accept such chapters [unverified]).
 - The recording does not include the emulator window, debugger or notifications.
 - The `tv43` aspect ratio is approximate [unverified]; the default `emulator`
   matches the display in the emulator window.
-- Videos are 50 frames/s with an exact rate of 50.000 (the emulator at 100 % runs
-  exactly 50 frames per second, a real MZ-800 about 50.04); from the MZ-700 NTSC
-  and MZ-1500 exactly 60 frames/s (the emulator at 100 %).
-- Real time: sound and picture aligned to within one video frame, about 60 to
-  80 ms of silence after each emulation pause (measured, see [Real time](#real-time)).
+- Videos are 50 frames/s with an exact rate of 50.000, from the MZ-700 NTSC and
+  MZ-1500 exactly 60 frames/s. At 100 % the emulator runs like the real computer
+  at about 50.04 (59.92) frames per second and the emulated frames go into the
+  video one after another (always in emulated time, at normal speed in real
+  time), so the video runs 0.07 % slower (0.13 % faster on the MZ-700 NTSC and
+  MZ-1500) than reality and tones in it sound 1.3 cents lower (2.2 cents
+  higher).
+- Real time: sound and picture aligned to roughly one video frame, about 40 to
+  60 ms of silence at the start and after a switch from emulated time (measured,
+  see [Real time](#real-time)).
 - In real-time recordings a PSG tone can sometimes "freeze" at a constant level
   for about one frame (a property of the emulator sound output, affects all
   platforms with a PSG); recordings in emulated time are clean.

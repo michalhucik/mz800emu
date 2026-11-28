@@ -5036,6 +5036,8 @@ async def emu_trace_read(channel: str, cursor: str = "", start: str = "oldest",
       audio_levels: seq, t, time_us, frame, channel, level
       audio_frames: seq, t, time_us, len_ticks, edges, on_pct, rms_level,
                 max_level, ref_rms, ref_peak, sdl_rms, sdl_peak, sdl_blocks
+                (default); on request ref_first, sdl_first (first sample
+                index of the frame in the reference / output path PCM)
       ramlog:   seq, t, frame, pc, sym, addr, space, offset, plane, old, new,
                 src, flags, count, tin
       bplog:    seq, t, frame, insn_pc, sym, pc, bp, name, kind, text, flags
@@ -5061,8 +5063,9 @@ async def emu_trace_read(channel: str, cursor: str = "", start: str = "oldest",
     (``emu_audio_capture_start`` with ``memory=True``, the default): the
     same data as psg_writes.csv and events.csv plus one summary row per
     audio frame (``seq`` = frame). ``time_us`` counts from the capture
-    start; ``hz``/``note`` are given for a new tone divider (``reg``
-    ``tone``), computed with the emulator's PSG formula. ``audio_frames``
+    start in real time following the crystal; ``hz``/``note`` are given for
+    a new tone divider (``reg`` ``tone``), computed with the emulator's PSG
+    formula and the crystal. ``audio_frames``
     lists per-channel arrays in the order of ``emu_audio_capture_status``
     ``channels``: ``edges`` (level changes), ``on_pct`` (time with level >
     0), ``rms_level`` (0-15), ``max_level``; ``ref_*`` / ``sdl_*`` are
@@ -10161,9 +10164,10 @@ async def emu_audio_capture_start(dir: str = "", frames: int = 0,
     (a short PCM window). A capture to memory only (all four files off)
     creates no folder.
 
-    ``ticks`` are GDG clock ticks since the start (``gdg_clk_hz`` in
-    capture.json), ``frame`` is the audio frame (one video frame) since
-    the start. The capture begins at the end of the next audio frame; with
+    ``ticks`` are GDG clock ticks since the start; real time follows the
+    crystal (``real_clk_hz`` in capture.json, a frame has 881.36 WAV
+    samples PAL, 735.95 NTSC), ``frame`` is the audio frame (one video
+    frame) since the start. The capture begins at the end of the next audio frame; with
     ``sdl_wav`` after 6 more frames that warm up the output path. It
     captures only while the emulation runs - combine with
     ``emu_run(frames=N)``.
@@ -10255,7 +10259,9 @@ async def emu_audio_capture_summary(frame_from: int = 0, frame_to: int = -1,
     ``emu_audio_capture_start``); works while it runs and after it ends.
 
     Returns ``frames`` [from, to] (audio frames since the capture start),
-    ``frames_available``, ``fps``, ``platform``, ``stereo``;
+    ``frames_available``, ``fps`` (nominal), ``fps_real`` and
+    ``real_clk_hz`` (the crystal; Hz, us and seconds below follow it),
+    ``platform``, ``stereo``;
     ``sound_spans`` / ``silent_spans`` ([[from, to], ...], at most 50
     each, ``*_total`` = all; silent = reference RMS below
     ``silence_rms``, ``silence_rule``); ``channels`` (per channel:
@@ -10269,10 +10275,42 @@ async def emu_audio_capture_summary(frame_from: int = 0, frame_to: int = -1,
     ``edge_interval_hist_us`` [[bucket_from_us, count]], ``likely``
     ``tone`` / ``pcm`` / ``irregular`` / ``silent`` - a heuristic
     estimate, see ``likely_rule``); ``ref_vs_sdl`` (needs
-    ``pcm=["reference", "sdl"]``: ``lag_samples``, ``lag_frames``,
-    ``diff_rms`` / ``diff_max`` (-1..1 units, mono), ``reference_rms``,
-    ``worst_frames`` [[frame, diff_rms]], ``sdl_missing_blocks``; at most
-    2 s are compared).
+    ``pcm=["reference", "sdl"]``: ``status`` ``ok`` / ``no_overlap`` /
+    ``not_comparable``, without numbers always ``error`` and ``reason``;
+    ``window`` [from, to) = sample window of the frames in reference
+    indexes from the stored frame boundaries, the same as
+    ``frame_range.samples_requested`` of ``emu_audio_capture_pcm``; with
+    ``ok`` ``lag_samples`` (a searched delay is an estimate:
+    ``lag_ambiguous`` false only means no equally good rival was found;
+    decide about a regression with a fixed ``lag_frames``),
+    ``lag_frames``, ``lag_ambiguous`` (the data do not determine the delay:
+    steady tone, silence or constant level, also in a short part, or
+    another delay fits as well, also two exact copies close to each other,
+    or a short part the alignment does not explain; pass ``lag_frames``
+    then),
+    ``from_sample`` / ``compared_samples`` (first compared
+    reference index, number of pairs), ``sdl_from_sample`` (first compared
+    audio output index), ``diff_rms`` / ``diff_max`` (-1..1
+    units, mono), ``reference_rms``, ``worst_frames`` [[frame, diff_rms]]
+    (as in the released version; every frame rated on its compared part,
+    also a partly held one), ``worst_frames_detail`` (same frames and
+    order as ``{frame, diff_rms, compared_samples}``);
+    always ``sdl_missing_blocks``; at most 2 s are compared; only pairs
+    both PCM memories still hold inside the window are compared, a window
+    one stream no longer holds gives ``no_overlap`` with a ``reason``;
+    when the delay search has no common start at the oldest end of the
+    memory (the output path holds only later indexes) ``no_overlap`` comes
+    with ``fixed_lag_min_samples`` and ``fixed_lag_min_frames`` (smallest
+    fixed ``lag_frames`` that pairs held samples, or null; larger values
+    may not pair) and the delay is not estimated;
+    ``not_comparable`` = a frame of the range or
+    before it ran at a custom speed, the reference and the output path then
+    have a different time scale, or so did a frame the fixed lag reaches or
+    the delay search can reach (whole ``max_lag_frames`` range;
+    ``first_off_nominal_frame``, use a smaller reach), or audio output blocks are missing in the
+    compared part or where the delay reaches (skipped by the audio device in
+    MAX SPEED; ``sdl_shift_frame``, ``sdl_empty_frames``), so there is a
+    ``reason`` instead of numbers).
 
     Args:
         frame_from: First frame (default 0 = oldest kept).
@@ -10309,8 +10347,32 @@ async def emu_audio_capture_pcm(source: str = "reference", frame_from: int = 0,
         source: ``"reference"`` (render in emulated time) or ``"sdl"``
             (output path).
         frame_from: Start at this audio frame (used when ``sample_from``
-            < 0).
-        frames: Length in frames (used when ``samples`` is 0).
+            < 0). The window then runs from the first sample of frame
+            ``frame_from`` to the first sample of frame ``frame_from +
+            frames`` of the chosen stream: the sample ranges of windows
+            frame by frame join exactly (the data are byte-equal to one
+            window only with ``rate=44100, stereo=True``; another rate is
+            resampled per window). An audio frame is one synchronisation
+            event (a picture frame at 100 %); the output path delivers one
+            block per frame at any speed, the reference the samples of the
+            emulated time. The boundaries are exact for as long as the PCM
+            is kept (also after the frame summary was dropped and after a
+            speed change). Only closed frames are covered; ``frame_range``
+            in the answer says what was returned (``status`` complete /
+            partial / empty, ``reasons`` such as
+            ``start_after_last_closed_frame``: read further PCM with
+            ``sample_from``). ``status`` covers the frame boundaries; the
+            sound may already be overwritten: the window is fixed and only
+            its samples still held are returned, never samples of the next
+            frame (``frame_range.audio_status`` complete / partial / lost /
+            none, ``samples_requested``, ``samples_held``,
+            ``audio_reasons``; ``gap`` = overwritten part inside the
+            window; the end of ``samples_requested`` is capped at
+            INT64_MAX, never negative). With ``sample_from`` an overwritten start is skipped
+            and ``samples`` samples come from the oldest held one.
+        frames: Length in frames (used when ``samples`` is 0; with
+            ``sample_from`` the length is ``frames`` frames after the
+            crystal).
         sample_from: Start sample (44100 Hz) since the capture start.
         samples: Length in 44100 Hz samples.
         rate: Output rate 1000-44100 Hz.
@@ -10323,8 +10385,8 @@ async def emu_audio_capture_pcm(source: str = "reference", frame_from: int = 0,
     Returns:
         ``{"source", "segment", "live", "rate", "channels", "from_sample",
         "samples", "frames_out", "next_sample", "end_of_data",
-        "truncated", "available": [first, next], "gap", "encoding",
-        "data_b64"}`` or ``{"error": ...}``.
+        "truncated", "available": [first, next], "gap", "frame_range",
+        "encoding", "data_b64"}`` or ``{"error": ...}``.
     """
     data: dict[str, Any] = {"source": source, "frame_from": frame_from,
                             "frames": frames, "rate": rate, "stereo": stereo,

@@ -28,8 +28,8 @@ typedef struct st_EMULATOR_MEASURING_FRAME_TIMING_STATS
     double median;
     double stddev;
     uint32_t samples_count;
-    double total_width;
-    double real_total_width;
+    double total_width;      /**< Očekávaná délka měření [s]: počet snímků / skutečná snímková frekvence (GDGCLK_REAL_FPS). */
+    double real_total_width; /**< Naměřený součet délek snímků [s]. */
 } st_EMULATOR_MEASURING_FRAME_TIMING_STATS;
 
 typedef struct st_EMULATOR_MEASURING_FRAME_TIMING

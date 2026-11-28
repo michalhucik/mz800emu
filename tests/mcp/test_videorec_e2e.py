@@ -444,8 +444,110 @@ def _avi_audio_peak(ffmpeg, avi):
 
 
 #: Zpoždění obrazu v režimu podle reality [snímky] = videorec_rt_video_delay_ticks() při 50 snímcích/s
-#: (VIDEOREC_RT_VIDEO_DELAY_MS = 40 ms, videorec_rt.h).
+#: (VIDEOREC_RT_VIDEO_DELAY_MS = 40 ms, videorec_rt.h) = rezerva fronty emulovaných snímků
+#: (VIDEOREC_RT_FRAMEQ_TARGET - 1), která mezi tiky čeká na vzorkovač.
 RT_DELAY = 2
+
+
+#: Program v RAM od 3000h: na každé hraně /VBLK (bit 7 portu C 8255, 0E002h) zvýší čítač
+#: a přebarví textový řádek 12 (atributy od 0D9E0h, 40 bajtů) barvou (čítač & 7) a řádek 13
+#: (0DA08h) barvou ((čítač >> 3) & 7) - každý emulovaný snímek má uprostřed obrazu jinou
+#: dvojici barev (čítač modulo 64; vynechání 64k + 1 snímků by vypadalo jako krok o 1).
+_COUNTER_PROG = bytes.fromhex(
+    "F3" "1E00"
+    "3A02E0" "17" "30FA"        # L1: čekej na PC7 = 1
+    "3A02E0" "17" "38FA"        # L2: čekej na PC7 = 0 (hrana jednou za snímek)
+    "1C" "7B" "E607" "57" "07070707" "B2"   # A = (c & 7) << 4 | (c & 7)
+    "21E0D9" "0628"             # HL = 0D800h + 12 * 40, B = 40
+    "77" "23" "10FC"            # L3: atributy řádku 12 (HL pak 0DA08h = řádek 13)
+    "7B" "0F0F0F" "E607" "57" "07070707" "B2"   # A = ((c >> 3) & 7) << 4 | ((c >> 3) & 7)
+    "0628"                      # B = 40
+    "77" "23" "10FC"            # L4: atributy řádku 13
+    "18CD")                     # JR L1
+
+#: Barvy 0 až 7, jak je zapisuje AVI (černá, modrá, červená, fialová, zelená, azurová,
+#: žlutá, bílá); hodnota pixelu = nejbližší barva.
+_COUNTER_PAL = [(0, 0, 0), (0, 140, 232), (255, 0, 0), (240, 84, 204), (84, 255, 84),
+                (128, 255, 255), (255, 255, 40), (255, 255, 255)]
+
+
+def _avi_counter_values(ffmpeg, avi):
+    """Hodnota čítače (0 až 63) každého snímku AVI podle barvy řádků 12 a 13 uprostřed obrazu.
+
+    Střed obrazu leží v řádku 12; řádek 13 je o 8 řádků canvasu níž, v AVI se zdvojenými
+    řádky o 16.
+    """
+    def plane(y_expr):
+        out = subprocess.run([ffmpeg, "-v", "error", "-i", str(avi), "-vf", f"crop=1:1:iw/2:{y_expr}",
+                              "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], capture_output=True, timeout=120)
+        if out.returncode != 0:
+            raise TestFailure(f"ffmpeg cannot decode video of {avi}")
+        raw = out.stdout
+        return [min(range(8), key=lambda k: sum((raw[i + j] - _COUNTER_PAL[k][j]) ** 2 for j in range(3)))
+                for i in range(0, len(raw) - 2, 3)]
+    lo = plane("ih/2")
+    hi = plane("ih/2+16")
+    return [a + 8 * b for a, b in zip(lo, hi)]
+
+
+def run_realtime_frame_order(exe, tmp, ffprobe, ffmpeg):
+    """Podle reality: každý emulovaný snímek v AVI právě jednou, i přes návrat do emulačního času.
+
+    Program _COUNTER_PROG barví každý emulovaný snímek jinak. Po náběhu programu se nahrává
+    volný běh 100 % podle reality, za běhu se přepne do emulačního času a pak stop. Obsah
+    AVI: na začátku jen plnění fronty (stejný obraz, nejvýš 3 opakování, případně jedno
+    vynechání o 1 snímek přímo za plněním - zahození přesahu plnění), dál čítač v každém
+    snímku přesně o 1 větší až do konce - bez vynechání a bez opakování, nezávisle na fázi
+    tiků vzorkovače proti koncům snímků.
+    """
+    work = tmp / "order"
+    work.mkdir()
+    cfg = work / "cfg"
+    cfg.mkdir()
+    ini = work / "order.ini"
+    ini.write_text("[BREAKPOINTS]\nauto_load = 0\nauto_save = 0\n", encoding="utf-8")
+    avi = work / "order.avi"
+    emu = PipeEmu(exe, cfg, ini)
+    try:
+        emu.call("reset")
+        emu.call("pause")
+        emu.call("run", {"frames": 5})
+        emu.call("pause")
+        emu.call("mem_write", {"addr": 0x3000, "data_hex": _COUNTER_PROG.hex()})
+        emu.call("set_register", {"reg": "PC", "value": 0x3000})
+        emu.call("set_speed", {"mode": "normal"})
+        emu.call("run", {"frames": 50})  # náběh programu (první snímky po spuštění nejsou pravidelné)
+        emu.call("videorec_timebase", {"timebase": "realtime"})
+        emu.call("videorec_start", {"path": str(avi)})
+        emu.call("run")
+        time.sleep(3.0)
+        st = emu.call("videorec_timebase", {"timebase": "emulated"})["data"]
+        check(st["timebase"] == "emulated", "order: switch to emulated time while running")
+        time.sleep(1.0)
+        emu.call("pause")
+        st = emu.call("videorec_status")["data"]
+        seq = (st.get("last_event") or {"seq": 0})["seq"]
+        emu.call("videorec_stop")
+        st = emu.wait_saved(seq)
+    finally:
+        emu.close()
+    total = st["last_event"]["frame"]
+    vals = _avi_counter_values(ffmpeg, avi)
+    check(len(vals) == total and total > 150, f"order: AVI has {len(vals)} frames (saved {total})")
+    deltas = [(b - a) % 64 for a, b in zip(vals, vals[1:])]
+    lead = 0
+    while lead < len(deltas) and deltas[lead] == 0:
+        lead += 1
+    # Plnění může skončit se snímkem navíc (dva snímky mezi tiky); ten se hned zahodí, aby obraz
+    # nezůstal o snímek později proti zvuku - jediné povolené vynechání, o 1 snímek a přímo
+    # na hranici plnění.
+    trimmed = lead < len(deltas) and deltas[lead] == 2
+    rest = lead + 1 if trimmed else lead
+    bad = [(i + 1, d) for i, d in enumerate(deltas[rest:], start=rest) if d != 1]
+    check(1 <= lead <= 3, f"order: {lead} repeats at the start (queue priming{', 1 frame trimmed' if trimmed else ''})")
+    check(not bad, f"order: every emulated frame exactly once after priming (odd deltas {bad[:10]})")
+    peak, n = _avi_audio_peak(ffmpeg, avi)
+    check(n == total * 960, f"order: audio samples ({n} = {total} x 960)")
 
 
 def run_realtime_bloxorz(exe, tmp, ffprobe, ffmpeg, dsk):
@@ -484,8 +586,9 @@ def run_realtime_bloxorz(exe, tmp, ffprobe, ffmpeg, dsk):
         check(st["state"] == "recording" and st["timebase_effective"] == "realtime",
               f"recording in real time ({st['state']}, {st['timebase_effective']})")
         check(st["rt_activity"] == "skipping", f"paused emulation is skipped ({st['rt_activity']})")
-        # 250 emulovaných snímků při 100 % = 5 s; vzorkovač 50/s => cca 250 snímků
-        # (+ start, tolerance na fázi ticků vůči příkazům). Čas mezi příkazy se nepočítá.
+        # 250 emulovaných snímků při 100 % = 5 s (4,996 s podle krystalu); vzorkovač tiká stejným
+        # tempem jako emulace (50,036/s) => cca 250 snímků (+ start, tolerance na fázi ticků vůči
+        # příkazům). Čas mezi příkazy se nepočítá.
         rt_frames = st["frames"]
         check(225 <= rt_frames <= 275,
               f"real-time frames match 5 s of emulation ({rt_frames}, wall {run_s:.2f} s)")
@@ -496,9 +599,14 @@ def run_realtime_bloxorz(exe, tmp, ffprobe, ffmpeg, dsk):
         st = emu.call("videorec_status")["data"]
         check(st["timebase_effective"] == "emulated" and st["rt_activity"] == "off",
               f"back in emulated time ({st['timebase_effective']}, {st['rt_activity']})")
-        # návrat: zpožďovací fronta (RT_DELAY snímků) + 50 emulovaných
-        check(st["frames"] == rt_frames + RT_DELAY + 50,
-              f"emulated frames after switch ({st['frames']}, rt {rt_frames})")
+        # návrat: dopíšou se emulované snímky čekající ve frontě vzorkovače + 50 emulovaných.
+        # Kolik jich ve frontě čeká, závisí na fázi konců snímků proti tikům vzorkovače (po
+        # každé pauze mezi příkazy run se ustaví znovu), proto se tu nekontroluje přesný
+        # počet - pořadí "každý emulovaný snímek právě jednou" ověřuje obsahem
+        # run_realtime_frame_order(). Tady stačí, že návrat nic neubral a že události
+        # a segmenty níže leží přesně na hranici.
+        pending = st["frames"] - rt_frames - 50
+        check(pending >= 0, f"emulated frames after switch ({st['frames']}, rt {rt_frames}, pending {pending})")
         check(st["segment"] == 2, f"timebase switch = segment boundary ({st['segment']})")
         total = st["frames"]
         seq = st["last_event"]["seq"]
@@ -516,13 +624,13 @@ def run_realtime_bloxorz(exe, tmp, ffprobe, ffmpeg, dsk):
     sc = json.loads((work / "rt.cuts.json").read_text(encoding="utf-8"))
     check(sc["version"] == 4 and sc.get("fps_num") == 50, "sidecar version 4, 50 fps")
     tb = [(e["frame"], e["value"]) for e in sc["events"] if e["kind"] == "timebase"]
-    check(tb == [(0, "realtime"), (rt_frames + RT_DELAY, "emulated")], f"timebase events {tb}")
+    check(tb == [(0, "realtime"), (rt_frames + pending, "emulated")], f"timebase events {tb}")
     check(any(e["kind"] == "pause_start" and e["value"] == "frames" for e in sc["events"]),
           "emu_run stop recorded as pause_start 'frames'")
     check(not any(m["label"] == "Pause" for m in sc["markers"]),
           f"no auto marker for emu_run stops ({sc['markers']})")
     check([(g["start"], g["end"]) for g in sc["segments"]]
-          == [(0, rt_frames + RT_DELAY), (rt_frames + RT_DELAY, total)],
+          == [(0, rt_frames + pending), (rt_frames + pending, total)],
           f"segments {sc['segments']}")
 
 
@@ -548,6 +656,11 @@ def main():
         run(emu, tmp, ffprobe)
         emu.close()
         emu = None
+        if ffmpeg:
+            print("Scenario 4: real-time frame order (counter program)")
+            run_realtime_frame_order(exe, tmp, ffprobe, ffmpeg)
+        else:
+            print("SKIP scenario 4: ffmpeg not found")
         if dsk.is_file():
             print(f"Scenario 2: game {dsk} (copy)")
             run_bloxorz(exe, tmp, ffprobe, ffmpeg, dsk)

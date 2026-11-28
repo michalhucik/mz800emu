@@ -17,7 +17,7 @@
 ## Emulation
 
 - MZ-700 NTSC (Japanese version): the position of the picture in the line, the wait on VRAM access and the CTC0 counter input are taken from the MZ-1500, which has the same crystal, and the wait state on reads from the monitor ROM from the European MZ-700; they are not measured on a Japanese MZ-700.
-- Exact clock: the emulator derives its clock from a whole number of frames per second, not from the crystal. PAL runs at 17,721,600 Hz instead of 17,734,475 Hz (0.07 % slow), NTSC at 14,336,640 Hz instead of 14,318,180 Hz (0.13 % fast); everything derived from it shifts the same way, including CTC0 tones. More exact emulation is planned: the number of ticks per frame stays the same, but the conversion to real time (audio, AVI recording, tape WAV writing and reading, sync without audio) will be based on the crystal frequency, possibly as an optional setting.
+- Exact clock, remaining parts: the emulation pace, live audio, audio capture and the readouts already follow the crystal of the real computer (PAL 50.036 frames per second, NTSC 59.923). The tape (conversion of WAV and other formats to ticks, off by 0.07 % on PAL and 0.13 % on NTSC) and the AVI file (header with 50 or 60 frames per second, pitch in the file 1.3 cents lower on PAL and 2.2 cents higher on NTSC) still use the nominal 50 and 60 frames per second. For the tape this changes the behaviour of the emulated computer with a tape, so it is handled separately.
 
 ### 8253 counter: known differences from the real computer
 

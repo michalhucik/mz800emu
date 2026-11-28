@@ -105,16 +105,19 @@ static inline void psg_write_log_ensure_mutex_init(void)
 }
 
 /**
- * @brief Vrací nominální emulátor clock (pxCLK) v Hz.
+ * @brief Vrací skutečné takty pxCLK za sekundu (kmitočet krystalu) v Hz.
  *
- * Pro TSV header metadata. Hodnota je arch-specifická (PAL/NTSC, MZ-800/
- * MZ-1500); čte se z runtime gdgclk konfigurace.
+ * Pro TSV header metadata (`emulator_clock_hz`): dělením sloupce
+ * `pxclk_ticks` touto hodnotou vyjdou sekundy skutečného stroje, stejně jako
+ * u manifestu stop (tlog_common_get_pxclk_freq()). Hodnota je per
+ * architektura: MZ-800 a MZ-700 PAL 17 734 475 Hz, MZ-1500 a MZ-700 NTSC
+ * 14 318 180 Hz.
+ *
+ * @return GDGCLK_REAL_TICKS_PER_SEC.
  */
 static inline uint32_t psg_write_log_pxclk_hz(void)
 {
-    /* GDGCLK_BASE = nominální pxCLK kompilovaný per architektura
-     * (MZ-800: ~17.73 MHz, MZ-1500/MZ-700-NTSC: ~14.32 MHz). */
-    return (uint32_t)GDGCLK_BASE;
+    return (uint32_t)GDGCLK_REAL_TICKS_PER_SEC;
 }
 
 bool psg_write_log_enable(const char *path)

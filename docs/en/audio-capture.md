@@ -55,9 +55,10 @@ The command line uses the same file selection.
 ## Files
 
 Times in the CSV files: `ticks` = clock ticks of the video chip since the
-start of the capture (the frequency is `gdg_clk_hz` in capture.json),
-`time_us` = the same in microseconds, `frame` = the frame since the start
-(20 ms PAL, 16.7 ms NTSC).
+start of the capture, `time_us` = the same in real microseconds following the
+crystal (`ticks` divided by `real_clk_hz` in capture.json), `frame` = the
+frame since the start (19.985 ms PAL, 16.688 ms NTSC; a frame always has the
+same number of ticks).
 
 **events.csv** - `ticks,time_us,frame,channel,level`. Channels: `ctc0` (the
 speaker, level 0, 15 or 31), `psg0_0` .. `psg0_3` (PSG, channel 3 = noise) and on
@@ -99,14 +100,35 @@ off) higher. The master volume and mute are not in the files.
 
 **reference.wav** and **sdl.wav** - 44100 Hz, 16 bit, stereo, the same
 format, so they can be compared directly. reference.wav is computed exactly
-in emulated time; sdl.wav is what the emulator's audio output produced. Their
+in emulated time; sdl.wav is what the emulator's audio output produced. Both
+convert ticks to samples following the crystal of a real computer, so the
+tones have its pitch and a frame has 881.36 samples (735.95 in NTSC); the
+audio output therefore makes blocks of 881 or 882 samples (735 or 736 in
+NTSC). Their
 difference shows defects of the audio output. sdl.wav comes later: without
 an audio device (`--headless`) by exactly one frame, with a device by its
 buffering. With an audio device at MAX SPEED the audio output skips frames -
 capture.json then has `sdl_blocks` lower than `frames`.
 
-**capture.json** - platform, `gdg_clk_hz`, `frames_per_sec`, `wav_rate`,
-channel names, counts (`frames`, `events`, `psg_writes`, `reference_samples`,
+A capture frame (`frames`, the frame summaries, PCM windows by frames) is
+one synchronisation event of the emulation. At 100 % it is a picture frame,
+at a custom speed a stretch of emulation of speed times a frame: reference.wav
+gets the samples of its emulated time (about half at 50 %), sdl.wav one block
+of 881 or 882 samples (735 or 736 in NTSC) at any speed - so at a custom
+speed the two files differ in length and the tone in sdl.wav has its pitch
+changed with the speed, like what the speaker plays. PCM windows by frames
+(MCP) have exact frame boundaries for as long as the memory holds their
+sound, also after a speed change; they cover closed frames only. The
+summary does not compare the reference with the audio output at a custom
+speed (the two streams have a different time scale), also when the delay
+of the audio output reaches a frame at a custom speed, and says so.
+
+**capture.json** - platform, `gdg_clk_hz` and `frames_per_sec` (the rounded
+clock and whole frames per second, unchanged for compatibility), `wav_rate`,
+`real_clk_hz` (the crystal: ticks per real second, which the WAV files and
+`time_us` follow), `frames_per_sec_real` (real frames per second, 50.036326
+or 59.922743) and exactly as the fraction `frames_per_sec_real_num` /
+`frames_per_sec_real_den` (crystal / ticks per frame), channel names, counts (`frames`, `events`, `psg_writes`, `reference_samples`,
 `sdl_blocks`, `sdl_samples`) and `stop_reason`. Further, times in GDG clock
 ticks since the emulation started (the same timeline as `total_screens` *
 `screen_total_ticks_per_frame` + `total_ticks` in MCP `emulator://periph/gdg`):
@@ -123,7 +145,7 @@ ticks since the emulation started (the same timeline as `total_screens` *
 
 (without a start or without CSV rows the values are `null`) and `clocks` -
 the platform clocks with the same names as in MCP `emulator://platform/info`:
-`gdg_base_hz` (the rounded frequency the emulated time runs at),
+`gdg_base_hz` (the rounded frequency: ticks per frame times whole frames per second),
 `gdg_real_base_hz` (the real crystal), `cpu_divider`, `ctc0_divider`,
 `psg_divider` (`null` without a PSG) and `screen_total_ticks_per_frame`.
 

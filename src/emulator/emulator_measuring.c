@@ -91,7 +91,8 @@ static void emulator_measuring_stats(double *samples, uint32_t head, uint32_t ta
     stats->median = median / 1000;
     stats->stddev = stddev / 1000;
     stats->samples_count = samples_count;
-    stats->total_width = (float)samples_count / VIDEO_SCREENS_PER_SEC;
+    /* očekávaná délka měření ve skutečném čase: snímky podle krystalu (PAL 19,985 ms) */
+    stats->total_width = (double)samples_count / GDGCLK_REAL_FPS;
     stats->real_total_width = sum / 1e6;
 
     if (g_emulator_measuring.frame_timing.console_output_enabled)
@@ -210,8 +211,8 @@ void emulator_measuring_gdg_event(st_EMULATOR_MEASURING_GDG *msgdg)
 
     if (msgdg->console_output_enabled)
     {
-        float native_fps = (float)GDGCLK_REAL_BASE / VIDEO_SCREEN_TICKS;
-        float simulated_fps = (float)GDGCLK_BASE / VIDEO_SCREEN_TICKS;
+        /* emulace běží podle krystalu: nativní hodnoty jsou zároveň cílové tempo emulace */
+        float native_fps = (float)GDGCLK_REAL_FPS;
 
         char *formatted_num = NULL;
         printf("\n\nGDG meassuring:\n");
@@ -222,12 +223,6 @@ void emulator_measuring_gdg_event(st_EMULATOR_MEASURING_GDG *msgdg)
         g_free(formatted_num);
 
         printf(" - Native FPS: %.4f\n", native_fps);
-
-        formatted_num = format_uint32_with_thousands(GDGCLK_BASE);
-        printf(" - Simulated GDG freq.: %s Hz\n", formatted_num);
-        g_free(formatted_num);
-
-        printf(" - Simulated FPS: %.4f\n", simulated_fps);
 
         formatted_num = format_uint32_with_thousands(msgdg->current_gdg_frequency);
         printf(" - Current GDG freq.: %s Hz\n", formatted_num);

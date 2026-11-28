@@ -46,7 +46,7 @@ typedef enum en_TRACE_KIND
     TRACE_KIND_EVENTLOG,     /**< 32B událost ringu Event Vieweru (st_EVENTLOG_EVENT). */
     TRACE_KIND_AUDIO_PSG_WRITES, /**< 24B zápis do PSG z paměti zachycení zvuku (st_AUDIO_CAPTURE_PSG_REC). */
     TRACE_KIND_AUDIO_LEVELS,     /**< 16B změna úrovně kanálu (st_AUDIO_CAPTURE_LEVEL_REC). */
-    TRACE_KIND_AUDIO_FRAMES,     /**< 192B souhrn zvukového snímku (st_AUDIO_CAPTURE_FRAME_REC). */
+    TRACE_KIND_AUDIO_FRAMES,     /**< 208B souhrn zvukového snímku (st_AUDIO_CAPTURE_FRAME_REC). */
     TRACE_KIND_RAMLOG,           /**< 32B zápis do paměti (st_RAMLOG_REC, ring ramlog). */
     TRACE_KIND_BPLOG,            /**< 296B výstup akce BP `log` / `stop` (st_BPLOG_REC, ring bplog). */
     TRACE_KIND_COUNT         /**< Počet druhů (není platná hodnota). */
@@ -272,7 +272,7 @@ typedef struct st_TRACE_PAGE_REQ
     uint64_t        ram_prefix_t;  /**< T-stavy RAM chunku před snap->ram_copy_seq (z emu vlákna). */
     unsigned        cpu_divider;   /**< Takty GDG na T-stav (pro t v taktech GDG; u audio_psg_writes pro Hz). */
     uint64_t        audio_origin;  /**< audio_*: absolutní čas začátku zachycení [takty GDG] (pro time_us). */
-    uint64_t        gdg_hz;        /**< audio_*: takt GDG [Hz] (time_us, Hz tónu PSG). */
+    uint64_t        gdg_hz;        /**< audio_*: takty GDG za skutečnou sekundu [Hz] pro time_us a Hz tónu PSG (dispatch předává krystal GDGCLK_REAL_TICKS_PER_SEC). */
     unsigned        audio_channels; /**< audio_frames: počet zvukových kanálů platformy (1..9). */
 } st_TRACE_PAGE_REQ;
 
@@ -289,7 +289,10 @@ const char *const *trace_columns ( en_TRACE_KIND kind, size_t *n );
  * @brief Maska sloupců ze seznamu jmen (NULL / prázdný = výchozí).
  *
  * Výchozí jsou všechny sloupce druhu, u cputrack jen sloupce formátu v2
- * (bez `kind` a registrů, o ty si klient řekne jménem).
+ * (bez `kind` a registrů, o ty si klient řekne jménem) a u audio_frames jen
+ * sloupce vydané verze 2.0.7 (bez `ref_first` a `sdl_first`, aby řádek bez
+ * výběru sloupců měl stejný počet prvků jako dřív; o ty si klient řekne
+ * jménem).
  *
  * @param kind    Druh kanálu.
  * @param names   Jména sloupců.
